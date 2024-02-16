@@ -2,7 +2,7 @@
   Api's to communicate with OP-TEE OS (Trusted OS based on ARM TrustZone) via
   secure monitor calls.
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -117,14 +117,14 @@ OpteeSetupPageList (
   OPTEE_SHM_PAGE_LIST  *ShmList, *TmpShmList;
   UINTN                NumPgLists = 0;
 
-  if (!(UserBuf && IS_ALIGNED (UserBuf, OPTEE_MSG_PAGE_SIZE))) {
+  if (!(UserBuf && IS_ALIGNED ((UINTN)UserBuf, OPTEE_MSG_PAGE_SIZE))) {
     DEBUG ((DEBUG_ERROR, "UserBuf %p is not valid\n", UserBuf));
     return EFI_INVALID_PARAMETER;
   }
 
   ShmList = PageList;
   if (ShmList != NULL) {
-    if (!IS_ALIGNED (ShmList, OPTEE_MSG_PAGE_SIZE)) {
+    if (!IS_ALIGNED ((UINTN)ShmList, OPTEE_MSG_PAGE_SIZE)) {
       DEBUG ((DEBUG_ERROR, "Invalid Shm List Buffer\n"));
       return EFI_INVALID_PARAMETER;
     }
@@ -282,7 +282,7 @@ OpteeSharedMemoryRemap (
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  Status = ArmSetMemoryAttributes (PhysicalAddress, Size, EFI_MEMORY_WB);
+  Status = ArmSetMemoryAttributes (PhysicalAddress, Size, EFI_MEMORY_WB, 0);
   if (EFI_ERROR (Status)) {
     return Status;
   }

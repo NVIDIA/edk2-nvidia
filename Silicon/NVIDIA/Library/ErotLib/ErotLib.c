@@ -2,7 +2,7 @@
 
   Erot library
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,6 +16,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/MctpProtocol.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 STATIC BOOLEAN               mErotLibInitialized = FALSE;
 STATIC UINTN                 mNumErots           = 0;
@@ -248,8 +249,20 @@ ErotSendBootComplete (
   UINTN                           ResponseLength;
   EFI_HANDLE                      Handle;
 
+  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+    goto Done;
+  }
+
   Status = ErotLibInit ();
   if (EFI_ERROR (Status)) {
+    if (Status == EFI_NOT_FOUND) {
+      //
+      // For EROT-less system, go ahead to install eROT boot complete protocol to
+      // satisfy FmpDxe dependency for SMBIOS type 45.
+      //
+      goto Done;
+    }
+
     return Status;
   }
 
@@ -267,14 +280,7 @@ ErotSendBootComplete (
   Status = Protocol->DoRequest (Protocol, &Req, sizeof (Req), &Rsp, sizeof (Rsp), &ResponseLength);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: %s request failed: %r\n", __FUNCTION__, Attributes.DeviceName, Status));
-
-    // TODO: remove this retry with old vendor id when all erots are updated
-    MctpUint32ToBEBuffer (Req.Common.Vendor.Id, 0x47160000UL);
-    Status = Protocol->DoRequest (Protocol, &Req, sizeof (Req), &Rsp, sizeof (Rsp), &ResponseLength);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: %s OLD request failed: %r\n", __FUNCTION__, Attributes.DeviceName, Status));
-      return Status;
-    }
+    return Status;
   }
 
   if (ResponseLength != sizeof (Rsp)) {
@@ -300,6 +306,7 @@ ErotSendBootComplete (
     return EFI_DEVICE_ERROR;
   }
 
+Done:
   if (Socket == 0) {
     Handle = NULL;
     Status = gBS->InstallMultipleProtocolInterfaces (

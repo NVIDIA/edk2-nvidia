@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -38,13 +38,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Tegra CPU Driver",
-  .UseDriverBinding                           = FALSE,
   .AutoEnableClocks                           = TRUE,
   .AutoResetModule                            = TRUE,
   .AutoDeassertPg                             = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
-  .DirectEnumerationSupport                   = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
 STATIC

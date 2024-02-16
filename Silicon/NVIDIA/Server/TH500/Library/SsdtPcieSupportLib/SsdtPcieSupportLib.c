@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -20,7 +20,9 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/AcpiTable.h>
@@ -36,7 +38,7 @@
 #include <Protocol/ConfigurationManagerProtocol.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
-#include <GpuDsdAmlGenerationProtocol.h>
+#include <Protocol/GpuDsdAmlGenerationProtocol.h>
 #include <TH500/TH500Definitions.h>
 
 extern CHAR8  ssdtpcietemplate_aml_code[];
@@ -72,7 +74,7 @@ GeneratePciDSDForExtPort (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
     goto exit_handler;
   }
 
@@ -85,7 +87,7 @@ GeneratePciDSDForExtPort (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[CurrentHandle],
@@ -140,6 +142,10 @@ GeneratePciDSDForExtPort (
   }
 
 exit_handler:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
   return Status;
 }
 
@@ -165,7 +171,7 @@ UpdateSharedNSMemAddr (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid protocol: %r\n",
       __FUNCTION__,
       Status
@@ -180,7 +186,7 @@ UpdateSharedNSMemAddr (
   DpcComm  = (RAS_FW_PCIE_DPC_COMM_STRUCT *)DpcCommBuf->PcieBase;
   Socket   = Uid >> 4;
   Instance = Uid & 0xF;
-  DEBUG ((EFI_D_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
+  DEBUG ((DEBUG_VERBOSE, "%a: Socket = %u, Instance = %u\r\n", __FUNCTION__, Socket, Instance));
 
   Status = AmlFindNode (RpNode, "ADDR", &AddrNode);
   if (EFI_ERROR (Status)) {
@@ -217,7 +223,7 @@ UpdateLICAddr (
     return Status;
   }
 
-  Address = Base | (Socket << 44);
+  Address = Base | (Socket << TH500_SOCKET_SHFT);
 
   Status = AmlNameOpUpdateInteger (LicaNode, Address);
   if (EFI_ERROR (Status)) {
@@ -254,6 +260,30 @@ UpdateFSPBootAddr (
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateLOC (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  )
+{
+  EFI_STATUS              Status;
+  AML_OBJECT_NODE_HANDLE  LocNode;
+
+  Status = AmlFindNode (Node, "_LOC", &LocNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AmlNameOpUpdateInteger (LocNode, PciInfo->PciSegmentGroupNumber);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
+}
+
 /** Generate Pci slots devices.
 
   PCI Firmware Specification - Revision 3.3,
@@ -283,7 +313,7 @@ GeneratePciSlots (
   EFI_STATUS                              Status1;
   EFI_ACPI_DESCRIPTION_HEADER             *SsdtPcieTemplate;
   AML_ROOT_NODE_HANDLE                    TemplateRoot;
-  AML_OBJECT_NODE_HANDLE                  Node;
+  AML_OBJECT_NODE_HANDLE                  GpuNode;
   AML_OBJECT_NODE_HANDLE                  DsdNode;
   AML_OBJECT_NODE_HANDLE                  RpNode;
   EFI_HANDLE                              *HandleBuffer;
@@ -295,6 +325,13 @@ GeneratePciSlots (
   UINTN                                   DeviceNumber;
   UINTN                                   FunctionNumber;
   NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL  *GpuDsdGeneration;
+  PCI_DEVICE_PATH                         *PciDevicePathNode;
+  EFI_DEVICE_PATH_PROTOCOL                *DevicePath;
+  AML_OBJECT_NODE_HANDLE                  CurrentNode;
+  AML_OBJECT_NODE_HANDLE                  SwitchNode;
+  CHAR8                                   SwitchName[5];
+  UINT8                                   SwitchNumber;
+  BOOLEAN                                 GpuNodeIsDetached;
 
   ASSERT (
     PciNode !=  NULL
@@ -304,12 +341,13 @@ GeneratePciSlots (
   SsdtPcieTemplate = (EFI_ACPI_DESCRIPTION_HEADER *)
                      ssdtpcietemplate_aml_code;
 
-  Node         = NULL;
-  TemplateRoot = NULL;
-  Status       = AmlParseDefinitionBlock (
-                   SsdtPcieTemplate,
-                   &TemplateRoot
-                   );
+  GpuNodeIsDetached = FALSE;
+  GpuNode           = NULL;
+  TemplateRoot      = NULL;
+  Status            = AmlParseDefinitionBlock (
+                        SsdtPcieTemplate,
+                        &TemplateRoot
+                        );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -352,17 +390,17 @@ GeneratePciSlots (
     return Status;
   }
 
+  Status = UpdateLOC (PciInfo, RpNode);
+  if (EFI_ERROR (Status)) {
+    goto error_handler;
+  }
+
   Status = GeneratePciDSDForExtPort (PciInfo, RpNode, Uid);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
 
   Status = UpdateSharedNSMemAddr (PciInfo, RpNode, Uid);
-  if (EFI_ERROR (Status)) {
-    goto error_handler;
-  }
-
-  Status = UpdateLICAddr (PciInfo, RpNode, Uid, TH500_SW_IO4_BASE_SOCKET_0);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
@@ -420,41 +458,102 @@ GeneratePciSlots (
         goto error_handler;
       }
 
-      Status = AmlFindNode (TemplateRoot, "\\GPU0", &Node);
+      Status = AmlFindNode (TemplateRoot, "\\GPU0", &GpuNode);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
 
-      Status = AmlDetachNode (Node);
+      Status = AmlDetachNode (GpuNode);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
 
-      Status = GpuDsdGeneration->GetDsdNode (GpuDsdGeneration, &DsdNode);
+      GpuNodeIsDetached = TRUE;
+      Status            = GpuDsdGeneration->GetDsdNode (GpuDsdGeneration, &DsdNode);
       if (EFI_ERROR (Status)) {
         ASSERT_EFI_ERROR (Status);
       } else {
-        Status = AmlAttachNode (Node, DsdNode);
+        Status = AmlAttachNode (GpuNode, DsdNode);
         if (EFI_ERROR (Status)) {
-          // Free the detached node.
-          AmlDeleteTree (Node);
           goto error_handler;
         }
       }
 
-      Status = AmlAttachNode (RpNode, Node);
+      Status = gBS->HandleProtocol (
+                      HandleBuffer[HandleIndex],
+                      &gEfiDevicePathProtocolGuid,
+                      (VOID **)&DevicePath
+                      );
       if (EFI_ERROR (Status)) {
-        // Free the detached node.
-        AmlDeleteTree (Node);
+        DEBUG ((DEBUG_ERROR, "%a: no GPU device path: %r\n", __FUNCTION__, Status));
         goto error_handler;
       }
 
-      Status = UpdateLICAddr (PciInfo, Node, Uid, TH500_SW_IO1_BASE_SOCKET_0);
+      CurrentNode  = NULL;
+      SwitchNumber = 0;
+      while (!IsDevicePathEnd (DevicePath)) {
+        DEBUG ((DEBUG_INFO, "%a: type=0x%x subtype=0x%x\n", __FUNCTION__, DevicePath->Type, DevicePath->SubType));
+
+        if ((DevicePath->Type == HARDWARE_DEVICE_PATH) &&
+            (DevicePath->SubType == HW_PCI_DP))
+        {
+          PciDevicePathNode = (PCI_DEVICE_PATH *)DevicePath;
+          DEBUG ((DEBUG_INFO, "%a: Pci Dev=0x%x Func=0x%x \n", __FUNCTION__, PciDevicePathNode->Device, PciDevicePathNode->Function));
+
+          // First PCI device in path is RP node
+          // Last PCI device in path is the GPU node
+          // Any additional PCI devices between first and last are switch nodes
+          if (IsDevicePathEnd (NextDevicePathNode (DevicePath))) {
+            DevicePath = NextDevicePathNode (DevicePath);
+            continue;
+          }
+
+          if (CurrentNode == NULL) {
+            CurrentNode = RpNode;
+          } else {
+            AsciiSPrint (SwitchName, sizeof (SwitchName), "SW%02x", SwitchNumber);
+            Status = AmlCodeGenDevice (SwitchName, CurrentNode, &SwitchNode);
+            if (EFI_ERROR (Status)) {
+              goto error_handler;
+            }
+
+            CurrentNode = SwitchNode;
+            Status      = AmlCodeGenNameInteger (
+                            "_ADR",
+                            (PciDevicePathNode->Device << 16) | PciDevicePathNode->Function,
+                            SwitchNode,
+                            NULL
+                            );
+            if (EFI_ERROR (Status)) {
+              goto error_handler;
+            }
+
+            DEBUG ((DEBUG_INFO, "%a: inserted %a\n", __FUNCTION__, SwitchName));
+
+            SwitchNumber++;
+          }
+        }
+
+        DevicePath = NextDevicePathNode (DevicePath);
+      }
+
+      if (CurrentNode == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: bad DP\n", __FUNCTION__));
+        goto error_handler;
+      }
+
+      Status = AmlAttachNode (CurrentNode, GpuNode);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
 
-      Status = UpdateFSPBootAddr (PciInfo, Node);
+      GpuNodeIsDetached = FALSE;
+      Status            = UpdateLICAddr (PciInfo, GpuNode, Uid, TH500_SW_IO1_BASE_SOCKET_0);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = UpdateFSPBootAddr (PciInfo, GpuNode);
       if (EFI_ERROR (Status)) {
         goto error_handler;
       }
@@ -467,6 +566,10 @@ GeneratePciSlots (
 
 error_handler:
   // Cleanup
+  if (GpuNodeIsDetached) {
+    AmlDeleteTree (GpuNode);
+  }
+
   Status1 = AmlDeleteTree (TemplateRoot);
   if (EFI_ERROR (Status1)) {
     DEBUG ((

@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,14 +21,14 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/VerPartitionLib.h>
-#include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/FirmwareManagementProgress.h>
 #include <Protocol/FwImageProtocol.h>
+#include <Protocol/FwPartitionProtocol.h>
 #include <Protocol/BrBctUpdateProtocol.h>
 #include <Protocol/BootChainProtocol.h>
 #include "TegraFmp.h"
@@ -59,7 +59,7 @@ enum {
   LAS_ERROR_IMAGE_NOT_IN_PACKAGE,
   LAS_ERROR_MB1_INVALIDATE_ERROR,
   LAS_ERROR_SINGLE_IMAGE_NOT_SUPPORTED,
-  LAS_ERROR_IMAGE_INDEX_MISSING,
+  LAS_ERROR_IMAGE_INDEX_MISSING,                        // deprecated
   LAS_ERROR_NO_PROTOCOL_FOR_IMAGE,
   LAS_ERROR_IMAGE_ATTRIBUTES_ERROR,
   LAS_ERROR_BCT_UPDATE_FAILED,
@@ -69,33 +69,24 @@ enum {
   LAS_ERROR_SET_SINGLE_IMAGE_FAILED,
   LAS_ERROR_FMP_LIB_UNINITIALIZED,
   LAS_ERROR_BOOT_CHAIN_UPDATE_CANCELED,
-};
-
-// Package image names to be ignored
-STATIC CONST CHAR16  *IgnoreImageNames[] = {
-  L"BCT",
-  L"BCT_A",
-  L"BCT_B",
-  L"mb1_b",
-  L"mb2-applet",
-  L"secondary_gpt",
-  L"secondary_gpt_backup",
-  NULL
+  LAS_ERROR_GPT_METADATA_UPDATE_FAILED,
+  LAS_ERROR_GPT_VERIFY_FAILED,
+  LAS_ERROR_GPT_INVALIDATE_FAILED,
+  LAS_ERROR_GPT_WRITE_FAILED,
 };
 
 // special images that are not processed in the main loop
 STATIC CONST CHAR16  *SpecialImageNames[] = {
+  L"GPT",
   L"mb1",
+  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
 
-// optional images are only updated if present in capsule
-STATIC CONST CHAR16  *OptionalImageNames[] = {
-  L"sce-fw",
-  L"smm-fw",
-  L"tsec-fw",
-  L"xusb-fw",
-  L"BCT-boot-chain_backup",
+// partitions not verified in main loop
+STATIC CONST CHAR16  *NoVerifyPartitionNames[] = {
+  L"BCT",
+  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
 
@@ -107,24 +98,35 @@ STATIC UINTN  mTotalBytesVerified = 0;
 STATIC UINTN  mCurrentCompletion  = 0;
 
 // module variables
-STATIC EFI_EVENT   mAddressChangeEvent      = NULL;
-STATIC EFI_EVENT   mExitBootServicesEvent   = NULL;
-STATIC BOOLEAN     mPcdFmpWriteVerifyImage  = FALSE;
-STATIC BOOLEAN     mPcdFmpSingleImageUpdate = FALSE;
-STATIC VOID        *mFmpDataBuffer          = NULL;
-STATIC UINTN       mFmpDataBufferSize       = 0;
-STATIC BOOLEAN     mFmpLibInitialized       = FALSE;
-STATIC CHAR8       *mPlatformCompatSpec     = NULL;
-STATIC CHAR8       *mPlatformSpec           = NULL;
-STATIC BOOLEAN     mIsProductionFused       = FALSE;
-STATIC UINT32      mActiveBootChain         = MAX_UINT32;
-STATIC UINT32      mTegraVersion            = 0;
-STATIC CHAR16      *mTegraVersionString     = NULL;
-STATIC EFI_STATUS  mTegraVersionStatus      = EFI_UNSUPPORTED;
+STATIC EFI_EVENT     mAddressChangeEvent      = NULL;
+STATIC BOOLEAN       mPcdFmpWriteVerifyImage  = FALSE;
+STATIC BOOLEAN       mPcdFmpSingleImageUpdate = FALSE;
+STATIC VOID          *mFmpDataBuffer          = NULL;
+STATIC UINTN         mFmpDataBufferSize       = 0;
+STATIC BOOLEAN       mFmpLibInitialized       = FALSE;
+STATIC BOOLEAN       mFmpLibInitializeFailed  = FALSE;
+STATIC CHAR8         *mPlatformCompatSpec     = NULL;
+STATIC CHAR8         *mPlatformSpec           = NULL;
+STATIC BOOLEAN       mIsProductionFused       = FALSE;
+STATIC UINT32        mActiveBootChain         = MAX_UINT32;
+STATIC UINT32        mTegraVersion            = 0;
+STATIC CHAR16        *mTegraVersionString     = NULL;
+STATIC EFI_STATUS    mTegraVersionStatus      = EFI_UNSUPPORTED;
+STATIC CONST CHAR16  **mFwImagesRequired      = NULL;
+STATIC UINTN         mFwImagesRequiredCount   = 0;
 
 STATIC NVIDIA_BOOT_CHAIN_PROTOCOL                     *mBootChainProtocol   = NULL;
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL                  *mBrBctUpdateProtocol = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  mProgress             = NULL;
+STATIC EFI_HANDLE                                     mImageHandle          = NULL;
+FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER                 mInstaller            = NULL;
+
+CONST CHAR16 **
+EFIAPI
+FwImageGetRequiredList (
+  IN  UINTN  ChipId,
+  OUT UINTN  *ImageCount
+  );
 
 /**
   Get production fuse setting from 5th field in TnSpec.  The field must contain
@@ -171,7 +173,8 @@ GetFuseSettings (
     return EFI_SUCCESS;
   }
 
-  mPlatformSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  // ensure null termination
+  mPlatformSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size + 1);
   if (mPlatformSpec == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Spec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -264,7 +267,8 @@ GetTnSpec (
     goto UseDefault;
   }
 
-  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size);
+  // ensure null termination
+  mPlatformCompatSpec = (CHAR8 *)AllocateRuntimeZeroPool (Size + 1);
   if (mPlatformCompatSpec == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: CompatSpec alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -318,6 +322,7 @@ Done:
   Get version info.
 
   @retval EFI_SUCCESS                   Operation completed successfully
+  @retval EFI_NOT_FOUND                 The VER partition wasn't found
   @retval Others                        An error occurred
 
 **/
@@ -338,8 +343,7 @@ GetVersionInfo (
   VerStr = NULL;
   Image  = FwImageFindProtocol (VER_PARTITION_NAME);
   if (Image == NULL) {
-    Status = EFI_NOT_FOUND;
-    goto Done;
+    return EFI_NOT_FOUND;
   }
 
   Status = Image->GetAttributes (Image, &Attributes);
@@ -347,7 +351,7 @@ GetVersionInfo (
     goto Done;
   }
 
-  BufferSize = MIN (Attributes.Bytes, mFmpDataBufferSize);
+  BufferSize = MIN (Attributes.ReadBytes, mFmpDataBufferSize);
   Status     = Image->Read (
                         Image,
                         0,
@@ -465,11 +469,13 @@ ImageWriteProgress (
 {
   UINTN  WriteCompletion;
 
-  mTotalBytesFlashed += Bytes;
-  WriteCompletion     = (mTotalBytesFlashed * FMP_PROGRESS_WRITE_IMAGES) /
-                        mTotalBytesToFlash;
+  if (mProgress != NULL) {
+    mTotalBytesFlashed += Bytes;
+    WriteCompletion     = (mTotalBytesFlashed * FMP_PROGRESS_WRITE_IMAGES) /
+                          mTotalBytesToFlash;
 
-  mProgress (mCurrentCompletion + WriteCompletion);
+    mProgress (mCurrentCompletion + WriteCompletion);
+  }
 }
 
 /**
@@ -604,6 +610,19 @@ GetPackageImageName (
     }
   }
 
+  if ((StrCmp (Name, L"GPT") == 0) ||
+      (StrCmp (Name, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) == 0))
+  {
+    switch (OTHER_BOOT_CHAIN (mActiveBootChain)) {
+      case BOOT_CHAIN_A:
+        PkgImageName = L"secondary_gpt";
+        break;
+      case BOOT_CHAIN_B:
+        PkgImageName = L"secondary_gpt_backup";
+        break;
+    }
+  }
+
   return PkgImageName;
 }
 
@@ -633,6 +652,8 @@ WriteImageFromBuffer (
   EFI_STATUS  Status;
   UINTN       WriteOffset;
   UINTN       BytesPerLoop;
+
+  Status = EFI_SUCCESS;
 
   DEBUG ((
     DEBUG_VERBOSE,
@@ -715,7 +736,7 @@ WriteImage (
                    &ImageIndex
                    );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to find image=%s: %r\n", Name, Status));
+    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
     return Status;
   }
 
@@ -756,6 +777,7 @@ WriteRegularImages (
   UINTN                     PkgImageIndex;
   UINTN                     ImageCount;
   NVIDIA_FW_IMAGE_PROTOCOL  **FwImageProtocolArray;
+  CONST CHAR16              *PkgImageName;
 
   ImageCount           = FwImageGetCount ();
   FwImageProtocolArray = FwImageGetProtocolArray ();
@@ -771,21 +793,24 @@ WriteRegularImages (
       continue;
     }
 
-    Status = FwPackageGetImageIndex (
-               Header,
-               ImageName,
-               mIsProductionFused,
-               mPlatformCompatSpec,
-               mPlatformSpec,
-               &PkgImageIndex
-               );
+    PkgImageName = GetPackageImageName (ImageName, Header);
+    Status       = FwPackageGetImageIndex (
+                     Header,
+                     PkgImageName,
+                     mIsProductionFused,
+                     mPlatformCompatSpec,
+                     mPlatformSpec,
+                     &PkgImageIndex
+                     );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        return Status;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
-      return Status;
+      continue;
     }
 
     Status = WriteImage (
@@ -809,6 +834,7 @@ WriteRegularImages (
   @param[in]  Name                  Name of the FwImage to verify
   @param[in]  Flags                 FwImage flags for the read.  See
                                     NVIDIA_FW_IMAGE_PROTOCOL.Read()
+  @param[in]  CompareDebugLevel     Debug level for compare error message.
 
   @retval EFI_SUCCESS               The operation completed successfully
   @retval Others                    An error occurred
@@ -820,7 +846,8 @@ EFIAPI
 VerifyImage (
   IN  CONST FW_PACKAGE_HEADER  *Header,
   IN  CONST CHAR16             *Name,
-  IN  UINTN                    Flags
+  IN  UINTN                    Flags,
+  IN  UINTN                    CompareDebugLevel
   )
 {
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
@@ -869,7 +896,7 @@ VerifyImage (
                    &ImageIndex
                    );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to find image=%s: %r\n", Name, Status));
+    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
     return Status;
   }
 
@@ -908,7 +935,7 @@ VerifyImage (
 
     if (CompareMem (mFmpDataBuffer, DataBuffer + VerifyOffset, VerifySize) != 0) {
       DEBUG ((
-        DEBUG_ERROR,
+        CompareDebugLevel,
         "Image=%s failed verify near offset=%u\n",
         Name,
         VerifyOffset
@@ -947,6 +974,7 @@ VerifyAllImages (
   UINTN                     PkgImageIndex;
   UINTN                     ImageCount;
   NVIDIA_FW_IMAGE_PROTOCOL  **FwImageProtocolArray;
+  CONST CHAR16              *PkgImageName;
 
   if (!mPcdFmpWriteVerifyImage) {
     return EFI_SUCCESS;
@@ -961,31 +989,35 @@ VerifyAllImages (
 
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
-    if (StrCmp (ImageName, L"BCT") == 0) {
+    if (NameIsInList (ImageName, NoVerifyPartitionNames)) {
       continue;
     }
 
-    Status = FwPackageGetImageIndex (
-               Header,
-               ImageName,
-               mIsProductionFused,
-               mPlatformCompatSpec,
-               mPlatformSpec,
-               &PkgImageIndex
-               );
+    PkgImageName = GetPackageImageName (ImageName, Header);
+    Status       = FwPackageGetImageIndex (
+                     Header,
+                     PkgImageName,
+                     mIsProductionFused,
+                     mPlatformCompatSpec,
+                     mPlatformSpec,
+                     &PkgImageIndex
+                     );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        return Status;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
-      return Status;
+      continue;
     }
 
     Status = VerifyImage (
                Header,
                ImageName,
-               FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE
+               FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE,
+               DEBUG_ERROR
                );
     if (EFI_ERROR (Status)) {
       return Status;
@@ -1036,7 +1068,7 @@ InvalidateImage (
     return Status;
   }
 
-  Bytes = MIN (Attributes.Bytes, mFmpDataBufferSize);
+  Bytes = MIN (Attributes.WriteBytes, mFmpDataBufferSize);
   SetMem (mFmpDataBuffer, Bytes, 0xff);
 
   mTotalBytesToFlash += Bytes;
@@ -1130,7 +1162,7 @@ FmpTegraSetSingleImage (
 
   SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
 
-  Status = VerifyImage (Header, PkgName, WriteFlag);
+  Status = VerifyImage (Header, PkgName, WriteFlag, DEBUG_ERROR);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1159,27 +1191,6 @@ FmpTegraSetSingleImage (
   return EFI_SUCCESS;
 }
 
-/**
-  Handle ExitBootServices() notification to update BCT if the reboot after
-  a FW update successfully booted the new FW.
-
-  @param[in]  Event         Event being handled
-  @param[in]  Context       Event context
-
-  @retval None
-
-**/
-STATIC
-VOID
-EFIAPI
-FmpTegraExitBootServicesNotify (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  DEBUG ((DEBUG_INFO, "%a: ExitBootServices\n", __FUNCTION__));
-}
-
 STATIC
 UINTN
 EFIAPI
@@ -1202,54 +1213,6 @@ FmpTegraGetTotalBytesToFlash (
   }
 
   return TotalBytesToFlash;
-}
-
-EFI_STATUS
-EFIAPI
-FmpTegraGetLowestSupportedVersion (
-  OUT UINT32  *Lsv
-  )
-{
-  EFI_STATUS  Status;
-  VOID        *DtbBase;
-  UINTN       DtbSize;
-  INT32       UefiNode;
-  CONST VOID  *LsvProperty;
-  INT32       LsvLength;
-
-  if (Lsv == NULL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Invalid parameter.\n",
-      __FUNCTION__
-      ));
-    return EFI_INVALID_PARAMETER;
-  }
-
-  *Lsv   = 0;
-  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: couldn't load DT\n", __FUNCTION__));
-    return Status;
-  }
-
-  UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
-  if (UefiNode >= 0) {
-    LsvProperty = fdt_getprop (DtbBase, UefiNode, "fmp-lowest-supported-version", &LsvLength);
-    if ((LsvProperty != NULL) && (LsvLength == sizeof (UINT32))) {
-      *Lsv = fdt32_to_cpu (*(UINT32 *)LsvProperty);
-    }
-  }
-
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: Read fmp-lowest-supported-version=%u: %r\n",
-    __FUNCTION__,
-    *Lsv,
-    Status
-    ));
-
-  return Status;
 }
 
 EFI_STATUS
@@ -1302,6 +1265,9 @@ FmpTegraCheckImage (
   NVIDIA_FW_IMAGE_PROTOCOL     **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
+  CONST CHAR16                 *PkgImageName;
+  CONST CHAR16                 *RequiredImageName;
+  NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1366,6 +1332,20 @@ FmpTegraCheckImage (
     return Status;
   }
 
+  // If supported, update inactive FwPartition meta-data by writing capsule
+  // GPT data to pseudo-image.
+  if (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) {
+    Status = WriteImage (
+               Header,
+               FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
+               FW_IMAGE_RW_FLAG_NONE
+               );
+    if (EFI_ERROR (Status)) {
+      *LastAttemptStatus = LAS_ERROR_GPT_METADATA_UPDATE_FAILED;
+      return EFI_ABORTED;
+    }
+  }
+
   ImageCount = FwImageGetCount ();
 
   // Handle special case of a development package with exactly one image
@@ -1398,10 +1378,9 @@ FmpTegraCheckImage (
 
   FwImageProtocolArray = FwImageGetProtocolArray ();
   for (Index = 0; Index < ImageCount; Index++) {
-    CONST CHAR16              *ImageName;
-    UINTN                     PkgImageIndex;
-    NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
-    FW_IMAGE_ATTRIBUTES       ImageAttributes;
+    CONST CHAR16         *ImageName;
+    UINTN                PkgImageIndex;
+    FW_IMAGE_ATTRIBUTES  ImageAttributes;
 
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
@@ -1410,24 +1389,26 @@ FmpTegraCheckImage (
       continue;
     }
 
-    Status = FwPackageGetImageIndex (
-               Header,
-               ImageName,
-               mIsProductionFused,
-               mPlatformCompatSpec,
-               mPlatformSpec,
-               &PkgImageIndex
-               );
+    PkgImageName = GetPackageImageName (ImageName, Header);
+    Status       = FwPackageGetImageIndex (
+                     Header,
+                     PkgImageName,
+                     mIsProductionFused,
+                     mPlatformCompatSpec,
+                     mPlatformSpec,
+                     &PkgImageIndex
+                     );
     if (EFI_ERROR (Status)) {
-      if (NameIsInList (ImageName, OptionalImageNames)) {
-        DEBUG ((DEBUG_INFO, "optional %s not in package: %r\n", ImageName, Status));
-        continue;
+      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+
+      if (NameIsInList (ImageName, mFwImagesRequired)) {
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
+        *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
+        return EFI_ABORTED;
       }
 
-      DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", ImageName, Status));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
-      *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
-      return EFI_ABORTED;
+      continue;
     }
 
     PkgImageInfo = FwPackageImageInfoPtr (Header, PkgImageIndex);
@@ -1445,13 +1426,13 @@ FmpTegraCheckImage (
       return EFI_ABORTED;
     }
 
-    if (PkgImageInfo->Bytes > ImageAttributes.Bytes) {
+    if (PkgImageInfo->Bytes > ImageAttributes.WriteBytes) {
       DEBUG ((
         DEBUG_ERROR,
         "Package image %s is bigger than partition: %u > %u\n",
         ImageName,
         PkgImageInfo->Bytes,
-        ImageAttributes.Bytes
+        ImageAttributes.WriteBytes
         ));
       *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_IMAGE_TOO_BIG;
@@ -1472,48 +1453,12 @@ FmpTegraCheckImage (
     }
   }
 
-  // Check that every image in the package has a protocol
-  for (Index = 0; Index < Header->ImageCount; Index++) {
-    CHAR16                    ImageName[FW_IMAGE_NAME_LENGTH];
-    NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
-
-    PkgImageInfo = FwPackageImageInfoPtr (Header, Index);
-    if (PkgImageInfo == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Image %u not found in package with %u images\n",
-        __FUNCTION__,
-        Index,
-        Header->ImageCount
-        ));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
-      *LastAttemptStatus = LAS_ERROR_IMAGE_INDEX_MISSING;
-      return EFI_ABORTED;
-    }
-
-    FwPackageCopyImageName (ImageName, PkgImageInfo, sizeof (ImageName));
-    DEBUG ((DEBUG_INFO, "%a: Image %u is %s\n", __FUNCTION__, Index, ImageName));
-
-    if (NameIsInList (ImageName, IgnoreImageNames)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: Image %u, skipping %s\n",
-        __FUNCTION__,
-        Index,
-        ImageName
-        ));
-      continue;
-    }
-
-    FwImageProtocol = FwImageFindProtocol (ImageName);
+  // Check that every required image has a protocol
+  for (Index = 0; Index < mFwImagesRequiredCount; Index++) {
+    RequiredImageName = mFwImagesRequired[Index];
+    FwImageProtocol   = FwImageFindProtocol (RequiredImageName);
     if (FwImageProtocol == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Image %u, no protocol for %s\n",
-        __FUNCTION__,
-        Index,
-        ImageName
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, RequiredImageName));
       *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_NO_PROTOCOL_FOR_IMAGE;
       return EFI_ABORTED;
@@ -1540,6 +1485,7 @@ FmpTegraSetImage (
 {
   CONST FW_PACKAGE_HEADER  *Header;
   EFI_STATUS               Status;
+  BOOLEAN                  GptUpdate;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1598,6 +1544,33 @@ FmpTegraSetImage (
     mTotalBytesToFlash
     ));
 
+  // detect optional GPT update
+  GptUpdate = FALSE;
+  if (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) {
+    Status = VerifyImage (
+               Header,
+               L"GPT",
+               FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE,
+               DEBUG_INFO
+               );
+    if ((Status != EFI_VOLUME_CORRUPTED) && (Status != EFI_SUCCESS)) {
+      DEBUG ((DEBUG_ERROR, "%a: error verifying GPT: %r\n", __FUNCTION__, Status));
+      *LastAttemptStatus = LAS_ERROR_GPT_VERIFY_FAILED;
+      return EFI_ABORTED;
+    }
+
+    GptUpdate = (Status != EFI_SUCCESS);
+  }
+
+  if (GptUpdate) {
+    Status = InvalidateImage (L"GPT", FW_IMAGE_RW_FLAG_NONE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Invalidate GPT failed: %r\n", Status));
+      *LastAttemptStatus = LAS_ERROR_GPT_INVALIDATE_FAILED;
+      return EFI_ABORTED;
+    }
+  }
+
   Status = InvalidateImage (L"mb1", FW_IMAGE_RW_FLAG_NONE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Invalidate mb1 failed: %r\n", Status));
@@ -1615,6 +1588,16 @@ FmpTegraSetImage (
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_MB1_WRITE_ERROR;
     return EFI_ABORTED;
+  }
+
+  if (GptUpdate) {
+    Status = WriteImage (Header, L"GPT", FW_IMAGE_RW_FLAG_NONE);
+    if (EFI_ERROR (Status)) {
+      *LastAttemptStatus = LAS_ERROR_GPT_WRITE_FAILED;
+      return EFI_ABORTED;
+    }
+
+    DEBUG ((DEBUG_INFO, "\n%a: Chain %u GPT updated\n", __FUNCTION__, OTHER_BOOT_CHAIN (mActiveBootChain)));
   }
 
   SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
@@ -1640,8 +1623,82 @@ FmpTegraSetImage (
 Done:
   SetImageProgress (FMP_PROGRESS_UPDATE_BCT);
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
+
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
   return EFI_SUCCESS;
+}
+
+/**
+  Install FMP by calling installer function.
+
+  @return None
+
+**/
+VOID
+EFIAPI
+FwImageInstallFmp (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  if (mInstaller == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no installer\n", __FUNCTION__));
+    return;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: installing FMP\n", __FUNCTION__));
+
+  Status = mInstaller (mImageHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP installer failed: %r\n", __FUNCTION__, Status));
+  }
+
+  mInstaller = NULL;
+}
+
+/**
+  Function to handle new FwImage found or FmpDxe registers installer function.
+
+  @return None
+
+**/
+VOID
+EFIAPI
+FmpDeviceFwImageCallback (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  if (mTegraVersionStatus == EFI_UNSUPPORTED) {
+    Status = GetVersionInfo ();
+    if (!EFI_ERROR (Status)) {
+      mFmpLibInitialized = TRUE;
+    } else if (Status == EFI_NOT_FOUND) {
+      return;
+    }
+  }
+
+  FwImageInstallFmp ();
+  FwImageRegisterImageAddedCallback (NULL);
+}
+
+VOID
+EFIAPI
+FmpTegraRegisterInstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
+  )
+{
+  mInstaller = Function;
+
+  if (mFmpLibInitializeFailed) {
+    DEBUG ((DEBUG_ERROR, "%a: init failed\n", __FUNCTION__));
+    FwImageInstallFmp ();
+    return;
+  }
+
+  FmpDeviceFwImageCallback ();
 }
 
 /**
@@ -1663,6 +1720,10 @@ FmpDeviceLibConstructor (
 {
   EFI_STATUS  Status;
   VOID        *Hob;
+
+  mImageHandle = ImageHandle;
+
+  FmpParamLibInit ();
 
   mPcdFmpWriteVerifyImage  = PcdGetBool (PcdFmpWriteVerifyImage);
   mPcdFmpSingleImageUpdate = PcdGetBool (PcdFmpSingleImageUpdate);
@@ -1720,35 +1781,6 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  FmpTegraExitBootServicesNotify,
-                  NULL,
-                  &gEfiEventExitBootServicesGuid,
-                  &mExitBootServicesEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error creating exit boot services event: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
-  Status = GetVersionInfo ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting version info: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
   Status = GetFuseSettings ();
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -1771,18 +1803,15 @@ FmpDeviceLibConstructor (
     goto Done;
   }
 
-  mFmpLibInitialized = TRUE;
+  mFwImagesRequired = FwImageGetRequiredList (TegraGetChipID (), &mFwImagesRequiredCount);
+  FwImageRegisterImageAddedCallback (FmpDeviceFwImageCallback);
+  Status = EFI_SUCCESS;
 
 Done:
   if (EFI_ERROR (Status)) {
     if (mFmpDataBuffer != NULL) {
       FreePool (mFmpDataBuffer);
       mFmpDataBuffer = NULL;
-    }
-
-    if (mExitBootServicesEvent != NULL) {
-      gBS->CloseEvent (mExitBootServicesEvent);
-      mExitBootServicesEvent = NULL;
     }
 
     if (mAddressChangeEvent != NULL) {
@@ -1800,10 +1829,11 @@ Done:
       mPlatformSpec = NULL;
     }
 
-    mFmpDataBufferSize   = 0;
-    mBrBctUpdateProtocol = NULL;
-    mBootChainProtocol   = NULL;
-    mActiveBootChain     = MAX_UINT32;
+    mFmpDataBufferSize      = 0;
+    mBrBctUpdateProtocol    = NULL;
+    mBootChainProtocol      = NULL;
+    mActiveBootChain        = MAX_UINT32;
+    mFmpLibInitializeFailed = TRUE;
   }
 
   // mFmpLibInitialized flag inibits API if there was an error

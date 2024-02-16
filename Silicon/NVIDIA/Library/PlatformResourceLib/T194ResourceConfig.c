@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -8,18 +8,24 @@
 
 #include <Uefi.h>
 #include <Pi/PiMultiPhase.h>
+
 #include <Library/BaseMemoryLib.h>
 #include <Library/DramCarveoutLib.h>
-#include <Library/DebugLib.h>
-#include <Library/HobLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Library/GoldenRegisterLib.h>
-#include "T194ResourceConfigPrivate.h"
-#include "T194ResourceConfig.h"
-#include <T194/T194Definitions.h>
-#include <Protocol/Eeprom.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
+#include <Library/NvgLib.h>
+#include <Library/TegraPlatformInfoLib.h>
+
+#include <Protocol/Eeprom.h>
+
+#include <T194/T194Definitions.h>
+
+#include "PlatformResourceConfig.h"
+#include "T194ResourceConfig.h"
+#include "T194ResourceConfigPrivate.h"
 
 TEGRA_MMIO_INFO  T194MmioInfo[] = {
   {
@@ -27,16 +33,16 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
     SIZE_4KB
   },
   {
-    FixedPcdGet64 (PcdTegraCombinedUartRxMailbox),
-    SIZE_4KB
-  },
-  {
-    FixedPcdGet64 (PcdTegraMCBBaseAddress),
+    T194_MEMORY_CONTROLLER_BASE,
     SIZE_4KB
   },
   {
     T194_GIC_INTERRUPT_INTERFACE_BASE,
     SIZE_4KB
+  },
+  {
+    T194_SCRATCH_BASE,
+    SIZE_64KB
   },
   {
     0,
@@ -46,6 +52,209 @@ TEGRA_MMIO_INFO  T194MmioInfo[] = {
 
 TEGRA_FUSE_INFO  T194FloorsweepingFuseList[] = {
 };
+
+NVDA_MEMORY_REGION  T194DramPageBlacklistInfoAddress[] = {
+  {
+    0,
+    0
+  },
+  {
+    0,
+    0
+  }
+};
+
+STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo;
+
+/**
+   Builds a list of DRAM memory regions.
+
+   @param[in]  CpuBootloaderParams  CPU BL params.
+   @param[out] DramRegions          The list of DRAM regions.
+   @param[out] DramRegionCount      Number of DRAM regions in the list.
+
+   @retval EFI_SUCCESS    The list was built successfully.
+   @retval !=EFI_SUCCESS  Errors occurred.
+*/
+STATIC
+EFI_STATUS
+T194BuildDramRegions (
+  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  OUT NVDA_MEMORY_REGION      **CONST  DramRegions,
+  OUT UINTN                    *CONST  DramRegionCount
+  )
+{
+  NVDA_MEMORY_REGION  *Regions;
+  CONST UINTN         RegionCount = 1;
+
+  Regions = (NVDA_MEMORY_REGION *)AllocatePool (RegionCount * sizeof (*Regions));
+  NV_ASSERT_RETURN (
+    Regions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu DRAM regions\r\n",
+    __FUNCTION__,
+    (UINT64)RegionCount
+    );
+
+  Regions[0].MemoryBaseAddress = TegraGetSystemMemoryBaseAddress (T194_CHIP_ID);
+  Regions[0].MemoryLength      = CpuBootloaderParams->SdramSize;
+
+  *DramRegions     = Regions;
+  *DramRegionCount = RegionCount;
+  return EFI_SUCCESS;
+}
+
+/**
+   Adds bootloader carveouts to a memory region list.
+
+   @param[in]     Regions            The list of memory regions.
+   @param[in,out] RegionCount        Number of regions in the list.
+   @param[in]     UsableRegions      The list of usable memory regions.
+   @param[in,out] UsableRegionCount  Number of usable regions in the list.
+   @param[in]     Carveouts          Bootloader carveouts.
+   @param[in]     CarveoutCount      Number of bootloader carveouts.
+*/
+STATIC
+VOID
+T194AddBootloaderCarveouts (
+  IN     NVDA_MEMORY_REGION          *CONST  Regions,
+  IN OUT UINTN                       *CONST  RegionCount,
+  IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
+  IN OUT UINTN                       *CONST  UsableRegionCount,
+  IN     CONST TEGRABL_CARVEOUT_INFO *CONST  Carveouts,
+  IN     CONST UINTN                         CarveoutCount
+  )
+{
+  UINTN                 Index;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINT64                Size, Pages;
+  EFI_MEMORY_TYPE       MemoryType;
+
+  for (Index = 0; Index < CarveoutCount; Index++) {
+    Base = Carveouts[Index].Base;
+    Size = Carveouts[Index].Size;
+
+    if ((Base == 0) || (Size == 0)) {
+      continue;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      Index,
+      Base,
+      Size
+      ));
+
+    switch (Index) {
+      case CARVEOUT_MISC:
+        // Leave in memory map but marked as used
+        if (!EFI_ERROR (ValidateGrBlobHeader (GetGRBlobBaseAddress ()))) {
+          MemoryType = EfiReservedMemoryType;
+        } else {
+          MemoryType = EfiBootServicesData;
+        }
+
+        Pages = EFI_SIZE_TO_PAGES (Size);
+        BuildMemoryAllocationHob (Base, EFI_PAGES_TO_SIZE (Pages), MemoryType);
+        PlatformResourceAddMemoryRegion (UsableRegions, UsableRegionCount, Base, Size);
+        break;
+
+      case CARVEOUT_CPUBL:
+      case CARVEOUT_OS:
+      case CARVEOUT_MB2:
+      case CARVEOUT_RCM_BLOB:
+        PlatformResourceAddMemoryRegion (UsableRegions, UsableRegionCount, Base, Size);
+        break;
+
+      default:
+        break;
+    }
+
+    PlatformResourceAddMemoryRegion (Regions, RegionCount, Base, Size);
+  }
+}
+
+/**
+   Builds a list of carveout memory regions.
+
+   @param[in]  CpuBootloaderParams        CPU BL params.
+   @param[out] CarveoutRegions            The list of carveout regions.
+   @param[out] CarveoutRegionCount        Number of carveout regions in the list.
+   @param[out] UsableCarveoutRegions      The list of usable carveout regions.
+   @param[out] UsableCarveoutRegionCount  Number of usable carveout regions in the list.
+
+   @retval EFI_SUCCESS    The list was built successfully.
+   @retval !=EFI_SUCCESS  Errors occurred.
+*/
+STATIC
+EFI_STATUS
+T194BuildCarveoutRegions (
+  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  OUT NVDA_MEMORY_REGION      **CONST  CarveoutRegions,
+  OUT UINTN                    *CONST  CarveoutRegionCount,
+  OUT NVDA_MEMORY_REGION      **CONST  UsableCarveoutRegions,
+  OUT UINTN                    *CONST  UsableCarveoutRegionCount
+  )
+{
+  NVDA_MEMORY_REGION  *Regions;
+  UINTN               RegionCount, RegionCountMax;
+  NVDA_MEMORY_REGION  *UsableRegions;
+  UINTN               UsableRegionCount, UsableRegionCountMax;
+
+  CONST BOOLEAN  DramPageRetirementEnabled =
+    CpuBootloaderParams->FeatureFlag.EnableDramPageBlacklisting;
+
+  RegionCountMax = UsableRegionCountMax = CARVEOUT_NUM;
+  if (DramPageRetirementEnabled) {
+    RegionCountMax += NUM_DRAM_BAD_PAGES;
+  }
+
+  Regions = (NVDA_MEMORY_REGION *)AllocatePool (RegionCountMax * sizeof (*Regions));
+  NV_ASSERT_RETURN (
+    Regions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu carveout regions\r\n",
+    __FUNCTION__,
+    (UINT64)RegionCountMax
+    );
+
+  UsableRegions = (NVDA_MEMORY_REGION *)AllocatePool (UsableRegionCountMax * sizeof (*UsableRegions));
+  NV_ASSERT_RETURN (
+    UsableRegions != NULL,
+    return EFI_DEVICE_ERROR,
+    "%a: Failed to allocate %lu usable carveout regions\r\n",
+    __FUNCTION__,
+    (UINT64)UsableRegionCountMax
+    );
+
+  RegionCount = UsableRegionCount = 0;
+
+  T194AddBootloaderCarveouts (
+    Regions,
+    &RegionCount,
+    UsableRegions,
+    &UsableRegionCount,
+    CpuBootloaderParams->CarveoutInfo,
+    CARVEOUT_NUM
+    );
+
+  if (DramPageRetirementEnabled) {
+    PlatformResourceAddRetiredDramPages (
+      Regions,
+      &RegionCount,
+      (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->DramPageBlacklistInfoAddress,
+      NUM_DRAM_BAD_PAGES,
+      SIZE_4KB
+      );
+  }
+
+  *CarveoutRegions           = Regions;
+  *CarveoutRegionCount       = RegionCount;
+  *UsableCarveoutRegions     = UsableRegions;
+  *UsableCarveoutRegionCount = UsableRegionCount;
+  return EFI_SUCCESS;
+}
 
 /**
   Installs resources into the HOB list
@@ -65,88 +274,62 @@ T194GetResourceConfig (
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  NVDA_MEMORY_REGION  *DramRegions;
-  NVDA_MEMORY_REGION  *CarveoutRegions;
-  UINTN               CarveoutRegionsCount = 0;
-  UINTN               Index;
-  UINT64              *DramPageBlacklistInfo;
+  EFI_STATUS          Status;
+  NVDA_MEMORY_REGION  *DramRegions, *CarveoutRegions, *UsableCarveoutRegions;
+  UINTN               DramRegionCount, CarveoutRegionCount, UsableCarveoutRegionCount;
 
-  CpuBootloaderParams          = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  PlatformInfo->DtbLoadAddress = CpuBootloaderParams->BlDtbLoadAddress;
+  TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams =
+    (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  // Build dram regions
-  DramRegions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (NVDA_MEMORY_REGION));
-  ASSERT (DramRegions != NULL);
-  if (DramRegions == NULL) {
-    return EFI_DEVICE_ERROR;
+  Status = T194BuildDramRegions (
+             CpuBootloaderParams,
+             &DramRegions,
+             &DramRegionCount
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  DramRegions->MemoryBaseAddress    = TegraGetSystemMemoryBaseAddress (T194_CHIP_ID);
-  DramRegions->MemoryLength         = CpuBootloaderParams->SdramSize;
-  PlatformInfo->DramRegions         = DramRegions;
-  PlatformInfo->DramRegionsCount    = 1;
-  PlatformInfo->UefiDramRegionIndex = 0;
-
-  // Build Carveout regions
-  CarveoutRegions = (NVDA_MEMORY_REGION *)AllocatePool (
-                                            (sizeof (NVDA_MEMORY_REGION) * (CARVEOUT_NUM + NUM_DRAM_BAD_PAGES))
-                                            );
-  ASSERT (CarveoutRegions != NULL);
-  if (CarveoutRegions == NULL) {
-    return EFI_DEVICE_ERROR;
+  Status = T194BuildCarveoutRegions (
+             CpuBootloaderParams,
+             &CarveoutRegions,
+             &CarveoutRegionCount,
+             &UsableCarveoutRegions,
+             &UsableCarveoutRegionCount
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  for (Index = CARVEOUT_NONE; Index < CARVEOUT_NUM; Index++) {
-    if ((CpuBootloaderParams->CarveoutInfo[Index].Base == 0) ||
-        (CpuBootloaderParams->CarveoutInfo[Index].Size == 0))
-    {
-      continue;
-    }
-
-    DEBUG ((
-      EFI_D_ERROR,
-      "Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n",
-      Index,
-      CpuBootloaderParams->CarveoutInfo[Index].Base,
-      CpuBootloaderParams->CarveoutInfo[Index].Size
-      ));
-    if (Index == CARVEOUT_MISC) {
-      // Leave in memory map but marked as used
-      BuildMemoryAllocationHob (
-        CpuBootloaderParams->CarveoutInfo[Index].Base,
-        EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CpuBootloaderParams->CarveoutInfo[Index].Size)),
-        (ValidateGrBlobHeader (GetGRBlobBaseAddress ()) == EFI_SUCCESS) ? EfiReservedMemoryType : EfiBootServicesData
-        );
-    } else if ((Index != CARVEOUT_CPUBL) &&
-               (Index != CARVEOUT_OS) &&
-               (Index != CARVEOUT_MB2) &&
-               (Index != CARVEOUT_RCM_BLOB) &&
-               (CpuBootloaderParams->CarveoutInfo[Index].Size != 0))
-    {
-      CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Index].Base;
-      CarveoutRegions[CarveoutRegionsCount].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Index].Size;
-      CarveoutRegionsCount++;
-    }
-  }
-
-  if (CpuBootloaderParams->FeatureFlag.EnableDramPageBlacklisting) {
-    DramPageBlacklistInfo = (UINT64 *)CpuBootloaderParams->DramPageBlacklistInfoAddress;
-    for (Index = 0; Index < NUM_DRAM_BAD_PAGES; Index++) {
-      if (DramPageBlacklistInfo[Index] == 0) {
-        break;
-      } else {
-        CarveoutRegions[CarveoutRegionsCount].MemoryBaseAddress = DramPageBlacklistInfo[Index];
-        CarveoutRegions[CarveoutRegionsCount].MemoryLength      = SIZE_4KB;
-        CarveoutRegionsCount++;
-      }
-    }
-  }
-
-  PlatformInfo->CarveoutRegions      = CarveoutRegions;
-  PlatformInfo->CarveoutRegionsCount = CarveoutRegionsCount;
+  PlatformInfo->DtbLoadAddress             = CpuBootloaderParams->BlDtbLoadAddress;
+  PlatformInfo->DramRegions                = DramRegions;
+  PlatformInfo->DramRegionsCount           = DramRegionCount;
+  PlatformInfo->UefiDramRegionIndex        = 0;
+  PlatformInfo->CarveoutRegions            = CarveoutRegions;
+  PlatformInfo->CarveoutRegionsCount       = CarveoutRegionCount;
+  PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
+  PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionCount;
 
   return EFI_SUCCESS;
+}
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+T194GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  T194DramPageBlacklistInfoAddress[0].MemoryBaseAddress = CpuBootloaderParams->DramPageBlacklistInfoAddress & ~EFI_PAGE_MASK;
+  T194DramPageBlacklistInfoAddress[0].MemoryLength      = SIZE_64KB;
+
+  return T194DramPageBlacklistInfoAddress;
 }
 
 /**
@@ -378,6 +561,20 @@ T194GetUpdateBrBct (
 }
 
 /**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+T194GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  PlatformResourceInfo->AffinityMpIdrSupported = FALSE;
+  return NvgGetEnabledCoresBitMap (PlatformResourceInfo->EnabledCoresBitMap);
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -504,6 +701,44 @@ T194SetNextBootChain (
       BOOT_CHAIN_GOOD
       );
   }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+T194SetNextBootRecovery (
+  IN  VOID
+  )
+{
+  MmioBitFieldWrite32 (
+    T194_SCRATCH_BASE + SCRATCH_RECOVERY_BOOT_OFFSET,
+    RECOVERY_BOOT_BIT,
+    RECOVERY_BOOT_BIT,
+    1
+    );
+}
+
+EFI_STATUS
+EFIAPI
+T194UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  if (PlatformResourceInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PlatformResourceInfo->VprInfo = &mVprInfo;
+  mVprInfo.Base                 =
+    ((UINT64)MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+    MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_BOM_0);
+  mVprInfo.Size =
+    (UINT64)MmioRead32 (T194_MEMORY_CONTROLLER_BASE + MC_VIDEO_PROTECT_SIZE_MB_0) << 20;
 
   return EFI_SUCCESS;
 }

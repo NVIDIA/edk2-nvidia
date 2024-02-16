@@ -2,7 +2,7 @@
 
   TegraP2U Driver private structures
 
-  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,7 +19,7 @@ typedef struct {
   UINT32        Signature;
   LIST_ENTRY    Link;
   UINT32        P2UId;
-  UINT32        BaseAddr;
+  UINT64        BaseAddr;
   BOOLEAN       SkipSizeProtectionEn;
   LIST_ENTRY    NotifyList;
 } TEGRAP2U_LIST_ENTRY;

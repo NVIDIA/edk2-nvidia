@@ -1,0 +1,43 @@
+/** @file
+  Platform Redfish boot order driver VFR file.
+
+  (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
+  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+
+#include "PlatformRedfishBootData.h"
+
+formset
+  guid      = PLATFORM_REDFISH_BOOT_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_FORM_SET_TITLE),
+  help      = STRING_TOKEN(STR_FORM_SET_TITLE_HELP),
+  classguid = PLATFORM_REDFISH_BOOT_FORMSET_GUID,
+
+  //
+  // Define a variable Storage for boot order
+  //
+  varstore PLATFORM_REDFISH_BOOT_OPTION_VARSTORE_DATA,
+    varid = BOOT_OPTION_VAR_STORE_ID,
+    name = PlatformRedfishBootOptionVar,
+    guid = PLATFORM_REDFISH_BOOT_FORMSET_GUID;
+
+  //
+  // Define a Form (EFI_IFR_FORM)
+  //
+  form formid = FORM_ID,                          // Form ID
+       title  = STRING_TOKEN(STR_FORM_TITLE);     // Form title
+
+    subtitle text = STRING_TOKEN(STR_BOOT_ORDER);
+
+    //
+    // This is where we will dynamically add choices for the Boot Manager
+    //
+    label LABEL_BOOT_OPTION;
+    label LABEL_BOOT_OPTION_END;
+
+  endform;
+endformset;

@@ -3,7 +3,7 @@
   Provides a driver binding protocol for supported NVIDIA GPUs
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,12 +17,19 @@
 #include <Protocol/DriverBinding.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/PciIo.h>
+#include <Protocol/BpmpIpc.h>
+#include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PciHostBridgeLib.h>
+#include <Library/DeviceDiscoveryLib/DeviceDiscoveryLibPrivate.h>
+
+#include <TH500/TH500Definitions.h>
 
 #include <IndustryStandard/Pci.h>
 
@@ -45,6 +52,9 @@
 #define NVIDIA_GPUDEVICELIBDRIVER_VERSION  0x10
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
+
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX      600000
+#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS  5
 
 /** Diagnostic dump of GPU Driver Binding Private Data
     @param[in] This                         Private Data structure.
@@ -243,6 +253,167 @@ NVIDIAGpuDriverSupported (
   return Status;
 }
 
+/** Helper function to get BPMP phandle
+    @param[in]  This                  EFI_DRIVER_BINDING_PROTOCOL instance
+    @param[in]  Segment               PCI Segment
+    @param[out] *Phandle              returned BPMP phandle
+
+    @retval EFI_SUCCESS               BPMP phandle succesfully returned
+    @retval EFI_UNSUPPORTED           failed obtaining PCI HostBridge | RootBridgeConfigurationIo Protocol
+    @retval EFI_OUT_OF_RESOURCES      failed allocating storage for Root Bridge handles
+    @retval other                     BPMP phandle not valid
+**/
+STATIC
+EFI_STATUS
+GetBpmpPhandle (
+  IN UINTN       Segment,
+  IN OUT UINT32  *Phandle
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL                          *BpmpIpcProtocol = NULL;
+  EFI_STATUS                                        Status           = EFI_SUCCESS;
+  EFI_HANDLE                                        *HandleBuffer    = NULL;
+  EFI_HANDLE                                        Handle;
+  UINTN                                             NoHandles;
+  UINTN                                             Index;
+  PCI_ROOT_BRIDGE                                   *RootBridgeBuffer = NULL;
+  PCI_ROOT_BRIDGE                                   *RootBridge;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciHostBridgeProtocolGuid,
+                  NULL,
+                  &NoHandles,
+                  &HandleBuffer
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  /* If the buffer is NULL, assume the Host Bridge protocol isn't available instead of OUT_OF_RESOURCES */
+  if (HandleBuffer == NULL) {
+    Status = EFI_UNSUPPORTED;
+    return Status;
+  }
+
+  RootBridgeBuffer = (PCI_ROOT_BRIDGE *)AllocatePool (sizeof (PCI_ROOT_BRIDGE) * NoHandles);
+  if (RootBridgeBuffer == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    return Status;
+  }
+
+  for (Index = 0; Index < NoHandles; Index++) {
+    Handle     = HandleBuffer[Index];
+    RootBridge = NULL;
+    Status     = gBS->HandleProtocol (
+                        Handle,
+                        &gNVIDIAPciHostBridgeProtocolGuid,
+                        (VOID **)&RootBridge
+                        );
+    if (EFI_ERROR (Status)) {
+      FreePool (RootBridgeBuffer);
+      Status = EFI_UNSUPPORTED;
+      return Status;
+    }
+
+    if (RootBridge->Segment != Segment) {
+      continue;
+    }
+
+    /* segments match, get BPMP phandle */
+    RootBridgeCfgIo = NULL;
+    Status          = gBS->HandleProtocol (
+                             Handle,
+                             &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                             (VOID **)&RootBridgeCfgIo
+                             );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: error getting RootBridgeCfgIo protocol: %r\n", __FUNCTION__, Status));
+      FreePool (RootBridgeBuffer);
+      Status = EFI_UNSUPPORTED;
+      return Status;
+    }
+
+    *Phandle = RootBridgeCfgIo->BpmpPhandle;
+    Status   = EFI_SUCCESS;
+    break;
+  }
+
+  if (RootBridgeBuffer != NULL) {
+    FreePool (RootBridgeBuffer);
+  }
+
+  return Status;
+}
+
+/** Update VDM with PCI Bus Device Function for the given NV GPU
+
+    @param[in]  This                  EFI_DRIVER_BINDING_PROTOCOL instance
+    @param[in]  Segment               PCI Segment
+    @param[in]  Bus                   PCI Bus
+    @param[in]  Device                PCI Device
+    @param[in]  Function              PCI Function
+
+    @retval EFI_SUCCESS               PCI VDM updated succesfully.
+    @retval EFI_NOT_READY             BPMP IPC protocol unavailable.
+    @retval EFI_DEVICE_ERROR          BPMP IPC communication error.
+    @retval other                     UPHY phandle not valid
+**/
+STATIC
+EFI_STATUS
+UpdateVDM (
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN UINTN                        Segment,
+  IN UINTN                        Bus,
+  IN UINTN                        Device,
+  IN UINTN                        Function
+  )
+{
+  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol;
+  MRQ_UPHY_COMMAND_PACKET   Request;
+  UINT32                    BpmpPhandle;
+  EFI_STATUS                Status;
+  EFI_STATUS                BpmpStatus;
+  INT32                     BpmpMessageError;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed getting BpmpIPC Protocol: %r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  Request.Lane              = (UINT16)0;
+  Request.Command           = (UINT16)CmdUphyPcieConfigVdm;
+  Request.Controller        = (UINT8)PCIE_ID_TO_INTERFACE (Segment);
+  Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) |
+                                       ((Device   & 0x1f) << 3) |
+                                       ((Function & 0x07) << 0));
+  Status = GetBpmpPhandle (Segment, &BpmpPhandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed getting UPHY phandle: %r\n", __FUNCTION__, Status));
+    Status = EFI_ABORTED;
+  } else {
+    BpmpStatus = BpmpIpcProtocol->Communicate (
+                                    BpmpIpcProtocol,
+                                    NULL,           /* Token */
+                                    BpmpPhandle,
+                                    MRQ_UPHY,
+                                    (VOID *)&Request,
+                                    sizeof (MRQ_UPHY_COMMAND_PACKET),
+                                    NULL,           /* Response     */
+                                    0,              /* ResponseSize */
+                                    &BpmpMessageError
+                                    );
+    if (EFI_ERROR (BpmpStatus)) {
+      DEBUG ((DEBUG_ERROR, "%a: BpmpMessageError: %d\n", __FUNCTION__, BpmpMessageError));
+      Status = EFI_DEVICE_ERROR;
+    }
+  }
+
+  return Status;
+}
+
 /** Driver Binding protocol interface to start the driver on the controller handle supplied
     @param[in] EFI_DRIVER_BINDING_PROTOCOL*      Pointer to the Driver Binding protocol
     @param[in] EFI_HANDLE                        Device Handle of the controller to start the driver on
@@ -261,11 +432,17 @@ NVIDIAGpuDriverStart (
   )
 {
   EFI_STATUS                                  Status        = EFI_SUCCESS;
+  EFI_STATUS                                  ErrorStatus   = EFI_UNSUPPORTED;
   NVIDIA_GPU_DRIVER_BINDING_PRIVATE_DATA      *mPrivateData = NULL;
   EFI_PCI_IO_PROTOCOL                         *PciIo        = NULL;
   NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL      *GpuDsdAmlGeneration;
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL  *GpuFirmwareBootCompleteProtocol;
-  GPU_MODE                                    GpuMode = GPU_MODE_EH;
+  GPU_MODE                                    GpuMode     = GPU_MODE_EH;
+  BOOLEAN                                     bFSPEnabled = TRUE;
+  UINTN                                       Segment;
+  UINTN                                       Bus;
+  UINTN                                       Device;
+  UINTN                                       Function;
 
   DEBUG ((DEBUG_ERROR, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
@@ -330,6 +507,25 @@ NVIDIAGpuDriverStart (
     goto ErrorHandler_RestorePCIAttributes;
   }
 
+  /* update VDM with PCIE BDF for supported downstream controllers */
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  if (!EFI_ERROR (Status)) {
+    Status = UpdateVDM (This, Segment, Bus, Device, Function);
+    /* note that a failed VDM update is non-fatal */
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: VDM%aupdated for Segment,Bus,Device,Function 0x%x,0x%x,0x%x,0x%x\n",
+      __FUNCTION__,
+      EFI_ERROR (Status) ? " NOT " : " ",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: ERROR: VDM update failed; PciIo GetLocation Status '%r'.\n", __func__, Status));
+  }
+
   /* Check GPU Mode */
   Status = CheckGpuMode (PciIo, &GpuMode);
   if (EFI_ERROR (Status)) {
@@ -361,16 +557,35 @@ NVIDIAGpuDriverStart (
     }
 
     if (GpuFirmwareBootCompleteProtocol != NULL) {
-      BOOLEAN  bFirmwareComplete = FALSE;
-      /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
-      Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
-        goto ErrorHandler_RestorePCIAttributes;
-      }
+      /* FSP is not active on TEGRA_PATFORM_VDK, skip polling and FSP RCP calls */
+      bFSPEnabled = (TegraGetPlatform () != TEGRA_PLATFORM_VDK);
+      if (bFSPEnabled) {
+        BOOLEAN  bFirmwareComplete = FALSE;
+        UINT32   TimeoutIdx        = UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX;
 
-      DEBUG ((DEBUG_INFO, "INFO: 'GpuFirmwareBootCompleteProtocol->GetBootCompleteState' on Handle [%p]. Status '%r'.\n", ControllerHandle, Status));
-      DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'GetBootCompleteState' for instance:'%p', '%a'\n", __FUNCTION__, GpuFirmwareBootCompleteProtocol, (bFirmwareComplete ? "TRUE" : "FALSE")));
+        while ((!bFirmwareComplete) && (TimeoutIdx--)) {
+          /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
+          Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+            ErrorStatus = Status;
+            goto ErrorHandler_RestorePCIAttributes;
+          }
+
+          gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
+        }
+
+        if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
+          ErrorStatus = EFI_TIMEOUT;
+          goto ErrorHandler_RestorePCIAttributes;
+        }
+
+        DEBUG ((DEBUG_INFO, "INFO: 'GpuFirmwareBootCompleteProtocol->GetBootCompleteState' on Handle [%p]. Status '%r'.\n", ControllerHandle, Status));
+        DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'GetBootCompleteState' for instance:'%p', '%a'\n", __FUNCTION__, GpuFirmwareBootCompleteProtocol, (bFirmwareComplete ? "TRUE" : "FALSE")));
+      } else {
+        DEBUG ((DEBUG_INFO, "DEBUG: Tegra Platform VDK Detected. Disabling FSP calls.\n"));
+      }
     } else {
       DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
     }
@@ -435,25 +650,34 @@ NVIDIAGpuDriverStart (
 
       DEBUG ((DEBUG_INFO, "%a: GpuDsdAmlNodeProtocol 'GetEgmSize' for instance:'%p', size = 0x%016lx\n", __FUNCTION__, GpuDsdAmlGeneration, EgmSize));
 
-      if (GpuMode == GPU_MODE_SHH) {
+      /* Check FSP enabled and GPU Mode SHH before enabling FSP RPC calls */
+      if ((bFSPEnabled) && (GpuMode == GPU_MODE_SHH)) {
         UINT64  EgmBasePaSocketMasked = MaskEgmBaseSocketAddress (EgmBasePa);
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EGM_SOCKET_ADDRESS_MASK = 0x%016lx\n", __FUNCTION__, ControllerHandle, EGM_SOCKET_ADDRESS_MASK));
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EgmBasePaSocketMasked = 0x%016lx\n", __FUNCTION__, ControllerHandle, EgmBasePaSocketMasked));
         /* Need to adjust for size */
         Status = FspConfigurationEgmBaseAndSize (PciIo, EgmBasePaSocketMasked, EgmSize);
-        /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
-        ASSERT_EFI_ERROR (Status);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationEgmBaseAndSize' failed with status '%r'.\n", Status));
+          /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
+          ASSERT_EFI_ERROR (Status);
+        }
 
-        Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
-        /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
-        ASSERT_EFI_ERROR (Status);
+        if (!EFI_ERROR (Status)) {
+          Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationAtsRange' failed with status '%r'.\n", Status));
+            /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
+            ASSERT_EFI_ERROR (Status);
+          }
+        }
       }
     }
 
-    DEBUG ((DEBUG_INFO, "%a: Finished, Status '%r'\n", __FUNCTION__, EFI_SUCCESS));
+    DEBUG ((DEBUG_INFO, "%a: Finished, Status '%r'\n", __FUNCTION__, Status));
   }
 
-  return EFI_SUCCESS;
+  return Status;
 
 ErrorHandler_RestorePCIAttributes:
   /* On Error, restore PCI Attributes */
@@ -473,7 +697,7 @@ ErrorHandler_CloseProtocol:
                   ControllerHandle
                   );
 
-  return EFI_UNSUPPORTED;
+  return ErrorStatus;
 }
 
 /** Driver Binding protocol interface to stop the driver on the controller handle supplied

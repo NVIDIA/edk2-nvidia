@@ -1,0 +1,59 @@
+## @file
+# This driver first constructs the non-tested memory range, then performs the R/W/V memory test.
+#
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GenericMpMemoryTestDxe
+  MODULE_UNI_FILE                = GenericMpMemoryTestDxe.uni
+  FILE_GUID                      = 3358254a-2b97-481e-9bcf-141c951a3aa7
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+
+  ENTRY_POINT                    = GenericMemoryTestEntryPoint
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  GenericMpMemoryTestDxe.h
+  GenericMpMemoryTestDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  BaseMemoryLib
+  BaseLib
+  ReportStatusCodeLib
+  DxeServicesTableLib
+  HobLib
+  MemoryVerificationLib
+  UefiDriverEntryPoint
+  RngLib
+  SynchronizationLib
+  DebugLib
+
+[Depex]
+  TRUE
+
+[Protocols]
+  gEfiGenericMemTestProtocolGuid                ## PRODUCES
+  gEfiThreadingProtocolGuid                     ## CONSUMES
+  gNVIDIAMemoryTestConfig                       ## PRODUCES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  GenericMemoryTestDxeExtra.uni

@@ -1,0 +1,37 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+#  Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraFastBootDxe
+  FILE_GUID                      = 3ae3270c-30d7-4c6a-8368-44cf9fb1d6a4
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = TegraAndroidFastbootPlatformEntryPoint
+
+[Sources.common]
+  TegraFastBoot.c
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gAndroidFastbootPlatformProtocolGuid
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec

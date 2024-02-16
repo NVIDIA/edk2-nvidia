@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -54,18 +54,22 @@ ProcessLibraryConstructorList (
   );
 
 /**
-  Return the Virtual Memory Map of your platform
+  Adds DTB and BLParams to MMU
 
-  This Virtual Memory Map is used by MemoryInitPei Module to initialize the MMU on your platform.
+**/
+EFI_STATUS
+EFIAPI
+MapCorePlatformMemory (
+  VOID
+  );
 
-  @param[out]   VirtualMemoryMap    Array of ARM_MEMORY_REGION_DESCRIPTOR describing a Physical-to-
-                                    Virtual Memory mapping. This array must be ended by a zero-filled
-                                    entry
+/**
+  Updates MMU mapping and relocates HOB to largest region
 
 **/
 VOID
-GetVirtualMemoryMap (
-  IN ARM_MEMORY_REGION_DESCRIPTOR  **VirtualMemoryMap
+UpdateMemoryMap (
+  VOID
   );
 
 #endif /* _PREPI_H_ */

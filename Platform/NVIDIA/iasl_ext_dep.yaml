@@ -1,0 +1,25 @@
+## @file
+# Download iasl executable tool from a nuget package
+# - package contains different binaries based on host
+# Add the folder with the tool to the path
+#
+# This is only downloaded for scope server thus
+# should have no impact on the asl compiler used by any
+# other given platform to build.
+#
+# Copyright (c) Microsoft Corporation.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+{
+  "override_id": "iasl-ci-1",
+  "id": "iasl-server-1",
+  "scope": "nvidia",
+  "type": "nuget",
+  "name": "edk2-acpica-iasl",
+  "source": "https://pkgs.dev.azure.com/projectmu/acpica/_packaging/mu_iasl/nuget/v3/index.json",
+  "version": "20200717.0.0",
+  "flags": ["set_path", "host_specific"],
+}

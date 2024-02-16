@@ -2,7 +2,7 @@
 
   Configuration Manager Data of Arm Performance Monitoring Unit Table (APMT)
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -162,7 +162,7 @@ InstallArmPerformanceMonitoringUnitTable (
       ApmtNodes[ApmtNodeIndex].Identifier             = ApmtNodeIndex;
       ApmtNodes[ApmtNodeIndex].BaseAddress0           = Register.BaseAddress;
       ApmtNodes[ApmtNodeIndex].BaseAddress1           = 0;
-      ApmtNodes[ApmtNodeIndex].OverflowInterrupt      = Interrupt.Interrupt + DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET;
+      ApmtNodes[ApmtNodeIndex].OverflowInterrupt      = DEVICETREE_TO_ACPI_INTERRUPT_NUM (Interrupt);
       ApmtNodes[ApmtNodeIndex].Reserved1              = 0;
       ApmtNodes[ApmtNodeIndex].OverflowInterruptFlags = EFI_ACPI_APMT_INTERRUPT_MODE_LEVEL_TRIGGERED;
       ApmtNodes[ApmtNodeIndex].ProcessorAffinity      = Socket;
@@ -175,7 +175,15 @@ InstallArmPerformanceMonitoringUnitTable (
 
       Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "device_type", NULL);
       if (Property == NULL) {
-        continue;
+        // Correct DTB has "compatible" = "cache" for cache nodes
+        Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "compatible", NULL);
+        if ((Property != NULL) && (AsciiStrCmp (Property, "cache") == 0)) {
+          ApmtNodes[ApmtNodeIndex].NodeType              = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
+          ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = 0;
+          ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
+        } else {
+          continue;
+        }
       }
 
       if (AsciiStrCmp (Property, "pci") == 0) {
@@ -189,6 +197,7 @@ InstallArmPerformanceMonitoringUnitTable (
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = SwapBytes32 (*(CONST UINT32 *)Property);
         ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = 0;
       } else if (AsciiStrCmp (Property, "cache") == 0) {
+        // Old DTB has "device_type" = "cache" for cache nodes
         ApmtNodes[ApmtNodeIndex].NodeType              = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = 0;
         ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
@@ -234,6 +243,7 @@ InstallArmPerformanceMonitoringUnitTable (
       NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ApmtHeader;
       NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[PlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       PlatformRepositoryInfo[Index].CmObjectCount++;
       PlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 

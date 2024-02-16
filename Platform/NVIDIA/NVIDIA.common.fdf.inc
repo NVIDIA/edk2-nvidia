@@ -1,10 +1,12 @@
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 [FV.UEFI_NS]
+BlockSize          = 0x10000
+NumBlocks          = 0         # This FV gets compressed so make it just big enough
 FvForceRebase      = TRUE
 FvAlignment        = 8
 ERASE_POLARITY     = 1

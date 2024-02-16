@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -40,7 +40,9 @@
 
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
+#include <Library/PlatformBootOrderLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ResetSystemLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
@@ -822,13 +824,138 @@ Exit:
 }
 
 /**
-  Do exactly what OpenAndReadUntrustedFileToBuffer does, except when
-  UEFI Secure Boot is enabled, also check detached signature of the
-  file. A valid signature establishes trust in the file's contents.
+  Utility function to open and decrypt the encrypted file named FileName to
+  buffer.
+
+  This function will open the encrypted file, allocate a block of shared
+  memory with fixed size, read the encrypted contents to shared memory and
+  call optee to decrypted the content block by block. Finally, get the clear
+  image in the buffer FileData.
+
+  Upon successful return, the caller is responsible for freeing all allocated
+  resources (OpteeSession & Shared Memory).
 
   @param[in]   PartitionHandle  Handle of the partition where this file lives on.
   @param[in]   FileName         Name of file to be processed
-  @param[out]  FileHandle       File handle of the opened file.
+  @param[out]  FileData         Buffer with file data.
+  @param[out]  FileDataSize     Size of the opened file.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval EFI_OUT_OF_RESOURCES  Failed buffer allocation.
+  @retval !(EFI_SUCCESS)        Error status from other APIs called.
+*/
+STATIC
+EFI_STATUS
+OpenAndDecryptFileToBuffer (
+  IN  CONST EFI_HANDLE          PartitionHandle,
+  IN  CONST CHAR16      *CONST  FileName,
+  OUT VOID             **CONST  FileData,
+  OUT UINT64            *CONST  FileDataSize
+  )
+{
+  EFI_STATUS       Status = EFI_SUCCESS;
+  EFI_DEVICE_PATH  *NextDevicePath;
+  EFI_DEVICE_PATH  *DevicePath = NULL;
+  EFI_FILE_HANDLE  Handle      = NULL;
+  UINT64           DataSize;
+
+  if ((FileData == NULL) || (FileDataSize == NULL)) {
+    ErrorPrint (L"%a: FileData and FileDataSize can not be NULL\r\n", __FUNCTION__);
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
+  }
+
+  DevicePath = FileDevicePath (PartitionHandle, FileName);
+  if (DevicePath == NULL) {
+    ErrorPrint (L"%a: Failed to create file device path\r\n", __FUNCTION__);
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  NextDevicePath = DevicePath;
+  Status         = EfiOpenFileByDevicePath (
+                     &NextDevicePath,
+                     &Handle,
+                     EFI_FILE_MODE_READ,
+                     0
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (
+      L"%a: Failed to open %s: %r\r\n",
+      __FUNCTION__,
+      FileName,
+      Status
+      );
+    goto Exit;
+  }
+
+  Status = FileHandleGetSize (Handle, &DataSize);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (
+      L"%a: Failed to get size of file %s: %r\r\n",
+      __FUNCTION__,
+      FileName,
+      Status
+      );
+    goto Exit;
+  }
+
+  *FileData = AllocatePool (DataSize);
+  if (*FileData == NULL) {
+    ErrorPrint (
+      L"%a: Failed to allocate buffer for %s\r\n",
+      __FUNCTION__,
+      FileName
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
+  }
+
+  Status = OpteeDecryptImage (
+             &Handle,
+             NULL,
+             NULL,
+             EncryptionInfo.ImageHeaderSize,
+             DataSize,
+             FileData,
+             FileDataSize
+             );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: OpteeDecryptImage failed for %s\r\n", __FUNCTION__, FileName);
+    goto Exit;
+  }
+
+Exit:
+
+  if (Handle != NULL) {
+    FileHandleClose (Handle);
+  }
+
+  if (DevicePath != NULL) {
+    FreePool (DevicePath);
+  }
+
+  return Status;
+}
+
+/**
+  Utility function to open and read file to buffer.
+
+  If UEFI Secure Boot is not enabled. This function do exactly what
+  OpenAndReadUntrustedFileToBuffer does.
+
+  If UEFI Secure Boot is enabled, and image encryption is enabled. This
+  function first call OpenAndDecryptFileToBuffer to read and decrypt
+  encrypted file to buffer, then check detached signature of the file.
+
+  If UEFI Secure Boot is enabled, but image encryption is not enabled.
+  This function first call OpenAndReadUntrustedFileToBuffer to read file
+  to buffer, then check detached signature of the file.
+
+  @param[in]   PartitionHandle  Handle of the partition where this file lives on.
+  @param[in]   FileName         Name of file to be processed
+  @param[out]  FileHandle       File handle of the opened file. Not support for
+  the encrypted File.
   @param[out]  FileData         Buffer with file data.
   @param[out]  FileDataSize     Size of the opened file.
 
@@ -866,13 +993,24 @@ OpenAndReadFileToBuffer (
              );
   }
 
-  Status = OpenAndReadUntrustedFileToBuffer (
-             PartitionHandle,
-             FileName,
-             FileHandle != NULL ? &Handle : NULL,
-             &Data,
-             &DataSize
-             );
+  // Encryption of extlinux.conf is not supported
+  if (EncryptionInfo.ImageEncrypted && StrCmp (FileName, EXTLINUX_CONF_PATH)) {
+    Status = OpenAndDecryptFileToBuffer (
+               PartitionHandle,
+               FileName,
+               &Data,
+               &DataSize
+               );
+  } else {
+    Status = OpenAndReadUntrustedFileToBuffer (
+               PartitionHandle,
+               FileName,
+               FileHandle != NULL ? &Handle : NULL,
+               &Data,
+               &DataSize
+               );
+  }
+
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -1266,6 +1404,8 @@ ExtLinuxBoot (
   ANDROID_BOOTIMG_PROTOCOL   *AndroidBootProtocol;
   EFI_HANDLE                 RamDiskLoadFileHandle = NULL;
   UINTN                      FdtSize;
+  UINTN                      KernelSize;
+  VOID                       *KernelBase       = NULL;
   VOID                       *AcpiBase         = NULL;
   VOID                       *OldFdtBase       = NULL;
   VOID                       *NewFdtBase       = NULL;
@@ -1344,8 +1484,8 @@ ExtLinuxBoot (
                &FdtSize
                );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a:sds Failed to Authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
-      goto Exit;
+      ErrorPrint (L"%a: Failed to authenticate %s (%r)\r\n", __FUNCTION__, EXTLINUX_CONF_PATH, Status);
+      goto LoadKernel;
     }
 
     ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (NewFdtBase)));
@@ -1353,6 +1493,14 @@ ExtLinuxBoot (
       Status = EFI_NOT_FOUND;
       goto Exit;
     }
+
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to install fdt\r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    FdtUpdated = TRUE;
 
     if (BootOption->Overlays != NULL) {
       DEBUG ((DEBUG_INFO, "%a: applying overlays %s\r\n", __FUNCTION__, BootOption->Overlays));
@@ -1406,29 +1554,41 @@ ExtLinuxBoot (
       FreePool (Overlays);
       Overlays = NULL;
     }
-
-    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedFdtBase);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Failed to install fdt\r\n", __FUNCTION__);
-      goto Exit;
-    }
-
-    FdtUpdated = TRUE;
   }
 
+LoadKernel:
   // Load and start the kernel
   if (BootOption->LinuxPath != NULL) {
-    KernelDevicePath = FileDevicePath (DeviceHandle, BootOption->LinuxPath);
-    if (KernelDevicePath == NULL) {
-      ErrorPrint (L"%a: Failed to create device path\r\n", __FUNCTION__);
-      Status = EFI_OUT_OF_RESOURCES;
-      goto Exit;
-    }
+    if (EncryptionInfo.ImageEncrypted) {
+      Status = OpenAndDecryptFileToBuffer (
+                 DeviceHandle,
+                 BootOption->LinuxPath,
+                 &KernelBase,
+                 &KernelSize
+                 );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to decrypt image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
 
-    Status = gBS->LoadImage (FALSE, ImageHandle, KernelDevicePath, NULL, 0, &KernelHandle);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
-      goto Exit;
+      Status = gBS->LoadImage (TRUE, ImageHandle, NULL, KernelBase, KernelSize, &KernelHandle);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
+    } else {
+      KernelDevicePath = FileDevicePath (DeviceHandle, BootOption->LinuxPath);
+      if (KernelDevicePath == NULL) {
+        ErrorPrint (L"%a: Failed to create device path\r\n", __FUNCTION__);
+        Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      }
+
+      Status = gBS->LoadImage (FALSE, ImageHandle, KernelDevicePath, NULL, 0, &KernelHandle);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"%a: Unable to load image: %s %r\r\n", __FUNCTION__, BootOption->LinuxPath, Status);
+        goto Exit;
+      }
     }
 
     if (NewArgs != NULL) {
@@ -1444,7 +1604,7 @@ ExtLinuxBoot (
 
       ImageInfo->LoadOptions     = NewArgs;
       ImageInfo->LoadOptionsSize = StrLen (NewArgs) * sizeof (CHAR16);
-      DEBUG ((DEBUG_ERROR, "%s", ImageInfo->LoadOptions));
+      DEBUG ((DEBUG_ERROR, "%s", (CHAR16 *)ImageInfo->LoadOptions));
     }
 
     // Before calling the image, enable the Watchdog Timer for  the 5 Minute period
@@ -1490,6 +1650,13 @@ Exit:
     FreePages (ExpandedFdtBase, EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
     ExpandedFdtBase = NULL;
   }
+
+  if (KernelBase != NULL) {
+    FreePool (KernelBase);
+    KernelBase = NULL;
+  }
+
+  KernelSize = 0;
 
   if (NewFdtBase != NULL) {
     FreePool (NewFdtBase);
@@ -1655,13 +1822,15 @@ ReadAndroidStyleKernelPartition (
   EFI_HANDLE              PartitionHandle;
   EFI_BLOCK_IO_PROTOCOL   *BlockIo;
   EFI_DISK_IO_PROTOCOL    *DiskIo;
-  UINTN                   Offset;
   ANDROID_BOOTIMG_HEADER  ImageHeader;
   VOID                    *ImageBuffer = NULL;
   UINTN                   ImageBufferSize;
+  UINTN                   EncryptedImageBufferSize;
+  UINTN                   DecryptedImageBufferSize;
   UINTN                   SignatureOffset;
   UINT8                   Signature[SIZE_2KB];
-  CONST UINTN             SignatureSize = sizeof (Signature);
+  UINTN                   SignatureSize = sizeof (Signature);
+  UINT8                   BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   Status = FindPartitionInfo (
              DeviceHandle,
@@ -1695,26 +1864,58 @@ ReadAndroidStyleKernelPartition (
     goto Exit;
   }
 
-  Offset = 0;
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     Offset,
-                     sizeof (ANDROID_BOOTIMG_HEADER),
-                     &ImageHeader
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
-
-  Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
-  if (EFI_ERROR (Status)) {
-    Offset = FixedPcdGet32 (PcdSignedImageHeaderSize);
+  if (EncryptionInfo.ImageEncrypted) {
     Status = DiskIo->ReadDisk (
                        DiskIo,
                        BlockIo->Media->MediaId,
-                       Offset,
+                       0,
+                       EncryptionInfo.ImageHeaderSize,
+                       BCH
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    DecryptedImageBufferSize = *(UINT32 *)(BCH + EncryptionInfo.ImageLengthOffset);
+    EncryptedImageBufferSize = DecryptedImageBufferSize + EncryptionInfo.ImageHeaderSize;
+
+    ImageBuffer = AllocatePool (DecryptedImageBufferSize);
+    if (ImageBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for decrypted image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
+    Status = OpteeDecryptImage (
+               NULL,
+               DiskIo,
+               BlockIo,
+               EncryptionInfo.ImageHeaderSize,
+               EncryptedImageBufferSize,
+               &ImageBuffer,
+               &DecryptedImageBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: OpteeDecryptImage failed \r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    memcpy (&ImageHeader, ImageBuffer, sizeof (ANDROID_BOOTIMG_HEADER));
+    Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Header not seen\r\n");
+      goto Exit;
+    }
+
+    SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+    SignatureSize   = DecryptedImageBufferSize - SignatureOffset;
+    memcpy (Signature, ImageBuffer + SignatureOffset, SignatureSize);
+  } else {
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
                        sizeof (ANDROID_BOOTIMG_HEADER),
                        &ImageHeader
                        );
@@ -1725,44 +1926,46 @@ ReadAndroidStyleKernelPartition (
 
     Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Header not seen at either offset 0 or offset 0x%x\r\n", Offset);
+      ErrorPrint (L"Android image header not seen\r\n");
       goto Exit;
     }
-  }
 
-  ImageBuffer = AllocatePool (ImageBufferSize);
-  if (ImageBuffer == NULL) {
-    ErrorPrint (L"Failed to allocate buffer for Image\r\n");
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
+    ImageBuffer = AllocatePool (ImageBufferSize);
+    if (ImageBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for Image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
 
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     Offset,
-                     ImageBufferSize,
-                     ImageBuffer
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       ImageBufferSize,
+                       ImageBuffer
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    if (IsSecureBootEnabled ()) {
+      SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+      Status          = DiskIo->ReadDisk (
+                                  DiskIo,
+                                  BlockIo->Media->MediaId,
+                                  SignatureOffset,
+                                  SignatureSize,
+                                  Signature
+                                  );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to read kernel image signature\r\n");
+        goto Exit;
+      }
+    }
   }
 
   if (IsSecureBootEnabled ()) {
-    SignatureOffset = Offset + ALIGN_VALUE (ImageBufferSize, SignatureSize);
-    Status          = DiskIo->ReadDisk (
-                                DiskIo,
-                                BlockIo->Media->MediaId,
-                                SignatureOffset,
-                                SignatureSize,
-                                Signature
-                                );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to read kernel image signature\r\n");
-      goto Exit;
-    }
-
     Status = VerifyDetachedSignature (
                Signature,
                SignatureSize,
@@ -1798,7 +2001,6 @@ Exit:
   @param[in]  PartitionBasename The base name of the partion where the image to boot is located.
   @param[in]  BootParams        Boot params for L4T.
   @param[out] Dtb               Pointer to the allocated dtb buffer.
-  @param[out] DtbOffset         Offset where dtb starts.
   @param[out] DtbSize           Size of the dtb buffer.
 
   @retval EFI_SUCCESS    The operation completed successfully.
@@ -1812,7 +2014,6 @@ ReadAndroidStyleDtbPartition (
   IN  CONST CHAR16           *CONST  PartitionBasename,
   IN  CONST L4T_BOOT_PARAMS  *CONST  BootParams,
   OUT       VOID            **CONST  Dtb,
-  OUT       UINTN            *CONST  DtbOffset,
   OUT       UINTN            *CONST  DtbSize
   )
 {
@@ -1822,10 +2023,11 @@ ReadAndroidStyleDtbPartition (
   EFI_DISK_IO_PROTOCOL   *DiskIo;
   VOID                   *DtbBuffer;
   UINT64                 DtbBufferSize;
-  UINTN                  Offset;
+  UINT64                 EncryptedDtbBufferSize;
   UINTN                  Size;
   UINTN                  SignatureOffset;
-  CONST UINTN            SignatureSize = SIZE_2KB;
+  UINTN                  SignatureSize = SIZE_2KB;
+  UINT8                  BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   DtbBuffer = NULL;
 
@@ -1861,50 +2063,94 @@ ReadAndroidStyleDtbPartition (
     goto Exit;
   }
 
-  DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
+  if (EncryptionInfo.ImageEncrypted) {
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       EncryptionInfo.ImageHeaderSize,
+                       &BCH
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
 
-  DtbBuffer = AllocatePool (DtbBufferSize);
-  if (DtbBuffer == NULL) {
-    ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
+    DtbBufferSize          = *(UINT32 *)(BCH + EncryptionInfo.ImageLengthOffset);
+    EncryptedDtbBufferSize = DtbBufferSize + EncryptionInfo.ImageHeaderSize;
 
-  Status = DiskIo->ReadDisk (
-                     DiskIo,
-                     BlockIo->Media->MediaId,
-                     0,
-                     DtbBufferSize,
-                     DtbBuffer
-                     );
-  if (EFI_ERROR (Status)) {
-    ErrorPrint (L"Failed to read disk\r\n");
-    goto Exit;
-  }
+    DtbBuffer = AllocatePool (DtbBufferSize);
+    if (DtbBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
 
-  Offset = 0;
-  if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
-    Offset = PcdGet32 (PcdSignedImageHeaderSize);
-    if (fdt_check_header ((UINT8 *)DtbBuffer + Offset) != 0) {
+    Status = OpteeDecryptImage (
+               NULL,
+               DiskIo,
+               BlockIo,
+               EncryptionInfo.ImageHeaderSize,
+               EncryptedDtbBufferSize,
+               &DtbBuffer,
+               &DtbBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: OpteeDecryptImage failed \r\n", __FUNCTION__);
+      goto Exit;
+    }
+
+    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
       ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
       goto Exit;
     }
-  }
 
-  Size = fdt_totalsize ((UINT8 *)DtbBuffer + Offset);
+    Size            = fdt_totalsize ((UINT8 *)DtbBuffer);
+    SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
+    SignatureSize   = DtbBufferSize - SignatureOffset;
+  } else {
+    DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
 
-  if (IsSecureBootEnabled ()) {
-    SignatureOffset = Offset + ALIGN_VALUE (Size, SignatureSize);
-    if (SignatureOffset + SignatureSize > DtbBufferSize) {
-      ErrorPrint (L"DTB signature missing\r\n");
-      Status = EFI_SECURITY_VIOLATION;
+    DtbBuffer = AllocatePool (DtbBufferSize);
+    if (DtbBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for dtb\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }
 
+    Status = DiskIo->ReadDisk (
+                       DiskIo,
+                       BlockIo->Media->MediaId,
+                       0,
+                       DtbBufferSize,
+                       DtbBuffer
+                       );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to read disk\r\n");
+      goto Exit;
+    }
+
+    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+      ErrorPrint (L"DTB on partition was corrupted, try using UEFI DTB\r\n");
+      goto Exit;
+    }
+
+    Size = fdt_totalsize ((UINT8 *)DtbBuffer);
+    if (IsSecureBootEnabled ()) {
+      SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
+      if (SignatureOffset + SignatureSize > DtbBufferSize) {
+        ErrorPrint (L"DTB signature missing\r\n");
+        Status = EFI_SECURITY_VIOLATION;
+        goto Exit;
+      }
+    }
+  }
+
+  if (IsSecureBootEnabled ()) {
     Status = VerifyDetachedSignature (
                (UINT8 *)DtbBuffer + SignatureOffset,
                SignatureSize,
-               (UINT8 *)DtbBuffer + Offset,
+               (UINT8 *)DtbBuffer,
                Size
                );
     if (EFI_ERROR (Status)) {
@@ -1913,10 +2159,9 @@ ReadAndroidStyleDtbPartition (
     }
   }
 
-  *Dtb       = DtbBuffer;
-  DtbBuffer  = NULL;
-  *DtbOffset = Offset;
-  *DtbSize   = Size;
+  *Dtb      = DtbBuffer;
+  DtbBuffer = NULL;
+  *DtbSize  = Size;
 
 Exit:
   if (DtbBuffer != NULL) {
@@ -1953,7 +2198,6 @@ BootAndroidStylePartition (
   UINTN       ImageSize;
   VOID        *AcpiBase;
   VOID        *Dtb = NULL;
-  UINTN       DtbOffset;
   UINTN       DtbSize;
   VOID        *OldDtb;
   VOID        *NewDtb = NULL;
@@ -1982,21 +2226,20 @@ BootAndroidStylePartition (
                BootImgDtbPartitionBasename,
                BootParams,
                &Dtb,
-               &DtbOffset,
                &DtbSize
                );
     if (EFI_ERROR (Status)) {
       break;
     }
 
-    NewDtbPages = EFI_SIZE_TO_PAGES (2 * DtbSize);
+    NewDtbPages = EFI_SIZE_TO_PAGES (4 * DtbSize);
     NewDtb      = AllocatePages (NewDtbPages);
     if (NewDtb == NULL) {
       DEBUG ((DEBUG_WARN, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
       break;
     }
 
-    if (fdt_open_into ((UINT8 *)Dtb + DtbOffset, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
+    if (fdt_open_into ((UINT8 *)Dtb, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
       DEBUG ((DEBUG_WARN, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
       break;
     }
@@ -2018,6 +2261,7 @@ BootAndroidStylePartition (
   } while (FALSE);
 
   DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+
   DEBUG ((DEBUG_ERROR, "%a", ((ANDROID_BOOTIMG_HEADER *)Image)->KernelArgs));
 
   Status = AndroidBootImgBoot (Image, ImageSize);
@@ -2053,6 +2297,114 @@ Exit:
 }
 
 /**
+ * @brief Get the Device Handle object that contains the RootFS for FV based boots
+ *
+ * If not-launched from a FV this function will return the LoadedHandle.
+ * Otherwise, it will use the DefaultBootPriority variable to attempt to find
+ * the boot device that contains a root fs to boot off of.
+ *
+ * @param LoadedHandle - Handle of the loaded device
+ * @param BootChain    - A/B info
+ * @return EFI_HANDLE of the specified device to attempt boot with.
+ *         It will be LoadedHandled for normal ESP based boots
+ **/
+EFI_HANDLE
+EFIAPI
+GetDeviceHandleForFvBoot (
+  IN EFI_HANDLE  LoadedHandle,
+  IN UINT32      BootChain
+  )
+{
+  EFI_STATUS                Status;
+  UINTN                     NumberOfBlockIo;
+  EFI_HANDLE                *BlockIoHandles;
+  UINTN                     BlockIoIndex;
+  EFI_BLOCK_IO_PROTOCOL     *BlockIo;
+  UINTN                     ChildCount;
+  EFI_HANDLE                *ChildHandles;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  CHAR8                     *DefaultBootOrder;
+  UINTN                     DefaultBootOrderSize;
+  CONST CHAR8               *DeviceClass;
+
+  DefaultBootOrder = NULL;
+
+  Status = gBS->HandleProtocol (LoadedHandle, &gEfiDevicePathProtocolGuid, (VOID **)&DevicePath);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "DevicePath not found, check on this disk\r\n"));
+    return LoadedHandle;
+  }
+
+  if ((DevicePath->Type != MEDIA_DEVICE_PATH) ||
+      (DevicePath->SubType != MEDIA_PIWG_FW_VOL_DP))
+  {
+    return LoadedHandle;
+  }
+
+  Status = GetVariable2 (
+             L"DefaultBootPriority",
+             &gNVIDIATokenSpaceGuid,
+             (VOID **)&DefaultBootOrder,
+             &DefaultBootOrderSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "DefaultBootPriority not found, expected for FV based boot!\r\n"));
+    return LoadedHandle;
+  }
+
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &NumberOfBlockIo, &BlockIoHandles);
+  if (EFI_ERROR (Status)) {
+    return LoadedHandle;
+  }
+
+  for (BlockIoIndex = 0; BlockIoIndex < NumberOfBlockIo; BlockIoIndex++) {
+    Status = gBS->HandleProtocol (BlockIoHandles[BlockIoIndex], &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (BlockIo->Media->LogicalPartition) {
+      continue;
+    }
+
+    Status = gBS->HandleProtocol (BlockIoHandles[BlockIoIndex], &gEfiDevicePathProtocolGuid, (VOID **)&DevicePath);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = GetBootDeviceClass (DevicePath, &DeviceClass);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (AsciiStrnCmp (DefaultBootOrder, DeviceClass, DefaultBootOrderSize) != 0) {
+      continue;
+    }
+
+    Status = ParseHandleDatabaseForChildControllers (BlockIoHandles[BlockIoIndex], &ChildCount, &ChildHandles);
+    if (EFI_ERROR (Status) || (ChildCount == 0)) {
+      continue;
+    }
+
+    Status = FindPartitionInfo (ChildHandles[0], ROOTFS_BASE_NAME, BootChain, NULL, NULL);
+    if (!EFI_ERROR (Status)) {
+      if (DefaultBootOrder != NULL) {
+        FreePool (DefaultBootOrder);
+      }
+
+      return ChildHandles[0];
+    }
+  }
+
+  if (DefaultBootOrder != NULL) {
+    FreePool (DefaultBootOrder);
+  }
+
+  DEBUG ((DEBUG_ERROR, "Device specified type not found, check on this disk\r\n"));
+  return LoadedHandle;
+}
+
+/**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers, including
   both device drivers and bus drivers.
@@ -2077,6 +2429,7 @@ L4TLauncher (
   EFI_STATUS                 Status;
   EFI_HANDLE                 LoadedImageHandle  = 0;
   EFI_HANDLE                 RootFsDeviceHandle = 0;
+  EFI_HANDLE                 DeviceHandle       = 0;
   L4T_BOOT_PARAMS            BootParams;
   EXTLINUX_BOOT_CONFIG       ExtLinuxConfig;
   UINTN                      ExtLinuxBootOption;
@@ -2094,10 +2447,19 @@ L4TLauncher (
     return Status;
   }
 
+  DeviceHandle = GetDeviceHandleForFvBoot (LoadedImage->DeviceHandle, BootParams.BootChain);
+
+  if (IsSecureBootEnabled ()) {
+    Status = GetImageEncryptionInfo (&EncryptionInfo);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Unable to get image status: %r\r\n", __FUNCTION__, Status);
+    }
+  }
+
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_GRUB) {
     ErrorPrint (L"%a: Attempting GRUB Boot\r\n", __FUNCTION__);
     do {
-      FullDevicePath = FileDevicePath (LoadedImage->DeviceHandle, GRUB_PATH);
+      FullDevicePath = FileDevicePath (DeviceHandle, GRUB_PATH);
       if (FullDevicePath == NULL) {
         ErrorPrint (L"%a: Failed to create full device path\r\n", __FUNCTION__);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
@@ -2114,7 +2476,7 @@ L4TLauncher (
         break;
       }
 
-      Status = UpdateBootConfig (LoadedImage->DeviceHandle, BootParams.BootChain);
+      Status = UpdateBootConfig (DeviceHandle, BootParams.BootChain);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Unable to update partition files\r\n", __FUNCTION__);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
@@ -2139,7 +2501,7 @@ L4TLauncher (
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_DIRECT) {
     ErrorPrint (L"%a: Attempting Direct Boot\r\n", __FUNCTION__);
     do {
-      Status = ProcessExtLinuxConfig (LoadedImage->DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
+      Status = ProcessExtLinuxConfig (DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Unable to process extlinux config: %r\r\n", __FUNCTION__, Status);
         BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
@@ -2197,13 +2559,17 @@ L4TLauncher (
   // Not in else to allow fallback
   if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_BOOTIMG) {
     ErrorPrint (L"%a: Attempting Kernel Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
+    Status = BootAndroidStylePartition (DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
+      // Warm reset if there is valid rootfs
+      if (IsValidRootfs ()) {
+        ResetCold ();
+      }
     }
   } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
     ErrorPrint (L"%a: Attempting Recovery Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
+    Status = BootAndroidStylePartition (DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", RECOVERY_BASE_NAME, BootParams.BootChain);
     }

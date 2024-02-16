@@ -1,0 +1,42 @@
+## @file
+#  Platform driver to provide Redfish override protocol.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformRedfishOverrideDxe
+  FILE_GUID                      = 3EA6A95B-59FD-4B67-B3FD-16E57900E0BE
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = PlatformRedfishOverrideDxeDriverEntryPoint
+
+[Sources]
+  PlatformRedfishOverrideDxe.c
+  PlatformRedfishOverrideDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  DebugLib
+  ReportStatusCodeLib
+  UefiBootServicesTableLib
+  PlatformResourceLib
+  StatusRegLib
+
+[Protocols]
+  gEdkiiRedfishOverrideProtocolGuid      ## PRODUCED ##
+
+[Depex]
+  TRUE

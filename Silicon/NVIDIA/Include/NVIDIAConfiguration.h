@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -26,7 +26,8 @@
 #define NVIDIA_OS_REDUNDANCY_BOOT_ONLY    0x0
 #define NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS  0x1
 
-#define L4T_BOOTMODE_VARIABLE_NAME  L"L4TDefaultBootMode"
+#define L4T_BOOTMODE_VARIABLE_NAME             L"L4TDefaultBootMode"
+#define L4T_BOARD_RECOVERY_BOOT_VARIABLE_NAME  L"BoardRecoveryBoot"
 
 #define NVIDIA_L4T_BOOTMODE_GRUB      0x0
 #define NVIDIA_L4T_BOOTMODE_DIRECT    0x1
@@ -36,6 +37,21 @@
 
 #define KERNEL_CMD_STR_MIN_SIZE  0
 #define KERNEL_CMD_STR_MAX_SIZE  255
+
+#define ASSET_TAG_MAX_LEN   32
+#define ASSET_TAG_MAX_SIZE  33
+
+#define ENABLED_PCIE_ALLOW_ALL  0xFF
+
+// Memory test levels
+#define MEMORY_TEST_LEVEL_IGNORE     0
+#define MEMORY_TEST_LEVEL_QUICK      1
+#define MEMORY_TEST_LEVEL_SPARSE     2
+#define MEMORY_TEST_LEVEL_EXTENSIVE  3
+
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER   0
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS  1
+#define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO    2
 
 // Option to expose PCIe in OS
 typedef struct {
@@ -90,6 +106,10 @@ typedef struct {
 } NVIDIA_L4T_BOOT_MODE;
 
 typedef struct {
+  BOOLEAN    BoardRecoveryBoot;
+} NVIDIA_BOARD_RECOVERY_BOOT;
+
+typedef struct {
   UINT8    IpMode;
 } NVIDIA_IPMI_NETWORK_BOOT_MODE;
 
@@ -99,6 +119,50 @@ typedef struct {
 
 typedef struct {
   UINT8    Enabled;
+} NVIDIA_UEFI_SHELL_ENABLED;
+
+typedef struct {
+  UINT8    Enabled;
 } NVIDIA_DGPU_DT_EFIFB_SUPPORT;
+
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_REDFISH_HOST_INTERFACE_ENABLED;
+
+typedef struct {
+  CHAR16    ChassisAssetTag[ASSET_TAG_MAX_SIZE];
+  UINT8     AssetTagProtection;
+} NVIDIA_PRODUCT_INFO;
+
+typedef struct {
+  UINT8    Enabled;
+  UINT8    Segment;
+  UINT8    Bus;
+  UINT8    Device;
+  UINT8    Function;
+} NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY;
+
+typedef struct {
+  UINT8      TestLevel;
+  BOOLEAN    NextBoot;
+  BOOLEAN    SingleBoot;
+  UINT8      TestIterations;
+  BOOLEAN    Walking1BitEnabled;
+  BOOLEAN    AddressCheckEnabled;
+  BOOLEAN    MovingInversions01Enabled;
+  BOOLEAN    MovingInversions8BitEnabled;
+  BOOLEAN    MovingInversionsRandomEnabled;
+  BOOLEAN    BlockMoveEnabled;
+  BOOLEAN    MovingInversions64BitEnabled;
+  BOOLEAN    RandomNumberSequenceEnabled;
+  BOOLEAN    Modulo20RandomEnabled;
+  BOOLEAN    BitFadeEnabled;
+  UINT64     BitFadePattern;
+  UINT64     BitFadeWait;
+} NVIDIA_MEMORY_TEST_OPTIONS;
+
+typedef struct {
+  UINT8    Mode;
+} NVIDIA_SOC_DISPLAY_HANDOFF_MODE;
 
 #endif //__NVIDIA_CONFIGURATION_H__

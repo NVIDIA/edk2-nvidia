@@ -173,7 +173,7 @@ ApeiDxeInitialize (
     NVIDIARasNsCommPcieDpcData->PcieSize = RasFwBufferInfo.PcieSize;
   } else {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Failed to get RAS_FW NS shared mem: %r\n",
       __FUNCTION__,
       Status

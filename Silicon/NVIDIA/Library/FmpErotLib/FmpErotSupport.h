@@ -12,7 +12,10 @@
 #define __FMP_EROT_SUPPORT_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/FmpParamLib.h>
 #include <Protocol/FirmwareManagement.h>
+
+extern FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller;
 
 /**
   Get system firmware version and/or version string.

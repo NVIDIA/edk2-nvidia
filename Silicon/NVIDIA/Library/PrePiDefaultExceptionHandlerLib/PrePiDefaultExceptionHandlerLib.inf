@@ -1,0 +1,38 @@
+#/** @file
+#
+#  Copyright (c) 2008, Apple Inc. All rights reserved.<BR>
+#  Copyright (c) 2011 - 2013, ARM Ltd. All rights reserved.<BR>
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PrePiDefaultExceptionHandlerLib
+  FILE_GUID                      = A8E53EB6-4306-4D7B-AFBF-BDE80067C610
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DefaultExceptionHandlerLib|SEC
+
+[Sources.common]
+  PrePiDefaultExceptionHandlerUefi.c
+
+[Sources.AARCH64]
+  AArch64/PrePiDefaultExceptionHandler.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  PrintLib
+  DebugLib
+  ArmDisassemblerLib
+  SerialPortLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdFvBaseAddress                   ## CONSUMES

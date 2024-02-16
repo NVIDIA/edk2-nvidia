@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Dxe
 
-  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -14,8 +14,9 @@
 
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/ConfigurationManagerProtocol.h>
 
 /** The GetObject function defines the interface implemented by the
@@ -40,114 +41,16 @@ NVIDIAPlatformGetObject (
   IN  CONST CM_OBJECT_ID                                  CmObjectId,
   IN  CONST CM_OBJECT_TOKEN                               Token OPTIONAL,
   IN  OUT   CM_OBJ_DESCRIPTOR                     *CONST  CmObject
-  )
-{
-  CONST EDKII_PLATFORM_REPOSITORY_INFO  *PlatRepoInfo;
-  UINT32                                Index;
-  UINT32                                ElemOffset;
-  UINT32                                ElemSize;
+  );
 
-  if ((This == NULL) || (CmObject == NULL)) {
-    ASSERT (This != NULL);
-    ASSERT (CmObject != NULL);
-    return EFI_INVALID_PARAMETER;
-  }
-
-  PlatRepoInfo = This->PlatRepoInfo;
-  ASSERT (PlatRepoInfo != NULL);
-
-  for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
-    // If CmObjectPtr is NULL, we have reached the end of valid
-    // entries, so stop looking.
-    if (PlatRepoInfo[Index].CmObjectPtr == NULL) {
-      break;
-    }
-
-    // CmObjectId must match, otherwise this entry is irrelevant and
-    // we must keep looking.
-    if (PlatRepoInfo[Index].CmObjectId != CmObjectId) {
-      continue;
-    }
-
-    // If this entry has a non-null CmObjectToken, the user-supplied
-    // token must match it exactly.
-    if (PlatRepoInfo[Index].CmObjectToken != CM_NULL_TOKEN) {
-      // If the user supplied a null Token and this entry has a
-      // matching CmObjectId and a non-null CmObjectToken, we will
-      // never find anything. If there is a single object with a
-      // particular CmObjectId and non-null CmObjectToken, then all
-      // objects sharing that CmObjectId must have a non-null (and
-      // unique) CmObjectTokens as well. Therefore, if the
-      // user-supplied a null Token, stop looking; otherwise, keep
-      // looking for an entry with a matching CmObjectToken.
-      if (Token == CM_NULL_TOKEN) {
-        break;
-      } else if (Token != PlatRepoInfo[Index].CmObjectToken) {
-        continue;
-      }
-    }
-
-    CmObject->ObjectId = CmObjectId;
-    CmObject->Data     = PlatRepoInfo[Index].CmObjectPtr;
-    CmObject->Size     = PlatRepoInfo[Index].CmObjectSize;
-    CmObject->Count    = PlatRepoInfo[Index].CmObjectCount;
-
-    // If CmObjectId matches and the entry has no CmObjectToken, but
-    // the user supplied a non-null Token, this is an array access;
-    // instead of returning all the objects, return the single
-    // requested element.
-    if (  (PlatRepoInfo[Index].CmObjectToken == CM_NULL_TOKEN)
-       && (Token != CM_NULL_TOKEN))
-    {
-      ElemOffset = Token - (CM_OBJECT_TOKEN)CmObject->Data;
-      ElemSize   = CmObject->Size / CmObject->Count;
-
-      if (!(ElemOffset < CmObject->Size)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "ERROR: Out-of-bounds CmObject array access: ID = %x, Token = %x, Size = %d, Count = %d\n",
-          CmObjectId,
-          Token,
-          CmObject->Size,
-          CmObject->Count
-          ));
-        return EFI_INVALID_PARAMETER;
-      } else if (ElemOffset % ElemSize != 0) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "ERROR: Misaligned CmObject array access: ID = %x, Token = %x, Size = %d, Count = %d\n",
-          CmObjectId,
-          Token,
-          CmObject->Size,
-          CmObject->Count
-          ));
-        return EFI_INVALID_PARAMETER;
-      }
-
-      CmObject->Data  = (UINT8 *)CmObject->Data + ElemOffset;
-      CmObject->Size  = ElemSize;
-      CmObject->Count = 1;
-    }
-
-    DEBUG ((
-      DEBUG_INFO,
-      "CmObject: ID = %x, Token = %x, Data = 0x%p, Size = %d, Count = %d\n",
-      CmObjectId,
-      Token,
-      CmObject->Data,
-      CmObject->Size,
-      CmObject->Count
-      ));
-    return EFI_SUCCESS;
-  }
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "ERROR: Not Found CmObject = 0x%x\n",
-    CmObjectId
-    ));
-  return EFI_NOT_FOUND;
-}
+EFI_STATUS
+EFIAPI
+NVIDIAPlatformGetObjectLegacy (
+  IN  CONST EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CONST  This,
+  IN  CONST CM_OBJECT_ID                                  CmObjectId,
+  IN  CONST CM_OBJECT_TOKEN                               Token OPTIONAL,
+  IN  OUT   CM_OBJ_DESCRIPTOR                     *CONST  CmObject
+  );
 
 /** The SetObject function defines the interface implemented by the
     Configuration Manager Protocol for updating the Configuration
@@ -202,8 +105,9 @@ ConfigurationManagerDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO  *PlatRepoInfo;
-  EFI_STATUS                      Status;
+  VOID        *PlatRepoInfo;
+  EFI_STATUS  Status;
+  UINTN       ChipID;
 
   Status = gBS->LocateProtocol (
                   &gNVIDIAConfigurationManagerDataProtocolGuid,
@@ -221,6 +125,19 @@ ConfigurationManagerDxeInitialize (
   }
 
   NVIDIAPlatformConfigManagerProtocol.PlatRepoInfo = PlatRepoInfo;
+
+  // While transitioning to new CM, use legacy method for platforms that haven't been transitioned yet
+  ChipID = TegraGetChipID ();
+  switch (ChipID) {
+    case T194_CHIP_ID:
+    case T234_CHIP_ID:
+      // Use the new NVIDIAPlatfocrmGetObject function, which is default
+      break;
+
+    default:
+      NVIDIAPlatformConfigManagerProtocol.GetObject = NVIDIAPlatformGetObjectLegacy;
+      break;
+  }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,

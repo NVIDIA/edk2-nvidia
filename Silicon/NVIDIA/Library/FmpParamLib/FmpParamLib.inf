@@ -1,0 +1,45 @@
+## @file
+#
+#  FMP parameter library
+#
+#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = FmpParamLib
+  MODULE_UNI_FILE = FmpParamLib.uni
+  FILE_GUID       = d7d0f50f-9927-4ecc-9687-67a5e3d2fd2b
+  MODULE_TYPE     = DXE_DRIVER
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = FmpParamLib|DXE_DRIVER UEFI_DRIVER
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64
+#
+
+[Sources]
+  FmpParamLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  FmpDevicePkg/FmpDevicePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  DtPlatformDtbLoaderLib
+  FdtLib
+  PcdLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
+  gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion

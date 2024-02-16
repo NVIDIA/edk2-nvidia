@@ -36,13 +36,13 @@ FfaAllocateAndMapRxTxBuffers (
 
   Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, pages, rx);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: RX buffer allocation failed\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: RX buffer allocation failed\n", __FUNCTION__));
     goto out;
   }
 
   Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData, pages, tx);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: TX buffer allocation failed\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: TX buffer allocation failed\n", __FUNCTION__));
     goto out_rx;
   }
 
@@ -55,7 +55,7 @@ FfaAllocateAndMapRxTxBuffers (
 
   if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_MAP failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -97,7 +97,7 @@ FfaReleaseRxBuffer (
 
   if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RX_RELEASE failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -138,7 +138,7 @@ FfaFreeRxTxBuffers (
 
   if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_UNMAP failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -188,7 +188,7 @@ FfaGetRasFwPartitionId (
   /* One SP should have been found */
   if (ArmSmcArgs.Arg2 != 1) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_PARTITION_INFO_GET failed: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg2
@@ -197,7 +197,7 @@ FfaGetRasFwPartitionId (
   }
 
   VmId = *((UINT16 *)rx);
-  DEBUG ((EFI_D_INFO, "%a: RAS_FW VmId=0x%x\n", __FUNCTION__, VmId));
+  DEBUG ((DEBUG_INFO, "%a: RAS_FW VmId=0x%x\n", __FUNCTION__, VmId));
 
   FfaReleaseRxBuffer ();
   Status = FfaFreeRxTxBuffers (pages, rx, tx);
@@ -227,7 +227,7 @@ FfaGetRasFwBuffer (
 
   if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Invalid FFA response: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg0
@@ -256,28 +256,28 @@ FfaGetRasFwBuffer (
                                RasFwBufferInfo->PcieSize);
 
   DEBUG ((
-    EFI_D_INFO,
+    DEBUG_INFO,
     "%a: CommBase: 0x%llx\tCommSize: 0x%x\r\n",
     __FUNCTION__,
     RasFwBufferInfo->CommBase,
     RasFwBufferInfo->CommSize
     ));
   DEBUG ((
-    EFI_D_INFO,
+    DEBUG_INFO,
     "%a: EinjBase: 0x%llx\tEinjSize: 0x%x\r\n",
     __FUNCTION__,
     RasFwBufferInfo->EinjBase,
     RasFwBufferInfo->EinjSize
     ));
   DEBUG ((
-    EFI_D_INFO,
+    DEBUG_INFO,
     "%a: PcieBase: 0x%llx\tPcieSize: 0x%x\r\n",
     __FUNCTION__,
     RasFwBufferInfo->PcieBase,
     RasFwBufferInfo->PcieSize
     ));
   DEBUG ((
-    EFI_D_INFO,
+    DEBUG_INFO,
     "%a: CperBase: 0x%llx\tCperSize: 0x%x\r\n",
     __FUNCTION__,
     RasFwBufferInfo->CperBase,
@@ -310,7 +310,7 @@ FfaGuidedCommunication (
 
   if (BufferSize > RasFwBufferInfo->CommSize) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: buffer size too small: %u\n",
       __FUNCTION__,
       BufferSize
@@ -324,7 +324,7 @@ FfaGuidedCommunication (
 
   if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Invalid FFA response: 0x%x\n",
       __FUNCTION__,
       ArmSmcArgs.Arg0

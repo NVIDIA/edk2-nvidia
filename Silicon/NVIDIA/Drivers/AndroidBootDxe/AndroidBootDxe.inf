@@ -2,7 +2,7 @@
 #
 # Android Boot Loader Driver
 #
-# Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -26,6 +26,8 @@
 [Sources]
   AndroidBootDxe.h
   AndroidBootDxe.c
+  AndroidBootConfig.h
+  AndroidBootConfig.c
 
 [LibraryClasses]
   BaseLib
@@ -42,6 +44,8 @@
   TegraPlatformInfoLib
   HandleParsingLib
   BootChainInfoLib
+  AndroidBcbLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid
@@ -60,9 +64,11 @@
   gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
+  gEfiEndOfDxeEventGroupGuid
   gNVIDIAPublicVariableGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage

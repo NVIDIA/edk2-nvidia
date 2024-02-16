@@ -2,7 +2,7 @@
 
   EEPROM Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -747,31 +747,33 @@ InitializeEepromDxe (
     return Status;
   }
 
-  SerialNumberCmdLine = (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL));
-  if (SerialNumberCmdLine == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    return Status;
-  }
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    SerialNumberCmdLine = (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL *)AllocateZeroPool (sizeof (NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL));
+    if (SerialNumberCmdLine == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
 
-  SerialNumberCmdLineBuffer = (CHAR16 *)AllocateZeroPool (sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN);
-  if (SerialNumberCmdLineBuffer == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    return Status;
-  }
+    SerialNumberCmdLineBuffer = (CHAR16 *)AllocateZeroPool (sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN);
+    if (SerialNumberCmdLineBuffer == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      return Status;
+    }
 
-  SerialNumberCmdLine->ExistingCommandLineArgument = NULL;
-  UnicodeSPrintAsciiFormat (SerialNumberCmdLineBuffer, sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN, "androidboot.serialno=%a", CvmBoardInfo->SerialNumber);
-  SerialNumberCmdLine->NewCommandLineArgument = SerialNumberCmdLineBuffer;
+    SerialNumberCmdLine->ExistingCommandLineArgument = NULL;
+    UnicodeSPrintAsciiFormat (SerialNumberCmdLineBuffer, sizeof (CHAR16) * SERIAL_NUM_CMD_MAX_LEN, "androidboot.serialno=%a", CvmBoardInfo->SerialNumber);
+    SerialNumberCmdLine->NewCommandLineArgument = SerialNumberCmdLineBuffer;
 
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Handle,
-                  &gNVIDIAKernelCmdLineUpdateGuid,
-                  SerialNumberCmdLine,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to install serial number kernel command line update protocol\n", __FUNCTION__));
-    return Status;
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIAKernelCmdLineUpdateGuid,
+                    SerialNumberCmdLine,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to install serial number kernel command line update protocol\n", __FUNCTION__));
+      return Status;
+    }
   }
 
   if ((EepromData == NULL) || (EepromData->CvbEepromDataSize == 0) ||

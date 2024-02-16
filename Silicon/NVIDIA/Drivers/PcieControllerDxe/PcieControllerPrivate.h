@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/EmbeddedGpio.h>
 #include <TH500/TH500Definitions.h>
 
 #define BIT(x)  (1 << (x))
@@ -24,8 +25,14 @@
 
 #define PCIE_NUMBER_OF_MAPPING_SPACE  3
 #define PCIE_NUMBER_OF_INTERUPT_MAP   4
-#define PCIE_REPO_OBJECTS             (5 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERUPT_MAP)// Config Space, 2 Reference Arrays, Mappings, Acpi tables, End of list
+#define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERUPT_MAP) // 2 Reference Arrays, Mappings, End of list
+#define PCIE_COMMON_REPO_OBJECTS      (3)                                                              // Config Space, Acpi Tables, end of list
 #define SPI_OFFSET                    (32U)
+
+#define GPU_SENSE_MAX_COUNT  500
+#define GPU_KICK_MAX_COUNT   5
+#define GPU_SENSE_DELAY      1
+#define GPU_RESET_DELAY      30000
 
 #define PCIE_CHILD_ADDRESS_OFFSET           0
 #define PCIE_CHILD_INT_OFFSET               3
@@ -66,6 +73,15 @@ typedef struct {
   UINT64                                              IoBase;
   UINT64                                              IoLimit;
   UINT32                                              BusMask;
+
+  // GPU Kick Information
+  BOOLEAN                                             GpuKickGpioSupported;
+  EMBEDDED_GPIO_PIN                                   GpuKickGpioSense;
+  EMBEDDED_GPIO_PIN                                   GpuKickGpioReset;
+
+  // C2C Init Tracking
+  BOOLEAN                                             C2cInitRequired;
+  NVIDIA_C2C_NODE_PROTOCOL                            *C2cProtocol;
 
   // Configuration data
   CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;
@@ -114,6 +130,12 @@ typedef struct {
 
 #define XTL_RC_MGMT_PERST_CONTROL            0x218
 #define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N  BIT(0)
+
+/* PCIExpress Capability */
+#define PCIE_DEV_CAP_ERR_COR_SUB_CLASS  BIT(16)
+
+/* AER Registers */
+#define  PCIE_AER_CORR_ERR_ADV_NONFATAL  0x2000
 
 /* DPC Registers */
 #define PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID  0x001D

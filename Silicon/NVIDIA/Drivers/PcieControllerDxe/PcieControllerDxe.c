@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,8 +24,10 @@
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
+#include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -35,13 +37,12 @@
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/C2CNodeProtocol.h>
+#include <Protocol/ConfigurationManagerTokenProtocol.h>
 
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 
 #include "PcieControllerPrivate.h"
-
-STATIC BOOLEAN  mPcieAcpiConfigInstalled = FALSE;
 
 /** The platform ACPI table list.
 */
@@ -54,7 +55,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMcfg),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // SSDT Table - PCIe
   {
@@ -63,7 +65,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtPciExpress),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   }
 };
 
@@ -87,12 +90,11 @@ STATIC ACPI_HID_DEVICE_PATH  mPciRootBridgeDevicePathNode = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Pcie controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = FALSE,
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .ThreadedDeviceStart             = TRUE
 };
 
 /**
@@ -150,11 +152,11 @@ PcieConfigurationAccess (
   }
 
   if (Register >= SIZE_4KB) {
-    DEBUG ((DEBUG_ERROR, "Register = %d\n", Register));
+    DEBUG ((DEBUG_ERROR, "Register = %u\n", Register));
   }
 
   if (Register + Length > SIZE_4KB) {
-    DEBUG ((DEBUG_ERROR, "Register = %d, Length = %d\n", Register, Length));
+    DEBUG ((DEBUG_ERROR, "Register = %u, Length = %u\n", Register, Length));
   }
 
   //
@@ -320,20 +322,25 @@ PCIeFindCap (
 STATIC
 BOOLEAN
 WaitForBit16 (
-  UINT32   cid,
-  UINT16   *feat,
-  UINT16   pos,
-  UINT32   count,
-  UINT32   time_us,
-  BOOLEAN  status
+  PCIE_CONTROLLER_PRIVATE  *Private,
+  UINT16                   *Feat,
+  UINT16                   Pos,
+  UINT32                   Count,
+  UINT32                   TimeUs,
+  BOOLEAN                  Status
   )
 {
-  UINT32  i = 0;
+  UINT32  Index = 0;
 
-  while (i < count) {
-    if (!!(*feat & BIT (pos)) != status) {
-      MicroSecondDelay (time_us);
-      i++;
+  while (Index < Count) {
+    if (!!(*Feat & BIT (Pos)) != Status) {
+      if (Private->C2cInitRequired) {
+        MicroSecondDelay (TimeUs);
+      } else {
+        DeviceDiscoveryThreadMicroSecondDelay (TimeUs);
+      }
+
+      Index++;
     } else {
       return TRUE;
     }
@@ -351,7 +358,7 @@ RetrainLink (
   PCI_CAPABILITY_PCIEXP  *PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
   /* Wait for previous link training to complete */
-  if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+  if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
     /* Clear Link Bandwith */
     PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
 
@@ -360,15 +367,20 @@ RetrainLink (
     PciExpCap->LinkControl.Bits.RetrainLink      = 1;
 
     /* Retraining: Wait for link training to clear */
-    if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
+    if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 11, 10000, 100, FALSE)) {
       /* Wait for Link Bandwith set */
-      if (WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 14, 10000, 100, TRUE)) {
+      if (WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 14, 10000, 100, TRUE)) {
         /* Clear Link Bandwith */
         PciExpCap->LinkStatus.Bits.LinkBandwidthManagement = 1;
         /* Wait for 20 ms for link to appear */
-        MicroSecondDelay (20*1000);
+        if (Private->C2cInitRequired) {
+          MicroSecondDelay (20*1000);
+        } else {
+          DeviceDiscoveryThreadMicroSecondDelay (20*1000);
+        }
+
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "PCIe Controller-0x%x Link Status after re-train (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
           Private->CtrlId,
           PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -377,14 +389,139 @@ RetrainLink (
           PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
           ));
       } else {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x wait for Link Bandwith Timeout\r\n", Private->CtrlId));
       }
     } else {
-      DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
+      DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Link Retrain Timeout\r\n", Private->CtrlId));
     }
   } else {
-    DEBUG ((EFI_D_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
+    DEBUG ((DEBUG_ERROR, "PCIe Controller-0x%x Previous Link train Timeout\r\n", Private->CtrlId));
   }
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+ReadSenseGpio (
+  IN  PCIE_CONTROLLER_PRIVATE  *Private,
+  IN  EMBEDDED_GPIO            *Gpio,
+  OUT BOOLEAN                  *Sensed
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       SenseCount;
+  UINTN       Value;
+
+  if ((Private == NULL) || (Gpio == NULL) || (Sensed == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (SenseCount = 0; SenseCount < GPU_SENSE_MAX_COUNT; SenseCount++) {
+    Status = Gpio->Get (Gpio, Private->GpuKickGpioSense, &Value);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio get failed: %r\r\n", Status));
+      return Status;
+    }
+
+    if (Value == 0) {
+      *Sensed = TRUE;
+      break;
+    }
+
+    MicroSecondDelay (GPU_SENSE_DELAY);
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+ToggleKickGpio (
+  IN PCIE_CONTROLLER_PRIVATE  *Private,
+  IN EMBEDDED_GPIO            *Gpio
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((Private == NULL) || (Gpio == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_0);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+    return Status;
+  }
+
+  DeviceDiscoveryThreadMicroSecondDelay (GPU_RESET_DELAY);
+
+  Status = Gpio->Set (Gpio, Private->GpuKickGpioReset, GPIO_MODE_OUTPUT_1);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
+    return Status;
+  }
+
+  DeviceDiscoveryThreadMicroSecondDelay (2 * GPU_RESET_DELAY);
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+SenseGpu (
+  IN PCIE_CONTROLLER_PRIVATE  *Private,
+  IN EFI_HANDLE               ControllerHandle
+  )
+{
+  EFI_STATUS     Status;
+  EMBEDDED_GPIO  *Gpio;
+  BOOLEAN        GPUSensed;
+  UINT32         KickCount;
+
+  if (!Private->GpuKickGpioSupported) {
+    return EFI_SUCCESS;
+  }
+
+  Status = gBS->LocateProtocol (&gEmbeddedGpioProtocolGuid, NULL, (VOID **)&Gpio);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get GPIO protocol - %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  KickCount = 0;
+  GPUSensed = FALSE;
+
+  Status = ReadSenseGpio (Private, Gpio, &GPUSensed);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "ERROR: Gpio sense failed: %r\r\n", Status));
+    return Status;
+  }
+
+  if (GPUSensed == TRUE) {
+    return Status;
+  }
+
+  for (KickCount = 0; KickCount < GPU_KICK_MAX_COUNT; KickCount++) {
+    Status = ToggleKickGpio (Private, Gpio);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio kick toggle failed: %r\r\n", Status));
+      return Status;
+    }
+
+    Status = ReadSenseGpio (Private, Gpio, &GPUSensed);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "ERROR: Gpio sense failed: %r\r\n", Status));
+      return Status;
+    }
+
+    if (GPUSensed == TRUE) {
+      return Status;
+    }
+  }
+
+  return EFI_NOT_READY;
 }
 
 STATIC
@@ -398,8 +535,7 @@ InitializeController (
   UINT64                        val;
   UINT32                        Socket, Ctrl;
   EFI_STATUS                    Status;
-  NVIDIA_C2C_NODE_PROTOCOL      *C2cProtocol = NULL;
-  PCI_CAPABILITY_PCIEXP         *PciExpCap   = NULL;
+  PCI_CAPABILITY_PCIEXP         *PciExpCap = NULL;
   UINT8                         C2cStatus;
   VOID                          *Hob;
   TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
@@ -439,7 +575,7 @@ InitializeController (
         XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN;
   MmioWrite32 (Private->XalBase + XAL_RC_BAR_CNTL_STANDARD, val);
 
-  DEBUG ((EFI_D_VERBOSE, "Programming XAL_RC registers is done\r\n"));
+  DEBUG ((DEBUG_VERBOSE, "Programming XAL_RC registers is done\r\n"));
 
   /* Setup bus numbers */
   MmioAndThenOr32 (Private->EcamBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0xff000000, 0x00ff0100);
@@ -456,7 +592,7 @@ InitializeController (
 
   Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
   if (!Private->PCIeCapOff) {
-    DEBUG ((EFI_D_VERBOSE, "Failed to find PCIe capability registers\r\n"));
+    DEBUG ((DEBUG_VERBOSE, "Failed to find PCIe capability registers\r\n"));
     return EFI_NOT_FOUND;
   }
 
@@ -467,9 +603,9 @@ InitializeController (
   /* Wait for link up */
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
 
-  if ( WaitForBit16 (Private->CtrlId, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
+  if ( WaitForBit16 (Private, &PciExpCap->LinkStatus.Uint16, 13, 10000, 100, TRUE)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "PCIe Controller-0x%x Link is UP (Capable: Gen-%d,x%d  Negotiated: Gen-%d,x%d)\r\n",
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -485,24 +621,25 @@ InitializeController (
       RetrainLink (Private);
     }
 
-    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&C2cProtocol);
-    if (!EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
-      Status = C2cProtocol->Init (C2cProtocol, C2cProtocol->Partitions, &C2cStatus);
+    if (Private->C2cInitRequired) {
+      DEBUG ((DEBUG_ERROR, "%a: Requesting C2C Initialization\r\n", __FUNCTION__));
+      Status = Private->C2cProtocol->Init (Private->C2cProtocol, Private->C2cProtocol->Partitions, &C2cStatus);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: C2C initialization mrq failed: %r\r\n", __FUNCTION__, Status));
       } else {
-        DEBUG ((EFI_D_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: C2C initialization mrq successful.\r\n", __FUNCTION__));
         if (C2cStatus == C2C_STATUS_C2C_LINK_TRAIN_PASS) {
-          DEBUG ((EFI_D_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
+          DEBUG ((DEBUG_ERROR, "%a: C2C link training successful.\r\n", __FUNCTION__));
         } else {
-          DEBUG ((EFI_D_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
+          DEBUG ((DEBUG_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
         }
       }
+
+      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = Private->C2cProtocol->BpmpPhandle;
     }
   } else {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "PCIe Controller-0x%x Link is DOWN (Capable: Gen-%d,x%d)\r\n",
       Private->CtrlId,
       PciExpCap->LinkCapability.Bits.MaxLinkSpeed,
@@ -711,7 +848,7 @@ PcieEnableErrorReporting (
   EFI_STATUS                    Status;
   UINTN                         Segment, Bus, Device, Function;
   PCI_REG_PCIE_CAPABILITY       Capability;
-  UINT32                        PciExpCapOffset, AerCapOffset, Offset;
+  UINT32                        PciExpCapOffset, AerCapOffset, Offset, DevCapOffset;
   PCI_REG_PCIE_ROOT_CONTROL     RootControl;
   PCI_REG_PCIE_DEVICE_CONTROL   DeviceControl;
   PCI_REG_PCIE_DEVICE_STATUS    DeviceStatus;
@@ -801,6 +938,35 @@ PcieEnableErrorReporting (
         Function
         ));
 
+      /* unmask Advisory non-Fatal interrupt */
+      AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
+      if (AerCapOffset) {
+        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorMask);
+        Status = PciIo->Pci.Read (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+
+        Val_32 &= ~PCIE_AER_CORR_ERR_ADV_NONFATAL;
+
+        Status = PciIo->Pci.Write (
+                              PciIo,
+                              EfiPciIoWidthUint32,
+                              Offset,
+                              1,
+                              &Val_32
+                              );
+        if (EFI_ERROR (Status)) {
+          return EFI_DEVICE_ERROR;
+        }
+      }
+
     /* fall through */
 
     case PCIE_DEVICE_PORT_TYPE_DOWNSTREAM_PORT:
@@ -846,7 +1012,23 @@ PcieEnableErrorReporting (
         }
 
         Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
-                   PCIE_DPC_CTL_DPC_ERR_COR_EN | PCIE_DPC_CTL_DPC_SIG_SFW_EN);
+                   PCIE_DPC_CTL_DPC_ERR_COR_EN);
+
+        DevCapOffset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
+        Status       = PciIo->Pci.Read (
+                                    PciIo,
+                                    EfiPciIoWidthUint32,
+                                    DevCapOffset,
+                                    1,
+                                    &Val_32
+                                    );
+        if (EFI_ERROR (Status)) {
+          return EFI_UNSUPPORTED;
+        }
+
+        if (Val_32 & PCIE_DEV_CAP_ERR_COR_SUB_CLASS) {
+          Val_16 |= PCIE_DPC_CTL_DPC_SIG_SFW_EN;
+        }
 
         Status = PciIo->Pci.Write (
                               PciIo,
@@ -1212,6 +1394,110 @@ PcieConfigDevices (
 }
 
 /**
+  Compare config space by segment number.
+
+  @param[in] Buffer1                  The pointer to first buffer.
+  @param[in] Buffer2                  The pointer to second buffer.
+
+  @retval 0                           Buffer1 equal to Buffer2.
+  @return <0                          Buffer1 is less than Buffer2.
+  @return >0                          Buffer1 is greater than Buffer2.
+**/
+INTN
+ConfigSpaceCompare (
+  IN CONST VOID  *Buffer1,
+  IN CONST VOID  *Buffer2
+  )
+{
+  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo1;
+  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo2;
+
+  ConfigSpaceInfo1 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer1;
+  ConfigSpaceInfo2 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer2;
+
+  return (INTN)ConfigSpaceInfo1->PciSegmentGroupNumber - (INTN)ConfigSpaceInfo2->PciSegmentGroupNumber;
+}
+
+/**
+ Installs the configuration manager object for PCIe config space
+
+ Installs these in an order that is sorted by segment number
+**/
+VOID
+InstallConfigurationSpaceConfigObjects (
+  VOID
+  )
+{
+  EFI_STATUS                                        Status;
+  UINTN                                             Index;
+  EDKII_PLATFORM_REPOSITORY_INFO                    *RepoInfo;
+  UINTN                                             NumberOfHandles;
+  EFI_HANDLE                                        *HandleBuffer;
+  CM_ARM_PCI_CONFIG_SPACE_INFO                      *ConfigSpaceInfo;
+  UINTN                                             ConfigSpaceInfoSize;
+  PCIE_CONTROLLER_PRIVATE                           *Private;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *PcieRootBridgeConfigurationIo;
+  EFI_HANDLE                                        NewHandle;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &HandleBuffer
+                  );
+
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  ConfigSpaceInfoSize = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfHandles;
+  ConfigSpaceInfo     = (CM_ARM_PCI_CONFIG_SPACE_INFO *)AllocatePool (ConfigSpaceInfoSize);
+  NV_ASSERT_RETURN (ConfigSpaceInfo != NULL, return , "Failed to allocate ConfigSpaceInfo\r\n");
+
+  for (Index = 0; Index < NumberOfHandles; Index++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Index],
+                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                    (VOID **)&PcieRootBridgeConfigurationIo
+                    );
+    NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+
+    Private = PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS (PcieRootBridgeConfigurationIo);
+    CopyMem (&ConfigSpaceInfo[Index], &Private->ConfigSpaceInfo, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO));
+  }
+
+  PerformQuickSort (ConfigSpaceInfo, NumberOfHandles, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO), ConfigSpaceCompare);
+
+  RepoInfo = (EDKII_PLATFORM_REPOSITORY_INFO *)AllocateZeroPool (sizeof (EDKII_PLATFORM_REPOSITORY_INFO) * PCIE_COMMON_REPO_OBJECTS);
+  NV_ASSERT_RETURN (RepoInfo != NULL, return , "Failed to allocate RepoInfo\r\n");
+
+  RepoInfo[0].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  RepoInfo[0].CmObjectToken = CM_NULL_TOKEN;
+  RepoInfo[0].CmObjectSize  = ConfigSpaceInfoSize;
+  RepoInfo[0].CmObjectCount = NumberOfHandles;
+  RepoInfo[0].CmObjectPtr   = ConfigSpaceInfo;
+
+  RepoInfo[1].CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  RepoInfo[1].CmObjectToken = CM_NULL_TOKEN;
+  RepoInfo[1].CmObjectSize  = sizeof (CmAcpiTableList);
+  RepoInfo[1].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+  RepoInfo[1].CmObjectPtr   = &CmAcpiTableList;
+  for (Index = 0; Index < RepoInfo[1].CmObjectCount; Index++) {
+    CmAcpiTableList[Index].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
+  }
+
+  NewHandle = 0;
+  Status    = gBS->InstallMultipleProtocolInterfaces (
+                     &NewHandle,
+                     &gNVIDIAConfigurationManagerDataObjectGuid,
+                     RepoInfo,
+                     NULL
+                     );
+  NV_ASSERT_EFI_ERROR_RETURN (Status, return );
+}
+
+/**
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -1235,34 +1521,45 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                Status;
-  PCI_ROOT_BRIDGE           *RootBridge        = NULL;
-  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath  = NULL;
-  CONST VOID                *BusProperty       = NULL;
-  CONST VOID                *RangesProperty    = NULL;
-  CONST VOID                *HbmRangesProperty = NULL;
-  INT32                     PropertySize       = 0;
-  INT32                     AddressCells;
-  INT32                     PciAddressCells;
-  INT32                     SizeCells;
-  INT32                     RangeSize;
-  CONST VOID                *SegmentNumber = NULL;
-  PCIE_CONTROLLER_PRIVATE   *Private       = NULL;
-  EFI_EVENT                 ExitBootServiceEvent;
-  UINT32                    DeviceTreeHandle;
-  UINT32                    NumberOfInterrupts;
-  UINT32                    Index;
-  UINT32                    Index2;
-  BOOLEAN                   PcieFound;
-  CONST UINT32              *InterruptMap;
-  INT32                     RPNodeOffset;
-  VOID                      *Registration;
+  EFI_STATUS                                   Status;
+  PCI_ROOT_BRIDGE                              *RootBridge          = NULL;
+  EFI_DEVICE_PATH_PROTOCOL                     *ParentDevicePath    = NULL;
+  CONST VOID                                   *BusProperty         = NULL;
+  CONST VOID                                   *RangesProperty      = NULL;
+  CONST VOID                                   *HbmRangesProperty   = NULL;
+  CONST UINT32                                 *GpuKickGpioProperty = NULL;
+  CONST UINT32                                 *PxmDmnStartProperty = NULL;
+  CONST UINT32                                 *NumPxmDmnProperty   = NULL;
+  INT32                                        PropertySize         = 0;
+  INT32                                        AddressCells;
+  INT32                                        PciAddressCells;
+  INT32                                        SizeCells;
+  INT32                                        RangeSize;
+  CONST VOID                                   *SegmentNumber = NULL;
+  PCIE_CONTROLLER_PRIVATE                      *Private       = NULL;
+  EFI_EVENT                                    ExitBootServiceEvent;
+  UINT32                                       DeviceTreeHandle;
+  UINT32                                       NumberOfInterrupts;
+  UINT32                                       Index;
+  UINT32                                       Index2;
+  BOOLEAN                                      PcieFound;
+  CONST UINT32                                 *InterruptMap;
+  INT32                                        RPNodeOffset;
+  VOID                                         *Registration;
+  NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
+  CM_OBJECT_TOKEN                              *TokenMap;
 
   Status    = EFI_SUCCESS;
   PcieFound = FALSE;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
+      Status = gBS->LocateProtocol (&gNVIDIAConfigurationManagerTokenProtocolGuid, NULL, (VOID **)&CMTokenProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to fird ConfigurationManagerTokenProtocol\n", __FUNCTION__));
+        break;
+      }
+
       RootBridge = AllocateZeroPool (sizeof (PCI_ROOT_BRIDGE));
       if (RootBridge == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device bridge structure\r\n", __FUNCTION__));
@@ -1367,7 +1664,7 @@ DeviceDiscoveryNotify (
                       &PropertySize
                       );
       if ((BusProperty == NULL) || (PropertySize != 2 * sizeof (UINT32))) {
-        DEBUG ((EFI_D_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
+        DEBUG ((DEBUG_INFO, "PCIe Controller: unknown bus size in fdt, default to 0-255\r\n"));
         RootBridge->Bus.Base  = 0x0;
         RootBridge->Bus.Limit = 0xff;
       } else {
@@ -1386,7 +1683,7 @@ DeviceDiscoveryNotify (
       RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
 
       if (PciAddressCells != 3) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
         Status = EFI_DEVICE_ERROR;
         break;
       }
@@ -1405,7 +1702,7 @@ DeviceDiscoveryNotify (
       RootBridge->PMemAbove4G.Base = MAX_UINT64;
 
       if ((RangesProperty == NULL) || ((PropertySize % RangeSize) != 0)) {
-        DEBUG ((EFI_D_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
         Status = EFI_UNSUPPORTED;
         break;
       }
@@ -1435,7 +1732,7 @@ DeviceDiscoveryNotify (
           CopyMem (&HostAddress, RangesProperty + (PciAddressCells * sizeof (UINT32)), sizeof (UINT32));
           HostAddress = SwapBytes32 (HostAddress);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1447,7 +1744,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Size, RangesProperty + ((PciAddressCells + AddressCells) * sizeof (UINT32)), sizeof (UINT32));
           Size = SwapBytes32 (Size);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1468,7 +1765,7 @@ DeviceDiscoveryNotify (
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM64) {
           if (Prefetchable) {
             if (Translation) {
-              DEBUG ((EFI_D_ERROR, "Non 1:1 mapping is NOT supported for Prefetchable aperture\n"));
+              DEBUG ((DEBUG_ERROR, "Non 1:1 mapping is NOT supported for Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
               break;
             }
@@ -1479,7 +1776,7 @@ DeviceDiscoveryNotify (
             Private->PrefetchMemBase                                    = HostAddress;
             Private->PrefetchMemLimit                                   = HostAddress + Size - 1;
             Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-            DEBUG ((EFI_D_INFO, "PREF64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+            DEBUG ((DEBUG_INFO, "PREF64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
           } else {
             if (Translation) {
               RootBridge->Mem.Base                                        = DeviceAddress;
@@ -1488,19 +1785,19 @@ DeviceDiscoveryNotify (
               Private->MemBase                                            = HostAddress;
               Private->MemLimit                                           = HostAddress + Size - 1;
               Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-              DEBUG ((EFI_D_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+              DEBUG ((DEBUG_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
             } else {
-              DEBUG ((EFI_D_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
+              DEBUG ((DEBUG_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
               break;
             }
           }
         } else if (Space == PCIE_DEVICETREE_SPACE_MEM32) {
-          DEBUG ((EFI_D_ERROR, "32-bit aperture usage for memory is not supported\n"));
+          DEBUG ((DEBUG_ERROR, "32-bit aperture usage for memory is not supported\n"));
           Status = EFI_DEVICE_ERROR;
           break;
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Unknown region 0x%08x 0x%016llx-0x%016llx T 0x%016llx\r\n", Flags, DeviceAddress, Limit, Translation));
           ASSERT (FALSE);
           Status = EFI_DEVICE_ERROR;
           break;
@@ -1534,7 +1831,7 @@ DeviceDiscoveryNotify (
           CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeStart, HbmRangesProperty, sizeof (UINT32));
           Private->PcieRootBridgeConfigurationIo.HbmRangeStart = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeStart);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
@@ -1546,13 +1843,46 @@ DeviceDiscoveryNotify (
           CopyMem (&Private->PcieRootBridgeConfigurationIo.HbmRangeSize, HbmRangesProperty + (AddressCells * sizeof (UINT32)), sizeof (UINT32));
           Private->PcieRootBridgeConfigurationIo.HbmRangeSize = SwapBytes32 (Private->PcieRootBridgeConfigurationIo.HbmRangeSize);
         } else {
-          DEBUG ((EFI_D_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
+          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
           Status = EFI_DEVICE_ERROR;
           break;
         }
 
-        Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
-        Private->PcieRootBridgeConfigurationIo.NumProximityDomains  = TH500_GPU_MAX_NR_MEM_PARTITIONS;
+        PxmDmnStartProperty = fdt_getprop (
+                                DeviceTreeNode->DeviceTreeBase,
+                                DeviceTreeNode->NodeOffset,
+                                "pxm-domain-start",
+                                &PropertySize
+                                );
+        if (PxmDmnStartProperty != NULL) {
+          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = SwapBytes32 (PxmDmnStartProperty[0]);
+        } else {
+          Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID ((Private->PcieRootBridgeConfigurationIo.SegmentNumber >> 4) & 0xF);
+        }
+
+        NumPxmDmnProperty = fdt_getprop (
+                              DeviceTreeNode->DeviceTreeBase,
+                              DeviceTreeNode->NodeOffset,
+                              "num-pxm-domain",
+                              &PropertySize
+                              );
+        if (NumPxmDmnProperty != NULL) {
+          Private->PcieRootBridgeConfigurationIo.NumProximityDomains = SwapBytes32 (NumPxmDmnProperty[0]);
+        } else {
+          Private->PcieRootBridgeConfigurationIo.NumProximityDomains = TH500_GPU_MAX_NR_MEM_PARTITIONS;
+        }
+      }
+
+      GpuKickGpioProperty = fdt_getprop (
+                              DeviceTreeNode->DeviceTreeBase,
+                              DeviceTreeNode->NodeOffset,
+                              "nvidia,gpukick-gpio",
+                              &PropertySize
+                              );
+      if ((GpuKickGpioProperty != NULL) && (PropertySize == (6 * sizeof (UINT32)))) {
+        Private->GpuKickGpioSense     = GPIO (SwapBytes32 (GpuKickGpioProperty[0]), SwapBytes32 (GpuKickGpioProperty[1]));
+        Private->GpuKickGpioReset     = GPIO (SwapBytes32 (GpuKickGpioProperty[3]), SwapBytes32 (GpuKickGpioProperty[4]));
+        Private->GpuKickGpioSupported = TRUE;
       }
 
       if ((RootBridge->PMem.Base == MAX_UINT64) && (RootBridge->PMemAbove4G.Base == MAX_UINT64)) {
@@ -1561,9 +1891,20 @@ DeviceDiscoveryNotify (
 
       Private->BusMask = RootBridge->Bus.Limit;
 
-      Status = InitializeController (Private, ControllerHandle);
+      Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAC2cNodeProtocolGuid, (VOID **)&Private->C2cProtocol);
+      if (!EFI_ERROR (Status)) {
+        Private->C2cInitRequired = TRUE;
+      }
+
+      Status = SenseGpu (Private, ControllerHandle);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to sense gpu (%r)\r\n", __FUNCTION__, Status));
+      }
+
+      Private->PcieRootBridgeConfigurationIo.BpmpPhandle = MAX_UINT32;
+      Status                                             = InitializeController (Private, ControllerHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
         break;
       }
 
@@ -1576,7 +1917,7 @@ DeviceDiscoveryNotify (
                       &ExitBootServiceEvent
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
         break;
       }
 
@@ -1590,18 +1931,27 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      RootBridge->DevicePath = AppendDevicePathNode (
-                                 ParentDevicePath,
-                                 (EFI_DEVICE_PATH_PROTOCOL  *)&mPciRootBridgeDevicePathNode
-                                 );
+      mPciRootBridgeDevicePathNode.UID = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
+      RootBridge->DevicePath           = AppendDevicePathNode (
+                                           ParentDevicePath,
+                                           (EFI_DEVICE_PATH_PROTOCOL  *)&mPciRootBridgeDevicePathNode
+                                           );
 
       // Setup configuration structure
       Private->ConfigSpaceInfo.BaseAddress           = Private->EcamBase;
       Private->ConfigSpaceInfo.PciSegmentGroupNumber = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
       Private->ConfigSpaceInfo.StartBusNumber        = Private->PcieRootBridgeConfigurationIo.MinBusNumber;
       Private->ConfigSpaceInfo.EndBusNumber          = Private->PcieRootBridgeConfigurationIo.MaxBusNumber;
-      Private->ConfigSpaceInfo.AddressMapToken       = REFERENCE_TOKEN (Private->AddressMapRefInfo);
-      Private->ConfigSpaceInfo.InterruptMapToken     = REFERENCE_TOKEN (Private->InterruptRefInfo);
+      Status                                         = CMTokenProtocol->AllocateTokens (CMTokenProtocol, 2, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 2 tokens for the ConfigSpaceInfo token maps\n", __FUNCTION__));
+        break;
+      }
+
+      Private->ConfigSpaceInfo.AddressMapToken   = TokenMap[0];
+      Private->ConfigSpaceInfo.InterruptMapToken = TokenMap[1];
+      FreePool (TokenMap);
+      TokenMap = NULL;
 
       Status = GetDeviceTreeHandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, &DeviceTreeHandle);
       if (EFI_ERROR (Status)) {
@@ -1621,48 +1971,59 @@ DeviceDiscoveryNotify (
         break;
       }
 
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERUPT_MAP, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP));
+        break;
+      }
+
       NumberOfInterrupts = PropertySize / PCIE_INTERRUPT_MAP_ENTRY_SIZE;
       if (NumberOfInterrupts == 1) {
         for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
           Private->InterruptMapInfo[Index].PciInterrupt            = Index;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
           Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
         }
       } else if (NumberOfInterrupts == PCIE_NUMBER_OF_INTERUPT_MAP) {
         for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = REFERENCE_TOKEN (Private->InterruptMapInfo[Index]);
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
           Private->InterruptMapInfo[Index].PciInterrupt            = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_CHILD_INT_OFFSET])-1;
           Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[(Index * PCIE_INTERRUPT_MAP_ENTRIES) + PCIE_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
           Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = BIT2;
         }
       } else {
         Status = EFI_DEVICE_ERROR;
-        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %d\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
+        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupts, got %u\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP, NumberOfInterrupts));
+        break;
+      }
+
+      FreePool (TokenMap);
+      TokenMap = NULL;
+
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, Private->AddressMapCount, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u tokens for the AddressMap token map\n", __FUNCTION__, Private->AddressMapCount));
         break;
       }
 
       for (Index = 0; Index < Private->AddressMapCount; Index++) {
-        Private->AddressMapRefInfo[Index].ReferenceToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index]);
+        Private->AddressMapRefInfo[Index].ReferenceToken = TokenMap[Index];
       }
 
-      Index                                  = 0;
-      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
-      Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
-      Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->ConfigSpaceInfo);
-      Private->RepoInfo[Index].CmObjectCount = 1;
-      Private->RepoInfo[Index].CmObjectPtr   = &Private->ConfigSpaceInfo;
-      Index++;
+      FreePool (TokenMap);
+      TokenMap = NULL;
 
+      Index                                  = 0;
       Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-      Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptRefInfo);
+      Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.InterruptMapToken;
       Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERUPT_MAP;
       Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERUPT_MAP;
       Private->RepoInfo[Index].CmObjectPtr   = Private->InterruptRefInfo;
       Index++;
 
       Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
-      Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapRefInfo);
+      Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.AddressMapToken;
       Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * Private->AddressMapCount;
       Private->RepoInfo[Index].CmObjectCount = Private->AddressMapCount;
       Private->RepoInfo[Index].CmObjectPtr   = Private->AddressMapRefInfo;
@@ -1670,7 +2031,7 @@ DeviceDiscoveryNotify (
 
       for (Index2 = 0; Index2 < PCIE_NUMBER_OF_MAPPING_SPACE; Index2++) {
         Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciAddressMapInfo);
-        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->AddressMapInfo[Index2]);
+        Private->RepoInfo[Index].CmObjectToken = Private->AddressMapRefInfo[Index2].ReferenceToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->AddressMapInfo[Index2]);
         Private->RepoInfo[Index].CmObjectCount = 1;
         Private->RepoInfo[Index].CmObjectPtr   = &Private->AddressMapInfo[Index2];
@@ -1679,24 +2040,10 @@ DeviceDiscoveryNotify (
 
       for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERUPT_MAP; Index2++) {
         Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciInterruptMapInfo);
-        Private->RepoInfo[Index].CmObjectToken = REFERENCE_TOKEN (Private->InterruptMapInfo[Index2]);
+        Private->RepoInfo[Index].CmObjectToken = Private->InterruptRefInfo[Index2].ReferenceToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->InterruptMapInfo[Index2]);
         Private->RepoInfo[Index].CmObjectCount = 1;
         Private->RepoInfo[Index].CmObjectPtr   = &Private->InterruptMapInfo[Index2];
-        Index++;
-      }
-
-      if (!mPcieAcpiConfigInstalled) {
-        mPcieAcpiConfigInstalled               = TRUE;
-        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-        Private->RepoInfo[Index].CmObjectToken = CM_NULL_TOKEN;
-        Private->RepoInfo[Index].CmObjectSize  = sizeof (CmAcpiTableList);
-        Private->RepoInfo[Index].CmObjectCount = sizeof (CmAcpiTableList) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-        Private->RepoInfo[Index].CmObjectPtr   = &CmAcpiTableList;
-        for (Index2 = 0; Index2 < Private->RepoInfo[Index].CmObjectCount; Index2++) {
-          CmAcpiTableList[Index2].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
-        }
-
         Index++;
       }
 
@@ -1718,6 +2065,8 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryEnumerationCompleted:
+
+      InstallConfigurationSpaceConfigObjects ();
 
       EfiCreateProtocolNotifyEvent (
         &gNVIDIABdsDeviceConnectCompleteGuid,

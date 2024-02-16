@@ -686,6 +686,7 @@ VariableReady (
   CONST CHAR8  *GuidStr;
   VOID         *Protocol;
   BOOLEAN      GuidBased;
+  EFI_HANDLE   DefaultHandle = NULL;
 
   Status = gBS->LocateProtocol (&gEfiVariableWriteArchProtocolGuid, NULL, &Protocol);
   if (EFI_ERROR (Status)) {
@@ -781,6 +782,19 @@ EspVar:
   }
 
   SetSecurityPcd ();
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &DefaultHandle,
+                  &gNVIDIADefaultVarDoneGuid,
+                  NULL,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to install DefaultVarDone protocol\r\n",
+      __FUNCTION__
+      ));
+  }
 }
 
 /**

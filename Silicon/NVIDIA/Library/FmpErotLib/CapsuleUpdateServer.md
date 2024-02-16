@@ -44,3 +44,14 @@ Library of PLDM Firmware Update Package definitions and helper functions.
 ### edk2-nvidia/Silicon/NVIDIA/Library/PldmFwUpdateTaskLib
 Description:
 Library that implements the PLDM Firmware Update Task sequence.
+### edk2-nvidia/Silicon/NVIDIA/Library/FmpParamLib
+Description:
+Library to access FMP parameters from PCDs and/or DTB.
+
+## Parameters and Options
+### FMP Lowest Supported Version
+The FMP Lowest Supported Version is a 32-bit unsigned integer that is set to either the value in the PCD PcdFmpDeviceBuildTimeLowestSupportedVersion or the value of the DTB /firmware/uefi node's fmp-lowest-supported-version property, whichever numeric value is larger.
+### FMP Capsule Image Type ID GUID
+The FMP Capsule Image Type ID GUID is used to uniquely identify the system FW and is reported in the ESRT.  This GUID is set by the PCD PcdSystemFmpCapsuleImageTypeIdGuid or that value can be overriden by setting the DTB /firmware/uefi node's fmp-image-type-id-guid property to a GUID string with format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+
+**For Server platforms, the default FMP Capsule Image Type ID GUID should always be replaced with a platform-specific GUID by updating the PCD or overriding it with the DTB property.**

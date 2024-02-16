@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,6 +19,9 @@
 #define FW_PARTITION_NAME_LENGTH                                \
   (sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName) /        \
    sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName[0]))
+
+// pseudo-partition to update meta-data of inactive partitions
+#define FW_PARTITION_UPDATE_INACTIVE_PARTITIONS  L"update_inactive_partitions"
 
 typedef struct _NVIDIA_FW_PARTITION_PROTOCOL NVIDIA_FW_PARTITION_PROTOCOL;
 

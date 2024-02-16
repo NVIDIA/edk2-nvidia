@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,8 +16,8 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "Jetson"
 
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["jetson"]
+    def GetGuid(self):
+        return "b175f7b7-0cb0-446e-b338-0e0d0f688de8"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
@@ -26,11 +26,13 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return "AARCH64/L4TLauncher.efi"
 
     def GetDscName(self):
-        return "edk2-nvidia/Platform/NVIDIA/Jetson/Jetson.dsc"
+        return "edk2-nvidia/Platform/NVIDIA/NVIDIA.common.dsc"
 
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
 
+    def GetConfigFiles(self):
+        return ["edk2-nvidia/Platform/NVIDIA/Jetson/Jetson.defconfig"]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Jetson. '''

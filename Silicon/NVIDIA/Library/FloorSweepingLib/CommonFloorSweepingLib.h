@@ -68,10 +68,8 @@ CommonFloorSweepCpus (
 EFI_STATUS
 EFIAPI
 CommonCheckAndRemapCpu (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId
+  IN UINT32      LogicalCore,
+  IN OUT UINT64  *Mpidr
   );
 
 #endif // __COMMON_FLOOR_SWEEPING_LIB_H__

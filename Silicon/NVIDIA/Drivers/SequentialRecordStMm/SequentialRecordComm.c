@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,13 +11,19 @@
 
 #include "SequentialRecordPrivate.h"
 #include <Protocol/FirmwareVolumeBlock.h>
+#include <Protocol/SmmVariable.h>
+#include <Library/BaseLib.h>
+#include <NVIDIAConfiguration.h>
+#include <IndustryStandard/Acpi64.h>
 
-NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
-NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
-NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
+STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
+STATIC NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;
+STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
+STATIC EFI_SMM_VARIABLE_PROTOCOL    *SmmVar;
 
 #define EARLY_VARS_RD_SOCKET  (0)
 #define UEFI_VARS_SOCKET      (0)
+#define MAX_VAR_NAME          (256 * sizeof (CHAR16))
 
 /**
  * GetSeqProto
@@ -278,6 +284,43 @@ ExitCmetMsgHandler:
 }
 
 /**
+ * @brief Given a RAS log from RAS Firmware, this function can be used to change where any given CPER is sent and
+ * therefore override the defaults from RAS Firmware.
+ *
+ * @param RasPayload  RAS Log from RAS Firmware that can be cast to RAS_LOG_MM_ENTRY
+ * @param Target      Bit field with destination of the CPER. Only the PUBLISH_HEST and PUBLISH_BMC bits can be added or
+ *                    removed.
+ * @return UINTN      Updated target where the PUBLISH_HEST and/or PUBLISH_BMC bits may have been changed.
+ */
+STATIC
+UINTN
+RasLogOverrideTargets (
+  IN UINT8  *RasPayload,
+  IN UINTN  Target
+  )
+{
+  RAS_LOG_MM_ENTRY                                 *LogEntry;
+  EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE  *Gedes;
+
+  if (FeaturePcdGet (PcdNoCorrectedErrorsInHest)) {
+    LogEntry = (RAS_LOG_MM_ENTRY *)RasPayload;
+    Gedes    = (EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE *)LogEntry->Log;
+    DEBUG ((DEBUG_INFO, "%a: Target=0x%llx Severity=0x%lx\n", __FUNCTION__, Target, Gedes->ErrorSeverity));
+
+    /* Don't publish corrected/informational errors to HEST/OS */
+    if ((Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_CORRECTED) ||
+        (Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_NONE))
+    {
+      Target &= ~(PUBLISH_HEST);
+      Target |= PUBLISH_BMC;
+      DEBUG ((DEBUG_INFO, "%a: Corrected/Informational error. New Target=0x%llx\n", __FUNCTION__, Target));
+    }
+  }
+
+  return Target;
+}
+
+/**
  * MMI handler for RAS Log service.
  *
  * @params[in]   DispatchHandle   Handle of the registered MMI..
@@ -338,6 +381,7 @@ RasLogMsgHandler (
                               (VOID *)RasPayload,
                               *CommBufferSize
                               );
+      RasHeader->Flag = RasLogOverrideTargets (RasPayload, RasHeader->Flag);
       break;
     default:
       DEBUG ((
@@ -543,6 +587,158 @@ ExitEarlyVarsMsgHandler:
 }
 
 /**
+  Is variable protected
+
+  @retval  True   Variable is protected.
+  @retval  False  Variable is not protected.
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsVariableProtectedStmm (
+  EFI_GUID  VariableGuid,
+  CHAR16    *VariableName
+  )
+{
+  EFI_STATUS           Status;
+  UINTN                ProductInfoSize;
+  NVIDIA_PRODUCT_INFO  ProductInfo;
+  CHAR16               ProductInfoVariableName[] = L"ProductInfo";
+
+  ProductInfoSize = sizeof (ProductInfo);
+
+  //
+  // Avoid deleting user password variables
+  //
+  if (CompareGuid (&VariableGuid, &gUserAuthenticationGuid)) {
+    return TRUE;
+  }
+
+  //
+  // Check if we have to protect product asset tag info.
+  //
+  Status = SmmVar->SmmGetVariable (
+                     ProductInfoVariableName,
+                     &gNVIDIAPublicVariableGuid,
+                     NULL,
+                     &ProductInfoSize,
+                     &ProductInfo
+                     );
+  if (Status == EFI_SUCCESS) {
+    if ((ProductInfo.AssetTagProtection != 0) &&
+        (StrnCmp (VariableName, ProductInfoVariableName, StrLen (ProductInfoVariableName)) == 0) &&
+        CompareGuid (&VariableGuid, &gNVIDIAPublicVariableGuid))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * DeleteNsVars
+ * Function to delete all the non-secure variables and locked variables.
+ * This function is usually called from SatMc SP.
+ *
+ *
+ * @retval EFI_SUCCESS Deleted all the NS and locked variables.
+ *         Other       Fail to delete.
+ **/
+STATIC
+EFI_STATUS
+DeleteNsVars (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  EFI_STATUS  GetVarStatus;
+  EFI_STATUS  ClearVarStatus;
+  CHAR16      *CurVarName;
+  CHAR16      *NextVarName;
+  EFI_GUID    CurVarGuid;
+  EFI_GUID    NextVarGuid;
+  UINTN       NameSize;
+
+  CurVarName  = NULL;
+  NextVarName = NULL;
+  Status      = EFI_SUCCESS;
+
+  if (SmmVar == NULL) {
+    Status = EFI_UNSUPPORTED;
+    goto ExitDeleteNsVars;
+  }
+
+  CurVarName = AllocateZeroPool (MAX_VAR_NAME);
+  if (CurVarName == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitDeleteNsVars;
+  }
+
+  NextVarName = AllocateZeroPool (MAX_VAR_NAME);
+  if (NextVarName == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitDeleteNsVars;
+  }
+
+  NameSize = MAX_VAR_NAME;
+
+  GetVarStatus = SmmVar->SmmGetNextVariableName (
+                           &NameSize,
+                           NextVarName,
+                           &NextVarGuid
+                           );
+  while (!EFI_ERROR (GetVarStatus)) {
+    CopyMem (CurVarName, NextVarName, NameSize);
+    CopyGuid (&CurVarGuid, &NextVarGuid);
+    NameSize = MAX_VAR_NAME;
+
+    GetVarStatus = SmmVar->SmmGetNextVariableName (
+                             &NameSize,
+                             NextVarName,
+                             &NextVarGuid
+                             );
+
+    if (IsVariableProtectedStmm (CurVarGuid, CurVarName)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Delete Variable %g:%s Write Protected\r\n",
+        &CurVarGuid,
+        CurVarName
+        ));
+      continue;
+    }
+
+    ClearVarStatus = SmmVar->SmmSetVariable (
+                               CurVarName,
+                               &CurVarGuid,
+                               0,
+                               0,
+                               NULL
+                               );
+    DEBUG ((
+      DEBUG_ERROR,
+      "Delete Variable %g:%s %r\r\n",
+      &CurVarGuid,
+      CurVarName,
+      ClearVarStatus
+      ));
+  }
+
+ExitDeleteNsVars:
+  if (CurVarName) {
+    FreePool (CurVarName);
+  }
+
+  if (NextVarName) {
+    FreePool (NextVarName);
+  }
+
+  return Status;
+}
+
+/**
  * MMI handler for SatMc service.
  *
  * @params[in]   DispatchHandle   Handle of the registered MMI..
@@ -612,13 +808,39 @@ SatMcMsgHandler (
       }
 
       break;
+    case CLEAR_EFI_NSVARS:
+      Status = DeleteNsVars ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Early Vars Partition %r, Cmd %u",
+          __FUNCTION__,
+          Status,
+          SatMcMmMsg->Command
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      Status = EraseEarlyVarsPartition ();
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Early Vars Partition %r, Cmd %u",
+          __FUNCTION__,
+          Status,
+          SatMcMmMsg->Command
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      break;
     default:
       DEBUG ((DEBUG_ERROR, "%a: Unknown command %u\n", __FUNCTION__, SatMcMmMsg->Command));
       Status = EFI_INVALID_PARAMETER;
       break;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Returning %a \n", __FUNCTION__, Status));
+  DEBUG ((DEBUG_INFO, "%a: Returning %r \n", __FUNCTION__, Status));
 
 ExitSatMcMsgHandler:
   SatMcMmMsg->ReturnStatus = Status;
@@ -780,7 +1002,7 @@ RegisterCmetHandler (
                     NULL,
                     (VOID **)&CmetSeqProto
                     );
-  if (CmetSeqProto == NULL) {
+  if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Failed to Get Sequential Proto for Cmet\n",
@@ -835,6 +1057,21 @@ RegisterSatMcHandler (
     goto ExitSatMcRegister;
   }
 
+  Status = gMmst->MmLocateProtocol (
+                    &gEfiSmmVariableProtocolGuid,
+                    NULL,
+                    (VOID **)&SmmVar
+                    );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: gEfiSmmVariableProtocolGuid: NOT LOCATED!\n",
+      __FUNCTION__
+      ));
+    SmmVar = NULL;
+    goto ExitSatMcRegister;
+  }
+
 ExitSatMcRegister:
   return Status;
 }
@@ -879,7 +1116,7 @@ SequentialRecordCommInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: failed to Register CMET log handler%r\n",
+      "%a: failed to Register CMET log handler %r\n",
       __FUNCTION__,
       Status
       ));
@@ -889,7 +1126,7 @@ SequentialRecordCommInitialize (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: failed to Register CMET log handler%r\n",
+      "%a: failed to Register SatMc log handler %r\n",
       __FUNCTION__,
       Status
       ));

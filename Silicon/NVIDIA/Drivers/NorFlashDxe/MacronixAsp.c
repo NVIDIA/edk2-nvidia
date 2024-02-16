@@ -101,7 +101,7 @@ MxPollingBit (
       break;
     }
 
-    MicroSecondDelay (SAFE_TIMEOUT);
+    MicroSecondDelay (MX_TIMEOUT);
   } while ((Reply & BitMask) != Expect);
 
   return Status;

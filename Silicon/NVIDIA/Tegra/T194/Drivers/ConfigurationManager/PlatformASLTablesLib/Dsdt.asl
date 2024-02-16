@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -233,18 +233,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       Name (_HID, "PNP0C0C")
     }
 
-    Device(USB0) {
-      Name (_HID, "NVDA0214")
-      Name (_CID, "PNP0D10")
-      Name (_UID, 0)
-      Name (_CCA, ZERO)
-
-      Name(_CRS, ResourceTemplate () {
-        Memory32Fixed(ReadWrite, 0x03610000, 0x40000)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xc3 }
-      })
-    }
-
     //---------------------------------------------------------------------
     // ethernet@2490000
     //---------------------------------------------------------------------
@@ -317,7 +305,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TEGRA194", 0x00000001)
       })
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, 0x3510000, 0x10000)
+        Memory32Fixed(ReadWrite, 0x3518000, 0x8000)
         Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { 0xC1 }
       })
     }

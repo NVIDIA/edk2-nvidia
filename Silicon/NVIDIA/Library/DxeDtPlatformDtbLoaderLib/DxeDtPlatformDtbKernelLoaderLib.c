@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -23,6 +23,7 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
@@ -50,7 +51,7 @@ typedef struct {
 } QSPI_COMPATIBILITY;
 
 EFI_EVENT  FdtInstallEvent;
-EFI_EVENT  ReadyToBootEvent;
+EFI_EVENT  EndOfDxeEvent;
 
 QSPI_COMPATIBILITY  gQspiCompatibilityMap[] = {
   { "nvidia,tegra186-qspi" },
@@ -198,6 +199,49 @@ EnableOpteeNode (
       ));
     return;
   }
+}
+
+STATIC
+VOID
+EnableFtpmNode (
+  IN VOID  *Dtb
+  )
+{
+  VOID        *Ftpm;
+  EFI_STATUS  Status;
+  INT32       FtpmNodeOffset;
+  INT32       Ret;
+
+  Status = gBS->LocateProtocol (&gNVIDIAFtpmPresentProtocolGuid, NULL, (VOID **)&Ftpm);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "FtpmProtocol Not Found - %r\n", Status));
+    goto ExitEnableFtpmNode;
+  }
+
+  FtpmNodeOffset = fdt_path_offset (Dtb, "/firmware/ftpm");
+  if (FtpmNodeOffset < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Ftpm Node not found %d\n",
+      __FUNCTION__,
+      FtpmNodeOffset
+      ));
+    goto ExitEnableFtpmNode;
+  }
+
+  Ret = fdt_setprop (Dtb, FtpmNodeOffset, "status", "okay", sizeof ("okay"));
+  if (Ret != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to add status Property %d\n",
+      __FUNCTION__,
+      Ret
+      ));
+    goto ExitEnableFtpmNode;
+  }
+
+ExitEnableFtpmNode:
+  return;
 }
 
 VOID
@@ -481,6 +525,7 @@ UpdateFdt (
   EFI_STATUS  Status;
   VOID        *AcpiBase;
   VOID        *Dtb;
+  BOOLEAN     FirmwareMediaOverlaysApplied;
   VOID        *CpublDtb;
   VOID        *OverlayDtb;
   INT32       NodeOffset;
@@ -496,12 +541,51 @@ UpdateFdt (
     return;
   }
 
-  // Apply kernel-dtb overlays
-  CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
-  OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
-  if (fdt_check_header (OverlayDtb) == 0) {
-    Status = ApplyTegraDeviceTreeOverlay (Dtb, OverlayDtb, SWModule);
-    if (EFI_ERROR (Status)) {
+  // Check if overlays from fw media are already applied
+  FirmwareMediaOverlaysApplied = FALSE;
+  NodeOffset                   = fdt_path_offset (Dtb, "/firmware/uefi");
+  if (NodeOffset >= 0) {
+    if (NULL != fdt_get_property (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL)) {
+      DEBUG ((DEBUG_ERROR, "%a: Overlays from firmware media already applied.\r\n", __FUNCTION__));
+      FirmwareMediaOverlaysApplied = TRUE;
+    }
+  }
+
+  if (!FirmwareMediaOverlaysApplied) {
+    // Apply kernel-dtb overlays
+    DEBUG ((DEBUG_ERROR, "%a: Applying overlays from firmware media.\r\n", __FUNCTION__));
+    CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
+    OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
+    if (fdt_check_header (OverlayDtb) == 0) {
+      Status = ApplyTegraDeviceTreeOverlay (Dtb, OverlayDtb, SWModule);
+      if (EFI_ERROR (Status)) {
+        return;
+      }
+
+      NodeOffset = fdt_path_offset (Dtb, "/firmware/uefi");
+      if (NodeOffset >= 0) {
+        fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+      } else {
+        NodeOffset = fdt_path_offset (Dtb, "/firmware");
+        if (NodeOffset >= 0) {
+          NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+          if (NodeOffset >= 0) {
+            fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+          }
+        } else {
+          NodeOffset = fdt_add_subnode (Dtb, 0, "firmware");
+          if (NodeOffset >= 0) {
+            NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+            if (NodeOffset >= 0) {
+              fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+            }
+          }
+        }
+      }
+
+      // Install DTB again so that any prior DTB updates that got skipped because of missing
+      // overlays are now applied.
+      gBS->InstallConfigurationTable (&gFdtTableGuid, Dtb);
       return;
     }
   }
@@ -532,173 +616,29 @@ UpdateFdt (
   } else if (IsTrustyPresent ()) {
     EnableTrustyNode (Dtb);
   }
+
+  EnableFtpmNode (Dtb);
 }
 
 VOID
 EFIAPI
-InstallFdt (
+OnEndOfDxe (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
 {
-  EFI_STATUS                   Status;
-  VOID                         *AcpiBase;
-  VOID                         *CurrentDtb;
-  CHAR16                       PartitionName[MAX_PARTITION_NAME_LEN];
-  UINTN                        NumOfHandles;
-  EFI_HANDLE                   *HandleBuffer;
-  UINT64                       Size;
-  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo;
-  BOOLEAN                      DtbLocAdjusted;
-  UINTN                        Index;
-  EFI_BLOCK_IO_PROTOCOL        *BlockIo;
-  VOID                         *KernelDtb;
-  VOID                         *Dtb;
-  VOID                         *DtbCopy;
-  UINTN                        DataSize;
-  UINT32                       BootMode;
-
-  HandleBuffer   = NULL;
-  PartitionInfo  = NULL;
-  DtbLocAdjusted = FALSE;
-  KernelDtb      = NULL;
-  Dtb            = NULL;
-  DtbCopy        = NULL;
-
   gBS->CloseEvent (Event);
 
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    return;
-  }
+  gBS->CreateEventEx (
+         EVT_NOTIFY_SIGNAL,
+         TPL_NOTIFY,
+         UpdateFdt,
+         NULL,
+         &gFdtTableGuid,
+         &FdtInstallEvent
+         );
 
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
-  DataSize = sizeof (BootMode);
-  Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
-  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
-    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, PcdGetPtr (PcdRecoveryKernelDtbPartitionName));
-  } else {
-    Status = GetActivePartitionName (PcdGetPtr (PcdKernelDtbPartitionName), PartitionName);
-    if (EFI_ERROR (Status)) {
-      return;
-    }
-  }
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiPartitionInfoProtocolGuid,
-                  NULL,
-                  &NumOfHandles,
-                  &HandleBuffer
-                  );
-
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
-  for (Index = 0; Index < NumOfHandles; Index++) {
-    Status = gBS->HandleProtocol (
-                    HandleBuffer[Index],
-                    &gEfiPartitionInfoProtocolGuid,
-                    (VOID **)&PartitionInfo
-                    );
-
-    if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
-      continue;
-    }
-
-    if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
-      continue;
-    }
-
-    if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-      continue;
-    }
-
-    if (0 == StrCmp (
-               PartitionInfo->Info.Gpt.PartitionName,
-               PartitionName
-               ))
-    {
-      break;
-    }
-  }
-
-  if (Index == NumOfHandles) {
-    goto Exit;
-  }
-
-  Status = gBS->HandleProtocol (
-                  HandleBuffer[Index],
-                  &gEfiBlockIoProtocolGuid,
-                  (VOID **)&BlockIo
-                  );
-  if (EFI_ERROR (Status) || (BlockIo == NULL)) {
-    goto Exit;
-  }
-
-  Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
-
-  KernelDtb = NULL;
-  Status    = gBS->AllocatePool (
-                     EfiBootServicesData,
-                     Size,
-                     &KernelDtb
-                     );
-
-  if (EFI_ERROR (Status) || (KernelDtb == NULL)) {
-    goto Exit;
-  }
-
-  Status = BlockIo->ReadBlocks (
-                      BlockIo,
-                      BlockIo->Media->MediaId,
-                      0,
-                      Size,
-                      KernelDtb
-                      );
-  if (EFI_ERROR (Status)) {
-    goto Exit;
-  }
-
-  Dtb = KernelDtb;
-  if (fdt_check_header (Dtb) != 0) {
-    Dtb += PcdGet32 (PcdSignedImageHeaderSize);
-    if (fdt_check_header (Dtb) != 0) {
-      DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
-      goto Exit;
-    }
-  }
-
-  DtbCopy = NULL;
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
-  if ((DtbCopy != NULL) &&
-      (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
-  {
-    DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB\r\n", __FUNCTION__));
-    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
-    if (EFI_ERROR (Status)) {
-      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
-      DtbCopy = NULL;
-    } else {
-      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
-    }
-  }
-
-Exit:
-  if (KernelDtb != NULL) {
-    gBS->FreePool (KernelDtb);
-    KernelDtb = NULL;
-  }
-
-  if (HandleBuffer != NULL) {
-    gBS->FreePool (HandleBuffer);
-    HandleBuffer = NULL;
-  }
+  UpdateFdt (NULL, NULL);
 }
 
 /**
@@ -720,13 +660,9 @@ DtPlatformLoadDtb (
   OUT   UINTN  *DtbSize
   )
 {
-  EFI_STATUS                    Status;
-  VOID                          *UefiDtb;
-  VOID                          *DtbCopy;
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  TEGRA_PLATFORM_TYPE           PlatformType;
-  BOOLEAN                       UefiDtbBoot;
+  EFI_STATUS  Status;
+  VOID        *UefiDtb;
+  VOID        *DtbCopy;
 
   UefiDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
   if (fdt_check_header (UefiDtb) != 0) {
@@ -737,8 +673,8 @@ DtPlatformLoadDtb (
   // Double the size taken by DTB to have enough buffer to accommodate
   // any runtime additions made to it.
   DtbCopy = NULL;
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (2 * fdt_totalsize (UefiDtb)));
-  if (fdt_open_into (UefiDtb, DtbCopy, 2 * fdt_totalsize (UefiDtb)) != 0) {
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (UefiDtb)));
+  if (fdt_open_into (UefiDtb, DtbCopy, 4 * fdt_totalsize (UefiDtb)) != 0) {
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
@@ -747,48 +683,18 @@ DtPlatformLoadDtb (
   *Dtb     = DtbCopy;
   *DtbSize = fdt_totalsize (*Dtb);
 
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-  {
-    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  } else {
-    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
-    return EFI_NOT_FOUND;
-  }
-
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
-                  UpdateFdt,
+                  OnEndOfDxe,
                   NULL,
-                  &gFdtTableGuid,
-                  &FdtInstallEvent
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &EndOfDxeEvent
                   );
 
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
-
-  PlatformType = TegraGetPlatform ();
-
-  UefiDtbBoot = FALSE;
-  if ((PlatformType != TEGRA_PLATFORM_SILICON) ||
-      (PlatformResourceInfo->BootType == TegrablBootRcm))
-  {
-    UefiDtbBoot = TRUE;
-  }
-
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  UefiDtbBoot ?
-                  UpdateFdt :
-                  InstallFdt,
-                  NULL,
-                  &gEfiEventReadyToBootGuid,
-                  &ReadyToBootEvent
-                  );
 
 Exit:
   if (EFI_ERROR (Status)) {

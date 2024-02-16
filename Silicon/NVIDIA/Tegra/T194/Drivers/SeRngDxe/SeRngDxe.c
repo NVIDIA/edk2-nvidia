@@ -2,7 +2,7 @@
 
   SE RNG Controller Driver
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,7 +30,6 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA T194 SE RNG controller driver",
-  .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoDeassertReset               = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
@@ -83,7 +82,7 @@ ExecuteRng1ControlCommand (
       break;
     case RNG1_CMD_NOP:
     default:
-      DEBUG ((DEBUG_ERROR, "Cmd %d has nothing to do (or) invalid\r\n", Command));
+      DEBUG ((DEBUG_ERROR, "Cmd %u has nothing to do (or) invalid\r\n", Command));
       return EFI_DEVICE_ERROR;
   }
 
@@ -93,7 +92,7 @@ ExecuteRng1ControlCommand (
   do {
     if (MaxPollCount == 0) {
       DEBUG ((DEBUG_ERROR, "RNG1 ISTAT poll timed out\r\n"));
-      DEBUG ((DEBUG_ERROR, "Command %d\r\n", Command));
+      DEBUG ((DEBUG_ERROR, "Command %u\r\n", Command));
       return EFI_DEVICE_ERROR;
     }
 
@@ -122,7 +121,7 @@ ExecuteRng1ControlCommand (
   if ((Data32 & TEGRA_SE_RNG1_INT_STATUS_EIP0) != 0) {
     DEBUG ((
       DEBUG_ERROR,
-      "RNG1 interupt not cleared (0x%x) after cmd %d execution\r\n",
+      "RNG1 interupt not cleared (0x%x) after cmd %u execution\r\n",
       Data32,
       Command
       ));
@@ -279,14 +278,14 @@ DeviceDiscoveryNotify (
       Private = (SE_RNG_PRIVATE_DATA *)AllocateZeroPool (sizeof (SE_RNG_PRIVATE_DATA));
       if (Private == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to allocate private data structure\r\n"));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to allocate private data structure\r\n"));
         break;
       }
 
       Private->Signature = SE_RNG_SIGNATURE;
       Status             = DeviceDiscoveryGetMmioRegion (ControllerHandle, 1, &Private->BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
         FreePool (Private);
         break;
       }
@@ -302,7 +301,7 @@ DeviceDiscoveryNotify (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to install protocol (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to install protocol (%r)\r\n", Status));
         FreePool (Private);
         break;
       }
@@ -312,7 +311,7 @@ DeviceDiscoveryNotify (
     case DeviceDiscoveryDriverBindingStop:
       Status = gBS->HandleProtocol (ControllerHandle, &gEfiCallerIdGuid, (VOID **)&Private);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRng: Failed to get private data (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRng: Failed to get private data (%r)\r\n", Status));
         break;
       }
 
@@ -325,7 +324,7 @@ DeviceDiscoveryNotify (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRng: Failed to uninstall procotol (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRng: Failed to uninstall procotol (%r)\r\n", Status));
         break;
       }
 

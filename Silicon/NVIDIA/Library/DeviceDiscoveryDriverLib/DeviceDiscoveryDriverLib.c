@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,8 +19,11 @@
 #include <Library/DeviceDiscoveryLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/TimerLib.h>
+#include <Library/SystemContextLib.h>
 #include <libfdt.h>
 
+#include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include <Protocol/ClockNodeProtocol.h>
@@ -30,9 +33,39 @@
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
 
-SCMI_CLOCK2_PROTOCOL           *gScmiClockProtocol    = NULL;
-NVIDIA_CLOCK_PARENTS_PROTOCOL  *gClockParentsProtocol = NULL;
-STATIC EFI_HANDLE              mImageHandle           = NULL;
+// These globals are defined be driver not for the full system context
+SCMI_CLOCK2_PROTOCOL                           *gScmiClockProtocol    = NULL;
+NVIDIA_CLOCK_PARENTS_PROTOCOL                  *gClockParentsProtocol = NULL;
+STATIC EFI_HANDLE                              mImageHandle           = NULL;
+STATIC EFI_SYSTEM_CONTEXT_AARCH64              MainContext            = { 0 };
+STATIC UINTN                                   SubThreadsRunning      = 0;
+STATIC NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL     *AsyncProtocol         = NULL;
+STATIC NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *CurrentThread         = NULL;
+BOOLEAN                                        EnumerationCompleted   = FALSE;
+
+/**
+  Gets info on if an async driver is still running.
+
+  @param[in]     This                The instance of the NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL.
+  @param[out]    StillPending        This driver is still running setup
+
+  @retval EFI_SUCCESS                Status was returned.
+  @retval EFI_INVALID_PARAMETER      StillPending is NULL.
+  @retval others                     Error processing status
+**/
+EFI_STATUS
+DeviceDiscoveryAsyncStatus (
+  IN  NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL  *This,
+  IN  BOOLEAN                              *StillPending
+  )
+{
+  if (StillPending == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *StillPending = (SubThreadsRunning != 0);
+  return EFI_SUCCESS;
+}
 
 VOID
 EFIAPI
@@ -71,14 +104,14 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
       return;
     }
 
     for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
       Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, failed to assert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
+        DEBUG ((DEBUG_ERROR, "%a, failed to assert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
         return;
       }
     }
@@ -87,13 +120,13 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ClockProtocol->DisableAll (ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to disable clocks %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to disable clocks %r\r\n", __FUNCTION__, Status));
       return;
     }
   }
@@ -101,25 +134,25 @@ DeviceDiscoveryOnExitBootServices (
   if (gDeviceDiscoverDriverConfig.AutoResetModule) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ResetProtocol->ModuleResetAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
       return;
     }
   } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       return;
     }
 
     Status = ResetProtocol->AssertAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
       return;
     }
   }
@@ -128,90 +161,214 @@ DeviceDiscoveryOnExitBootServices (
 }
 
 /**
-  Supported function of Driver Binding protocol for this driver.
-  Test to see if this driver supports ControllerHandle.
+  @brief Timer event callback. When this fires we switch back to the driver
+  context until it yields again.
 
-  @param This                   Protocol instance pointer.
-  @param Controller             Handle of device to test.
-  @param RemainingDevicePath    A pointer to the device path.
-                                it should be ignored by device driver.
+  @param Context Thread Context
+**/
+VOID
+DeviceDiscoveryThreadCallback (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  CurrentThread = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)Context;
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&MainContext,
+    (EFI_SYSTEM_CONTEXT)&CurrentThread->Context
+    );
+}
 
-  @retval EFI_SUCCESS           This driver supports this device.
-  @retval EFI_ALREADY_STARTED   This driver is already running on this device.
-  @retval other                 This driver does not support this device.
+/**
+  Stalls for at least the given number of microseconds.
 
+  Switches back to main thread for at least the given number of microseconds
+
+  @param  MicroSeconds  The minimum number of microseconds to delay.
+
+  @return The value of MicroSeconds specified.
+
+**/
+UINTN
+EFIAPI
+DeviceDiscoveryThreadMicroSecondDelay (
+  IN      UINTN  MicroSeconds
+  )
+{
+  NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext;
+
+  if (CurrentThread == NULL) {
+    return MicroSecondDelay (MicroSeconds);
+  }
+
+  ThreadContext = CurrentThread;
+  gBS->SetTimer (ThreadContext->Timer, TimerRelative, MicroSeconds*10);
+  CurrentThread = NULL;
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
+    (EFI_SYSTEM_CONTEXT)&MainContext
+    );
+  return MicroSeconds;
+}
+
+/**
+  @brief Wrapper function for driver start
+
+  @param ThreadContext Thread context info
+
+**/
+STATIC
+VOID
+DeviceThreadMain (
+  IN NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext
+  )
+{
+  EFI_STATUS  Status;
+
+  CurrentThread = ThreadContext;
+  SubThreadsRunning++;
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryDriverBindingStart,
+             ThreadContext->DriverHandle,
+             ThreadContext->Controller,
+             ThreadContext->Node
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+  }
+
+  CurrentThread = NULL;
+  SubThreadsRunning--;
+  gBS->CloseEvent (ThreadContext->Timer);
+
+  if (EnumerationCompleted && (SubThreadsRunning == 0)) {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryEnumerationCompleted,
+               mImageHandle,
+               NULL,
+               NULL
+               );
+  }
+
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
+    (EFI_SYSTEM_CONTEXT)&MainContext
+    );
+
+  // Should never get here
+  ASSERT (FALSE);
+  CpuDeadLoop ();
+}
+
+/**
+  @brief Start device initialization in a subthread
+
+  @param DriverHandle  Handle of Driver
+  @param Controller    Handle of Contoller
+  @param Node          DeviceTree Node of controller
+
+  @retval EFI_SUCCESS  Thread was started
+  @retval others       Failure to start thread
 **/
 STATIC
 EFI_STATUS
 EFIAPI
-DeviceDiscoveryBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+ThreadedDeviceStart (
+  IN EFI_HANDLE                        DriverHandle,
+  IN EFI_HANDLE                        Controller,
+  IN NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node
   )
 {
-  EFI_STATUS                        Status;
-  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
-  NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
+  EFI_STATUS                              Status;
+  NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *NewContext;
+  EFI_TPL                                 OldTpl;
+  UINTN                                   ThreadStackPages;
 
-  //
-  // Attempt to open NonDiscoverable Protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER
+  NewContext = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)AllocateZeroPool (sizeof (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT));
+  if (NewContext == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  ThreadStackPages = EFI_SIZE_TO_PAGES (THREAD_STACK_SIZE);
+
+  NewContext->StackBase = (EFI_PHYSICAL_ADDRESS)AllocatePages (ThreadStackPages);
+  if (NewContext->StackBase == 0) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
+
+  Status = gBS->CreateEvent (
+                  EVT_TIMER|EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  DeviceDiscoveryThreadCallback,
+                  NewContext,
+                  &NewContext->Timer
                   );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ErrorExit;
   }
 
-  Status = gBS->HandleProtocol (Controller, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
-  if (EFI_ERROR (Status)) {
-    Node = NULL;
-  }
+  NewContext->Controller   = Controller;
+  NewContext->DriverHandle = DriverHandle;
+  NewContext->Node         = Node;
 
-  Status = EFI_UNSUPPORTED;
-  while (MappingNode->Compatibility != NULL) {
-    if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
-      Status = EFI_SUCCESS;
-      break;
+  // Don't change the special registers
+  GetSystemContext ((EFI_SYSTEM_CONTEXT)&MainContext);
+  NewContext->Context.ELR  = MainContext.ELR;
+  NewContext->Context.SPSR = MainContext.SPSR;
+  NewContext->Context.FPSR = MainContext.FPSR;
+  NewContext->Context.ESR  = MainContext.ESR;
+  NewContext->Context.FAR  = MainContext.FAR;
+
+  NewContext->Context.LR = (UINT64)DeviceThreadMain;
+  NewContext->Context.SP = NewContext->StackBase + THREAD_STACK_SIZE;
+  NewContext->Context.X0 = (UINT64)NewContext;
+
+  if (AsyncProtocol == NULL) {
+    AsyncProtocol = (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL *)AllocatePool (sizeof (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL));
+    if (AsyncProtocol == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ErrorExit;
     }
 
-    MappingNode++;
+    AsyncProtocol->GetStatus = DeviceDiscoveryAsyncStatus;
+    gBS->InstallMultipleProtocolInterfaces (&DriverHandle, &gNVIDIAAsyncDriverStatusProtocol, (VOID *)AsyncProtocol, NULL);
   }
 
-  if (!EFI_ERROR (Status)) {
-    Status = DeviceDiscoveryNotify (
-               DeviceDiscoveryDriverBindingSupported,
-               This->DriverBindingHandle,
-               Controller,
-               Node
-               );
-  }
+  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+  SwapSystemContext (
+    (EFI_SYSTEM_CONTEXT)&MainContext,
+    (EFI_SYSTEM_CONTEXT)&NewContext->Context
+    );
+  gBS->RestoreTPL (OldTpl);
 
-  gBS->CloseProtocol (
-         Controller,
-         &gNVIDIANonDiscoverableDeviceProtocolGuid,
-         This->DriverBindingHandle,
-         Controller
-         );
+ErrorExit:
+  if (EFI_ERROR (Status)) {
+    if (NewContext != NULL) {
+      if (NewContext->Timer != 0) {
+        gBS->CloseEvent (NewContext->Timer);
+        NewContext->Timer = 0;
+      }
+
+      if (NewContext->StackBase != 0) {
+        FreePages ((VOID *)NewContext->StackBase, ThreadStackPages);
+        NewContext->StackBase = 0;
+      }
+
+      FreePool (NewContext);
+      NewContext = NULL;
+    }
+  }
 
   return Status;
 }
 
 /**
-  This routine is called right after the .Supported() called and
   Start this driver on ControllerHandle.
 
-  @param This                   Protocol instance pointer.
   @param Controller             Handle of device to bind driver to.
-  @param RemainingDevicePath    A pointer to the device path.
-                                it should be ignored by device driver.
 
   @retval EFI_SUCCESS           This driver is added to this device.
   @retval EFI_ALREADY_STARTED   This driver is already running on this device.
@@ -221,10 +378,8 @@ DeviceDiscoveryBindingSupported (
 STATIC
 EFI_STATUS
 EFIAPI
-DeviceDiscoveryBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+DeviceDiscoveryStart (
+  IN EFI_HANDLE  Controller
   )
 {
   EFI_STATUS                        Status;
@@ -244,12 +399,12 @@ DeviceDiscoveryBindingStart (
                   Controller,
                   &gNVIDIANonDiscoverableDeviceProtocolGuid,
                   (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
+                  mImageHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no NonDiscoverableProtocol\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, no NonDiscoverableProtocol\r\n", __FUNCTION__));
     return Status;
   }
 
@@ -269,21 +424,32 @@ DeviceDiscoveryBindingStart (
   }
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
+    goto ErrorExit;
+  }
+
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryDriverBindingSupported,
+             mImageHandle,
+             Controller,
+             Node
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a, Failed supported check\r\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   if (gDeviceDiscoverDriverConfig.AutoDeassertPg) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no Pg node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
       Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, failed to deassert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
+        DEBUG ((DEBUG_ERROR, "%a, failed to deassert Pg %x: %r\r\n", __FUNCTION__, PgProtocol->PowerGateId[Index], Status));
         goto ErrorExit;
       }
     }
@@ -292,13 +458,13 @@ DeviceDiscoveryBindingStart (
   if (gDeviceDiscoverDriverConfig.AutoEnableClocks) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no clock node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ClockProtocol->EnableAll (ClockProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to enable clocks %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to enable clocks %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -306,25 +472,25 @@ DeviceDiscoveryBindingStart (
   if (gDeviceDiscoverDriverConfig.AutoResetModule) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ResetProtocol->ModuleResetAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to reset module%r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   } else if (gDeviceDiscoverDriverConfig.AutoDeassertReset) {
     Status = gBS->HandleProtocol (Controller, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ResetProtocol->DeassertAll (ResetProtocol);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -335,7 +501,7 @@ DeviceDiscoveryBindingStart (
                   (VOID **)&DeviceDiscoveryContext
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to allocate context\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to allocate context\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -355,20 +521,32 @@ DeviceDiscoveryBindingStart (
                     &DeviceDiscoveryContext->OnExitBootServicesEvent
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, driver returned %r to create event callback\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, driver returned %r to create event callback\r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
 
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryDriverBindingStart,
-             This->DriverBindingHandle,
-             Controller,
-             Node
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
+  if (gDeviceDiscoverDriverConfig.ThreadedDeviceStart) {
+    Status = ThreadedDeviceStart (
+               mImageHandle,
+               Controller,
+               Node
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, threaded device start returned %r\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
+  } else {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryDriverBindingStart,
+               mImageHandle,
+               Controller,
+               Node
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+      goto ErrorExit;
+    }
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -378,11 +556,12 @@ DeviceDiscoveryBindingStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to install device discovery context guid\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, driver returned %r to install device discovery context guid\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
   if (!gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
+    ASSERT (!gDeviceDiscoverDriverConfig.ThreadedDeviceStart);
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &Controller,
                     &gEdkiiNonDiscoverableDeviceProtocolGuid,
@@ -392,7 +571,7 @@ DeviceDiscoveryBindingStart (
     if (EFI_ERROR (Status)) {
       DeviceDiscoveryNotify (
         DeviceDiscoveryDriverBindingStop,
-        This->DriverBindingHandle,
+        mImageHandle,
         Controller,
         Node
         );
@@ -412,150 +591,13 @@ ErrorExit:
     gBS->CloseProtocol (
            Controller,
            &gNVIDIANonDiscoverableDeviceProtocolGuid,
-           This->DriverBindingHandle,
+           mImageHandle,
            Controller
            );
   }
 
   return Status;
 }
-
-/**
-  Stop this driver on ControllerHandle.
-
-  @param This               Protocol instance pointer.
-  @param Controller         Handle of device to stop driver on.
-  @param NumberOfChildren   Not used.
-  @param ChildHandleBuffer  Not used.
-
-  @retval EFI_SUCCESS   This driver is removed from this device.
-  @retval other         Some error occurs when removing this driver from this device.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-DeviceDiscoveryBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN UINTN                        NumberOfChildren,
-  IN EFI_HANDLE                   *ChildHandleBuffer
-  )
-{
-  EFI_STATUS                        Status;
-  NON_DISCOVERABLE_DEVICE           *NonDiscoverableProtocol = NULL;
-  NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
-  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
-  NVIDIA_DEVICE_DISCOVERY_CONTEXT   *DeviceDiscoveryContext  = NULL;
-
-  if (NumberOfChildren != 0) {
-    return EFI_UNSUPPORTED;
-  }
-
-  //
-  // Attempt to open NonDiscoverable Protocol
-  //
-  Status = gBS->OpenProtocol (
-                  Controller,
-                  &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                  (VOID **)&NonDiscoverableProtocol,
-                  This->DriverBindingHandle,
-                  Controller,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = EFI_UNSUPPORTED;
-  while (MappingNode->Compatibility != NULL) {
-    if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
-      Status = EFI_SUCCESS;
-      break;
-    }
-
-    MappingNode++;
-  }
-
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (Controller, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
-  if (EFI_ERROR (Status)) {
-    Node = NULL;
-  }
-
-  if (!gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
-    Status = gBS->UninstallMultipleProtocolInterfaces (
-                    This->DriverBindingHandle,
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    NonDiscoverableProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      return EFI_DEVICE_ERROR;
-    }
-  }
-
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryDriverBindingStop,
-             This->DriverBindingHandle,
-             Controller,
-             Node
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->HandleProtocol (
-                  Controller,
-                  &gNVIDIADeviceDiscoveryContextGuid,
-                  (VOID **)&DeviceDiscoveryContext
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  if (!gDeviceDiscoverDriverConfig.SkipAutoDeinitControllerOnExitBootServices) {
-    gBS->CloseEvent (DeviceDiscoveryContext->OnExitBootServicesEvent);
-  }
-
-  Status = gBS->UninstallMultipleProtocolInterfaces (
-                  Controller,
-                  &gNVIDIADeviceDiscoveryContextGuid,
-                  DeviceDiscoveryContext,
-                  NULL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, driver returned %r to uninstall device discovery context guid\r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  gBS->FreePool (DeviceDiscoveryContext);
-
-  //
-  // Close protocols opened by Controller driver
-  //
-  return gBS->CloseProtocol (
-                Controller,
-                &gNVIDIANonDiscoverableDeviceProtocolGuid,
-                This->DriverBindingHandle,
-                Controller
-                );
-}
-
-///
-/// EFI_DRIVER_BINDING_PROTOCOL instance
-///
-STATIC EFI_DRIVER_BINDING_PROTOCOL  mDriverBindingProtocol = {
-  DeviceDiscoveryBindingSupported,
-  DeviceDiscoveryBindingStart,
-  DeviceDiscoveryBindingStop,
-  0x0,
-  NULL,
-  NULL
-};
 
 /**
   This is function is caused to allow the system to check if this implementation supports
@@ -608,28 +650,18 @@ DeviceTreeIsSupported (
 
   return DeviceDiscoveryNotify (
            DeviceDiscoveryDeviceTreeCompatibility,
-           mDriverBindingProtocol.DriverBindingHandle,
+           mImageHandle,
            NULL,
            Node
            );
 }
-
-STATIC NVIDIA_DEVICE_TREE_COMPATIBILITY_PROTOCOL  gDeviceTreeCompatibilty = {
-  DeviceTreeIsSupported
-};
 
 /**
   This is function is caused to allow the system to check if this implementation supports
   the device tree node. If EFI_SUCCESS is returned then handle will be created and driver binding
   will occur.
 
-  @param[in]  This                   The instance of the NVIDIA_DEVICE_TREE_BINDING_PROTOCOL.
   @param[in]  Node                   The pointer to the requested node info structure.
-  @param[out] DeviceType             Pointer to allow the return of the device type
-  @param[out] PciIoInitialize        Pointer to allow return of function that will be called
-                                       when the PciIo subsystem connects to this device.
-                                       Note that this will may not be called if the device
-                                       is not in the boot path.
 
   @return EFI_SUCCESS               The node is supported by this instance
   @return EFI_UNSUPPORTED           The node is not supported by this instance
@@ -653,11 +685,15 @@ EnumerationIsNodeSupported (
 }
 
 /**
-  Enumerate all matching devices
+  Enumerate all matching devices. Called automatically if DelayEnumeration is
+  false. Used if device enumeration needs to not happen at driver start.
+  For example, if device needs to wait for a protocol notification.
+
+  @retval EFI_SUCCESS             Device Enumeration started
+  @retval others                  Error occured
 **/
-STATIC
 EFI_STATUS
-EnumerateDevices (
+DeviceDiscoveryEnumerateDevices (
   VOID
   )
 {
@@ -707,7 +743,7 @@ EnumerateDevices (
     DeviceHandle = NULL;
     Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
     if (Device == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -722,10 +758,8 @@ EnumerateDevices (
       continue;
     }
 
-    Status = DeviceDiscoveryBindingStart (
-               &mDriverBindingProtocol,
-               DeviceHandle,
-               NULL
+    Status = DeviceDiscoveryStart (
+               DeviceHandle
                );
     if (EFI_ERROR (Status)) {
       continue;
@@ -737,12 +771,16 @@ EnumerateDevices (
     DtNodeInfo = NULL;
   }
 
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryEnumerationCompleted,
-             mImageHandle,
-             NULL,
-             NULL
-             );
+  EnumerationCompleted = TRUE;
+  if (!gDeviceDiscoverDriverConfig.ThreadedDeviceStart || (SubThreadsRunning == 0)) {
+    Status = DeviceDiscoveryNotify (
+               DeviceDiscoveryEnumerationCompleted,
+               mImageHandle,
+               NULL,
+               NULL
+               );
+  }
+
   return Status;
 }
 
@@ -765,8 +803,7 @@ DeviceDiscoveryDriverInitialize (
 {
   EFI_STATUS  Status;
 
-  mDriverBindingProtocol.DriverBindingHandle = ImageHandle;
-  mImageHandle                               = ImageHandle;
+  mImageHandle = ImageHandle;
 
   Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&gScmiClockProtocol);
   if (EFI_ERROR (Status)) {
@@ -778,25 +815,9 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  if (gDeviceDiscoverDriverConfig.UseDriverBinding &&
-      !gDeviceDiscoverDriverConfig.DirectEnumerationSupport)
-  {
-    Status = EfiLibInstallDriverBinding (
-               ImageHandle,
-               SystemTable,
-               &mDriverBindingProtocol,
-               ImageHandle
-               );
-
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
-      return Status;
-    }
-  }
-
   Status = DeviceDiscoveryNotify (
              DeviceDiscoveryDriverStart,
-             mDriverBindingProtocol.DriverBindingHandle,
+             mImageHandle,
              NULL,
              NULL
              );
@@ -804,16 +825,8 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  if (!gDeviceDiscoverDriverConfig.DirectEnumerationSupport) {
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &mDriverBindingProtocol.DriverBindingHandle,
-                    &gNVIDIADeviceTreeCompatibilityProtocolGuid,
-                    &gDeviceTreeCompatibilty,
-                    NULL
-                    );
-    ASSERT_EFI_ERROR (Status);
-  } else {
-    Status = EnumerateDevices ();
+  if (!gDeviceDiscoverDriverConfig.DelayEnumeration) {
+    Status = DeviceDiscoveryEnumerateDevices ();
     ASSERT_EFI_ERROR (Status);
   }
 

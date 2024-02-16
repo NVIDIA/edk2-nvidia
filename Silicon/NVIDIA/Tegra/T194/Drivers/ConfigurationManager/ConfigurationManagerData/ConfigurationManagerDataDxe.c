@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -359,6 +359,7 @@ UpdateAhciInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdtahci_aml_code;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -424,8 +425,8 @@ UpdateSerialPortInfo (
   }
 
   if (*Map == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: No Matches found \n", __FUNCTION__));
-    return Status;
+    // Do not treat no serial ports as an error
+    return EFI_SUCCESS;
   }
 
   SerialHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfSerialPorts);
@@ -460,10 +461,8 @@ UpdateSerialPortInfo (
 
     SpcrSerialPort[Index].BaseAddress       = RegisterData.BaseAddress;
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
-    SpcrSerialPort[Index].Interrupt         = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                         DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                         DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-    SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+    SpcrSerialPort[Index].Interrupt         = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    SpcrSerialPort[Index].BaudRate          = FixedPcdGet64 (PcdUartDefaultBaudRate);
     if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_FULL_16550) {
       SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
     } else {
@@ -498,6 +497,7 @@ UpdateSerialPortInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiTegraUartOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -598,6 +598,7 @@ FinalizeSsdtTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = TestTable->OemTableId;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = TestTable->OemRevision;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
       Status                                            = EFI_SUCCESS;
@@ -745,11 +746,8 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                        DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                        DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_INT0));
       goto ErrorExit;
@@ -761,7 +759,7 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%d", Index);
+    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%u", Index);
     Status = PatchProtocol->UpdateNodeName (PatchProtocol, &AcpiNodeInfo, SdcPathString);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, SdcPathString));
@@ -895,11 +893,8 @@ UpdateI2cInfo (
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                        DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                        DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_I2CT_INT0));
       goto ErrorExit;
@@ -911,7 +906,7 @@ UpdateI2cInfo (
       goto ErrorExit;
     }
 
-    AsciiSPrint (I2cPathString, sizeof (I2cPathString), "I2C%d", Index);
+    AsciiSPrint (I2cPathString, sizeof (I2cPathString), "I2C%u", Index);
     Status = PatchProtocol->UpdateNodeName (PatchProtocol, &AcpiNodeInfo, I2cPathString);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, I2cPathString));

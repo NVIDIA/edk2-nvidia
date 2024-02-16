@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -15,7 +15,17 @@
   LIBRARY_CLASS                  = DeviceTreeHelperLib
 
 [Sources]
-  DeviceTreeHelperLib.c
+  DeviceTreeHelperLibCore.c
+  DeviceTreeHelperLibParser.c
+  DeviceTreeHelperLibPointer.c
+  DeviceTreeHelperLibUtility.c
+  DeviceTreeHelperLibDeprecated.c
+
+[Sources.ARM, Sources.AARCH64]
+  DeviceTreeHelperLibParserAArch64.c
+
+[Sources.IA32, Sources.X64]
+  DeviceTreeHelperLibParserX86.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -24,6 +34,8 @@
 
 [LibraryClasses]
   BaseLib
+  BaseMemoryLib
   DebugLib
-  FdtLib
   DtPlatformDtbLoaderLib
+  FdtLib
+  MemoryAllocationLib

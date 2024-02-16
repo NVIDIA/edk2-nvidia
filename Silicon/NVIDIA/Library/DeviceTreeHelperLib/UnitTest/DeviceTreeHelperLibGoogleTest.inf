@@ -1,0 +1,26 @@
+## @file
+# Unit test suite for the DeviceTreeHelperLib using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = DeviceTreeHelperLibGoogleTest
+  FILE_GUID           = e24e6ae2-5433-4c6e-9126-3e7a894a4d68
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+[Sources]
+DeviceTreeHelperLibGoogleTest.cpp
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  DeviceTreeHelperLib

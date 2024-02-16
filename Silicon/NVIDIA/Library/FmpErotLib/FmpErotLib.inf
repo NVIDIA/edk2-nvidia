@@ -41,16 +41,17 @@
   BaseMemoryLib
   DisplayUpdateProgressLib
   ErotLib
+  FmpParamLib
   MemoryAllocationLib
   PcdLib
   PldmFwUpdateLib
   PldmFwUpdatePkgLib
   PldmFwUpdateTaskLib
   PrintLib
+  UefiBootServicesTableLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
@@ -61,6 +62,8 @@
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid
+  gEfiEndOfDxeEventGroupGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
-  gNVIDIAErotBootCompleteProtocolGuid
+  TRUE

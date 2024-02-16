@@ -3,13 +3,16 @@
   does user authentication before entering Setup.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "UserAuthenticationDxe.h"
+#include "UserAuthenticationIpmi.h"
+#include <Library/PlatformResourceLib.h>
+#include <Library/StatusRegLib.h>
 
 USER_AUTHENTICATION_PRIVATE_DATA  *mUserAuthenticationData = NULL;
 EFI_MM_COMMUNICATION2_PROTOCOL    *mMmCommunication2       = NULL;
@@ -160,6 +163,11 @@ ForceSystemReset (
   )
 {
   MessageBox (L"Password retry count reach, reset system!");
+
+  // Mark existing boot chain as good.
+  ValidateActiveBootChain ();
+
+  StatusRegReset ();
   gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
   CpuDeadLoop ();
 }
@@ -362,6 +370,55 @@ CheckForPassword (
     if (NeedEnrollPassword ()) {
       SetUserPassword ();
     }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Protect user password variables from being changed or erased without authentication.
+
+  @retval EFI_SUCCESS             Variables are locked successfully
+  @retval EFI_SECURITY_VIOLATION  Fail to lock variables
+**/
+EFI_STATUS
+EFIAPI
+ProtectUserAuthenticationVariables (
+  VOID
+  )
+{
+  EFI_STATUS                      Status;
+  EDKII_VARIABLE_POLICY_PROTOCOL  *PolicyProtocol;
+
+  Status = gBS->LocateProtocol (
+                  &gEdkiiVariablePolicyProtocolGuid,
+                  NULL,
+                  (VOID **)&PolicyProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to locate Variable policy protocol\r\n"));
+    ASSERT (FALSE);
+    return EFI_SECURITY_VIOLATION;
+  }
+
+  //
+  // Lock all variables that are used for user authentication to make them
+  // write protected for UEFI and only MM can change or delete them.
+  //
+  Status = RegisterBasicVariablePolicy (
+             PolicyProtocol,
+             &gUserAuthenticationGuid,
+             NULL,
+             VARIABLE_POLICY_NO_MIN_SIZE,
+             VARIABLE_POLICY_NO_MAX_SIZE,
+             VARIABLE_POLICY_NO_MUST_ATTR,
+             VARIABLE_POLICY_NO_CANT_ATTR,
+             VARIABLE_POLICY_TYPE_LOCK_NOW
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to lock Password variables - %r\r\n", Status));
+    ASSERT (FALSE);
+    return EFI_SECURITY_VIOLATION;
   }
 
   return EFI_SUCCESS;
@@ -702,8 +759,25 @@ UserAuthenticationEntry (
                   &mUserAuthenticationProtocol,
                   NULL
                   );
-  if (!EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: install user authentication protocol failed: %r\n", __func__, Status));
     return Status;
+  }
+
+  //
+  // Protect user password variables from being changed or erased without authentication.
+  //
+  Status = ProtectUserAuthenticationVariables ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Fall through to allow driver to load.\n", __FUNCTION__));
+  }
+
+  //
+  // BIOS password synchronization between BIOS and BMC.
+  //
+  Status = BiosPasswordSynchronization ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to sync BIOS password with BMC: %r\n", __func__, Status));
   }
 
   return EFI_SUCCESS;

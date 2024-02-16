@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -10,8 +10,11 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HashLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PrintLib.h>
+#include <Library/ReportStatusCodeLib.h>
 #include <Library/Tpm2DeviceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -20,10 +23,14 @@
 #include <Guid/TpmInstance.h>
 #include <IndustryStandard/TpmPtp.h>
 
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
+
 #include "Tpm2DeviceLibInternal.h"
 
 STATIC VOID                  *mSearchToken = NULL;
 STATIC NVIDIA_TPM2_PROTOCOL  *mTpm2        = NULL;
+STATIC EFI_EVENT             mTpm2Event    = NULL;
 
 /**
   This service enables the sending of commands to the TPM2.
@@ -97,13 +104,26 @@ Tpm2Initialize (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  UINT32      TpmHashAlgorithmBitmap;
-  UINT32      ActivePCRBanks;
+  EFI_STATUS          Status;
+  UINT32              TpmHashAlgorithmBitmap;
+  UINT32              ActivePCRBanks;
+  UINT32              Pcr;
+  UINT32              Event;
+  TPML_DIGEST_VALUES  DigestList;
+  CHAR8               OemDesc[sizeof (OEM_EC_DESC_TPM_PCR_BANK_NOT_SUPPORTED)];
 
   Status = Tpm2RequestUseTpmInternal ();
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Fail to request to use TPM.\n", __FUNCTION__));
+    if (PcdGetBool (PcdTpmEnable)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to request to use TPM.\n", __FUNCTION__));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_INACCESSIBLE,
+        OEM_EC_DESC_TPM_INACCESSIBLE,
+        sizeof (OEM_EC_DESC_TPM_INACCESSIBLE)
+        );
+    }
+
     return EFI_DEVICE_ERROR;
   }
 
@@ -122,19 +142,106 @@ Tpm2Initialize (
   }
 
   //
-  // Select hash algorithm based on active PCR bank
+  // If PcdTpm2InitializationPolicy=0, TPM is assumed to be started by pre-UEFI images.
+  // If TPM is not accessible here, it has not been started successfully, possibly TPM is
+  // disabled in the fuse, or TPM is disabled or not present on the platform,...
   //
   Status = Tpm2GetCapabilitySupportedAndActivePcrs (&TpmHashAlgorithmBitmap, &ActivePCRBanks);
-  if ((ActivePCRBanks & TPM_ALG_SHA384) != 0) {
-    PcdSet32S (PcdTpm2HashMask, 0x00000004);
-  } else if ((ActivePCRBanks & TPM_ALG_SHA256) != 0) {
-    PcdSet32S (PcdTpm2HashMask, 0x00000002);
+  if (EFI_ERROR (Status)) {
+    if (PcdGetBool (PcdTpmEnable)) {
+      DEBUG ((DEBUG_ERROR, "%a: TPM has not been started successfully.\n", __FUNCTION__));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_NOT_INITIALIZED,
+        OEM_EC_DESC_TPM_NOT_INITIALIZED,
+        sizeof (OEM_EC_DESC_TPM_NOT_INITIALIZED)
+        );
+    }
+
+    return Status;
+  }
+
+  //
+  // Select hash algorithm based on active PCR bank
+  //
+  if ((ActivePCRBanks & HASH_ALG_SHA384) != 0) {
+    PcdSet32S (PcdTpm2HashMask, HASH_ALG_SHA384);
+  } else if ((ActivePCRBanks & HASH_ALG_SHA256) != 0) {
+    PcdSet32S (PcdTpm2HashMask, HASH_ALG_SHA256);
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported PCR banks - %x\n", __FUNCTION__, ActivePCRBanks));
-    ASSERT (FALSE);
+    AsciiSPrint (OemDesc, sizeof (OemDesc), OEM_EC_DESC_TPM_PCR_BANK_NOT_SUPPORTED, ActivePCRBanks);
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_PCR_BANK_NOT_SUPPORTED,
+      OemDesc,
+      AsciiStrSize (OemDesc)
+      );
+    return EFI_UNSUPPORTED;
   }
 
   PcdSet32S (PcdTcg2HashAlgorithmBitmap, 0x00000006);
+
+  //
+  // If TPM is disabled by users, lock down the TPM and remove the driver
+  //
+  if (!PcdGetBool (PcdTpmEnable)) {
+    //
+    // Disable Storage and Endorsement hierarchies
+    //
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_OWNER, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Owner Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_ENDORSEMENT, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Endorsement Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    //
+    // Cap PCRs 0-7 by extending EV_SEPARATOR to them
+    //
+    Event = 0;
+    for (Pcr = 0; Pcr < 8; Pcr++) {
+      Status = HashAndExtend (Pcr, (UINT8 *)&Event, sizeof (Event), &DigestList);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Fail to extend EV_SEPARATOR to PCR%u - %r\n", __FUNCTION__, Pcr, Status));
+      }
+    }
+
+    //
+    // Disable Platform hierarchy
+    //
+    Status = Tpm2HierarchyControl (TPM_RH_PLATFORM, NULL, TPM_RH_PLATFORM, NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Disable Platform Hierarchy Failed! %r\n", __FUNCTION__, Status));
+    }
+
+    //
+    // Relinqish TPM locality to allow TPM to enter low power state
+    //
+    TisReleaseTpm (mTpm2);
+
+    return EFI_UNSUPPORTED;
+  }
+
+  //
+  // Run self-test to check if TPM is working, if not, disable TPM
+  //
+  if (PcdGet8 (PcdTpm2SelfTestPolicy) == 1) {
+    Status = Tpm2SelfTest (NO);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: TPM self-test failed - %r\n", __FUNCTION__, Status));
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_TPM_SELF_TEST_FAILED,
+        OEM_EC_DESC_TPM_SELF_TEST_FAILED,
+        sizeof (OEM_EC_DESC_TPM_SELF_TEST_FAILED)
+        );
+      return Status;
+    }
+  }
 
   return EFI_SUCCESS;
 }
@@ -189,6 +296,7 @@ Tpm2RegistrationEvent (
       //
       DEBUG ((DEBUG_ERROR, "%a: Fail to handle TPM protocol.\n", __FUNCTION__));
       mTpm2 = NULL;
+      goto Exit;
     }
 
     if ((mTpm2 != NULL) && (mTpm2 != Tpm2)) {
@@ -202,6 +310,7 @@ Tpm2RegistrationEvent (
       //
       // Disable if fail to initialize TPM
       //
+      DEBUG ((DEBUG_ERROR, "%a: Disable TPM driver.\n", __FUNCTION__));
       mTpm2 = NULL;
     }
   } else {
@@ -211,17 +320,30 @@ Tpm2RegistrationEvent (
     mTpm2 = NULL;
   }
 
+Exit:
   FreePool (Handles);
 }
 
 /**
-  Library entry point
+  Destructor for TPM2 device library.
 
-  @param  ImageHandle           Handle that identifies the loaded image.
-  @param  SystemTable           System Table for this image.
+  @retval EFI_SUCCESS on Success.
+ **/
+EFI_STATUS
+EFIAPI
+Tpm2DeviceLibDestructor (
+  VOID
+  )
+{
+  gBS->CloseEvent (mTpm2Event);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Constructor for TPM2 device library.
 
   @retval EFI_SUCCESS           The operation completed successfully.
-
 **/
 EFI_STATUS
 EFIAPI
@@ -229,7 +351,6 @@ Tpm2DeviceLibConstructor (
   VOID
   )
 {
-  EFI_EVENT   Event;
   EFI_STATUS  Status;
 
   //
@@ -250,15 +371,15 @@ Tpm2DeviceLibConstructor (
   // protocol. This will notify us even if the protocol instance we are looking
   // for has already been installed or reinstalled.
   //
-  Event = EfiCreateProtocolNotifyEvent (
-            &gNVIDIATpm2ProtocolGuid,
-            TPL_CALLBACK,
-            Tpm2RegistrationEvent,
-            NULL,
-            &mSearchToken
-            );
-  if (Event == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
+  mTpm2Event = EfiCreateProtocolNotifyEvent (
+                 &gNVIDIATpm2ProtocolGuid,
+                 TPL_CALLBACK,
+                 Tpm2RegistrationEvent,
+                 NULL,
+                 &mSearchToken
+                 );
+  if (mTpm2Event == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create protocol event\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

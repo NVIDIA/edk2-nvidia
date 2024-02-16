@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -68,11 +68,12 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
-            Timeout = 0;
             if (TimeOutMessage == FALSE) {
-              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
+
+            return EFI_NOT_READY;
           }
         }
       }
@@ -103,11 +104,12 @@ QspiFlushFifo (
         if (Timeout != TIMEOUT) {
           Timeout++;
           if (Timeout == TIMEOUT) {
-            Timeout = 0;
             if (TimeOutMessage == FALSE) {
-              DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
               TimeOutMessage = TRUE;
             }
+
+            return EFI_NOT_READY;
           }
         }
       }
@@ -126,7 +128,6 @@ QspiFlushFifo (
   @param  ChipSelect               Chip select to configure
   @param  Enable                   TRUE for Tx Fifo, FALSE for Rx Fifo
 **/
-STATIC
 VOID
 QspiConfigureCS (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
@@ -160,7 +161,7 @@ QspiConfigureCS (
       );
   }
 
-  DEBUG ((EFI_D_INFO, "QSPI CS Configured.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI CS Configured.\n"));
 }
 
 /**
@@ -222,11 +223,12 @@ QspiWaitTransactionStatusReady (
     if (Timeout != TIMEOUT) {
       Timeout++;
       if (Timeout == TIMEOUT) {
-        Timeout = 0;
         if (TimeOutMessage == FALSE) {
-          DEBUG ((EFI_D_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+          DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
           TimeOutMessage = TRUE;
         }
+
+        return EFI_NOT_READY;
       }
     }
   }
@@ -256,6 +258,87 @@ QspiPerformWaitCycleConfiguration (
     QSPI_MISC_0_WAIT_CYCLES_MSB,
     WaitCycles
     );
+}
+
+/**
+  Enable/disable Combined sequence mode
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Packet                   QSPI transaction context
+  @param  Enable                   TRUE: enable wait state, FALSE: disable wait state
+**/
+VOID
+QspiConfigureCombinedSequenceMode (
+  IN EFI_PHYSICAL_ADDRESS     QspiBaseAddress,
+  IN QSPI_TRANSACTION_PACKET  *Packet,
+  IN BOOLEAN                  Enable
+  )
+{
+  UINT8  CmdSize  = 1;
+  UINT8  AddrSize = 0;
+
+  if ((Packet->Control & QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR) != 0) {
+    AddrSize = 3;
+  } else if ((Packet->Control & QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_4B_ADDR) != 0) {
+    AddrSize = 4;
+  } else {
+    // Exit if not Combined sequence mode
+    return;
+  }
+
+  if (Enable) {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_ENABLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_LSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_MSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_X1_X2_X4_SINGLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SDR_DDR_SDR
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_CMD_CFG_0,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SIZE_LSB,
+      QSPI_CMB_SEQ_CMD_CFG_0_COMMAND_SIZE_MSB,
+      (8 * CmdSize) - 1
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_LSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_MSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_X1_X2_X4_SINGLE
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_BIT,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SDR_DDR_SDR
+      );
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_CMB_SEQ_ADDR_CFG_0,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SIZE_LSB,
+      QSPI_CMB_SEQ_ADDR_CFG_0_ADDRESS_SIZE_MSB,
+      (8 * AddrSize) - 1
+      );
+    MmioWrite32 (QspiBaseAddress + QSPI_CMB_SEQ_CMD_0, Packet->Command);
+    MmioWrite32 (QspiBaseAddress + QSPI_CMB_SEQ_ADDR_0, Packet->Address);
+  } else {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_CMB_SEQ_EN_DISABLE
+      );
+  }
 }
 
 /**
@@ -327,7 +410,6 @@ QspiPerformTransactionConfiguration (
   @retval EFI_SUCCESS              Data received successfully.
   @retval Others                   Data reception failed.
 **/
-STATIC
 EFI_STATUS
 QspiPerformReceive (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
@@ -378,7 +460,7 @@ QspiPerformReceive (
                                            QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT
                                            ))
     {
-      DEBUG ((EFI_D_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -411,7 +493,7 @@ QspiPerformReceive (
     QSPI_COMMAND_0_PIO_DIS
     );
 
-  DEBUG ((EFI_D_INFO, "QSPI Data Received.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Data Received.\n"));
 
   return EFI_SUCCESS;
 }
@@ -430,7 +512,6 @@ QspiPerformReceive (
   @retval EFI_SUCCESS              Data transmitted successfully.
   @retval Others                   Data transmission failed.
 **/
-STATIC
 EFI_STATUS
 QspiPerformTransmit (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
@@ -468,7 +549,7 @@ QspiPerformTransmit (
                                           QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT
                                           ))
     {
-      DEBUG ((EFI_D_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
       return EFI_DEVICE_ERROR;
     }
 
@@ -514,7 +595,7 @@ QspiPerformTransmit (
     QSPI_COMMAND_0_PIO_DIS
     );
 
-  DEBUG ((EFI_D_INFO, "QSPI Data Transmitted.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Data Transmitted.\n"));
 
   return EFI_SUCCESS;
 }
@@ -600,7 +681,7 @@ QspiInitialize (
     return Status;
   }
 
-  DEBUG ((EFI_D_INFO, "QSPI Initialized.\n"));
+  DEBUG ((DEBUG_INFO, "QSPI Initialized.\n"));
 
   return EFI_SUCCESS;
 }
@@ -651,9 +732,12 @@ QspiPerformTransaction (
   QspiPerformWaitCycleConfiguration (QspiBaseAddress, Packet->WaitCycles);
   // Enable CS
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, TRUE);
+  // Enable Combined sequence mode
+  QspiConfigureCombinedSequenceMode (QspiBaseAddress, Packet, TRUE);
+
   // If transmission buffer address valid, start transmission
   if (Packet->TxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Tx Args: 0x%p %d.\n", Packet->TxBuf, Packet->TxLen));
+    DEBUG ((DEBUG_INFO, "QSPI Tx Args: 0x%p %d.\n", Packet->TxBuf, Packet->TxLen));
     Buffer = Packet->TxBuf;
     Count  = Packet->TxLen;
     // Based on transmission buffer length, calculate packet width and packets in current transaction.
@@ -661,7 +745,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Tx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((DEBUG_INFO, "QSPI Tx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformTransmit (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;
@@ -674,7 +758,7 @@ QspiPerformTransaction (
 
   // If reception buffer address valid, start reception
   if (Packet->RxBuf != NULL) {
-    DEBUG ((EFI_D_INFO, "QSPI Rx Args: 0x%p %d.\n", Packet->RxBuf, Packet->RxLen));
+    DEBUG ((DEBUG_INFO, "QSPI Rx Args: 0x%p %d.\n", Packet->RxBuf, Packet->RxLen));
     Buffer = Packet->RxBuf;
     Count  = Packet->RxLen;
     // Based on reception buffer length, calculate packet width and packets in current transaction.
@@ -682,7 +766,7 @@ QspiPerformTransaction (
     while (Count > 0) {
       TransactionWidth = (Count % sizeof (UINT32)) ? sizeof (UINT8) : sizeof (UINT32);
       TransactionCount = MIN (MAX_FIFO_PACKETS, (Count / TransactionWidth));
-      DEBUG ((EFI_D_INFO, "QSPI Rx Transaction: Count: %d Width: %d.\n", TransactionCount, TransactionWidth));
+      DEBUG ((DEBUG_INFO, "QSPI Rx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformReceive (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
         return Status;
@@ -693,36 +777,49 @@ QspiPerformTransaction (
     }
   }
 
+  // Disable Combined sequence mode
+  QspiConfigureCombinedSequenceMode (QspiBaseAddress, Packet, FALSE);
   // Disable CS
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, FALSE);
 
   // Wait for the controller to clear state before starting next transaction.
   if ((Packet->Control & QSPI_CONTROLLER_CONTROL_FAST_MODE) == 0) {
-    MicroSecondDelay (TIMEOUT);
+    MicroSecondDelay (QSPI_CLEAR_STATE_DELAY);
   }
 
   return EFI_SUCCESS;
 }
 
 /**
-  Enable polling for wait state
+  Enable/disable polling for wait state
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Enable                   TRUE: enable wait state, FALSE: disable wait state
 
   @retval EFI_SUCCESS              Wait state is enabled
   @retval Others                   Wait state cannot be enabled
 **/
 EFI_STATUS
 QspiEnableWaitState (
-  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN BOOLEAN               Enable
   )
 {
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
-    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
-    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
-    QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_ENABLE
-    );
+  if (Enable) {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_ENABLE
+      );
+  } else {
+    MmioBitFieldWrite32 (
+      QspiBaseAddress + QSPI_GLOBAL_CONFIG_0,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_BIT,
+      QSPI_GLOBAL_CONFIG_0_WAIT_STATE_EN_DISABLE
+      );
+  }
 
   return EFI_SUCCESS;
 }

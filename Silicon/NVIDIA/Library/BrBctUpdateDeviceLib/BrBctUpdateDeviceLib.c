@@ -76,7 +76,7 @@ BrBctReadSlot (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Reading %s offset %u\n",
+    "%a: Reading %s offset %lu\n",
     __FUNCTION__,
     Partition->PartitionInfo.Name,
     Offset
@@ -88,7 +88,7 @@ BrBctReadSlot (
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Error reading %s offset %u: %r\n",
+      "%a: Error reading %s offset %lu: %r\n",
       __FUNCTION__,
       Partition->PartitionInfo.Name,
       Offset,
@@ -187,7 +187,7 @@ BrBctWriteSlot (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Writing %s slot %u offset 0x%x\n",
+    "%a: Writing %s slot %u offset 0x%lx\n",
     __FUNCTION__,
     Protocol->PartitionName,
     Slot,

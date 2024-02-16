@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  Copyright (c) 2018 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,6 +13,7 @@
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/IoLib.h>
 
 /* FVB transactions will only be made to socket 0. */
 #define FVB_DEVICE_SOCKET  (0)
@@ -435,7 +436,7 @@ FvbWrite (
                                         );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
     ASSERT (FALSE);
     if (Private->PartitionData != NULL) {
       Private->NorFlashProtocol->Read (
@@ -587,7 +588,7 @@ FvbEraseBlocks (
                                           NumOfLba
                                           );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
       ASSERT (FALSE);
       if (Private->PartitionData != NULL) {
         Private->NorFlashProtocol->Read (
@@ -834,20 +835,20 @@ ValidateFvHeader (
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
       (FwVolHeader->FvLength  > PartitionSize))
   {
-    DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Check the Firmware Volume Guid
   if ( CompareGuid (&FwVolHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid) == FALSE ) {
-    DEBUG ((EFI_D_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Verify the header checksum
   Checksum = CalculateSum16 ((UINT16 *)FwVolHeader, FwVolHeader->HeaderLength);
   if (Checksum != 0) {
-    DEBUG ((EFI_D_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
+    DEBUG ((DEBUG_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
     return EFI_NOT_FOUND;
   }
 
@@ -858,14 +859,14 @@ ValidateFvHeader (
     if (!CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid) &&
         !CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid))
     {
-      DEBUG ((EFI_D_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
+      DEBUG ((DEBUG_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
 
     VariableStoreLength = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
 
     if (VariableStoreHeader->Size != VariableStoreLength) {
-      DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
+      DEBUG ((DEBUG_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
       return EFI_NOT_FOUND;
     }
   }
@@ -1157,11 +1158,17 @@ FvbInitializeGpt (
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
   VOID                        *PartitionEntryArray;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
+  UINTN                       GptHeaderOffset;
 
-  // Validate GPT and get table entries, always 512 bytes from the end
+  GptHeaderOffset = GptGetHeaderOffset (
+                      StmmGetBootChainForGpt (),
+                      NorFlashAttributes->MemoryDensity,
+                      NorFlashAttributes->BlockSize
+                      );
+
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               NorFlashAttributes->MemoryDensity - GPT_PARTITION_BLOCK_SIZE,
+                               GptHeaderOffset,
                                sizeof (PartitionHeader),
                                &PartitionHeader
                                );

@@ -215,19 +215,22 @@ VirtualNorFlashInitialize (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Device->Signature                = VIRTUAL_NOR_FLASH_SIGNATURE;
-  Device->Memory                   = Memory;
-  Device->Attributes.MemoryDensity = Size;
-  Device->Attributes.BlockSize     = BlockSize;
-  Device->Protocol.FvbAttributes   = 0;
-  Device->Protocol.GetAttributes   = VirtualNorFlashGetAttributes;
-  Device->Protocol.Read            = VirtualNorFlashRead;
-  Device->Protocol.Write           = VirtualNorFlashWrite;
-  Device->Protocol.Erase           = VirtualNorFlashErase;
-  Device->Protocol.QuickRead       = VirtualNorFlashRead;
-  Device->Protocol.QuickWrite      = VirtualNorFlashWrite;
-  Device->Protocol.QuickErase      = VirtualNorFlashErase;
-  *Protocol                        = &Device->Protocol;
+  Device->Signature                              = VIRTUAL_NOR_FLASH_SIGNATURE;
+  Device->Memory                                 = Memory;
+  Device->Attributes.MemoryDensity               = Size;
+  Device->Attributes.BlockSize                   = BlockSize;
+  Device->Attributes.ProgramFirstByteTimeUs      = NOR_SFDP_PROGRAM_FIRST_BYTE_TIME_DEFAULT;
+  Device->Attributes.ProgramAdditionalByteTimeUs = NOR_SFDP_PROGRAM_ADDITIONAL_BYTE_TIME_DEFAULT;
+  Device->Attributes.ProgramPageTimeUs           = NOR_SFDP_PROGRAM_PAGE_TIME_DEFAULT;
+  Device->Attributes.ProgramPageSize             = NOR_SFDP_WRITE_DEF_PAGE;
+  Device->Attributes.ProgramMaxTimeMultiplier    = NOR_SFDP_PROGRAM_MAX_TIME_MULTIPLIER_DEFAULT;
+
+  Device->Protocol.FvbAttributes = 0;
+  Device->Protocol.GetAttributes = VirtualNorFlashGetAttributes;
+  Device->Protocol.Read          = VirtualNorFlashRead;
+  Device->Protocol.Write         = VirtualNorFlashWrite;
+  Device->Protocol.Erase         = VirtualNorFlashErase;
+  *Protocol                      = &Device->Protocol;
   return EFI_SUCCESS;
 }
 

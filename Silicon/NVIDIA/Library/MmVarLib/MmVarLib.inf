@@ -1,0 +1,39 @@
+## @file
+#
+#  The StMM Library provides functions to get EFI Variables. This is meant for use from
+#  StMM Drivers and Libraries.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MmVarLib
+  FILE_GUID                      = cb8fc2b6-948f-4aec-9242-0e225ab124dc
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MmVarLib|DXE_RUNTIME_DRIVER DXE_SMM_DRIVER MM_STANDALONE
+
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  MmVarLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Protocols]
+  gEfiSmmVariableProtocolGuid
+
+[LibraryClasses]
+  MemoryAllocationLib
+  DebugLib
+  BaseMemoryLib
+  BaseLib

@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (C) 2016, Linaro Ltd. All rights reserved.<BR>
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -164,7 +164,10 @@ NonDiscoverablePciDeviceStart (
     goto FreeDev;
   }
 
-  InitializePciIoProtocol (Dev, DeviceHandle);
+  Status = InitializePciIoProtocol (Dev, DeviceHandle);
+  if (EFI_ERROR (Status)) {
+    goto CloseProtocol;
+  }
 
   //
   // Setup complete, attempt to export the driver instance's

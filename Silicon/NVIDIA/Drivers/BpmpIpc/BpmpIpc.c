@@ -166,7 +166,7 @@ ProcessTransaction (
   CIndex = PrivateData->ActiveChannel;
   // Validate channels are empty
   if (!ChannelFree (PrivateData->Channels[CIndex].RxChannel) || !ChannelFree (PrivateData->Channels[CIndex].TxChannel)) {
-    DEBUG ((EFI_D_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Channel not idle\r\n", __FUNCTION__));
     ASSERT (FALSE);
 
     OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
@@ -206,7 +206,7 @@ ProcessTransaction (
                        TimerTick
                        );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set timer:%r\r\n", __FUNCTION__, Status));
 
       OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
       RemoveEntryList (List);
@@ -370,7 +370,7 @@ BpmpIpcCommunicate (
     if (PLATFORM_MAX_SOCKETS == 1) {
       ChannelNo = 0;
     } else {
-      DEBUG ((EFI_D_ERROR, "%a: Invalid Bpmp device phandle: %u\n", __FUNCTION__, BpmpPhandle));
+      DEBUG ((DEBUG_ERROR, "%a: Invalid Bpmp device phandle: %u\n", __FUNCTION__, BpmpPhandle));
       return EFI_INVALID_PARAMETER;
     }
   }
@@ -483,7 +483,7 @@ MoveTxChannelState (
                                     HspDoorbellBpmp
                                     );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
   }
 
   return Status;
@@ -617,7 +617,7 @@ BpmpIpcProtocolInit (
                   &PrivateData->TimerEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create timer event: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create timer event: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -675,26 +675,26 @@ BpmpIpcProtocolInit (
     }
 
     if (HspIndex >= HspDeviceCount) {
-      DEBUG ((EFI_D_ERROR, "%a, HSP device with phandle %u not found.", __FUNCTION__, PrivateData->Channels[Index].HspPhandle));
+      DEBUG ((DEBUG_ERROR, "%a, HSP device with phandle %u not found.", __FUNCTION__, PrivateData->Channels[Index].HspPhandle));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
 
     Status = HspDoorbellInit (&HspNodeInfo[HspIndex], &HspDevice[HspIndex], PrivateData->Channels[Index].HspDoorbellLocation);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to initialize Hsp Doorbell: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize Hsp Doorbell: %r", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
     Status = HspDoorbellEnableChannel (PrivateData->Channels[Index].HspDoorbellLocation, HspDoorbellBpmp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
     Status = InitializeIvcChannel (&PrivateData->Channels[Index]);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -706,7 +706,7 @@ BpmpIpcProtocolInit (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
     goto ErrorExit;
   }
 

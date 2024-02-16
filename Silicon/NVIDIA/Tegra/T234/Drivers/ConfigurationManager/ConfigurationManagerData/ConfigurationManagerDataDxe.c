@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -11,47 +11,7 @@
     - Obj or OBJ - Object
 **/
 
-#include <ConfigurationManagerObject.h>
-
-#include <Library/ArmLib.h>
-#include <Library/ArmGicLib.h>
-#include <Library/BaseLib.h>
-#include <Library/BaseMemoryLib.h>
-#include <Library/ConfigurationManagerLib.h>
-#include <Library/DebugLib.h>
-#include <Library/FloorSweepingLib.h>
-#include <Library/TegraPlatformInfoLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/DeviceTreeHelperLib.h>
-#include <Library/PrintLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
-#include <libfdt.h>
-
-#include <IndustryStandard/DebugPort2Table.h>
-
-#include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
-#include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
-
-#include <Protocol/AmlPatchProtocol.h>
-#include <Protocol/AmlGenerationProtocol.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
-
-#include <NVIDIAConfiguration.h>
-
-#include "Platform.h"
-#include <T234/T234Definitions.h>
-
-#include "Dsdt.hex"
-#include "Dsdt.offset.h"
-#include "SdcTemplate.hex"
-#include "SdcTemplate.offset.h"
-
-#define ACPI_PATCH_MAX_PATH  255
-#define ACPI_SDCT_REG0       "SDCT.REG0"
-#define ACPI_SDCT_UID        "SDCT._UID"
-#define ACPI_SDCT_INT0       "SDCT.INT0"
-#define ACPI_SDCT_RMV        "SDCT._RMV"
+#include <ConfigurationManagerDataDxePrivate.h>
 
 // Index at which Cores get listed in Proc Hierarchy Node
 #define CORE_BEGIN_INDEX  4
@@ -94,7 +54,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // GTDT Table
   {
@@ -103,16 +64,18 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // MADT Table
   {
-    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_5_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_5_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // DSDT Table
   {
@@ -121,7 +84,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // SSDT Table - Cpu Topology
   {
@@ -130,7 +94,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtCpuTopology),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
 };
 
@@ -234,10 +199,8 @@ UpdateSerialPortInfo (
 
     SpcrSerialPort[Index].BaseAddress       = RegisterData.BaseAddress;
     SpcrSerialPort[Index].BaseAddressLength = RegisterData.Size;
-    SpcrSerialPort[Index].Interrupt         = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                         DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                         DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-    SpcrSerialPort[Index].BaudRate = FixedPcdGet64 (PcdUartDefaultBaudRate);
+    SpcrSerialPort[Index].Interrupt         = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    SpcrSerialPort[Index].BaudRate          = FixedPcdGet64 (PcdUartDefaultBaudRate);
     if (PcdGet8 (PcdSerialTypeConfig) == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
       SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART;
     } else {
@@ -278,6 +241,7 @@ UpdateSerialPortInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiTegraUartOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -381,6 +345,7 @@ FinalizeSsdtTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)TestTable;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = TestTable->OemTableId;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = TestTable->OemRevision;
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
       Status                                            = EFI_SUCCESS;
@@ -528,11 +493,8 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    InterruptDescriptor.InterruptNumber[0] = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                                        DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                                        DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
-    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
+    InterruptDescriptor.InterruptNumber[0] = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status                                 = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &InterruptDescriptor, sizeof (InterruptDescriptor));
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, ACPI_SDCT_INT0));
       goto ErrorExit;
@@ -544,7 +506,7 @@ UpdateSdhciInfo (
       goto ErrorExit;
     }
 
-    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%d", Index);
+    AsciiSPrint (SdcPathString, sizeof (SdcPathString), "SDC%u", Index);
     Status = PatchProtocol->UpdateNodeName (PatchProtocol, &AcpiNodeInfo, SdcPathString);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to update name to %a\n", __FUNCTION__, SdcPathString));
@@ -566,6 +528,202 @@ ErrorExit:
   return Status;
 }
 
+/** Find HDA data in the DeviceTree and patch dsdt table.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateHdaInfo (
+  )
+{
+  EFI_STATUS                         Status;
+  AML_ROOT_NODE_HANDLE               RootNode;
+  AML_NODE_HANDLE                    SbNode;
+  AML_NODE_HANDLE                    HdaNode;
+  AML_NODE_HANDLE                    HdaNewNode;
+  AML_NODE_HANDLE                    BaseNode;
+  AML_NODE_HANDLE                    UidNode;
+  AML_NODE_HANDLE                    ResourceNode;
+  AML_NODE_HANDLE                    MemoryNode;
+  INT32                              NodeOffset;
+  CONST CHAR8                        *CompatibleInfo[] = { "nvidia,tegra234-hda", "nvidia,tegra23x-hda", NULL };
+  CHAR8                              HdaNodeName[]     = "HDAx";
+  UINT32                             InterruptId;
+  UINT32                             NumberOfHda;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA   RegisterData;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
+  UINT32                             Size;
+  EFI_ACPI_DESCRIPTION_HEADER        *NewTable;
+  CM_STD_OBJ_ACPI_TABLE_INFO         *NewAcpiTables;
+  UINT32                             Index;
+
+  Status = AmlParseDefinitionBlock ((const EFI_ACPI_DESCRIPTION_HEADER *)ssdthda_aml_code, &RootNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse hda ssdt - %r\r\n", __func__, Status));
+    return Status;
+  }
+
+  Status = AmlFindNode ((AML_NODE_HANDLE)RootNode, "\\_SB_", &SbNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find SB node - %r\r\n", __func__, Status));
+    return Status;
+  }
+
+  Status = AmlFindNode (SbNode, "HDA0", &HdaNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find hda node - %r\r\n", __func__, Status));
+    return Status;
+  }
+
+  Status = AmlDetachNode (HdaNode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to detach hda node - %r\r\n", __func__, Status));
+    return Status;
+  }
+
+  NumberOfHda = 0;
+  NodeOffset  = -1;
+  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (CompatibleInfo, &NodeOffset)) {
+    // Only one register space is expected
+    Size   = 1;
+    Status = DeviceTreeGetRegisters (NodeOffset, &RegisterData, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get registers - %r\r\n", __func__, Status));
+      break;
+    }
+
+    // Only one interrupt is expected
+    Size   = 1;
+    Status = DeviceTreeGetInterrupts (NodeOffset, &InterruptData, &Size);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to get interrupts - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCloneTree (HdaNode, &HdaNewNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to clone node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlAttachNode (SbNode, HdaNewNode);
+    if (EFI_ERROR (Status)) {
+      AmlDeleteTree (HdaNewNode);
+      DEBUG ((DEBUG_ERROR, "%a: Unable to attach hda node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    AsciiSPrint (HdaNodeName, sizeof (HdaNodeName), "HDA%u", NumberOfHda);
+    Status = AmlDeviceOpUpdateName (HdaNewNode, HdaNodeName);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update node name - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlFindNode (HdaNewNode, "_UID", &UidNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find Uid node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlNameOpUpdateInteger (UidNode, NumberOfHda);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update Uid node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlFindNode (HdaNewNode, "BASE", &BaseNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find base node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlNameOpUpdateInteger (BaseNode, RegisterData.BaseAddress);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to update base node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCodeGenNameResourceTemplate ("_CRS", HdaNewNode, &ResourceNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create _CRS node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    Status = AmlCodeGenRdMemory32Fixed (
+               TRUE,
+               RegisterData.BaseAddress + HDA_REG_OFFSET,
+               RegisterData.Size - HDA_REG_OFFSET,
+               ResourceNode,
+               &MemoryNode
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create memory node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    InterruptId = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
+    Status      = AmlCodeGenRdInterrupt (
+                    TRUE,
+                    FALSE,
+                    FALSE,
+                    FALSE,
+                    &InterruptId,
+                    1,
+                    ResourceNode,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create memory node - %r\r\n", __func__, Status));
+      break;
+    }
+
+    NumberOfHda++;
+  }
+
+  if (!EFI_ERROR (Status) && (NumberOfHda != 0)) {
+    // Install new table
+
+    Status = AmlSerializeDefinitionBlock (RootNode, &NewTable);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to serialize table - %r\r\n", __func__, Status));
+      return Status;
+    }
+
+    for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
+      if (NVIDIAPlatformRepositoryInfo[Index].CmObjectId == CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList)) {
+        NewAcpiTables = (CM_STD_OBJ_ACPI_TABLE_INFO *)AllocateCopyPool (NVIDIAPlatformRepositoryInfo[Index].CmObjectSize + sizeof (CM_STD_OBJ_ACPI_TABLE_INFO), NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr);
+        if (NewAcpiTables == NULL) {
+          return EFI_OUT_OF_RESOURCES;
+        }
+
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr = NewAcpiTables;
+
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableSignature = NewTable->Signature;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableRevision  = NewTable->Revision;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)NewTable;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = NewTable->OemTableId;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = NewTable->OemRevision;
+        NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
+        NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
+        Status                                            = EFI_SUCCESS;
+        break;
+      } else if (NVIDIAPlatformRepositoryInfo[Index].CmObjectPtr == NULL) {
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
+    }
+  }
+
+  AmlDeleteTree (RootNode);
+  return Status;
+}
+
 /** Initialize the platform configuration repository.
   @retval EFI_SUCCESS   Success
 **/
@@ -578,6 +736,8 @@ InitializePlatformRepository (
 {
   UINTN       Index;
   EFI_STATUS  Status;
+  UINTN       DataSize;
+  UINT32      EnableIortTableGen;
 
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
   EDKII_PLATFORM_REPOSITORY_INFO  *RepoEnd;
@@ -646,12 +806,25 @@ InitializePlatformRepository (
     return Status;
   }
 
+  Status = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
+  if (!EFI_ERROR (Status) && (EnableIortTableGen > 0)) {
+    Status = InstallIoRemappingTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
+
   Status = InitializeSsdtTable ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   Status = UpdateSdhciInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateHdaInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -708,6 +881,11 @@ ConfigurationManagerDataDxeInitialize (
                             OffsetTableArray,
                             ARRAY_SIZE (AcpiTableArray)
                             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = InitializeIoRemappingNodes ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

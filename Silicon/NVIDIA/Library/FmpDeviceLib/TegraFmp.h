@@ -12,6 +12,8 @@
 #define __TEGRA_FMP_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/FmpParamLib.h>
+#include <Library/FmpDeviceLib.h>
 #include <Protocol/FirmwareManagement.h>
 
 /**
@@ -87,19 +89,17 @@ FmpTegraSetImage (
   );
 
 /**
-  Get Tegra lowest supported version number
+  Register FmpDxe installer function.
 
-  @param[out] Lsv                   Pointer to store Lowest supported version
-                                    number or NULL
+  @param[in]  Function              Installer function pointer.
 
-  @retval EFI_SUCCESS               Valid version information returned.
-  @retval Others                    An error occurred
+  @retval None
 
 **/
-EFI_STATUS
+VOID
 EFIAPI
-FmpTegraGetLowestSupportedVersion (
-  OUT UINT32  *Lsv
+FmpTegraRegisterInstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   );
 
 #endif

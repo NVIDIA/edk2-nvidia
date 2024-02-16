@@ -7,9 +7,11 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DxeServicesTableLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/FruLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -63,6 +65,42 @@ FindFruByDescription (
 }
 
 /**
+  Find and get FRU extra string that has a certain prefix
+
+  @param[in] FruExtra  Pointer to the array of FRU (chassis/board/product) extra
+  @param[in] Prefix    FRU extra prefix to search for
+
+  @return A pointer to an allocated string
+
+**/
+CHAR8 *
+GetFruExtraStr (
+  IN CHAR8        **FruExtra,
+  IN CONST CHAR8  *Prefix
+  )
+{
+  UINT32  Index;
+  UINTN   PrefixLen;
+
+  ASSERT (FruExtra != NULL);
+  ASSERT (Prefix != NULL);
+
+  PrefixLen = AsciiStrLen (Prefix);
+
+  for (Index = 0; Index < MAX_EXTRA_FRU_AREA_ENTRIES; Index++) {
+    if (FruExtra[Index] == NULL) {
+      break;
+    }
+
+    if (AsciiStrnCmp (FruExtra[Index], Prefix, PrefixLen) == 0) {
+      return AllocateCopyString (FruExtra[Index] + PrefixLen);
+    }
+  }
+
+  return NULL;
+}
+
+/**
   Allocate and copy string
 
   @param[in] String     String to be copied
@@ -87,6 +125,7 @@ AllocateCopyString (
 
   @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
   @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+  @param[in]      PlatformRepositoryInfo      Pointer to the platform repository info
 
   @return EFI_SUCCESS       Successful installation
   @retval !(EFI_SUCCESS)    Other errors
@@ -96,7 +135,8 @@ EFI_STATUS
 EFIAPI
 InstallCmSmbiosTableList (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   )
 {
   CM_SMBIOS_PRIVATE_DATA          *Private;
@@ -107,17 +147,19 @@ InstallCmSmbiosTableList (
     { EFI_SMBIOS_TYPE_BIOS_INFORMATION,                     InstallSmbiosType0Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_INFORMATION,                   InstallSmbiosType1Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_ENCLOSURE,                     InstallSmbiosType3Cm   },
-    { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,                InstallSmbiosType2Cm   },
+    { EFI_SMBIOS_TYPE_PROCESSOR_INFORMATION,                InstallSmbiosProcSubCm },
     { EFI_SMBIOS_TYPE_PORT_CONNECTOR_INFORMATION,           InstallSmbiosType8Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_SLOTS,                         InstallSmbiosType9Cm   },
     { EFI_SMBIOS_TYPE_OEM_STRINGS,                          InstallSmbiosType11Cm  },
     { EFI_SMBIOS_TYPE_BIOS_LANGUAGE_INFORMATION,            InstallSmbiosType13Cm  },
     { EFI_SMBIOS_TYPE_PHYSICAL_MEMORY_ARRAY,                InstallSmbiosTypeMemCm },
+    { EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION,                InstallSmbiosType2Cm   },
     { EFI_SMBIOS_TYPE_SYSTEM_BOOT_INFORMATION,              InstallSmbiosType32Cm  },
     { EFI_SMBIOS_TYPE_IPMI_DEVICE_INFORMATION,              InstallSmbiosType38Cm  },
     { EFI_SMBIOS_TYPE_SYSTEM_POWER_SUPPLY,                  InstallSmbiosType39Cm  },
     { EFI_SMBIOS_TYPE_ONBOARD_DEVICES_EXTENDED_INFORMATION, InstallSmbiosType41Cm  },
-    { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm  }
+    { SMBIOS_TYPE_TPM_DEVICE,                               InstallSmbiosType43Cm  },
+    { SMBIOS_TYPE_FIRMWARE_INVENTORY_INFORMATION,           InstallSmbiosType45Cm  }
   };
 
   Private = AllocatePool (sizeof (CM_SMBIOS_PRIVATE_DATA));
@@ -130,7 +172,7 @@ InstallCmSmbiosTableList (
   Private->RepoEnd                         = PlatformRepositoryInfoEnd;
   Private->EnclosureBaseboardBinding.Count = 0;
   Private->EnclosureBaseboardBinding.Info  = NULL;
-
+  Private->PlatformRepositoryInfo          = NVIDIAPlatformRepositoryInfo;
   //
   // Load device tree SMBIOS node
   //

@@ -3,7 +3,7 @@
 
   Copyright (c) 2011, Intel Corporation
   Copyright (c) 2020, ARM Limited. All rights reserved.
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -32,7 +32,7 @@ typedef struct {
 /**
   Initial RNDIS SNP service
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.

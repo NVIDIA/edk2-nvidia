@@ -1,0 +1,15 @@
+// /** @file
+// Wfi App.
+//
+// This application exits boot services and then does a WFI loop
+//
+// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+// **/
+
+
+#string STR_MODULE_ABSTRACT             #language en-US "WFI boot application"
+
+#string STR_MODULE_DESCRIPTION          #language en-US "This application exits boot services and then does a WFI loop."
+

@@ -1,7 +1,7 @@
 ## @file
 #  FW Partition Protocol NorFlash Dxe
 #
-#  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -24,12 +24,14 @@
 
 [LibraryClasses]
   BaseLib
+  BootChainInfoLib
   BrBctUpdateDeviceLib
   DebugLib
   HobLib
   FwPartitionDeviceLib
   MemoryAllocationLib
   PlatformResourceLib
+  TegraPlatformInfoLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiLib

@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,16 +19,18 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,gv11b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra30-hda",     &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra194-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra23x-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra234-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,ga10b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,th500-soc-hwpm",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra234-nvdla",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { "nvidia,tegra234-host1x", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,tegra194-rce",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
   { NULL,                     NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Controller Enable Driver",
-  .UseDriverBinding                           = TRUE,
   .AutoEnableClocks                           = TRUE,
   .AutoResetModule                            = TRUE,
   .AutoDeassertPg                             = TRUE,
@@ -73,7 +75,7 @@ DeviceDiscoveryNotify (
           if (!EFI_ERROR (Status)) {
             Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, HWPM_LA_MAX_CLOCK);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a, Failed to set hwpm la clock frequency %r\r\n", __FUNCTION__, Status));
+              DEBUG ((DEBUG_ERROR, "%a, Failed to set hwpm la clock frequency %r\r\n", __FUNCTION__, Status));
             }
           }
         }

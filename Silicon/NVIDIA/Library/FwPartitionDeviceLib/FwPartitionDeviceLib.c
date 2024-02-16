@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,19 +15,33 @@
 #include <Library/FwPartitionDeviceLib.h>
 #include <Library/GptLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Uefi/UefiBaseType.h>
+
+#define FW_PARTITION_PSEUDO_DEVICE_SIGNATURE  SIGNATURE_32 ('F','W','P','P')
+
+typedef struct {
+  UINT32                      Signature;
+
+  FW_PARTITION_DEVICE_INFO    DeviceInfo;
+  FW_PARTITION_DEVICE_INFO    *MmDeviceInfo;
+} FW_PARTITION_PSEUDO_DEVICE_INFO;
 
 STATIC FW_PARTITION_PRIVATE_DATA  *mPrivate                   = NULL;
 STATIC UINTN                      mNumFwPartitions            = 0;
 STATIC UINTN                      mMaxFwPartitions            = 0;
 STATIC UINT32                     mActiveBootChain            = MAX_UINT32;
 STATIC BOOLEAN                    mOverwriteActiveFwPartition = FALSE;
+STATIC UINTN                      mChipId                     = MAX_UINTN;
+STATIC UINT32                     mGptBootChain               = MAX_UINT32;
 
 // non-A/B partition names
 STATIC CONST CHAR16  *NonABPartitionNames[] = {
   L"BCT",
   L"BCT-boot-chain_backup",
   L"mb2-applet",
+  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
 
@@ -172,6 +186,7 @@ FwPartitionRead (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         PartitionInfo->Name,
                          DeviceInfo,
                          Offset + PartitionInfo->Offset,
                          Bytes,
@@ -260,6 +275,7 @@ FwPartitionWrite (
     ));
 
   Status = DeviceInfo->DeviceWrite (
+                         PartitionInfo->Name,
                          DeviceInfo,
                          Offset + PartitionInfo->Offset,
                          Bytes,
@@ -278,6 +294,154 @@ FwPartitionWrite (
   }
 
   return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FwPartitionWriteToUpdateInactivePartitions (
+  IN  CONST CHAR16              *PartitionName,
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes,
+  IN  CONST VOID                *Buffer
+  )
+{
+  EFI_STATUS                       Status;
+  UINTN                            GptTableSize;
+  EFI_PARTITION_TABLE_HEADER       *GptHeader;
+  EFI_PARTITION_ENTRY              *PartitionTable;
+  UINTN                            BlockSize;
+  CONST EFI_PARTITION_ENTRY        *Partition;
+  UINTN                            Index;
+  CHAR16                           BaseName[MAX_PARTITION_NAME_LEN];
+  UINTN                            PartitionBootChain;
+  UINT32                           InactiveBootChain;
+  CONST CHAR16                     *Name;
+  FW_PARTITION_PRIVATE_DATA        *Private;
+  FW_PARTITION_PRIVATE_DATA        *BctPartition;
+  FW_PARTITION_INFO                *PartitionInfo;
+  CONST VOID                       *AlignedBuffer;
+  FW_PARTITION_PSEUDO_DEVICE_INFO  *PseudoDeviceInfo;
+
+  if ((DeviceInfo == NULL) || (Buffer == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PseudoDeviceInfo = CR (
+                       DeviceInfo,
+                       FW_PARTITION_PSEUDO_DEVICE_INFO,
+                       DeviceInfo,
+                       FW_PARTITION_PSEUDO_DEVICE_SIGNATURE
+                       );
+
+  AlignedBuffer = AllocateRuntimeCopyPool (Bytes, Buffer);
+  NV_ASSERT_RETURN ((AlignedBuffer != NULL), return EFI_OUT_OF_RESOURCES, "%a: alloc failed\n", __FUNCTION__);
+
+  GptTableSize      = NVIDIA_GPT_PARTITION_TABLE_SIZE;
+  GptHeader         = (EFI_PARTITION_TABLE_HEADER  *)((UINT8 *)AlignedBuffer + GptTableSize);
+  PartitionTable    = (EFI_PARTITION_ENTRY *)AlignedBuffer;
+  InactiveBootChain = OTHER_BOOT_CHAIN (mActiveBootChain);
+  BlockSize         = NVIDIA_GPT_BLOCK_SIZE;
+
+  DEBUG ((DEBUG_INFO, "%a: Starting update Offset=%llu, Bytes=%u, Buffer=0x%p\n", __FUNCTION__, Offset, Bytes, AlignedBuffer));
+
+  Status = GptValidateHeader (GptHeader);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid GPT header: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = GptValidatePartitionTable (GptHeader, PartitionTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid PartitionTable: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Partition = PartitionTable;
+  for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++, Partition++) {
+    Name = Partition->PartitionName;
+
+    if (StrLen (Name) == 0) {
+      continue;
+    }
+
+    Status = GetPartitionBaseNameAndBootChainAny (Name, BaseName, &PartitionBootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get boot chain for %s: %r\n", __FUNCTION__, Name, Status));
+      continue;
+    }
+
+    Private = FwPartitionFindByName (Name);
+    if (Private == NULL) {
+      DEBUG ((DEBUG_INFO, "%a: Partition %s is new\n", __FUNCTION__, Name));
+
+      BctPartition = FwPartitionFindByName (L"BCT");
+      if (BctPartition == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: BCT partition not found, can't add %s\n", __FUNCTION__, Name));
+        return EFI_DEVICE_ERROR;
+      }
+
+      Status = FwPartitionAdd (
+                 Name,
+                 BctPartition->DeviceInfo,
+                 (PseudoDeviceInfo->MmDeviceInfo == NULL) ? Partition->StartingLBA * BlockSize : 0,
+                 GptPartitionSizeInBlocks (Partition) * BlockSize
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      continue;
+    }
+
+    if (PartitionBootChain != InactiveBootChain) {
+      DEBUG ((DEBUG_INFO, "%a: skipping %s, chain=%u\n", __FUNCTION__, Name, PartitionBootChain));
+      continue;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: updating %s\n", __FUNCTION__, Name));
+
+    PartitionInfo = &Private->PartitionInfo;
+
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Updating %s Offset 0x%llx->0x%llx Bytes 0x%llx->0x%llx\n",
+      __FUNCTION__,
+      Name,
+      PartitionInfo->Offset,
+      Partition->StartingLBA * BlockSize,
+      PartitionInfo->Bytes,
+      GptPartitionSizeInBlocks (Partition) * BlockSize
+      ));
+
+    if (PseudoDeviceInfo->MmDeviceInfo == NULL) {
+      PartitionInfo->Offset = Partition->StartingLBA * BlockSize;
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: no %s offset update for MM\n", __FUNCTION__, Name));
+    }
+
+    PartitionInfo->Bytes = GptPartitionSizeInBlocks (Partition) * BlockSize;
+  }
+
+  if (PseudoDeviceInfo->MmDeviceInfo != NULL) {
+    Status = PseudoDeviceInfo->MmDeviceInfo->DeviceWrite (
+                                               PartitionName,
+                                               PseudoDeviceInfo->MmDeviceInfo,
+                                               Offset,
+                                               Bytes,
+                                               Buffer
+                                               );
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: write pass-thru failed: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Finished update\n", __FUNCTION__));
+
+  return EFI_SUCCESS;
 }
 
 EFI_STATUS
@@ -345,6 +509,42 @@ FwPartitionAdd (
 
 EFI_STATUS
 EFIAPI
+FwPartitionAddPseudoPartition (
+  IN  FW_PARTITION_DEVICE_INFO  *MmDeviceInfo   OPTIONAL
+  )
+{
+  EFI_STATUS                       Status;
+  FW_PARTITION_DEVICE_INFO         *DeviceInfo;
+  FW_PARTITION_PSEUDO_DEVICE_INFO  *PseudoDeviceInfo;
+  CHAR16                           *Name;
+
+  Name             = FW_PARTITION_UPDATE_INACTIVE_PARTITIONS;
+  PseudoDeviceInfo = (FW_PARTITION_PSEUDO_DEVICE_INFO *)AllocateRuntimeZeroPool (sizeof (*PseudoDeviceInfo));
+  NV_ASSERT_RETURN ((PseudoDeviceInfo != NULL), return EFI_OUT_OF_RESOURCES, "%a: PDI alloc failed\n", __FUNCTION__);
+
+  PseudoDeviceInfo->Signature    = FW_PARTITION_PSEUDO_DEVICE_SIGNATURE;
+  PseudoDeviceInfo->MmDeviceInfo = MmDeviceInfo;
+  DeviceInfo                     = &PseudoDeviceInfo->DeviceInfo;
+  DeviceInfo->DeviceName         = L"pseudo-partition";
+  DeviceInfo->DeviceWrite        = FwPartitionWriteToUpdateInactivePartitions;
+  DeviceInfo->DeviceRead         = NULL;
+  DeviceInfo->BlockSize          = 1;
+
+  Status = FwPartitionAdd (
+             Name,
+             DeviceInfo,
+             0,
+             GptGetGptDataSize ()
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: add failed: %r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+EFI_STATUS
+EFIAPI
 FwPartitionAddFromDeviceGpt (
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    DeviceSizeInBytes
@@ -356,10 +556,15 @@ FwPartitionAddFromDeviceGpt (
   UINT64                      PartitionTableOffset;
   UINTN                       PartitionCount;
   UINTN                       BlockSize;
+  UINTN                       GptHeaderOffset;
+  UINTN                       GptDataOffset;
+  UINT32                      BootChain;
+  CHAR16                      GptPartitionName[MAX_PARTITION_NAME_LEN];
 
-  BlockSize      = NVIDIA_GPT_BLOCK_SIZE;
-  PartitionCount = mNumFwPartitions;
-  PartitionTable = NULL;
+  BlockSize       = NVIDIA_GPT_BLOCK_SIZE;
+  PartitionCount  = mNumFwPartitions;
+  PartitionTable  = NULL;
+  GptHeaderOffset = GptGetHeaderOffset (mGptBootChain, DeviceSizeInBytes, DeviceInfo->BlockSize);
 
   // read and validate GPT header
   GptHeader = (EFI_PARTITION_TABLE_HEADER *)AllocatePool (BlockSize);
@@ -370,14 +575,16 @@ FwPartitionAddFromDeviceGpt (
 
   DEBUG ((
     DEBUG_INFO,
-    "Reading secondary GPT header DeviceSizeInBytes=%llu, BlockSize=%u\n",
+    "Reading secondary GPT header DeviceSizeInBytes=%llu, BlockSize=%u Offset=%u\n",
     DeviceSizeInBytes,
-    BlockSize
+    BlockSize,
+    GptHeaderOffset
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         L"GPT-Header",
                          DeviceInfo,
-                         DeviceSizeInBytes - BlockSize,
+                         GptHeaderOffset,
                          BlockSize,
                          GptHeader
                          );
@@ -422,6 +629,7 @@ FwPartitionAddFromDeviceGpt (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         L"GPT-Table",
                          DeviceInfo,
                          PartitionTableOffset,
                          GptPartitionTableSizeInBytes (GptHeader),
@@ -462,10 +670,41 @@ FwPartitionAddFromDeviceGpt (
     DeviceInfo->DeviceName
     ));
 
-  Status = EFI_SUCCESS;
   if (PartitionCount == 0) {
     Status = EFI_NOT_FOUND;
+    goto Done;
   }
+
+  if (mChipId == T194_CHIP_ID) {
+    goto Done;
+  }
+
+  // only add GPT update support for boot device
+  if (FwPartitionFindByName (L"BCT") == NULL) {
+    goto Done;
+  }
+
+  // add partitions for GPT updates
+  for (BootChain = 0; BootChain < BOOT_CHAIN_COUNT; BootChain++) {
+    Status = GetBootChainPartitionNameAny (L"GPT", BootChain, GptPartitionName);
+    NV_ASSERT_EFI_ERROR_RETURN (Status, goto Done);
+
+    GptDataOffset = GptGetGptDataOffset (BootChain, DeviceSizeInBytes, DeviceInfo->BlockSize);
+
+    Status = FwPartitionAdd (
+               GptPartitionName,
+               DeviceInfo,
+               GptDataOffset,
+               GptGetGptDataSize ()
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error adding %s partition: %r\n", __FUNCTION__, GptPartitionName, Status));
+      goto Done;
+    }
+  }
+
+  // add pseudo-partition to update inactive partition meta-data
+  Status = FwPartitionAddPseudoPartition (NULL);
 
 Done:
   if (PartitionTable != NULL) {
@@ -491,6 +730,8 @@ FwPartitionAddFromPartitionTable (
   CONST EFI_PARTITION_ENTRY  *Partition;
   EFI_STATUS                 Status;
   UINTN                      Index;
+  CHAR16                     BaseName[MAX_PARTITION_NAME_LEN];
+  UINTN                      PartitionBootChain;
 
   BlockSize = NVIDIA_GPT_BLOCK_SIZE;
 
@@ -509,6 +750,12 @@ FwPartitionAddFromPartitionTable (
   Partition = PartitionTable;
   for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++, Partition++) {
     if (StrLen (Partition->PartitionName) > 0) {
+      Status = GetPartitionBaseNameAndBootChainAny (Partition->PartitionName, BaseName, &PartitionBootChain);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to get base name for %s: %r\n", Partition->PartitionName, Status));
+        continue;
+      }
+
       Status = FwPartitionAdd (
                  Partition->PartitionName,
                  DeviceInfo,
@@ -631,12 +878,16 @@ EFIAPI
 FwPartitionDeviceLibInit (
   IN  UINT32   ActiveBootChain,
   IN  UINTN    MaxFwPartitions,
-  IN  BOOLEAN  OverwriteActiveFwPartition
+  IN  BOOLEAN  OverwriteActiveFwPartition,
+  IN  UINTN    ChipId,
+  IN  UINT32   GptBootChain
   )
 {
   mActiveBootChain            = ActiveBootChain;
   mMaxFwPartitions            = MaxFwPartitions;
   mOverwriteActiveFwPartition = OverwriteActiveFwPartition;
+  mChipId                     = ChipId;
+  mGptBootChain               = GptBootChain;
 
   mPrivate = (FW_PARTITION_PRIVATE_DATA *)AllocateRuntimeZeroPool (
                                             mMaxFwPartitions * sizeof (FW_PARTITION_PRIVATE_DATA)

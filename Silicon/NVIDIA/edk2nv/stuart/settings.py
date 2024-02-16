@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,6 +36,9 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             "subclasses."
         )
 
+    def GetGuid(self):
+        return "fb0e2152-1441-49e0-b376-5f8593d66678"
+
     #######################################
     # Edk2InvocableSettingsInterface
 
@@ -62,10 +65,30 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         # NOTE: These paths must use a trailing slash to ensure stuart treats
         # them properly when computing relative paths.
         packages_paths = [path + "/" for path in self._insert_pkgs_paths]
+
+        # The Conf directory needs to be in the package path as well.  Since we
+        # move it to a platform-specific directory, we'll need to add it here.
+        # We also need to create it now because Edk2Path verifies it exists.
+        confdir_name = self.GetConfDirName()
+        if confdir_name:
+            ws_dir = Path(self.GetWorkspaceRoot())
+            confdir_path = ws_dir / confdir_name
+            confdir_path.mkdir(parents=True, exist_ok=True)
+            packages_paths.append(confdir_name)
+
         packages_paths.extend([
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
             "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
         ])
+
+        if self.GetConfigFiles ():
+            ws_dir = Path(self.GetWorkspaceRoot())
+            config_path = "nvidia-config/" + self.GetName()
+            config_fullpath = ws_dir / config_path
+            config_fullpath.mkdir(parents=True, exist_ok=True)
+            packages_paths.extend([
+                config_path
+            ])
 
         return packages_paths
 
@@ -80,7 +103,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
 
     def GetActiveScopes(self):
         ''' List of scopes we need for this platform. '''
-        return ['edk2-build']
+        return ['edk2-build','nvidia']
 
     def AddCommandLineOptions(self, parserObj):
         ''' Add command line options to the argparser '''
@@ -136,6 +159,23 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         return []
 
+    def GetConfigFiles(self):
+        ''' Return the list of config files that will used for this build
+            these will be applied in order and are relative to the workspace
+        '''
+        return None
+
+    #######################################
+    # NVIDIA settings
+    def GetConfDirName(self):
+        ''' Return the name of the Conf directory.
+
+            This directory name will include the target so that targets
+            can be built in parallel.  Returned as a string.  This default
+            implementation will use "Conf/{platform_name}/{target}".
+        '''
+        return None
+
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
                             PrEvalSettingsManager, BuildSettingsManager,
@@ -177,7 +217,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The return from this method will be used as the prefix when setting
             BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
-        return "202303.0"
+        return "202402.0"
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.
@@ -264,7 +304,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH COMPILE_INFO")
 
     def GetReportFile(self):
         ''' Return the build report filename.
@@ -367,6 +407,27 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         target = self.GetTarget()
         return str(Path("images") / f"builddir_{platform_name}_{target}.txt")
 
+    def GetBuildIdFile(self):
+        ''' Return the file name of the build id file.
+
+            This file will contain the BUILDID_STRING.  This string will
+            also be used in the images boot banner.
+
+            Returns a path relative to the workspace.
+        '''
+        platform_name = self.GetName()
+        target = self.GetTarget()
+        return str(Path("images") / f"buildid_{platform_name}_{target}.txt")
+
+    def GetKConfigFile(self):
+        ''' Return the file name of the main Kconfig configuration.
+
+            This file will is used with the platform Kconfig file to generate the
+            specific configuration.
+
+            The path must be relative to GetWorkspaceRoot().
+        '''
+        return "edk2-nvidia/Platform/NVIDIA/Kconfig"
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
                               CiSetupSettingsManager, CiBuildSettingsManager,
@@ -434,7 +495,7 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set BUILDREPORT_TYPES.
         '''
-        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH")
+        return ("PCD LIBRARY FLASH DEPEX BUILD_FLAGS FIXED_ADDRESS HASH COMPILE_INFO")
 
     def GetReportFile(self):
         ''' Return the build report filename.

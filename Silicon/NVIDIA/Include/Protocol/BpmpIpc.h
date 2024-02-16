@@ -17,6 +17,18 @@
   0x2b560a1f, 0x8e7b, 0x45a0, { 0x96, 0x8f, 0x7c, 0xa8, 0x2b, 0xd2, 0xb5, 0x99 } \
   }
 
+#define BPMP_RESPONSE_TIMEOUT_US  100000
+
+/**
+ * @ingroup IVC_States
+ * @name IVC Channel State
+ * These are the states of the IVC communication channels
+ *
+ */
+#define IVC_STATE_ESTABLISHED  0
+#define IVC_STATE_SYNC         1
+#define IVC_STATE_ACK          2
+
 /**
  * @ingroup MRQ_Codes
  * @name Legal MRQ codes
@@ -46,6 +58,7 @@
 #define MRQ_TRACE_ITER        64
 #define MRQ_PG                66
 #define MRQ_CPU_NDIV_LIMITS   67
+#define MRQ_UPHY              69
 #define MRQ_TELEMETRY         80
 #define MRQ_PWR_LIMIT         81
 #define MRQ_C2C               85

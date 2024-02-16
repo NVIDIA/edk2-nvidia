@@ -319,7 +319,7 @@ match_type_done:
   }
 
 finish:
-  DEBUG ((DEBUG_INFO, "%a: Board Id match result: %d\n", __FUNCTION__, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Board Id match result: %u\n", __FUNCTION__, Matched));
   return Matched;
 }
 
@@ -345,7 +345,7 @@ MatchOdmData (
   }
 
 ret_odm_match:
-  DEBUG ((DEBUG_INFO, "%a: Matching odm-data %a. Result: %d\n", __FUNCTION__, OdmData, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Matching odm-data %a. Result: %u\n", __FUNCTION__, OdmData, Matched));
   return Matched;
 }
 
@@ -388,7 +388,7 @@ MatchFuseInfo (
     }
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Matching fuse-info %a. Result: %d\n", __FUNCTION__, FuseStr, Matched));
+  DEBUG ((DEBUG_INFO, "%a: Matching fuse-info %a. Result: %u\n", __FUNCTION__, FuseStr, Matched));
   return Matched;
 }
 
@@ -450,7 +450,7 @@ FdtDeleteProperty (
     return EFI_DEVICE_ERROR;
   }
 
-  Err = fdt_delprop (FdtBase, TargetNode, PropName);
+  Err = fdt_nop_property (FdtBase, TargetNode, PropName);
   if ( 0 != Err) {
     return EFI_DEVICE_ERROR;
   }
@@ -499,6 +499,7 @@ FdtCleanFixups (
   VOID         *FdtBuf;
   UINTN        FdtSize;
   UINTN        BufPageCount;
+  INTN         SymbolsNode;
   INTN         FixupsNode;
   INTN         FixupsNodeNew;
   INTN         SubNode;
@@ -522,20 +523,42 @@ FdtCleanFixups (
     return EFI_DEVICE_ERROR;
   }
 
+  FdtBuf = NULL;
+
+  NodeLen  = strlen (NodeName);
+  NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
+  CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
+  NodePath[0] = '/';
+
+  SymbolsNode = fdt_subnode_offset (FdtBase, 0, "__symbols__");
+  if (SymbolsNode >= 0) {
+    fdt_for_each_property_offset (PropOffset, FdtBase, SymbolsNode) {
+      PropStr = fdt_getprop_by_offset (FdtBase, PropOffset, &PropName, &PropLen);
+      if (PropLen >= NodeLen+2) {
+        if (0 == CompareMem (NodePath, PropStr, NodeLen+1)) {
+          if (PropStr[NodeLen+1] == '/') {
+            fdt_nop_property (FdtBase, SymbolsNode, PropName);
+          }
+        }
+      }
+    }
+  }
+
   FixupsNode = fdt_subnode_offset (FdtBase, 0, "__local_fixups__");
   if (FixupsNode >= 0) {
     SubNode = fdt_subnode_offset (FdtBase, FixupsNode, NodeName);
     if (SubNode >= 0) {
       if (0 > fdt_del_node (FdtBase, SubNode)) {
         DEBUG ((DEBUG_ERROR, "Error deleting fragment %a from __local_fixups__\n", NodeName));
-        return EFI_DEVICE_ERROR;
+        Status = EFI_DEVICE_ERROR;
+        goto ExitFixups;
       }
     }
   }
 
   FixupsNode = fdt_subnode_offset (FdtBase, 0, "__fixups__");
   if (FixupsNode < 0) {
-    return Status;
+    goto ExitFixups;
   }
 
   FdtSize      = fdt_totalsize (FdtBase);
@@ -544,19 +567,16 @@ FdtCleanFixups (
 
   if (FdtBuf == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for overlay dtb. \n", __FUNCTION__));
-    return EFI_DEVICE_ERROR;
+    Status = EFI_DEVICE_ERROR;
+    goto ExitFixups;
   }
 
   if (fdt_open_into (FdtBase, FdtBuf, FdtSize)) {
-    DEBUG ((EFI_D_ERROR, "Failed to copy overlay device tree.\r\n"));
+    DEBUG ((DEBUG_ERROR, "Failed to copy overlay device tree.\r\n"));
     Status =  EFI_LOAD_ERROR;
     goto ExitFixups;
   }
 
-  NodeLen  = strlen (NodeName);
-  NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
-  CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
-  NodePath[0] = '/';
   DEBUG ((DEBUG_INFO, "Removing fixups for fragment: %a\n", NodePath));
 
   fdt_for_each_property_offset (PropOffset, FdtBuf, FixupsNode) {
@@ -590,7 +610,7 @@ FdtCleanFixups (
       }
 
       if (NewPropLen == 0) {
-        Err = fdt_delprop (FdtBase, FixupsNodeNew, PropName);
+        Err = fdt_nop_property (FdtBase, FixupsNodeNew, PropName);
       } else {
         Err = fdt_setprop (FdtBase, FixupsNodeNew, PropName, NewProp, NewPropLen);
       }
@@ -610,7 +630,10 @@ ExitFixups:
     FreePool (NodePath);
   }
 
-  FreePages (FdtBuf, BufPageCount);
+  if (FdtBuf) {
+    FreePages (FdtBuf, BufPageCount);
+  }
+
   return Status;
 }
 
@@ -850,7 +873,7 @@ ApplyTegraDeviceTreeOverlayCommon (
     FdtSize = fdt_totalsize (FdtNext);
 
     if (fdt_open_into (FdtNext, FdtBuf, FdtSize)) {
-      DEBUG ((EFI_D_ERROR, "Failed to copy overlay device tree.\r\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to copy overlay device tree.\r\n"));
       Status =  EFI_LOAD_ERROR;
       goto Exit;
     }
@@ -862,12 +885,12 @@ ApplyTegraDeviceTreeOverlayCommon (
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply (FdtBase, FdtBuf);
       if (Err != 0) {
-        DEBUG ((EFI_D_ERROR, "Failed to apply device tree overlay. Error Code = %d\n", Err));
+        DEBUG ((DEBUG_ERROR, "Failed to apply device tree overlay. Error Code = %d\n", Err));
         Status = EFI_DEVICE_ERROR;
         goto Exit;
       }
     } else {
-      DEBUG ((EFI_D_INFO, "Overlay skipped.\n"));
+      DEBUG ((DEBUG_INFO, "Overlay skipped.\n"));
       Status = EFI_SUCCESS;
     }
 

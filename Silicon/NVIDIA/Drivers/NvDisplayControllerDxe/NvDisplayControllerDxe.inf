@@ -2,7 +2,7 @@
 #
 #  NV Display Controller Driver
 #
-#  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -30,6 +30,7 @@
   BaseLib
   DebugLib
   DeviceDiscoveryDriverLib
+  DisplayDeviceTreeHelperLib
   HobLib
   IoLib
   MemoryAllocationLib
@@ -43,16 +44,13 @@
 
 [Guids]
   gEfiAcpiTableGuid
-  gEfiEventExitBootServicesGuid
   gEfiEventReadyToBootGuid
   gFdtTableGuid
-  gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
   gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
-  gEfiDevicePathProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
@@ -61,6 +59,8 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
 
 [Depex]
+  gEfiVariableArchProtocolGuid                  AND
   gNVIDIAI2cExpanderGpioProtocolGuid

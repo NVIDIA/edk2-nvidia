@@ -2,7 +2,7 @@
 #
 #  Sequential Record Communications Driver
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -40,10 +40,11 @@
   BaseLib
 
 [Protocols]
-  gNVIDIANorFlashProtocolGuid
-  gEfiSmmFirmwareVolumeBlockProtocolGuid
-  gNVIDIASequentialStorageGuid
-  gNVIDIACmetStorageGuid
+  gNVIDIANorFlashProtocolGuid             ## CONSUMES
+  gEfiSmmFirmwareVolumeBlockProtocolGuid  ## CONSUMES
+  gNVIDIASequentialStorageGuid            ## PRODUCES
+  gNVIDIACmetStorageGuid                  ## PRODUCES
+  gEfiSmmVariableProtocolGuid             ## CONSUMES
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
@@ -51,6 +52,11 @@
   gNVIDIARasCmetMmGuid
   gNVIDIAMmMb1RecordGuid
   gNVIDIASatMcMmGuid
+  gUserAuthenticationGuid
+  gNVIDIAPublicVariableGuid
+
+[Pcd]
+   gNVIDIATokenSpaceGuid.PcdNoCorrectedErrorsInHest
 
 [Depex]
   TRUE

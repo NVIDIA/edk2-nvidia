@@ -31,7 +31,7 @@
 #define BMC_SSIF_SIGNATURE      SIGNATURE_64 ('B','M','C','_','S','S','I','F')
 #define BMC_RETRY_COUNT         10
 #define BMC_RETRY_DELAY         100000
-#define BMC_SMBALERT_TIMEOUT    500000
+#define BMC_SMBALERT_TIMEOUT    5000000
 #define BMC_SMBALERT_POLL_TIME  100
 
 // Private data structure

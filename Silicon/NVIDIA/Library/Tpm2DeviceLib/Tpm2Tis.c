@@ -4,7 +4,7 @@
 
   Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -47,7 +47,6 @@ TisRead8 (
 
   Status = Tpm2->Transfer (Tpm2, TRUE, Addr, &Value, sizeof (Value));
   if (EFI_ERROR (Status)) {
-    ASSERT_EFI_ERROR (Status);
     Value = TIS_INVALID_VALUE;
   }
 
@@ -71,7 +70,6 @@ TisWrite8 (
   EFI_STATUS  Status;
 
   Status = Tpm2->Transfer (Tpm2, FALSE, Addr, &Value, sizeof (Value));
-  ASSERT_EFI_ERROR (Status);
 }
 
 /**
@@ -154,10 +152,13 @@ TisReadBurstCount (
   WaitTime = 0;
   do {
     Status = Tpm2->Transfer (Tpm2, TRUE, TPM_STS_0, StsReg, sizeof (StsReg));
-    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      return EFI_TIMEOUT;
+    }
 
     *BurstCount = (UINT16)((StsReg[2] << 8) | StsReg[1]);
     if (*BurstCount != 0) {
+      *BurstCount = MIN (TPM_MAX_TRANSFER_SIZE, *BurstCount);
       return EFI_SUCCESS;
     }
 
@@ -249,7 +250,7 @@ TisTpmCommand (
   EFI_STATUS  Status;
   UINT16      BurstCount;
   UINT32      Index;
-  UINT32      TpmOutSize;
+  UINT32      TpmOutSize = 0;
   UINT16      Data16;
   UINT32      Data32;
   UINT16      TransferSize;
@@ -301,7 +302,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, MIN (BurstCount, (SizeIn - Index)));
+    TransferSize = MIN (BurstCount, (SizeIn - Index));
     Status       = Tpm2->Transfer (
                            Tpm2,
                            FALSE,
@@ -328,8 +329,8 @@ TisTpmCommand (
              TIS_TIMEOUT_C
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Tpm2 The send buffer too small!\n"));
-    Status = EFI_BUFFER_TOO_SMALL;
+    DEBUG ((DEBUG_ERROR, "Tpm2 STS_EXPECT timeout. TPM failed to receive command.\n"));
+    Status = EFI_DEVICE_ERROR;
     goto Exit;
   }
 
@@ -388,12 +389,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    if (*SizeOut < (Index + BurstCount)) {
-      Status = EFI_BUFFER_TOO_SMALL;
-      goto Exit;
-    }
-
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    TransferSize = MIN (*SizeOut - Index, BurstCount);
     Status       = Tpm2->Transfer (
                            Tpm2,
                            TRUE,
@@ -438,9 +434,7 @@ TisTpmCommand (
       goto Exit;
     }
 
-    ASSERT (*SizeOut >= (Index + BurstCount));
-
-    TransferSize = MIN (TPM_MAX_TRANSFER_SIZE, BurstCount);
+    TransferSize = MIN (BurstCount, TpmOutSize - Index);
     Status       = Tpm2->Transfer (
                            Tpm2,
                            TRUE,
@@ -465,6 +459,26 @@ Exit:
 
   DEBUG ((DEBUG_VERBOSE, "\n"));
   DEBUG_CODE_END ();
+
   TisWrite8 (Tpm2, TPM_STS_0, TIS_PC_STS_READY);
   return Status;
+}
+
+/**
+  Release the control of TPM chip
+
+  @param[in] Tpm2             Pointer to NVIDIA_TPM2_PROTOCOL
+**/
+VOID
+TisReleaseTpm (
+  IN NVIDIA_TPM2_PROTOCOL  *Tpm2
+  )
+{
+  ASSERT (Tpm2 != NULL);
+
+  //
+  // According to TIS spec, software relinquishes the TPM’s locality by
+  // writing a “1” to the TPM_ACCESS_x.activeLocality field.
+  //
+  TisWrite8 (Tpm2, TPM_ACCESS_0, TIS_PC_ACC_ACTIVE);
 }

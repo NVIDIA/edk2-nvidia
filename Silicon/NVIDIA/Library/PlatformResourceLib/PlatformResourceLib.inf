@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -13,6 +13,8 @@
   LIBRARY_CLASS                  = PlatformResourceLib
 
 [Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   NetworkPkg/NetworkPkg.dec
   CryptoPkg/CryptoPkg.dec
@@ -22,9 +24,12 @@
 [LibraryClasses]
   TegraPlatformInfoLib
   GoldenRegisterLib
-  ErotLib
+  HobLib
+  MceAriLib
+  NvgLib
 
 [Sources.common]
+  PlatformResourceConfig.c
   PlatformResourceLib.c
   T194ResourceConfig.c
   T234ResourceConfig.c
@@ -32,19 +37,21 @@
   TH500Tcg2EventLog.c
   TH500ResourceConfig.h
   TH500ResourceConfigPrivate.h
+  CommonResourceConfig.c
 
 [Guids]
   gNVIDIAOSCarveoutHob
   gNVIDIATH500MB1DataGuid
+  gNVIDIATH500MB1DefaultDataGuid
   gTcgEvent2EntryHobGuid
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
-  gNVIDIATokenSpaceGuid.PcdTegraMCBBaseAddress
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234

@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library for StandaloneMm
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,20 +24,16 @@ BOOLEAN  SerialPortInitialized = FALSE;
 /** Identify the serial device hardware
 
  **/
-TEGRA_UART_OBJ *
+VOID
 EFIAPI
 SerialPortIdentify (
-  VOID
+  SERIAL_MAPPING  **SerialMapping OPTIONAL
   )
 {
   EFI_STATUS            Status;
   UINT32                ChipID;
   UINT32                UARTInstanceType;
   EFI_PHYSICAL_ADDRESS  UARTInstanceAddress;
-
-  if (TegraUartObj != NULL) {
-    return TegraUartObj;
-  }
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
@@ -76,8 +72,6 @@ SerialPortIdentify (
       } else {
         TegraUartObj = Tegra16550SerialPortGetObject ();
       }
-
-      return TegraUartObj;
     }
 
     // Select the SerialPort based on the retrieved UART instance info
@@ -93,8 +87,6 @@ SerialPortIdentify (
       TegraUartObj = Tegra16550SerialPortGetObject ();
     }
   }
-
-  return TegraUartObj;
 }
 
 /** Initialize the serial device hardware with default settings.
@@ -118,9 +110,9 @@ SerialPortInitialize (
     SerialPortInitialized = TRUE;
     return RETURN_SUCCESS;
   } else {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortInitialize (SerialBaseAddress);
+    SerialPortIdentify (NULL);
+    if (TegraUartObj != NULL) {
+      return TegraUartObj->SerialPortInitialize (SerialBaseAddress);
     } else {
       return RETURN_SUCCESS;
     }
@@ -144,13 +136,20 @@ SerialPortWrite (
   IN UINTN  NumberOfBytes
   )
 {
+  /* Check if the DebugLib's constructor has been called. */
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortWrite (SerialBaseAddress, Buffer, NumberOfBytes);
-    } else {
-      return NumberOfBytes;
+    if (TegraUartObj == NULL) {
+      SerialPortIdentify (NULL);
+      if (TegraUartObj == NULL) {
+        return NumberOfBytes;
+      }
     }
+
+    return TegraUartObj->SerialPortWrite (
+                           SerialBaseAddress,
+                           Buffer,
+                           NumberOfBytes
+                           );
   } else {
     return NumberOfBytes;
   }
@@ -173,16 +172,8 @@ SerialPortRead (
   IN  UINTN  NumberOfBytes
   )
 {
-  if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortRead (SerialBaseAddress, Buffer, NumberOfBytes);
-    } else {
-      return NumberOfBytes;
-    }
-  } else {
-    return NumberOfBytes;
-  }
+  /* UART Read isn't supported in StMM */
+  return 0;
 }
 
 /**
@@ -199,12 +190,14 @@ SerialPortPoll (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortPoll (SerialBaseAddress);
-    } else {
-      return FALSE;
+    if (TegraUartObj == NULL) {
+      SerialPortIdentify (NULL);
+      if (TegraUartObj == NULL) {
+        return FALSE;
+      }
     }
+
+    return TegraUartObj->SerialPortPoll (SerialBaseAddress);
   } else {
     return FALSE;
   }
@@ -243,12 +236,14 @@ SerialPortSetControl (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortSetControl (SerialBaseAddress, Control);
-    } else {
-      return RETURN_SUCCESS;
+    if (TegraUartObj == NULL) {
+      SerialPortIdentify (NULL);
+      if (TegraUartObj == NULL) {
+        return RETURN_SUCCESS;
+      }
     }
+
+    return TegraUartObj->SerialPortSetControl (SerialBaseAddress, Control);
   } else {
     return RETURN_SUCCESS;
   }
@@ -293,12 +288,14 @@ SerialPortGetControl (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortGetControl (SerialBaseAddress, Control);
-    } else {
-      return RETURN_SUCCESS;
+    if (TegraUartObj == NULL) {
+      SerialPortIdentify (NULL);
+      if (TegraUartObj == NULL) {
+        return RETURN_SUCCESS;
+      }
     }
+
+    return TegraUartObj->SerialPortGetControl (SerialBaseAddress, Control);
   } else {
     return RETURN_SUCCESS;
   }
@@ -347,20 +344,22 @@ SerialPortSetAttributes (
   )
 {
   if (SerialPortInitialized == TRUE) {
-    TEGRA_UART_OBJ  *UartObj = SerialPortIdentify ();
-    if (UartObj != NULL) {
-      return UartObj->SerialPortSetAttributes (
-                        SerialBaseAddress,
-                        BaudRate,
-                        ReceiveFifoDepth,
-                        Timeout,
-                        Parity,
-                        DataBits,
-                        StopBits
-                        );
-    } else {
-      return RETURN_SUCCESS;
+    if (TegraUartObj == NULL) {
+      SerialPortIdentify (NULL);
+      if (TegraUartObj == NULL) {
+        return RETURN_SUCCESS;
+      }
     }
+
+    return TegraUartObj->SerialPortSetAttributes (
+                           SerialBaseAddress,
+                           BaudRate,
+                           ReceiveFifoDepth,
+                           Timeout,
+                           Parity,
+                           DataBits,
+                           StopBits
+                           );
   } else {
     return RETURN_SUCCESS;
   }

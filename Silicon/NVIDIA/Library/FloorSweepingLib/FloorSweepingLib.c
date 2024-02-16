@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -17,6 +17,7 @@
 #include <Library/MceAriLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NvgLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -35,7 +36,6 @@
                                           PLATFORM_MAX_SOCKETS) *   \
                                          PLATFORM_MAX_CORES_PER_CLUSTER)
 
-#define MAX_SUPPORTED_CORES  1024
 typedef struct {
   UINTN     MaxClusters;
   UINTN     MaxCoresPerCluster;
@@ -254,10 +254,8 @@ GetMpidrFromLinearCoreID (
 EFI_STATUS
 EFIAPI
 CheckAndRemapCpu (
-  IN UINT32        LogicalCore,
-  IN OUT UINT64    *Mpidr,
-  OUT CONST CHAR8  **DtCpuFormat,
-  OUT UINTN        *DtCpuId
+  IN UINT32      LogicalCore,
+  IN OUT UINT64  *Mpidr
   )
 {
   UINTN       ChipId;
@@ -267,17 +265,14 @@ CheckAndRemapCpu (
 
   switch (ChipId) {
     case T194_CHIP_ID:
-      Status       = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
-      *Mpidr      &= MPIDR_AFFINITY_MASK;
-      *DtCpuFormat = "cpu@%x";
-      *DtCpuId     = *Mpidr;
+      Status  = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
+      *Mpidr &= MPIDR_AFFINITY_MASK;
       break;
     case T234_CHIP_ID:
-      Status       = MceAriCheckCoreEnabled (Mpidr, DtCpuId);
-      *DtCpuFormat = "cpu@%u";
+      Status = MceAriCheckCoreEnabled (Mpidr);
       break;
     case TH500_CHIP_ID:
-      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr, DtCpuFormat, DtCpuId);
+      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr);
       break;
     default:
       Status = EFI_UNSUPPORTED;
@@ -367,6 +362,48 @@ GetNumberOfEnabledCpuCores (
 }
 
 /**
+  Rename cpu-map child nodes sequentially starting at 0 to meet DTB spec.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+RenameChildNodesSequentially (
+  IN VOID         *Dtb,
+  IN INT32        NodeOffset,
+  IN CONST CHAR8  *ChildNameFormat,
+  IN CHAR8        *ChildNameStr,
+  IN UINTN        ChildNameStrSize,
+  IN UINTN        MaxChildNodes
+  )
+{
+  INT32        ChildOffset;
+  UINT32       ChildIndex;
+  CONST CHAR8  *DtbChildName;
+  INT32        FdtErr;
+
+  ChildIndex = 0;
+  fdt_for_each_subnode (ChildOffset, Dtb, NodeOffset) {
+    NV_ASSERT_RETURN ((ChildIndex < MaxChildNodes), return EFI_UNSUPPORTED, "%a: hit max nodes=%u for %a\n", __FUNCTION__, MaxChildNodes, ChildNameFormat);
+
+    AsciiSPrint (ChildNameStr, ChildNameStrSize, ChildNameFormat, ChildIndex);
+    DtbChildName = fdt_get_name (Dtb, ChildOffset, NULL);
+
+    DEBUG ((DEBUG_INFO, "%a: Checking %a==%a (%u)\n", __FUNCTION__, ChildNameStr, DtbChildName, ChildIndex));
+    if (AsciiStrCmp (ChildNameStr, DtbChildName) != 0) {
+      FdtErr = fdt_set_name (Dtb, ChildOffset, ChildNameStr);
+      NV_ASSERT_RETURN ((FdtErr >= 0), return EFI_DEVICE_ERROR, "%a: Failed to update name %a: %a\n", __FUNCTION__, ChildNameStr, fdt_strerror (FdtErr));
+
+      DEBUG ((DEBUG_INFO, "%a: Updated %a\n", __FUNCTION__, ChildNameStr));
+    }
+
+    ChildIndex++;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Floorsweep CPUs in DTB
 
 **/
@@ -378,18 +415,20 @@ UpdateCpuFloorsweepingConfig (
   IN VOID   *Dtb
   )
 {
-  UINTN   Cpu;
-  UINT32  Cluster;
-  UINT64  Mpidr;
-  INT32   CpuMapOffset;
-  INT32   FdtErr;
-  UINT64  Tmp64;
-  UINT32  Tmp32;
-  CHAR8   CpuNodeStr[]     = "cpu@ffffffff";
-  CHAR8   ClusterNodeStr[] = "cluster10";
-  UINT32  AddressCells;
-  INT32   NodeOffset;
-  INT32   TmpOffset;
+  UINTN        Cpu;
+  UINT32       Cluster;
+  UINT64       Mpidr;
+  INT32        CpuMapOffset;
+  INT32        FdtErr;
+  UINT64       Tmp64;
+  UINT32       Tmp32;
+  CONST CHAR8  *CpuNodeStr;
+  CHAR8        ClusterNodeStr[] = "cluster10";
+  UINT32       AddressCells;
+  INT32        NodeOffset;
+  INT32        TmpOffset;
+  CHAR8        CoreNodeStr[] = "coreXX";
+  EFI_STATUS   Status;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
@@ -398,11 +437,9 @@ UpdateCpuFloorsweepingConfig (
   Cpu        = 0;
   NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
   while (NodeOffset > 0) {
-    CONST VOID   *Property;
-    INT32        Length;
-    EFI_STATUS   Status;
-    UINTN        DtCpuId;
-    CONST CHAR8  *DtCpuFormat;
+    CONST VOID  *Property;
+    INT32       Length;
+    EFI_STATUS  Status;
 
     Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
@@ -415,7 +452,7 @@ UpdateCpuFloorsweepingConfig (
     if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
       DEBUG ((
         DEBUG_ERROR,
-        "Failed to get MPIDR for /cpus/%a, len=%u\n",
+        "Failed to get MPIDR for /cpus/%a, len=%d\n",
         fdt_get_name (Dtb, NodeOffset, NULL),
         Length
         ));
@@ -430,12 +467,11 @@ UpdateCpuFloorsweepingConfig (
       Mpidr = fdt32_to_cpu (Tmp32);
     }
 
-    Status = CheckAndRemapCpu (Cpu, &Mpidr, &DtCpuFormat, &DtCpuId);
+    Status = CheckAndRemapCpu (Cpu, &Mpidr);
     if (!EFI_ERROR (Status)) {
-      AsciiSPrint (CpuNodeStr, sizeof (CpuNodeStr), DtCpuFormat, DtCpuId);
-      FdtErr = fdt_set_name (Dtb, NodeOffset, CpuNodeStr);
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to set name to %a: %a\r\n", CpuNodeStr, fdt_strerror (FdtErr)));
+      CpuNodeStr = fdt_get_name (Dtb, NodeOffset, NULL);
+      if (CpuNodeStr == NULL) {
+        DEBUG ((DEBUG_ERROR, "Failed to get name of CPU node\r\n"));
         return EFI_DEVICE_ERROR;
       }
 
@@ -527,12 +563,22 @@ UpdateCpuFloorsweepingConfig (
             }
           }
         }
+
+        Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
       }
 
       Cluster++;
     } else {
       break;
     }
+  }
+
+  Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   return EFI_SUCCESS;
@@ -617,7 +663,7 @@ FloorSweepGlobalThermals (
         continue;
       }
 
-      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%u\n", ThermNodeName, MapName, Length));
+      DEBUG ((DEBUG_INFO, "/thermal-zones/%a/cooling-maps/%a len=%d\n", ThermNodeName, MapName, Length));
 
       Buffer = (UINT8 *)AllocatePool (Length);
       if (Buffer == NULL) {
@@ -640,7 +686,7 @@ FloorSweepGlobalThermals (
       // update DT if new list is different than original
       if (BufferLength != Length) {
         if (BufferLength != 0) {
-          fdt_delprop (Dtb, MapSubNodeOffset, "cooling-device");
+          fdt_nop_property (Dtb, MapSubNodeOffset, "cooling-device");
           fdt_setprop (Dtb, MapSubNodeOffset, "cooling-device", Buffer, BufferLength);
           MapSubNodeOffset = fdt_next_subnode (Dtb, MapSubNodeOffset);
         } else {

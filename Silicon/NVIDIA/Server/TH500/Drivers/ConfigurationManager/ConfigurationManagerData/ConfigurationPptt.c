@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library for Processor Topology
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -108,151 +108,72 @@ FindNextLevelCacheToken (
   return CM_NULL_TOKEN;
 }
 
-// Collecting L1 cache properties from the cpu node
-STATIC
-EFI_STATUS
-EFIAPI
-CollectCacheInfoCpuNode (
-  VOID               *DeviceTree,
-  INT32              NodeOffset,
-  CM_ARM_CACHE_INFO  *CacheInfo
-  )
-{
-  CONST UINT32     *ICacheSize;
-  CONST UINT32     *ICacheSets;
-  CONST UINT32     *ILineSize;
-  CONST UINT32     *DCacheSize;
-  CONST UINT32     *DCacheSets;
-  CONST UINT32     *DLineSize;
-  CONST UINT32     *NextLevelCache;
-  UINT32           NextLevelCachepHandle;
-  CM_OBJECT_TOKEN  NextLevelCacheToken;
-  INT32            Length;
-
-  ICacheSize = fdt_getprop (DeviceTree, NodeOffset, "i-cache-size", &Length);
-  if (ICacheSize == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[0].Size = SwapBytes32 (*ICacheSize);
-
-  // Parse the "cache-line-size" property (mandatory)
-  ILineSize = fdt_getprop (DeviceTree, NodeOffset, "i-cache-line-size", &Length);
-  if (ILineSize == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[0].LineSize = SwapBytes32 (*ILineSize);
-
-  // Parse the "cache-sets" property (mandatory)
-  ICacheSets = fdt_getprop (DeviceTree, NodeOffset, "i-cache-sets", &Length);
-  if (ICacheSets == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[0].NumberOfSets = SwapBytes32 (*ICacheSets);
-
-  // Calculate Associativity
-  CacheInfo[0].Associativity = CacheInfo[0].Size / (CacheInfo[0].LineSize * CacheInfo[0].NumberOfSets);
-
-  // Assign Attributes
-  CacheInfo[0].Attributes =  CACHE_ATTRIBUTES (
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ,
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
-                               );
-
-  // D-Cache
-  DCacheSize = fdt_getprop (DeviceTree, NodeOffset, "d-cache-size", &Length);
-  if (DCacheSize == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[1].Size = SwapBytes32 (*DCacheSize);
-
-  // Parse the "cache-line-size" property (mandatory)
-  DLineSize = fdt_getprop (DeviceTree, NodeOffset, "d-cache-line-size", &Length);
-  if (DLineSize == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[1].LineSize = SwapBytes32 (*DLineSize);
-
-  // Parse the "cache-sets" property (mandatory)
-  DCacheSets = fdt_getprop (DeviceTree, NodeOffset, "d-cache-sets", &Length);
-  if (DCacheSets == NULL ) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CacheInfo[1].NumberOfSets = SwapBytes32 (*DCacheSets);
-
-  // Calculate Associativity
-  CacheInfo[1].Associativity = CacheInfo[1].Size / (CacheInfo[1].LineSize * CacheInfo[1].NumberOfSets);
-
-  // Assign Attributes
-  CacheInfo[1].Attributes =  CACHE_ATTRIBUTES (
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
-                               EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
-                               );
-
-  // "next-level-cache" property (optional property)
-  NextLevelCache = fdt_getprop (DeviceTree, NodeOffset, "next-level-cache", &Length);
-  if (NextLevelCache == NULL) {
-    CacheInfo[0].NextLevelOfCacheToken = CM_NULL_TOKEN;
-    CacheInfo[1].NextLevelOfCacheToken = CM_NULL_TOKEN;
-  } else {
-    // go through Cache linked list and find the next level token
-    NextLevelCachepHandle              = SwapBytes32 (*NextLevelCache);
-    NextLevelCacheToken                = FindNextLevelCacheToken (NextLevelCachepHandle);
-    CacheInfo[0].NextLevelOfCacheToken = NextLevelCacheToken;
-    CacheInfo[1].NextLevelOfCacheToken = NextLevelCacheToken;
-  }
-
-  CacheInfo[0].Token = REFERENCE_TOKEN (CacheInfo[0]);
-  CacheInfo[1].Token = REFERENCE_TOKEN (CacheInfo[1]);
-
-  return EFI_SUCCESS;
-}
-
-// Collecting cache properties for non cpu nodes.
+// Collecting cache properties
 STATIC
 EFI_STATUS
 EFIAPI
 GetCacheInfo (
-  VOID               *Dtb,
-  INT32              CacheOffset,
-  CM_ARM_CACHE_INFO  *CacheInfo
+  INT32                          CacheOffset,
+  NVIDIA_DEVICE_TREE_CACHE_TYPE  CacheType,
+  CM_ARM_CACHE_INFO              *CacheInfo
   )
 {
-  CONST UINT32  *Property;
+  EFI_STATUS                     Status;
+  NVIDIA_DEVICE_TREE_CACHE_DATA  CacheData;
 
-  Property = fdt_getprop (Dtb, CacheOffset, "cache-size", NULL);
-  if (Property != NULL) {
-    CacheInfo->Size = SwapBytes32 (*Property);
+  CacheData.Type = CacheType;
+  Status         = DeviceTreeGetCacheData (CacheOffset, &CacheData);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get cache data (type = %d) for CacheOffset 0x%x\n", __FUNCTION__, Status, CacheType, CacheOffset));
+    return Status;
   }
 
-  Property = fdt_getprop (Dtb, CacheOffset, "cache-sets", NULL);
-  if (Property != NULL) {
-    CacheInfo->NumberOfSets = SwapBytes32 (*Property);
-  }
-
-  Property = fdt_getprop (Dtb, CacheOffset, "cache-line-size", NULL);
-  if (Property != NULL) {
-    CacheInfo->LineSize = SwapBytes32 (*Property);
-  }
+  CacheInfo->Size         = CacheData.CacheSize;
+  CacheInfo->NumberOfSets = CacheData.CacheSets;
+  CacheInfo->LineSize     = CacheData.CacheLineSize;
 
   // Calculate Associativity
   CacheInfo->Associativity = CacheInfo->Size / (CacheInfo->LineSize * CacheInfo->NumberOfSets);
 
   // Assign Attributes
-  CacheInfo->Attributes =  CACHE_ATTRIBUTES (
-                             EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-                             EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
-                             EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
-                             );
+  switch (CacheType) {
+    case CACHE_TYPE_UNIFIED:
+      CacheInfo->Attributes =  CACHE_ATTRIBUTES (
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 );
+      break;
 
-  CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
+    case CACHE_TYPE_ICACHE:
+      CacheInfo->Attributes =  CACHE_ATTRIBUTES (
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 );
+      break;
+
+    case CACHE_TYPE_DCACHE:
+      CacheInfo->Attributes =  CACHE_ATTRIBUTES (
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
+                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 );
+      break;
+
+    default:
+      return EFI_INVALID_PARAMETER;
+  }
+
+  // "next-level-cache" property (optional property)
+  if ((CacheData.NextLevelCache == 0) ||
+      (CacheType == CACHE_TYPE_UNIFIED))
+  {
+    CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
+  } else {
+    // go through Cache linked list and find the next level token
+    CacheInfo->NextLevelOfCacheToken = FindNextLevelCacheToken (CacheData.NextLevelCache);
+  }
 
   CacheInfo->Token = REFERENCE_TOKEN (CacheInfo[0]);
 
@@ -307,9 +228,12 @@ UpdateCpuInfo (
   INT32                           PrevNodeOffset;
   UINT32                          NumCpus;
   UINT32                          ProcHierarchyIndex;
+  UINT32                          Socket;
+  UINT32                          NumSockets;
   CACHE_NODE                      *CacheNode;
   CM_ARM_CACHE_INFO               *CacheInfoStruct;
   CM_ARM_CACHE_INFO               *CacheInfo;
+  CM_OBJECT_TOKEN                 RootToken;
   CM_OBJECT_TOKEN                 *SocketTokenMap;
   CM_OBJECT_TOKEN                 PrivateResources[10];
   CM_OBJECT_TOKEN                 *SocketPrivateResources;
@@ -330,6 +254,11 @@ UpdateCpuInfo (
 
   CacheNodeCntr   = 0;
   EnabledCoreCntr = 0;
+
+  SocketTokenMap         = NULL;
+  ProcHierarchyInfo      = NULL;
+  SocketPrivateResources = NULL;
+  CorePrivateResources   = NULL;
 
   CachePtrList = AllocateZeroPool (sizeof (LIST_ENTRY));
   InitializeListHead (CachePtrList);
@@ -479,7 +408,7 @@ UpdateCpuInfo (
   // TODO: Get Enabled Sockets and enabled Cluster info
 
   // Space for top level node, sockets, clusters and cores
-  ProcHierarchyInfo = AllocateZeroPool (sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (PLATFORM_MAX_SOCKETS + PLATFORM_MAX_CLUSTERS + NumCpus + 1));
+  ProcHierarchyInfo = AllocateZeroPool (sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (1 + PLATFORM_MAX_SOCKETS + PLATFORM_MAX_CLUSTERS + NumCpus + 1));
   if (ProcHierarchyInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -498,6 +427,34 @@ UpdateCpuInfo (
 
   // Build top level node
   ProcHierarchyIndex = 0;
+  RootToken          = CM_NULL_TOKEN;
+  NumSockets         = 0;
+
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+    if (IsSocketEnabled (Socket)) {
+      NumSockets++;
+    }
+  }
+
+  if (NumSockets > 1) {
+    // Build Root Node
+    ProcHierarchyInfo[ProcHierarchyIndex].Token = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
+    ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
+                                                    EFI_ACPI_6_3_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                    EFI_ACPI_6_3_PPTT_PROCESSOR_ID_INVALID,
+                                                    EFI_ACPI_6_3_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                    EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
+                                                    EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
+                                                    );
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
+    ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
+
+    RootToken = ProcHierarchyInfo[ProcHierarchyIndex].Token;
+
+    ProcHierarchyIndex++;
+  }
 
   // loop through all sockets and see if there are private resources for socket
   INT32   SocketOffset;
@@ -505,7 +462,7 @@ UpdateCpuInfo (
   CHAR8   SocketNodeStr[] = "/socket@xx";
 
   // This could be different for Tegra vs Server
-  for (UINT32 Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
     SocketOffset              = fdt_path_offset (Dtb, SocketNodeStr);
     SocketPrivateResourceCntr = 0;
@@ -525,8 +482,13 @@ UpdateCpuInfo (
       CONST VOID  *Property;
       INT32       Length;
 
-      Property       = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
       PrevNodeOffset = NodeOffset;
+      Property       = fdt_getprop (Dtb, NodeOffset, "compatible", &Length);
+      // Support old DTB where "device_type" == "cache" and "compatible" == "l3-cache" instead of "device_type" missing and "compatible" == "cache"
+      if ((Property == NULL) || (AsciiStrCmp (Property, "cache") != 0)) {
+        Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
+      }
+
       if ((Property == NULL) || (AsciiStrCmp (Property, "cache") != 0)) {
         continue;
       }
@@ -535,20 +497,25 @@ UpdateCpuInfo (
       // Allocate space for this Cache node
       CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
       if (CacheNode == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
 
       CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO));
       if (CacheInfo == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
       }
 
       // Obtain the cache info into the allocated space
-      Status             = GetCacheInfo (Dtb, NodeOffset, CacheInfo);
+      Status = GetCacheInfo (NodeOffset, CACHE_TYPE_UNIFIED, CacheInfo);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get L3 cache info\r\n", __FUNCTION__));
+        goto Exit;
+      }
+
       CacheInfo->CacheId = GET_CACHE_ID (3, CACHE_TYPE_UNIFIED, 0, 0, Socket);
 
       // Add this cache node to the linked list
@@ -593,7 +560,7 @@ UpdateCpuInfo (
                                                     EFI_ACPI_6_3_PPTT_NODE_IS_NOT_LEAF,
                                                     EFI_ACPI_6_3_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
-    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].ParentToken          = RootToken;
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken            = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources = SocketPrivateResourceCntr;
     if (SocketPrivateResourceCntr > 0) {
@@ -621,13 +588,13 @@ UpdateCpuInfo (
     AsciiSPrint (CpusNodeStr, sizeof (CpusNodeStr), "/socket@%u/cpus", Socket);
     CpusOffset = fdt_path_offset (Dtb, CpusNodeStr);
     if (CpusOffset < 0) {
-      DEBUG ((EFI_D_ERROR, "Failed to find /cpus node\n"));
+      DEBUG ((DEBUG_ERROR, "Failed to find /cpus node\n"));
       continue;
     }
 
     CpuMapOffset = fdt_subnode_offset (Dtb, CpusOffset, "cpu-map");
     if (CpuMapOffset < 0) {
-      DEBUG ((EFI_D_ERROR, "/cpus/cpu-map does not exist\r\n"));
+      DEBUG ((DEBUG_ERROR, "/cpus/cpu-map does not exist\r\n"));
       continue;
     }
 
@@ -636,7 +603,7 @@ UpdateCpuInfo (
          Cluster < PLATFORM_MAX_CLUSTERS/PLATFORM_MAX_SOCKETS;
          Cluster++)
     {
-      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
+      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%d", Cluster);
       ClusterOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
       if (ClusterOffset >= 0) {
         // Loop through all cores and collect resources
@@ -651,7 +618,7 @@ UpdateCpuInfo (
         for (Core = 0; Core < PLATFORM_MAX_CORES_PER_CLUSTER; Core++) {
           CorePrivateResourceCntr = 0;
           ResIndex                = 0;
-          AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", Core);
+          AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%d", Core);
           CoreOffset = fdt_subnode_offset (Dtb, ClusterOffset, CoreNodeStr);
 
           // check if core exists
@@ -668,16 +635,21 @@ UpdateCpuInfo (
               // Allocate space for this Cache node
               CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO));
               if (CacheInfo == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
 
-              Status             = GetCacheInfo (Dtb, LCacheOffset, CacheInfo);
+              Status = GetCacheInfo (LCacheOffset, CACHE_TYPE_UNIFIED, CacheInfo);
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "%a: Failed to get L2 cache info\r\n", __FUNCTION__));
+                goto Exit;
+              }
+
               CacheInfo->CacheId = GET_CACHE_ID (2, CACHE_TYPE_UNIFIED, Core, Cluster, Socket);
               CacheNode          = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -695,19 +667,31 @@ UpdateCpuInfo (
               // Allocate space for I cache and D cache for this cache node
               CacheInfo = (CM_ARM_CACHE_INFO *)AllocateZeroPool (sizeof (CM_ARM_CACHE_INFO) * 2);
               if (CacheInfo == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfo\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
 
-              Status               = CollectCacheInfoCpuNode (Dtb, CpuCacheOffset, CacheInfo);
+              Status = GetCacheInfo (CpuCacheOffset, CACHE_TYPE_ICACHE, &CacheInfo[0]);
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "%a: Failed to get I cache info\r\n", __FUNCTION__));
+                goto Exit;
+              }
+
               CacheInfo[0].CacheId = GET_CACHE_ID (1, CACHE_TYPE_ICACHE, Core, Cluster, Socket);
+
+              Status = GetCacheInfo (CpuCacheOffset, CACHE_TYPE_DCACHE, &CacheInfo[1]);
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "%a: Failed to get D cache info\r\n", __FUNCTION__));
+                goto Exit;
+              }
+
               CacheInfo[1].CacheId = GET_CACHE_ID (1, CACHE_TYPE_DCACHE, Core, Cluster, Socket);
 
               // I Cache
               CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -722,7 +706,7 @@ UpdateCpuInfo (
               // D Cache
               CacheNode = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE));
               if (CacheNode == NULL) {
-                DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
+                DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNode\r\n", __FUNCTION__));
                 Status = EFI_OUT_OF_RESOURCES;
                 goto Exit;
               }
@@ -798,7 +782,7 @@ UpdateCpuInfo (
   if (CacheNodeCntr > 0) {
     CacheInfoStruct = (CM_ARM_CACHE_INFO *)AllocatePool (sizeof (CM_ARM_CACHE_INFO) * CacheNodeCntr);
     if (CacheInfoStruct == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to allocate for CacheInfoStruct\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfoStruct\r\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
       goto Exit;
     }

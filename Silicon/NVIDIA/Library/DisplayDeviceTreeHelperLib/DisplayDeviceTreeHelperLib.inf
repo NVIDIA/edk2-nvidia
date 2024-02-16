@@ -1,0 +1,28 @@
+/** @file
+*
+*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = DisplayDeviceTreeHelperLib
+  FILE_GUID                      = 3cb0a600-c6bc-4577-8a0b-8bf4dd9e43ac
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DisplayDeviceTreeHelperLib
+
+[Sources]
+  DisplayDeviceTreeHelperLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  FdtLib
+  PrintLib

@@ -1,0 +1,39 @@
+## @file
+# Unit test suite for the MmVarLib using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = MmVarLibGoogleTest
+  FILE_GUID           = a462a8ca-0fcb-4b7f-a46d-76b5e1b9d279
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  MmVarLibGoogleTest.cpp
+
+[Guids]
+  gEfiImageSecurityDatabaseGuid
+  gEfiGlobalVariableGuid
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  MmServicesTableLib
+  SmmVarProtoLib
+  MmVarLib

@@ -1,0 +1,38 @@
+#/** @file
+#
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+# NVIDIA EDK II declaration file for Driver and SDK resources
+#   relative path listing for EDK II build scripts locating common driver and SDK resources
+#   [Internal SDK version for gpu_drv_v1 repository]
+
+[Defines]
+    DEC_SPECIFICATION           = 0x00010015
+    PACKAGE_NAME                = NVSDK
+    PACKAGE_GUID                = 2515B97F-FF53-475E-BBB9-231B6D947E33
+    PACKAGE_VERSION             = 1.0
+    DEFINE        OPENRM_PREFIX = open-gpu-kernel-modules
+
+
+[Includes.common]
+    $(OPENRM_PREFIX)/src/common
+    $(OPENRM_PREFIX)/src/common/inc
+    $(OPENRM_PREFIX)/src/common/inc/swref/published/hopper/gh100
+    $(OPENRM_PREFIX)/src/common/inc/swref/published
+    $(OPENRM_PREFIX)/src/common/inc/swref
+    $(OPENRM_PREFIX)/src/nvidia/arch/nvalloc/common/inc
+    $(OPENRM_PREFIX)/src/common/sdk
+    $(OPENRM_PREFIX)/src/common/sdk/nvidia
+    $(OPENRM_PREFIX)/src/common/sdk/nvidia/inc
+    $(OPENRM_PREFIX)/src/common/sdk/nvidia/inc/ctrl
+
+[Guids]
+
+[PPIs]
+
+[LibraryClasses]
+

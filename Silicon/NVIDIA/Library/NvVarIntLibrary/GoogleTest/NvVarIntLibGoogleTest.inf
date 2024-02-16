@@ -1,0 +1,38 @@
+## @file
+# Unit test suite for the NvVarIntLib using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = NvVarIntLibGoogleTest
+  FILE_GUID           = 8694ea25-3082-49e9-83fc-c9f8b3ce16db
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  NvVarIntLibGoogleTest.cpp
+
+[Guids]
+  gEfiImageSecurityDatabaseGuid
+  gEfiGlobalVariableGuid
+
+[Packages]
+  CryptoPkg/CryptoPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  NvVarIntLib

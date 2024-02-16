@@ -227,20 +227,20 @@ DeviceDiscoveryConfigReset (
 
   Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAResetNodeProtocolGuid, (VOID **)&ResetNodeProtocol);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, no reset node protocol\r\n", __FUNCTION__));
     return Status;
   }
 
   if (Enable) {
     Status = ResetNodeProtocol->Assert (ResetNodeProtocol, ResetId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   } else {
     Status = ResetNodeProtocol->Deassert (ResetNodeProtocol, ResetId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, failed to deassert resets %r\r\n", __FUNCTION__, Status));
       return Status;
     }
   }
@@ -496,7 +496,7 @@ DeviceDiscoverySetProd (
   LastRegion = 0;
   Status     = DeviceDiscoveryGetMmioRegion (ControllerHandle, LastRegion, &RegionBase, &RegionSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", LastRegion));
+    DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %u\r\n", LastRegion));
     return Status;
   }
 
@@ -512,7 +512,7 @@ DeviceDiscoverySetProd (
       if (Region != LastRegion) {
         Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Region, &RegionBase, &RegionSize);
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %d\r\n", Region));
+          DEBUG ((DEBUG_ERROR, "Failed to get MMIO region %u\r\n", Region));
           return Status;
         }
 

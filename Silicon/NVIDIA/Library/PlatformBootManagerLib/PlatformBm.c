@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -23,11 +23,19 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/PlatformBootOrderLib.h>
+#include <Library/PlatformBootOrderIpmiLib.h>
 #include <Library/BaseCryptLib.h>
+#include <Library/PerformanceLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DxeCapsuleLibFmp/CapsuleOnDisk.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/NVIDIADebugLib.h>
+#include <Library/TimerLib.h>
+#include <Library/Tcg2PhysicalPresenceLib.h>
+#include <Library/TpmPlatformHierarchyLib.h>
+#include <Library/StatusRegLib.h>
+#include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DeferredImageLoad.h>
 #include <Protocol/DevicePath.h>
@@ -36,6 +44,7 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/IpmiTransportProtocol.h>
+#include <Protocol/MemoryTestConfig.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
@@ -157,7 +166,7 @@ FilterAndProcess (
     // This is not an error, just an informative condition.
     //
     DEBUG ((
-      EFI_D_VERBOSE,
+      DEBUG_VERBOSE,
       "%a: %g: %r\n",
       __FUNCTION__,
       ProtocolGuid,
@@ -199,31 +208,44 @@ FilterAndProcess (
   Perform the memory test base on the memory test intensive level,
   and update the memory resource.
 
-  @param  Level         The memory test intensive level.
-
   @retval EFI_STATUS    Success test all the system memory and update
                         the memory resource
 
 **/
 EFI_STATUS
 MemoryTest (
-  IN EXTENDMEM_COVERAGE_LEVEL  Level
+  VOID
   )
 {
-  EFI_STATUS                        Status;
-  BOOLEAN                           RequireSoftECCInit;
-  EFI_GENERIC_MEMORY_TEST_PROTOCOL  *GenMemoryTest;
-  UINT64                            TestedMemorySize;
-  UINT64                            TotalMemorySize;
-  BOOLEAN                           ErrorOut;
-  BOOLEAN                           TestAbort;
+  EFI_STATUS                          Status;
+  EFI_STATUS                          KeyStatus;
+  BOOLEAN                             RequireSoftECCInit;
+  EFI_GENERIC_MEMORY_TEST_PROTOCOL    *GenMemoryTest;
+  UINT64                              TestedMemorySize;
+  UINT64                              TotalMemorySize;
+  BOOLEAN                             ErrorOut;
+  BOOLEAN                             TestAbort;
+  EFI_INPUT_KEY                       Key;
+  EXTENDMEM_COVERAGE_LEVEL            Level;
+  UINT64                              StartTime;
+  UINT64                              EndTime;
+  UINT64                              TimeTaken;
+  NVIDIA_MEMORY_TEST_OPTIONS          *MemoryTestOptions;
+  UINTN                               SizeOfBuffer;
+  UINT8                               Iteration;
+  NVIDIA_MEMORY_TEST_CONFIG_PROTOCOL  *TestConfig;
+  CONST CHAR8                         *TestName;
 
-  TestedMemorySize = 0;
-  TotalMemorySize  = 0;
-  ErrorOut         = FALSE;
-  TestAbort        = FALSE;
-
+  TestedMemorySize   = 0;
+  TotalMemorySize    = 0;
+  ErrorOut           = FALSE;
+  TestAbort          = FALSE;
   RequireSoftECCInit = FALSE;
+  ZeroMem (&Key, sizeof (EFI_INPUT_KEY));
+
+  MemoryTestOptions = PcdGetPtr (PcdMemoryTest);
+  NV_ASSERT_RETURN (MemoryTestOptions != NULL, return EFI_DEVICE_ERROR, "Failed to get memory test info\r\n");
+  Level = MemoryTestOptions->TestLevel;
 
   Status = gBS->LocateProtocol (
                   &gEfiGenericMemTestProtocolGuid,
@@ -231,37 +253,188 @@ MemoryTest (
                   (VOID **)&GenMemoryTest
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to find memory test protocol\r\n"));
     return EFI_SUCCESS;
   }
 
-  Status = GenMemoryTest->MemoryTestInit (
-                            GenMemoryTest,
-                            Level,
-                            &RequireSoftECCInit
-                            );
-  if (Status == EFI_NO_MEDIA) {
-    //
-    // The PEI codes also have the relevant memory test code to check the memory,
-    // it can select to test some range of the memory or all of them. If PEI code
-    // checks all the memory, this BDS memory test will has no not-test memory to
-    // do the test, and then the status of EFI_NO_MEDIA will be returned by
-    // "MemoryTestInit". So it does not need to test memory again, just return.
-    //
+  Status = gBS->LocateProtocol (
+                  &gNVIDIAMemoryTestConfig,
+                  NULL,
+                  (VOID **)&TestConfig
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to find gNVIDIAMemoryTestConfig protocol\r\n"));
     return EFI_SUCCESS;
   }
 
-  do {
-    Status = GenMemoryTest->PerformMemoryTest (
-                              GenMemoryTest,
-                              &TestedMemorySize,
-                              &TotalMemorySize,
-                              &ErrorOut,
-                              TestAbort
-                              );
-    if (ErrorOut && (Status == EFI_DEVICE_ERROR)) {
-      ASSERT (0);
+  if ((MemoryTestOptions->TestIterations < 0) ||
+      (MemoryTestOptions->TestIterations > MAX_UINT8))
+  {
+    DEBUG ((DEBUG_ERROR, "TestIterations out of bounds\r\n"));
+    return EFI_SUCCESS;
+  }
+
+  for (Iteration = 0; Iteration < MemoryTestOptions->TestIterations; Iteration++) {
+    for (TestConfig->TestMode = MemoryTestWalking1Bit;
+         TestConfig->TestMode < MemoryTestMaxTest;
+         TestConfig->TestMode++)
+    {
+      switch (TestConfig->TestMode) {
+        case MemoryTestWalking1Bit:
+          if (!MemoryTestOptions->Walking1BitEnabled) {
+            continue;
+          }
+
+          TestName = "Walking 1 bit";
+
+          break;
+        case MemoryTestAddressCheck:
+          if (!MemoryTestOptions->AddressCheckEnabled) {
+            continue;
+          }
+
+          TestName = "Address Check";
+
+          break;
+        case MemoryTestMovingInversions01:
+          if (!MemoryTestOptions->MovingInversions01Enabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, ones&zeros";
+
+          break;
+        case MemoryTestMovingInversions8Bit:
+          if (!MemoryTestOptions->MovingInversions8BitEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, 8 bit pattern";
+          break;
+
+        case MemoryTestMovingInversionsRandom:
+          if (!MemoryTestOptions->MovingInversionsRandomEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, random pattern";
+          break;
+
+        /*
+                case MemoryTestBlockMode:
+                  if (!MemoryTestOptions->BlockMoveEnabled) {
+                    continue;
+                  }
+
+                  TestName = "Block move, 64 moves";
+                  break;
+        */
+        case MemoryTestMovingInversions64Bit:
+          if (!MemoryTestOptions->MovingInversions64BitEnabled) {
+            continue;
+          }
+
+          TestName = "Moving inversions, 64 bit pattern";
+          break;
+        case MemoryTestRandomNumberSequence:
+          if (!MemoryTestOptions->RandomNumberSequenceEnabled) {
+            continue;
+          }
+
+          TestName = "Random number sequence";
+          break;
+        case MemoryTestModulo20Random:
+          if (!MemoryTestOptions->Modulo20RandomEnabled) {
+            continue;
+          }
+
+          TestName = "Modulo 20, random pattern";
+          break;
+        case MemoryTestBitFadeTest:
+          if (!MemoryTestOptions->BitFadeEnabled) {
+            continue;
+          }
+
+          TestName               = "Bit Fade";
+          TestConfig->Parameter1 = MemoryTestOptions->BitFadePattern;
+          TestConfig->Parameter2 = MemoryTestOptions->BitFadeWait;
+
+          break;
+        default:
+          continue;
+      }
+
+      Print (L"[%03u] %a test starting\r\n", Iteration+1, TestName);
+      Status = GenMemoryTest->MemoryTestInit (
+                                GenMemoryTest,
+                                Level,
+                                &RequireSoftECCInit
+                                );
+      if (Status == EFI_NO_MEDIA) {
+        //
+        // The PEI codes also have the relevant memory test code to check the memory,
+        // it can select to test some range of the memory or all of them. If PEI code
+        // checks all the memory, this BDS memory test will has no not-test memory to
+        // do the test, and then the status of EFI_NO_MEDIA will be returned by
+        // "MemoryTestInit". So it does not need to test memory again, just return.
+        //
+        return EFI_SUCCESS;
+      }
+
+      if (MemoryTestOptions->NextBoot) {
+        // Disable watchdog as memory tests can take a while.
+        gBS->SetWatchdogTimer (0, 0, 0, NULL);
+        StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+        Print (L"Perform memory test (ESC to skip).\r\n");
+
+        do {
+          Status = GenMemoryTest->PerformMemoryTest (
+                                    GenMemoryTest,
+                                    &TestedMemorySize,
+                                    &TotalMemorySize,
+                                    &ErrorOut,
+                                    TestAbort
+                                    );
+          NV_ASSERT_RETURN (
+            !(ErrorOut && (Status == EFI_DEVICE_ERROR)),
+            return EFI_DEVICE_ERROR,
+            "Memory Testing failed!\r\n"
+            );
+
+          Print (L"[%03u] Tested %8lld MB/%8lld MB\r", Iteration+1, TestedMemorySize / SIZE_1MB, TotalMemorySize / SIZE_1MB);
+
+          if (!PcdGetBool (PcdConInConnectOnDemand)) {
+            KeyStatus = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+            if (!EFI_ERROR (KeyStatus) && (Key.ScanCode == SCAN_ESC)) {
+              if (!RequireSoftECCInit) {
+                break;
+              }
+
+              TestAbort = TRUE;
+            }
+          }
+        } while (Status != EFI_NOT_FOUND);
+
+        EndTime   = GetTimeInNanoSecond (GetPerformanceCounter ());
+        TimeTaken = EndTime - StartTime;
+        Print (L"\r\n%llu bytes of system memory tested OK in %llu ms\r\n", TotalMemorySize, TimeTaken/1000000);
+      }
+
+      if (TestAbort) {
+        break;
+      }
     }
-  } while (Status != EFI_NOT_FOUND);
+
+    if (TestAbort) {
+      break;
+    }
+  }
+
+  if (MemoryTestOptions->SingleBoot) {
+    MemoryTestOptions->NextBoot = FALSE;
+    SizeOfBuffer                = sizeof (NVIDIA_MEMORY_TEST_OPTIONS);
+    PcdSetPtrS (PcdMemoryTest, &SizeOfBuffer, MemoryTestOptions);
+  }
 
   Status = GenMemoryTest->Finished (GenMemoryTest);
 
@@ -303,7 +476,7 @@ IsPciDisplay (
                         &Pci
                         );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
+    DEBUG ((DEBUG_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
     return FALSE;
   }
 
@@ -331,7 +504,7 @@ Connect (
                   FALSE   // Recursive
                   );
   DEBUG ((
-    EFI_ERROR (Status) ? EFI_D_ERROR : EFI_D_VERBOSE,
+    EFI_ERROR (Status) ? DEBUG_ERROR : DEBUG_VERBOSE,
     "%a: %s: %r\n",
     __FUNCTION__,
     ReportText,
@@ -357,7 +530,7 @@ AddOutput (
   DevicePath = DevicePathFromHandle (Handle);
   if (DevicePath == NULL) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: handle %p: device path not found\n",
       __FUNCTION__,
       ReportText,
@@ -369,7 +542,7 @@ AddOutput (
   Status = EfiBootManagerUpdateConsoleVariable (ConOut, DevicePath, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: adding to ConOut: %r\n",
       __FUNCTION__,
       ReportText,
@@ -381,7 +554,7 @@ AddOutput (
   Status = EfiBootManagerUpdateConsoleVariable (ErrOut, DevicePath, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: %s: adding to ErrOut: %r\n",
       __FUNCTION__,
       ReportText,
@@ -391,7 +564,7 @@ AddOutput (
   }
 
   DEBUG ((
-    EFI_D_VERBOSE,
+    DEBUG_VERBOSE,
     "%a: %s: added to ConOut and ErrOut\n",
     __FUNCTION__,
     ReportText
@@ -435,7 +608,7 @@ ListPciDevices (
                         &Pci
                         );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
+    DEBUG ((DEBUG_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
     return;
   }
 
@@ -448,7 +621,7 @@ ListPciDevices (
                     );
 
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "%a: Segment: %02x\t Bus: 0x%02x\t Device: 0x%02x\t Function: 0x%02x\tVendor ID: 0x%04x\tDevice ID:0x%04x\n",
     __FUNCTION__,
     Segment,
@@ -1131,23 +1304,36 @@ PlatformConfigured (
                   &CurrentPlatformConfigData
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error setting Platform Config data: %r\r\n", __FUNCTION__, Status));
     // TODO: Evaluate what should be done in this case.
   }
 }
 
+/**
+  Update ConOut, ErrOut, ConIn variables to contain all available devices.
+  For initial boot, all consoles are registered. Afterwards, only GOP consoles
+  are registered, as external display devices are dynamically attached.
+
+  @param[in] InitialConsoleRegistration  TRUE:  register all  available ConOut/ErrOut consoles
+                                         FALSE: register just NvDisplay ConOut/ErrOut consoles
+  @param  none
+  @retval none
+**/
 STATIC
 VOID
 PlatformRegisterConsoles (
-  VOID
+  BOOLEAN  InitialConsoleRegistration
   )
 {
-  EFI_STATUS                Status;
-  EFI_HANDLE                *Handles;
-  UINTN                     NoHandles;
-  UINTN                     Count;
-  EFI_DEVICE_PATH_PROTOCOL  *Interface;
+  EFI_STATUS                    Status;
+  EFI_HANDLE                    *Handles;
+  UINTN                         NoHandles;
+  UINTN                         Count;
+  EFI_DEVICE_PATH_PROTOCOL      *Interface;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
 
   ASSERT (FixedPcdGet8 (PcdDefaultTerminalType) == 4);
+
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
                   &gEfiSimpleTextOutProtocolGuid,
@@ -1159,12 +1345,36 @@ PlatformRegisterConsoles (
     for (Count = 0; Count < NoHandles; Count++) {
       Status = gBS->HandleProtocol (
                       Handles[Count],
+                      &gEfiGraphicsOutputProtocolGuid,
+                      (VOID **)&Gop
+                      );
+      if (!EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: GraphicsOutputProtocol supported on SimpleTextOutProtocol handle 0x%p\n",
+          __FUNCTION__,
+          Handles[Count]
+          ));
+      } else {
+        Gop = NULL;
+      }
+
+      Status = gBS->HandleProtocol (
+                      Handles[Count],
                       &gEfiDevicePathProtocolGuid,
                       (VOID **)&Interface
                       );
       if (!EFI_ERROR (Status)) {
-        EfiBootManagerUpdateConsoleVariable (ConOut, Interface, NULL);
-        EfiBootManagerUpdateConsoleVariable (ErrOut, Interface, NULL);
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: DevicePathProtocol supported on SimpleTextOutProtocol handle 0x%p\n",
+          __FUNCTION__,
+          Handles[Count]
+          ));
+        if ((InitialConsoleRegistration == TRUE) || (Gop != NULL)) {
+          EfiBootManagerUpdateConsoleVariable (ConOut, Interface, NULL);
+          EfiBootManagerUpdateConsoleVariable (ErrOut, Interface, NULL);
+        }
       }
     }
 
@@ -1384,6 +1594,134 @@ VerifyAndDispatchDeferredImages (
 // BDS Platform Functions
 //
 
+VOID
+EFIAPI
+CheckUefiShellLoadOption (
+  OUT BOOLEAN  *UefiShellEnabled
+  )
+{
+  EFI_STATUS                    Status;
+  NVIDIA_UEFI_SHELL_ENABLED     UefiShell;
+  UINTN                         VariableSize;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
+  UINTN                         NvBootOptionCount;
+  UINTN                         Index;
+
+  //
+  // Get Embedded UEFI Shell Setup Option
+  //
+  VariableSize = sizeof (NVIDIA_UEFI_SHELL_ENABLED);
+  Status       = gRT->GetVariable (
+                        L"UefiShellEnabled",
+                        &gNVIDIAPublicVariableGuid,
+                        NULL,
+                        &VariableSize,
+                        (VOID *)&UefiShell
+                        );
+  if (EFI_ERROR (Status) || UefiShell.Enabled) {
+    *UefiShellEnabled = 1;
+    return;
+  }
+
+  //
+  // Remove Embedded UEFI Shell Setup Option
+  //
+  *UefiShellEnabled = 0;
+  NvBootOptions     = EfiBootManagerGetLoadOptions (
+                        &NvBootOptionCount,
+                        LoadOptionTypeBoot
+                        );
+
+  for (Index = 0; Index < NvBootOptionCount; Index++) {
+    if (StrCmp (NvBootOptions[Index].Description, L"UEFI Shell") == 0) {
+      EfiBootManagerDeleteLoadOptionVariable (
+        NvBootOptions[Index].OptionNumber,
+        LoadOptionTypeBoot
+        );
+    }
+  }
+
+  EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionCount);
+}
+
+/**
+  Process TPM commands that need to be done before handing off to OS
+**/
+VOID
+ProcessTpmBeforeBooting (
+  VOID
+  )
+{
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return;
+  }
+
+  //
+  // Process TCG2 PPI
+  //
+  Tcg2PhysicalPresenceLibProcessRequest (NULL);
+
+  //
+  // Prevent OS from using commands that require platform hierarchy authorization
+  //
+  ConfigureTpmPlatformHierarchy ();
+}
+
+/**
+  Wait for all async drivers to complete
+**/
+VOID
+EFIAPI
+WaitForAsyncDrivers (
+  VOID
+  )
+{
+  EFI_STATUS                           Status;
+  UINTN                                Handles;
+  EFI_HANDLE                           *HandleBuffer;
+  UINTN                                HandleIndex;
+  NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL  *AsyncProtocol;
+  BOOLEAN                              StillPending;
+  BOOLEAN                              PrintedForDriver;
+
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gNVIDIAAsyncDriverStatusProtocol, NULL, &Handles, &HandleBuffer);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  PERF_START (&gEfiCallerIdGuid, "AsyncDriverWait", NULL, 0);
+  for (HandleIndex = 0; HandleIndex < Handles; HandleIndex++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[HandleIndex],
+                    &gNVIDIAAsyncDriverStatusProtocol,
+                    (VOID **)&AsyncProtocol
+                    );
+    ASSERT_EFI_ERROR (Status);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    PrintedForDriver = FALSE;
+    do {
+      AsyncProtocol->GetStatus (AsyncProtocol, &StillPending);
+      if (StillPending) {
+        if (!PrintedForDriver) {
+          DEBUG ((DEBUG_ERROR, "Waiting for driver %u of %u to complete\r\n.", HandleIndex+1, Handles));
+          PrintedForDriver = TRUE;
+        }
+
+        CpuPause ();
+      }
+    } while (StillPending);
+  }
+
+  if (Handles != 0) {
+    gDS->Dispatch ();
+  }
+
+  PERF_END (&gEfiCallerIdGuid, "AsyncDriverWait", NULL, 0);
+}
+
 /**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
@@ -1401,19 +1739,30 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
-  UINT8       *EnrollDefaultKeys;
-  EFI_STATUS  Status;
   EFI_HANDLE  BdsHandle = NULL;
+  BOOLEAN     UefiShellEnabled;
+
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    //
+    // Check Embedded UEFI Shell Setup Option
+    //
+    CheckUefiShellLoadOption (&UefiShellEnabled);
+
+    //
+    // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+    //
+    CheckIPMIForBootOrderUpdates ();
+
+    //
+    // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
+    //
+    RestoreBootOrder (NULL, NULL);
+  }
 
   //
-  // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+  // Wait for all async drivers to complete
   //
-  CheckIPMIForBootOrderUpdates ();
-
-  //
-  // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
-  //
-  RestoreBootOrder (NULL, NULL);
+  WaitForAsyncDrivers ();
 
   //
   // Signal EndOfDxe PI Event
@@ -1453,80 +1802,63 @@ PlatformBootManagerBeforeConsole (
   //
   FilterAndProcess (&gEfiPciIoProtocolGuid, NULL, ListPciDevices);
 
-  if (IsPlatformConfigurationNeeded ()) {
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    if (IsPlatformConfigurationNeeded ()) {
+      //
+      // Connect the rest of the devices.
+      //
+      EfiBootManagerConnectAll ();
+
+      //
+      // Enumerate all possible boot options.
+      //
+      EfiBootManagerRefreshAllBootOption ();
+
+      //
+      // Register platform-specific boot options and keyboard shortcuts.
+      //
+      PlatformRegisterOptionsAndKeys ();
+
+      //
+      // Register UEFI Shell
+      //
+      if (UefiShellEnabled) {
+        PlatformRegisterFvBootOption (
+          &gUefiShellFileGuid,
+          L"UEFI Shell",
+          LOAD_OPTION_ACTIVE,
+          LoadOptionTypeBoot
+          );
+      }
+
+      //
+      // Set Boot Order
+      //
+      SetBootOrder ();
+
+      //
+      // Set platform has been configured
+      //
+      PlatformConfigured ();
+    }
+
+    //
+    // Process IPMI-directed BootOrder updates
+    //
+    ProcessIPMIBootOrderUpdates ();
+  } else {
     //
     // Connect the rest of the devices.
     //
     EfiBootManagerConnectAll ();
 
-    //
-    // Enumerate all possible boot options.
-    //
-    EfiBootManagerRefreshAllBootOption ();
-
-    //
-    // Register platform-specific boot options and keyboard shortcuts.
-    //
-    PlatformRegisterOptionsAndKeys ();
-
-    //
-    // Register EnrollDefaultKeysApp as a SysPrep Option.
-    //
-    Status = GetVariable2 (
-               L"EnrollDefaultSecurityKeys",
-               &gNVIDIAPublicVariableGuid,
-               (VOID **)&EnrollDefaultKeys,
-               NULL
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: No Default keys to enroll: %r.\n",
-        __FUNCTION__,
-        Status
-        ));
-    } else {
-      if (*EnrollDefaultKeys == 1) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Enroll default keys: %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        PlatformRegisterFvBootOption (
-          &gEnrollFromDefaultKeysAppFileGuid,
-          L"Enroll Default Keys App",
-          LOAD_OPTION_ACTIVE,
-          LoadOptionTypeSysPrep
-          );
-      }
-    }
-
-    //
-    // Register UEFI Shell
-    //
     PlatformRegisterFvBootOption (
-      &gUefiShellFileGuid,
-      L"UEFI Shell",
+      FixedPcdGetPtr (PcdSingleBootApplicationGuid),
+      L"Boot Application",
       LOAD_OPTION_ACTIVE,
       LoadOptionTypeBoot
       );
-
-    //
-    // Set Boot Order
-    //
-    SetBootOrder ();
-
-    //
-    // Set platform has been configured
-    //
-    PlatformConfigured ();
   }
-
-  //
-  // Process IPMI-directed BootOrder updates
-  //
-  ProcessIPMIBootOrderUpdates ();
 
   //
   // Add the hardcoded short-form USB keyboard device path to ConIn.
@@ -1538,14 +1870,23 @@ PlatformBootManagerBeforeConsole (
     );
 
   //
-  // Register all available consoles.
+  // Register all available consoles during intitial
+  // boot, then set PCD to FALSE afterwards.
   //
-  PlatformRegisterConsoles ();
+  PlatformRegisterConsoles (PcdGetBool (PcdDoInitialConsoleRegistration));
+  if (PcdGetBool (PcdDoInitialConsoleRegistration) == TRUE) {
+    PcdSetBoolS (PcdDoInitialConsoleRegistration, FALSE);
+  }
 
   //
   // Signal BeforeConsoleEvent.
   //
   EfiEventGroupSignal (&gNVIDIABeforeConsoleEventGuid);
+
+  //
+  // Process TPM before booting to OS
+  //
+  ProcessTpmBeforeBooting ();
 
   // Install protocol to indicate that devices are connected
   gBS->InstallMultipleProtocolInterfaces (
@@ -1612,6 +1953,9 @@ HandleCapsules (
   // Check for capsules on disk
   //
   if (CoDCheckCapsuleOnDiskFlag ()) {
+    // Mark existing boot chain as good.
+    ValidateActiveBootChain ();
+
     NeedReset = TRUE;
     Status    = CoDRelocateCapsule (0);
     if (EFI_ERROR (Status)) {
@@ -1630,6 +1974,7 @@ HandleCapsules (
   if (NeedReset) {
     DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
 
+    StatusRegReset ();
     gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
     CpuDeadLoop ();
   }
@@ -1871,6 +2216,9 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
+  // Print the BootOrder information
+  PrintCurrentBootOrder (DEBUG_ERROR);
+
   //
   // Show the splash screen.
   //
@@ -1879,12 +2227,14 @@ PlatformBootManagerAfterConsole (
   //
   // Display system and hotkey information after console is ready.
   //
-  DisplaySystemAndHotkeyInformation ();
+  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+    DisplaySystemAndHotkeyInformation ();
+  }
 
   //
-  // Run Sparse memory test
+  // Run memory test
   //
-  MemoryTest (SPARSE);
+  MemoryTest ();
 
   // Ipmi communication
   PrintBmcIpAddresses ();

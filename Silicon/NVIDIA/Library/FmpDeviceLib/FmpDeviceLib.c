@@ -42,7 +42,9 @@ RegisterFmpInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   )
 {
-  return EFI_UNSUPPORTED;
+  FmpTegraRegisterInstaller (Function);
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -70,7 +72,7 @@ RegisterFmpUninstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
   )
 {
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -104,7 +106,7 @@ FmpDeviceSetContext (
   IN OUT VOID    **Context
   )
 {
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -239,23 +241,7 @@ FmpDeviceGetLowestSupportedVersion (
   OUT UINT32  *LowestSupportedVersion
   )
 {
-  EFI_STATUS  Status;
-  UINT32      LsvInDtb;
-
-  // Check build PCD
-  *LowestSupportedVersion = PcdGet32 (PcdFmpDeviceBuildTimeLowestSupportedVersion);
-
-  // Check the lowest supported version in DTB
-  Status = FmpTegraGetLowestSupportedVersion (&LsvInDtb);
-  if (EFI_ERROR (Status)) {
-    LsvInDtb = 0;
-  }
-
-  if (LsvInDtb > *LowestSupportedVersion) {
-    *LowestSupportedVersion = LsvInDtb;
-  }
-
-  return EFI_SUCCESS;
+  return FmpParamGetLowestSupportedVersion (LowestSupportedVersion);
 }
 
 /**

@@ -2,7 +2,7 @@
 
   OEM Status code handling unit test
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,12 +27,15 @@
 #include <Library/DebugLib.h>
 
 #include <IndustryStandard/Ipmi.h>
+#include <Protocol/IpmiTransportProtocol.h>
 #include <Protocol/ReportStatusCodeHandler.h>
 
 #include "../OemDescStatusCodeDxe.h"
 
 #define UNIT_TEST_NAME     "OEM Send Description Test"
 #define UNIT_TEST_VERSION  "1.0"
+
+#define STUB_EFI_EVENT  ((EFI_EVENT) &mStubEvent)
 
 #define MAX_STATUS_CODE_DATA_SIZE  1000
 
@@ -49,6 +52,10 @@ typedef struct {
 // PRIVATE VARIABLES
 ////////////////////////////////////////////////////////////////////////////////
 
+STATIC UINTN                     mStubEvent       = 0;
+STATIC EFI_EVENT_NOTIFY          mIpmiNotify      = NULL;
+STATIC UINTN                     mRegistration    = 0;
+STATIC IPMI_TRANSPORT            mIpmiTransport   = { 0 };
 STATIC EFI_RSC_HANDLER_PROTOCOL  mRsc             = { 0 };
 STATIC EFI_BOOT_SERVICES         mBS              = { 0 };
 STATIC EFI_RSC_HANDLER_CALLBACK  mOemDescCallback = NULL;
@@ -188,6 +195,60 @@ OemDescStatusCodeDxeDriverEntryPoint (
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
+  Creates and returns a notification event and registers that event with all the protocol
+  instances specified by ProtocolGuid.
+
+  @param  ProtocolGuid    Supplies GUID of the protocol upon whose installation the event is fired.
+  @param  NotifyTpl       Supplies the task priority level of the event notifications.
+  @param  NotifyFunction  Supplies the function to notify when the event is signaled.
+  @param  NotifyContext   The context parameter to pass to NotifyFunction.
+  @param  Registration    A pointer to a memory location to receive the registration value.
+
+  @return The notification event that was created.
+**/
+EFI_EVENT
+EFIAPI
+__wrap_EfiCreateProtocolNotifyEvent (
+  IN  EFI_GUID          *ProtocolGuid,
+  IN  EFI_TPL           NotifyTpl,
+  IN  EFI_EVENT_NOTIFY  NotifyFunction,
+  IN  VOID              *NotifyContext   OPTIONAL,
+  OUT VOID              **Registration
+  )
+{
+  EFI_STATUS  Status = (EFI_STATUS)mock ();
+
+  ASSERT (CompareGuid (&gIpmiTransportProtocolGuid, ProtocolGuid));
+  ASSERT (NotifyFunction != NULL);
+  ASSERT (Registration != NULL);
+
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  mIpmiNotify   = NotifyFunction;
+  *Registration = &mRegistration;
+  return STUB_EFI_EVENT;
+}
+
+/**
+  Closes an event.
+
+  @param[in]  Event             The event to close.
+
+  @retval EFI_SUCCESS           The event has been closed.
+**/
+EFI_STATUS
+EFIAPI
+MockedCloseEvent (
+  IN EFI_EVENT  Event
+  )
+{
+  mIpmiNotify = NULL;
+  return EFI_SUCCESS;
+}
+
+/**
   Mocked version of EFI_RSC_HANDLER_REGISTER
 
   @param[in] Callback   A pointer to a function of type EFI_RSC_HANDLER_CALLBACK that is called when
@@ -278,6 +339,57 @@ MockedCreateEventEx (
 }
 
 /**
+  Mocked version of submitting commands via Ipmi.
+
+  @param[in]         This              This point for IPMI_TRANSPORT structure.
+  @param[in]         NetFunction       Net function of the command.
+  @param[in]         Lun               LUN
+  @param[in]         Command           IPMI Command.
+  @param[in]         RequestData       Command Request Data.
+  @param[in]         RequestDataSize   Size of Command Request Data.
+  @param[out]        ResponseData      Command Response Data.
+  @param[in, out]    ResponseDataSize  Size of Command Response Data.
+
+  @retval EFI_SUCCESS            The command byte stream was successfully submit to the device.
+  @retval EFI_NOT_FOUND          The command was not successfully sent to the device.
+  @retval EFI_NOT_READY          Ipmi Device is not ready for Ipmi command access.
+  @retval EFI_DEVICE_ERROR       Ipmi Device hardware error.
+  @retval EFI_TIMEOUT            The command time out.
+  @retval EFI_UNSUPPORTED        The command was not successfully sent to the device.
+  @retval EFI_OUT_OF_RESOURCES   The resource allcation is out of resource or data size error.
+**/
+EFI_STATUS
+EFIAPI
+MockedIpmiSubmitCommand (
+  IN     IPMI_TRANSPORT  *This,
+  IN     UINT8           NetFunction,
+  IN     UINT8           Lun,
+  IN     UINT8           Command,
+  IN     UINT8           *RequestData,
+  IN     UINT32          RequestDataSize,
+  OUT    UINT8           *ResponseData,
+  IN OUT UINT32          *ResponseDataSize
+  )
+{
+  EFI_STATUS  Status;
+
+  Status            = (EFI_STATUS)mock ();
+  *ResponseDataSize = (UINT32)mock ();
+  *ResponseData     = (UINT8)mock ();
+
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  ASSERT (NetFunction == IPMI_NETFN_OEM);
+  ASSERT (Command     == IPMI_CMD_OEM_SEND_DESCRIPTION);
+
+  check_expected (RequestData);
+
+  return EFI_SUCCESS;
+}
+
+/**
   Mocked version of EFI_LOCATE_PROTOCOL
 
   @param[in]  Protocol          Provides the protocol to search for.
@@ -303,63 +415,25 @@ MockedLocateProtocol (
 {
   BOOLEAN  ProtocolFound = (BOOLEAN)mock ();
 
-  ASSERT (CompareGuid (&gEfiRscHandlerProtocolGuid, Protocol));
-
   if (!ProtocolFound) {
     return EFI_NOT_FOUND;
   }
 
-  mRsc.Register   = MockedRscHandlerRegister;
-  mRsc.Unregister = MockedRscHandlerUnregister;
-  *Interface      = &mRsc;
-
-  return EFI_SUCCESS;
-}
-
-/**
-  Mocked version of submitting commands via Ipmi.
-
-  @param[in]         NetFunction       Net function of the command.
-  @param[in]         Command           IPMI Command.
-  @param[in]         RequestData       Command Request Data.
-  @param[in]         RequestDataSize   Size of Command Request Data.
-  @param[out]        ResponseData      Command Response Data.
-  @param[in, out]    ResponseDataSize  Size of Command Response Data.
-
-  @retval EFI_SUCCESS            The command byte stream was successfully submit to the device.
-  @retval EFI_NOT_FOUND          The command was not successfully sent to the device.
-  @retval EFI_NOT_READY          Ipmi Device is not ready for Ipmi command access.
-  @retval EFI_DEVICE_ERROR       Ipmi Device hardware error.
-  @retval EFI_TIMEOUT            The command time out.
-  @retval EFI_UNSUPPORTED        The command was not successfully sent to the device.
-  @retval EFI_OUT_OF_RESOURCES   The resource allcation is out of resource or data size error.
-**/
-EFI_STATUS
-__wrap_IpmiSubmitCommand (
-  IN     UINT8   NetFunction,
-  IN     UINT8   Command,
-  IN     UINT8   *RequestData,
-  IN     UINT32  RequestDataSize,
-  OUT    UINT8   *ResponseData,
-  IN OUT UINT32  *ResponseDataSize
-  )
-{
-  EFI_STATUS  Status;
-
-  Status            = (EFI_STATUS)mock ();
-  *ResponseDataSize = (UINT32)mock ();
-  *ResponseData     = (UINT8)mock ();
-
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (CompareGuid (&gEfiRscHandlerProtocolGuid, Protocol)) {
+    mRsc.Register   = MockedRscHandlerRegister;
+    mRsc.Unregister = MockedRscHandlerUnregister;
+    *Interface      = &mRsc;
+    return EFI_SUCCESS;
   }
 
-  ASSERT (NetFunction == IPMI_NETFN_OEM);
-  ASSERT (Command     == IPMI_CMD_OEM_SEND_DESCRIPTION);
+  if (CompareGuid (&gIpmiTransportProtocolGuid, Protocol)) {
+    mIpmiTransport.IpmiSubmitCommand = MockedIpmiSubmitCommand;
+    *Interface                       = &mIpmiTransport;
+    return EFI_SUCCESS;
+  }
 
-  check_expected (RequestData);
-
-  return EFI_SUCCESS;
+  UT_ASSERT_TRUE (FALSE);
+  return EFI_NOT_FOUND;
 }
 
 /**
@@ -413,16 +487,19 @@ OemDescInitErrors (
   gBS                 = &mBS;
   gBS->CreateEventEx  = MockedCreateEventEx;
   gBS->LocateProtocol = MockedLocateProtocol;
+  gBS->CloseEvent     = MockedCloseEvent;
 
   //
   // Test case: fail to locate RscHandlerProtocol
   //
+  will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedLocateProtocol, FALSE);
   Status = OemDescStatusCodeDxeDriverEntryPoint (NULL, NULL);
   UT_ASSERT_TRUE (Status == EFI_NOT_FOUND);
   //
   // Test case: fail to register ReportStatusCode callback
   //
+  will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedLocateProtocol, TRUE);
   will_return (MockedRscHandlerRegister, FALSE);
   Status = OemDescStatusCodeDxeDriverEntryPoint (NULL, NULL);
@@ -430,11 +507,13 @@ OemDescInitErrors (
   //
   // Test case: fail to create notify ExitBootServices event
   //
+  will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedLocateProtocol, TRUE);
   will_return (MockedRscHandlerRegister, TRUE);
   will_return (MockedCreateEventEx, FALSE);
   Status = OemDescStatusCodeDxeDriverEntryPoint (NULL, NULL);
   UT_ASSERT_TRUE (Status == EFI_OUT_OF_RESOURCES);
+  UT_ASSERT_TRUE (mIpmiNotify != NULL);
 
   return UNIT_TEST_PASSED;
 }
@@ -464,11 +543,72 @@ OemDescInitSuccess (
   mData->HeaderSize = sizeof (EFI_STATUS_CODE_DATA);
   CopyGuid (&mData->Type, &gEfiStatusCodeSpecificDataGuid);
 
+  will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedLocateProtocol, TRUE);
   will_return (MockedRscHandlerRegister, TRUE);
   will_return (MockedCreateEventEx, TRUE);
   Status = OemDescStatusCodeDxeDriverEntryPoint (NULL, NULL);
   UT_ASSERT_NOT_EFI_ERROR (Status);
+  UT_ASSERT_TRUE (mIpmiNotify != NULL);
+
+  return UNIT_TEST_PASSED;
+}
+
+/**
+  Send status code before IPMI driver is loaded
+
+  @param[in]  Context                   Unit test context
+  @retval  UNIT_TEST_PASSED             The Unit test has passed.
+  @retval  UNIT_TEST_ERROR_TEST_FAILED  A test case assertion has failed.
+**/
+UNIT_TEST_STATUS
+EFIAPI
+OemDescSendBeforeIpmi (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  OEM_DESC_TEST_DATA  *TestData[] = { &ShortDesc1, &ShortDesc2, &ShortDesc3, &LongDesc1, &LongDesc2 };
+  EFI_STATUS          Status;
+  UINTN               Index;
+
+  for (Index = 0; Index < ARRAY_SIZE (TestData); Index++) {
+    mData->Size = TestData[Index]->DataSize;
+    CopyMem (mData + 1, TestData[Index]->Data, mData->Size);
+
+    will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR);
+    ASSERT (mOemDescCallback != NULL);
+    Status = mOemDescCallback (TestData[Index]->CodeType, TestData[Index]->Value, 0, NULL, mData);
+    UT_ASSERT_NOT_EFI_ERROR (Status);
+  }
+
+  return UNIT_TEST_PASSED;
+}
+
+/**
+  Send all staged messages once IPMI driver is loaded
+
+  @param[in]  Context                   Unit test context
+  @retval  UNIT_TEST_PASSED             The Unit test has passed.
+  @retval  UNIT_TEST_ERROR_TEST_FAILED  A test case assertion has failed.
+**/
+UNIT_TEST_STATUS
+EFIAPI
+OemDescSendWhenIpmiLoaded (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  OEM_DESC_TEST_DATA  *TestData[] = { &LongDesc1, &LongDesc2 };
+  UINTN               Index;
+
+  for (Index = 0; Index < ARRAY_SIZE (TestData); Index++) {
+    will_return (MockedIpmiSubmitCommand, EFI_SUCCESS);
+    will_return (MockedIpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
+    will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_NORMAL);
+    expect_memory (MockedIpmiSubmitCommand, RequestData, TestData[Index]->IpmiReqData, TestData[Index]->IpmiReqSize);
+  }
+
+  will_return (MockedLocateProtocol, TRUE);
+  mIpmiNotify (NULL, NULL);
 
   return UNIT_TEST_PASSED;
 }
@@ -551,10 +691,10 @@ OemDescSendContext (
   mData->Size = TestData->DataSize;
   CopyMem (mData + 1, TestData->Data, mData->Size);
 
-  will_return (__wrap_IpmiSubmitCommand, EFI_SUCCESS);
-  will_return (__wrap_IpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
-  will_return (__wrap_IpmiSubmitCommand, IPMI_COMP_CODE_NORMAL);
-  expect_memory (__wrap_IpmiSubmitCommand, RequestData, TestData->IpmiReqData, TestData->IpmiReqSize);
+  will_return (MockedIpmiSubmitCommand, EFI_SUCCESS);
+  will_return (MockedIpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
+  will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_NORMAL);
+  expect_memory (MockedIpmiSubmitCommand, RequestData, TestData->IpmiReqData, TestData->IpmiReqSize);
 
   will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR | DEBUG_WARN | DEBUG_INFO | DEBUG_VERBOSE);
 
@@ -631,10 +771,10 @@ OemDescBmcNotSupport (
   mData->Size = ShortDesc1.DataSize;
   CopyMem (mData + 1, ShortDesc1.Data, mData->Size);
 
-  will_return (__wrap_IpmiSubmitCommand, EFI_SUCCESS);
-  will_return (__wrap_IpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
-  will_return (__wrap_IpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
-  expect_memory (__wrap_IpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
+  will_return (MockedIpmiSubmitCommand, EFI_SUCCESS);
+  will_return (MockedIpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
+  will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
+  expect_memory (MockedIpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
   will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR | DEBUG_WARN | DEBUG_INFO | DEBUG_VERBOSE);
 
   ASSERT (mOemDescCallback != NULL);
@@ -672,9 +812,9 @@ OemDescReceiveIpmiError (
   mData->Size = ShortDesc1.DataSize;
   CopyMem (mData + 1, ShortDesc1.Data, mData->Size);
 
-  will_return (__wrap_IpmiSubmitCommand, EFI_TIMEOUT);
-  will_return (__wrap_IpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
-  will_return (__wrap_IpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
+  will_return (MockedIpmiSubmitCommand, EFI_TIMEOUT);
+  will_return (MockedIpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
+  will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
   will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR | DEBUG_WARN | DEBUG_INFO | DEBUG_VERBOSE);
 
   ASSERT (mOemDescCallback != NULL);
@@ -702,10 +842,10 @@ OemDescReceiveWrongResponse (
   mData->Size = ShortDesc1.DataSize;
   CopyMem (mData + 1, ShortDesc1.Data, mData->Size);
 
-  will_return (__wrap_IpmiSubmitCommand, EFI_SUCCESS);
-  will_return (__wrap_IpmiSubmitCommand, 5);
-  will_return (__wrap_IpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
-  expect_memory (__wrap_IpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
+  will_return (MockedIpmiSubmitCommand, EFI_SUCCESS);
+  will_return (MockedIpmiSubmitCommand, 5);
+  will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_INVALID_COMMAND);
+  expect_memory (MockedIpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
   will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR | DEBUG_WARN | DEBUG_INFO | DEBUG_VERBOSE);
 
   ASSERT (mOemDescCallback != NULL);
@@ -733,10 +873,10 @@ OemDescReceiveErrorCode (
   mData->Size = ShortDesc1.DataSize;
   CopyMem (mData + 1, ShortDesc1.Data, mData->Size);
 
-  will_return (__wrap_IpmiSubmitCommand, EFI_SUCCESS);
-  will_return (__wrap_IpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
-  will_return (__wrap_IpmiSubmitCommand, IPMI_COMP_CODE_BMC_INIT_IN_PROGRESS);
-  expect_memory (__wrap_IpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
+  will_return (MockedIpmiSubmitCommand, EFI_SUCCESS);
+  will_return (MockedIpmiSubmitCommand, sizeof (IPMI_OEM_SEND_DESC_RSP_DATA));
+  will_return (MockedIpmiSubmitCommand, IPMI_COMP_CODE_BMC_INIT_IN_PROGRESS);
+  expect_memory (MockedIpmiSubmitCommand, RequestData, ShortDesc1.IpmiReqData, ShortDesc1.IpmiReqSize);
   will_return (__wrap_GetDebugPrintErrorLevel, DEBUG_ERROR | DEBUG_WARN | DEBUG_INFO | DEBUG_VERBOSE);
 
   ASSERT (mOemDescCallback != NULL);
@@ -813,6 +953,8 @@ SetupAndRunUnitTests (
 
   Status = AddTestCase (OemDescTests, "Error handling cases during driver entry point", "DriverInitErrors", OemDescInitErrors, NULL, NULL, NULL);
   Status = AddTestCase (OemDescTests, "Driver initializes successfully", "DriverInitSuccess", OemDescInitSuccess, NULL, OemDescTestCleanup, NULL);
+  Status = AddTestCase (OemDescTests, "Send error codes before IPMI driver is loaded", "SendBeforeIpmi", OemDescSendBeforeIpmi, NULL, OemDescTestCleanup, NULL);
+  Status = AddTestCase (OemDescTests, "Send all staged messages as soon as IPMI driver is loaded", "SendWhenIpmiLoaded", OemDescSendWhenIpmiLoaded, NULL, OemDescTestCleanup, NULL);
   Status = AddTestCase (OemDescTests, "Send progress code with no description", "SendNoDescription", OemDescSendNone, NULL, OemDescTestCleanup, NULL);
   Status = AddTestCase (OemDescTests, "Send progress code with binary data", "SendCodeWithBinary", OemDescSendBinary, NULL, OemDescTestCleanup, NULL);
   Status = AddTestCase (OemDescTests, "Send short description", "SendShortDescription", OemDescSendContext, NULL, OemDescTestCleanup, &ShortDesc1);

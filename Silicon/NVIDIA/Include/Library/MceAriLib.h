@@ -2,7 +2,7 @@
 
   MCE ARI library
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,7 +36,6 @@ MceAriGetVersion (
   Checks to see if the core with the given MPIDR is enabled
 
   @param[in]    Mpidr           Mpidr of the CPU (Affinity bits only)
-  @param[out]   DtCpuId         LinearCoreId of the CPU, if enabled
 
   @return       EFI_SUCCESS     CPU enabled
   @return       EFI_NOT_FOUND   CPU not enabled
@@ -44,8 +43,7 @@ MceAriGetVersion (
 EFI_STATUS
 EFIAPI
 MceAriCheckCoreEnabled (
-  IN  UINT64  *Mpidr,
-  OUT UINTN   *DtCpuId
+  IN  UINT64  *Mpidr
   );
 
 /**

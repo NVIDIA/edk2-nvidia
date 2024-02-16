@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,6 +20,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Protocol/UsbPadCtl.h>
 #include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
@@ -42,12 +44,12 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Xhci controller driver",
-  .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoDeassertReset               = TRUE,
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = FALSE,
-  .SkipEdkiiNondiscoverableInstall = FALSE,
+  .SkipEdkiiNondiscoverableInstall = TRUE,
+  .ThreadedDeviceStart             = FALSE
 };
 
 /* XhciController Protocol Function used to return the Xhci
@@ -129,7 +131,7 @@ OnExitBootServices (
     if (PgState == CmdPgStateOn) {
       Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
+        DEBUG ((DEBUG_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
         return;
       }
     }
@@ -176,6 +178,8 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE              PlatformType;
   NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
   UINT32                           Index;
+  VOID                             *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
 
   T234Platform = FALSE;
   LoadIfrRom   = FALSE;
@@ -187,7 +191,7 @@ DeviceDiscoveryNotify (
 
       Private = AllocatePool (sizeof (XHCICONTROLLER_DXE_PRIVATE));
       if (NULL == Private) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate memory\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory\r\n", __FUNCTION__));
         return EFI_OUT_OF_RESOURCES;
       }
 
@@ -253,7 +257,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Unable to locate Xhci Base address range\n",
           __FUNCTION__
           ));
@@ -270,7 +274,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Unable to locate Xhci Config address range\n",
           __FUNCTION__
           ));
@@ -288,7 +292,7 @@ DeviceDiscoveryNotify (
                    );
         if (EFI_ERROR (Status)) {
           DEBUG ((
-            EFI_D_ERROR,
+            DEBUG_ERROR,
             "%a: Unable to locate Xhci Base 2 address range\n",
             __FUNCTION__
             ));
@@ -315,7 +319,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a, Failed to install protocols: %r\r\n",
           __FUNCTION__,
           Status
@@ -325,7 +329,7 @@ DeviceDiscoveryNotify (
 
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "PowerGateNodeProtocol not found\r\n"));
+        DEBUG ((DEBUG_ERROR, "PowerGateNodeProtocol not found\r\n"));
         goto ErrorExit;
       }
 
@@ -334,7 +338,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_VERBOSE, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
+          DEBUG ((DEBUG_ERROR, "Deassert pg not found\r\n"));
           goto ErrorExit;
         }
       }
@@ -344,7 +348,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_VERBOSE, "Assert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "Assert pg not found\r\n"));
+          DEBUG ((DEBUG_ERROR, "Assert pg not found\r\n"));
         }
       }
 
@@ -353,7 +357,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_VERBOSE, "Deassert pg: %d\r\n", PgProtocol->PowerGateId[Index]));
         Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "Deassert pg not found\r\n"));
+          DEBUG ((DEBUG_ERROR, "Deassert pg not found\r\n"));
         }
       }
 
@@ -364,7 +368,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status) || (Private->mUsbPadCtlProtocol == NULL)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find UsbPadCtl Protocol Handle %r\n",
           __FUNCTION__,
           Status
@@ -395,7 +399,7 @@ DeviceDiscoveryNotify (
       Status = Private->mUsbPadCtlProtocol->InitHw (Private->mUsbPadCtlProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a, Failed to Initailize USB HW: %r\r\n",
           __FUNCTION__,
           Status
@@ -410,7 +414,7 @@ DeviceDiscoveryNotify (
                  (Private->XusbSoc->Cfg4AddrMask << Private->XusbSoc->Cfg4AddrShift);
       MmioWrite32 (CfgAddress + XUSB_CFG_4_0, reg_val);
 
-      gBS->Stall (200);
+      DeviceDiscoveryThreadMicroSecondDelay (200);
 
       if (T234Platform) {
         reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_7_0);
@@ -419,7 +423,7 @@ DeviceDiscoveryNotify (
                    (Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
         MmioWrite32 (CfgAddress + XUSB_CFG_7_0, reg_val);
 
-        gBS->Stall (200);
+        DeviceDiscoveryThreadMicroSecondDelay (200);
       }
 
       reg_val = MmioRead32 (CfgAddress + XUSB_CFG_1_0);
@@ -440,7 +444,7 @@ DeviceDiscoveryNotify (
             break;
           }
 
-          gBS->Stall (1000);
+          DeviceDiscoveryThreadMicroSecondDelay (1000);
         }
 
         if ((StatusRegister & USBSTS_CNR)) {
@@ -451,6 +455,22 @@ DeviceDiscoveryNotify (
         }
       }
 
+      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+      if ((Hob != NULL) &&
+          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+      {
+        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
+      }
+
+      // In RCM boot, USB FW is already loaded.
+      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+        goto skipXusbFwLoad;
+      }
+
       /* Load xusb Firmware */
       Status = gBS->LocateProtocol (
                       &gNVIDIAUsbFwProtocolGuid,
@@ -459,7 +479,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status) || (Private->mUsbFwProtocol == NULL)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find UsbFw Protocol Handle %r\n",
           __FUNCTION__,
           Status
@@ -474,7 +494,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a, failed to load falcon firmware %r\r\n",
           __FUNCTION__,
           Status
@@ -490,16 +510,27 @@ DeviceDiscoveryNotify (
           break;
         }
 
-        gBS->Stall (1000);
+        DeviceDiscoveryThreadMicroSecondDelay (1000);
       }
 
 skipXusbFwLoad:
       /* Return Error if CNR is not cleared or Host Controller Error is set */
       if (StatusRegister & (USBSTS_CNR | USBSTS_HCE)) {
-        DEBUG ((EFI_D_ERROR, "Usb Host Controller Initialization Failed\n"));
-        DEBUG ((EFI_D_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32 (FALCON_CPUCTL_0)));
+        DEBUG ((DEBUG_ERROR, "%a:%d %llx - %r\r\n", __func__, __LINE__, BaseAddress, Status));
+        DEBUG ((DEBUG_ERROR, "Usb Host Controller Initialization Failed\n"));
+        DEBUG ((DEBUG_ERROR, "UsbStatus: 0x%x Falcon CPUCTL: 0x%x\n", StatusRegister, FalconRead32 (FALCON_CPUCTL_0)));
         Status = EFI_DEVICE_ERROR;
         goto ErrorExit;
+      }
+
+      if (gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
+        Status = gBS->InstallMultipleProtocolInterfaces (
+                        &ControllerHandle,
+                        &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                        Device,
+                        NULL
+                        );
+        ASSERT_EFI_ERROR (Status);
       }
 
       break;

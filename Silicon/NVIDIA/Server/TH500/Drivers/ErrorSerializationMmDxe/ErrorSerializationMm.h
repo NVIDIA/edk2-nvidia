@@ -19,7 +19,10 @@
 #define ERST_RECORD_VERSION_MAJOR  1
 #define ERST_RECORD_VERSION_MINOR  1
 
-#define ERST_MIN_BLOCK_SIZE  SIZE_16KB
+#define EFI_ERROR_RECORD_REVISION_MAJOR_MASK  0x0000FF00
+#define EFI_ERROR_RECORD_REVISION_MINOR_MASK  0x000000FF
+
+#define ERST_MIN_BLOCK_SIZE  SIZE_32KB
 
 #define MAX_NORFLASH_HANDLES  8
 
@@ -86,6 +89,7 @@ typedef struct {
   ERST_CPER_INFO               *IncomingCperInfo;     // Which CperInfo entry is INCOMING, if any
   ERST_CPER_INFO               *OutgoingCperInfo;     // Which CperInfo entry is OUTGOING, if any
   EFI_STATUS                   InitStatus;            // The status returned from the Init call
+  UINTN                        PartitionSize;         // The size of the ERST flash partition
 } ERST_PRIVATE_INFO;
 
 typedef
@@ -192,14 +196,15 @@ ErstReadRecord (
 
 EFI_STATUS
 EFIAPI
-ErstCopyOutgoingToIncomingCper (
-  IN ERST_CPER_INFO  *OutgoingCperInfo,
+ErstCopyValidToIncomingCper (
+  IN ERST_CPER_INFO  *ValidCperInfo,
   IN ERST_CPER_INFO  *IncomingCperInfo
   );
 
 EFI_STATUS
 EFIAPI
-ErstRelocateOutgoing (
+ErstMarkAsInvalid (
+  IN ERST_CPER_INFO  *CperInfo
   );
 
 EFI_STATUS
@@ -228,6 +233,12 @@ EFI_STATUS
 EFIAPI
 ErrorSerializationGatherBufferData (
   VOID
+  );
+
+EFI_STATUS
+EFIAPI
+ErrorSerializationPopulateTimings (
+  UINT64  *Timings
   );
 
 EFI_STATUS
@@ -270,7 +281,8 @@ ErstFindRecord (
 EFI_STATUS
 EFIAPI
 ErstValidateCperHeader (
-  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper
+  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper,
+  IN UINT64                          MaxRecordLength
   );
 
 EFI_STATUS

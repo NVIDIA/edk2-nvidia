@@ -2,7 +2,7 @@
 #
 #  Boot Chain Protocol Driver
 #
-#  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,13 +34,14 @@
   UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
   UefiLib
+  StatusRegLib
 
 [Protocols]
   gNVIDIABootChainProtocolGuid              ## PRODUCES
   gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES
 
 [Guids]
-  gEfiEndOfDxeEventGroupGuid
+  gEfiEventReadyToBootGuid
   gEfiGlobalVariableGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,9 +15,6 @@ class TegraVirtSettingsManager(NVIDIASettingsManager):
 
     def GetName(self):
         return "TegraVirt"
-
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["tegravirt"]
 
     def GetFirmwareVolume(self):
         return "FV/FVMAIN_COMPACT.Fv"

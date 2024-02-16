@@ -2,7 +2,7 @@
 
   Tegra Pin Control Driver
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -39,13 +39,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Tegra Pin Control driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoDeassertReset               = TRUE,
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 STATIC
@@ -152,7 +150,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find PadCtl address range\n",
           __FUNCTION__
           ));

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -31,9 +31,14 @@
 #define TEGRABL_RAS_ERROR_LOGS        (24U)
 #define TEGRABL_EARLY_BOOT_VARS       (16U)
 #define TEGRABL_CMET                  (17U)
+#define TEGRABL_OEM                   (28U)
 #define TEGRABL_ERST                  (29U)
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)
+#define MAX_SUPPORTED_CORES           1024U
+#define MAX_SUPPORTED_SOCKETS         4
+
+#define UID_NUM_DWORDS  4
 
 typedef enum {
   TegrablBootInvalid,
@@ -43,15 +48,17 @@ typedef enum {
 } TEGRA_BOOT_TYPE;
 
 typedef struct {
-  NVDA_MEMORY_REGION    *InputDramRegions;
   NVDA_MEMORY_REGION    *DramRegions;
   UINTN                 DramRegionsCount;
   UINTN                 UefiDramRegionIndex;
   NVDA_MEMORY_REGION    *InputCarveoutRegions;
   NVDA_MEMORY_REGION    *CarveoutRegions;
   UINTN                 CarveoutRegionsCount;
+  NVDA_MEMORY_REGION    *UsableCarveoutRegions;
+  UINTN                 UsableCarveoutRegionsCount;
   UINTN                 DtbLoadAddress;
   NVDA_MEMORY_REGION    RamOopsRegion;
+  NVDA_MEMORY_REGION    XusbRegion;
 } TEGRA_RESOURCE_INFO;
 
 typedef struct {
@@ -72,6 +79,7 @@ typedef struct {
   UINT8     ManufacturerId;
   UINT8     Rank;
   UINT64    Size;
+  UINT32    SpeedKhz;
 } TEGRA_DRAM_DEVICE_INFO;
 
 typedef struct {
@@ -105,6 +113,13 @@ typedef struct {
 
 typedef struct {
   UINT32                      SocketMask;
+  UINT32                      MaxPossibleSockets;
+  UINT32                      MaxPossibleClusters;
+  UINT32                      MaxPossibleCoresPerCluster;
+  UINT32                      MaxPossibleCores;
+  UINT64                      EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
+  BOOLEAN                     AffinityMpIdrSupported;
+  UINT32                      NumberOfEnabledCores;
   UINT32                      ActiveBootChain;
   BOOLEAN                     BrBctUpdateFlag;
   TEGRA_RESOURCE_INFO         *ResourceInfo;
@@ -117,12 +132,27 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
   TEGRA_BASE_AND_SIZE_INFO    PvaFwInfo;
   TEGRA_BASE_AND_SIZE_INFO    FrameBufferInfo;
+  TEGRA_BASE_AND_SIZE_INFO    ProfilerInfo;
+  TEGRA_BASE_AND_SIZE_INFO    CpublCoInfo;
+  TEGRA_BASE_AND_SIZE_INFO    *VprInfo;
   TEGRA_BOOT_TYPE             BootType;
   BOOLEAN                     HypervisorMode;
   TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
   UINT64                      PhysicalDramSize;
   TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
+  UINT8                       *C2cMode;
+  UINT32                      UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
 } TEGRA_PLATFORM_RESOURCE_INFO;
+
+/**
+  Retrieve CPU BL Address
+
+**/
+UINTN
+EFIAPI
+GetCPUBLBaseAddress (
+  VOID
+  );
 
 /**
   Set Tegra UART Base Address
@@ -165,6 +195,16 @@ BOOLEAN
 EFIAPI
 GetGicInfo (
   OUT TEGRA_GIC_INFO  *GicInfo
+  );
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+EFIAPI
+GetDramPageBlacklistInfoAddress (
+  VOID
   );
 
 /**
@@ -214,12 +254,23 @@ SetNextBootChain (
 
 /**
   Get Platform Resource Information
+  Does not update the CPU info structures.
 
 **/
 EFI_STATUS
 EFIAPI
 GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
+/**
+  Update info in Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+UpdatePlatformResourceInformation (
+  VOID
   );
 
 /**
@@ -327,6 +378,46 @@ EFIAPI
 IsSocketEnabledStMm (
   IN UINTN   CpuBlAddress,
   IN UINT32  SocketNum
+  );
+
+/**
+ * Check if TPM is requested to be enabled.
+ *
+ * @retval  TRUE      TPM is enabled.
+ * @retval  FALSE     TPM is disabled.
+**/
+BOOLEAN
+EFIAPI
+IsTpmToBeEnabled (
+  VOID
+  );
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+SetNextBootRecovery (
+  IN  VOID
+  );
+
+/**
+  Retrieve Active Boot Chain Information for StMm.
+
+  @param[in]  ChipID                Chip ID
+  @param[in]  ScratchBase           Base address of scratch register space.
+  @param[out] BootChain             Active boot chain (0=A, 1=B).
+ *
+ * @retval  EFI_SUCCESS             Boot chain retrieved successfully.
+ * @retval  others                  Error retrieving boot chain.
+**/
+EFI_STATUS
+EFIAPI
+GetActiveBootChainStMm (
+  IN  UINTN   ChipID,
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
   );
 
 #endif //__PLATFORM_RESOURCE_LIB_H__

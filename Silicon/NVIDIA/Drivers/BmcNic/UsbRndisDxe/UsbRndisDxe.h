@@ -1,14 +1,14 @@
 /** @file
   Definition of USB RNDIS driver.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
  **/
 
-#ifndef USB_RDIS_DXE_H_
-#define USB_RDIS_DXE_H_
+#ifndef USB_RNDIS_DXE_H_
+#define USB_RNDIS_DXE_H_
 
 #include <Uefi.h>
 
@@ -73,9 +73,10 @@ typedef struct {
 // USB endpoint data
 //
 typedef struct {
-  UINT8    BulkIn;
-  UINT8    BulkOut;
-  UINT8    Interrupt;
+  UINT8     BulkIn;
+  UINT8     BulkOut;
+  UINT8     Interrupt;
+  UINT16    MaxPacketSize;
 } USB_ENDPOINT_DATA;
 
 //
@@ -130,6 +131,7 @@ typedef struct {
   EFI_EVENT                       ReceiverControlTimer;
   BOOLEAN                         ReceiverSlowWaitFlag;
   BOOLEAN                         DeviceLost;
+  VOID                            *TxBuffer;
 } USB_RNDIS_PRIVATE_DATA;
 
 #define USB_RNDIS_PRIVATE_DATA_FROM_SNP_THIS(a) \
@@ -168,7 +170,7 @@ typedef struct {
 /**
   Initial RNDIS USB NIC Information protocol.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.

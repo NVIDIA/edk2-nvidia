@@ -32,12 +32,13 @@
 
 [Protocols]
   gNVIDIAUsbFwProtocolGuid
-  gEfiBlockIoProtocolGuid
-  gNVIDIANorFlashProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSignature
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE

@@ -1,0 +1,46 @@
+## @file
+# Unit tests of the AndroidBoot driver that are run from a host environment.
+#
+# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = AndroidBootDxeUnitTest
+  FILE_GUID                      = 6675eb50-e086-4d62-a57b-6286fa04a2fb
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+#
+# The following information is for reference only
+# and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = X64
+#
+
+[Sources]
+  AndroidBootDxeUnitTests.c
+  BootImgHeaderUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  TegraPlatformInfoLib
+  ShellLib
+  ShellCommandLib
+  OrderedCollectionLib
+  BlockIoStubProtocol
+  DiskIoStubProtocol
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize

@@ -114,17 +114,41 @@ InstallSmbiosType17Type19Cm (
 
   for (Index = 0; Index < DramDevicesCount; Index++) {
     CmMemDevicesInfo[Index].SerialNum = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
-    AsciiSPrint (
-      CmMemDevicesInfo[Index].SerialNum,
-      SMBIOS_TYPE17_MAX_STRLEN,
-      "%lu",
-      DramInfo[Index].SerialNumber
-      );
+    if (CmMemDevicesInfo[Index].SerialNum != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].SerialNum,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "%lu",
+        DramInfo[Index].SerialNumber
+        );
+    }
 
-    CmMemDevicesInfo[Index].Size                  = DramInfo[Index].Size;
-    CmMemDevicesInfo[Index].DataWidth             = DramInfo[Index].DataWidth;
-    CmMemDevicesInfo[Index].TotalWidth            = DramInfo[Index].TotalWidth;
-    CmMemDevicesInfo[Index].Rank                  = DramInfo[Index].Rank;
+    CmMemDevicesInfo[Index].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+    if (CmMemDevicesInfo[Index].DeviceLocator != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].DeviceLocator,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "LP5x_%u",
+        Index
+        );
+    }
+
+    CmMemDevicesInfo[Index].BankLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+    if (CmMemDevicesInfo[Index].BankLocator != NULL) {
+      AsciiSPrint (
+        CmMemDevicesInfo[Index].BankLocator,
+        SMBIOS_TYPE17_MAX_STRLEN,
+        "LP5x_%u",
+        Index
+        );
+    }
+
+    CmMemDevicesInfo[Index].Size       = DramInfo[Index].Size;
+    CmMemDevicesInfo[Index].DataWidth  = DramInfo[Index].DataWidth;
+    CmMemDevicesInfo[Index].TotalWidth = DramInfo[Index].TotalWidth;
+    CmMemDevicesInfo[Index].Rank       = DramInfo[Index].Rank;
+    // Per spec the speed is to be reported in MT/s (Mega Transfers / second)
+    CmMemDevicesInfo[Index].Speed                 = ((DramInfo[Index].SpeedKhz / 1000) * 2);
     CmMemDevicesInfo[Index].PhysicalArrayToken    = PhysMemArrayToken;
     CmMemDevicesInfo[Index].DeviceType            = MemoryTypeLpddr5;
     CmMemDevicesInfo[Index].DeviceTechnology      = MemoryTechnologyDram;

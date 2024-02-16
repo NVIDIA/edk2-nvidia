@@ -1,7 +1,7 @@
 /** @file
 *  PCI Host Bridge Library instance for NVIDIA platforms
 *
-*  Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION. All rights reserved.
 *  Copyright (c) 2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -14,6 +14,7 @@
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/SortLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Protocol/PciHostBridgeResourceAllocation.h>
@@ -24,6 +25,31 @@ STATIC CONST CHAR16  mPciHostBridgeLibAcpiAddressSpaceTypeStr[][4] = {
   L"Mem", L"I/O", L"Bus"
 };
 #endif
+
+/**
+  Compare root bridges by segment number.
+
+  @param[in] Buffer1                  The pointer to first buffer.
+  @param[in] Buffer2                  The pointer to second buffer.
+
+  @retval 0                           Buffer1 equal to Buffer2.
+  @return <0                          Buffer1 is less than Buffer2.
+  @return >0                          Buffer1 is greater than Buffer2.
+**/
+INTN
+RootBridgeCompare (
+  IN CONST VOID  *Buffer1,
+  IN CONST VOID  *Buffer2
+  )
+{
+  PCI_ROOT_BRIDGE  *RootBridge1;
+  PCI_ROOT_BRIDGE  *RootBridge2;
+
+  RootBridge1 = (PCI_ROOT_BRIDGE *)Buffer1;
+  RootBridge2 = (PCI_ROOT_BRIDGE *)Buffer2;
+
+  return (INTN)RootBridge1->Segment - (INTN)RootBridge2->Segment;
+}
 
 /**
   Return all the root bridge instances in an array.
@@ -58,14 +84,14 @@ PciHostBridgeGetRootBridges (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
     goto Done;
   }
 
   RootBridges = (PCI_ROOT_BRIDGE *)AllocatePool (sizeof (PCI_ROOT_BRIDGE) * NumberOfHandles);
   if (RootBridges == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate root bridge array.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate root bridge array.\r\n", __FUNCTION__));
     goto Done;
   }
 
@@ -78,7 +104,7 @@ PciHostBridgeGetRootBridges (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[CurrentHandle],
@@ -89,6 +115,8 @@ PciHostBridgeGetRootBridges (
 
     CopyMem (&RootBridges[CurrentHandle], RootBridge, sizeof (PCI_ROOT_BRIDGE));
   }
+
+  PerformQuickSort (RootBridges, NumberOfHandles, sizeof (PCI_ROOT_BRIDGE), RootBridgeCompare);
 
 Done:
   if (Handles != NULL) {

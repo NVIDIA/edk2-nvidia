@@ -2,7 +2,7 @@
 #
 #  TPM 2.0 functions
 #
-#  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) Microsoft Corporation.
@@ -18,6 +18,7 @@
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = Tpm2DeviceLib
   CONSTRUCTOR                    = Tpm2DeviceLibConstructor
+  DESTRUCTOR                     = Tpm2DeviceLibDestructor
 
 [Sources.common]
   Tpm2DeviceLib.c
@@ -38,6 +39,7 @@
   MemoryAllocationLib
   UefiLib
   Tpm2CommandLib
+  HashLib
 
 [Protocols]
   gNVIDIATpm2ProtocolGuid  ## CONSUMES
@@ -46,7 +48,10 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType   ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask             ## PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap  ## PRODUCES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy       ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy ## CONSUMES
+  gNVIDIATokenSpaceGuid.PcdTpmEnable                        ## CONSUMES
+
 
 [Depex]
   gNVIDIATpm2ProtocolGuid

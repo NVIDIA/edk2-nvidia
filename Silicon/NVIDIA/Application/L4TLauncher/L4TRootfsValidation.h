@@ -111,4 +111,17 @@ ValidateRootfsStatus (
   OUT L4T_BOOT_PARAMS  *BootParams
   );
 
+/**
+  Check if there is valid rootfs or not
+
+  @retval TRUE     There is valid rootfs
+  @retval FALSE    There is no valid rootfs
+
+**/
+BOOLEAN
+EFIAPI
+IsValidRootfs (
+  VOID
+  );
+
 #endif

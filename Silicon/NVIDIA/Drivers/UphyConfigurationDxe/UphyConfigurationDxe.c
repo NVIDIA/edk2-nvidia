@@ -7,7 +7,7 @@
 
 **/
 #include <Library/HobLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -151,8 +151,8 @@ Th500UphyConfiguration (
         goto ErrorExit;
       }
 
-      if (GpioMode != GPIO_MODE_INPUT) {
-        Status = Gpio->Set (Gpio, GpioPin, GPIO_MODE_INPUT);
+      if (GpioMode != GPIO_MODE_OUTPUT_0) {
+        Status = Gpio->Set (Gpio, GpioPin, GPIO_MODE_OUTPUT_0);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
           goto ErrorExit;
@@ -203,7 +203,7 @@ Th500UphyConfiguration (
     }
 
     for (Count = 0; Count < NumUphyConfigApply; Count++) {
-      Status = Gpio->Set (Gpio, GpioApplyPin[Count], GPIO_MODE_INPUT);
+      Status = Gpio->Set (Gpio, GpioApplyPin[Count], GPIO_MODE_OUTPUT_0);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "ERROR: Gpio set failed: %r\r\n", Status));
         goto ErrorExit;
@@ -237,6 +237,8 @@ ErrorExit:
   if (GpioApplyPin != NULL) {
     FreePool (GpioApplyPin);
   }
+
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "UPHY Configuration Failure.\n");
 
   return Status;
 }

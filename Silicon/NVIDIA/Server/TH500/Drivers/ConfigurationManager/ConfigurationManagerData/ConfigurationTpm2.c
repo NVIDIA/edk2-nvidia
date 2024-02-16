@@ -2,7 +2,7 @@
 
   Configuration Manager Data of Trusted Computing Platform 2 Table (TPM2)
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -47,6 +47,10 @@ InstallTrustedComputingPlatform2Table (
   UINT8                           Tpm2TableRev;
   UINT8                           TpmInterfaceType;
 
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return EFI_SUCCESS;
+  }
+
   //
   // Check if TPM2 interface is supported
   //
@@ -81,7 +85,7 @@ InstallTrustedComputingPlatform2Table (
       break;
 
     default:
-      DEBUG ((DEBUG_ERROR, "%a: Unsupported TpmInterfaceType %d\n", __FUNCTION__, TpmInterfaceType));
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported TpmInterfaceType %u\n", __FUNCTION__, TpmInterfaceType));
       FreePool (TpmInfo);
       return EFI_DEVICE_ERROR;
   }
@@ -124,6 +128,7 @@ InstallTrustedComputingPlatform2Table (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 

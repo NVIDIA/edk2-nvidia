@@ -10,7 +10,7 @@
 #include <Library/IoLib.h>               // MMIO calls
 #include <Library/BaseMemoryLib.h>       // CopyMem
 #include <Library/MemoryAllocationLib.h> // AllocatePool
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h> // STMM_COMM_BUFFERS
 #include <Library/HobLib.h>
 
@@ -27,6 +27,10 @@
 #ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
   #undef DEBUG_CODE
 #define DEBUG_CODE(X)
+  #undef DEBUG_ERROR
+#define DEBUG_ERROR  DEBUG_INFO
+  #undef DEBUG_WARN
+#define DEBUG_WARN  DEBUG_INFO
 #else
   #include <Library/TimerLib.h>
 STATIC UINT64  WriteRecordTime __attribute__ ((unused)) = 0;
@@ -137,7 +141,8 @@ STATIC UINT64  SpiTime         __attribute__ ((unused)) = 0;
 */
 
 ERST_PRIVATE_INFO                       mErrorSerialization;
-STATIC ERROR_SERIALIZATION_MM_PROTOCOL  ErrorSerializationProtocol = { ErrorSerializationEventHandler };
+STATIC ERROR_SERIALIZATION_MM_PROTOCOL  ErrorSerializationProtocol;
+UINT8                                   *mShadowFlash = NULL;
 
 STATIC
 BOOLEAN
@@ -163,6 +168,53 @@ IsErasedBuffer (
   return IsEmpty;
 }
 
+EFI_STATUS
+EFIAPI
+ErstInitShadowFlash (
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      StartTime __attribute__ ((unused));
+
+  mShadowFlash = AllocatePool (mErrorSerialization.PartitionSize);
+  if (mShadowFlash == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Error allocating 0x%x bytes of memory to cache the Flash contents. Will run witohut a cache\n", __FUNCTION__, mErrorSerialization.PartitionSize));
+    Status = EFI_OUT_OF_RESOURCES;
+  } else {
+    DEBUG_CODE (
+      StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      );
+    Status = mErrorSerialization.NorFlashProtocol->Read (
+                                                     mErrorSerialization.NorFlashProtocol,
+                                                     mErrorSerialization.NorErstOffset,
+                                                     mErrorSerialization.PartitionSize,
+                                                     mShadowFlash
+                                                     );
+    DEBUG_CODE (
+    {
+      UINT64 EndTime;
+      UINT64 ElapsedTime;
+      EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      if (EndTime > StartTime) {
+        ElapsedTime = EndTime-StartTime;
+      } else {
+        ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+      }
+
+      DEBUG ((DEBUG_INFO, "%a: Initing the cache of the Flash contents took %lu ns\n", __FUNCTION__, ElapsedTime));
+    }
+      );
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to initialize the cache of the Flash contents (rc=%r). Will try to run witohut a cache\n", __FUNCTION__, Status));
+      FreePool (mShadowFlash);
+      mShadowFlash = NULL;
+    }
+  }
+
+  return Status;
+}
+
 // Read data from the SPINOR
 EFI_STATUS
 EFIAPI
@@ -175,28 +227,42 @@ ErstReadSpiNor (
   EFI_STATUS  Status;
   UINT64      StartTime __attribute__ ((unused));
 
-  DEBUG_CODE (
-    StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
-    );
-  Status = mErrorSerialization.NorFlashProtocol->QuickRead (
-                                                   mErrorSerialization.NorFlashProtocol,
-                                                   Offset + mErrorSerialization.NorErstOffset,
-                                                   Length,
-                                                   Data
-                                                   );
-
-  DEBUG_CODE (
-    UINT64 EndTime;
-    UINT64 ElapsedTime;
-    EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
-    if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+  if (Offset + Length > mErrorSerialization.PartitionSize) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ReturnStatus;
   }
 
-    SpiTime += ElapsedTime;
-    );
+  if (mShadowFlash) {
+    CopyMem (Data, &mShadowFlash[Offset], Length);
+    Status = EFI_SUCCESS;
+  } else {
+    DEBUG_CODE (
+      StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      );
+    Status = mErrorSerialization.NorFlashProtocol->Read (
+                                                     mErrorSerialization.NorFlashProtocol,
+                                                     Offset + mErrorSerialization.NorErstOffset,
+                                                     Length,
+                                                     Data
+                                                     );
+
+    DEBUG_CODE (
+    {
+      UINT64 EndTime;
+      UINT64 ElapsedTime;
+      EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
+      if (EndTime > StartTime) {
+        ElapsedTime = EndTime-StartTime;
+      } else {
+        ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+      }
+
+      SpiTime += ElapsedTime;
+    }
+      );
+  }
+
+ReturnStatus:
   return Status;
 }
 
@@ -212,11 +278,20 @@ ErstWriteSpiNor (
   EFI_STATUS  Status;
   UINT64      StartTime __attribute__ ((unused));
 
+  if (Offset + Length > mErrorSerialization.PartitionSize) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ReturnStatus;
+  }
+
   DEBUG_CODE (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
 
-  Status = mErrorSerialization.NorFlashProtocol->QuickWrite (
+  if (mShadowFlash) {
+    CopyMem (&mShadowFlash[Offset], Data, Length);
+  }
+
+  Status = mErrorSerialization.NorFlashProtocol->Write (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Offset + mErrorSerialization.NorErstOffset,
                                                    Length,
@@ -224,18 +299,22 @@ ErstWriteSpiNor (
                                                    );
 
   DEBUG_CODE (
-    UINT64 EndTime;
-    UINT64 ElapsedTime;
+  {
+    UINT64  EndTime;
+    UINT64  ElapsedTime;
+
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     SpiTime += ElapsedTime;
+  }
     );
 
+ReturnStatus:
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: NorFlashWrite returned Status 0x%x\n", __FUNCTION__, Status));
   }
@@ -271,33 +350,42 @@ ErstEraseSpiNor (
     StartTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     );
 
-  Status = mErrorSerialization.NorFlashProtocol->QuickErase (
+  if (mShadowFlash) {
+    SetMem (&mShadowFlash[Offset], Length, 0xFF);
+  }
+
+  Status = mErrorSerialization.NorFlashProtocol->Erase (
                                                    mErrorSerialization.NorFlashProtocol,
                                                    Lba,
                                                    NumLba
                                                    );
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     SpiTime += ElapsedTime;
 
-    UINT8 *Data = ErstAllocatePoolBlock (mErrorSerialization.BlockSize);
-    ErstReadSpiNor (Data, Offset, Length);
+    UINT8 *Data            = ErstAllocatePoolBlock (mErrorSerialization.BlockSize);
+    VOID *SavedShadowFlash = mShadowFlash;
+    mShadowFlash           = NULL;
+    ErstReadSpiNor (Data, Offset, Length); // Want this to access actual spinor, not cache
+    mShadowFlash = SavedShadowFlash;
     if (!IsErasedBuffer (Data, Length, 0xFF)) {
-    DEBUG ((DEBUG_ERROR, "%a: Spinor block isn't erased after Erase operation!\n", __FUNCTION__));
-  } else {
-    DEBUG ((DEBUG_INFO, "%a: Erased block successfully!\n", __FUNCTION__));
-  }
+      DEBUG ((DEBUG_ERROR, "%a: Spinor block isn't erased after Erase operation!\n", __FUNCTION__));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Erased block successfully!\n", __FUNCTION__));
+    }
 
     ErstFreePoolBlock (Data);
+  }
     );
 
   return Status;
@@ -312,6 +400,7 @@ ErstWriteCperStatus (
   )
 {
   EFI_STATUS  Status;
+  UINT32      Offset;
 
   if ((*CperStatus == ERST_RECORD_STATUS_INCOMING) &&
       (mErrorSerialization.IncomingCperInfo != NULL) &&
@@ -331,11 +420,20 @@ ErstWriteCperStatus (
     goto ReturnStatus;
   }
 
+  Offset = CperInfo->RecordOffset +
+           OFFSET_OF (EFI_COMMON_ERROR_RECORD_HEADER, PersistenceInfo) +
+           OFFSET_OF (CPER_ERST_PERSISTENCE_INFO, Status);
+  if (mShadowFlash) {
+    if ((mShadowFlash[Offset] & *CperStatus) != *CperStatus) {
+      DEBUG ((DEBUG_ERROR, "%a: Attempted illegal CPER status change from 0x%X to 0x%X\n", __FUNCTION__, mShadowFlash[Offset], *CperStatus));
+      Status = EFI_UNSUPPORTED;
+      goto ReturnStatus;
+    }
+  }
+
   Status = ErstWriteSpiNor (
              CperStatus,
-             CperInfo->RecordOffset +
-             OFFSET_OF (EFI_COMMON_ERROR_RECORD_HEADER, PersistenceInfo) +
-             OFFSET_OF (CPER_ERST_PERSISTENCE_INFO, Status),
+             Offset,
              1
              );
   if (EFI_ERROR (Status)) {
@@ -426,19 +524,20 @@ ErstEraseBlock (
 EFI_STATUS
 EFIAPI
 ErstValidateCperHeader (
-  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper
+  IN EFI_COMMON_ERROR_RECORD_HEADER  *Cper,
+  IN UINT64                          MaxRecordLength
   )
 {
   CPER_ERST_PERSISTENCE_INFO  *CperPI;
 
   if ((Cper->SignatureStart != EFI_ERROR_RECORD_SIGNATURE_START) ||
-      (Cper->Revision != EFI_ERROR_RECORD_REVISION) ||
+      ((Cper->Revision & EFI_ERROR_RECORD_REVISION_MAJOR_MASK) != (EFI_ERROR_RECORD_REVISION & EFI_ERROR_RECORD_REVISION_MAJOR_MASK)) ||
       (Cper->SignatureEnd != EFI_ERROR_RECORD_SIGNATURE_END))
   {
     DEBUG ((DEBUG_ERROR, "%a: Cper Signature/Revision validation failed\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: Cper SignatureStart = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureStart, EFI_ERROR_RECORD_SIGNATURE_START));
-    DEBUG ((DEBUG_INFO, "%a: Cper Revision = 0x%x expected 0x%x\n", __FUNCTION__, Cper->Revision, EFI_ERROR_RECORD_REVISION));
-    DEBUG ((DEBUG_INFO, "%a: Cper SignatureEnd = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureEnd, EFI_ERROR_RECORD_SIGNATURE_END));
+    DEBUG ((DEBUG_ERROR, "%a: Cper SignatureStart = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureStart, EFI_ERROR_RECORD_SIGNATURE_START));
+    DEBUG ((DEBUG_ERROR, "%a: Cper Revision = 0x%x expected 0x%x\n", __FUNCTION__, Cper->Revision, EFI_ERROR_RECORD_REVISION));
+    DEBUG ((DEBUG_ERROR, "%a: Cper SignatureEnd = 0x%x expected 0x%x\n", __FUNCTION__, Cper->SignatureEnd, EFI_ERROR_RECORD_SIGNATURE_END));
     return EFI_INCOMPATIBLE_VERSION;
   }
 
@@ -453,9 +552,9 @@ ErstValidateCperHeader (
       (CperPI->Minor != ERST_RECORD_VERSION_MINOR))
   {
     DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Signature/Revision validation failed\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Signature = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Signature, ERST_RECORD_SIGNATURE));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Major = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Major, ERST_RECORD_VERSION_MAJOR));
-    DEBUG ((DEBUG_INFO, "%a: PersistenceInfo Minor = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Minor, ERST_RECORD_VERSION_MINOR));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Signature = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Signature, ERST_RECORD_SIGNATURE));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Major = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Major, ERST_RECORD_VERSION_MAJOR));
+    DEBUG ((DEBUG_ERROR, "%a: PersistenceInfo Minor = 0x%x expected 0x%x\n", __FUNCTION__, CperPI->Minor, ERST_RECORD_VERSION_MINOR));
     return EFI_INCOMPATIBLE_VERSION;
   }
 
@@ -527,6 +626,20 @@ ErstValidateCperHeader (
     return EFI_COMPROMISED_DATA;
   }
 
+  if ((Cper->RecordLength > MaxRecordLength) ||
+      (Cper->RecordLength < sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Found impossible RecordLength 0x%lx (min is 0x%lx, max is 0x%lx)\n",
+      __FUNCTION__,
+      Cper->RecordLength,
+      sizeof (EFI_COMMON_ERROR_RECORD_HEADER),
+      MaxRecordLength
+      ));
+    return EFI_COMPROMISED_DATA;
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -548,12 +661,12 @@ ErstValidateRecord (
       (RecordLength != Cper->RecordLength))
   {
     DEBUG ((DEBUG_ERROR, "%a: RecordId or RecordLength doesn't match tracking data\n", __FUNCTION__));
-    DEBUG ((DEBUG_INFO, "%a: RecordId 0x%x has ID 0x%x in Flash\n", __FUNCTION__, RecordID, Cper->RecordID));
-    DEBUG ((DEBUG_INFO, "%a: RecordLength 0x%x is Length 0x%x in Flash\n", __FUNCTION__, RecordLength, Cper->RecordLength));
+    DEBUG ((DEBUG_INFO, "%a: RecordId 0x%lx has ID 0x%x in Flash\n", __FUNCTION__, RecordID, Cper->RecordID));
+    DEBUG ((DEBUG_INFO, "%a: RecordLength 0x%lx is Length 0x%x in Flash\n", __FUNCTION__, RecordLength, Cper->RecordLength));
     return EFI_COMPROMISED_DATA;
   }
 
-  return ErstValidateCperHeader (Cper);
+  return ErstValidateCperHeader (Cper, RecordLength);
 }
 
 // Copies all valid records to another block, so that this block can be erased when needed
@@ -571,15 +684,6 @@ ErstReclaimBlock (
   // Mark block as being reclaimed
   if (BlockInfo->ValidEntries > 0) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
-  }
-
-  // Make sure there's no OUTGOING before we try to move other records around
-  // This happens when RelocateOutgoing requires reclaiming its own block to make space
-  if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    Status = ErstRelocateOutgoing ();
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
   }
 
   while (BlockInfo->ValidEntries < 0) {
@@ -635,7 +739,7 @@ ErstFindFreeSpace (
   do {
     AdjustedBlockIndex = (BlockIndex + mErrorSerialization.MostRecentBlock)%mErrorSerialization.NumBlocks;
     BlockInfo          = &mErrorSerialization.BlockInfo[AdjustedBlockIndex];
-    DEBUG ((DEBUG_VERBOSE, "%a: Block %d has UsedSize 0x%x, WastedSize 0x%x\n", __FUNCTION__, AdjustedBlockIndex, BlockInfo->UsedSize, BlockInfo->WastedSize));
+    DEBUG ((DEBUG_VERBOSE, "%a: Block %u has UsedSize 0x%x, WastedSize 0x%x\n", __FUNCTION__, AdjustedBlockIndex, BlockInfo->UsedSize, BlockInfo->WastedSize));
     if ((BlockInfo->ValidEntries > 0) &&
         (BlockInfo->UsedSize + RecordLength <= mErrorSerialization.BlockSize))
     {
@@ -994,6 +1098,7 @@ ErstAllocateNewRecord (
       *AllocatedRecord = &mErrorSerialization.CperInfo[mErrorSerialization.RecordCount];
     }
 
+    DEBUG ((DEBUG_VERBOSE, "Added record 0x%x at index %d\n", NewRecord->RecordId, mErrorSerialization.RecordCount));
     mErrorSerialization.RecordCount++;
     mErrorSerialization.UnsyncedSpinorChanges++;
     return EFI_SUCCESS;
@@ -1053,7 +1158,7 @@ ErstWriteRecord (
   CperPI->Minor     = ERST_RECORD_VERSION_MINOR;
   CperPI->Status    = ERST_RECORD_STATUS_INCOMING;
 
-  Status = ErstValidateCperHeader (Cper);
+  Status = ErstValidateCperHeader (Cper, NewRecord->RecordLength);
   if (EFI_ERROR (Status)) {
     goto ReturnStatus;
   }
@@ -1156,16 +1261,18 @@ ReturnStatus:
   }
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
     WriteRecordTime = ElapsedTime;
+  }
     );
 
   return Status;
@@ -1193,9 +1300,9 @@ ErstReadRecord (
   } else {
     Status = ErstReadSpiNor (Cper, Record->RecordOffset, Record->RecordLength);
     if (!EFI_ERROR (Status)) {
-      Status = ErstValidateCperHeader (Cper);
+      Status = ErstValidateCperHeader (Cper, Record->RecordLength);
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Spinor read failed with Status=%d\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Spinor read failed with Status=%u\n", __FUNCTION__, Status));
     }
   }
 
@@ -1338,6 +1445,7 @@ ErrorSerializationEventHandler (
     );
 
   DEBUG ((DEBUG_INFO, "%a: ERST Handler Entered\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "RecordCount is %d\n", mErrorSerialization.RecordCount));
 
   // Note: must be initialized before any gotos
   ERSTComm = (ERST_COMM_STRUCT *)mErrorSerialization.BufferInfo.ErstBase;
@@ -1359,6 +1467,7 @@ ErrorSerializationEventHandler (
       (mErrorSerialization.OutgoingCperInfo != NULL))
   {
     EfiStatus = ErrorSerializationReInit ();
+    DEBUG ((DEBUG_VERBOSE, "RecordCount is %d after Handler's ReInit\n", mErrorSerialization.RecordCount));
     if (EFI_ERROR (EfiStatus)) {
       DEBUG ((DEBUG_ERROR, "%a: ErrorSerialization driver is out of sync with the SPINOR and failed recovery attempt!\n", __FUNCTION__));
       goto ReturnStatus;
@@ -1392,76 +1501,78 @@ ErrorSerializationEventHandler (
 
       Cper = (EFI_COMMON_ERROR_RECORD_HEADER *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset);
       DEBUG_CODE (
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: PhysicalBase = 0x%p OsRecordOffset = 0x%p Cper = 0x%p\n",
-          __FUNCTION__,
-          (void *)mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase,
-          (void *)OSRecordOffset,
-          Cper
-          ));
-        DEBUG ((DEBUG_INFO, "%a: CPER->SignatureStart = 0x%08x Revision      = 0x%04x     SigantureEnd   = 0x%08x\n", __FUNCTION__, Cper->SignatureStart, Cper->Revision, Cper->SignatureEnd));
-        DEBUG ((DEBUG_INFO, "%a: CPER->SectionCount   = 0x%04x     ErrorSeverity = 0x%08x ValidationBits = 0x%08x\n", __FUNCTION__, Cper->SectionCount, Cper->ErrorSeverity, Cper->ValidationBits));
-        DEBUG ((DEBUG_INFO, "%a: CPER->RecordLength   = 0x%08x TimeStamp(Sec)= 0x%02x       RecordID       = 0x%016llx\n", __FUNCTION__, Cper->RecordLength, Cper->TimeStamp.Seconds, Cper->RecordID));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Header1 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[0],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[1],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[2],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[3],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[4],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[5],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[6],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[7]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Header2 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[8],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[9],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[10],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[11],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[12],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[13],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[14],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[15]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[0],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[1],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[2],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[3],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[4],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[5],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[6],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[7]
-          ));
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
-          __FUNCTION__,
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[8],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[9],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[10],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[11],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[12],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[13],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[14],
-          ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[15]
-          ));
+    {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: PhysicalBase = 0x%p OsRecordOffset = 0x%p Cper = 0x%p\n",
+        __FUNCTION__,
+        (void *)mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase,
+        (void *)OSRecordOffset,
+        Cper
+        ));
+      DEBUG ((DEBUG_INFO, "%a: CPER->SignatureStart = 0x%08x Revision      = 0x%04x     SigantureEnd   = 0x%08x\n", __FUNCTION__, Cper->SignatureStart, Cper->Revision, Cper->SignatureEnd));
+      DEBUG ((DEBUG_INFO, "%a: CPER->SectionCount   = 0x%04x     ErrorSeverity = 0x%08x ValidationBits = 0x%08x\n", __FUNCTION__, Cper->SectionCount, Cper->ErrorSeverity, Cper->ValidationBits));
+      DEBUG ((DEBUG_INFO, "%a: CPER->RecordLength   = 0x%08x TimeStamp(Sec)= 0x%02x       RecordID       = 0x%016llx\n", __FUNCTION__, Cper->RecordLength, Cper->TimeStamp.Seconds, Cper->RecordID));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Header1 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[0],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[1],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[2],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[3],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[4],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[5],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[6],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[7]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Header2 = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[8],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[9],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[10],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[11],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[12],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[13],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[14],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset))[15]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[0],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[1],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[2],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[3],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[4],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[5],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[6],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[7]
+        ));
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: CPER->Data = 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx 0x%016llx\n",
+        __FUNCTION__,
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[8],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[9],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[10],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[11],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[12],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[13],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[14],
+        ((UINT64 *)(mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase + OSRecordOffset + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))[15]
+        ));
+    }
         );
       // Save off the length and ID before validating them
       OSRecordLength = Cper->RecordLength;
       OSRecordID     = Cper->RecordID;
 
       if (OSRecordOffset + OSRecordLength > mErrorSerialization.BufferInfo.ErrorLogInfo.Length) {
-        DEBUG ((DEBUG_WARN, "%a: RecordOffset (0x%x) + RecordLength (0x%x) overflows ErrorLogBuffer Length (0x%x)\n", __FUNCTION__, OSRecordOffset, OSRecordLength, mErrorSerialization.BufferInfo.ErrorLogInfo.Length));
+        DEBUG ((DEBUG_WARN, "%a: RecordOffset (0x%lx) + RecordLength (0x%lx) overflows ErrorLogBuffer Length (0x%x)\n", __FUNCTION__, OSRecordOffset, OSRecordLength, mErrorSerialization.BufferInfo.ErrorLogInfo.Length));
         AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
         break;
       }
@@ -1587,18 +1698,20 @@ ReturnStatus:
   ErstClearBusy ();
 
   DEBUG_CODE (
+  {
     UINT64 EndTime;
     UINT64 ElapsedTime;
     EndTime = GetTimeInNanoSecond (GetPerformanceCounter ());
     if (EndTime > StartTime) {
-    ElapsedTime = EndTime-StartTime;
-  } else {
-    ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
-  }
+      ElapsedTime = EndTime-StartTime;
+    } else {
+      ElapsedTime = (MAX_UINT64 - StartTime) + EndTime;
+    }
 
-    DEBUG ((DEBUG_ERROR, "%a: Function took %lld ns from start to clear busy (WriteRecordTime=%lld = %d%%, SpiTime=%lld = %d%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
+    DEBUG ((DEBUG_INFO, "%a: Function took %lu ns from start to clear busy (WriteRecordTime=%lu = %u%%, SpiTime=%lu = %u%%)\n", __FUNCTION__, ElapsedTime, WriteRecordTime, 100*WriteRecordTime/ElapsedTime, SpiTime, 100*SpiTime/ElapsedTime));
     WriteRecordTime = 0;
     SpiTime         = 0;
+  }
     );
 
   if (NewCper != NULL) {
@@ -1711,48 +1824,36 @@ ErstCollectBlock (
       break; // FREE/INVALID is last entry in block
     }
 
-    // INCOMING is an incomplete write, so other info might not be valid,
-    // and only comes at the end of a block
-    if (CperPI->Status == ERST_RECORD_STATUS_INCOMING) {
-      Status = ErstAddCperToList (Cper, Base + Offset);
-      if (!EFI_ERROR (Status)) {
-        BlockInfo->ValidEntries++;
-        BlockInfo->UsedSize += mErrorSerialization.BlockSize-Offset;
-      }
-
-      break; // INCOMING is last entry in block
-    }
-
     if ((CperPI->Status == ERST_RECORD_STATUS_VALID) ||
         (CperPI->Status == ERST_RECORD_STATUS_OUTGOING) ||
-        (CperPI->Status == ERST_RECORD_STATUS_DELETED))
+        (CperPI->Status == ERST_RECORD_STATUS_DELETED) ||
+        (CperPI->Status == ERST_RECORD_STATUS_INCOMING))
     {
-      // Attempt to validate the header if it's expected to be correct
-      Status = ErstValidateCperHeader (Cper);
+      // Attempt to validate the header
+      Status = ErstValidateCperHeader (Cper, mErrorSerialization.BlockSize-Offset);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Found invalid CPER header, so marking the rest of the block INVALID\n", __FUNCTION__));
         CperPI->Status = ERST_RECORD_STATUS_INVALID;
+        Status         = EFI_SUCCESS;
         break; // INVALID is the last entry in block
       }
 
-      // Header is valid, so process it
-      if ((CperPI->Status == ERST_RECORD_STATUS_VALID) ||
-          (CperPI->Status == ERST_RECORD_STATUS_OUTGOING))
-      {
+      if (CperPI->Status == ERST_RECORD_STATUS_DELETED) {
+        BlockInfo->UsedSize   += Cper->RecordLength;
+        BlockInfo->WastedSize += Cper->RecordLength;
+      } else {
         Status = ErstAddCperToList (Cper, Base + Offset);
         if (EFI_ERROR (Status)) {
           goto ReturnStatus;
         }
 
         BlockInfo->ValidEntries++;
-        BlockInfo->UsedSize += Cper->RecordLength;
-      } else if (CperPI->Status == ERST_RECORD_STATUS_DELETED) {
-        BlockInfo->UsedSize   += Cper->RecordLength;
-        BlockInfo->WastedSize += Cper->RecordLength;
-      } else {
-        // This should be impossible without a code bug
-        CperPI->Status = ERST_RECORD_STATUS_INVALID;
-        break; // INVALID is the last entry in block
+        if (CperPI->Status == ERST_RECORD_STATUS_INCOMING) {
+          BlockInfo->UsedSize += mErrorSerialization.BlockSize-Offset;
+          break; // INCOMING is last entry in block
+        } else {
+          BlockInfo->UsedSize += Cper->RecordLength;
+        }
       }
     } else {
       // All other status values are INVALID
@@ -1761,7 +1862,7 @@ ErstCollectBlock (
     }
 
     Offset += Cper->RecordLength;
-  } while (Offset < (mErrorSerialization.BlockSize - sizeof (EFI_COMMON_ERROR_RECORD_HEADER)));
+  } while (Offset <= (mErrorSerialization.BlockSize - sizeof (EFI_COMMON_ERROR_RECORD_HEADER)));
 
   if (CperPI->Status == ERST_RECORD_STATUS_INVALID) {
     // INVALID, so other info isn't valid, and goes to the end of a block
@@ -1770,8 +1871,8 @@ ErstCollectBlock (
     BlockInfo->WastedSize += mErrorSerialization.BlockSize-Offset;
   }
 
-  if (ReclaimBlock) {
-    // Mark for reclaim
+  // Mark block as being reclaimed
+  if (ReclaimBlock && (BlockInfo->ValidEntries > 0)) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
   }
 
@@ -1805,49 +1906,48 @@ ReturnStatus:
 
 EFI_STATUS
 EFIAPI
-ErstCopyOutgoingToIncomingCper (
-  IN ERST_CPER_INFO  *OutgoingCperInfo,
+ErstCopyValidToIncomingCper (
+  IN ERST_CPER_INFO  *ValidCperInfo,
   IN ERST_CPER_INFO  *IncomingCperInfo
   )
 {
-  EFI_STATUS                  Status;
-  UINT8                       *OutgoingCper;
-  UINT8                       *IncomingCper;
-  CPER_ERST_PERSISTENCE_INFO  *OutgoingCperPI;
-  UINT8                       *Space;
-  ERST_BLOCK_INFO             *IncomingBlockInfo;
-  UINT32                      ByteIndex;
-  UINT32                      RemainingBlockSize;
+  EFI_STATUS       Status;
+  UINT8            *ValidCper;
+  UINT8            *IncomingCper;
+  UINT8            *Space;
+  ERST_BLOCK_INFO  *IncomingBlockInfo;
+  UINT32           ByteIndex;
+  UINT32           RemainingBlockSize;
 
-  OutgoingCper = NULL;
+  ValidCper    = NULL;
   IncomingCper = NULL;
   Space        = NULL;
 
   // Make sure length and ID are compatible
   // Note: This only works if SPINOR erases to 1s
-  if ((IncomingCperInfo->RecordLength < OutgoingCperInfo->RecordLength) ||
-      ((IncomingCperInfo->RecordId & OutgoingCperInfo->RecordId) != OutgoingCperInfo->RecordId))
+  if ((IncomingCperInfo->RecordLength < ValidCperInfo->RecordLength) ||
+      ((IncomingCperInfo->RecordId & ValidCperInfo->RecordId) != ValidCperInfo->RecordId))
   {
     DEBUG ((DEBUG_WARN, "%a: RecordLength or RecordID isn't commpatible\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
-  OutgoingCper = ErstAllocatePoolRecord (OutgoingCperInfo->RecordLength);
-  if (OutgoingCper == NULL) {
+  ValidCper = ErstAllocatePoolRecord (ValidCperInfo->RecordLength);
+  if (ValidCper == NULL) {
     // GCOVR_EXCL_START - won't test allocation errors
-    DEBUG ((DEBUG_ERROR, "%a: Couldn't allocate space to read Outgoing CPER\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't allocate space to read VALID CPER\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ReturnStatus;
     // GCOVR_EXCL_STOP
   }
 
-  Status = ErstReadSpiNor (OutgoingCper, OutgoingCperInfo->RecordOffset, OutgoingCperInfo->RecordLength);
+  Status = ErstReadSpiNor (ValidCper, ValidCperInfo->RecordOffset, ValidCperInfo->RecordLength);
   if (EFI_ERROR (Status)) {
     goto ReturnStatus;
   }
 
-  IncomingCperInfo->RecordId     = OutgoingCperInfo->RecordId;
-  IncomingCperInfo->RecordLength = OutgoingCperInfo->RecordLength;
+  IncomingCperInfo->RecordId     = ValidCperInfo->RecordId;
+  IncomingCperInfo->RecordLength = ValidCperInfo->RecordLength;
 
   IncomingCper = ErstAllocatePoolRecord (IncomingCperInfo->RecordLength);
   if (IncomingCper == NULL) {
@@ -1865,13 +1965,11 @@ ErstCopyOutgoingToIncomingCper (
     // GCOVR_EXCL_STOP
   }
 
-  // Make sure we can copy a VALID copy of the OUTGOING CPER onto the INCOMING one
-  OutgoingCperPI         = (CPER_ERST_PERSISTENCE_INFO *)(&((EFI_COMMON_ERROR_RECORD_HEADER *)OutgoingCper)->PersistenceInfo);
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_VALID;
-  for (ByteIndex = 0; ByteIndex < OutgoingCperInfo->RecordLength; ByteIndex++) {
-    if ((OutgoingCper[ByteIndex] & IncomingCper[ByteIndex]) != OutgoingCper[ByteIndex]) {
+  // Make sure we can copy the VALID CPER onto the INCOMING one
+  for (ByteIndex = 0; ByteIndex < ValidCperInfo->RecordLength; ByteIndex++) {
+    if ((ValidCper[ByteIndex] & IncomingCper[ByteIndex]) != ValidCper[ByteIndex]) {
       DEBUG ((DEBUG_WARN, "%a: CPER data isn't commpatible at byte 0x%x\n", __FUNCTION__, ByteIndex));
-      DEBUG ((DEBUG_INFO, "%a: Outgoing 0x%x Incoming 0x%x\n", __FUNCTION__, OutgoingCper[ByteIndex], IncomingCper[ByteIndex]));
+      DEBUG ((DEBUG_INFO, "%a: Valid 0x%x Incoming 0x%x\n", __FUNCTION__, ValidCper[ByteIndex], IncomingCper[ByteIndex]));
       Status = EFI_INVALID_PARAMETER;
       goto ReturnStatus;
     }
@@ -1887,7 +1985,7 @@ ErstCopyOutgoingToIncomingCper (
     // GCOVR_EXCL_STOP
   }
 
-  RemainingBlockSize = mErrorSerialization.BlockSize - ((IncomingCperInfo->RecordOffset - IncomingBlockInfo->Base) + OutgoingCperInfo->RecordLength);
+  RemainingBlockSize = mErrorSerialization.BlockSize - ((IncomingCperInfo->RecordOffset - IncomingBlockInfo->Base) + ValidCperInfo->RecordLength);
   if (RemainingBlockSize > 0) {
     Space = ErstAllocatePoolBlock (RemainingBlockSize);
     if (Space == NULL) {
@@ -1898,7 +1996,7 @@ ErstCopyOutgoingToIncomingCper (
       // GCOVR_EXCL_STOP
     }
 
-    Status = ErstReadSpiNor (Space, IncomingCperInfo->RecordOffset + OutgoingCperInfo->RecordLength, RemainingBlockSize);
+    Status = ErstReadSpiNor (Space, IncomingCperInfo->RecordOffset + ValidCperInfo->RecordLength, RemainingBlockSize);
     if (EFI_ERROR (Status)) {
       // GCOVR_EXCL_START - can't test flash errors after the first read succeeds
       goto ReturnStatus;
@@ -1921,7 +2019,7 @@ ErstCopyOutgoingToIncomingCper (
     }
   }
 
-  Status = ErstWriteRecord ((EFI_COMMON_ERROR_RECORD_HEADER *)OutgoingCper, OutgoingCperInfo, IncomingCperInfo, FALSE);
+  Status = ErstWriteRecord ((EFI_COMMON_ERROR_RECORD_HEADER *)ValidCper, ValidCperInfo, IncomingCperInfo, FALSE);
   if (EFI_ERROR (Status)) {
     // GCOVR_EXCL_START - can't test flash errors after the first read succeeds
     goto ReturnStatus;
@@ -1932,9 +2030,9 @@ ErstCopyOutgoingToIncomingCper (
   IncomingBlockInfo->UsedSize = (IncomingCperInfo->RecordOffset)%mErrorSerialization.BlockSize + IncomingCperInfo->RecordLength;
 
 ReturnStatus:
-  if (OutgoingCper != NULL) {
-    ErstFreePoolRecord (OutgoingCper);
-    OutgoingCper = NULL;
+  if (ValidCper != NULL) {
+    ErstFreePoolRecord (ValidCper);
+    ValidCper = NULL;
   }
 
   if (IncomingCper != NULL) {
@@ -1952,45 +2050,51 @@ ReturnStatus:
 
 EFI_STATUS
 EFIAPI
-ErstRelocateOutgoing (
+ErstMarkAsInvalid (
+  IN ERST_CPER_INFO  *CperInfo
   )
 {
   EFI_STATUS       Status;
+  UINT8            CperStatus;
   ERST_BLOCK_INFO  *BlockInfo;
 
-  if ((mErrorSerialization.OutgoingCperInfo == NULL) ||
-      (mErrorSerialization.IncomingCperInfo != NULL))
-  {
-    Status = EFI_UNSUPPORTED;
+  CperStatus = ERST_RECORD_STATUS_INVALID;
+  Status     = ErstWriteCperStatus (&CperStatus, CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START
     goto ReturnStatus;
+    // GCOVR_EXCL_STOP
   }
 
-  // Try to relocate just the outgoing record
-  Status = ErstRelocateRecord (mErrorSerialization.OutgoingCperInfo);
+  mErrorSerialization.UnsyncedSpinorChanges++; // Wrote SPINOR
 
-  // May need to relocate the whole block due to lack of resources
-  if (Status == EFI_OUT_OF_RESOURCES) {
-    BlockInfo = ErstGetBlockOfRecord (mErrorSerialization.OutgoingCperInfo);
-    if (BlockInfo == NULL) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
+  // Mark the block for reclaim
+  BlockInfo = ErstGetBlockOfRecord (CperInfo);
+  if (BlockInfo == NULL) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find the block for the CPER record being marked as INVALID\n", __FUNCTION__));
+    Status = EFI_NOT_FOUND;
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
+  }
 
-    // Mark the OUTGOING block for reclaim, allowing using the last free block
+  // Mark block as being reclaimed
+  if (BlockInfo->ValidEntries > 0) {
     BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
+  }
 
-    // Must relocate the OUTGOING record first, to avoid creating a second OUTGOING
-    Status = ErstRelocateRecord (mErrorSerialization.OutgoingCperInfo);
-    if (EFI_ERROR (Status)) {
-      goto ReturnStatus;
-    }
+  Status = ErstFreeRecord (CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
+  }
 
-    // Now that OUTGOING is gone, relocate the rest of the records from its block
-    Status = ErstReclaimBlock (BlockInfo);
-    if (EFI_ERROR (Status)) {
-      goto ReturnStatus;
-    }
+  Status = ErstDeallocateRecord (CperInfo);
+  if (EFI_ERROR (Status)) {
+    // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
+    goto ReturnStatus;
+    // GCOVR_EXCL_STOP
   }
 
 ReturnStatus:
@@ -2003,12 +2107,12 @@ ErstCollectBlockInfo (
   IN ERST_BLOCK_INFO  *ErstBlockInfo
   )
 {
-  UINT32           BlockNum;
-  EFI_STATUS       Status;
-  UINT8            FreeBlocks = 0;
-  UINT8            CperStatus;
-  ERST_CPER_INFO   *CperInfo;
-  ERST_BLOCK_INFO  *BlockInfo;
+  UINT32          BlockNum;
+  EFI_STATUS      Status;
+  UINT8           FreeBlocks = 0;
+  ERST_CPER_INFO  *CperInfo;
+  UINT8           NewOutgoingStatus;
+  UINT8           NewIncomingStatus;
 
   // Get ERST block info
   for (BlockNum = 0; BlockNum < mErrorSerialization.NumBlocks; BlockNum++) {
@@ -2021,92 +2125,103 @@ ErstCollectBlockInfo (
   DEBUG ((DEBUG_VERBOSE, "%a: INCOMING 0x%p OUTGOING 0x%p\n", __FUNCTION__, mErrorSerialization.IncomingCperInfo, mErrorSerialization.OutgoingCperInfo));
 
   /*
-    During Init, if an OUTGOING Status is seen and a VALID Status for the same RecordID
-    is seen, the OUTGOING will be marked as DELETED.
+    During Init, if an OUTGOING Status is seen then there should either be a completely valid INCOMING
+    record or VALID record with the same ID, which is meant to replace OUTGOING, so
+    1. Mark INCOMING as VALID (if INCOMING)
+    2. Mark OUTGOING as DELETED (always)
 
-    But if no VALID is seen and an INCOMING Status is seen for that RecordID, it is possible that the record was being
-    moved, and if possible the driver will continue the move of OUTGOING to INCOMING.
+    Otherwise, OUTGOING shouldn't be possible, so mark it as INVALID
 
-    If an OUTGOING Status is seen but no corresponding INCOMING is seen, the OUTGOING
-    will be moved to restore it to VALID Status.
-
+    Then, if an INCOMING status is still seen, then either it is incomplete new data or an incomplete
+    relocation of VALID data, so either
+    1. Finish the relocation of the VALID data (if VALID exists and is compatible)
+    2. Mark INCOMING as INVALID (if no VALID exists or if not compatible)
   */
+
+  NewOutgoingStatus = ERST_RECORD_STATUS_OUTGOING;
+  NewIncomingStatus = ERST_RECORD_STATUS_INCOMING;
+
   if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    CperInfo = ErstFindRecord (mErrorSerialization.OutgoingCperInfo->RecordId);
-    if (CperInfo != NULL) {
-      DEBUG ((DEBUG_VERBOSE, "%a: Deleting OUTGOING record\n", __FUNCTION__));
-      // Valid exists, so delete Outgoing
-      Status = ErstClearRecord (mErrorSerialization.OutgoingCperInfo);
-      if (EFI_ERROR (Status)) {
-        // GCOVR_EXCL_START - Can't test clear failure after reading blocks succeeded
-        goto ReturnStatus;
-        // GCOVR_EXCL_STOP
+    if (mErrorSerialization.IncomingCperInfo == NULL) {
+      CperInfo = ErstFindRecord (mErrorSerialization.OutgoingCperInfo->RecordId);
+      if (CperInfo != NULL) {
+        // VALID exists, so OUTGOING can be DELETED
+        NewOutgoingStatus = ERST_RECORD_STATUS_DELETED;
+      } else {
+        // VALID and INCOMING don't exist, so OUTGOING is INVALID
+        NewOutgoingStatus = ERST_RECORD_STATUS_INVALID;
       }
-    } else if (mErrorSerialization.IncomingCperInfo != NULL) {
-      DEBUG ((DEBUG_VERBOSE, "%a: Trying to merge OUTGOING record\n", __FUNCTION__));
-      // Valid doesn't exist, but Incoming does, so try to merge Outgoing and Incoming //JDS TODO - this is wrong - INCOMING must be VALID in all but name at this point
-      Status = ErstCopyOutgoingToIncomingCper (mErrorSerialization.OutgoingCperInfo, mErrorSerialization.IncomingCperInfo);
-      if ((EFI_ERROR (Status)) &&
-          (Status != EFI_INVALID_PARAMETER)) // Indicates inability to merge
-      {
+    } else {
+      if (mErrorSerialization.IncomingCperInfo->RecordId == mErrorSerialization.OutgoingCperInfo->RecordId) {
+        // INCOMING exists and matches ID, so it is the complete, new VALID data and OUTGOING can be DELETED
+        NewIncomingStatus = ERST_RECORD_STATUS_VALID;
+        NewOutgoingStatus = ERST_RECORD_STATUS_DELETED;
+      } else {
+        // INCOMING exists but doesn't match, so we're in a bad state and both are INVALID
+        NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
+        NewOutgoingStatus = ERST_RECORD_STATUS_INVALID;
+      }
+    }
+  } else if (mErrorSerialization.IncomingCperInfo != NULL) {
+    CperInfo = ErstFindRecord (mErrorSerialization.IncomingCperInfo->RecordId);
+    if (CperInfo != NULL) {
+      // VALID exists, so INCOMING might be an in-progress relocation of VALID
+      DEBUG ((DEBUG_VERBOSE, "%a: Trying to merge INCOMING record with VALID\n", __FUNCTION__));
+      Status = ErstCopyValidToIncomingCper (CperInfo, mErrorSerialization.IncomingCperInfo);
+      if (Status == EFI_INVALID_PARAMETER) {
+        // Indicates inability to merge, so INCOMING should be INVALID
+        NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
+      } else if (EFI_ERROR (Status)) {
         // GCOVR_EXCL_START - Can't test read/write failure after reading blocks succeeded
         goto ReturnStatus;
         // GCOVR_EXCL_STOP
       }
+    } else {
+      // VALID doesn't exist, so INCOMING is INVALID
+      NewIncomingStatus = ERST_RECORD_STATUS_INVALID;
     }
   }
 
-  // If an INCOMING Status is seen but no corresponding OUTGOING is seen, it is impossible
-  // to determine how much of the INCOMING CPER is missing, and it will be marked as INVALID.
-  if (mErrorSerialization.IncomingCperInfo != NULL) {
+  // INCOMING -> VALID or INVALID
+  if (NewIncomingStatus == ERST_RECORD_STATUS_VALID) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Marking INCOMING record as VALID\n", __FUNCTION__));
+    Status = ErstWriteCperStatus (&NewIncomingStatus, mErrorSerialization.IncomingCperInfo);
+    if (EFI_ERROR (Status)) {
+      // GCOVR_EXCL_START
+      goto ReturnStatus;
+      // GCOVR_EXCL_STOP
+    }
+  } else if (NewIncomingStatus == ERST_RECORD_STATUS_INVALID) {
     DEBUG ((DEBUG_VERBOSE, "%a: Marking INCOMING record as INVALID\n", __FUNCTION__));
-    CperStatus = ERST_RECORD_STATUS_INVALID;
-    CperInfo   = mErrorSerialization.IncomingCperInfo;
-    Status     = ErstWriteCperStatus (&CperStatus, CperInfo);
+    Status = ErstMarkAsInvalid (mErrorSerialization.IncomingCperInfo);
     if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Can't test write failure after reading blocks succeeded
+      // GCOVR_EXCL_START
       goto ReturnStatus;
       // GCOVR_EXCL_STOP
     }
-
-    mErrorSerialization.UnsyncedSpinorChanges++; // Wrote SPINOR
-
-    // Mark the block for reclaim
-    BlockInfo = ErstGetBlockOfRecord (CperInfo);
-    if (BlockInfo == NULL) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      DEBUG ((DEBUG_ERROR, "%a: Unable to find the block for the Incoming record\n", __FUNCTION__));
-      Status = EFI_NOT_FOUND;
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
-
-    BlockInfo->ValidEntries = -BlockInfo->ValidEntries;
-
-    Status = ErstFreeRecord (CperInfo);
-    if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
-
-    Status = ErstDeallocateRecord (CperInfo);
-    if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Should be imposible without data corruption or code bug
-      goto ReturnStatus;
-      // GCOVR_EXCL_STOP
-    }
+  } else {
+    ASSERT (NewIncomingStatus == ERST_RECORD_STATUS_INCOMING);
   }
 
-  // Outgoing couldn't be deleted or merged, so relocate it now that there's no INCOMING
-  if (mErrorSerialization.OutgoingCperInfo != NULL) {
-    DEBUG ((DEBUG_VERBOSE, "%a: Relocating OUTGOING record\n", __FUNCTION__));
-    Status = ErstRelocateOutgoing ();
+  // OUTGOING -> DELETED or INVALID
+  if (NewOutgoingStatus == ERST_RECORD_STATUS_DELETED) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Deleting OUTGOING record\n", __FUNCTION__));
+    Status = ErstClearRecord (mErrorSerialization.OutgoingCperInfo);
     if (EFI_ERROR (Status)) {
-      // GCOVR_EXCL_START - Can't test write failure after reading blocks succeeded
+      // GCOVR_EXCL_START
       goto ReturnStatus;
       // GCOVR_EXCL_STOP
     }
+  } else if (NewOutgoingStatus == ERST_RECORD_STATUS_INVALID) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Marking OUTGOING record as INVALID\n", __FUNCTION__));
+    Status = ErstMarkAsInvalid (mErrorSerialization.OutgoingCperInfo);
+    if (EFI_ERROR (Status)) {
+      // GCOVR_EXCL_START
+      goto ReturnStatus;
+      // GCOVR_EXCL_STOP
+    }
+  } else {
+    ASSERT (NewOutgoingStatus == ERST_RECORD_STATUS_OUTGOING);
   }
 
   // Reclaim any remaining blocks that are marked for reclaim
@@ -2128,6 +2243,10 @@ ErstCollectBlockInfo (
   }
 
   ASSERT (FreeBlocks > 0);
+  if (FreeBlocks < 1) {
+    DEBUG ((DEBUG_ERROR, "%a: All blocks are used, which shouldn't be possible\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+  }
 
 ReturnStatus:
   return Status;
@@ -2141,7 +2260,8 @@ ErrorSerializationInitProtocol (
   UINT32                     NorErstSize
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS        Status;
+  ERST_COMM_STRUCT  *ErstComm;
 
   mErrorSerialization.NorFlashProtocol = NorFlashProtocol;
 
@@ -2228,6 +2348,22 @@ ErrorSerializationInitProtocol (
     goto Done;
   }
 
+  mErrorSerialization.PartitionSize = mErrorSerialization.NumBlocks * (UINTN)mErrorSerialization.BlockSize;
+
+  ErstComm = (ERST_COMM_STRUCT *)mErrorSerialization.BufferInfo.ErstBase;
+  if (ErstComm != NULL) {
+    Status = ErrorSerializationPopulateTimings (&ErstComm->Timings);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to populate the actual NorFlash timings: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Done;
+    }
+  }
+
 Done:
   return Status;
 }
@@ -2267,6 +2403,9 @@ ErrorSerializationGatherSpinorData (
 
   ZeroMem (mErrorSerialization.CperInfo, CperInfoLength);
 
+  // Try to create the ShadowFlash. Ignore the returned Status because we can run without it
+  ErstInitShadowFlash ();
+
   mErrorSerialization.UnsyncedSpinorChanges = 1; // Make sure it's non-zero until after Collecting
   Status                                    = ErstCollectBlockInfo (mErrorSerialization.BlockInfo);
   if (!EFI_ERROR (Status)) {
@@ -2305,9 +2444,12 @@ ErrorSerializationGatherBufferData (
   STMM_COMM_BUFFERS  *StmmCommBuffers;
 
   GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
-  if (GuidHob == NULL) {
-    ASSERT_EFI_ERROR (EFI_NOT_FOUND);
-  }
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    return EFI_NOT_FOUND,
+    "%a: Unable to find HOB for gNVIDIAStMMBuffersGuid\n",
+    __FUNCTION__
+    );
 
   StmmCommBuffers         = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
   NsCommBuffMemRegionBase = StmmCommBuffers->NsBufferAddr;
@@ -2318,7 +2460,7 @@ ErrorSerializationGatherBufferData (
   mErrorSerialization.BufferInfo.ErstSize                  = StmmCommBuffers->NsErstUncachedBufSize;
   mErrorSerialization.BufferInfo.ErrorLogInfo.PhysicalBase = StmmCommBuffers->NsErstCachedBufAddr;
   mErrorSerialization.BufferInfo.ErrorLogInfo.Length       = StmmCommBuffers->NsErstCachedBufSize;
-  mErrorSerialization.BufferInfo.ErrorLogInfo.Attributes   = 0;
+  mErrorSerialization.BufferInfo.ErrorLogInfo.Attributes   = ERST_LOG_ATTRIBUTE_SLOW;
 
   if (mErrorSerialization.BufferInfo.ErstSize < (sizeof (ERST_COMM_STRUCT))) {
     DEBUG ((
@@ -2347,6 +2489,44 @@ ErrorSerializationGatherBufferData (
 
 EFI_STATUS
 EFIAPI
+ErrorSerializationPopulateTimings (
+  UINT64  *Timings
+  )
+{
+  UINT64                TypicalAccessTime;
+  UINT64                MaxAccessTime;
+  UINT64                MaxWriteLength;
+  UINT64                MaxPageWrites;
+  NOR_FLASH_ATTRIBUTES  *Attr;
+
+  if (Timings == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Write is potentially comprised of:
+  // Write INCOMING (1 byte write)
+  // Write whole record (at most ErrorLogInfo.Length)
+  // Write OUTGOING (1 byte write)
+  // Write VALID (1 byte write)
+  // Write DELETED (1 byte write)
+  // Total time is N pages for the record + 4 single byte writes
+
+  Attr              = &mErrorSerialization.NorAttributes;
+  MaxWriteLength    = mErrorSerialization.BufferInfo.ErrorLogInfo.Length;
+  MaxPageWrites     = ((MaxWriteLength + Attr->ProgramPageSize - 1) / Attr->ProgramPageSize);
+  TypicalAccessTime = (MaxPageWrites * Attr->ProgramPageTimeUs) + (4 * Attr->ProgramFirstByteTimeUs);
+  MaxAccessTime     = TypicalAccessTime * Attr->ProgramMaxTimeMultiplier;
+
+  DEBUG ((DEBUG_INFO, "%a: Typical access time is %lu us\n", __FUNCTION__, TypicalAccessTime));
+  DEBUG ((DEBUG_INFO, "%a: Maximum access time is %lu us\n", __FUNCTION__, MaxAccessTime));
+
+  *Timings = (MaxAccessTime << ERST_MAX_TIMING_SHIFT) | (TypicalAccessTime & ERST_NOMINAL_TIMING_MASK);
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 ErrorSerializationSetupOsCommunication (
   VOID
   )
@@ -2359,12 +2539,10 @@ ErrorSerializationSetupOsCommunication (
   ErstComm->Operation = ERST_OPERATION_INVALID;
   CopyMem (&ErstComm->ErrorLogAddressRange, &mErrorSerialization.BufferInfo.ErrorLogInfo, sizeof (ERST_ERROR_LOG_INFO));
   ErstComm->Status       = EFI_ACPI_6_4_ERST_STATUS_SUCCESS;
-  ErstComm->Timings      = ERST_DEFAULT_TIMING;
-  ErstComm->Timings    <<= ERST_MAX_TIMING_SHIFT;
-  ErstComm->Timings     |= (ERST_DEFAULT_TIMING & ERST_NOMINAL_TIMING_MASK);
   ErstComm->RecordCount  = 0;
   ErstComm->RecordID     = ERST_INVALID_RECORD_ID;
   ErstComm->RecordOffset = 0;
+  ErstComm->Timings      = ERST_DEFAULT_TIMINGS; // Will be populated when we look up Spinor Info
 
   return EFI_SUCCESS;
 }
@@ -2497,6 +2675,8 @@ RegisterErrorSerializationHandler (
   )
 {
   EFI_STATUS  Status;
+
+  ErrorSerializationProtocol.InterruptHandler = ErrorSerializationEventHandler;
 
   Status = EFI_SUCCESS;
   Status = gMmst->MmInstallProtocolInterface (

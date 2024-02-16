@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -32,22 +32,16 @@
 #include <Protocol/TegraCpuFreq.h>
 #include <libfdt.h>
 
-#define HZ_TO_MHZ(x)  (x/1000000)
+#define HZ_TO_MHZ(x)   (x/1000000)
+#define GENMASK_32(n)  (~(0U) >> (32 - n))
 
-#define FUSE_OPT_VENDOR_CODE_0   (0x200)
-#define FUSE_OPT_FAB_CODE_0      (0x204)
-#define FUSE_OPT_LOT_CODE_0_0    (0x208)
-#define FUSE_OPT_LOT_CODE_1_0    (0x20C)
-#define FUSE_OPT_WAFER_ID_0      (0x210)
-#define FUSE_OPT_X_COORDINATE_0  (0x214)
-#define FUSE_OPT_Y_COORDINATE_0  (0x218)
-#define FUSE_OPT_OPS_RESERVED_0  (0x220)
-#define CPUSNMAXSTR              (256)
+#define CPUSNMAXSTR  (320)
 
 STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
 STATIC SMBIOS_TABLE_TYPE3       *Type3Record;
 STATIC CHAR16                   *BoardProductName;
+STATIC CHAR16                   *ProcessorVersion;
 STATIC CHAR16                   *AssetTag;
 STATIC CHAR16                   *SerialNumber;
 STATIC UINT32                   SocketMask;
@@ -126,8 +120,8 @@ exitGetFreqMhz:
   @retval Number of Enabled Cores (0 on failure)
 
 **/
-STATIC
 UINTN
+EFIAPI
 GetCpuEnabledCores (
   UINT8  ProcessorIndex
   )
@@ -169,9 +163,11 @@ PopulateCpuData (
   OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
   )
 {
-  UINTN       CoresEnabled;
-  UINT64      CurFreqHz = 0;
-  UINT64      MaxFreqHz = 0;
+  UINTN   CoresEnabled;
+  UINT64  CurFreqHz = 0;
+  UINT64  MaxFreqHz = 0;
+  UINTN   ChipId;
+
   EFI_STATUS  Status;
 
   Status = GetCpuFreqHz (ProcessorIndex, &CurFreqHz, &MaxFreqHz);
@@ -181,8 +177,17 @@ PopulateCpuData (
     MaxFreqHz = 0;
   }
 
+  ChipId = TegraGetChipID ();
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      MiscProcessorData->MaxSpeed = 0;
+      break;
+    default:
+      MiscProcessorData->MaxSpeed = HZ_TO_MHZ (MaxFreqHz);
+      break;
+  }
+
   MiscProcessorData->CurrentSpeed = HZ_TO_MHZ (CurFreqHz);
-  MiscProcessorData->MaxSpeed     = HZ_TO_MHZ (MaxFreqHz);
   CoresEnabled                    = GetCpuEnabledCores (ProcessorIndex);
   MiscProcessorData->CoreCount    = CoresEnabled;
   MiscProcessorData->CoresEnabled = CoresEnabled;
@@ -289,122 +294,6 @@ OemGetProcessorInformation (
 }
 
 /**
-  GetMaxCacheLevels
-  Gets the Max Cache Levels given the Configuration Manager (CM) Object for Caches.
-
-  @param CmCacheObj    CM Object for Caches.
-
-  @return              Max number of Cache levels.
-**/
-STATIC
-UINTN
-GetMaxCacheLevels (
-  CM_OBJ_DESCRIPTOR  *CmCacheObj
-  )
-{
-  UINTN  MaxCacheLevels = 0;
-
-  if (CmCacheObj) {
-    /*
-     * HardCode this Logic for now, the assumption is that only L1
-     * has a dedicated I/D Cache, all other levels have unified caches.
-     */
-    MaxCacheLevels = CmCacheObj->Count - 1;
-  }
-
-  return MaxCacheLevels;
-}
-
-/**
-  GetCacheIndex
-  Gets the Index into the CM_ARM_CACHE_INFO datastructure for the given CacheLevel.
-
-  @param CmCacheObj    Max number of Cache levels present
-         CacheLevel    Cache Level for which data is needed.
-         DataCache     Is this a DataCache.
-
-  @return              Cache Index on success OR (MaxCacheLevels + 1) on failure.
-**/
-STATIC
-UINTN
-GetCacheIndex (
-  IN UINTN    MaxCacheLevels,
-  IN UINT8    CacheLevel,
-  IN BOOLEAN  DataCache
-  )
-{
-  UINTN  CacheIndex = 0;
-
-  if (CacheLevel > MaxCacheLevels) {
-    CacheIndex = MaxCacheLevels + 1;
-  } else {
-    /*
-       * HardCode this Logic for now, the assumption is that only L1
-       * has a dedicated I/D Cache, all other levels have unified caches.
-       */
-    if (CacheLevel == 1) {
-      if (DataCache) {
-        CacheIndex = 0;
-      } else {
-        CacheIndex = 1;
-      }
-    } else {
-      CacheIndex = MaxCacheLevels - 1;
-    }
-  }
-
-  return CacheIndex;
-}
-
-/**
-  GetCmCacheObject
-  Gets the Configuration Manager(CM) Object for the Caches;
-
-  @param CmCacheObject Output Pram with the CM Cache Object.
-
-  @return              EFI_SUCCESS on success/ error  on failure .
-**/
-STATIC
-EFI_STATUS
-GetCmCacheObject (
-  OUT CM_OBJ_DESCRIPTOR  *CmCacheObj
-  )
-{
-  EFI_STATUS                            Status;
-  EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CfgMgrProtocol;
-
-  Status = gBS->LocateProtocol (
-                  &gEdkiiConfigurationManagerProtocolGuid,
-                  NULL,
-                  (VOID **)&CfgMgrProtocol
-                  );
-  if ( EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to Locate Config Manager Protocol: %r",
-      __FUNCTION__,
-      Status
-      ));
-  } else {
-    Status = CfgMgrProtocol->GetObject (
-                               CfgMgrProtocol,
-                               CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo),
-                               CM_NULL_TOKEN,
-                               CmCacheObj
-                               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "ERROR: Failed to Get Cache Info. Status = %r\n",
-        Status
-        ));
-    }
-  }
-
-  return Status;
-}
-
-/**
   OemGetCacheInformation
   Gets information about the cache at the specified cache level.
 
@@ -426,40 +315,8 @@ OemGetCacheInformation (
   IN OUT SMBIOS_TABLE_TYPE7  *SmbiosCacheTable
   )
 {
-  UINT8              CacheDataIdx = 0;
-  UINT32             WritePolicy;
-  CM_ARM_CACHE_INFO  *CacheInfo;
-  CM_OBJ_DESCRIPTOR  CmCacheObj;
-  UINT8              NumCacheLevels;
-  EFI_STATUS         Status;
-
   if ((SocketMask & (1UL << ProcessorIndex)) == 0) {
     return FALSE;
-  }
-
-  SmbiosCacheTable->CacheConfiguration = CacheLevel - 1;
-  Status                               = GetCmCacheObject (&CmCacheObj);
-
-  // Unknown operational mode
-  if (EFI_ERROR (Status)) {
-    SmbiosCacheTable->CacheConfiguration |= (3 << 8);
-  } else {
-    CacheInfo      = (CM_ARM_CACHE_INFO *)CmCacheObj.Data;
-    NumCacheLevels = GetMaxCacheLevels (&CmCacheObj);
-    CacheDataIdx   = GetCacheIndex (NumCacheLevels, CacheLevel, DataCache);
-    if (CacheDataIdx > NumCacheLevels) {
-      SmbiosCacheTable->CacheConfiguration |= (3 << 8);
-    } else {
-      WritePolicy = CacheInfo[CacheDataIdx].Attributes;
-      WritePolicy = (WritePolicy >> 4) & 0x1;
-      if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_THROUGH) {
-        SmbiosCacheTable->CacheConfiguration |= (0 << 8);
-      } else if (WritePolicy == EFI_ACPI_6_4_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK) {
-        SmbiosCacheTable->CacheConfiguration |= (1 << 8);
-      } else {
-        SmbiosCacheTable->CacheConfiguration |= (3 << 8);
-      }
-    }
   }
 
   return TRUE;
@@ -574,6 +431,76 @@ OemGetProductName (
   }
 
   return BoardProductName;
+}
+
+/**
+  GetProcessorVersion
+  Get the processor version from the DT. For multisocket designs,
+  we can assume all processors in the system are same version.
+
+  @param  NONE.
+
+  @return Null terminated unicode string for the processor version.
+**/
+STATIC
+CHAR16 *
+GetProcessorVersion (
+  VOID
+  )
+{
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  CONST VOID  *Property;
+  INT32       Length;
+  EFI_STATUS  Status;
+  INTN        DtbSmbiosOffset;
+  INTN        Type4Offset;
+  CHAR8       *ProcessorStep = NULL;
+  UINTN       ProcessorStrLen;
+
+  if (ProcessorVersion == NULL) {
+    Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+    if (EFI_ERROR (Status)) {
+      return NULL;
+    }
+
+    DtbSmbiosOffset = fdt_path_offset (DtbBase, "/firmware/smbios");
+    if (DtbSmbiosOffset < 0) {
+      return NULL;
+    }
+
+    Type4Offset = fdt_subnode_offset (DtbBase, DtbSmbiosOffset, "type4@0");
+    if (Type4Offset < 0) {
+      return NULL;
+    }
+
+    Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
+    if ((Property != NULL) && (Length != 0)) {
+      ProcessorStep = TegraGetMinorVersion ();
+      if (ProcessorStep == NULL) {
+        DEBUG ((DEBUG_INFO, "%a: No Processor Step Found\n", __FUNCTION__));
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Processor Step %a %u\n", __FUNCTION__, ProcessorStep, AsciiStrLen (ProcessorStep)));
+      }
+
+      ProcessorStrLen  = ((Length + AsciiStrLen (ProcessorStep) + 2) * sizeof (CHAR16));
+      ProcessorVersion = AllocateZeroPool (ProcessorStrLen);
+      if (ProcessorVersion == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+        return NULL;
+      }
+
+      UnicodeSPrint (
+        ProcessorVersion,
+        ProcessorStrLen,
+        L"%a %a",
+        Property,
+        ProcessorStep
+        );
+    }
+  }
+
+  return ProcessorVersion;
 }
 
 /**
@@ -695,135 +622,6 @@ OemGetSocketDesignation (
 }
 
 /**
- * Get the EFuse protocol for a given ProcessorIndex.
- *
- * @param[in] ProcessorIdx Socket Num to get Efuse protocol.
- *
- * @return Pointer to Efuse Protocol on Success.
- *         NULL on failure.
- **/
-STATIC
-NVIDIA_EFUSE_PROTOCOL *
-GetEfuseProtocol (
-  IN UINT8  ProcessorIdx
-  )
-{
-  UINTN                  EfuseHandles;
-  EFI_HANDLE             *EfuseHandleBuffer;
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
-  NVIDIA_EFUSE_PROTOCOL  *Iter;
-  EFI_STATUS             Status;
-  UINTN                  Index;
-
-  EfuseProtocol = NULL;
-  Status        = gBS->LocateHandleBuffer (
-                         ByProtocol,
-                         &gNVIDIAEFuseProtocolGuid,
-                         NULL,
-                         &EfuseHandles,
-                         &EfuseHandleBuffer
-                         );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Error locating Efuse handles: %r\n", Status));
-    goto ExitGetEfuseProtocol;
-  }
-
-  Iter = NULL;
-
-  for (Index = 0; Index < EfuseHandles; Index++) {
-    Status = gBS->HandleProtocol (
-                    EfuseHandleBuffer[Index],
-                    &gNVIDIAEFuseProtocolGuid,
-                    (VOID **)&Iter
-                    );
-    if (EFI_ERROR (Status) || (Iter == NULL)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "Failed to get EfuseProtocol for handle index %u: %r\n",
-        Index,
-        Status
-        ));
-      continue;
-    }
-
-    if (Iter->Socket == ProcessorIdx) {
-      DEBUG ((DEBUG_ERROR, "Found EFuse Proto %u\n", ProcessorIdx));
-      EfuseProtocol = Iter;
-      break;
-    } else {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a:%d ProcessorIdx %u Socket %u\n",
-        __FUNCTION__,
-        __LINE__,
-        ProcessorIdx,
-        Iter->Socket
-        ));
-    }
-  }
-
-ExitGetEfuseProtocol:
-  return EfuseProtocol;
-}
-
-/**
- * Get the Serial Number for TH500 SOC.
- *
- * @param[in] EfuseProtocol EfuseProtocol to use to query Fuse Registers
- *
- * @return Null terminated Unicode string containing SerialNum on Success.
- *         NULL string on allocation failure.
- **/
-STATIC
-CHAR16 *
-GetCpuSerialNumTh500 (
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol
-  )
-{
-  UINT32  Vendor;
-  UINT32  Fab;
-  UINT32  Lot0;
-  UINT32  Lot1;
-  UINT32  Wafer;
-  UINT32  XValue;
-  UINT32  YValue;
-  UINT32  Reserved;
-  UINTN   CpuBufSize;
-  CHAR16  *Serial = NULL;
-
-  CpuBufSize = CPUSNMAXSTR;
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_VENDOR_CODE_0, &Vendor);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_FAB_CODE_0, &Fab);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_0_0, &Lot0);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_1_0, &Lot1);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_WAFER_ID_0, &Wafer);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_X_COORDINATE_0, &XValue);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_Y_COORDINATE_0, &YValue);
-  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_OPS_RESERVED_0, &Reserved);
-
-  Serial = AllocateZeroPool (CpuBufSize);
-  if (Serial == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate String\n", __FUNCTION__));
-    return NULL;
-  }
-
-  UnicodeSPrint (
-    Serial,
-    CpuBufSize,
-    L"%x-%x-%x-%x-%x-%x-%x-%x",
-    Vendor,
-    Fab,
-    Lot0,
-    Lot1,
-    Wafer,
-    XValue,
-    YValue,
-    Reserved
-    );
-  return Serial;
-}
-
-/**
  * Get the Serial Number for a given Socket Index
  *
  * @param[in] ProcessorIdx Socket Num to get Serial Num.
@@ -831,33 +629,50 @@ GetCpuSerialNumTh500 (
  * @return Null terminated Unicode string containing SerialNum on Success.
  *         NULL string on failure.
  **/
-STATIC
 CHAR16 *
+EFIAPI
 GetCpuSerialNum (
   UINT8  ProcessorIndex
   )
 {
-  UINTN                  ChipId;
-  CHAR16                 *CpuSn;
-  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
+  UINTN   ChipId;
+  UINT32  *EcId;
+  CHAR16  *CpuSn;
+  VOID    *Hob;
 
-  CpuSn         = NULL;
-  ChipId        = TegraGetChipID ();
-  EfuseProtocol = GetEfuseProtocol (ProcessorIndex);
-  if (EfuseProtocol == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get EfuseProtocol\n", __FUNCTION__));
-    goto exitGetCpuSerialNum;
+  CpuSn  = NULL;
+  EcId   = NULL;
+  ChipId = TegraGetChipID ();
+
+  if (ChipId != TH500_CHIP_ID) {
+    return NULL;
   }
 
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      CpuSn = GetCpuSerialNumTh500 (EfuseProtocol);
-      break;
-    default:
-      break;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    EcId = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->UniqueId[ProcessorIndex];
+  } else {
+    ASSERT (FALSE);
   }
 
-exitGetCpuSerialNum:
+  CpuSn = AllocateZeroPool (CPUSNMAXSTR);
+  if (CpuSn == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate String\n", __FUNCTION__));
+    return NULL;
+  }
+
+  UnicodeSPrint (
+    CpuSn,
+    CPUSNMAXSTR,
+    L"0x%08x%08x%08x%08x",
+    EcId[3],
+    EcId[2],
+    EcId[1],
+    EcId[0]
+    );
+
   return CpuSn;
 }
 
@@ -899,9 +714,6 @@ OemUpdateSmbiosInfo (
     case ChassisLocationType02:
       HiiString = (CHAR16 *)PcdGetPtr (PcdBoardChassisLocation);
       break;
-    case BoardManufacturerType02:
-      HiiString = (CHAR16 *)PcdGetPtr (PcdBoardManufacturer);
-      break;
     case SerialNumType01:
     case SerialNumberType02:
       if (SmEepromData) {
@@ -931,6 +743,9 @@ OemUpdateSmbiosInfo (
       break;
     case ProcessorSerialNumType04_0 ... ProcessorSerialNumType04_15:
       HiiString = GetCpuSerialNum (FIELD_TO_INDEX (Field, ProcessorSerialNumType04_0));
+      break;
+    case ProcessorVersionType04:
+      HiiString = GetProcessorVersion ();
       break;
     default:
       break;

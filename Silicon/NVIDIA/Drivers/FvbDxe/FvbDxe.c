@@ -2,7 +2,7 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -407,7 +407,7 @@ FvbWrite (
                                   );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
     ASSERT (FALSE);
     Private->BlockIo->ReadBlocks (
                         Private->BlockIo,
@@ -556,7 +556,7 @@ FvbEraseBlocks (
                                    Private->VariablePartition + FvbOffset + (Index * BlockSize)
                                    );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
         ASSERT (FALSE);
         Private->BlockIo->ReadBlocks (
                             Private->BlockIo,
@@ -679,20 +679,20 @@ ValidateFvHeader (
       (FwVolHeader->Signature != EFI_FVH_SIGNATURE) ||
       (FwVolHeader->FvLength  > FvLength))
   {
-    DEBUG ((EFI_D_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: No Firmware Volume header present\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Check the Firmware Volume Guid
   if ( CompareGuid (&FwVolHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid) == FALSE ) {
-    DEBUG ((EFI_D_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Firmware Volume Guid non-compatible\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   // Verify the header checksum
   Checksum = CalculateSum16 ((UINT16 *)FwVolHeader, FwVolHeader->HeaderLength);
   if (Checksum != 0) {
-    DEBUG ((EFI_D_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
+    DEBUG ((DEBUG_INFO, "%a: FV checksum is invalid (Checksum:0x%X)\n", __FUNCTION__, Checksum));
     return EFI_NOT_FOUND;
   }
 
@@ -702,14 +702,14 @@ ValidateFvHeader (
   if (!CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid) &&
       !CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid))
   {
-    DEBUG ((EFI_D_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Variable Store Guid non-compatible\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   VariableStoreLength = FwVolHeader->FvLength - FwVolHeader->HeaderLength;
 
   if (VariableStoreHeader->Size != VariableStoreLength) {
-    DEBUG ((EFI_D_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Variable Store Length does not match\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
@@ -1230,8 +1230,8 @@ FVBInitialize (
   Status = ValidateFvHeader ((EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_INFO, "%a: The FVB Header is not valid.\n", __FUNCTION__));
-    DEBUG ((EFI_D_INFO, "%a: Installing a correct one for this volume.\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: The FVB Header is not valid.\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: Installing a correct one for this volume.\n", __FUNCTION__));
 
     gBS->SetMem (Private->VariablePartition, Size, 0xFF);
 
@@ -1306,7 +1306,7 @@ FVBInitialize (
         goto NoFlashExit;
       }
 
-      RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocatePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+      RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocateRuntimePool (sizeof (EFI_RT_PROPERTIES_TABLE));
       if (RtProperties == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;

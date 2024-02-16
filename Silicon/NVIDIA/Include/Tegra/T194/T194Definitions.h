@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -35,6 +35,9 @@
 #define T194_GIC_DISTRIBUTOR_BASE          0x03881000
 #define T194_GIC_INTERRUPT_INTERFACE_BASE  0x03882000
 
+// SCRATCH
+#define T194_SCRATCH_BASE  0x0C390000
+
 // BL CARVEOUT OFFSET
 #define T194_BL_CARVEOUT_OFFSET  0x448
 
@@ -46,5 +49,11 @@
 #define ZONE_TEMP          1
 #define CPU_TEMP_ZONE      2
 #define TEMP_POLL_TIME     50                // 5s
+
+// VPR
+#define T194_MEMORY_CONTROLLER_BASE    0x02c10000ULL
+#define MC_VIDEO_PROTECT_BOM_0         0x648
+#define MC_VIDEO_PROTECT_SIZE_MB_0     0x64c
+#define MC_VIDEO_PROTECT_BOM_ADR_HI_0  0x978
 
 #endif //__T194_DEFINES_H__

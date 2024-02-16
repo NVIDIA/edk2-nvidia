@@ -361,7 +361,7 @@ IpmiBlobTransferOpen (
   }
 
   if (!BlobFound) {
-    DEBUG ((DEBUG_ERROR, "%a: Could not find a blob that matches %s\n", __FUNCTION__, BlobId));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find a blob that matches %a\n", __FUNCTION__, BlobId));
     FreePool (BlobSearch);
     return EFI_NOT_FOUND;
   }

@@ -1,7 +1,7 @@
 /** @file
   SSDT for TH500 Socket 3 devices
 
-  Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2023, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -52,13 +52,47 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         RDAT, 960
       }
 
+      OperationRegion (DRBL, SystemMemory, BPMP_DOORBELL_SOCKET_3, BPMP_DOORBELL_SIZE)
+      Field (DRBL, AnyAcc, NoLock, Preserve) {
+        TRIG, 4,
+        ENA,  4,
+        RAW,  4,
+        PEND, 4
+      }
+
       Method (BIPC, 2, Serialized, 0, PkgObj, {IntObj, BuffObj}) {
-        OperationRegion (DRBL, SystemMemory, BPMP_DOORBELL_SOCKET_3, BPMP_DOORBELL_SIZE)
-        Field (DRBL, AnyAcc, NoLock, Preserve) {
-          TRIG, 4,
-          ENA,  4,
-          RAW,  4,
-          PEND, 4
+        If ((TSTA != IVC_STATE_ESTABLISHED) ||
+            (RSTA != IVC_STATE_ESTABLISHED) ||
+            (RWCT != RRCT) || (TWCT != TRCT)) {
+          //Reset IVC channel
+          TSTA = IVC_STATE_SYNC
+          Store (One, TRIG)
+
+          Local0 = 0
+          While ((TSTA != IVC_STATE_ESTABLISHED) ||
+                 (RSTA != IVC_STATE_ESTABLISHED)) {
+            If (Local0 == BPMP_RESPONSE_TIMEOUT_US) {
+              RERR = 1
+              Return (Package() {RERR, RDAT})
+            }
+
+            If (RSTA == IVC_STATE_SYNC) {
+              TWCT = 0
+              RRCT = 0
+              TSTA = IVC_STATE_ACK
+              Store (One, TRIG)
+            } ElseIf (TSTA == IVC_STATE_ACK) {
+              TSTA = IVC_STATE_ESTABLISHED
+              Store (One, TRIG)
+            } ElseIf ((TSTA == IVC_STATE_SYNC) && (RSTA == IVC_STATE_ACK)) {
+              TWCT = 0
+              RRCT = 0
+              TSTA = IVC_STATE_ESTABLISHED
+              Store (One, TRIG)
+            }
+            Local0++
+            Stall(1)
+          }
         }
 
         TMRQ = Arg0
@@ -67,11 +101,30 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         Increment (TWCT)
         Store (One, TRIG)
 
+        Local0 = 0
         While (RWCT == RRCT) {
-          Sleep (10)
+          If (Local0 == BPMP_RESPONSE_TIMEOUT_US) {
+            RERR = 1
+            Return (Package() {RERR, RDAT})
+          }
+          Stall (1)
+          Local0++
         }
         Increment (RRCT)
         Return (Package() {RERR, RDAT})
+      }
+
+      Method (CONV, 1, Serialized, 0, IntObj, IntObj) {
+        Local0 = Arg0
+        Local2 = Local0 >> TH500_TWOS_COMP_SHIFT
+        If (Local2 > 0) {
+            //two's complement for negatives
+            Local3 = (Local0 ^ XOR_MASK) + 1
+            Local1 = 2732 - (Local3 / 100)
+        } Else {
+            Local1 = (Local0 / 100) + 2732
+        }
+        Return (Local1)
       }
 
       Method (TEMP, 1, Serialized, 0, IntObj, IntObj) {
@@ -86,10 +139,8 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
           Return (2732)
         }
         CreateDWordField (DerefOf (Index (Local1, 1)), 0x00, TEMP)
-        Local3 = TEMP / 100
-        Local4 = 2732
-        Add (Local3, Local4, Local3)
-        Return (Local3)
+        Local2 = \_SB.BPM3.CONV(TEMP)
+        Return (Local2)
       }
 
       Method (TELM, 2, Serialized, 0, IntObj, {IntObj, IntObj}) {
@@ -99,6 +150,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         Local3 = 0
         Local4 = 0
         Local5 = 0
+        Local6 = 0
 
         If ((Arg0 < TH500_MODULE_PWR) || (Arg0 > TH500_SOC_PWR)) {
           Return (PWR_METER_ERR_RETURN)
@@ -126,7 +178,9 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
           If (ERR != 0) {
             Return (PWR_METER_ERR_RETURN)
           }
-          CreateQWordField (DerefOf (Index (Local1, 1)), 0x00, BUFF)
+          Store (DerefOf (Index (Local1, 1)), Local6)
+          Or (Local6, TH500_AMAP_START_SOCKET_3, Local6)
+          CreateQWordField (Local6, 0x00, BUFF)
 
           OperationRegion (TELD, SystemMemory, BUFF, 0x180)
           Field (TELD, AnyAcc, NoLock, Preserve) {
@@ -146,18 +200,23 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
             VFG2, 32
           }
 
+          Store (Zero, PWRV)
           Switch (Arg0) {
             Case (TH500_MODULE_PWR) {
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS) {
                 And (VFG0, TH500_MODULE_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (MPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (MAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
               Break
@@ -168,12 +227,16 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
                 And (VFG0, TH500_TH500_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (TPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (TAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
               Break
@@ -184,12 +247,16 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
                 And (VFG0, TH500_CPU_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (CPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (CAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
               Break
@@ -200,12 +267,16 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
                 And (VFG0, TH500_SOC_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (SPWR, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
-              If (Arg1 = PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
+              If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (SAPW, PWRV)
+                } Else {
+                  Store (PWR_METER_ERR_RETURN, PWRV)
                 }
               }
               Break
@@ -243,17 +314,13 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
       }
 
       Method (GPRL, 1, Serialized, 0, IntObj, IntObj) {
-        Local0 = Buffer (16) {}
+        Local0 = Buffer (8) {}
 
         CreateDWordField (Local0, 0x00, CMD)
         CreateDWordField (Local0, 0x04, LIID)
-        CreateDWordField (Local0, 0x08, LISR)
-        CreateDWordField (Local0, 0x0C, LITY)
 
-        CMD = TH500_PWR_LIMIT_GET
+        CMD = TH500_PWR_LIMIT_CURR_CAP
         LIID = Arg0
-        LISR = TH500_PWR_LIMIT_SRC_INB
-        LITY = TH500_PWR_LIMIT_TYPE_TARGET_CAP
 
         Local1 = \_SB.BPM3.BIPC (MRQ_PWR_LIMIT, Local0)
         CreateDWordField (DerefOf (Index (Local1, 0)), 0x00, ERR)
@@ -344,12 +411,31 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
     External(\_SB.C003.C052)
 
     //---------------------------------------------------------------------
+    // Thermal Zone for TLimit
+    //---------------------------------------------------------------------
+
+    ThermalZone (TZL3) {
+      OperationRegion (TL30, SystemMemory, TH500_TLIMIT_SOCKET_3, TH500_TLIMIT_REGSIZE)
+      Field (TL30, AnyAcc, NoLock, Preserve) {
+        TLIM, 32
+      }
+      Method(_TMP) {
+        Local0 = 0
+        Local0 = \_SB.BPM3.CONV(TLIM)
+        return (Local0)
+      }
+      Method(_CRT) { Return (TH500_THERMAL_ZONE_CRT + 2732) }
+      Name (_STR, Unicode ("Thermal Zone Skt3 TLimit"))
+    }
+
+    //---------------------------------------------------------------------
     // Module Power Device Socket 3
     //---------------------------------------------------------------------
     Device (PM30)
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 30)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)
@@ -426,6 +512,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 31)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0xAAAAAAAA)
@@ -452,7 +539,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         \_SB.PM31.MAXP,
         "",                                  // Model Number - NULL
         "",                                  // Serial Number - NULL
-        "TH500 Power Socket 3"               // OEM Information - "TH500 Power Socket 3"
+        "Grace Power Socket 3"               // OEM Information - "Grace Power Socket 3"
       })
 
       Method (_PMC) {
@@ -518,6 +605,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 32)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)
@@ -594,6 +682,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
     {
       Name (_HID, "ACPI000D")
       Name (_UID, 33)
+      Name (_STA, 0)
       Name (CAI, PWR_METER_MEASUREMENT_SAMPLING_TIME_50MS)
       Name (HWLT, 0)
       Name (MINP, 0x00000000)
@@ -619,7 +708,7 @@ DefinitionBlock ("BpmpSsdtSocket3.aml", "SSDT", 2, "NVIDIA", "BPMP_S3", 0x000000
         \_SB.PM33.MAXP,
         "",                                // Model Number - NULL
         "",                                // Serial Number - NULL
-        "SoC Power Socket 3"               // OEM Information - "SoC Power Socket 3"
+        "SysIO Power Socket 3"             // OEM Information - "SysIO Power Socket 3"
       })
 
       Method (_PMC) {

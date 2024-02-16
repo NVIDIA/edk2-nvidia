@@ -75,11 +75,11 @@ ReadNorFlashRegister (
   Packet.RxLen      = sizeof (UINT8);
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash register.\n", __FUNCTION__));
   }
 
   return Status;
@@ -116,24 +116,22 @@ WaitNorFlashWriteComplete (
     if (Count == NOR_SR1_WIP_RETRY_CNT) {
       Count = 0;
       if (TimeOutMessage == FALSE) {
-        DEBUG ((EFI_D_ERROR, "%a: NOR flash write transactions slower than usual.\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: NOR flash write transactions slower than usual.\n", __FUNCTION__));
         TimeOutMessage = TRUE;
       }
     }
 
-    MicroSecondDelay (Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QUICK_TIMEOUT : SAFE_TIMEOUT);
-
     // Read WIP status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
       return Status;
     }
 
     Count++;
   } while ((Resp & NOR_SR1_WIP_BMSK) != 0);
 
-  DEBUG ((EFI_D_INFO, "%a: NOR flash write complete.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: NOR flash write complete.\n", __FUNCTION__));
   return Status;
 }
 
@@ -173,7 +171,7 @@ ConfigureNorFlashWriteEnLatch (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
   RegCmd = NOR_READ_SR1;
 
@@ -184,7 +182,7 @@ ConfigureNorFlashWriteEnLatch (
     if (Count == NOR_SR1_WEL_RETRY_CNT) {
       Count = 0;
       if (TimeOutMessage == FALSE) {
-        DEBUG ((EFI_D_ERROR, "%a: NOR flash write enable latch slower than usual.\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: NOR flash write enable latch slower than usual.\n", __FUNCTION__));
         TimeOutMessage = TRUE;
       }
     }
@@ -192,23 +190,21 @@ ConfigureNorFlashWriteEnLatch (
     // Configure WREN
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not program WREN latch.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not program WREN latch.\n", __FUNCTION__));
       return Status;
     }
-
-    MicroSecondDelay (Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QUICK_TIMEOUT : SAFE_TIMEOUT);
 
     // Read WREN status
     Status = ReadNorFlashRegister (Private, &RegCmd, sizeof (RegCmd), &Resp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash status 1 register.\n", __FUNCTION__));
       return Status;
     }
 
     Count++;
   } while ((Resp & NOR_SR1_WEL_BMSK) != Cmp);
 
-  DEBUG ((EFI_D_INFO, "%a: NOR flash WREN %s.\n", __FUNCTION__, Enable ? L"enabled" : L"disabled"));
+  DEBUG ((DEBUG_INFO, "%a: NOR flash WREN %s.\n", __FUNCTION__, Enable ? L"enabled" : L"disabled"));
   return Status;
 }
 
@@ -276,18 +272,18 @@ ReadNorFlashSFDP (
   Packet.RxLen      = sizeof (SFDPHeader);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP header.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   // Verify the read SFDP signature
   SFDPSignature = NOR_SFDP_SIGNATURE;
   if (0 != CompareMem (&SFDPHeader.SFDPSignature, &SFDPSignature, sizeof (SFDPHeader.SFDPSignature))) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's SFDP signature invalid.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's SFDP signature invalid.\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
@@ -314,11 +310,11 @@ ReadNorFlashSFDP (
   Packet.RxLen      = (SFDPHeader.NumParamHdrs + 1) * sizeof (NOR_SFDP_PARAM_TBL_HDR);
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameter table headers.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP parameter table headers.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -332,7 +328,7 @@ ReadNorFlashSFDP (
   }
 
   if (Count < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP parameter table header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP parameter table header.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -362,11 +358,11 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParamBasicTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP parameters.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP parameters.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -380,7 +376,7 @@ ReadNorFlashSFDP (
   }
 
   if (Count < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP 4 byte instruction parameter table header.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP 4 byte instruction parameter table header.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -410,18 +406,18 @@ ReadNorFlashSFDP (
   Packet.RxLen      = SFDPParam4ByteInstructionTblSize;
   Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = 0;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP 4 byte instruction parameters.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) ||
+  if ((SFDPParam4ByteInstructionTbl->ReadCmd0C == FALSE) &&
       (SFDPParam4ByteInstructionTbl->ReadCmd13 == FALSE))
   {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's single bit RW unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -434,7 +430,7 @@ ReadNorFlashSFDP (
 
   // Page write has to be supported
   if (SFDPParam4ByteInstructionTbl->WriteCmd12 == FALSE) {
-    DEBUG ((EFI_D_ERROR, "%a: NOR flash's single page Write unsupported.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NOR flash's single page Write unsupported.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -445,7 +441,7 @@ ReadNorFlashSFDP (
   if (MemoryDensity & BIT31) {
     MemoryDensity &= ~BIT31;
     if (MemoryDensity < 32) {
-      DEBUG ((EFI_D_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: NOR flash's memory density unsupported.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -480,7 +476,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count < 0) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter table header.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter table header.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -510,11 +506,11 @@ ReadNorFlashSFDP (
     Packet.RxLen      = SFDPParamSectorTblSize;
     Packet.WaitCycles = NOR_SFDP_WAIT_CYCLES;
     Packet.ChipSelect = Private->QspiChipSelect;
-    Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+    Packet.Control    = 0;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not read NOR flash's SFDP sector parameters.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
@@ -535,7 +531,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  SFDPParamSectorTblHeader->ParamTblLen) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter mapping table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter mapping table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -561,7 +557,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -576,7 +572,7 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's SFDP first sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's SFDP first sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -596,13 +592,13 @@ ReadNorFlashSFDP (
   }
 
   if (Count >=  NOR_SFDP_ERASE_COUNT) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's uniform block size in SFDP sector parameter erase table.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's uniform erase table supported in SFDP.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's uniform erase table supported in SFDP.\n", __FUNCTION__));
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -621,13 +617,13 @@ ReadNorFlashSFDP (
     }
 
     if (Count >=  NOR_SFDP_ERASE_COUNT) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid block size in SFDP sector parameter erase table.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's hybrid block size in SFDP sector parameter erase table.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
 
     if (!(SFDPParam4ByteInstructionTbl->EraseTypeSupported & (1 << Count))) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not find compatible NOR flash's hybrid erase table supported in SFDP.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not find compatible NOR flash's hybrid erase table supported in SFDP.\n", __FUNCTION__));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
@@ -635,9 +631,9 @@ ReadNorFlashSFDP (
     Private->PrivateFlashAttributes.HybridEraseCmd = SFDPParam4ByteInstructionTbl->EraseInstruction[Count];
   }
 
-  // If basic parameter table size is more than NOR_SFDP_PRM_TBL_LEN_JESD216,
-  // read page size from the table. Otherwise default to NOR_SFDP_WRITE_DEF_PAGE
-  if (SFDPParamBasicTblSize > NOR_SFDP_PRM_TBL_LEN_JESD216) {
+  // If basic parameter table size is large enough to contain the 11th DWORD,
+  // parse it. Otherwise use default values
+  if (SFDPParamBasicTblSize > OFFSET_OF (NOR_SFDP_PARAM_BASIC_TBL, Dword11)) {
     Private->PrivateFlashAttributes.PageSize = 1 << SFDPParamBasicTbl->PageSize;
     // Override page size for newer flashes
     if (Private->PrivateFlashAttributes.PageSize > NOR_SFDP_WRITE_DEF_PAGE) {
@@ -646,8 +642,61 @@ ReadNorFlashSFDP (
       // to support higher page sizes.
       Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
     }
+
+    // Calculate program times based on JEDEC Standard 216F.02
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs =
+      (SFDPParamBasicTbl->ByteProgramTypicalTimeFirst + 1) * (SFDPParamBasicTbl->ByteProgramTypicalTimeFirstUnits ? 8 : 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramFirstByteTimeUs = %u (FirstByte = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeFirst,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeFirstUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs =
+      (SFDPParamBasicTbl->ByteProgramTypicalTimeAdditional + 1) * (SFDPParamBasicTbl->ByteProgramTypicalTimeAdditionalUnits ? 8 : 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramAdditionalByteTimeUs = %u (AdditionalByte = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeAdditional,
+      SFDPParamBasicTbl->ByteProgramTypicalTimeAdditionalUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs =
+      (SFDPParamBasicTbl->PageProgramTypicalTime + 1) * (SFDPParamBasicTbl->PageProgramTypicalTimeUnits ? 64 : 8);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramPageTimeUs = %u (Page = %u, Units = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs,
+      SFDPParamBasicTbl->PageProgramTypicalTime,
+      SFDPParamBasicTbl->PageProgramTypicalTimeUnits
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize = 1 << SFDPParamBasicTbl->PageSize;
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramPageSize = %u (PageSize = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize,
+      SFDPParamBasicTbl->PageSize
+      ));
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier = 2 * (SFDPParamBasicTbl->ProgramMaxTimeMultiplier + 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ProgramMaxTimeMultiplier = %u (Multiplier = %u)\n",
+      __FUNCTION__,
+      Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier,
+      SFDPParamBasicTbl->ProgramMaxTimeMultiplier
+      ));
   } else {
-    Private->PrivateFlashAttributes.PageSize = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.PageSize                                    = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramFirstByteTimeUs      = NOR_SFDP_PROGRAM_FIRST_BYTE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramAdditionalByteTimeUs = NOR_SFDP_PROGRAM_ADDITIONAL_BYTE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageTimeUs           = NOR_SFDP_PROGRAM_PAGE_TIME_DEFAULT;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramPageSize             = NOR_SFDP_WRITE_DEF_PAGE;
+    Private->PrivateFlashAttributes.FlashAttributes.ProgramMaxTimeMultiplier    = NOR_SFDP_PROGRAM_MAX_TIME_MULTIPLIER_DEFAULT;
   }
 
   Private->FlashInstance = NOR_SFDP_SIGNATURE;
@@ -704,23 +753,6 @@ NorFlashGetAttributes (
 
   CopyMem (Attributes, &Private->PrivateFlashAttributes.FlashAttributes, sizeof (NOR_FLASH_ATTRIBUTES));
 
-  return EFI_SUCCESS;
-}
-
-EFI_STATUS
-NorFlashSetMode (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN NOR_FLASH_MODE             Mode
-  )
-{
-  NOR_FLASH_PRIVATE_DATA  *Private;
-
-  if (This == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Private                                    = NOR_FLASH_PRIVATE_DATA_FROM_NOR_FLASH_PROTOCOL (This);
-  Private->PrivateFlashAttributes.AccessMode = Mode;
   return EFI_SUCCESS;
 }
 
@@ -790,7 +822,7 @@ NorFlashRead (
   Packet.RxBuf      = Buffer;
   Packet.RxLen      = Size;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
   DEBUG ((
     DEBUG_INFO,
@@ -802,51 +834,15 @@ NorFlashRead (
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not read data from NOR flash.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not read data from NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully read data from NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully read data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
   return Status;
-}
-
-EFI_STATUS
-NorFlashReadSafe (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Offset,
-  IN UINT32                     Size,
-  IN VOID                       *Buffer
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashRead (This, Offset, Size, Buffer);
-}
-
-EFI_STATUS
-NorFlashReadQuick (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Offset,
-  IN UINT32                     Size,
-  IN VOID                       *Buffer
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashRead (This, Offset, Size, Buffer);
 }
 
 /**
@@ -971,7 +967,7 @@ NorFlashErase (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed hybrid erase: %r\n",
         __FUNCTION__,
         Status
@@ -986,7 +982,7 @@ NorFlashErase (
   for (Block = Lba; Block < (Lba + NumLba); Block++) {
     Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
@@ -1005,28 +1001,28 @@ NorFlashErase (
     Packet.RxLen      = 0;
     Packet.WaitCycles = 0;
     Packet.ChipSelect = Private->QspiChipSelect;
-    Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+    Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
     Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not erase data from NOR flash.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = WaitNorFlashWriteComplete (Private);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
       goto ErrorExit;
     }
 
     Status = ConfigureNorFlashWriteEnLatch (Private, FALSE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
       goto ErrorExit;
     }
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully erased data from NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully erased data from NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
@@ -1051,40 +1047,6 @@ NorFlashUniformErase (
   )
 {
   return NorFlashErase (This, Lba, NumLba, FALSE);
-}
-
-EFI_STATUS
-NorFlashUniformEraseSafe (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Lba,
-  IN UINT32                     NumLba
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashUniformErase (This, Lba, NumLba);
-}
-
-EFI_STATUS
-NorFlashUniformEraseQuick (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Lba,
-  IN UINT32                     NumLba
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashUniformErase (This, Lba, NumLba);
 }
 
 /**
@@ -1134,7 +1096,7 @@ NorFlashWriteSinglePage (
   ZeroMem (Private->CommandBuffer, CmdSize + Size);
   Status = ConfigureNorFlashWriteEnLatch (Private, TRUE);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not enable NOR flash WREN.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
@@ -1153,27 +1115,27 @@ NorFlashWriteSinglePage (
   Packet.RxLen      = 0;
   Packet.WaitCycles = 0;
   Packet.ChipSelect = Private->QspiChipSelect;
-  Packet.Control    = Private->PrivateFlashAttributes.AccessMode == NOR_FLASH_MODE_QUICK ? QSPI_CONTROLLER_CONTROL_FAST_MODE : 0;
+  Packet.Control    = QSPI_CONTROLLER_CONTROL_FAST_MODE;
 
   Status = Private->QspiController->PerformTransaction (Private->QspiController, &Packet);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   Status = WaitNorFlashWriteComplete (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not complete NOR flash write.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
   Status = ConfigureNorFlashWriteEnLatch (Private, FALSE);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Could not disable NOR flash WREN.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not disable NOR flash WREN.\n", __FUNCTION__));
     goto ErrorExit;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
 ErrorExit:
 
@@ -1232,7 +1194,7 @@ NorFlashWrite (
 
     Status = NorFlashWriteSinglePage (This, Offset, BytesToWrite, Buffer);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Could not write data to NOR flash.\n", __FUNCTION__));
       return Status;
     }
 
@@ -1241,45 +1203,9 @@ NorFlashWrite (
     Size   -= BytesToWrite;
   }
 
-  DEBUG ((EFI_D_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Successfully wrote data to NOR flash.\n", __FUNCTION__));
 
   return Status;
-}
-
-EFI_STATUS
-NorFlashWriteSafe (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Offset,
-  IN UINT32                     Size,
-  IN VOID                       *Buffer
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_SAFE);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashWrite (This, Offset, Size, Buffer);
-}
-
-EFI_STATUS
-NorFlashWriteQuick (
-  IN NVIDIA_NOR_FLASH_PROTOCOL  *This,
-  IN UINT32                     Offset,
-  IN UINT32                     Size,
-  IN VOID                       *Buffer
-  )
-{
-  EFI_STATUS  Status;
-
-  Status = NorFlashSetMode (This, NOR_FLASH_MODE_QUICK);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  return NorFlashWrite (This, Offset, Size, Buffer);
 }
 
 /**
@@ -1516,14 +1442,10 @@ NorFlashInitialise (
                                               EFI_FVB2_ERASE_POLARITY |
                                               EFI_FVB2_WRITE_STATUS |
                                               EFI_FVB2_WRITE_ENABLED_CAP;
-    Private->NorFlashProtocol.GetAttributes    = NorFlashGetAttributes;
-    Private->NorFlashProtocol.Read             = NorFlashReadSafe;
-    Private->NorFlashProtocol.Write            = NorFlashWriteSafe;
-    Private->NorFlashProtocol.Erase            = NorFlashUniformEraseSafe;
-    Private->NorFlashProtocol.QuickRead        = NorFlashReadQuick;
-    Private->NorFlashProtocol.QuickWrite       = NorFlashWriteQuick;
-    Private->NorFlashProtocol.QuickErase       = NorFlashUniformEraseQuick;
-    Private->PrivateFlashAttributes.AccessMode = NOR_FLASH_MODE_SAFE;
+    Private->NorFlashProtocol.GetAttributes = NorFlashGetAttributes;
+    Private->NorFlashProtocol.Read          = NorFlashRead;
+    Private->NorFlashProtocol.Write         = NorFlashWrite;
+    Private->NorFlashProtocol.Erase         = NorFlashUniformErase;
 
     Status = gMmst->MmInstallProtocolInterface (
                       &Private->NorFlashHandle,

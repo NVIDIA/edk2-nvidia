@@ -2,7 +2,7 @@
   Configuration Manager Data of MPAM Table
   Memory System Resource Partitioning and Monitoring Table
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -253,10 +253,7 @@ UpdateMscNodeInfo (
             (AsciiStrCmp (InterruptData[InterruptIndex].Name, "error") == 0))
         {
           ASSERT (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE);
-          MscNodeInfo[Index].ErrorInterrupt = InterruptData[InterruptIndex].Interrupt +
-                                              (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE ?
-                                               DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                               DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+          MscNodeInfo[Index].ErrorInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[InterruptIndex]);
 
           // Affinity routed to the socket ID
           MscNodeInfo[Index].ErrorInterruptAff = Index;
@@ -272,10 +269,7 @@ UpdateMscNodeInfo (
                    (AsciiStrCmp (InterruptData[InterruptIndex].Name, "overflow") == 0))
         {
           ASSERT (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE);
-          MscNodeInfo[Index].OverflowInterrupt = InterruptData[InterruptIndex].Interrupt +
-                                                 (InterruptData[InterruptIndex].Type == INTERRUPT_SPI_TYPE ?
-                                                  DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                  DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
+          MscNodeInfo[Index].OverflowInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[InterruptIndex]);
 
           // Affinity routed to the socket ID
           MscNodeInfo[Index].OverflowInterruptAff = Index;
@@ -415,6 +409,7 @@ InstallMpamTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 

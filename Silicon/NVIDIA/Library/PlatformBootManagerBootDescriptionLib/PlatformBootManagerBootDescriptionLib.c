@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerBootDescriptionLib library class interfaces.
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/HiiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
 
 #define PLATFORM_BOOT_MANAGER_BOOT_DESCRIPTION_GUID \
@@ -49,6 +50,7 @@ PlatformLoadFileBootDescriptionHandler (
   CHAR16                    *Desc;
   UINTN                     DataSize;
   UINT32                    BootMode;
+  MiscCmdType               MiscCmd;
   BOOLEAN                   RecoveryBoot;
 
   Status = gBS->HandleProtocol (
@@ -69,6 +71,11 @@ PlatformLoadFileBootDescriptionHandler (
   DataSize     = sizeof (BootMode);
   Status       = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
   if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+    RecoveryBoot = TRUE;
+  }
+
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE))) {
     RecoveryBoot = TRUE;
   }
 

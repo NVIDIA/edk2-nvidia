@@ -12,10 +12,10 @@
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = TegraI2cDxe
   FILE_GUID                      = e733ecc5-2ee4-4ee4-82c4-81f69433f22d
-  MODULE_TYPE                    = DXE_DRIVER
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
 
-  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+  ENTRY_POINT                    = TegraI2cInitialize
 
 [Sources.common]
   TegraI2cDxe.c
@@ -30,6 +30,8 @@
   BaseLib
   UefiLib
   UefiBootServicesTableLib
+  DxeServicesTableLib
+  UefiRuntimeLib
   DebugLib
   PrintLib
   TimerLib
@@ -49,6 +51,7 @@
   gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid
 
 [Guids]
+  gEfiEventVirtualAddressChangeGuid
   gNVIDIAI2cUnknown
   gNVIDIAEeprom
   gNVIDIAI2cTca9539
@@ -58,6 +61,7 @@
   gNVIDIAI2cNcp81599
   gNVIDIAI2cNct3018y
   gNVIDIAI2cBmcSSIF
+  gNVIDIAI2cFpga
 
 [Depex]
   gNVIDIAPinControlProtocolGuid

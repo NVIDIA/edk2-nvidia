@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,16 +17,23 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
-#include "TegraSerialPortLibPrivate.h"
-
 STATIC
-SERIAL_MAPPING  gSerialCompatibilityMap[] = {
+SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
   { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,sbsa-uart"       },
   { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject,    "nvidia,tegra20-uart" },
   { TEGRA_UART_TYPE_NONE,  NULL,                             NULL                  },
 };
+
+STATIC
+SERIAL_MAPPING  gPresilSerialCompatibilityMap[] = {
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
+  { TEGRA_UART_TYPE_NONE, NULL,                         NULL            },
+};
+
+STATIC
+SERIAL_MAPPING  *gSerialCompatibilityMap = NULL;
 
 /** Identify the serial device hardware
 
@@ -60,7 +67,7 @@ GetRawDeviceTreePointer (
 VOID
 EFIAPI
 SerialPortIdentify (
-  VOID
+  SERIAL_MAPPING  **SerialMapping OPTIONAL
   )
 {
   EFI_STATUS                        Status;
@@ -74,6 +81,17 @@ SerialPortIdentify (
   UINTN                             DeviceTreeSize;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData;
 
+  Platform = TegraGetPlatform ();
+  if (Platform == TEGRA_PLATFORM_SILICON) {
+    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
+  } else {
+    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
+  }
+
+  if (SerialMapping != NULL) {
+    *SerialMapping = gSerialCompatibilityMap;
+  }
+
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
 
@@ -83,6 +101,13 @@ SerialPortIdentify (
 
   UartFound = FALSE;
   Platform  = TegraGetPlatform ();
+
+  if (Platform == TEGRA_PLATFORM_SILICON) {
+    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
+  } else {
+    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
+  }
+
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if ((Platform == TEGRA_PLATFORM_SILICON) &&
         (Mapping->Type == TEGRA_UART_TYPE_16550))
@@ -106,6 +131,8 @@ SerialPortIdentify (
         Mapping->BaseAddress = RegData.BaseAddress;
         // Update UART base address
         SetTegraUARTBaseAddress (Mapping->BaseAddress);
+      } else {
+        Mapping->BaseAddress = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
       }
 
       Mapping->IsFound = TRUE;
@@ -137,7 +164,7 @@ SerialPortInitialize (
   RETURN_STATUS   Status;
   SERIAL_MAPPING  *Mapping;
 
-  SerialPortIdentify ();
+  SerialPortIdentify (NULL);
 
   for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
     if (Mapping->IsFound == TRUE) {
@@ -149,6 +176,38 @@ SerialPortInitialize (
   }
 
   return RETURN_SUCCESS;
+}
+
+/**
+  Return the active SERIAL_MAPPING or NULL.
+
+  @retval SERIAL_MAPPING*  If a mapping is active
+  @retval NULL             If no mapping is active
+
+**/
+STATIC
+SERIAL_MAPPING *
+EFIAPI
+GetActiveMapping (
+  )
+{
+  SERIAL_MAPPING  *Mapping;
+
+  Mapping = NULL;
+
+  if (gSerialCompatibilityMap != NULL) {
+    for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+      if (Mapping->IsFound == TRUE) {
+        break;
+      }
+    }
+  }
+
+  if ((Mapping == NULL) || (Mapping->Compatibility == NULL)) {
+    return NULL;
+  }
+
+  return Mapping;
 }
 
 /**
@@ -171,16 +230,16 @@ SerialPortWrite (
   RETURN_STATUS   Status;
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      Status = Mapping->GetObject ()->SerialPortWrite (Mapping->BaseAddress, Buffer, NumberOfBytes);
-      if (RETURN_ERROR (Status)) {
-        return 0;
-      }
+  Mapping = GetActiveMapping ();
+
+  if (Mapping != NULL) {
+    Status = Mapping->GetObject ()->SerialPortWrite (Mapping->BaseAddress, Buffer, NumberOfBytes);
+    if (!RETURN_ERROR (Status)) {
+      return NumberOfBytes;
     }
   }
 
-  return NumberOfBytes;
+  return 0;
 }
 
 /**
@@ -202,13 +261,9 @@ SerialPortRead (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return 0;
   }
 
@@ -230,13 +285,9 @@ SerialPortPoll (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return FALSE;
   }
 
@@ -277,13 +328,9 @@ SerialPortSetControl (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 
@@ -330,13 +377,9 @@ SerialPortGetControl (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 
@@ -387,13 +430,9 @@ SerialPortSetAttributes (
 {
   SERIAL_MAPPING  *Mapping;
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      break;
-    }
-  }
+  Mapping = GetActiveMapping ();
 
-  if (Mapping->Compatibility == NULL) {
+  if (Mapping == NULL) {
     return RETURN_DEVICE_ERROR;
   }
 

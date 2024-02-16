@@ -1,7 +1,7 @@
 /** @file
   PCI Segment Library implementation using PCI Root Bridge I/O Protocol.
 
-  Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -53,7 +53,8 @@ PciSegmentLibConstructor (
                   );
   ASSERT_EFI_ERROR (Status);
   if (EFI_ERROR (Status)) {
-    return Status;
+    Status = EFI_NOT_FOUND;
+    goto Exit;
   }
 
   mNumberOfPciConfigurations = HandleCount;
@@ -61,7 +62,8 @@ PciSegmentLibConstructor (
   mPciConfigurations = AllocatePool (HandleCount * sizeof (NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL *));
   ASSERT (mPciConfigurations != NULL);
   if (mPciConfigurations == NULL) {
-    return EFI_OUT_OF_RESOURCES;
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
   }
 
   //
@@ -76,11 +78,14 @@ PciSegmentLibConstructor (
                     );
     ASSERT_EFI_ERROR (Status);
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto Exit;
     }
   }
 
-  FreePool (HandleBuffer);
+Exit:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
 
   return EFI_SUCCESS;
 }

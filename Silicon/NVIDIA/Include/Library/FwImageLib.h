@@ -2,7 +2,7 @@
 
   FW Image Library
 
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,18 @@
 #define __FW_IMAGE_LIB_H__
 
 #include <Protocol/FwImageProtocol.h>
+
+/**
+  Function called back when FwImage array is updated.
+
+  @retval None
+
+**/
+typedef
+VOID
+(EFIAPI *FW_IMAGE_ADDED_CALLBACK)(
+  VOID
+  );
 
 /**
   Find the NVIDIA_FW_IMAGE_PROTOCOL structure for the given image name.
@@ -50,6 +62,21 @@ NVIDIA_FW_IMAGE_PROTOCOL **
 EFIAPI
 FwImageGetProtocolArray (
   VOID
+  );
+
+/**
+  Register function to call back when FwImage is added.
+
+  @param[in]  Callback              Pointer to callback function or NULL to
+                                    unregister previous callback function.
+
+  @retval None
+
+**/
+VOID
+EFIAPI
+FwImageRegisterImageAddedCallback (
+  FW_IMAGE_ADDED_CALLBACK  Callback
   );
 
 #endif

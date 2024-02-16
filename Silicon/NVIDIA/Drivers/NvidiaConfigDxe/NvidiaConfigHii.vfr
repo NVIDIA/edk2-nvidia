@@ -2,7 +2,7 @@
 *
 *  NVIDIA Config formset.
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -11,6 +11,9 @@
 
 #include <Uefi/UefiMultiPhase.h>
 #include "NvidiaConfigHii.h"
+
+#define EFI_USER_INFO_ACCESS_SETUP_ADMIN_GUID \
+  { 0x85b75607, 0xf7ce, 0x471e, { 0xb7, 0xe4, 0x2a, 0xea, 0x5f, 0x72, 0x32, 0xee } }
 
 formset
   guid      = NVIDIA_CONFIG_FORMSET_GUID,
@@ -43,7 +46,7 @@ formset
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   efivarstore NVIDIA_NEW_DEVICE_HIERARCHY,
-    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = NewDeviceHierarchy,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
@@ -90,6 +93,41 @@ formset
   efivarstore NVIDIA_DGPU_DT_EFIFB_SUPPORT,
     attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
     name  = DgpuDtEfifbSupport,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_UEFI_SHELL_ENABLED,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = UefiShellEnabled,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_REDFISH_HOST_INTERFACE_ENABLED,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = RedfishHostInterface,
+    guid  = NVIDIA_TOKEN_SPACE_GUID;
+
+  efivarstore NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = EnabledPcieNicTopology,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_PRODUCT_INFO,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name = ProductInfo,
+    guid = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_MEMORY_TEST_OPTIONS,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name = MemoryTestControl,
+    guid = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_BOARD_RECOVERY_BOOT,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = BoardRecoveryBoot,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
+  efivarstore NVIDIA_SOC_DISPLAY_HANDOFF_MODE,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = SocDisplayHandoffMode,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
   //
@@ -141,17 +179,33 @@ formset
         flags  = INTERACTIVE,
         key    = KEY_BOOT_CONFIG;
 
+    goto MEMORY_TEST_FORM_ID,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_MEMORY_TEST;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 0;
     goto TH500_CONFIGURATION_FORM_ID,
         prompt = STRING_TOKEN(STR_TH500_CONFIG_FORM_TITLE),
-        help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP);
+        help   = STRING_TOKEN(STR_TH500_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_GRACE_CONFIG;
     endif;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
     goto DEBUG_CONFIGURATION_FORM_ID,
         prompt = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_TITLE),
-        help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP);
+        help   = STRING_TOKEN(STR_DEBUG_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_DEBUG_CONFIG;
     endif;
+
+    goto NVIDIA_PRODUCT_INFO_FORM_ID,
+        prompt = STRING_TOKEN(STR_PRODUCT_INFO_TITLE),
+        help   = STRING_TOKEN(STR_PRODUCT_INFO_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_PRODUCT_INFO;
 
     text
       help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
@@ -207,6 +261,219 @@ formset
         option text = STRING_TOKEN(STR_DISABLED), value = ACPI_TIMER_DISABLE, flags = 0;
         option text = STRING_TOKEN(STR_ENABLED),  value = ACPI_TIMER_ENABLE, flags = 0;
     endoneof;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.RedfishSupported == 0;
+    oneof varid = RedfishHostInterface.Enabled,
+        questionid = KEY_ENABLE_HOST_INTERFACE,
+        prompt = STRING_TOKEN(STR_HOST_INTERFACE_ENABLED_PROMPT),
+        help   = STRING_TOKEN(STR_HOST_INTERFACE_ENABLED_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = HOST_INTERFACE_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = HOST_INTERFACE_ENABLE, flags = DEFAULT;
+    endoneof;
+    endif;
+
+    grayoutif NOT security (EFI_USER_INFO_ACCESS_SETUP_ADMIN_GUID);
+    oneof varid = UefiShellEnabled.Enabled,
+        questionid = KEY_ENABLE_UEFI_SHELL,
+        prompt = STRING_TOKEN(STR_EMBEDDED_UEFI_SHELL_PROMPT),
+        help   = STRING_TOKEN(STR_EMBEDDED_UEFI_SHELL_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = 0x00, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = DEFAULT;
+    endoneof;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmPresent == 0;
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmEnableSettingSupported == 0;
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.TpmEnable,
+        questionid = KEY_ENABLE_TPM,
+        prompt = STRING_TOKEN(STR_TPM_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_TPM_ENABLE_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = 0x00, flags = DEFAULT;
+        option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = 0;
+    endoneof;
+    endif;
+    endif;
+
+    checkbox varid = EnabledPcieNicTopology.Enabled,
+        prompt = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_PROMPT),
+        help   = STRING_TOKEN(STR_ENABLED_PCIE_NIC_TOPOLOGY_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+        default = FALSE,
+    endcheckbox;
+
+    grayoutif ideqval EnabledPcieNicTopology.Enabled == 0;
+    numeric varid = EnabledPcieNicTopology.Segment,
+        prompt = STRING_TOKEN(STR_PCIE_SEGMENT_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+        numeric varid = EnabledPcieNicTopology.Bus,
+        prompt = STRING_TOKEN(STR_PCIE_BUS_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    numeric varid = EnabledPcieNicTopology.Device,
+        prompt = STRING_TOKEN(STR_PCIE_DEVICE_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    numeric varid = EnabledPcieNicTopology.Function,
+        prompt = STRING_TOKEN(STR_PCIE_FUNCTION_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_PCIE_ALLOW_ALL_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 255,
+    endnumeric;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.L4TSupported == 0;
+      checkbox varid = BoardRecoveryBoot.BoardRecoveryBoot,
+          prompt  = STRING_TOKEN(STR_BOARD_RECOVERY_BOOT_PROMPT),
+          help    = STRING_TOKEN(STR_BOARD_RECOVERY_BOOT_HELP),
+          flags   = INTERACTIVE | RESET_REQUIRED,
+          default = FALSE,
+      endcheckbox;
+    endif;
+
+    oneof varid = SocDisplayHandoffMode.Mode,
+      questionid = KEY_SOC_DISPLAY_HANDOFF_MODE,
+      prompt = STRING_TOKEN(STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT),
+      help   = STRING_TOKEN(STR_SOC_DISPLAY_HANDOFF_MODE_HELP),
+      flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+      option text = STRING_TOKEN(STR_NEVER), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER, flags = 0;
+      option text = STRING_TOKEN(STR_ALWAYS), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS, flags = 0;
+      option text = STRING_TOKEN(STR_AUTO), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO, flags = 0;
+    endoneof;
+  endform;
+
+  //
+  // Form for Memory Test
+  //
+  form formid = MEMORY_TEST_FORM_ID,
+    title = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    oneof varid = MemoryTestControl.TestLevel,
+        questionid = KEY_MEMORY_TEST_LEVEL,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_LEVEL_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_LEVEL_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1,
+        option text = STRING_TOKEN(STR_IGNORE), value = MEMORY_TEST_LEVEL_IGNORE, flags = 0;
+        option text = STRING_TOKEN(STR_QUICK),  value = MEMORY_TEST_LEVEL_QUICK, flags = 0;
+        option text = STRING_TOKEN(STR_SPARSE),  value = MEMORY_TEST_LEVEL_SPARSE, flags = 0;
+        option text = STRING_TOKEN(STR_EXTENSIVE),  value = MEMORY_TEST_LEVEL_EXTENSIVE , flags = 0;
+    endoneof;
+
+    checkbox varid = MemoryTestControl.NextBoot,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_NEXT_BOOT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_NEXT_BOOT_HELP),
+        default = FALSE,
+    endcheckbox;
+
+    checkbox varid = MemoryTestControl.SingleBoot,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_SINGLE_BOOT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_SINGLE_BOOT_HELP),
+        default = FALSE,
+    endcheckbox;
+
+    numeric varid = MemoryTestControl.TestIterations,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_ITERATIONS_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_ITERATIONS_HELP),
+        flags = DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 255,
+        step = 1,
+        default = 1,
+    endnumeric;
+
+    checkbox varid = MemoryTestControl.Walking1BitEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_WALKING_1_BIT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_WALKING_1_BIT_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.AddressCheckEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_ADDRESS_CHECK_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_ADDRESS_CHECK_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.MovingInversions01Enabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_01_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_01_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.MovingInversions8BitEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_8BIT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_8BIT_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.MovingInversionsRandomEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_RANDOM_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_RANDOM_HELP),
+        default = FALSE,
+    endcheckbox;
+//    checkbox varid = MemoryTestControl.BlockMoveEnabled,
+//        prompt = STRING_TOKEN(STR_MEMORY_TEST_BLOCK_MOVE_PROMPT),
+//        help   = STRING_TOKEN(STR_MEMORY_TEST_BLOCK_MOVE_HELP),
+//        default = FALSE,
+//    endcheckbox;
+    checkbox varid = MemoryTestControl.MovingInversions64BitEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_64BIT_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_MOVING_INVERSIONS_64BIT_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.RandomNumberSequenceEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_RANDOM_NUMBER_SEQUENCE_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_RANDOM_NUMBER_SEQUENCE_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.Modulo20RandomEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_MODULO20_RANDOM_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_MODULO20_RANDOM_HELP),
+        default = FALSE,
+    endcheckbox;
+    checkbox varid = MemoryTestControl.BitFadeEnabled,
+        prompt = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_PROMPT),
+        help   = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_HELP),
+        default = FALSE,
+    endcheckbox;
+    grayoutif ideqval MemoryTestControl.BitFadeEnabled == 0;
+      numeric varid = MemoryTestControl.BitFadePattern,
+          prompt = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_PATTERN_PROMPT),
+          help   = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_PATTERN_HELP),
+          flags = DISPLAY_UINT_HEX,
+          minimum = 0,
+          maximum = 0xFFFFFFFFFFFFFFFF,
+          step = 1,
+          default = 0xFFFFFFFFFFFFFFFF,
+      endnumeric;
+      numeric varid = MemoryTestControl.BitFadeWait,
+          prompt = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_DELAY_PROMPT),
+          help   = STRING_TOKEN(STR_MEMORY_TEST_BIT_FADE_DELAY_HELP),
+          flags = DISPLAY_UINT_DEC,
+          minimum = 0,
+          maximum = 0xFFFFFFFFFFFFFFFF,
+          step = 1,
+          default = 60000,
+      endnumeric;
+    endif;
   endform;
 
   //
@@ -300,37 +567,82 @@ formset
     subtitle text = STRING_TOKEN(STR_NULL);
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EgmEnabled,
+        questionid = KEY_ENABLE_EGM,
         prompt = STRING_TOKEN(STR_EGM_ENABLE_PROMPT),
         help   = STRING_TOKEN(STR_EGM_ENABLE_HELP),
-        flags  = RESET_REQUIRED,
-        default = FALSE,
+        flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
 
     grayoutif ideqval NVIDIA_CONFIG_HII_CONTROL.EgmEnabled == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.EgmHvSizeMb,
+        questionid = KEY_EGM_HV_SIZE_MB,
         prompt = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_PROMPT),
         help   = STRING_TOKEN(STR_EGM_HV_RESERVED_SIZE_HELP),
-        flags = RESET_REQUIRED | DISPLAY_UINT_DEC,
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
         minimum = 0,
         maximum = 4294967295,
         step = 64,
-        default = 0,
     endnumeric;
     endif;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SpreadSpectrumEnable,
+        questionid = KEY_SPREAD_SPECTRUM,
         prompt = STRING_TOKEN(STR_SPREAD_SPECTRUM_PROMPT),
         help   = STRING_TOKEN(STR_SPREAD_SPECTRUM_HELP),
-        flags  = RESET_REQUIRED,
-        default = FALSE,
+        flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
 
-    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.AtsPageGranule4k,
-        prompt = STRING_TOKEN(STR_ATS_PAGE_GRANULE_PROMPT),
-        help   = STRING_TOKEN(STR_ATS_PAGE_GRANULE_HELP),
-        flags  = RESET_REQUIRED,
-        default = FALSE,
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ModsSpEnableSettingSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.ModsSpEnable,
+        questionid = KEY_MODS_SP_ENABLE,
+        prompt = STRING_TOKEN(STR_MODS_SP_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_MODS_SP_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
     endcheckbox;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnableSettingSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.GpuSmmuBypassEnable,
+        questionid = KEY_GPU_SMMU_BYPASS_ENABLE,
+        prompt = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_GPU_SMMU_BYPASS_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.UartBaudRateSettingSupported == 0;
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.UartBaudRate,
+        questionid = KEY_UART_BAUD_RATE,
+        prompt = STRING_TOKEN(STR_UART_BAUD_RATE_PROMPT),
+        help   = STRING_TOKEN(STR_UART_BAUD_RATE_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_115200), value = UART_BAUD_RATE_115200, flags = 0;
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_57600),  value = UART_BAUD_RATE_57600,  flags = 0;
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_38400),  value = UART_BAUD_RATE_38400,  flags = 0;
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_19200),  value = UART_BAUD_RATE_19200,  flags = 0;
+        option text = STRING_TOKEN(STR_UART_BAUD_RATE_9600),   value = UART_BAUD_RATE_9600,   flags = 0;
+    endoneof;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PerfVersionSettingSupported == 0;
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.PerfVersion,
+        questionid = KEY_PERF_VERSION,
+        prompt = STRING_TOKEN(STR_PERF_VERSION_PROMPT),
+        help   = STRING_TOKEN(STR_PERF_VERSION_HELP),
+        flags = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_PERF_VERSION_DEFAULT), value = PERF_VERSION_DEFAULT, flags = 0;
+        option text = STRING_TOKEN(STR_PERF_VERSION_C1_NCM),  value = PERF_VERSION_C1_NCM,  flags = 0;
+    endoneof;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.EInjEnableSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.EInjEnable,
+        questionid = KEY_EINJ_ENABLE,
+        prompt = STRING_TOKEN(STR_EINJ_ENABLE_PROMPT),
+        help   = STRING_TOKEN(STR_EINJ_ENABLE_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
 
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)
@@ -339,6 +651,28 @@ formset
 
   endform;
 
+  form formid = NVIDIA_PRODUCT_INFO_FORM_ID,
+    title = STRING_TOKEN(STR_PRODUCT_INFO_TITLE);
+    subtitle text = STRING_TOKEN(STR_NULL);
+    string varid = ProductInfo.ChassisAssetTag,
+      questionid = KEY_PRODUCT_CHASSIS_ASSET_TAG,
+      prompt   = STRING_TOKEN(STR_PRODUCT_CHASSIS_ASSET_TAG),
+      help     = STRING_TOKEN(STR_PRODUCT_CHASSIS_ASSET_TAG_HELP),
+      flags   = INTERACTIVE | RESET_REQUIRED,
+      minsize  = 0,
+      maxsize  = ASSET_TAG_MAX_LEN,
+    endstring;
+
+    oneof varid = ProductInfo.AssetTagProtection,
+        questionid = KEY_ASSET_TAG_PROTECTION,
+        prompt = STRING_TOKEN(STR_PRODUCT_ASSET_TAG_PROTECTION),
+        help   = STRING_TOKEN(STR_PRODUCT_ASSET_TAG_PROTECTION_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = ASSET_TAG_PROTECTION_DISABLE, flags = 0;
+        option text = STRING_TOKEN(STR_ENABLED),  value = ASSET_TAG_PROTECTION_ENABLE, flags = 0;
+    endoneof;
+
+  endform;
   ADD_SOCKET_FORM(0)
   ADD_SOCKET_FORM(1)
   ADD_SOCKET_FORM(2)
@@ -389,13 +723,13 @@ formset
     subtitle text = STRING_TOKEN(STR_NULL);
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
       numeric varid = NVIDIA_CONFIG_HII_CONTROL.UefiDebugLevel,
+          questionid = KEY_UEFI_DEBUG_LEVEL,
           prompt = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_PROMPT),
           help   = STRING_TOKEN(STR_UEFI_DEBUG_LEVEL_HELP),
-          flags = RESET_REQUIRED | DISPLAY_UINT_HEX,
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_HEX,
           minimum = 0,
           maximum = 4294967295,
           step = 1,
-          default = 0,
       endnumeric;
     endif; // suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
   endform;

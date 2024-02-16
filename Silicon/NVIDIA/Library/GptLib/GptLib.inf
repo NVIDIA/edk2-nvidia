@@ -3,7 +3,7 @@
 #  GPT - GUID Partition Table Library
 #        This implementation of GPT uses just the secondary GPT table.
 #
-#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -26,4 +26,4 @@
 
 [LibraryClasses]
   BaseLib
-
+  DebugLib

@@ -63,7 +63,7 @@ NewUsbRndisPrivate (
 /**
   Release private data and stop corresponding timer event.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
   @param[in]      DriverBinding Driver binding handle
 
   @retval EFI_SUCCESS           function is finished successfully.
@@ -103,6 +103,12 @@ ReleaseUsbRndisPrivate (
            DriverBinding->DriverBindingHandle,
            Private->ControllerData
            );
+    gBS->CloseProtocol (
+           Private->ControllerData,
+           &gEfiUsbIoProtocolGuid,
+           DriverBinding->DriverBindingHandle,
+           Private->Handle
+           );
     Private->UsbIoDataProtocol = NULL;
   }
 
@@ -122,7 +128,7 @@ ReleaseUsbRndisPrivate (
 }
 
 /**
-  Find private data from early propulated handle
+  Find private data from early populated handle
 
   @param[in]      Controller    Controller handle
 
@@ -332,9 +338,26 @@ UsbRndisDriverStart (
                     &Private->UsbNicInfoProtocol,
                     NULL
                     );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, install SNP protocol failed: %r\n", __FUNCTION__, Status));
+    if (!EFI_ERROR (Status)) {
+      //
+      // Open For Child Device
+      //
+      Status = gBS->OpenProtocol (
+                      Controller,
+                      &gEfiUsbIoProtocolGuid,
+                      (VOID **)&UsbIo,
+                      This->DriverBindingHandle,
+                      Private->Handle,
+                      EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: open protocol by child controller failed: %r\n", __FUNCTION__, Status));
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: install SNP and corresponding protocols failed: %r\n", __FUNCTION__, Status));
     }
+
+    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a: Controller Data: 0x%p done, new handle: 0x%p\n", __FUNCTION__, Controller, Private->Handle));
 
     return Status;
   }
@@ -404,7 +427,7 @@ UsbRndisDriverStart (
 
   DevicePathStr = ConvertDevicePathToText (Private->DevicePathProtocol, TRUE, TRUE);
   if (DevicePathStr != NULL) {
-    DEBUG ((USB_DEBUG_RNDIS, "%a, device path: %s\n", __FUNCTION__, DevicePathStr));
+    DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, device path: %s\n", __FUNCTION__, DevicePathStr));
     FreePool (DevicePathStr);
   }
 
@@ -423,6 +446,8 @@ UsbRndisDriverStart (
     DEBUG ((DEBUG_ERROR, "%a, install caller id failed: %r\n", __FUNCTION__, Status));
     goto OnError;
   }
+
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, install caller ID: %g\n", __FUNCTION__, &gEfiCallerIdGuid));
 
   Private->Handle = NULL;
   Status          = gBS->InstallMultipleProtocolInterfaces (
@@ -495,7 +520,7 @@ UsbRndisDriverStop (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, no caller id found: %r\n", __FUNCTION__, Status));
-    return EFI_UNSUPPORTED;
+    return EFI_SUCCESS;
   }
 
   Private = USB_RNDIS_PRIVATE_DATA_FROM_ID (Id);
@@ -510,6 +535,7 @@ UsbRndisDriverStop (
   //
   // Uninstall caller id.
   //
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, uninstall caller id: %g\n", __FUNCTION__, &gEfiCallerIdGuid));
   Status = gBS->UninstallProtocolInterface (
                   Controller,
                   &gEfiCallerIdGuid,
@@ -522,6 +548,7 @@ UsbRndisDriverStop (
   //
   // Uninstall protocols
   //
+  DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, uninstall protocols\n", __FUNCTION__));
   Status = gBS->UninstallMultipleProtocolInterfaces (
                   Private->Handle,
                   &gEfiDevicePathProtocolGuid,

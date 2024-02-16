@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,8 +34,10 @@
   PhyDxeUtil.c
   PhyMarvell.c
   PhyRealtek.c
+  PhyMicrel.c
   PhyMgbe.c
   DtAcpiMacUpdate.c
+  EqosAdapterInfo.c
 
   nvethernetrm/osd.c
   nvethernetrm/osi/core/debug.c
@@ -85,6 +87,9 @@
   DmaLib
   TimerLib
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gNVIDIAClockNodeProtocolGuid
@@ -93,6 +98,7 @@
   gNVIDIACvmEepromProtocolGuid
   gEfiAcpiTableProtocolGuid                     # PROTOCOL ALWAYS_CONSUMED
   gEfiAcpiSdtProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
+  gEfiAdapterInformationProtocolGuid
 
 [Guids]
   gDwEqosNetNonDiscoverableDeviceGuid
@@ -102,6 +108,7 @@
   gFdtTableGuid
   gEfiAcpiTableGuid
   gEfiEventExitBootServicesGuid
+  gEfiAdapterInfoMediaStateGuid
 
 [Depex]
   gEmbeddedGpioProtocolGuid
@@ -112,4 +119,7 @@
 
 [BuildOptions]
   *_*_*_PP_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT
-  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT -Wno-unused-function -Wno-self-assign
+  # -mno-outline-atomics is required for GCC 10.x and later, which makes
+  # -moutline-atomics the default.  nvethernetrm uses atomics not currently
+  # supported by CompilerIntrinsicsLib.
+  *_*_*_CC_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT -Wno-unused-function -Wno-self-assign -mno-outline-atomics

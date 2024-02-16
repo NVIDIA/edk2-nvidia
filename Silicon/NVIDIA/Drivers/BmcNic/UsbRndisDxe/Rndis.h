@@ -29,7 +29,7 @@
 //
 // Bulk endpoints
 //
-#define USB_BSSE_CLASS_CDC_DATA             0x0A
+#define USB_BASE_CLASS_CDC_DATA             0x0A
 #define   USB_SUB_CLASS_CODE_CDC_DATA_NONE  0x00
 #define   USB_PROTOCOL_CODE_CDC_DATA_NONE   0x00
 
@@ -48,8 +48,8 @@
 
 #define USB_INCREASE_REQUEST_ID(a)  ((a)++)
 #define USB_RESET_REQUEST_ID(a)     ((a) = 0x1)
-#define USB_BACKGROUND_PULL_INTERVAL  (1000 * TICKS_PER_MS) // slow down polling to 1 second interval.
-#define USB_LANGUAGE_ID_ENGLISH       0x0409                // English
+#define USB_BACKGROUND_PULL_INTERVAL  (10 * TICKS_PER_MS) // slow down polling to 10 ms interval.
+#define USB_LANGUAGE_ID_ENGLISH       0x0409              // English
 
 //
 // Per MS-RNDIS
@@ -386,7 +386,7 @@ UsbRndisInitialDevice (
 /**
   Initial RNDIS device and query corresponding data for SNP use.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
@@ -404,7 +404,7 @@ UsbRndisInitialRndisDevice (
   @param[in]      RequestId         RNDIS message request ID
   @param[in]      Oid               RNDIS OID
   @param[in]      Length            Buffer length in byte
-  @param[in]      Buffer            Bufer to send
+  @param[in]      Buffer            Buffer to send
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
@@ -461,14 +461,14 @@ RndisReceiveDequeue (
 /**
   Ask receive timer to receive data immediately.
 
-  @param[in]      Private       Poniter to private data
+  @param[in]      Private       Pointer to private data
 
   @retval EFI_SUCCESS           function is finished successfully.
   @retval Others                Error occurs.
 
 **/
 VOID
-UndisReceiveNow (
+RndisReceiveNow (
   IN USB_RNDIS_PRIVATE_DATA  *Private
   );
 

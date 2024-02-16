@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -15,6 +15,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
 {
   Scope(_SB)
   {
+    Name(PLAT, 0xFF)
     //---------------------------------------------------------------------
     // GED to receive RAS events
     //---------------------------------------------------------------------
@@ -626,6 +627,25 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       })
     }
 
+    Device (MISC) {
+      Name (_HID, "NVDA2010")
+      Name (_UID, 0)
+      Name (_STA, 0xf)
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0x100000, 0xf000)
+        Memory32Fixed (ReadWrite, 0x10f000, 0x1000)
+      })
+    }
+
+    Device (FUSE) {
+      Name (_HID, "NVDA200F")
+      Name (_UID, 0)
+      Name (_STA, 0xf)
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0x3810000, 0x19000)
+      })
+    }
+
     Device (FLS1) {
       Name (_HID, "PRP0001")
       Name (_UID, 0)
@@ -641,26 +661,6 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
                      ControllerInitiated, 1000000, ClockPolarityLow,
                      ClockPhaseFirst, "\\_SB.QSP1",)
       })
-    }
-
-    Device (TPM1) {
-      Name (_HID, "PRP0001")
-      Name (_UID, 0)
-      Name (_STA, 0)
-      Name(RBUF, ResourceTemplate() {
-        SPISerialBus(0, PolarityLow, FourWireMode, 8,
-                     ControllerInitiated, 1000000, ClockPolarityLow,
-                     ClockPhaseFirst, "\\_SB.QSP1",)
-      })
-      Name (_DSD, Package () {
-        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
-        Package () {
-          Package () { "compatible", "tpm_tis_spi" },
-        }
-      })
-      Method (_CRS, 0, NotSerialized) {
-        Return(RBUF)
-      }
     }
 
     //---------------------------------------------------------------------
@@ -691,6 +691,18 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
                                                                         0xbb,
                                                                         0xbc }
         })
+        Name(_AEI, ResourceTemplate () {
+            GpioInt(Edge, ActiveLow, ExclusiveAndWake, PullUp, , " \\\_SB.GPI0") {70}
+        })
+        Method (_EVT,1) { // Handle all ACPI Events signaled by GPIO Controller GPI0
+            Switch (Arg0) {
+                Case (70) {
+                  If (LEqual (\_SB.PLAT, 0x0)) {
+                    Notify (\_SB, 0x81)
+                  }
+                }
+            }
+        }
     }
 
     //---------------------------------------------------------------------
@@ -786,7 +798,8 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // Coresight STM
     Device (STM0)
     {
-      Name (_CID, "ARMHC502")
+      Name (_HID, "ARMHC502")
+      Name (_UID, 0x0)
 
       Name (_CRS, ResourceTemplate () {
         //STM control register
@@ -849,7 +862,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     Device (FUN0)
     {
       Name (_HID , "ARMHC9FF")
-      Name (_UID , 0x00)
+      Name (_UID , 0x1001)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
@@ -900,7 +913,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     // Coresight ETF
     Device (ETF0) {
       Name (_HID , "ARMHC97C")
-      Name (_UID , 0x00)
+      Name (_UID , 0x1000)
       Name (_CID , "ARMHC500")
 
       Name (_CRS , ResourceTemplate () {
@@ -947,7 +960,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ00) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU0_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -967,7 +980,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ01) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU1_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -987,7 +1000,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (SQ02) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_SMMU2_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -1007,7 +1020,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (GQ00) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU0_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {
@@ -1027,7 +1040,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
     //---------------------------------------------------------------------
     Device (GQ01) {
       Name (_HID, "NVDA200C")
-      Name (_UID, TH500_GSMMU1_BASE_SOCKET_0)
+      Name (_UID, 0xFFFFFFFF)
       Name (_CCA, 1)
 
       Name (_CRS, ResourceTemplate() {

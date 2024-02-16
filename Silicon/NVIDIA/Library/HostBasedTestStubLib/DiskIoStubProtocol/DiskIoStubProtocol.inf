@@ -1,0 +1,30 @@
+## @file
+#
+#  DiskIo Protocol stubs for host based tests
+#
+#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DiskIoStubProtocol
+  FILE_GUID                      = a9a4e75a-79f3-46d9-b2bb-295ac2d84879
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DiskIoStubProtocol
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+
+[Sources.common]
+  DiskIoStubProtocol.c

@@ -11,8 +11,10 @@
 #ifndef __USER_AUTHENTICATION_GUID_H__
 #define __USER_AUTHENTICATION_GUID_H__
 
-#define PASSWORD_MIN_SIZE  15   // MIN number of chars of password, including NULL.
-#define PASSWORD_MAX_SIZE  25   // MAX number of chars of password, including NULL.
+#define PASSWORD_MIN_SIZE   15  // MIN number of chars of password, including NULL.
+#define PASSWORD_MAX_SIZE   25  // MAX number of chars of password, including NULL.
+#define PASSWORD_SALT_SIZE  32
+#define PASSWORD_HASH_SIZE  32
 
 #define PASSWORD_COMM_BUFFER_SIZE  1024
 
@@ -32,6 +34,8 @@ typedef struct {
 #define MM_PASSWORD_FUNCTION_SET_VERIFY_POLICY      4
 #define MM_PASSWORD_FUNCTION_GET_VERIFY_POLICY      5
 #define MM_PASSWORD_FUNCTION_WAS_PASSWORD_VERIFIED  6
+#define MM_PASSWORD_FUNCTION_GET_PASSWORD_HASH      7
+#define MM_PASSWORD_FUNCTION_SET_PASSWORD_HASH      8
 
 typedef struct {
   CHAR8    NewPassword[PASSWORD_MAX_SIZE];
@@ -45,5 +49,11 @@ typedef struct {
 typedef struct {
   BOOLEAN    NeedReVerify;
 } MM_PASSWORD_COMMUNICATE_VERIFY_POLICY;
+
+typedef struct {
+  BOOLEAN    ClearPassword;                     // Clear password when it is TRUE. This is not used in MM_PASSWORD_FUNCTION_GET_PASSWORD_HASH
+  UINT8      PasswordSalt[PASSWORD_SALT_SIZE];  // Password salt
+  UINT8      PasswordHash[PASSWORD_HASH_SIZE];  // Password hash
+} MM_PASSWORD_COMMUNICATE_PASSWORD_HASH;
 
 #endif

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,6 +14,7 @@
 // SOCKETS
 #define TH500_PRIMARY_SOCKET  0
 #define TH500_MAX_SOCKETS     4
+#define TH500_SOCKET_SHFT     44
 
 // SBSA ACS
 #define ARMARCH_TMR_HYPVIRT_PPI  28
@@ -204,6 +205,7 @@
 #define TH500_MSS_C2C_MODE          0xC910
 #define TH500_MSS_C2C_MODE_ONE_GPU  0x0
 #define TH500_MSS_C2C_MODE_TWO_GPU  0x1
+#define TH500_MSS_C2C_MODE_REMOTE   0x2
 
 // SOCKET AMAP
 #define TH500_AMAP_START_SOCKET_0  0x000000000000ULL
@@ -260,12 +262,21 @@
 #define TH500_THERMAL_ZONE_TC1     2
 #define TH500_THERMAL_ZONE_TC2     8
 #define TH500_THERMAL_ZONE_TSP     1                  // 100ms
+#define TH500_THERMAL_ZONE_TFP     10                 // 10ms
+#define TH500_TLIMIT_SOCKET_0      0x00000C3900BCULL
+#define TH500_TLIMIT_SOCKET_1      0x10000C3900BCULL
+#define TH500_TLIMIT_SOCKET_2      0x20000C3900BCULL
+#define TH500_TLIMIT_SOCKET_3      0x30000C3900BCULL
+#define TH500_TLIMIT_REGSIZE       4
+#define TH500_TWOS_COMP_SHIFT      31
+#define XOR_MASK                   0xFFFFFFFF
 
 // Power Meter
 #define TH500_MODULE_PWR                      0
 #define TH500_TH500_PWR                       1
 #define TH500_CPU_PWR                         2
 #define TH500_SOC_PWR                         3
+#define TH500_MAX_PWR_METER                   4
 #define TH500_MODULE_PWR_IDX_VALID_FLAG       0x00000010
 #define TH500_TH500_PWR_IDX_VALID_FLAG        0x00000020
 #define TH500_CPU_PWR_IDX_VALID_FLAG          0x00000040
@@ -275,6 +286,10 @@
 #define TH500_CPU_PWR_1SEC_IDX_VALID_FLAG     0x00000400
 #define TH500_SOC_PWR_1SEC_IDX_VALID_FLAG     0x00000800
 #define TH500_BPMP_IPC_CALL_INTERVAL_50MS     500000
+#define TH500_TEL_LAYOUT_VALID_FLAGS0_IDX     90
+#define TH500_TEL_LAYOUT_VALID_FLAGS1_IDX     91
+#define TH500_TEL_LAYOUT_VALID_FLAGS2_IDX     92
+#define TH500_TEL_LAYOUT_DRAM_RATE_IDX        58
 
 // SMMU CMDQV
 
@@ -367,5 +382,19 @@
 #define TH500_GSMMU1_CMDQV_INTR_SOCKET_1   639
 #define TH500_GSMMU1_CMDQV_INTR_SOCKET_2   959
 #define TH500_GSMMU1_CMDQV_INTR_SOCKET_3   4383
+
+// MCF SMMU
+#define TH500_MCF_SMMU_SOCKET_0                 0x000004010000ULL
+#define TH500_MCF_SMMU_SOCKET_1                 0x100004010000ULL
+#define TH500_MCF_SMMU_SOCKET_2                 0x200004010000ULL
+#define TH500_MCF_SMMU_SOCKET_3                 0x300004010000ULL
+#define TH500_MCF_SMMU_CLKEN_OVERRIDE_0_OFFSET  0x0
+#define TH500_MCF_SMMU_BYPASS_0_OFFSET          0x4
+
+// Maximum time ACPI loops before abort */
+#define TH500_ACPI_MAX_LOOP_TIMEOUT  30
+
+// Maximum time ACPI loops before abort during GPU _RST */
+#define TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT  10
 
 #endif //__TH500_DEFINES_H__

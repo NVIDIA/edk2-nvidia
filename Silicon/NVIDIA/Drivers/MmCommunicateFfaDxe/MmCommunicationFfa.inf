@@ -43,6 +43,7 @@
   DxeServicesTableLib
   HobLib
   UefiDriverEntryPoint
+  TimerLib
 
 [Protocols]
   gEfiMmCommunication2ProtocolGuid              ## PRODUCES
@@ -58,6 +59,8 @@
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled
   gNVIDIATokenSpaceGuid.PcdErstBufferBase
   gNVIDIATokenSpaceGuid.PcdErstBufferSize
+  gNVIDIATokenSpaceGuid.PcdMmCommMaxRetries
+  gNVIDIATokenSpaceGuid.PcdMmCommRetryBackOffUs
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase

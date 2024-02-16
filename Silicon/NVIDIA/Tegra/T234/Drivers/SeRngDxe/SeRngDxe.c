@@ -2,7 +2,7 @@
 
   SE RNG Controller Driver
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,7 +30,6 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA SE RNG controller driver",
-  .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoDeassertReset               = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
@@ -98,7 +97,7 @@ SeRngGetRandom128 (
   } while ((MaxPollCount > 0) && (AesStatus != 0));
 
   if (AesStatus != 0) {
-    DEBUG ((EFI_D_ERROR, "%a, Timeout waiting for random\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a, Timeout waiting for random\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
   }
@@ -155,14 +154,14 @@ DeviceDiscoveryNotify (
       Private = (SE_RNG_PRIVATE_DATA *)AllocateZeroPool (sizeof (SE_RNG_PRIVATE_DATA));
       if (Private == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to allocate private data structure\r\n"));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to allocate private data structure\r\n"));
         break;
       }
 
       Private->Signature = SE_RNG_SIGNATURE;
       Status             = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &Private->BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to get region location (%r)\r\n", Status));
         FreePool (Private);
         break;
       }
@@ -178,7 +177,7 @@ DeviceDiscoveryNotify (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRngDxe: Failed to install protocol (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRngDxe: Failed to install protocol (%r)\r\n", Status));
         FreePool (Private);
         break;
       }
@@ -188,7 +187,7 @@ DeviceDiscoveryNotify (
     case DeviceDiscoveryDriverBindingStop:
       Status = gBS->HandleProtocol (ControllerHandle, &gEfiCallerIdGuid, (VOID **)&Private);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRng: Failed to get private data (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRng: Failed to get private data (%r)\r\n", Status));
         break;
       }
 
@@ -201,7 +200,7 @@ DeviceDiscoveryNotify (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "SeRng: Failed to uninstall procotol (%r)\r\n", Status));
+        DEBUG ((DEBUG_ERROR, "SeRng: Failed to uninstall procotol (%r)\r\n", Status));
         break;
       }
 

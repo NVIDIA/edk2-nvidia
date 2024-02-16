@@ -100,7 +100,7 @@ BpmpIpcProcess (
     Private->TransferInProgress = FALSE;
     if (NULL != Token) {
       if (EFI_ERROR (Token->TransactionStatus)) {
-        DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n", __FUNCTION__, Token->TransactionStatus, Private->MessageError));
+        DEBUG ((DEBUG_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n", __FUNCTION__, Token->TransactionStatus, Private->MessageError));
         *Private->TransactionStatus = EFI_DEVICE_ERROR;
         Private->RequestPacket      = NULL;
         if (Private->TransactionEvent != NULL) {
@@ -192,7 +192,7 @@ BpmpIpcProcess (
                                &Private->MessageError
                                );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n", __FUNCTION__, Status, Private->MessageError));
+    DEBUG ((DEBUG_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n", __FUNCTION__, Status, Private->MessageError));
     *Private->TransactionStatus = EFI_DEVICE_ERROR;
     Private->RequestPacket      = NULL;
     if (Private->TransactionEvent != NULL) {
@@ -697,7 +697,7 @@ BuildI2cDevices (
           Private->I2cDevices[Index].I2cBusConfiguration = 0;
           RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
           if ((RegEntry == NULL) || (RegLength != sizeof (UINT32))) {
-            DEBUG ((EFI_D_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
             Private->I2cDevices[Index].SlaveAddressCount = 0;
             Private->I2cDevices[Index].SlaveAddressArray = NULL;
             break;
@@ -780,7 +780,7 @@ BpmpI2cStart (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get BpmpIpc protocol %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get BpmpIpc protocol %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -801,20 +801,20 @@ BpmpI2cStart (
 
   Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to load device tree..\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to load device tree..\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
   }
 
   Private = (NVIDIA_BPMP_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_BPMP_I2C_PRIVATE_DATA));
   if (NULL == Private) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
 
   Private->ChildDevicePath = AppendDevicePathNode (ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)&mDevicePathNode);
   if (NULL == Private->ChildDevicePath) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device path\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device path\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
@@ -843,7 +843,7 @@ BpmpI2cStart (
                                                               "nvidia,tegra186-bpmp-i2c"
                                                               );
   if (0 == Private->DeviceTreeNodeOffset) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate bpmp-i2c device tree node\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate bpmp-i2c device tree node\r\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
@@ -857,7 +857,7 @@ BpmpI2cStart (
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
     Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
     if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
-      DEBUG ((EFI_D_ERROR, "%a: Failed to locate adapter property\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to locate adapter property\r\n", __FUNCTION__));
       Status = EFI_NOT_FOUND;
       goto ErrorExit;
     }
@@ -867,7 +867,7 @@ BpmpI2cStart (
 
   Status = BuildI2cDevices (Private);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to enumerate i2c devices: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to enumerate i2c devices: %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -884,7 +884,7 @@ BpmpI2cStart (
                   &Private->BpmpIpcToken.Event
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create BpmpIpcEvent: %R\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create BpmpIpcEvent: %R\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -903,7 +903,7 @@ BpmpI2cStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install i2c protocols:%r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -916,7 +916,7 @@ BpmpI2cStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install callerid protocol:%r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install callerid protocol:%r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -932,7 +932,7 @@ BpmpI2cStart (
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed open by child %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed open by child %r\r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -1033,7 +1033,7 @@ BpmpI2cStop (
         return EFI_DEVICE_ERROR;
       }
 
-      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (This);
+      Private = BPMP_I2C_PRIVATE_DATA_FROM_MASTER (I2cMaster);
       if (Private == NULL) {
         return EFI_DEVICE_ERROR;
       }
@@ -1113,7 +1113,7 @@ BpmpI2cInitialize (
              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install driver binding protocol: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 

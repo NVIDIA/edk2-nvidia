@@ -29,6 +29,8 @@
 
 [Guids]
   gNVIDIAMmMb1RecordGuid
+  gUserAuthenticationGuid
+  gNVIDIAPublicVariableGuid
 
 [Protocols]
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES

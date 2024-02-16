@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,8 @@
 #include <Library/Crc8Lib.h>
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/UefiRuntimeLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
@@ -29,6 +31,10 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
 
+STATIC NVIDIA_TEGRA_I2C_PRIVATE_DATA  *mI2cPrivate[MAX_I2C_MASTERS] = { 0 };
+STATIC UINTN                          mI2cMasterCount               = 0;
+STATIC EFI_EVENT                      mVirtualAddressChangeEvent    = NULL;
+
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
   { "nvidia,tegra234-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
@@ -37,11 +43,9 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Tegra I2C controller driver",
-  .UseDriverBinding                = FALSE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = TRUE,
-  .DirectEnumerationSupport        = TRUE,
+  .SkipEdkiiNondiscoverableInstall = TRUE
 };
 
 STATIC
@@ -160,32 +164,24 @@ TegraI2cSetBusFrequency (
       DEBUG ((DEBUG_ERROR, "%a: Failed to set HS prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x2;
   } else if (*BusClockHertz >= FM_PLUS_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fmplus");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM+ prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x10;
   } else if (*BusClockHertz >= FM_SPEED) {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_fm");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set FM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x19;
   } else {
     Status = DeviceDiscoverySetProd (Private->ControllerHandle, Private->DeviceTreeNode, "prod_c_sm");
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to set SM prod settings (%r)\r\n", __FUNCTION__, Status));
       return Status;
     }
-
-    ClockDivisor = 0x19;
   }
 
   if (*BusClockHertz < HS_SPEED) {
@@ -193,11 +189,15 @@ TegraI2cSetBusFrequency (
     Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_INTERFACE_TIMING_0_OFFSET);
     TLow               = (Data32 & I2C_I2C_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_INTERFACE_TIMING_0_TLOW_SHIFT;
     THigh              = (Data32 & I2C_I2C_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET);
+    ClockDivisor       = (Data32 & I2C_CLK_DIVISOR_STD_FAST_MODE_MASK) >> I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;
   } else {
     Private->HighSpeed = TRUE;
     Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_HS_INTERFACE_TIMING_0_OFFSET);
     TLow               = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_TLOW_SHIFT;
     THigh              = (Data32 & I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_MASK) >> I2C_I2C_HS_INTERFACE_TIMING_0_THIGH_SHIFT;
+    Data32             = MmioRead32 (Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET);
+    ClockDivisor       = (Data32 & I2C_CLK_DIVISOR_HSMODE_MASK) >> I2C_CLK_DIVISOR_HSMODE_SHIFT;
   }
 
   ClockMultiplier = (TLow + THigh + 2) * (ClockDivisor + 1);
@@ -206,20 +206,6 @@ TegraI2cSetBusFrequency (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, failed to set clock frequency to %lldHz (%r)\r\n", __FUNCTION__, *BusClockHertz * ClockMultiplier, Status));
     return Status;
-  }
-
-  if (*BusClockHertz < HS_SPEED) {
-    MmioAndThenOr32 (
-      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-      ~I2C_CLK_DIVISOR_STD_FAST_MODE_MASK,
-      ClockDivisor << I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT
-      );
-  } else {
-    MmioAndThenOr32 (
-      Private->BaseAddress + I2C_I2C_CLK_DIVISOR_REGISTER_0_OFFSET,
-      ~I2C_CLK_DIVISOR_HSMODE_MASK,
-      ClockDivisor << I2C_CLK_DIVISOR_HSMODE_SHIFT
-      );
   }
 
   Private->ConfigurationChanged = TRUE;
@@ -1052,29 +1038,30 @@ TegraI2CDriverBindingStart (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                     Status;
-  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
-  UINTN                          RegionSize;
-  CONST UINT32                   *DtClockHertz;
-  CONST UINT32                   *DtControllerId;
-  UINT32                         Data32;
-  UINTN                          Index;
-  NON_DISCOVERABLE_DEVICE        *Device;
-  INT32                          I2cNodeOffset = 0;
-  UINT32                         I2cAddress;
-  INT32                          EepromManagerNodeOffset;
-  UINT32                         I2cNodeHandle;
-  INT32                          EepromManagerBusNodeOffset;
-  CONST UINT32                   *I2cBusProperty;
-  INT32                          I2cBusHandleLength;
-  UINT32                         I2cBusHandle;
-  INT32                          EepromNodeOffset;
-  CONST VOID                     *Property;
-  INT32                          PropertyLen;
-  EFI_GUID                       *DeviceGuid;
-  EFI_DEVICE_PATH                *OldDevicePath;
-  EFI_DEVICE_PATH                *NewDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL       *DevicePathNode;
+  EFI_STATUS                       Status;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA    *Private = NULL;
+  UINTN                            RegionSize;
+  CONST UINT32                     *DtClockHertz;
+  CONST UINT32                     *DtControllerId;
+  UINT32                           Data32;
+  UINTN                            Index;
+  NON_DISCOVERABLE_DEVICE          *Device;
+  INT32                            I2cNodeOffset = 0;
+  UINT32                           I2cAddress;
+  INT32                            EepromManagerNodeOffset;
+  UINT32                           I2cNodeHandle;
+  INT32                            EepromManagerBusNodeOffset;
+  CONST UINT32                     *I2cBusProperty;
+  INT32                            I2cBusHandleLength;
+  UINT32                           I2cBusHandle;
+  INT32                            EepromNodeOffset;
+  CONST VOID                       *Property;
+  INT32                            PropertyLen;
+  EFI_GUID                         *DeviceGuid;
+  EFI_DEVICE_PATH                  *OldDevicePath;
+  EFI_DEVICE_PATH                  *NewDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL         *DevicePathNode;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Descriptor;
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -1086,12 +1073,15 @@ TegraI2CDriverBindingStart (
     return Status;
   }
 
-  Private = (NVIDIA_TEGRA_I2C_PRIVATE_DATA *)AllocateZeroPool (sizeof (NVIDIA_TEGRA_I2C_PRIVATE_DATA));
+  Private = (NVIDIA_TEGRA_I2C_PRIVATE_DATA *)AllocateRuntimeZeroPool (sizeof (NVIDIA_TEGRA_I2C_PRIVATE_DATA));
   if (NULL == Private) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate private data\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
   }
+
+  ASSERT (mI2cMasterCount < MAX_I2C_MASTERS);
+  mI2cPrivate[mI2cMasterCount++] = Private;
 
   Private->Signature                                      = TEGRA_I2C_SIGNATURE;
   Private->I2cMaster.SetBusFrequency                      = TegraI2cSetBusFrequency;
@@ -1201,6 +1191,23 @@ TegraI2CDriverBindingStart (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "TegraI2cDxe: Failed to get region location (%r)\r\n", Status));
     goto ErrorExit;
+  }
+
+  // Convert to runtime memory
+  Status = gDS->GetMemorySpaceDescriptor (Private->BaseAddress, &Descriptor);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to be memory descriptor\r\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = gDS->SetMemorySpaceAttributes (
+                  Descriptor.BaseAddress,
+                  Descriptor.Length,
+                  Descriptor.Attributes | EFI_MEMORY_RUNTIME
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set memory as runtime\r\n", __FUNCTION__));
+    return Status;
   }
 
   // Initialize controller
@@ -1499,6 +1506,28 @@ TegraI2CDriverBindingStart (
         // Leave i2c for bmc activated on exit boot services
         Private->SkipOnExitDisabled = TRUE;
       }
+    } else if (fdt_node_check_compatible (
+                 DeviceTreeNode->DeviceTreeBase,
+                 I2cNodeOffset,
+                 "nvidia,fpga-cfr"
+                 ) == 0)
+    {
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
+        I2cAddress = SwapBytes32 (I2cAddress);
+        DEBUG ((DEBUG_INFO, "%a: FPGA I2C Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
+        DeviceGuid = &gNVIDIAI2cFpga;
+        Status     = TegraI2cAddDevice (
+                       Private,
+                       I2cAddress,
+                       DeviceGuid,
+                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       );
+        if (EFI_ERROR (Status)) {
+          goto ErrorExit;
+        }
+      }
     }
   }
 
@@ -1725,4 +1754,83 @@ DeviceDiscoveryNotify (
   }
 
   return Status;
+}
+
+/**
+  Notification function of EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE.
+
+  Converts all pointers to new virtual addresses.
+
+  @param  Event        Event whose notification function is being invoked.
+  @param  Context      Pointer to the notification function's context.
+
+**/
+VOID
+EFIAPI
+TegraI2cVirtualNotifyEvent (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  UINTN                          Index;
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+
+  for (Index = 0; Index < mI2cMasterCount; Index++) {
+    Private = mI2cPrivate[Index];
+    if (Private != NULL) {
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.SetBusFrequency);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.Reset);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.StartRequest);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cMaster.I2cControllerCapabilities);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cEnumerate.Enumerate);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2cEnumerate.GetBusFrequency);
+      EfiConvertPointer (0x0, (VOID **)&Private->I2CConfiguration.EnableI2cBusConfiguration);
+      EfiConvertPointer (0x0, (VOID **)&Private->DeviceTreeBase);
+      EfiConvertPointer (0x0, (VOID **)&Private->DeviceTreeNode);
+      EfiConvertPointer (0x0, (VOID **)&Private->BaseAddress);
+      EfiConvertPointer (0x0, (VOID **)&mI2cPrivate[Index]);
+    }
+  }
+}
+
+/**
+  Initialize the Tegra I2C Driver
+
+  @param  ImageHandle           Handle that identifies the loaded image.
+  @param  SystemTable           System Table for this image.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+
+**/
+EFI_STATUS
+EFIAPI
+TegraI2cInitialize (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DeviceDiscoveryDriverInitialize (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Register for the virtual address change event
+  //
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  TegraI2cVirtualNotifyEvent,
+                  NULL,
+                  &gEfiEventVirtualAddressChangeGuid,
+                  &mVirtualAddressChangeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create virtual address change event\r\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  return EFI_SUCCESS;
 }

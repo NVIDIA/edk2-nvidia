@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,6 +17,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Guid/MpInformation.h>
 
 #include <Library/ArmMmuLib.h>
+#include <Library/StandaloneMmMmuLib.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
@@ -61,7 +62,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
-ARM_MEMORY_REGION_DESCRIPTOR        MemoryTable[MAX_MANIFEST_REGIONS+1];
+STMM_ARM_MEMORY_REGION_DESCRIPTOR   MemoryTable[MAX_MANIFEST_REGIONS+1];
 PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 EFI_SECURE_PARTITION_BOOT_INFO      PayloadBootInfo;
 STATIC STMM_COMM_BUFFERS            StmmCommBuffers;
@@ -236,7 +237,7 @@ GetDeviceMemRegions (
   INT32                 ParentOffset   = 0;
   INT32                 NodeOffset     = 0;
   INT32                 PrevNodeOffset = 0;
-  CONST VOID            *NodeName;
+  CONST CHAR8           *NodeName;
   EFI_MM_DEVICE_REGION  *DeviceRegions;
   UINTN                 NumRegions;
   UINTN                 BufferSize;
@@ -1033,7 +1034,7 @@ ConfigureStage1Translations (
   MemoryTable[NumRegions].PhysicalBase = 0;
   MemoryTable[NumRegions].VirtualBase  = 0;
   MemoryTable[NumRegions].Length       = 0x80000000;
-  MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+  MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
   NumRegions++;
 
  #else
@@ -1053,7 +1054,7 @@ ConfigureStage1Translations (
     MemoryTable[NumRegions].PhysicalBase = RegionAddress;
     MemoryTable[NumRegions].VirtualBase  = RegionAddress;
     MemoryTable[NumRegions].Length       = RegionSize;
-    MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
+    MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_DEVICE;
     NumRegions++;
     ASSERT (NumRegions < MAX_MANIFEST_REGIONS);
 
@@ -1066,7 +1067,7 @@ ConfigureStage1Translations (
   MemoryTable[NumRegions].PhysicalBase = PAGE_ALIGN ((UINT64)DTBAddress, DEFAULT_PAGE_SIZE);
   MemoryTable[NumRegions].VirtualBase  = MemoryTable[NumRegions].PhysicalBase;
   MemoryTable[NumRegions].Length       = TotalSPMemorySize;
-  MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+  MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
   NumRegions++;
 
   /* Loop over all the memory-regions of the manifest. This is time-consuming with caches disabled. */
@@ -1101,7 +1102,7 @@ ConfigureStage1Translations (
       MemoryTable[NumRegions].PhysicalBase = NsBufferAddress;
       MemoryTable[NumRegions].VirtualBase  = NsBufferAddress;
       MemoryTable[NumRegions].Length       = NsUncachedSize;
-      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
+      MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
       DEBUG ((
         DEBUG_ERROR,
         "UnCached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
@@ -1115,7 +1116,7 @@ ConfigureStage1Translations (
       MemoryTable[NumRegions].PhysicalBase = (NsBufferAddress + NsUncachedSize);
       MemoryTable[NumRegions].VirtualBase  = (NsBufferAddress + NsUncachedSize);
       MemoryTable[NumRegions].Length       = ErstCachedSize;
-      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK;
+      MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK;
       DEBUG ((
         DEBUG_ERROR,
         "Cached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
@@ -1133,7 +1134,7 @@ ConfigureStage1Translations (
       MemoryTable[NumRegions].PhysicalBase = RegionAddress;
       MemoryTable[NumRegions].VirtualBase  = RegionAddress;
       MemoryTable[NumRegions].Length       = RegionSize;
-      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+      MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
       NumRegions++;
     }
 
@@ -1143,7 +1144,7 @@ ConfigureStage1Translations (
       MemoryTable[NumRegions].PhysicalBase = RegionAddress;
       MemoryTable[NumRegions].VirtualBase  = RegionAddress;
       MemoryTable[NumRegions].Length       = RegionSize;
-      MemoryTable[NumRegions].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
+      MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
       DEBUG ((DEBUG_ERROR, "CPUBL Address     = 0x%llx \n", RegionAddress));
       DEBUG ((DEBUG_ERROR, "CPUPL Size      = 0x%llx \n", RegionSize));
       NumRegions++;
@@ -1208,7 +1209,7 @@ _ModuleEntryPointC (
     );
   DebugPrint (DEBUG_ERROR, Version);
 
-  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%x DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
+  DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%lx DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
 
   ConfigureStage1Translations (TotalSPMemorySize, DTBAddress);
 
@@ -1229,11 +1230,14 @@ _ModuleEntryPointC (
 
   /* Locate PE/COFF File information for the Standalone MM core module */
   PayloadBootInfo.SpImageBase = GetSpImageBase (DTBAddress);
-  Status                      = LocateStandaloneMmCorePeCoffData (
-                                  (EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase,
-                                  &TeData,
-                                  &TeDataSize
-                                  );
+  PayloadBootInfo.SpImageSize = ((EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase)->FvLength;
+  PayloadBootInfo.SpImageSize = PAGE_ALIGN (PayloadBootInfo.SpImageSize + DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+
+  Status = LocateStandaloneMmCorePeCoffData (
+             (EFI_FIRMWARE_VOLUME_HEADER *)PayloadBootInfo.SpImageBase,
+             &TeData,
+             &TeDataSize
+             );
   if (EFI_ERROR (Status)) {
     goto finish;
   }
@@ -1250,8 +1254,6 @@ _ModuleEntryPointC (
   if (EFI_ERROR (Status)) {
     goto finish;
   }
-
-  PayloadBootInfo.SpImageSize = ImageContext.ImageSize;
 
   /*
    * ImageBase may deviate from ImageContext.ImageAddress if we are dealing

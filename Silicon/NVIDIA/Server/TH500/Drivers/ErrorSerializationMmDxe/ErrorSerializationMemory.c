@@ -9,9 +9,16 @@
 
 #include "ErrorSerializationMemory.h"
 #include <Uefi.h>
-#include <Library/DebugLib.h>            // ASSERT
+#include <Library/NVIDIADebugLib.h>      // ASSERT
 #include <Library/MemoryAllocationLib.h> // AllocatePool
 #include <Guid/Cper.h>                   // From MdePkg
+
+#ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
+  #undef DEBUG_ERROR
+#define DEBUG_ERROR  DEBUG_INFO
+  #undef DEBUG_WARN
+#define DEBUG_WARN  DEBUG_INFO
+#endif
 
 typedef struct {
   VOID       *Memory;
@@ -43,7 +50,7 @@ ErstAllocatePool (
   if (PoolInfo->InUse || ((PoolInfo->Memory != NULL) && (PoolInfo->Size < AllocationSize))) {
     PoolIndex = ((__UINTPTR_TYPE__)PoolInfo - (__UINTPTR_TYPE__)ErstPools)/sizeof (ERST_MEMORY_POOL_INFO);
     DEBUG ((
-      DEBUG_ERROR,
+      (PoolIndex < ERST_POOL_RECORDS) ? DEBUG_ERROR : DEBUG_INFO,
       "%a: Failing to allocate 0x%p bytes [PoolInfo[%u]: InUse=%d, Memory=0x%p, Size=0x%p]\n",
       __FUNCTION__,
       (VOID *)AllocationSize,
@@ -113,9 +120,12 @@ ErstAllocatePoolRecord (
     Allocation = ErstAllocatePool (&ErstPools[ERST_POOL_RECORDS + PoolIndex], AllocationSize);
     if (Allocation != NULL) {
       return Allocation;
+    } else if (PoolIndex < MAX_RECORD_POOLS - 1) {
+      DEBUG ((DEBUG_INFO, "%a: Trying next record pool\n", __FUNCTION__));
     }
   }
 
+  DEBUG ((DEBUG_ERROR, "%a: All record pools are full - failing to allocate Record\n", __FUNCTION__));
   return NULL;
 }
 
@@ -133,7 +143,7 @@ ErstFreePoolRecord (
     }
   }
 
-  ASSERT (0 && "UNABLE TO FREE RECORD POOL");
+  NV_ASSERT_RETURN (0, return , "UNABLE TO FREE RECORD POOL");
 }
 
 #define GENERATE_POOL_ALLOCATE_FREE_FOR(PoolName, PoolIndex) \

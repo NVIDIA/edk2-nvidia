@@ -280,10 +280,10 @@ EinjSetupTable (
   /* RAS_FW should have initialized the shared EINJ structure */
   EinjComm = (RAS_FW_EINJ_COMM_STRUCT *)RasFwBufferInfo->EinjBase;
   if (EinjComm->Signature == EINJ_DISABLED_SIGNATURE) {
-    DEBUG ((EFI_D_ERROR, "%a: EINJ is disabled\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: EINJ is disabled\n", __FUNCTION__));
     return EFI_SUCCESS;
   } else if (EinjComm->Signature != EFI_ACPI_6_4_ERROR_INJECTION_TABLE_SIGNATURE) {
-    DEBUG ((EFI_D_ERROR, "%a: EINJComm not initialized\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: EINJComm not initialized\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 

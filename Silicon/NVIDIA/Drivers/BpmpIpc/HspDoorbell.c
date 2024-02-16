@@ -90,7 +90,7 @@ HspDoorbellEnableChannel (
     1
     );
 
-  DEBUG ((EFI_D_ERROR, "%a: Waiting for HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_ERROR, "%a: Waiting for HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
   while (0 == MmioBitFieldRead32 (
                 DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
                 HSP_MASTER_CCPLEX,
@@ -106,7 +106,7 @@ HspDoorbellEnableChannel (
     }
   }
 
-  DEBUG ((EFI_D_ERROR, "%a: HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_ERROR, "%a: HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }
@@ -140,7 +140,7 @@ HspDoorbellInit (
       (HspDevice->Resources->Desc != ACPI_ADDRESS_SPACE_DESCRIPTOR) ||
       (HspDevice->Resources->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
   {
-    DEBUG ((EFI_D_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Invalid node resources.\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
   }
 

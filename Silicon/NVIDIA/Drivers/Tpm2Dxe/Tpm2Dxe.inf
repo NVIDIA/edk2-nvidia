@@ -32,9 +32,15 @@
   DebugLib
   UefiLib
   FdtLib
+  PcdLib
   TimerLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  PlatformResourceLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTpmPresent
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
 
 [Protocols]
   gNVIDIAQspiControllerProtocolGuid  ## CONSUMES

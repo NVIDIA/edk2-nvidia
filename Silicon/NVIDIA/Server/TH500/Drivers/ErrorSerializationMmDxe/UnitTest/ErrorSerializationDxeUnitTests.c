@@ -30,6 +30,13 @@
 #include <ErrorSerializationDxeTestPrivate.h>
 
 #include <Library/StandaloneMmOpteeDeviceMem.h>
+
+#define FREE_NON_NULL(a) \
+  if ((a) != NULL) { \
+    FreePool ((a));  \
+    (a) = NULL;      \
+  }
+
 typedef struct {
   EFI_HOB_GUID_TYPE    GUID;
   STMM_COMM_BUFFERS    Buffers;
@@ -95,17 +102,8 @@ IsBufferValue (
   return TRUE;
 }
 
-// Untested but potentially testable?
-// 428-430 ReclaimBlock - when outgoing present and RelocateOutgoing fails
-// *** 501 FindFreeSpace - when most wasted block isn't first wasted block found
-// 521 FindFreeSpace - when EraseBlock of the free block fails
-// 1607 RelocateOutgoing - when RelocateRecord(OUTGOING) fails even after marking block as Reclaim
-// 1613 RelocateOutgoing - when ReclaimBlock fails
-// 1731 CollectBlockInfo - when a block is marked for Reclaim (ie. Invalid but not fully wasted) and it fails reclaim
-
-// * Collecting Block with invalid header
-
 extern ERST_PRIVATE_INFO  mErrorSerialization;
+extern UINT8              *mShadowFlash;
 
 // STATIC UINT8 *TestVariablePartition;
 STATIC UINT8                      *TestFlashStorage;
@@ -1087,11 +1085,13 @@ E2EEmptyFlashSetup (
   IN UNIT_TEST_CONTEXT  Context
   )
 {
-  EFI_STATUS           Status;
-  UNIT_TEST_STATUS     UTStatus;
-  COMMON_TEST_CONTEXT  *TestInfo;
-  UINT32               ErstSize;
-  ERST_COMM_STRUCT     *TestErstComm;
+  EFI_STATUS            Status;
+  UNIT_TEST_STATUS      UTStatus;
+  COMMON_TEST_CONTEXT   *TestInfo;
+  UINT32                ErstSize;
+  ERST_COMM_STRUCT      *TestErstComm;
+  UINT64                TypicalTime;
+  NOR_FLASH_ATTRIBUTES  NorAttributes;
 
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
   ErstSize = TestInfo->TestValue;
@@ -1121,7 +1121,10 @@ E2EEmptyFlashSetup (
 
   TestErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
   UT_ASSERT_STATUS_EQUAL (GetStatus (TestErstComm), EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  UT_ASSERT_EQUAL (TestErstComm->Timings, ((UINT64)ERST_DEFAULT_TIMING << ERST_MAX_TIMING_SHIFT) | ERST_DEFAULT_TIMING);
+  Status = TestNorFlashProtocol->GetAttributes (TestNorFlashProtocol, &NorAttributes);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  TypicalTime = NorAttributes.ProgramFirstByteTimeUs*4 + NorAttributes.ProgramPageTimeUs*((ERROR_LOG_INFO_BUFFER_SIZE+NorAttributes.ProgramPageSize-1)/NorAttributes.ProgramPageSize);
+  UT_ASSERT_EQUAL (TestErstComm->Timings, ((TypicalTime*NorAttributes.ProgramMaxTimeMultiplier) << ERST_MAX_TIMING_SHIFT) | TypicalTime);
   // Note: ReInit restores these fields to their previous value, so don't check them
   //  UT_ASSERT_EQUAL (TestErstComm->Operation, ERST_OPERATION_INVALID);
   //  UT_ASSERT_EQUAL (TestErstComm->RecordOffset, 0);
@@ -1647,8 +1650,18 @@ E2ERead (
     TestCper->SignatureStart = Cper->SignatureStart;
     TestCper->Revision       = Cper->Revision;
     TestCper->SignatureEnd   = Cper->SignatureEnd;
-    //    PrintCper(Cper, "Read Result:");
-    //    PrintCper(TestCper, "Expected Result:");
+    for (int i = 0; i < sizeof (EFI_COMMON_ERROR_RECORD_HEADER); i++) {
+      UINT8  *data1 = (UINT8 *)Cper;
+      UINT8  *data2 = (UINT8 *)TestCper;
+
+      if (data1[i] != data2[i]) {
+        DEBUG ((DEBUG_ERROR, "Mismatched CPER header found!\n"));
+        PrintCper (Cper, "Actual Cper:");
+        PrintCper (TestCper, "Expected Cper:");
+        break;
+      }
+    }
+
     UT_ASSERT_MEM_EQUAL (Cper, TestCper, sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
 
     // Make sure RecordID points to a new record if possible
@@ -2510,6 +2523,9 @@ InvalidInputTest (
   // Make sure there's valid data
   E2ESimpleFillTest (Context);
 
+  Cper->RecordID     = mErrorSerialization.CperInfo[0].RecordId;
+  Cper->RecordLength = mErrorSerialization.CperInfo[0].RecordLength;
+
   CperInfo.RecordId     = mErrorSerialization.CperInfo[0].RecordId;
   CperInfo.RecordLength = mErrorSerialization.CperInfo[0].RecordLength;
   CperInfo.RecordOffset = TOTAL_NOR_FLASH_SIZE;
@@ -2621,19 +2637,6 @@ InvalidInputTest (
 
   // NOTE: The below tests break the tracking data
 
-  // ErstRelocateOutgoing when Incoming != NULL
-  mErrorSerialization.OutgoingCperInfo = &mErrorSerialization.CperInfo[0];
-  mErrorSerialization.IncomingCperInfo = &mErrorSerialization.CperInfo[0];
-  Status                               = ErstRelocateOutgoing ();
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_UNSUPPORTED);
-
-  // ErstRelocateOutgoing when Outgoing == NULL
-  mErrorSerialization.OutgoingCperInfo = NULL;
-  mErrorSerialization.IncomingCperInfo = &mErrorSerialization.CperInfo[0];
-  Status                               = ErstRelocateOutgoing ();
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_UNSUPPORTED);
-  mErrorSerialization.IncomingCperInfo = NULL;
-
   // ErstCollectBlockInfo when CollectBlock fails
   // *** Initialize when gatherspinordata fails when ErstCollectBlockInfo fails when CollectBlock fails
   // Note: this is no longer an error condition, as we mark the block invalid and move on instead of erroring out
@@ -2733,14 +2736,20 @@ FaultyFlashTest (
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
   ErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
 
+  // Can't use shadow flash because these tests expect to touch faulty flash
+  FREE_NON_NULL (mShadowFlash);
+
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Write tests\n"));
   // Test Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_FAILED);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - DummyWrite tests\n"));
   // Test Dummy Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Fill\n"));
   // Make sure there's valid data, written with the good protocol
   mErrorSerialization.NorFlashProtocol = TestNorFlashProtocol;
   E2ESimpleFillTest (Context);
@@ -2749,8 +2758,9 @@ FaultyFlashTest (
   CperInfo    = &mErrorSerialization.CperInfo[0];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Read tests\n"));
   // E2E Read broken flash
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2ERead (
@@ -2762,6 +2772,7 @@ FaultyFlashTest (
     EFI_ACPI_6_4_ERST_STATUS_FAILED
     );
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Clear tests\n"));
   // E2E Clear broken flash
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EClear (
@@ -2773,16 +2784,18 @@ FaultyFlashTest (
     EFI_ACPI_6_4_ERST_STATUS_FAILED
     );
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - CPER tests\n"));
   // ErstWriteCperStatus
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   Status                               = ErstWriteCperStatus (&CperPI->Status, CperInfo);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
-  // ErstCopyOutgoingToincomingCper when ReadSpinor fails
+  // ErstCopyValidToincomingCper when ReadSpinor fails
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  Status                               = ErstCopyOutgoingToIncomingCper (&mErrorSerialization.CperInfo[0], &mErrorSerialization.CperInfo[mErrorSerialization.RecordCount-1]);
+  Status                               = ErstCopyValidToIncomingCper (&mErrorSerialization.CperInfo[0], &mErrorSerialization.CperInfo[mErrorSerialization.RecordCount-1]);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - Erase tests\n"));
   // ErstFindFreeSpace when Erase is required
   // 1. Clear the block
   // 2. Fill it again
@@ -2799,6 +2812,13 @@ FaultyFlashTest (
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   E2EWrite (Context, 0xabcd, 0x0, 0x0, 0xbb, EFI_ACPI_6_4_ERST_STATUS_FAILED);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - CollectBlock tests\n"));
+  // ErstCollectBlock when ReadSpinor fails
+  mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
+  Status                               = ErstCollectBlock ((ERST_BLOCK_INFO *)TestBuffer, 0, 0);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+
+  DEBUG ((DEBUG_INFO, "FaultyFlash - InitProtocol tests\n"));
   // Make sure initprotocol fails when we can't get flash attributes
   // WARNING: This clears the tracking information, so will break subequent tests
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
@@ -2807,16 +2827,12 @@ FaultyFlashTest (
   Status = ErrorSerializationReInit ();
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
+  DEBUG ((DEBUG_INFO, "FaultyFlash - E2E tests\n"));
   // E2E Op broken flash when out of sync
   // Note: can't check anything, since mErrorSerialization is left in a bad state
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
   mErrorSerialization.UnsyncedSpinorChanges++;
   ErrorSerializationEventHandler (NULL, NULL, NULL, NULL);
-
-  // ErstCollectBlock when ReadSpinor fails
-  mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  Status                               = ErstCollectBlock ((ERST_BLOCK_INFO *)TestBuffer, 0, 0);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -2876,7 +2892,6 @@ IncomingOutgoingInvalidTest (
   ERST_COMM_STRUCT                *ErstComm;
   UINT32                          RecordCount;
   EFI_STATUS                      Status;
-  UINT8                           *Payload;
   UINT32                          CopySize;
   UINT32                          RecordIndex;
   UNIT_TEST_STATUS                UTStatus;
@@ -2895,7 +2910,7 @@ IncomingOutgoingInvalidTest (
   CperInfo    = &mErrorSerialization.CperInfo[RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
@@ -2923,15 +2938,14 @@ IncomingOutgoingInvalidTest (
   CperInfo    = &mErrorSerialization.CperInfo[RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Pretend we've only written the status field, and the rest is still unwritten
   SetMem (Cper, CperInfo->RecordLength, 0xff);
   // Mark it as incoming, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -2954,13 +2968,12 @@ IncomingOutgoingInvalidTest (
   CperInfo    = &mErrorSerialization.CperInfo[RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as incoming, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -2976,78 +2989,90 @@ IncomingOutgoingInvalidTest (
   SanityCheckTracking (Context);
 
   // Test Gather cleaning up OUTGOING without a corresponding INCOMING or VALID
-  // simulating having written the STATUS but not started the copy
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (Status updated but no copy, last entry)\n"));
+  // simulating an invalid state
+  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (invalid, last entry)\n"));
 
   // Gather info about the last entry in the block
   CperInfo    = &mErrorSerialization.CperInfo[RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
+  // Confirm that the record is invalidated then freed
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
+  // Create it again
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
   SanityCheckTracking (Context);
 
   // Test Gather cleaning up OUTGOING without a corresponding INCOMING or VALID
-  // simulating having written the STATUS but not started the copy
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (Status updated but no copy, middle entry)\n"));
+  // simulating an invalid state
+  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (invalid, middle entry)\n"));
 
   // Gather info about the middle entry in the block
   CperInfo    = &mErrorSerialization.CperInfo[RecordCount/2];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  DEBUG ((DEBUG_VERBOSE, "OUTGOING entry has ID 0x%llx\n", RecordId));
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
+  // Confirm that the record is invalidated then freed
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
+  // Create it again
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
   SanityCheckTracking (Context);
 
   // Test Gather cleaning up OUTGOING without a corresponding INCOMING or VALID
-  // simulating having written the STATUS but not started the copy
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (Status updated but no copy, first entry)\n"));
+  // simulating an invalid state
+  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING entry (invalid, first entry)\n"));
 
   // Gather info about the first entry in the block
   CperInfo    = &mErrorSerialization.CperInfo[0];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
+  // Confirm that the record is invalidated then freed
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
+  // Create it again
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -3064,9 +3089,8 @@ IncomingOutgoingInvalidTest (
   RecordId = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
-  DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  DEBUG ((DEBUG_VERBOSE, "OUTGOING entry has ID 0x%llx\n", RecordId));
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -3077,7 +3101,7 @@ IncomingOutgoingInvalidTest (
   CperInfo = &mErrorSerialization.CperInfo[ErstComm->RecordCount/2];
   Cper     = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   UT_ASSERT_NOT_EQUAL (CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER), PayloadSize);
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   DEBUG ((DEBUG_INFO, "VALID entry had ID 0x%llx\n", Cper->RecordID));
   Cper->RecordID     = RecordId;
@@ -3098,25 +3122,24 @@ IncomingOutgoingInvalidTest (
   CperInfo    = &mErrorSerialization.CperInfo[ErstComm->RecordCount/2];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  DEBUG ((DEBUG_VERBOSE, "OUTGOING entry has ID 0x%llx\n", RecordId));
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Gather info about the last entry in the block
-  // and change it's RecordID to the outgoing one's
+  // and change it's RecordID to the OUTGOING one's
   CperInfo = &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper     = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   UT_ASSERT_NOT_EQUAL (CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER), PayloadSize);
-  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize        = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   Cper->RecordID     = RecordId;
   CperInfo->RecordId = RecordId;
@@ -3136,14 +3159,13 @@ IncomingOutgoingInvalidTest (
   CperInfo    = &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -3154,7 +3176,7 @@ IncomingOutgoingInvalidTest (
   CperInfo = &mErrorSerialization.CperInfo[0];
   Cper     = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   UT_ASSERT_NOT_EQUAL (CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER), PayloadSize);
-  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize        = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   Cper->RecordID     = RecordId;
   CperInfo->RecordId = RecordId;
@@ -3166,21 +3188,20 @@ IncomingOutgoingInvalidTest (
 
   SanityCheckTracking (Context);
 
-  // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and Incompatible INCOMING entry (\"Copy in progress\", different ID)\n"));
+  // Test VALID with INCOMING
+  DEBUG ((DEBUG_INFO, "Testing Init with VALID and Incompatible INCOMING entry (\"Copy in progress\", different ID)\n"));
 
   // Gather info about the last entry in the block
   CperInfo    = &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordId    = Cper->RecordID;
 
   // Mark it as INCOMING, and out of sync
   DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx\n", RecordId));
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -3194,36 +3215,28 @@ IncomingOutgoingInvalidTest (
   OutgoingPayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   OutgoingRecordId    = Cper->RecordID;
 
-  // Mark it as OUTGOING, and out of sync
-  DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx\n", OutgoingRecordId));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = CperInfo;
+  DEBUG ((DEBUG_INFO, "Valid entry has ID 0x%llx\n", OutgoingRecordId));
+  UT_ASSERT_STATUS_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
 
-  // Confirm that INCOMING was invalidated and OUTGOING was moved
+  // Confirm that INCOMING was invalidated and VALID stayed valid
   E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
   E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
 
   SanityCheckTracking (Context);
 
-  // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and Incompatible INCOMING entry (\"Copy in progress\", different size)\n"));
+  // Test VALID with INCOMING
+  DEBUG ((DEBUG_INFO, "Testing Init with VALID and Incompatible INCOMING entry (\"Copy in progress\", different size)\n"));
 
   // Gather info about the middle entry in the block
   OutgoingCperInfo    = &mErrorSerialization.CperInfo[ErstComm->RecordCount/2-1];
   OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
   OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
-  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   OutgoingRecordId    = OutgoingCper->RecordID;
   UT_ASSERT_TRUE (OutgoingPayloadSize > 0); // Need to manually adjust the Cper selected if this fails
   UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
 
-  // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
@@ -3234,43 +3247,40 @@ IncomingOutgoingInvalidTest (
   CperInfo           = &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper               = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   CperPI             = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   PayloadSize        = MIN (OutgoingPayloadSize-1, Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
   Cper->RecordLength = sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + PayloadSize;
   Cper->RecordID     = OutgoingRecordId;
   RecordId           = Cper->RecordID;
 
-  // Mark it as INCOMING, and out of sync, and smaller than outgoing
+  // Mark it as INCOMING, and out of sync, and smaller than VALID
   // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
 
   SanityCheckTracking (Context);
 
-  // Confirm that INCOMING was invalidated and OUTGOING was moved
+  // Confirm that INCOMING was invalidated and VALID was unchanged
   // DEBUG ((DEBUG_INFO, "INCOMING 0x%p (0x%x) OUTGOING 0x%p (0x%x)\n", mErrorSerialization.IncomingCperInfo, CperPI->Status, mErrorSerialization.OutgoingCperInfo, OutgoingCperPI->Status));
   E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
 
   SanityCheckTracking (Context);
 
   // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", Completed but not marked valid)\n"));
+  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Replacing Record\", Completed but not marked valid)\n"));
 
   // Gather info about the middle entry in the block
   OutgoingCperInfo    = &mErrorSerialization.CperInfo[ErstComm->RecordCount/2];
   OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
   OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
-  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
   OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   OutgoingRecordId    = OutgoingCper->RecordID;
-  UT_ASSERT_TRUE (OutgoingPayloadSize > 0);
   UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
 
   // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  DEBUG ((DEBUG_VERBOSE, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
+  OutgoingCperPI->Status               = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
@@ -3279,198 +3289,45 @@ IncomingOutgoingInvalidTest (
   SanityCheckTracking (Context);
 
   // Gather info about the last entry in the block
-  CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
-  Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
+  CperInfo           = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
+  Cper               = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
+  CperPI             = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
+  PayloadData        = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
+  PayloadSize        = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
+  CperInfo->RecordId = OutgoingRecordId;
+  Cper->RecordID     = OutgoingRecordId;
 
   // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", Cper->RecordID, Cper->RecordLength));
   // DEBUG ((DEBUG_INFO, "Cper 0x%p, Payload 0x%p, Space 0x%p\n", Cper, Payload, &Payload[PayloadSize]));
 
-  // Copy all of the OUTGOING CPER to it and erase the rest
-  if (OutgoingPayloadSize <= PayloadSize) {
-    CopyMem (Cper, OutgoingCper, OutgoingCper->RecordLength);
-    if (OutgoingPayloadSize < PayloadSize) {
-      // DEBUG ((DEBUG_INFO, "Cper 0x%p, Payload 0x%p, NewSpace 0x%p\n", Cper, Payload, &Payload[OutgoingPayloadSize]));
-      SetMem (&Payload[OutgoingPayloadSize], PayloadSize - OutgoingPayloadSize, 0xFF);
-    }
-  } else {
-    // DEBUG ((DEBUG_INFO, "OUTGOING length 0x%llx can't fit in INCOMING length 0x%llx\n", OutgoingCper->RecordLength, Cper->RecordLength));
-    UT_ASSERT_TRUE (0);
-  }
-
   // Mark it as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
 
   SanityCheckTracking (Context);
 
-  // Confirm that OUTGOING was copied to INCOMING
+  // Confirm that OUTGOING was deleted and INCOMING marked valid
   // DEBUG ((DEBUG_INFO, "Before mES.RecordCount 0x%x\n", mErrorSerialization.RecordCount));
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
-  UT_ASSERT_EQUAL (Cper->RecordID, OutgoingRecordId);
   UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_DELETED);
   // DEBUG ((DEBUG_INFO, "After mES.RecordCount 0x%x\n", mErrorSerialization.RecordCount));
 
   SanityCheckTracking (Context);
 
-  // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", Partial Copy)\n"));
+  // Test VALID with INCOMING when data isn't compatible
+  DEBUG ((DEBUG_INFO, "Testing Init with VALID and INCOMING entry (\"Copy in progress\", Partial Incompatible Copy)\n"));
 
   // Gather info about the last entry in the block that can be used for INCOMING
   CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   RecordId    = Cper->RecordID;
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
 
   // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
 
-  // Find a suitable entry for OUTGOING toward the middle
-  RecordIndex      = ErstComm->RecordCount/2-1;
-  OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
-  while (OutgoingCperInfo->RecordLength > CperInfo->RecordLength) {
-    RecordIndex--;
-    if (RecordIndex == 0) {
-      RecordIndex = ErstComm->RecordCount-2;
-    }
-
-    OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
-  }
-
-  OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
-  OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
-  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-  OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  OutgoingRecordId    = OutgoingCper->RecordID;
-  UT_ASSERT_TRUE (OutgoingPayloadSize > 0);
-  UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
-
-  // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
-  MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
-  UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
-  UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
-
-  SanityCheckTracking (Context);
-
-  // Copy half of the OUTGOING CPER to INCOMING and erase the rest
-  CopySize = OutgoingCper->RecordLength/2;
-  if (OutgoingPayloadSize <= PayloadSize) {
-    CopyMem (Cper, OutgoingCper, CopySize);
-    SetMem (&((UINT8 *)Cper)[CopySize], sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + PayloadSize - CopySize, 0xFF);
-  } else {
-    // DEBUG ((DEBUG_INFO, "OUTGOING length 0x%llx can't fit in INCOMING length 0x%llx\n", OutgoingCper->RecordLength, Cper->RecordLength));
-    UT_ASSERT_TRUE (0);
-  }
-
-  // Mark INCOMING as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.IncomingCperInfo = CperInfo;
-
-  SanityCheckTracking (Context);
-
-  // Confirm that OUTGOING was copied to INCOMING
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
-  UT_ASSERT_EQUAL (Cper->RecordID, OutgoingRecordId);
-  UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_DELETED);
-
-  SanityCheckTracking (Context);
-
-  // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", Nothing Copied yet)\n"));
-
-  // Gather info about the last entry in the block that can be used for INCOMING
-  CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
-  Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  RecordId    = Cper->RecordID;
-  CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-
-  // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
-
-  // Find a suitable entry for OUTGOING toward the middle
-  RecordIndex      = ErstComm->RecordCount/2-1;
-  OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
-  while ((OutgoingCperInfo->RecordLength > CperInfo->RecordLength) ||
-         (OutgoingCperInfo->RecordLength == sizeof (EFI_COMMON_ERROR_RECORD_HEADER)))
-  {
-    RecordIndex--;
-    if (RecordIndex == 0) {
-      RecordIndex = ErstComm->RecordCount-2;
-    }
-
-    OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
-  }
-
-  OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
-  OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
-  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-  OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  OutgoingRecordId    = OutgoingCper->RecordID;
-  UT_ASSERT_TRUE (OutgoingPayloadSize > 0);
-  UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
-
-  // Mark it as OUTGOING, and out of sync
-  // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
-  MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
-  UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
-  UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
-
-  SanityCheckTracking (Context);
-
-  // Copy nothing and Erase Incoming
-  CopySize = 0;
-  if (OutgoingPayloadSize <= PayloadSize) {
-    //    CopyMem(Cper, OutgoingCper, CopySize);
-    SetMem (&((UINT8 *)Cper)[CopySize], sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + PayloadSize - CopySize, 0xFF);
-  } else {
-    // DEBUG ((DEBUG_INFO, "OUTGOING length 0x%llx can't fit in INCOMING length 0x%llx\n", OutgoingCper->RecordLength, Cper->RecordLength));
-    UT_ASSERT_TRUE (0);
-  }
-
-  // Mark INCOMING as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.IncomingCperInfo = CperInfo;
-
-  SanityCheckTracking (Context);
-
-  // Confirm that OUTGOING was copied to INCOMING
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
-  UT_ASSERT_EQUAL (Cper->RecordID, OutgoingRecordId);
-  UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_DELETED);
-
-  SanityCheckTracking (Context);
-
-  // Test OUTGOING without a corresponding VALID but an INCOMING when data isn't compatible
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", Partial Incompatible Copy)\n"));
-
-  // Gather info about the last entry in the block that can be used for INCOMING
-  CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
-  Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  RecordId    = Cper->RecordID;
-  CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-
-  // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
-
-  // Find a suitable entry for OUTGOING toward the middle
+  // Find a suitable entry for VALID toward the middle
   RecordIndex      = ErstComm->RecordCount/2-1;
   OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
   while ((OutgoingCperInfo->RecordLength > CperInfo->RecordLength) ||
@@ -3487,67 +3344,50 @@ IncomingOutgoingInvalidTest (
   OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
   OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
   OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  if (OutgoingPayloadSize > 0) {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-  } else {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)-1);
-  }
+  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
 
   OutgoingRecordId = OutgoingCper->RecordID;
   //  UT_ASSERT_TRUE(OutgoingPayloadSize > 0);
   UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
 
-  // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   SanityCheckTracking (Context);
 
-  // Copy half of the OUTGOING CPER to INCOMING and erase the rest
-  CopySize = OutgoingCper->RecordLength/2;
-  if (OutgoingPayloadSize <= PayloadSize) {
-    CopyMem (Cper, OutgoingCper, CopySize);
-    SetMem (&((UINT8 *)Cper)[CopySize], sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + PayloadSize - CopySize, 0xFF);
-    // Corrupt a byte
-    ((UINT8 *)Cper)[0] = ~((UINT8 *)Cper)[0];
-  } else {
-    // DEBUG ((DEBUG_INFO, "OUTGOING length 0x%llx can't fit in INCOMING length 0x%llx\n", OutgoingCper->RecordLength, Cper->RecordLength));
-    UT_ASSERT_TRUE (0);
-  }
+  // Copy header and corrupt it
+  CopySize = sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
+  CopyMem (Cper, OutgoingCper, CopySize);
+  // Corrupt a byte
+  ((UINT8 *)Cper)[sizeof (EFI_COMMON_ERROR_RECORD_HEADER)-2] = ~((UINT8 *)Cper)[sizeof (EFI_COMMON_ERROR_RECORD_HEADER)-2];
 
   // Mark INCOMING as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
 
   SanityCheckTracking (Context);
 
-  // Confirm that OUTGOING was moved and INCOMING was INVALIDATED (note: both blocks get freed after the move)
+  // Confirm that VAILD was preserved and INCOMING was INVALIDATED (note: INCOMING's block should have been cleaned up)
   E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
-  UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_FREE);
 
   SanityCheckTracking (Context);
 
-  // Test OUTGOING without a corresponding VALID but an INCOMING
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", Partial Incompatible Copy, end)\n"));
+  // Test VALID with INCOMING
+  DEBUG ((DEBUG_INFO, "Testing Init with VALID and INCOMING entry (\"Copy in progress\", Partial Incompatible Copy, end)\n"));
 
   // Gather info about the last entry in the block that can be used for INCOMING
   CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   RecordId    = Cper->RecordID;
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
 
   // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
 
-  // Find a suitable entry for OUTGOING toward the middle
+  // Find a suitable entry for VALID toward the middle
   RecordIndex      = ErstComm->RecordCount/2-1;
   OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
   while ((OutgoingCperInfo->RecordLength > CperInfo->RecordLength) ||
@@ -3564,28 +3404,20 @@ IncomingOutgoingInvalidTest (
   OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
   OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
   OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  if (OutgoingPayloadSize > 0) {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-  } else {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)-1);
-  }
+  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
 
   OutgoingRecordId = OutgoingCper->RecordID;
   //  UT_ASSERT_TRUE(OutgoingPayloadSize > 0);
   UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
 
-  // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   SanityCheckTracking (Context);
 
-  // Copy half of the OUTGOING CPER to INCOMING and erase the rest
+  // Copy half of the VALID CPER to INCOMING and erase the rest
   CopySize = OutgoingCper->RecordLength/2;
   if (OutgoingPayloadSize <= PayloadSize) {
     CopyMem (Cper, OutgoingCper, CopySize);
@@ -3598,33 +3430,30 @@ IncomingOutgoingInvalidTest (
   }
 
   // Mark INCOMING as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
 
   SanityCheckTracking (Context);
 
-  // Confirm that OUTGOING was moved and INCOMING was INVALIDATED
+  // Confirm that VALID was preserved and INCOMING was INVALIDATED
   E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
-  UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_FREE);
 
   SanityCheckTracking (Context);
 
-  // Test OUTGOING without a corresponding VALID but an INCOMING when space after INCOMING isn't completely FREE
-  DEBUG ((DEBUG_INFO, "Testing Init with OUTGOING and INCOMING entry (\"Copy in progress\", After INCOMING not entirely FREE)\n"));
+  // Test VALID with INCOMING when space after INCOMING isn't completely FREE
+  DEBUG ((DEBUG_INFO, "Testing Init with VALID and INCOMING entry (\"Copy in progress\", After INCOMING not entirely FREE)\n"));
 
   // Gather info about the last entry in the block that can be used for INCOMING
   CperInfo    = GetLastEntryCperInfo (Context);// &mErrorSerialization.CperInfo[ErstComm->RecordCount-1];
   Cper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
   RecordId    = Cper->RecordID;
   CperPI      = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  Payload     = (UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   PayloadSize = Cper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
 
   // DEBUG ((DEBUG_INFO, "INCOMING entry has ID 0x%llx and length 0x%llx\n", RecordId, Cper->RecordLength));
 
-  // Find a suitable entry for OUTGOING toward the middle
+  // Find a suitable entry for VALID toward the middle
   RecordIndex      = ErstComm->RecordCount/2-1;
   OutgoingCperInfo = &mErrorSerialization.CperInfo[RecordIndex];
   while ((OutgoingCperInfo->RecordLength > CperInfo->RecordLength) ||
@@ -3641,28 +3470,20 @@ IncomingOutgoingInvalidTest (
   OutgoingCper        = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OutgoingCperInfo->RecordOffset);
   OutgoingCperPI      = (CPER_ERST_PERSISTENCE_INFO *)&OutgoingCper->PersistenceInfo;
   OutgoingPayloadSize = OutgoingCper->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  if (OutgoingPayloadSize > 0) {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-  } else {
-    OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER)-1);
-  }
+  OutgoingPayloadData = *((UINT8 *)OutgoingCper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
 
   OutgoingRecordId = OutgoingCper->RecordID;
   //  UT_ASSERT_TRUE(OutgoingPayloadSize > 0);
   UT_ASSERT_TRUE (OutgoingCperPI->Status == ERST_RECORD_STATUS_VALID);
 
-  // Mark it as OUTGOING, and out of sync
   // DEBUG ((DEBUG_INFO, "OUTGOING entry has ID 0x%llx and length 0x%llx\n", OutgoingRecordId, OutgoingCper->RecordLength));
-  OutgoingCperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
-  mErrorSerialization.OutgoingCperInfo = OutgoingCperInfo;
   MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   SanityCheckTracking (Context);
 
-  // Copy half of the OUTGOING CPER to INCOMING and erase the rest
+  // Copy half of the VALID CPER to INCOMING and erase the rest
   CopySize = OutgoingCper->RecordLength/2;
   if (OutgoingPayloadSize <= PayloadSize) {
     CopyMem (Cper, OutgoingCper, CopySize);
@@ -3679,16 +3500,14 @@ IncomingOutgoingInvalidTest (
   *LastByte = ~*LastByte;
 
   // Mark INCOMING as INCOMING, and out of sync
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
 
   SanityCheckTracking (Context);
 
-  // Confirm that OUTGOING was moved and INCOMING was INVALIDATED
+  // Confirm that VALID was preserved and INCOMING was INVALIDATED
   E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
-  UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_FREE);
 
   // NOTE: Tests below don't do E2E, so can't use ErstComm
 
@@ -3700,8 +3519,7 @@ IncomingOutgoingInvalidTest (
 
   // Mark it as INCOMING
   // DEBUG ((DEBUG_INFO, "INCOMING address 0x%p\n", CperInfo));
-  CperPI->Status = ERST_RECORD_STATUS_INCOMING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_INCOMING;
   mErrorSerialization.IncomingCperInfo = CperInfo;
   Status                               = ErstDeallocateRecord (&mErrorSerialization.CperInfo[0]);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -3716,8 +3534,7 @@ IncomingOutgoingInvalidTest (
 
   // Mark it as OUTGOING
   // DEBUG ((DEBUG_INFO, "OUTGOING address 0x%p\n", CperInfo));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   Status                               = ErstDeallocateRecord (&mErrorSerialization.CperInfo[0]);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -3732,8 +3549,7 @@ IncomingOutgoingInvalidTest (
 
   // Mark it as OUTGOING
   // DEBUG ((DEBUG_INFO, "OUTGOING address 0x%p\n", CperInfo));
-  CperPI->Status = ERST_RECORD_STATUS_OUTGOING;
-  mErrorSerialization.UnsyncedSpinorChanges++;
+  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
   mErrorSerialization.OutgoingCperInfo = CperInfo;
   Status                               = ErstWriteRecord (Cper, NULL, CperInfo, FALSE);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_UNSUPPORTED);
@@ -3762,16 +3578,12 @@ ReclaimTest (
   COMMON_TEST_CONTEXT             *TestInfo;
   ERST_CPER_INFO                  *CperInfo;
   EFI_COMMON_ERROR_RECORD_HEADER  *Cper;
-  CPER_ERST_PERSISTENCE_INFO      *CperPI;
   UINT8                           PayloadData;
   UINT32                          PayloadSize;
   UINT32                          RecordOffset;
   UINT64                          RecordId;
-  UINT32                          OutgoingOffset;
-  UINT64                          OutgoingRecordId;
   ERST_COMM_STRUCT                *ErstComm;
   ERST_BLOCK_INFO                 *BlockInfo;
-  UNIT_TEST_STATUS                UTStatus;
 
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
   ErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
@@ -3791,7 +3603,7 @@ ReclaimTest (
     CperInfo = &mErrorSerialization.CperInfo[EntryIndexList[i]];
     Cper     = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
     //    CperPI = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-    PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
+    PayloadData = *((UINT8 *)Cper + sizeof (EFI_COMMON_ERROR_RECORD_HEADER) - 1);
     PayloadSize = CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
 
     // Can't overwrite entry due to lack of space
@@ -3838,41 +3650,6 @@ ReclaimTest (
   E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_EQUAL (RecordOffset, CperInfo->RecordOffset);
-
-  // Throw an OUTGOING into the mix, to make sure reclaim moves the OUTGOING first
-  // DEBUG ((DEBUG_INFO, "Trying to write a record when OUTGOING already exists\n"));
-  DEBUG ((DEBUG_INFO, "Testing Replacing an entry while OUTGOING exists\n"));
-  CperInfo                             = &mErrorSerialization.CperInfo[ErstComm->RecordCount/2];
-  Cper                                 = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  CperPI                               = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  CperPI->Status                       = ERST_RECORD_STATUS_OUTGOING;
-  OutgoingOffset                       = CperInfo->RecordOffset;
-  OutgoingRecordId                     = CperInfo->RecordId;
-  mErrorSerialization.OutgoingCperInfo = CperInfo;
-  // DEBUG ((DEBUG_INFO, "TestCase -  Outgoing=0x%p, ID=0x%llx, Len=0x%llx, Offset=0x%llx\n", CperInfo, CperInfo->RecordId, CperInfo->RecordLength, CperInfo->RecordOffset));
-
-  RecordId     = ErstComm->RecordID;
-  CperInfo     = ErstFindRecord (RecordId);
-  PayloadSize  = CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
-  RecordOffset = CperInfo->RecordOffset;
-
-  // Make sure there's enough space to replace
-  BlockInfo   = ErstGetBlockOfRecord (CperInfo);
-  PayloadSize = MIN (PayloadSize, mErrorSerialization.BlockSize - BlockInfo->UsedSize - sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
-
-  // DEBUG ((DEBUG_INFO, "TestCase -   Writing=0x%p, ID=0x%llx, Len=0x%llx, Offset=0x%llx\n", CperInfo, CperInfo->RecordId, CperInfo->RecordLength, CperInfo->RecordOffset));
-  MockGetFirstGuidHob (&gNVIDIAStMMBuffersGuid, &StmmCommBuffersData);
-  UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset, MockNorErstSize);
-  UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, ~PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  CperInfo = ErstFindRecord (RecordId);
-  UT_ASSERT_NOT_EQUAL (RecordOffset, CperInfo->RecordOffset);
-
-  CperInfo = ErstFindRecord (OutgoingRecordId);
-  UT_ASSERT_NOT_EQUAL (OutgoingOffset, CperInfo->RecordOffset);
-  Cper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  CperPI = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
-  UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
 
   // Impossible E2E scenario where Reclaim is called and can't find all the CperInfo for the block
   DEBUG ((DEBUG_INFO, "Testing Reclaim when it can't find all the CperInfo for the block\n"));
@@ -3954,6 +3731,7 @@ WriteCperStatusTest (
   TestInfo   = (COMMON_TEST_CONTEXT *)Context;
   TestCper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + TestInfo->Offset);
   TestCperPI = (CPER_ERST_PERSISTENCE_INFO *)&TestCper->PersistenceInfo;
+  CperInfo   = (ERST_CPER_INFO) { };
 
   StatusVal = (UINT8)TestInfo->TestValue;
 
@@ -4041,6 +3819,7 @@ WriteCperStatusErrorTest (
   ERST_CPER_INFO       OtherCperInfo;
 
   TestInfo = (COMMON_TEST_CONTEXT *)Context;
+  CperInfo = (ERST_CPER_INFO) { };
 
   CperInfo.RecordOffset      = TestInfo->Offset;
   OtherCperInfo.RecordOffset = TestInfo->Offset + 1;
@@ -4151,6 +3930,8 @@ ValidateRecordTest (
   ERST_CPER_INFO                  *CperInfo;
   EFI_COMMON_ERROR_RECORD_HEADER  *Cper;
   CPER_ERST_PERSISTENCE_INFO      *CperPI;
+  EFI_COMMON_ERROR_RECORD_HEADER  *ShadowCper;
+  CPER_ERST_PERSISTENCE_INFO      *ShadowCperPI;
   UINT64                          RecordId;
   UINT32                          PayloadSize;
 
@@ -4171,8 +3952,10 @@ ValidateRecordTest (
 
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_NULL (CperInfo);
-  Cper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
-  CperPI = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
+  Cper         = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + CperInfo->RecordOffset);
+  CperPI       = (CPER_ERST_PERSISTENCE_INFO *)&Cper->PersistenceInfo;
+  ShadowCper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(mShadowFlash + CperInfo->RecordOffset);
+  ShadowCperPI = (CPER_ERST_PERSISTENCE_INFO *)&ShadowCper->PersistenceInfo;
 
   // Pass in FIRST record ID
   Status = ErstValidateRecord (Cper, ERST_FIRST_RECORD_ID, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
@@ -4212,7 +3995,7 @@ ValidateRecordTest (
   Cper->RecordID = ERST_FIRST_RECORD_ID;
   Status         = ErstValidateRecord (Cper, RecordId, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
-  Status = ErstValidateCperHeader (Cper);
+  Status = ErstValidateCperHeader (Cper, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
   Cper->RecordID = RecordId;
 
@@ -4220,7 +4003,7 @@ ValidateRecordTest (
   Cper->RecordID = ERST_INVALID_RECORD_ID;
   Status         = ErstValidateRecord (Cper, RecordId, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
-  Status = ErstValidateCperHeader (Cper);
+  Status = ErstValidateCperHeader (Cper, PayloadSize+sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
   Cper->RecordID = RecordId;
 
@@ -4249,10 +4032,12 @@ ValidateRecordTest (
   CperPI->Status = ~CperPI->Status;
 
   // RelocateRecord when ValidateRecord fails
-  CperPI->Status = ~CperPI->Status;
-  Status         = ErstRelocateRecord (CperInfo);
+  CperPI->Status       = ~CperPI->Status;
+  ShadowCperPI->Status = CperPI->Status;
+  Status               = ErstRelocateRecord (CperInfo);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_COMPROMISED_DATA);
-  CperPI->Status = ~CperPI->Status;
+  CperPI->Status       = ~CperPI->Status;
+  ShadowCperPI->Status = CperPI->Status;
 
   return UNIT_TEST_PASSED;
 }
@@ -4530,10 +4315,10 @@ InitTestData (
 
   StmmCommBuffersData.Buffers.NsErstUncachedBufAddr = ErstUncachedBufferBase;
   StmmCommBuffersData.Buffers.NsErstUncachedBufSize = ErstUncachedBufferSize;
-  DEBUG ((DEBUG_ERROR, "Erst Uncached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstUncachedBufAddr, StmmCommBuffersData.Buffers.NsErstUncachedBufSize));
+  DEBUG ((DEBUG_INFO, "Erst Uncached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstUncachedBufAddr, StmmCommBuffersData.Buffers.NsErstUncachedBufSize));
   StmmCommBuffersData.Buffers.NsErstCachedBufAddr = ErstCachedBufferBase;
   StmmCommBuffersData.Buffers.NsErstCachedBufSize = ErstCachedBufferSize;
-  DEBUG ((DEBUG_ERROR, "Erst Cached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstCachedBufAddr, StmmCommBuffersData.Buffers.NsErstCachedBufSize));
+  DEBUG ((DEBUG_INFO, "Erst Cached Base=0x%llx Size=0x%llx\n", StmmCommBuffersData.Buffers.NsErstCachedBufAddr, StmmCommBuffersData.Buffers.NsErstCachedBufSize));
 }
 
 /**
@@ -4575,6 +4360,7 @@ DefaultUnitTestCleanup (
   ErstFreeRuntimeMemory ();
   mErrorSerialization.BlockInfo = NULL;
   mErrorSerialization.CperInfo  = NULL;
+  FREE_NON_NULL (mShadowFlash);
 }
 
 /**

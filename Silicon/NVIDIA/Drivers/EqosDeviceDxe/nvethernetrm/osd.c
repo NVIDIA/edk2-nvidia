@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -11,6 +11,7 @@
 #include <Library/DebugLib.h>
 #include <Library/TimerLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DeviceDiscoveryDriverLib.h>
 
 /**
  * @brief osd_usleep_range - sleep in micro seconds
@@ -24,7 +25,7 @@ osd_usleep_range (
   unsigned long  umax
   )
 {
-  MicroSecondDelay (umin);
+  DeviceDiscoveryThreadMicroSecondDelay (umin);
 }
 
 /**
@@ -37,7 +38,7 @@ osd_msleep (
   unsigned int  msec
   )
 {
-  MicroSecondDelay (((unsigned long)msec) * 1000);
+  DeviceDiscoveryThreadMicroSecondDelay (((unsigned long)msec) * 1000);
 }
 
 /**
@@ -50,7 +51,7 @@ osd_udelay (
   unsigned long  usec
   )
 {
-  MicroSecondDelay (usec);
+  DeviceDiscoveryThreadMicroSecondDelay (usec);
 }
 
 /**

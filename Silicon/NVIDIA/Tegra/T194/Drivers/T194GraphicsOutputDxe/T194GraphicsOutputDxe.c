@@ -1,8 +1,8 @@
 /** @file
 
-  XUDC Driver
+  Graphics Output Protocol Driver for T194
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -11,17 +11,20 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DisplayDeviceTreeHelperLib.h>
+#include <Library/DmaLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/DmaLib.h>
-#include <Library/BaseMemoryLib.h>
 
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockNodeProtocol.h>
+
 #include <libfdt.h>
 
 #include "T194GraphicsOutputDxe.h"
@@ -35,16 +38,8 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA T194 display driver",
-  .UseDriverBinding                = TRUE,
   .AutoResetModule                 = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE
-};
-
-STATIC CONST CHAR8  *mFbCarveoutPaths[] = {
-  "/reserved-memory/fb0_carveout",
-  "/reserved-memory/fb1_carveout",
-  "/reserved-memory/fb2_carveout",
-  "/reserved-memory/fb3_carveout"
 };
 
 /** GraphicsOutput Protocol function, mapping to
@@ -72,7 +67,7 @@ GraphicsQueryMode (
       ((This != NULL) && (This->Mode == NULL)) ||
       (ModeNumber >= This->Mode->MaxMode))
   {
-    DEBUG ((DEBUG_ERROR, "GraphicsQueryMode: ERROR - For mode number %d : Invalid Parameter.\n", ModeNumber));
+    DEBUG ((DEBUG_ERROR, "GraphicsQueryMode: ERROR - For mode number %u : Invalid Parameter.\n", ModeNumber));
     Status = EFI_INVALID_PARAMETER;
     goto EXIT;
   }
@@ -107,7 +102,7 @@ GraphicsSetMode (
 
   // Check if this mode is supported
   if (ModeNumber >= This->Mode->MaxMode) {
-    DEBUG ((DEBUG_ERROR, "GraphicsSetMode: ERROR - Unsupported mode number %d .\n", ModeNumber));
+    DEBUG ((DEBUG_ERROR, "GraphicsSetMode: ERROR - Unsupported mode number %u .\n", ModeNumber));
     return EFI_UNSUPPORTED;
   }
 
@@ -222,6 +217,14 @@ WriteDcReg32 (
     return EFI_INVALID_PARAMETER;
   }
 
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: HeadIndex=%d: write address = 0x%08x == 0x%08x\n",
+    __FUNCTION__,
+    HeadIndex,
+    DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset,
+    Data
+    ));
   MmioWrite32 (DC_HEAD_0_BASE_ADDR + DC_PER_HEAD_OFFSET*HeadIndex + RegOffset, Data);
   return EFI_SUCCESS;
 }
@@ -573,103 +576,152 @@ IsHeadActive (
   to update the appropriate fb?_carveout node.
 
   @param [in]  DtBlob      ptr to Device Tree blob
-  @param [in]  Private     ptr to GOP_INSTANCE
-  @param [in,out] Data     array of UINT64 items
-  @param [in]  DataItems   number of items in Data
   @param [in]  HeadIndex   Head index to update
+  @param [in]  FbAddress   Address of FB
+  @param [in]  FbSize      Size of FB
+  @param [in]  LutAddress  Address of LUT
+  @param [in]  LutSize     Size of LUT
 
-  @retval EFI_SUCCESS      Operation successful.
-  @retval others           Error occurred
+  @retval TRUE   Operation successful.
+  @retval FALSE  Error occurred
  ***************************************/
 STATIC
-EFI_STATUS
+BOOLEAN
 UpdateFbCarveoutNode (
-  IN VOID                       *DtBlob,
-  IN GOP_INSTANCE       *CONST  Private,
-  IN OUT UINT64                 Data[],
-  IN UINTN                      DataItems,
-  IN INTN                       HeadIndex
+  IN VOID         *CONST         DtBlob,
+  IN CONST INTN                  HeadIndex,
+  IN CONST EFI_PHYSICAL_ADDRESS  FbAddress,
+  IN CONST UINTN                 FbSize,
+  IN CONST EFI_PHYSICAL_ADDRESS  LutAddress,
+  IN CONST UINTN                 LutSize
+  )
+{
+  INT32   Result;
+  CHAR8   FbCarveoutPath[32];
+  UINT64  RegProp[4];
+
+  AsciiSPrint (
+    FbCarveoutPath,
+    sizeof (FbCarveoutPath),
+    "/reserved-memory/fb%d_carveout",
+    HeadIndex
+    );
+
+  Result = fdt_path_offset (DtBlob, FbCarveoutPath);
+  if (Result < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error getting '%a' DT node offset: %a\n",
+      __FUNCTION__,
+      FbCarveoutPath,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  /* update the DT blob with the new FB and LUT details */
+  RegProp[0] = SwapBytes64 (FbAddress);
+  RegProp[1] = SwapBytes64 (FbSize);
+  RegProp[2] = SwapBytes64 (LutAddress);
+  RegProp[3] = SwapBytes64 (LutSize);
+
+  Result = fdt_setprop_inplace (DtBlob, Result, "reg", RegProp, sizeof (RegProp));
+  if (Result != 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Error updating '%a' DT node: %a\n",
+      __FUNCTION__,
+      FbCarveoutPath,
+      fdt_strerror (Result)
+      ));
+    return FALSE;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Updated '%a': FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
+    "%a: Updated '%a': LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
+    __FUNCTION__,
+    FbCarveoutPath,
+    FbAddress,
+    FbSize,
+    FbSize,
+    __FUNCTION__,
+    FbCarveoutPath,
+    LutAddress,
+    LutSize,
+    LutSize
+    ));
+
+  return TRUE;
+}
+
+/***************************************
+  support function for FdtInstalled callback
+  to update DT for given head
+
+  @param [in]  DtBlob      ptr to Device Tree blob
+  @param [in]  Private     ptr to GOP_INSTANCE
+  @param [in]  HeadIndex   Head index to update
+ ***************************************/
+STATIC
+VOID
+UpdateDtForHead (
+  IN VOID         *CONST  DtBlob,
+  IN GOP_INSTANCE *CONST  Private,
+  IN CONST INTN           HeadIndex
   )
 {
   EFI_STATUS            Status;
-  INT32                 Result;
-  CONST CHAR8           *FbCarveoutPath;
-  INTN                  FbCarveoutNodeOffset;
+  BOOLEAN               IsActive;
   EFI_PHYSICAL_ADDRESS  FbAddress, LutAddress;
   UINTN                 FbSize, LutSize;
 
-  Status = GetLutRegion (Private, HeadIndex, &LutAddress, &LutSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region, force LutAddress and LutSize to 0: %r\n", __FUNCTION__, Status));
-    LutAddress = 0;
-    LutSize    = 0;
-  }
+  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode =
+    &Private->Mode[HeadIndex];
 
-  FbAddress = Private->Mode[HeadIndex].FrameBufferBase;
-  FbSize    = Private->Mode[HeadIndex].FrameBufferSize;
-  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferBase));
-  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Private->Mode[HeadIndex].FrameBufferSize));
-  FbCarveoutPath       = mFbCarveoutPaths[HeadIndex];
-  FbCarveoutNodeOffset = fdt_path_offset (DtBlob, FbCarveoutPath);
-  if (FbCarveoutNodeOffset < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error getting %a DT node offset: %a\n",
-      __FUNCTION__,
-      FbCarveoutPath,
-      fdt_strerror (FbCarveoutNodeOffset)
-      ));
-    return EFI_NOT_FOUND;
-  }
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferBase = 0x%p\n", HeadIndex, Mode->FrameBufferBase));
+  DEBUG ((DEBUG_ERROR, "Mode[%d].FrameBufferSize = %u\n", HeadIndex, Mode->FrameBufferSize));
 
-  if (IsHeadActive (Private, HeadIndex)) {
+  IsActive = IsHeadActive (Private, HeadIndex);
+  if (IsActive) {
     /* Active head: use FB and LUT settings from CBoot */
-
     if (HeadIndex == Private->ActiveHeadIndex) {
       DEBUG ((DEBUG_ERROR, "Head index %d is active and used by UEFI\n", HeadIndex));
     } else {
       DEBUG ((DEBUG_ERROR, "Head index %d is active but not used by UEFI\n", HeadIndex));
     }
 
-    Data[0] = SwapBytes64 (FbAddress);
-    Data[1] = SwapBytes64 (FbSize);
-    Data[2] = SwapBytes64 (LutAddress);
-    Data[3] = SwapBytes64 (LutSize);
+    FbAddress = Mode->FrameBufferBase;
+    FbSize    = Mode->FrameBufferSize;
+
+    Status = GetLutRegion (Private, HeadIndex, &LutAddress, &LutSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error getting LUT region, force LutAddress and LutSize to 0: %r\n", __FUNCTION__, Status));
+      LutAddress = 0;
+      LutSize    = 0;
+    }
   } else {
     /* inactive head: zero-fill everything */
     DEBUG ((DEBUG_ERROR, "Head index %d is NOT active\n", HeadIndex));
-    ZeroMem (Data, sizeof (Data[0])*DataItems);
+
+    FbAddress = LutAddress = 0;
+    FbSize    = LutSize    = 0;
   }
 
-  /* update the DT blob with the new FB and LUT details */
-  Result = fdt_setprop_inplace (DtBlob, FbCarveoutNodeOffset, "reg", Data, sizeof (Data[0])*DataItems);
-  if (Result != 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error updating %a DT node\n",
-      __FUNCTION__,
-      FbCarveoutPath
-      ));
-    return EFI_NOT_FOUND;
+  /* In general, we are not guaranteed the DT nodes we wish to update
+     will be present, so ignore any errors during DT updates and just
+     print an info message. */
+
+  if (!UpdateFbCarveoutNode (DtBlob, HeadIndex, FbAddress, FbSize, LutAddress, LutSize)) {
+    DEBUG ((DEBUG_INFO, "%a: FB carveout update failed, DT node is likely missing\r\n", __FUNCTION__));
   }
 
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: Updated %a: FbAddress  = 0x%016lx FbSize  = 0x%lx (%lu)\n"
-    "%a: Updated %a: LutAddress = 0x%016lx LutSize = 0x%lx (%lu)\n",
-    __FUNCTION__,
-    FbCarveoutPath,
-    Data[0],
-    Data[1],
-    Data[1],
-    __FUNCTION__,
-    FbCarveoutPath,
-    Data[2],
-    Data[3],
-    Data[3]
-    ));
-
-  return Status;
+  if (IsActive) {
+    if (!UpdateDeviceTreeSimpleFramebufferInfo (DtBlob, Mode->Info, (UINT64)FbAddress, (UINT64)FbSize)) {
+      DEBUG ((DEBUG_INFO, "%a: simple-framebuffer info update failed, DT nodes are likely missing\r\n", __FUNCTION__));
+    }
+  }
 }
 
 /***************************************
@@ -690,18 +742,16 @@ STATIC
 VOID
 EFIAPI
 FdtInstalled (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT            Event,
+  IN GOP_INSTANCE *CONST  Private
   )
 {
-  EFI_STATUS                    Status;
-  INT32                         Result;
-  VOID                          *DtBlob;
-  UINT64                        Data[4];
-  GOP_INSTANCE          *CONST  GopInstance = (GOP_INSTANCE *)Context;
-  INTN                          HeadIndex, HeadIndexLimit;
+  EFI_STATUS  Status;
+  INT32       Result;
+  VOID        *DtBlob;
+  INTN        HeadIndex, HeadCount;
 
-  if (GopInstance == NULL) {
+  if (Private == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Invalid context\n", __FUNCTION__));
     return;
   }
@@ -719,15 +769,14 @@ FdtInstalled (
     return;
   }
 
-  if (GopInstance->MaxHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
-    DEBUG ((DEBUG_ERROR, "%a: unsupported MaxHeadIndex=%d\n", __FUNCTION__, GopInstance->MaxHeadIndex));
+  if (Private->MaxHeadIndex == DC_HEAD_INDEX_UNKNOWN) {
+    DEBUG ((DEBUG_ERROR, "%a: unsupported MaxHeadIndex=%d\n", __FUNCTION__, Private->MaxHeadIndex));
     return;
   }
 
-  HeadIndexLimit = GopInstance->MaxHeadIndex + 1;
-
-  for (HeadIndex = 0; HeadIndex < HeadIndexLimit; HeadIndex++) {
-    Status = UpdateFbCarveoutNode (DtBlob, GopInstance, Data, DC_HEAD_INDEX_MAX+1, HeadIndex);
+  HeadCount = Private->MaxHeadIndex + 1;
+  for (HeadIndex = 0; HeadIndex < HeadCount; HeadIndex++) {
+    UpdateDtForHead (DtBlob, Private, HeadIndex);
   }
 }
 
@@ -933,6 +982,69 @@ exit:
 }
 
 /***************************************
+  This function checks Device Tree bootloader-status for the given head.
+
+  @param[in]  DeviceTreeNode       Pointer to the device tree node protocol
+  @param[in]  Head                 Head index
+  @retval     BOOLEAN              FALSE: Head 'bootloader-status' is  disabled,
+                                          or error encountered parsing Device Tree.
+                                   TRUE:  Head 'bootloader-status' is !disabled
+ ***************************************/
+STATIC
+BOOLEAN
+CheckDtEnabledForHead (
+  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  IN  CONST UINTN                             Head
+  )
+{
+  EFI_STATUS    Status;
+  INTN          DcNodeOffset;
+  CONST UINT32  *DcCtrlNumProp;
+  CONST CHAR8   *BootloaderStatusProp;
+  BOOLEAN       HeadEnabled;
+
+  DcNodeOffset = 0;
+  Status       = EFI_NOT_FOUND;
+
+  DcNodeOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, -1, "nvidia,tegra194-dc");
+
+  while (DcNodeOffset != -FDT_ERR_NOTFOUND) {
+    if (0 > DcNodeOffset) {
+      Status = EFI_UNSUPPORTED;
+      break;
+    }
+
+    DcCtrlNumProp = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "nvidia,dc-ctrlnum", NULL);
+    if (NULL == DcCtrlNumProp) {
+      Status = EFI_INVALID_PARAMETER;
+      break;
+    }
+
+    /* check for matching "nvidia,dc-ctrlnum" cell value */
+    if (Head == (UINTN)SwapBytes32 (*DcCtrlNumProp)) {
+      Status = EFI_SUCCESS;
+      break;
+    }
+
+    DcNodeOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "nvidia,tegra194-dc");
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: error parsing DT for Head %u enablement: %r\n", __FUNCTION__, Head, Status));
+    return FALSE;
+  }
+
+  /* we've found the correct DT Head node, now get bootloader-status */
+  BootloaderStatusProp = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DcNodeOffset, "bootloader-status", NULL);
+
+  /* treat undefined bootloader-status node as 'okay' as status node must be 'okay' to get to this point */
+  HeadEnabled = ((NULL == BootloaderStatusProp) ||
+                 (AsciiStrCmp (BootloaderStatusProp, "okay") == 0));
+
+  return HeadEnabled;
+}
+
+/***************************************
   Callback that will be invoked at various phases of the driver initialization
 
   This function allows for modification of system behavior at various points in
@@ -973,53 +1085,65 @@ DeviceDiscoveryNotify (
 
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
-        break;
+        return EFI_UNSUPPORTED;
       }
 
       Status = GetDispHeadFromAddr (BaseAddress, &HeadIndex);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: error getting Head index\n", __FUNCTION__));
-        break;
-      }
-
-      // some debug prints to confirm programming from Cbboot nvdisp-init
-      Status = DumpRegsForThisHead (HeadIndex);
-
-      Status = GetFirstWinForThisHead (HeadIndex, WindowStateEnabled, &WindowIndex);
-      if (EFI_ERROR (Status)) {
         return EFI_UNSUPPORTED;
       }
 
-      // this head has an enabled window: do some sanity checks,
+      /* check Device Tree enablement for this head */
+      if (DeviceTreeNode == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Warning: DeviceTree enablement unknown for Head index=%d\n", __FUNCTION__, HeadIndex));
+      } else {
+        if (CheckDtEnabledForHead (DeviceTreeNode, HeadIndex) == FALSE) {
+          DEBUG ((DEBUG_INFO, "%a: Head %d is not enabled in DeviceTree\n", __FUNCTION__, HeadIndex));
+          return EFI_UNSUPPORTED;
+        }
+
+        DEBUG ((DEBUG_INFO, "%a: Head %d is enabled in DeviceTree\n", __FUNCTION__, HeadIndex));
+      }
 
       Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ScmiClockProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ScmiClockProtocol\n", __FUNCTION__, HeadIndex));
-        break;
+        return EFI_UNSUPPORTED;
       }
 
       Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIAClockNodeProtocolGuid, (VOID **)&ClockNodeProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed to get ClockNodeProtocol\n", __FUNCTION__, HeadIndex));
-        break;
+        return EFI_UNSUPPORTED;
       }
 
-      // If there are clocks listed make sure the primary one is enabled
+      /* If there are clocks listed make sure the primary one 'nvdisplay_disp' is enabled */
       if ((ClockNodeProtocol != NULL) && (ClockNodeProtocol->Clocks != 0) && (ScmiClockProtocol != NULL)) {
         Status = ScmiClockProtocol->GetClockAttributes (ScmiClockProtocol, ClockNodeProtocol->ClockEntries[0].ClockId, &ClockEnabled, ClockName);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Head index=%d: failed detect clock enable state\n", __FUNCTION__, HeadIndex));
-          break;
+          return EFI_UNSUPPORTED;
         }
 
         if (!ClockEnabled) {
-          DEBUG ((DEBUG_ERROR, "%a: Clock not enabled for Head index %d\n", __FUNCTION__, HeadIndex));
+          DEBUG ((DEBUG_ERROR, "%a: clock '%a' is not enabled for Head index=%d\n", __FUNCTION__, ClockName, HeadIndex));
           return EFI_UNSUPPORTED;
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: clock '%a' is enabled for Head index=%d\n", __FUNCTION__, ClockName, HeadIndex));
         }
       }
 
-      // sanity checks passed: alloc GOP_INSTANCE Private on first Supported call
+      /* some debug prints to confirm programming from Cbboot nvdisp-init */
+      Status = DumpRegsForThisHead (HeadIndex);
 
+      /* this controller has enabled clocks: do some sanity checks */
+      Status = GetFirstWinForThisHead (HeadIndex, WindowStateEnabled, &WindowIndex);
+      if (EFI_ERROR (Status)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      /* sanity checks passed: alloc GOP_INSTANCE Private on first Supported call */
       if (Private == NULL) {
         Private = AllocateZeroPool (sizeof (GOP_INSTANCE));
         if (Private == NULL) {
@@ -1037,8 +1161,8 @@ DeviceDiscoveryNotify (
         Status = gBS->CreateEventEx (
                         EVT_NOTIFY_SIGNAL,                  // Type
                         TPL_CALLBACK,                       // NotifyTpl
-                        FdtInstalled,                       // NotifyFunction / callback
-                        (void *)Private,                    // NotifyContext
+                        (EFI_EVENT_NOTIFY)FdtInstalled,     // NotifyFunction / callback
+                        (VOID *)Private,                    // NotifyContext
                         &gFdtTableGuid,                     // EventGroup
                         &FdtInstallEvent
                         );                                  // Event
@@ -1097,12 +1221,13 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
+      /* update DC_A_WINBUF_AD_START_ADDR_OFFSET, DC_A_WINBUF_AD_START_ADDR_HI_OFFSET */
       Status = UpdateGopInfoForThisHead (Phase, ControllerHandle, BaseAddress, Private, HeadIndex, WindowIndex);
       if (EFI_ERROR (Status)) {
         break;
       }
 
-      // Install the Graphics Output Protocol and the Device Path
+      /* Install the Graphics Output Protocol and the Device Path */
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Private->Handle,
                       &gEfiGraphicsOutputProtocolGuid,
@@ -1121,9 +1246,11 @@ DeviceDiscoveryNotify (
     /******************************************************************************************/
     default:
       Status = EFI_SUCCESS;
+      DEBUG ((DEBUG_INFO, "%a: Phase=%d, default handler Status=%r\n", __FUNCTION__, Phase, Status));
       break;
   }
 
+  /* if we get here with an error, assume Private is invalid */
   if (EFI_ERROR (Status)) {
     if (Private != NULL) {
       if (Private->Mode[HeadIndex].FrameBufferBase != 0) {
@@ -1133,6 +1260,7 @@ DeviceDiscoveryNotify (
       }
 
       FreePool (Private);
+      Private = NULL;
     }
   }
 

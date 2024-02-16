@@ -24,7 +24,7 @@
 	execution-state = <0>; /* AARCH64 */
 	load-address = <0x00000000 0x8B000000>;
 	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
-	reserved-pages-count = <256>; /* Core-Heap */
+	reserved-pages-count = <0>; 
 	xlat-granule = <0>; /* 4KiB */
 	boot-order = <0>;
 	messaging-method = <3>; /* Direct messaging with managed exit */
@@ -89,7 +89,7 @@
 		/* Reserved memory for stage-1 table entries */
 		stage1-entries {
 			description = "stage1-entries";
-			pages-count = <192>;
+			pages-count = <96>;
 			base-address = <0x00000000 0x8B530000>;
 			attributes = <0x3>; /* read-write */
 		};
@@ -102,14 +102,6 @@
 			nv-non-secure-memory = <0x1>;
 			nv-erst-cached-pages-count = <16>;
 			nv-erst-uncached-pages-count = <1>;
-		};
-		/* Shared memory between StMM and Secure world (TF-A) */
-		stmmsec-memory {
-			description = "stmmsec-memory";
-			pages-count = <1>;
-			base-address = <0x00000000 0x8B7FE000>;
-			attributes = <0x3>; /* read-write */
-			nv-sp-shared-buffer-id = <4>;
 		};
 		txbuffer: tx-buffer {
 			description = "tx-buffer";

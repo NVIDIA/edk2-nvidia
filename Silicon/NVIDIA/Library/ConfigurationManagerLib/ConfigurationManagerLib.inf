@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText:  Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -15,6 +15,7 @@
 [Packages]
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   EmbeddedPkg/EmbeddedPkg.dec
@@ -28,10 +29,12 @@
   PlatformResourceLib
   UefiBootServicesTableLib
   UefiLib
+  DynamicPlatRepoLib
 
 [Sources.common]
   ConfigurationManagerGicLib.c
   ConfigurationManagerProtocolLib.c
+  ConfigurationManagerDataLib.c
 
 [Pcd]
   gArmTokenSpaceGuid.PcdGicDistributorBase
@@ -40,12 +43,26 @@
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
+  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision
+
+[Guids]
+  gEfiMdeModulePkgTokenSpaceGuid
 
 [Protocols]
   gNVIDIAConfigurationManagerDataObjectGuid
   gNVIDIATegraCpuFrequencyProtocolGuid
+  gNVIDIAAmlPatchProtocolGuid
+  gNVIDIAAmlGenerationProtocolGuid
+  gNVIDIAConfigurationManagerTokenProtocolGuid
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid
   AND
   gNVIDIATegraCpuFrequencyProtocolGuid
+  AND
+  gNVIDIAConfigurationManagerTokenProtocolGuid

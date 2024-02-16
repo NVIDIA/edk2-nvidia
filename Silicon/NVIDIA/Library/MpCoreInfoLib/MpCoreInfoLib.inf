@@ -1,0 +1,31 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = MpCoreInfoLib
+  FILE_GUID                      = 8f7cfe5a-a5ef-4083-8e34-aea3dc84fa8a
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MpCoreInfoLib
+
+[Sources.common]
+  MpCoreInfoLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  HobLib
+
+[Guids]
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid

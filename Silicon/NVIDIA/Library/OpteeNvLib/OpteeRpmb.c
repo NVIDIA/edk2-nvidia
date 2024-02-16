@@ -885,7 +885,7 @@ HandleRpmbDataReq (
   RespFrame = RpmbResp;
 
   if ((ReqSize % RPMB_FRAME_SIZE) || (ReqSize % RPMB_FRAME_SIZE)) {
-    DEBUG ((DEBUG_ERROR, "Invalid Size Req(%u)/Resp(%u) \n", ReqSize, RespSize));
+    DEBUG ((DEBUG_ERROR, "Invalid Size Req(%lu)/Resp(%lu) \n", ReqSize, RespSize));
     Status =  EFI_INVALID_PARAMETER;
     goto Error;
   }
@@ -899,7 +899,7 @@ HandleRpmbDataReq (
       if ((NumReqFrames != 1) || (NumRespFrames != 1)) {
         DEBUG ((
           DEBUG_ERROR,
-          "Invalid NumFrames (Resp %u Req %u) for Cmd %d\n",
+          "Invalid NumFrames (Resp %u Req %u) for Cmd %u\n",
           NumRespFrames,
           NumReqFrames,
           Request
@@ -968,7 +968,7 @@ HandleCmdRpmb (
 
   DEBUG ((
     DEBUG_INFO,
-    "ReqShm Addr %lx Size %ld Offset %ld Buf %lx\n",
+    "ReqShm Addr %lx Size %lu Offset %ld Buf %lx\n",
     Msg->Params[0].Union.RMemory.SharedMemoryReference,
     ReqSize,
     Msg->Params[0].Union.RMemory.Offset,
@@ -976,7 +976,7 @@ HandleCmdRpmb (
     ));
   DEBUG ((
     DEBUG_INFO,
-    "RespShm Addr %lx Size %ld Offset %ld Buf %lx\n",
+    "RespShm Addr %lx Size %lu Offset %ld Buf %lx\n",
     Msg->Params[1].Union.RMemory.SharedMemoryReference,
     RespSize,
     Msg->Params[1].Union.RMemory.Offset,

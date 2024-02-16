@@ -1,7 +1,7 @@
 #/** @file
 #    OemMiscLib.inf
 #
-#    Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #    Copyright (c) 2021, NUVIA Inc. All rights reserved.
 #    Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 #    Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -45,7 +45,6 @@
 [Protocols]
   gEdkiiConfigurationManagerProtocolGuid     # PROTOCOL ALWAYS_CONSUMED
   gNVIDIACvmEepromProtocolGuid               # PROTOCOL ALWAYS_CONSUMED
-  gNVIDIAEFuseProtocolGuid                   # PROTOCOL ALWAYS_CONSUMED
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBoardChassisLocation

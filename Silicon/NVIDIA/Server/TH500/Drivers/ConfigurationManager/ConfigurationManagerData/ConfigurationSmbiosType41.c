@@ -13,7 +13,8 @@
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
-#include <Library/PciSegmentLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Protocol/PciIo.h>
 #include "ConfigurationSmbiosPrivate.h"
 
 typedef struct {
@@ -97,6 +98,7 @@ InstallSmbiosType41Cm (
   CONST CHAR8                             *PropertyStr;
   INT32                                   Length;
   UINTN                                   Index;
+  UINTN                                   Index2;
   UINTN                                   NumOnboardDevices;
   INT32                                   NodeOffset;
   UINT8                                   DeviceType;
@@ -107,11 +109,29 @@ InstallSmbiosType41Cm (
   UINT32                                  SegmentNum;
   UINT32                                  BusNum;
   UINT32                                  DevFuncNum;
+  UINTN                                   Segment;
+  UINTN                                   Bus;
+  UINTN                                   Device;
+  UINTN                                   Function;
+  EFI_PCI_IO_PROTOCOL                     *PciIo;
+  UINTN                                   HandleCount;
+  EFI_HANDLE                              *HandleBuf;
 
   NumOnboardDevices       = 0;
   OnboardDeviceExInfo     = NULL;
   DeviceTypeInstances     = NULL;
   DeviceTypeInstanceCount = 0;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiPciIoProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &HandleBuf
+                  );
+  if (EFI_ERROR (Status)) {
+    HandleCount = 0;
+  }
 
   for (Index = 0; Index < MAX_TYPE41_COUNT; Index++) {
     ZeroMem (Type41NodeStr, sizeof (Type41NodeStr));
@@ -164,21 +184,6 @@ InstallSmbiosType41Cm (
       AsciiSPrint (OnboardDeviceExInfo[NumOnboardDevices].ReferenceDesignation, Length + 1, PropertyStr);
     }
 
-    VendorDeviceId = PciSegmentRead32 (
-                       PCI_SEGMENT_LIB_ADDRESS (
-                         SegmentNum,
-                         BusNum,
-                         (DevFuncNum >> 3) & 0x1F,
-                         DevFuncNum & 0x7,
-                         0
-                         )
-                       );
-    if (VendorDeviceId != TYPE41_DEVICE_NOT_PRESENT) {
-      OnboardDeviceExInfo[NumOnboardDevices].DeviceType = DeviceType | TYPE41_ONBOARD_DEVICE_ENABLED;
-    } else {
-      OnboardDeviceExInfo[NumOnboardDevices].DeviceType = DeviceType & ~TYPE41_ONBOARD_DEVICE_ENABLED;
-    }
-
     OnboardDeviceExInfo[NumOnboardDevices].DeviceTypeInstance = GetOnboardDeviceInstance (
                                                                   DeviceType,
                                                                   &DeviceTypeInstances,
@@ -187,6 +192,34 @@ InstallSmbiosType41Cm (
     OnboardDeviceExInfo[NumOnboardDevices].SegmentGroupNum = SegmentNum;
     OnboardDeviceExInfo[NumOnboardDevices].BusNum          = BusNum;
     OnboardDeviceExInfo[NumOnboardDevices].DevFuncNum      = DevFuncNum;
+
+    OnboardDeviceExInfo[NumOnboardDevices].DeviceType = DeviceType & ~TYPE41_ONBOARD_DEVICE_ENABLED;
+
+    for (Index2 = 0; Index2 < HandleCount; Index2++) {
+      Status = gBS->HandleProtocol (
+                      HandleBuf[Index2],
+                      &gEfiPciIoProtocolGuid,
+                      (VOID **)&PciIo
+                      );
+      if (!EFI_ERROR (Status)) {
+        Segment  = 0;
+        Bus      = 0;
+        Device   = 0;
+        Function = 0;
+        Status   = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+        if (!EFI_ERROR (Status) &&
+            (OnboardDeviceExInfo[NumOnboardDevices].SegmentGroupNum == Segment) &&
+            (OnboardDeviceExInfo[NumOnboardDevices].BusNum == Bus) &&
+            (OnboardDeviceExInfo[NumOnboardDevices].DevFuncNum == (UINT8)((Device << 3) | Function)))
+        {
+          Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, 0x00, 1, &VendorDeviceId);
+          if (!EFI_ERROR (Status) && (VendorDeviceId != 0xFFFF)) {
+            OnboardDeviceExInfo[NumOnboardDevices].DeviceType = DeviceType | TYPE41_ONBOARD_DEVICE_ENABLED;
+          }
+        }
+      }
+    }
+
     NumOnboardDevices++;
   }
 

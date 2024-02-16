@@ -1,7 +1,7 @@
 ## @file
 #  Application to launch L4T A/B.
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -20,6 +20,7 @@
 [Sources]
   L4TLauncher.c
   L4TRootfsValidation.c
+  L4TOpteeDecrypt.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -46,6 +47,9 @@
   PlatformResourceLib
   ResetSystemLib
   TimerLib
+  OpteeNvLib
+  TegraPlatformInfoLib
+  PlatformBootOrderLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
@@ -61,9 +65,6 @@
   gEfiDiskIoProtocolGuid
   gEfiLoadFile2ProtocolGuid
   gEfiPkcs7VerifyProtocolGuid
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
 
 [UserExtensions.TianoCore."ExtraFiles"]
   L4TLauncherExtra.uni

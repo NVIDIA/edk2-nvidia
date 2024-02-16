@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -30,6 +30,8 @@ RegisterDeviceTree (
   This function is called by the platform memory initialization library.
 
   @param  MemoryRegionsCount    Number of regions installed into HOB list.
+  @param  MaxRegionStart        Base address of largest region in dram
+  @param  MaxRegionSize         Size of largest region
 
   @retval EFI_SUCCESS           Resources have been installed
   @retval EFI_DEVICE_ERROR      Error setting up memory
@@ -37,7 +39,9 @@ RegisterDeviceTree (
 **/
 EFI_STATUS
 InstallSystemResources (
-  OUT UINTN  *MemoryRegionsCount
+  OUT UINTN                 *MemoryRegionsCount,
+  OUT EFI_PHYSICAL_ADDRESS  *MaxRegionStart,
+  OUT UINTN                 *MaxRegionSize
   );
 
 #endif //__SYSTEM_RESOURCE_LIB_H__

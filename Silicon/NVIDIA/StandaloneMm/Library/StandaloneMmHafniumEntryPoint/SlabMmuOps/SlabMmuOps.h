@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -8,6 +8,8 @@
 
 #ifndef _SLAB_MMU_OPS_H_
 #define _SLAB_MMU_OPS_H_
+
+#include "../StandaloneMmArmLib.h"
 
 #define PAGE_ALIGN(Address, PageSize)  ((UINT64) (Address) & ~(PageSize - 1))
 
@@ -36,9 +38,9 @@ SlabArmSetEntriesSlab (
 EFI_STATUS
 EFIAPI
 SlabArmConfigureMmu (
-  IN  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable,
-  OUT VOID                          **TranslationTableBase OPTIONAL,
-  OUT UINTN                         *TranslationTableSize OPTIONAL
+  IN  STMM_ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable,
+  OUT VOID                               **TranslationTableBase OPTIONAL,
+  OUT UINTN                              *TranslationTableSize OPTIONAL
   );
 
 #endif /* _SLAB_MMU_OPS_H_ */

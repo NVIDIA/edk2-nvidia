@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -8,6 +8,7 @@
 **/
 
 #include <PiPei.h>
+#include <Uefi.h>
 
 #include <Library/DebugAgentLib.h>
 #include <Library/PrePiLib.h>
@@ -19,7 +20,11 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include <Library/SystemResourceLib.h>
+#include <Library/TegraSerialPortLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/CpuExceptionHandlerLib.h>
+#include <Library/NVIDIADebugLib.h>
+#include <Library/StatusRegLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -42,7 +47,7 @@ InitMmu (
   //      DRAM (even at the top of DRAM as it is the first permanent memory allocation)
   Status = ArmConfigureMmu (MemoryTable, &TranslationTableBase, &TranslationTableSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Error: Failed to enable MMU\n"));
+    DEBUG ((DEBUG_ERROR, "Error: Failed to enable MMU\n"));
   }
 }
 
@@ -173,7 +178,7 @@ DisplayHobResource (
         ((UINTN)HobBase < NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
     {
       DEBUG ((
-        EFI_D_INIT,
+        DEBUG_INIT,
         "Main memory region: (0x%016llx, 0x%016llx)\r\n",
         NextHob.ResourceDescriptor->PhysicalStart,
         NextHob.ResourceDescriptor->ResourceLength
@@ -214,7 +219,7 @@ PrintModel (
       return;
     }
 
-    DEBUG ((EFI_D_ERROR, "Model: %a\n", Data));
+    DEBUG ((DEBUG_ERROR, "Model: %a\n", Data));
   }
 }
 
@@ -228,11 +233,10 @@ CEntryPoint (
 {
   EFI_HOB_HANDOFF_INFO_TABLE    *HobList;
   EFI_STATUS                    Status;
-  CHAR8                         Buffer[100];
+  CHAR8                         Buffer[150];
   UINTN                         CharCount;
   FIRMWARE_SEC_PERFORMANCE      Performance;
   UINT64                        StartTimeStamp;
-  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable;
   EFI_FIRMWARE_VOLUME_HEADER    *FvHeader;
   UINT64                        FvSize;
   UINT64                        FvOffset = 0;
@@ -243,7 +247,21 @@ CEntryPoint (
   UINT64                        DtbSize;
   UINT64                        DtbOffset;
   UINT64                        DtbNext;
-  TEGRA_PLATFORM_RESOURCE_INFO  PlatformResourceInfo;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
+  SERIAL_MAPPING                *Mapping;
+
+  if (PerformanceMeasurementEnabled ()) {
+    // Initialize the Timer Library to setup the Timer HW controller
+    if (!EFI_ERROR (TimerConstructor ())) {
+      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
+      StartTimeStamp = GetPerformanceCounter ();
+    } else {
+      StartTimeStamp = 0;
+    }
+  } else {
+    StartTimeStamp = 0;
+  }
 
   FvHeader = NULL;
 
@@ -267,6 +285,9 @@ CEntryPoint (
   {
     FvSize += GrBlobBinarySize (GetGRBlobBaseAddress ());
   }
+
+  // Share Fv location with Arm libraries
+  PatchPcdSet64 (PcdFvBaseAddress, (UINT64)FvHeader);
 
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *)DtbBase != NULL);
@@ -372,18 +393,6 @@ CEntryPoint (
     }
   }
 
-  if (PerformanceMeasurementEnabled ()) {
-    // Initialize the Timer Library to setup the Timer HW controller
-    if (!EFI_ERROR (TimerConstructor ())) {
-      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
-      StartTimeStamp = GetPerformanceCounter ();
-    } else {
-      StartTimeStamp = 0;
-    }
-  } else {
-    StartTimeStamp = 0;
-  }
-
   // Data Cache enabled on Primary core when MMU is enabled.
   ArmDisableDataCache ();
   // Invalidate instruction cache
@@ -393,6 +402,37 @@ CEntryPoint (
 
   // Initialize the architecture specific bits
   ArchInitialize ();
+
+  // Declare the PI/UEFI memory region
+  HobFree = HobBase + HobSize;
+  HobList = HobConstructor (
+              (VOID *)HobBase,
+              HobSize,
+              (VOID *)HobBase,
+              (VOID *)HobFree
+              );
+  PrePeiSetHobList (HobList);
+
+  InitialMemory[0].PhysicalBase = MemoryBase;
+  InitialMemory[0].VirtualBase  = MemoryBase;
+  InitialMemory[0].Length       = MemorySize;
+  InitialMemory[0].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+  InitialMemory[1].PhysicalBase = 0;
+  InitialMemory[1].VirtualBase  = 0;
+  InitialMemory[1].Length       = 0;
+  InitialMemory[1].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
+  InitMmu (InitialMemory);
+  MapCorePlatformMemory ();
+  StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
+
+  SerialPortIdentify (&Mapping);
+  while (Mapping->Compatibility != NULL) {
+    if (Mapping->IsFound) {
+      ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC, 0);
+    }
+
+    Mapping++;
+  }
 
   // Initialize the Serial Port
   SerialPortInitialize ();
@@ -406,49 +446,44 @@ CEntryPoint (
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
+  // Enable exception handlers, now that we have a serial port to write to.
+  Status = InitializeCpuExceptionHandlers (NULL);
+  ASSERT_EFI_ERROR (Status);
+
   // Initialize the Debug Agent for Source Level Debugging
   // InitializeDebugAgent (DEBUG_AGENT_INIT_POSTMEM_SEC, NULL, NULL);
   SaveAndSetDebugTimerInterrupt (TRUE);
-
-  // Declare the PI/UEFI memory region
-  HobFree = HobBase + HobSize;
-  HobList = HobConstructor (
-              (VOID *)HobBase,
-              HobSize,
-              (VOID *)HobBase,
-              (VOID *)HobFree
-              );
-  PrePeiSetHobList (HobList);
 
   // Register Firmware volume
   BuildFvHob ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
 
   // Build Platform Resource Data HOB
-  ZeroMem (&PlatformResourceInfo, sizeof (PlatformResourceInfo));
-  Status = GetPlatformResourceInformation (&PlatformResourceInfo);
-  ASSERT_EFI_ERROR (Status);
-  BuildGuidDataHob (&gNVIDIAPlatformResourceDataGuid, &PlatformResourceInfo, sizeof (PlatformResourceInfo));
-
-  // Initialize MMU and Memory HOBs (Resource Descriptor HOBs)
-  // Get Virtual Memory Map from the Platform Library
-  GetVirtualMemoryMap (&MemoryTable);
-
-  // Build Memory Allocation Hob
-  InitMmu (MemoryTable);
-
-  Status = ArmSetMemoryRegionReadOnly (StackBase + StackSize, SIZE_4KB);
-  ASSERT_EFI_ERROR (Status);
-
-  // Register UEFI DTB
-  RegisterDeviceTree (DtbBase);
-
-  // Print platform model info from UEFI DTB
-  PrintModel ();
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)BuildGuidHob (&gNVIDIAPlatformResourceDataGuid, sizeof (TEGRA_PLATFORM_RESOURCE_INFO));
+  NV_ASSERT_RETURN (PlatformResourceInfo != NULL, CpuDeadLoop (), "Failed to allocate platform resource!\r\n");
+  ZeroMem (PlatformResourceInfo, sizeof (TEGRA_PLATFORM_RESOURCE_INFO));
+  Status = GetPlatformResourceInformation (PlatformResourceInfo);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to GetPlatformResourceInformation - %r!\r\n", Status);
 
   if (FeaturePcdGet (PcdPrePiProduceMemoryTypeInformationHob)) {
     // Optional feature that helps prevent EFI memory map fragmentation.
     BuildMemoryTypeInformationHob ();
   }
+
+  // Add all new entries to memory map and relocate HOB if needed
+  UpdateMemoryMap ();
+
+  Status = ArmSetMemoryAttributes (StackBase + StackSize, SIZE_4KB, EFI_MEMORY_RO, EFI_MEMORY_RO);
+  ASSERT_EFI_ERROR (Status);
+
+  // Register UEFI DTB
+  RegisterDeviceTree (DtbBase);
+
+  // Get info from platform
+  Status = UpdatePlatformResourceInformation ();
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceInformation - %r!\r\n", Status);
+
+  // Print platform model info from UEFI DTB
+  PrintModel ();
 
   // Create DTB memory allocation HOB
   BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);

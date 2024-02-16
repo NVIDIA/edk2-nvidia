@@ -25,6 +25,10 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/UsbNicInfoProtocol.h>
 #include <RedfishPlatformHostInterfaceIpmi.h>
+#include <Library/NetLib.h>
+#include <Library/ReportStatusCodeLib.h>
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #define VERBOSE_COLUMN_SIZE      (16)
 #define MAX_IP_ADDRESS_STR_SIZE  30
@@ -330,6 +334,7 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
   UINT16                              VendorID;
   UINT16                              ProductID;
   UINT16                              CBHandle;
+  EFI_MAC_ADDRESS                     ZeroMac;
 
   RedfishInterfaceData = AllocateZeroPool (sizeof (USB_INTERFACE_DEVICE_DESCRIPTOR_V2) + 1);
   if (RedfishInterfaceData == NULL) {
@@ -361,7 +366,18 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
   // Return the USB NIC MAC address on host side.
   // MAC Address is came from UsbRndisDxe driver.
   //
-  CopyMem ((VOID *)&DeviceDesc->MacAddress, (VOID *)&mBmcMacAddress.Addr, sizeof (DeviceDesc->MacAddress));
+  ZeroMem (&ZeroMac, sizeof (EFI_MAC_ADDRESS));
+
+  if (!NET_MAC_EQUAL (&mBmcMacAddress, &ZeroMac, sizeof (EFI_MAC_ADDRESS))) {
+    CopyMem ((VOID *)&DeviceDesc->MacAddress, (VOID *)&mBmcMacAddress.Addr, sizeof (DeviceDesc->MacAddress));
+  } else {
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_MAC_INVALID,
+      OEM_EC_DESC_HOST_INTERFACE_INVALID_MAC_ADDRESS,
+      sizeof (OEM_EC_DESC_HOST_INTERFACE_INVALID_MAC_ADDRESS)
+      );
+  }
 
   // Credential Bootstrapping is an IPMI command, the handle of the interface is SSIF
   // Get the BIOS generated handle for the SMBIOS table type 38 - SSIF
@@ -376,8 +392,101 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
 }
 
 /**
+  Check Redfish over IP protocol data - IP & subnet mask.
+
+  @param[in] RedfishProtocolData     Pointer to REDFISH_OVER_IP_PROTOCOL_DATA
+**/
+VOID
+CheckRedfishIpProtocolData (
+  IN REDFISH_OVER_IP_PROTOCOL_DATA  *RedfishProtocolData
+  )
+{
+  EFI_IP_ADDRESS  ZeroIpAddr;
+
+  ZeroMem (&ZeroIpAddr, sizeof (EFI_IP_ADDRESS));
+
+  if (RedfishProtocolData->RedfishServiceIpAddressFormat == REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_IP4) {
+    if (EFI_IP4_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->HostIpAddress, &ZeroIpAddr.v4)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_HOST_IP4_INVALID,
+        OEM_EC_DESC_HOST_INTERFACE_INVALID_IP_ADDRESS,
+        sizeof (OEM_EC_DESC_HOST_INTERFACE_INVALID_IP_ADDRESS)
+        );
+    }
+
+    if (EFI_IP4_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->HostIpMask, &ZeroIpAddr.v4) ||
+        IP4_IS_VALID_NETMASK (EFI_IP4 (*(EFI_IP_ADDRESS *)&RedfishProtocolData->HostIpMask)))
+    {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_HOST_IP4_SUBNET_MASK_INVALID,
+        OEM_EC_DESC_HOST_INTERFACE_INVALID_SUBNET_MASK_ADDRESS,
+        sizeof (OEM_EC_DESC_HOST_INTERFACE_INVALID_SUBNET_MASK_ADDRESS)
+        );
+    }
+
+    if (EFI_IP4_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->RedfishServiceIpAddress, &ZeroIpAddr.v4)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_SERVICE_IP4_INVALID,
+        OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS,
+        sizeof (OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS)
+        );
+    }
+
+    if (EFI_IP4_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->RedfishServiceIpMask, &ZeroIpAddr.v4) ||
+        IP4_IS_VALID_NETMASK (EFI_IP4 (*(EFI_IP_ADDRESS *)&RedfishProtocolData->RedfishServiceIpMask)))
+    {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_SERVICE_IP4_SUBNET_MASK_INVALID,
+        OEM_EC_DESC_REDFISH_SERVICE_INVALID_SUBNET_MASK_ADDRESS,
+        sizeof (OEM_EC_DESC_REDFISH_SERVICE_INVALID_SUBNET_MASK_ADDRESS)
+        );
+    }
+  } else {
+    if (EFI_IP6_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->HostIpAddress, &ZeroIpAddr.v6)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_HOST_IP6_INVALID,
+        OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS,
+        sizeof (OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS)
+        );
+    }
+
+    if (EFI_IP6_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->HostIpMask, &ZeroIpAddr.v6)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_HOST_IP6_SUBNET_MASK_INVALID,
+        OEM_EC_DESC_HOST_INTERFACE_INVALID_SUBNET_MASK_ADDRESS,
+        sizeof (OEM_EC_DESC_HOST_INTERFACE_INVALID_SUBNET_MASK_ADDRESS)
+        );
+    }
+
+    if (EFI_IP6_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->RedfishServiceIpAddress, &ZeroIpAddr.v6)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_SERVICE_IP6_INVALID,
+        OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS,
+        sizeof (OEM_EC_DESC_REDFISH_SERVICE_INVALID_IP_ADDRESS)
+        );
+    }
+
+    if (EFI_IP6_EQUAL ((EFI_IP_ADDRESS *)&RedfishProtocolData->RedfishServiceIpMask, &ZeroIpAddr.v6)) {
+      REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+        EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+        EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_REDFISH_SERVICE_IP6_SUBNET_MASK_INVALID,
+        OEM_EC_DESC_REDFISH_SERVICE_INVALID_SUBNET_MASK_ADDRESS,
+        sizeof (OEM_EC_DESC_REDFISH_SERVICE_INVALID_SUBNET_MASK_ADDRESS)
+        );
+    }
+  }
+}
+
+/**
   Get platform Redfish host interface protocol data.
-  Caller should pass NULL in ProtocolRecord to retrive the first protocol record.
+  Caller should pass NULL in ProtocolRecord to retrieve the first protocol record.
   Then continuously pass previous ProtocolRecord for retrieving the next ProtocolRecord.
 
   @param[out] ProtocolRecord     Pointer to retrieve the protocol record.
@@ -547,6 +656,8 @@ RedfishPlatformHostInterfaceProtocolData (
 
     *ProtocolRecord = CurrentProtocolRecord;
 
+    CheckRedfishIpProtocolData (ProtocolData);
+
     Size = sizeof (MC_HOST_INTERFACE_PROTOCOL_RECORD) -1 + ProtocolRecordSize - 2;
     DumpRedfishIpProtocolData (ProtocolData, Size);
   }
@@ -667,7 +778,7 @@ EfiUsbNicProtocolIsReady (
   indicates the necessary information is ready for building
   SMBIOS 42h record.
 
-  @param[out] InformationReadinessGuid  Pointer to retrive the protocol
+  @param[out] InformationReadinessGuid  Pointer to retrieve the protocol
                                         GUID.
 
   @retval EFI_SUCCESS          Notification is required for building up
@@ -706,7 +817,7 @@ RedfishPlatformHostInterfaceNotification (
   @param ImageHandle     The image handle.
   @param SystemTable     The system table.
 
-  @retval  EFI_SUCEESS  Install Boot manager menu success.
+  @retval  EFI_SUCCESS  Install Boot manager menu success.
   @retval  Other        Return error status.
 
 **/

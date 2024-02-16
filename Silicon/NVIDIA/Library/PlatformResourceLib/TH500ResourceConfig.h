@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,6 +16,15 @@ TH500UARTInstanceInfo (
   IN  UINT32                SharedUARTInstanceId,
   OUT UINT32                *UARTInstanceType,
   OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
+  );
+
+/**
+  Retrieve Dram Page Blacklist Info Address
+
+**/
+NVDA_MEMORY_REGION *
+TH500GetDramPageBlacklistInfoAddress (
+  IN  UINTN  CpuBootloaderAddress
   );
 
 UINT64
@@ -80,6 +89,35 @@ EFI_STATUS
 EFIAPI
 TH500BuildTcgEventHob (
   IN UINTN  TpmLogAddress
+  );
+
+/**
+ * Check TPM Status
+**/
+BOOLEAN
+EFIAPI
+TH500IsTpmToBeEnabled (
+  IN  UINTN  CpuBootloaderAddress
+  );
+
+/**
+  Fills in the EnabledCoresBitMap
+
+**/
+EFI_STATUS
+EFIAPI
+TH500GetEnabledCoresBitMap (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
+/**
+  Update info in Platform Resource Information
+
+**/
+EFI_STATUS
+EFIAPI
+TH500UpdatePlatformResourceInformation (
+  IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
 #endif //__TH500_RESOURCE_CONFIG_H__

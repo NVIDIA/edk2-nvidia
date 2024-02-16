@@ -2,7 +2,7 @@
 #
 #  XHCI Controller Driver
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -53,6 +53,7 @@
 
 [Guids]
   gEdkiiNonDiscoverableXhciDeviceGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   gNVIDIAUsbPadCtlProtocolGuid

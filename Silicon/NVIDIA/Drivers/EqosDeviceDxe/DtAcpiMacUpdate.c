@@ -5,7 +5,7 @@
 
   The original software modules are licensed as follows:
 
-  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2014, Applied Micro Curcuit Corporation. All rights reserved.<BR>
@@ -48,7 +48,7 @@
 // #define ACPI_DEBUG
 
 #ifdef ACPI_DEBUG
-#define DBG(arg ...)  DEBUG((EFI_D_ERROR,## arg))
+#define DBG(arg ...)  DEBUG((DEBUG_ERROR,## arg))
 #else
 #define DBG(arg ...)
 #endif
@@ -227,7 +227,7 @@ GetEthID (
   // Get NameString ETHx
   Status = AcpiTableProtocol->GetOption (ChildHandle, 1, &DataType, &Buffer, &DataSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "[%a:%d] Get NameString failed: %r\n", __FUNCTION__, __LINE__, Status));
+    DEBUG ((DEBUG_ERROR, "[%a:%d] Get NameString failed: %r\n", __FUNCTION__, __LINE__, Status));
     return Status;
   }
 
@@ -239,7 +239,7 @@ GetEthID (
       (AsciiStrnCmp ("ETH", Data, 3) != 0) ||
       (Data[3] > '9') || (Data[3] < '0'))
   {
-    DEBUG ((EFI_D_ERROR, "[%a:%d] The NameString %a is not ETHn\n", __FUNCTION__, __LINE__, Data));
+    DEBUG ((DEBUG_ERROR, "[%a:%d] The NameString %a is not ETHn\n", __FUNCTION__, __LINE__, Data));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -503,7 +503,7 @@ EthMacInit (
   EFI_ACPI_HANDLE         TableHandle;
   UINTN                   i;
 
-  DEBUG ((EFI_D_ERROR, "Updating Ethernet MAC in ACPI DSDT...\n"));
+  DEBUG ((DEBUG_ERROR, "Updating Ethernet MAC in ACPI DSDT...\n"));
 
   //
   // Find the AcpiTable protocol
@@ -599,7 +599,7 @@ UpdateDTACPIMacAddress (
       ChipID = TegraGetChipID ();
       if (ChipID == T234_CHIP_ID) {
         for (Count = 0; Count < Snp->NumMacs; Count++) {
-          CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%d", Count);
+          CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
           CharCount = AsciiSPrint (
                         MacBuffer,
                         sizeof (MacBuffer),

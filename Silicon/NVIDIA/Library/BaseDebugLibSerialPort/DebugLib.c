@@ -7,7 +7,7 @@
   being blocked.  This may occur if a key(s) are pressed in a terminal emulator
   used to monitor the DEBUG() and ASSERT() messages.
 
-  Copyright (c) 2021 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -245,7 +245,7 @@ DebugAssert (
   } else if ((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_RESET_ENABLED) != 0) {
     ResetDelay = PcdGet32 (PcdAssertResetTimeoutValue);
     if (ResetDelay > 0) {
-      AsciiSPrint (Buffer, sizeof (Buffer), "\nResetting the system in %d seconds.\n", ResetDelay);
+      AsciiSPrint (Buffer, sizeof (Buffer), "\nResetting the system in %u seconds.\n", ResetDelay);
       SerialPortWrite ((UINT8 *)Buffer, AsciiStrLen (Buffer));
       MicroSecondDelay (ResetDelay * 1000000);
     }

@@ -1,0 +1,66 @@
+## @file
+#  Platform Redfish boot order driver.
+#
+#  (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformRedfishBootDxe
+  FILE_GUID                      = 8E73C4DD-FED8-47A0-A4C0-382F65447FBD
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = PlatformRedfishBootDxeDriverEntryPoint
+  UNLOAD_IMAGE                   = PlatformRedfishBootDxeDriverUnload
+
+[Sources]
+  PlatformRedfishBootDxe.c
+  PlatformRedfishBootDxe.h
+  PlatformRedfishBootData.h
+  PlatformRedfishBootVfr.vfr
+  PlatformRedfishBootDxeStrings.uni
+  PlatformRedfishBootDxeMap.uni
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PcdLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiLib
+  PrintLib
+  HiiLib
+  JsonLib
+  UefiBootManagerLib
+  UefiHiiServicesLib
+  RedfishEventLib
+  RedfishDebugLib
+
+[Protocols]
+  gEfiDevicePathProtocolGuid                  ## PRODUCED ##
+  gEfiHiiConfigAccessProtocolGuid             ## PRODUCED ##
+  gEdkIIRedfishResourceAddendumProtocolGuid   ## PRODUCED ##
+
+[Guids]
+  gPlatformRedfishBootFormsetGuid
+  gEfiIfrTianoGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSingleBootSupport
+
+[Depex]
+  gEfiHiiDatabaseProtocolGuid

@@ -2,7 +2,7 @@
 #
 #  T194 Graphics output protocol
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -28,15 +28,18 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseMemoryLib
   DebugLib
-  IoLib
-  UefiBootServicesTableLib
-  UefiLib
   DeviceDiscoveryDriverLib
+  DisplayDeviceTreeHelperLib
   DmaLib
   FrameBufferBltLib
-  BaseMemoryLib
+  IoLib
   MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiLib
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid

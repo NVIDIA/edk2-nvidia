@@ -1,9 +1,11 @@
 #
-#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
+
+!include Platform/NVIDIA/NVIDIA.global.dsc.inc
 
 ################################################################################
 #
@@ -29,6 +31,7 @@
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   AuthVariableLib|SecurityPkg/Library/AuthVariableLib/AuthVariableLib.inf
   VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+  VarSetCallbacksLib|MdeModulePkg/Library/VarSetCallbacksLibNull/VarSetCallbacksLibNull.inf
   VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLib.inf
   VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
   VariableFlashInfoLib|MdeModulePkg/Library/BaseVariableFlashInfoLib/BaseVariableFlashInfoLib.inf
@@ -44,14 +47,13 @@
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
-  RngLib|MdePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
+  RngLib|MdeModulePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
   StandaloneMmOpteeLib|Silicon/NVIDIA/Library/StandaloneMmOpteeLib/StandaloneMmOpteeLib.inf
   FwPartitionDeviceLib|Silicon/NVIDIA/Library/FwPartitionDeviceLib/FwPartitionDeviceLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
   GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
   MctpBaseLib|Silicon/NVIDIA/Library/MctpBaseLib/MctpBaseLib.inf
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
-  ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 
   # Use the NULL Serial/Debug Lib as this changes based on platforms.
   SerialPortLib|MdePkg/Library/BaseSerialPortLibNull/BaseSerialPortLibNull.inf
@@ -62,6 +64,12 @@
 
   NULL|ArmPkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
   NULL|MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
+
+  MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
+  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
+  HashApiLib|CryptoPkg/Library/BaseHashApiLib/BaseHashApiLib.inf
+  NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
+  MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
   HobLib|StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
@@ -98,6 +106,7 @@
   #                              // significantly impact boot performance
   #  DEBUG_ERROR     0x80000000  // Error
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x23
 
   # DEBUG_ASSERT_ENABLED       0x01
   # DEBUG_PRINT_ENABLED        0x02

@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Library/BrBctUpdateDeviceLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
@@ -20,6 +21,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -35,11 +37,13 @@ typedef struct {
   NOR_FLASH_ATTRIBUTES         Attributes;
   NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
   FW_PARTITION_DEVICE_INFO     DeviceInfo;
+  UINTN                        UnalignedGptStart;
 } FW_PARTITION_NOR_FLASH_INFO;
 
 STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo      = NULL;
 STATIC UINTN                        mNumDevices         = 0;
 STATIC EFI_EVENT                    mAddressChangeEvent = NULL;
+STATIC UINT32                       mActiveBootChain    = 0;
 
 /**
   Erase data from device.
@@ -133,6 +137,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPNorFlashRead (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -191,6 +196,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPNorFlashWrite (
+  IN  CONST CHAR16              *PartitionName,
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
@@ -235,6 +241,24 @@ FPNorFlashWrite (
         __FUNCTION__,
         Offset,
         Bytes,
+        Status
+        ));
+      return Status;
+    }
+  } else if (Offset == NorFlashInfo->UnalignedGptStart) {
+    Status = FPNorFlashErase (
+               DeviceInfo,
+               Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
+               Bytes + (Offset % NorFlashInfo->Attributes.BlockSize)
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: GPT erase offset=%llu, bytes=%u error: %r\n",
+        __FUNCTION__,
+        Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
+        Bytes + (Offset % NorFlashInfo->Attributes.BlockSize),
+
         Status
         ));
       return Status;
@@ -355,17 +379,18 @@ FPNorFlashInitDevices (
       break;
     }
 
-    NorFlashInfo              = &mNorFlashInfo[mNumDevices];
-    NorFlashInfo->Signature   = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes      = Attributes.MemoryDensity;
-    mNorFlashInfo->Attributes = Attributes;
-    mNorFlashInfo->NorFlash   = NorFlash;
+    NorFlashInfo                     = &mNorFlashInfo[mNumDevices];
+    NorFlashInfo->Signature          = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
+    mNorFlashInfo->Bytes             = Attributes.MemoryDensity;
+    mNorFlashInfo->Attributes        = Attributes;
+    mNorFlashInfo->NorFlash          = NorFlash;
+    mNorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = DeviceName;
     DeviceInfo->DeviceRead  = FPNorFlashRead;
     DeviceInfo->DeviceWrite = FPNorFlashWrite;
-    DeviceInfo->BlockSize   = 1;
+    DeviceInfo->BlockSize   = Attributes.BlockSize;
 
     mNumDevices++;
   }
@@ -450,12 +475,13 @@ FwPartitionNorFlashDxeInitialize (
 {
   EFI_STATUS                  Status;
   UINTN                       Index;
-  UINT32                      ActiveBootChain;
   BR_BCT_UPDATE_PRIVATE_DATA  *BrBctUpdatePrivate;
   FW_PARTITION_PRIVATE_DATA   *FwPartitionPrivate;
   VOID                        *Hob;
   BOOLEAN                     PcdOverwriteActiveFwPartition;
+  UINTN                       ChipId;
 
+  ChipId                        = TegraGetChipID ();
   PcdOverwriteActiveFwPartition = PcdGetBool (PcdOverwriteActiveFwPartition);
   BrBctUpdatePrivate            = NULL;
 
@@ -463,7 +489,7 @@ FwPartitionNorFlashDxeInitialize (
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
-    ActiveBootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
+    mActiveBootChain = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -473,7 +499,7 @@ FwPartitionNorFlashDxeInitialize (
     return EFI_UNSUPPORTED;
   }
 
-  Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition);
+  Status = FwPartitionDeviceLibInit (mActiveBootChain, MAX_FW_PARTITIONS, PcdOverwriteActiveFwPartition, ChipId, GetBootChainForGpt ());
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FwPartition lib init failed: %r\n", __FUNCTION__, Status));
     return Status;
@@ -541,7 +567,7 @@ FwPartitionNorFlashDxeInitialize (
   // Only one is device supported, use its device erase size for BR-BCT
   ASSERT (mNumDevices == 1);
   Status = BrBctUpdateDeviceLibInit (
-             ActiveBootChain,
+             mActiveBootChain,
              mNorFlashInfo[0].Attributes.BlockSize
              );
   if (EFI_ERROR (Status)) {

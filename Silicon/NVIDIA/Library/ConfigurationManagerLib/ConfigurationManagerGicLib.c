@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Library
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 
 #include <Uefi.h>
 #include <ConfigurationManagerObject.h>
+#include <Library/ArmLib/AArch64/AArch64Lib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/PcdLib.h>
 #include <Library/NvgLib.h>
@@ -21,7 +22,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/TegraCpuFreq.h>
@@ -45,6 +46,8 @@
 #define GIC_V4_REDISTRIBUTOR_GRANULARITY  (GIC_V3_REDISTRIBUTOR_GRANULARITY   \
                                            + ARM_GICR_SGI_VLPI_FRAME_SIZE     \
                                            + ARM_GICR_SGI_RESERVED_FRAME_SIZE)
+
+#define TH500_TRBE_INT  22
 
 // GiC variable
 CM_ARM_GICC_INFO  *GicCInfo;
@@ -92,10 +95,7 @@ GetPmuBaseInterrupt (
   }
 
   ASSERT (InterruptData.Type == INTERRUPT_PPI_TYPE);
-  *PmuBaseInterrupt = InterruptData.Interrupt + (InterruptData.Type == INTERRUPT_SPI_TYPE ?
-                                                 DEVICETREE_TO_ACPI_SPI_INTERRUPT_OFFSET :
-                                                 DEVICETREE_TO_ACPI_PPI_INTERRUPT_OFFSET);
-
+  *PmuBaseInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
   return Status;
 }
 
@@ -349,25 +349,34 @@ UpdateGicInfo (
   EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo
   )
 {
-  EFI_STATUS                        Status;
-  UINT32                            NumberOfGicCtlrs;
-  UINT32                            NumberOfGicEntries;
-  UINT32                            *GicHandles;
-  EDKII_PLATFORM_REPOSITORY_INFO    *Repo;
-  TEGRA_GIC_INFO                    *GicInfo;
-  CM_ARM_GICD_INFO                  *GicDInfo;
-  CM_ARM_GIC_REDIST_INFO            *GicRedistInfo;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
-  UINT32                            Index;
-  UINT32                            CoreIndex;
-  UINT32                            RegisterSize;
-  CONST UINT64                      *Prop;
-  UINT64                            MpIdr;
-  UINT64                            PmuBaseInterrupt;
-  UINT32                            NumCores;
-  UINT32                            EnabledCoreCntr;
-  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL    *CpuFreq;
-  CM_ARM_CPC_INFO                   *CpcInfo;
+  EFI_STATUS                         Status;
+  UINT32                             NumberOfGicCtlrs;
+  UINT32                             NumberOfGicEntries;
+  UINT32                             *GicHandles;
+  EDKII_PLATFORM_REPOSITORY_INFO     *Repo;
+  TEGRA_GIC_INFO                     *GicInfo;
+  CM_ARM_GICD_INFO                   *GicDInfo;
+  CM_ARM_GIC_REDIST_INFO             *GicRedistInfo;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA   *RegisterData;
+  UINT32                             Index;
+  UINT32                             CoreIndex;
+  UINT32                             RegisterSize;
+  CONST UINT64                       *Prop;
+  UINT64                             MpIdr;
+  UINT64                             PmuBaseInterrupt;
+  UINT32                             NumCores;
+  UINT32                             EnabledCoreCntr;
+  NVIDIA_TEGRA_CPU_FREQ_PROTOCOL     *CpuFreq;
+  CM_ARM_CPC_INFO                    *CpcInfo;
+  UINT64                             DbgFeatures;
+  UINT16                             TrbeInterrupt;
+  CM_ARM_ET_INFO                     *EtInfo;
+  CM_OBJECT_TOKEN                    EtToken;
+  UINT32                             NumberOfSpeHandles;
+  UINT32                             SpeOverflowInterruptHandle;
+  UINT32                             NumberOfSpeInterrupts;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  SpeOverflowInterrupt;
+  UINT32                             SpeOverflowInterruptNum;
 
   NumberOfGicCtlrs   = 0;
   NumberOfGicEntries = 0;
@@ -380,13 +389,16 @@ UpdateGicInfo (
   Prop               = NULL;
   PmuBaseInterrupt   = 0;
   EnabledCoreCntr    = 0;
+  TrbeInterrupt      = 0;
+  EtInfo             = NULL;
+  EtToken            = CM_NULL_TOKEN;
 
   NumCores = GetNumberOfEnabledCpuCores ();
 
   GicInfo = (TEGRA_GIC_INFO *)AllocatePool (sizeof (TEGRA_GIC_INFO));
 
   if (!GetGicInfo (GicInfo)) {
-    Status = EFI_D_ERROR;
+    Status = DEBUG_ERROR;
     goto Exit;
   }
 
@@ -483,6 +495,53 @@ UpdateGicInfo (
 
   Repo = *PlatformRepositoryInfo;
 
+  DbgFeatures = ArmReadIdAA64Dfr0 ();
+
+  // The ID_AA64DFR0_EL1.TraceBuffer field identifies support for FEAT_TRBE.
+  if (((DbgFeatures >> 44) & 0xF) != 0) {
+    TrbeInterrupt = TH500_TRBE_INT;
+  }
+
+  // The ID_AA64DFR0_EL1.TraceVer field identifies the presence of FEAT_ETE.
+  if (((DbgFeatures >> 4) & 0xF) != 0) {
+    EtInfo = AllocateZeroPool (sizeof (CM_ARM_ET_INFO));
+    NV_ASSERT_RETURN (
+      EtInfo != NULL,
+      { Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      },
+      "%a: Failed to allocate EtInfo structure\r\n",
+      __FUNCTION__
+      );
+    EtInfo->EtType      = ArmEtTypeEte;
+    EtToken             = (CM_OBJECT_TOKEN)(VOID *)EtInfo;
+    Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjEtInfo);
+    Repo->CmObjectToken = EtToken;
+    Repo->CmObjectSize  = sizeof (CM_ARM_ET_INFO);
+    Repo->CmObjectCount = 1;
+    Repo->CmObjectPtr   = EtInfo;
+    Repo++;
+  }
+
+  // Get SpeOverflow interrupt information
+  NumberOfSpeHandles      = 1;
+  SpeOverflowInterruptNum = 0;
+  Status                  = GetMatchingEnabledDeviceTreeNodes ("arm,statistical-profiling-extension-v1", &SpeOverflowInterruptHandle, &NumberOfSpeHandles);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_INFO, "%a: SPE not found in DTB. SpeOverflowInterrupt will be 0x%x\n", __FUNCTION__, PcdGet32 (PcdSpeOverflowIntrNum)));
+    SpeOverflowInterruptNum = PcdGet32 (PcdSpeOverflowIntrNum);
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error checking for SPE nodes in DTB: %r\n", __FUNCTION__, Status));
+  } else {
+    NumberOfSpeInterrupts = 1;
+    Status                = GetDeviceTreeInterrupts (SpeOverflowInterruptHandle, &SpeOverflowInterrupt, &NumberOfSpeInterrupts);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error getting SPE node interrupt: %r\n", __FUNCTION__, Status));
+    } else {
+      SpeOverflowInterruptNum = DEVICETREE_TO_ACPI_INTERRUPT_NUM (SpeOverflowInterrupt);
+    }
+  }
+
   // Populate GICC structures for all enabled cores
   EnabledCoreCntr = 0;
   for (CoreIndex = 0; CoreIndex < PLATFORM_MAX_CPUS; CoreIndex++) {
@@ -511,8 +570,7 @@ UpdateGicInfo (
     GicCInfo[EnabledCoreCntr].MPIDR                         = MpIdr;
     GicCInfo[EnabledCoreCntr].ProcessorPowerEfficiencyClass = 0;
 
-    // TODO: check for compat string "arm,statistical-profiling-extension-v1"
-    GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = 0;
+    GicCInfo[EnabledCoreCntr].SpeOverflowInterrupt = SpeOverflowInterruptNum;
 
     // Obtain SocketID
     GicCInfo[EnabledCoreCntr].ProximityDomain = CoreIndex/PLATFORM_CPUS_PER_SOCKET;
@@ -534,16 +592,19 @@ UpdateGicInfo (
           // Set Status to SUCCESS as this is not a fatal  error
           Status = EFI_SUCCESS;
         } else {
-          Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo);
-          Repo->CmObjectToken = (CM_OBJECT_TOKEN)(VOID *)CpcInfo;
-          Repo->CmObjectSize  = sizeof (CM_ARM_CPC_INFO);
-          Repo->CmObjectCount = 1;
-          Repo->CmObjectPtr   = CpcInfo;
+          Repo->CmObjectId                   = CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo);
+          Repo->CmObjectToken                = (CM_OBJECT_TOKEN)(VOID *)CpcInfo;
+          Repo->CmObjectSize                 = sizeof (CM_ARM_CPC_INFO);
+          Repo->CmObjectCount                = 1;
+          Repo->CmObjectPtr                  = CpcInfo;
           GicCInfo[EnabledCoreCntr].CpcToken = Repo->CmObjectToken;
           Repo++;
         }
       }
     }
+
+    GicCInfo[EnabledCoreCntr].TrbeInterrupt = TrbeInterrupt;
+    GicCInfo[EnabledCoreCntr].EtToken       = EtToken;
 
     EnabledCoreCntr++;
     // Check to ensure space allocated for GICC is enough
@@ -597,6 +658,10 @@ Exit:
 
     if (GicCInfo != NULL) {
       FreePool (GicCInfo);
+    }
+
+    if (EtInfo != NULL) {
+      FreePool (EtInfo);
     }
   }
 

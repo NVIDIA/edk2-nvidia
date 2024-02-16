@@ -2,7 +2,7 @@
 
   Configuration Manager Data Driver private structures for SMBIOS tables
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,10 +13,15 @@
 
 #include <Library/FruLib.h>
 
-#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED   64
-#define MAX_TYPE2_COUNT                    10
-#define MAX_TYPE3_COUNT                    100
-#define MAX_TYPE3_CONTAINED_ELEMENT_COUNT  100
+#define MAX_SMBIOS_TABLE_TYPES_SUPPORTED       64
+#define MAX_TYPE2_COUNT                        10
+#define MAX_TYPE3_COUNT                        100
+#define MAX_TYPE3_CONTAINED_ELEMENT_COUNT      100
+#define MAX_TYPE41_COUNT                       100
+#define TYPE41_DEVICE_NOT_PRESENT              0xFFFFFFFF
+#define TYPE41_ONBOARD_DEVICE_ENABLED          0x80
+#define MAX_TPM_VERSION_LEN                    14
+#define MAX_FIRMWARE_INVENTORY_FMP_DESC_COUNT  100
 
 //
 // CM SMBIOS record population struct
@@ -25,10 +30,6 @@ typedef struct {
   UINT8              FruDeviceId;
   CM_OBJECT_TOKEN    ChassisCmToken;
 } CM_ENCLOSURE_BASEBOARD_INFO;
-
-#define MAX_TYPE41_COUNT               100
-#define TYPE41_DEVICE_NOT_PRESENT      0xFFFFFFFF
-#define TYPE41_ONBOARD_DEVICE_ENABLED  0x80
 
 /** This structure contains data used by SMBIOS CM object creators */
 typedef struct CmSmbiosPrivateData {
@@ -64,6 +65,8 @@ typedef struct CmSmbiosPrivateData {
     CM_ENCLOSURE_BASEBOARD_INFO    *Info;
     UINT8                          Count;
   } EnclosureBaseboardBinding;
+
+  EDKII_PLATFORM_REPOSITORY_INFO    *PlatformRepositoryInfo;
 } CM_SMBIOS_PRIVATE_DATA;
 
 typedef EFI_STATUS
@@ -84,6 +87,7 @@ typedef struct {
 
   @param[in, out] PlatformRepositoryInfo      Pointer to the available Platform Repository
   @param[in]      PlatformRepositoryInfoEnd   End address of the Platform Repository
+  @param[in]      PlatformRepositoryInfo      Pointer to the platform repository info
 
   @return EFI_SUCCESS       Successful installation
   @retval !(EFI_SUCCESS)    Other errors
@@ -93,7 +97,8 @@ EFI_STATUS
 EFIAPI
 InstallCmSmbiosTableList (
   IN OUT  EDKII_PLATFORM_REPOSITORY_INFO  **PlatformRepositoryInfo,
-  IN      UINTN                           PlatformRepositoryInfoEnd
+  IN      UINTN                           PlatformRepositoryInfoEnd,
+  IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   );
 
 /**
@@ -109,6 +114,21 @@ FRU_DEVICE_INFO *
 FindFruByDescription (
   IN  CM_SMBIOS_PRIVATE_DATA  *Private,
   IN  CHAR8                   *FruDescPattern
+  );
+
+/**
+  Find and get FRU extra string that has a certain prefix
+
+  @param[in] FruExtra  Pointer to the array of FRU (chassis/board/product) extra
+  @param[in] Prefix    FRU extra prefix to search for
+
+  @return A pointer to an allocated string
+
+**/
+CHAR8 *
+GetFruExtraStr (
+  IN CHAR8        **FruExtra,
+  IN CONST CHAR8  *Prefix
   );
 
 /**
@@ -198,6 +218,14 @@ EFIAPI
 InstallSmbiosType8Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
+
+//
+// Pci slot info and class code association structure
+//
+typedef struct {
+  UINT8    PciClass;
+  CHAR8    *SlotDescription;
+} PCI_SLOT_ASSOCIATION;
 
 /**
   Install CM object for SMBIOS Type 9
@@ -317,9 +345,48 @@ InstallSmbiosType43Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 
+/**
+  Install CM object for SMBIOS Type Mem
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
 EFI_STATUS
 EFIAPI
 InstallSmbiosTypeMemCm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 45
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosType45Cm (
+  IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
+  );
+
+/**
+  Install CM object for SMBIOS Type 4 and Type 7
+
+  @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+EFI_STATUS
+EFIAPI
+InstallSmbiosProcSubCm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   );
 

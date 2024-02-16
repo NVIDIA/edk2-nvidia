@@ -1,8 +1,8 @@
 #
-#  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 [Defines]
@@ -22,7 +22,7 @@
 [LibraryClasses]
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
-  FdtLib|EmbeddedPkg/Library/FdtLib/FdtLib.inf
+  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
   ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
   QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
@@ -39,33 +39,12 @@
 #
 ################################################################################
 [PcdsFixedAtBuild]
-  #  DEBUG_INIT      0x00000001  // Initialization
-  #  DEBUG_WARN      0x00000002  // Warnings
-  #  DEBUG_LOAD      0x00000004  // Load events
-  #  DEBUG_FS        0x00000008  // EFI File system
-  #  DEBUG_POOL      0x00000010  // Alloc & Free (pool)
-  #  DEBUG_PAGE      0x00000020  // Alloc & Free (page)
-  #  DEBUG_INFO      0x00000040  // Informational debug messages
-  #  DEBUG_DISPATCH  0x00000080  // PEI/DXE/SMM Dispatchers
-  #  DEBUG_VARIABLE  0x00000100  // Variable
-  #  DEBUG_BM        0x00000400  // Boot Manager
-  #  DEBUG_BLKIO     0x00001000  // BlkIo Driver
-  #  DEBUG_NET       0x00004000  // SNP Driver
-  #  DEBUG_UNDI      0x00010000  // UNDI Driver
-  #  DEBUG_LOADFILE  0x00020000  // LoadFile
-  #  DEBUG_EVENT     0x00080000  // Event messages
-  #  DEBUG_GCD       0x00100000  // Global Coherency Database changes
-  #  DEBUG_CACHE     0x00200000  // Memory range cachability changes
-  #  DEBUG_VERBOSE   0x00400000  // Detailed debug messages that may
-  #                              // significantly impact boot performance
-  #  DEBUG_ERROR     0x80000000  // Error
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
 
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0xF000
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
@@ -175,14 +154,20 @@
   Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
 
   #
+  # MM Error Serialization Driver
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+
+  #
+  # MM Oem Partition Sample Driver.
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionMm.inf
+
+  #
   # MM User Authentication Driver
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
-  #
-  # MM Error Serialization Driver
-  #
-  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
 
 [Components.AARCH64]
 
@@ -196,7 +181,7 @@
 #
 ###################################################################################################
 [BuildOptions.AARCH64]
-  GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000 -Wl,-z,text,-Bsymbolic,-pie
+  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000 -Wl,-z,text,-Bsymbolic,-pie
 
 [BuildOptions.AARCH64]
   # Avoid absolute symbols when linking, which will cause a failure in GenFw.
@@ -208,7 +193,7 @@
 
 [BuildOptions]
   RELEASE_*_*_CC_FLAGS  = -DMDEPKG_NDEBUG
-  *_*_*_CC_FLAGS  = -DDISABLE_NEW_DEPRECATED_INTERFACES -fpie -mstrict-align
+  *_*_*_CC_FLAGS  = -DDISABLE_NEW_DEPRECATED_INTERFACES -fpie
 
   # Avoid absolute symbols when linking, which will cause a failure in GenFw.
   # This happens in GCC toolchains not configured with --enable-default-pie,

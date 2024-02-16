@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -13,13 +13,17 @@
 #include <Library/BaseCryptLib.h>
 #include <Library/PlatformResourceLib.h>
 
-#define BOOT_CHAIN_MAX           2
-#define BOOT_CHAIN_BIT_FIELD_LO  4
-#define BOOT_CHAIN_BIT_FIELD_HI  5
-#define BOOT_CHAIN_STATUS_LO     0
-#define BOOT_CHAIN_STATUS_HI     3
-#define BOOT_CHAIN_GOOD          0
-#define BOOT_CHAIN_BAD           1
+#define BOOT_CHAIN_SCRATCH_OFFSET  0x3cc
+#define BOOT_CHAIN_MAX             2
+#define BOOT_CHAIN_BIT_FIELD_LO    4
+#define BOOT_CHAIN_BIT_FIELD_HI    5
+#define BOOT_CHAIN_STATUS_LO       0
+#define BOOT_CHAIN_STATUS_HI       3
+#define BOOT_CHAIN_GOOD            0
+#define BOOT_CHAIN_BAD             1
+
+#define SCRATCH_RECOVERY_BOOT_OFFSET  0x2000
+#define RECOVERY_BOOT_BIT             1
 
 #define BL_MAGIC_BIT_FIELD_LO       0
 #define BL_MAGIC_BIT_FIELD_HI       15
@@ -47,7 +51,8 @@
 #define BRBCT_SIGNED_CUSTOMER_DATA_SIZE    1024
 #define BRBCT_CUSTOMER_DATA_SIZE           (BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE +\
                                            BRBCT_SIGNED_CUSTOMER_DATA_SIZE)
-#define MAX_CPUBL_OEM_FW_RATCHET_INDEX     112
+#define MAX_CPUBL_OEM_FW_RATCHET_INDEX_V1  112
+#define MAX_CPUBL_OEM_FW_RATCHET_INDEX_V2  304
 
 #define T234_FUSE_BASE_ADDRESS  0x03810000
 #define FUSE_OPT_ISP_DISABLE    0x4d8
@@ -425,16 +430,109 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (UINT32 Reserved6, 4);
 
   /**< Min Ratchet Level */
-  UEFI_DECLARE_ALIGNED (UINT8 MinRatchetLevel[MAX_CPUBL_OEM_FW_RATCHET_INDEX], 8);
+  UEFI_DECLARE_ALIGNED (UINT8 MinRatchetLevel[MAX_CPUBL_OEM_FW_RATCHET_INDEX_V1], 8);
 
   /**< physical address and size of the carveouts */
   UEFI_DECLARE_ALIGNED (TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_OEM_COUNT], 8);
 } TEGRA_CPUBL_PARAMS_V1;
 
 typedef struct {
+  /**< sha512 digest */
+  UEFI_DECLARE_ALIGNED (UINT8 Digest[SHA512_DIGEST_SIZE], 8);
+
+  /**< version */
+  UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
+
+  /**< Uart instance */
+  UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
+
+  /**< If tos loaded by mb2 has secureos or not. */
+  UEFI_DECLARE_ALIGNED (UINT32 SecureosType, 4);
+
+  /**< Boot mode can be cold boot, or RCM */
+  UEFI_DECLARE_ALIGNED (UINT32 BootType, 4);
+
+  /**< Indicate whether fw is enabled or not */
+  UEFI_DECLARE_ALIGNED (UINT32 Reserved1, 4);
+
+  /**< Reserved field */
+  UEFI_DECLARE_ALIGNED (UINT32 Reserved2, 4);
+
+  /**< Indicate whether DRAM ECC page blacklisting feature is enabled or not */
+  UEFI_DECLARE_ALIGNED (
+    union {
+    UINT64 FeatureFlagRaw;
+    struct {
+      UINT64 EnableDramPageRetirement: 1;
+      UINT64 EnableCombinedUart: 1;
+      UINT64 EnableDramStagedScrubbing: 1;
+      UINT64 EnableBlanketNsdramCarveout: 1;
+      UINT64 EnableNsdramEncryption: 1;
+    } FeatureFlagData;
+  },
+    8
+    );
+
+  /**< SDRAM base address*/
+  UEFI_DECLARE_ALIGNED (UINT64 SdramBase, 8);
+
+  /**< SDRAM size in bytes */
+  UEFI_DECLARE_ALIGNED (UINT64 SdramSize, 8);
+
+  /**< mb1 bct version information */
+  UEFI_DECLARE_ALIGNED (TEGRABL_VERSION Mb1Bct, 4);
+
+  /**< mb1 version */
+  UEFI_DECLARE_ALIGNED (TEGRABL_VERSION Mb1, 4);
+
+  /**< mb2 version */
+  UEFI_DECLARE_ALIGNED (TEGRABL_VERSION Mb2, 4);
+
+  /**< EEPROM data FIXME:CHECK eEPROM*/
+  UEFI_DECLARE_ALIGNED (TEGRABL_EEPROM_DATA Eeprom, 8);
+
+  /**< Boot chain selection, specifies if GPIO is used to select the chain to boot.
+     Value 0 indicates BCT boot mode, value 1 indicates GPIO boot mode */
+  UEFI_DECLARE_ALIGNED (UINT32 BootChainSelectionMode, 4);
+
+  UEFI_DECLARE_ALIGNED (UINT32 U32NonGpioSelectBootChain, 4);
+
+  /**< BRBCT unsigned and signed customer data */
+  UEFI_DECLARE_ALIGNED (
+    union {
+    UINT8 BrbctCustomerData[2048];
+    struct {
+      UINT8 BrbctUnsignedCustomerData[BRBCT_UNSIGNED_CUSTOMER_DATA_SIZE];
+      UINT8 BrbctSignedCustomerData[BRBCT_SIGNED_CUSTOMER_DATA_SIZE];
+    };
+  },
+    8
+    );
+
+  /**< Start address of DRAM ECC page retirement information structure */
+  UEFI_DECLARE_ALIGNED (UINT64 DramPageRetirementInfoAddress, 8);
+
+  /** Start address of hvinfo page */
+  UEFI_DECLARE_ALIGNED (UINT64 Reserved3, 8);
+
+  /** Start address of PVIT page */
+  UEFI_DECLARE_ALIGNED (UINT64 Reserved4, 8);
+
+  UEFI_DECLARE_ALIGNED (UINT32 Reserved5, 4);
+  UEFI_DECLARE_ALIGNED (UINT32 Reserved6, 4);
+
+  /**< Min Ratchet Level */
+  UEFI_DECLARE_ALIGNED (UINT8 MinRatchetLevel[MAX_CPUBL_OEM_FW_RATCHET_INDEX_V2], 8);
+
+  /**< physical address and size of the carveouts */
+  UEFI_DECLARE_ALIGNED (TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_OEM_COUNT], 8);
+} TEGRA_CPUBL_PARAMS_V2;
+
+typedef struct {
   union {
     TEGRA_CPUBL_PARAMS_V0    v0;
     TEGRA_CPUBL_PARAMS_V1    v1;
+    TEGRA_CPUBL_PARAMS_V2    v2;
     struct {
       UEFI_DECLARE_ALIGNED (UINT8 Digest[SHA512_DIGEST_SIZE], 8);
       UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
@@ -447,11 +545,15 @@ typedef struct {
                                               ((TEGRA_CPUBL_PARAMS *)PARAMS)->v0.FIELD:\
                                               ((CPUBL_VERSION(PARAMS)) == 1)? \
                                               ((TEGRA_CPUBL_PARAMS *)PARAMS)->v1.FIELD:\
+                                              ((CPUBL_VERSION(PARAMS)) == 2)? \
+                                              ((TEGRA_CPUBL_PARAMS *)PARAMS)->v2.FIELD:\
                                                0)
 #define ADDR_OF_CPUBL_PARAMS(PARAMS, FIELD)  (((CPUBL_VERSION(PARAMS)) == 0)? \
                                                &((TEGRA_CPUBL_PARAMS *)PARAMS)->v0.FIELD:\
                                               ((CPUBL_VERSION(PARAMS)) == 1)? \
                                                &((TEGRA_CPUBL_PARAMS *)PARAMS)->v1.FIELD:\
+                                              ((CPUBL_VERSION(PARAMS)) == 2)? \
+                                               &((TEGRA_CPUBL_PARAMS *)PARAMS)->v2.FIELD:\
                                                NULL)
 
 #endif //__T234_RESOURCE_CONFIG_PRIVATE_H__

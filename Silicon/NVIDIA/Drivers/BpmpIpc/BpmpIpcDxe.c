@@ -195,7 +195,7 @@ ProcessDTNodes (
 
   *Device = (NON_DISCOVERABLE_DEVICE *)AllocateZeroPool (sizeof (NON_DISCOVERABLE_DEVICE) * (*DeviceCount));
   if (NULL == *Device) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
     Status = EFI_DEVICE_ERROR;
     goto ErrorExit;
   }
@@ -282,7 +282,7 @@ BpmpIpcInitialize (
                     NULL
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
     }
 
     return Status;

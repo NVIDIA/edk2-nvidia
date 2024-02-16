@@ -1,7 +1,7 @@
-/** @file
+/**
   Configuration Manager Data of SMBIOS Type 3 table
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -15,7 +15,7 @@
 #include <ConfigurationManagerObject.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
-
+#include <NVIDIAConfiguration.h>
 #include "ConfigurationSmbiosPrivate.h"
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
@@ -23,11 +23,6 @@ CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType03),
   NULL
 };
-
-typedef struct  {
-  CHAR8    **CmAsciiString;
-  CHAR8    *DtbPropertyName;
-} TYPE3_STRING_OVERRIDE_PARAMETERS;
 
 /**
   Get system fru data for SMBIOS Type 3 data collection.
@@ -88,40 +83,46 @@ InstallSmbiosType3Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO    *Repo    = Private->Repo;
-  VOID                              *DtbBase = Private->DtbBase;
-  CM_SMBIOS_ENCLOSURE_INFO          *EnclosureInfo;
-  EFI_STATUS                        Status;
-  INTN                              Type3ContainedElementOffset;
-  CONST VOID                        *Property;
-  INT32                             Length;
-  FRU_DEVICE_INFO                   *Type3FruInfo;
-  UINT8                             ChassisType;
-  UINTN                             Type3Index;
-  UINTN                             Index;
-  INT32                             NodeOffset;
-  UINT32                            NumEnclosures;
-  CONTAINED_ELEMENT                 *ContainedElements;
-  UINT8                             ContainedElementCount;
-  UINTN                             AssetTagStrSize;
-  CHAR8                             *ManufacturerStr = NULL;
-  CHAR8                             *SkuNumberStr    = NULL;
-  CHAR8                             *SerialNumberStr = NULL;
-  CHAR8                             *AssetTagStr     = NULL;
-  CHAR8                             *VersionStr      = NULL;
-  SMBIOS_TABLE_TYPE3                *Type3RecordPcd;
-  CHAR16                            AssetTagVariableName[]     = L"ChassisAssetTag??";
-  CHAR8                             Type3NodeStr[]             = "/firmware/smbios/type3@xx";
-  CHAR8                             DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
-  TYPE3_STRING_OVERRIDE_PARAMETERS  StringOverrideArray[]      = {
-    { &ManufacturerStr, "manufacturer" },
-    { &VersionStr,      "version"      }
-  };
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
+  VOID                            *DtbBase = Private->DtbBase;
+  CM_SMBIOS_ENCLOSURE_INFO        *EnclosureInfo;
+  EFI_STATUS                      Status;
+  INTN                            Type3ContainedElementOffset;
+  CONST VOID                      *Property;
+  INT32                           Length;
+  FRU_DEVICE_INFO                 *Type3FruInfo;
+  UINT8                           ChassisType;
+  UINTN                           Type3Index;
+  UINTN                           Index;
+  INT32                           NodeOffset;
+  UINT32                          NumEnclosures;
+  CONTAINED_ELEMENT               *ContainedElements;
+  UINT8                           ContainedElementCount;
+  UINTN                           ProductInfoSize;
+  CHAR8                           *ManufacturerStr    = NULL;
+  CHAR8                           *SkuNumberStr       = NULL;
+  CHAR16                          *SkuNumberUniStr    = NULL;
+  CHAR8                           *SerialNumberStr    = NULL;
+  CHAR16                          *SerialNumberUniStr = NULL;
+  CHAR8                           *AssetTagStr        = NULL;
+  CHAR8                           *VersionStr         = NULL;
+  SMBIOS_TABLE_TYPE3              *Type3RecordPcd;
+  NVIDIA_PRODUCT_INFO             ProductInfo;
+  UINTN                           AssetTagLenWithNullTerminator;
+  CHAR16                          ProductInfoVariableName[]  = L"ProductInfo";
+  CHAR8                           Type3NodeStr[]             = "/firmware/smbios/type3@xx";
+  CHAR8                           DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
 
-  NumEnclosures   = 0;
-  AssetTagStrSize = 0;
-  EnclosureInfo   = NULL;
-  Type3RecordPcd  = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  NumEnclosures                 = 0;
+  ProductInfoSize               = sizeof (ProductInfo);
+  EnclosureInfo                 = NULL;
+  Type3RecordPcd                = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
+  AssetTagLenWithNullTerminator = 0;
+
+  Status = gRT->GetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, NULL, &ProductInfoSize, &ProductInfo);
+  if (Status == EFI_SUCCESS) {
+    AssetTagLenWithNullTerminator = StrSize (ProductInfo.ChassisAssetTag);
+  }
 
   for (Type3Index = 0; Type3Index < MAX_TYPE3_COUNT; Type3Index++) {
     //
@@ -141,9 +142,38 @@ InstallSmbiosType3Cm (
     Status       = GetFruDataType3 (Private, DtbBase, NodeOffset, "fru-desc", &Type3FruInfo);
 
     if ((Status == EFI_SUCCESS) && (Type3FruInfo != NULL)) {
-      SerialNumberStr = Type3FruInfo->ChassisSerial;
-      SkuNumberStr    = Type3FruInfo->ChassisPartNum;
-      ChassisType     = Type3FruInfo->ChassisType;
+      if (Type3FruInfo->ChassisSerial != NULL) {
+        SerialNumberStr = Type3FruInfo->ChassisSerial;
+      } else {
+        SerialNumberUniStr = (CHAR16 *)PcdGetPtr (PcdChassisSerialNumber);
+        if (StrLen (SerialNumberUniStr) > 0) {
+          SerialNumberStr = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLen (SerialNumberUniStr) +1));
+          if (SerialNumberStr != NULL) {
+            UnicodeStrToAsciiStrS (SerialNumberUniStr, SerialNumberStr, StrLen (SerialNumberUniStr) +1);
+          }
+        }
+      }
+
+      if (Type3FruInfo->ChassisPartNum != NULL) {
+        SkuNumberStr = Type3FruInfo->ChassisPartNum;
+      } else {
+        SkuNumberUniStr = (CHAR16 *)PcdGetPtr (PcdChassisSku);
+        if (StrLen (SkuNumberUniStr) > 0) {
+          SkuNumberStr = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (StrLen (SkuNumberUniStr) +1));
+          if (SkuNumberStr != NULL) {
+            UnicodeStrToAsciiStrS (SkuNumberUniStr, SkuNumberStr, StrLen (SkuNumberUniStr) +1);
+          }
+        }
+      }
+
+      if (Type3FruInfo->ChassisType != 0) {
+        ChassisType = Type3FruInfo->ChassisType;
+      } else {
+        ChassisType = Type3RecordPcd->Type;
+      }
+
+      ManufacturerStr = Type3FruInfo->ProductManufacturer;
+      VersionStr      = Type3FruInfo->ProductVersion;
     } else {
       continue;
     }
@@ -169,19 +199,6 @@ InstallSmbiosType3Cm (
     }
 
     //
-    // Check if there are OEM overrides from DTB.
-    //
-    for (Index = 0; Index < ARRAY_SIZE (StringOverrideArray); Index++) {
-      *StringOverrideArray[Index].CmAsciiString = NULL;
-      Property                                  = fdt_getprop (DtbBase, NodeOffset, StringOverrideArray[Index].DtbPropertyName, &Length);
-      if ((Property != NULL) && (Length != 0)) {
-        *StringOverrideArray[Index].CmAsciiString = (CHAR8 *)Property;
-      } else {
-        *StringOverrideArray[Index].CmAsciiString = " ";
-      }
-    }
-
-    //
     // Check if there are OEM overrides from DTB for contained elements.
     //
     ContainedElementCount = 0;
@@ -190,7 +207,7 @@ InstallSmbiosType3Cm (
       AsciiSPrint (DtContainedElementFormat, sizeof (DtContainedElementFormat), "%a/contained-element@%u", Type3NodeStr, Index);
       Type3ContainedElementOffset = fdt_path_offset (DtbBase, DtContainedElementFormat);
       if (Type3ContainedElementOffset < 0) {
-        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %d.\n", __FUNCTION__, Type3Index, ContainedElementCount));
+        DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %u.\n", __FUNCTION__, Type3Index, ContainedElementCount));
         break;
       } else {
         ContainedElements = ReallocatePool (
@@ -251,27 +268,15 @@ InstallSmbiosType3Cm (
     EnclosureInfo[NumEnclosures].ThermalState     = Type3RecordPcd->ThermalState;
     EnclosureInfo[NumEnclosures].SecurityStatus   = Type3RecordPcd->SecurityStatus;
 
-    UnicodeSPrint (AssetTagVariableName, sizeof (AssetTagVariableName), L"ChassisAssetTag%d", Type3Index);
     //
     // Get asset tag info from UEFI variable.
     //
     AssetTagStr = NULL;
-    Status      = gRT->GetVariable (AssetTagVariableName, &gNVIDIAPublicVariableGuid, NULL, &AssetTagStrSize, AssetTagStr);
-    if (Status == EFI_BUFFER_TOO_SMALL) {
-      AssetTagStr = AllocateZeroPool (AssetTagStrSize + 1);
-      if (AssetTagStr == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate asset tag info, size: %u\n", __FUNCTION__, AssetTagStrSize));
-      } else {
-        Status = gRT->GetVariable (AssetTagVariableName, &gNVIDIAPublicVariableGuid, NULL, &AssetTagStrSize, AssetTagStr);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed getting %s: %r\n",
-            __FUNCTION__,
-            AssetTagVariableName,
-            Status
-            ));
-        }
+
+    if ((ChassisType != MiscChassisBladeEnclosure) && (AssetTagLenWithNullTerminator != 0)) {
+      AssetTagStr = AllocateZeroPool (AssetTagLenWithNullTerminator);
+      if (AssetTagStr != NULL) {
+        UnicodeStrToAsciiStrS (ProductInfo.ChassisAssetTag, AssetTagStr, AssetTagLenWithNullTerminator);
       }
     }
 
@@ -302,7 +307,7 @@ InstallSmbiosType3Cm (
 
   Private->EnclosureBaseboardBinding.Count = NumEnclosures;
   DEBUG (
-    (DEBUG_INFO, "%a: NumEnclosures = %d\n", __FUNCTION__, NumEnclosures)
+    (DEBUG_INFO, "%a: NumEnclosures = %u\n", __FUNCTION__, NumEnclosures)
     );
 
   //

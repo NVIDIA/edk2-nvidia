@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,20 +16,22 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "Server"
 
-    def GetActiveScopes(self):
-        return super().GetActiveScopes() + ["server"]
+    def GetGuid(self):
+        return "25cdda40-4cf9-44e9-97f1-b0a0f5fa7b9c"
 
     def GetPackagesPath(self):
         return super().GetPackagesPath() + [
-            "edk2-nvidia-server-gpu-sdk"
+            "edk2-nvidia-server-gpu-sdk/", "edk2-redfish-client/"
         ]
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
 
     def GetDscName(self):
-        return ("edk2-nvidia/Platform/NVIDIA/Server/Server.dsc")
+        return ("edk2-nvidia/Platform/NVIDIA/NVIDIA.common.dsc")
 
+    def GetConfigFiles(self):
+        return ["edk2-nvidia/Platform/NVIDIA/Server/Server.defconfig"]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Server. '''

@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -294,7 +294,7 @@ InitBiasPad (
     if (EFI_ERROR (Status)) {
       /* Print Error and Conitnue as USB3(Super Speed) might still be partially working */
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "Unable to Enable USB2 Clock:%d Status: %x\n",
         PlatConfig->Usb2ClockIds[Index],
         Status
@@ -568,8 +568,8 @@ DisableVbus (
       /* Disable VBUS Regulator through GPIO */
       if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, FALSE))) {
         DEBUG ((
-          EFI_D_ERROR,
-          "%a: Couldn't Disable Regulator: %d for USB Port: %d\n",
+          DEBUG_ERROR,
+          "%a: Couldn't Disable Regulator: %d for USB Port: %u\n",
           __FUNCTION__,
           Usb2Ports[i].VbusSupply,
           i
@@ -611,8 +611,8 @@ EnableVbus (
       /* Enable VBUS Regulator through GPIO */
       if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, TRUE))) {
         DEBUG ((
-          EFI_D_ERROR,
-          "Couldn't Enable Regulator: %d for USB Port: %d\n",
+          DEBUG_ERROR,
+          "Couldn't Enable Regulator: %d for USB Port: %u\n",
           Usb2Ports[i].VbusSupply,
           i
           ));
@@ -632,14 +632,14 @@ EnableVbus (
   if (Private->HandleOverCurrent == TRUE) {
     Status = gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_NOTIFY, OverCurrentHandler, Private, &Private->TimerEvent);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "%a: Unable to create OverCurrent Timer\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Unable to create OverCurrent Timer\n", __FUNCTION__));
       return Status;
     }
 
     /* Using 2 Seconds so that we dont load the System with frequent Polling */
     Status = gBS->SetTimer (Private->TimerEvent, TimerPeriodic, 20000000);
     if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "Error in Setting OverCurrent Timer\n"));
+      DEBUG ((DEBUG_ERROR, "Error in Setting OverCurrent Timer\n"));
       return Status;
     }
   }
@@ -661,24 +661,24 @@ FindUsb2PadClocks (
 
   NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pads");
   if (NodeOffset < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Couldn't find pads subnode in DT\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't find pads subnode in DT\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
   NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, NodeOffset, "usb2");
   if (NodeOffset < 0) {
-    DEBUG ((EFI_D_ERROR, "%a: Couldn't find pads->usb2 subnode in DT\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't find pads->usb2 subnode in DT\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
   ClockIds = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "clocks", &ClocksLength);
   if ((ClockIds == 0) || (ClocksLength == 0)) {
     PlatConfig->NumUsb2Clocks = 0;
-    DEBUG ((EFI_D_ERROR, "%a: Couldn't find usb2 pad's clocks property in DT\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Couldn't find usb2 pad's clocks property in DT\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   } else {
     if ((ClocksLength % (sizeof (UINT32) * 2)) != 0) {
-      DEBUG ((EFI_D_ERROR, "%a, Clock length(%d) unexpected\n", __FUNCTION__, ClocksLength));
+      DEBUG ((DEBUG_ERROR, "%a, Clock length(%d) unexpected\n", __FUNCTION__, ClocksLength));
       return EFI_UNSUPPORTED;
     }
 
@@ -714,7 +714,7 @@ InitPlatInfo (
 
   Ports = AllocateZeroPool ((PlatConfig->NumHsPhys + PlatConfig->NumSsPhys) * sizeof (PORT_INFO));
   if (NULL == Ports) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Port Memory\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Port Memory\r\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -725,7 +725,7 @@ InitPlatInfo (
   Usb3Ports = PlatConfig->Usb3Ports;
 
   if (FindUsb2PadClocks (PlatConfig, DeviceTreeNode) != EFI_SUCCESS) {
-    DEBUG ((EFI_D_ERROR, "Couldn't find USB2 Clocks Info in Device Tree\n"));
+    DEBUG ((DEBUG_ERROR, "Couldn't find USB2 Clocks Info in Device Tree\n"));
     FreePool (Ports);
     return EFI_UNSUPPORTED;
   }
@@ -733,7 +733,7 @@ InitPlatInfo (
   /* Finding the USB2 Ports that are enabled on the Platform */
   PortsOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "ports");
   if (PortsOffset < 0) {
-    DEBUG ((EFI_D_ERROR, "Couldn't find USB Ports\n"));
+    DEBUG ((DEBUG_ERROR, "Couldn't find USB Ports\n"));
     FreePool (Ports);
     return EFI_UNSUPPORTED;
   }
@@ -743,7 +743,7 @@ InitPlatInfo (
     /* The Port is disabled by default */
     Usb2Ports[i].PortEnabled = FALSE;
 
-    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%d", i);
+    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%u", i);
     NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
@@ -751,7 +751,7 @@ InitPlatInfo (
 
     Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
     if (Property == NULL) {
-      DEBUG ((EFI_D_ERROR, "Couldnt Find the USB Port Status\n"));
+      DEBUG ((DEBUG_ERROR, "Couldnt Find the USB Port Status\n"));
       continue;
     }
 
@@ -762,7 +762,7 @@ InitPlatInfo (
 
     Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "mode", &PropertySize);
     if (Property == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Couldn't Find the %s Port Mode\n", __FUNCTION__, Name));
+      DEBUG ((DEBUG_ERROR, "%a: Couldn't Find the %a Port Mode\n", __FUNCTION__, Name));
       continue;
     }
 
@@ -776,7 +776,7 @@ InitPlatInfo (
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Usb2Ports[i].VbusSupply = SwapBytes32 (*(UINT32 *)Property);
     } else {
-      DEBUG ((EFI_D_ERROR, "Couldn't find Vbus Supply for Port: %a\n", Name));
+      DEBUG ((DEBUG_ERROR, "Couldn't find Vbus Supply for Port: %a\n", Name));
       continue;
     }
 
@@ -799,7 +799,7 @@ InitPlatInfo (
     /* The Port is disabled by default */
     Usb3Ports[i].PortEnabled = FALSE;
 
-    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb3-%d", i);
+    CharCount  = AsciiSPrint (Name, sizeof (Name), "usb3-%u", i);
     NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
@@ -807,7 +807,7 @@ InitPlatInfo (
 
     Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
     if (Property == NULL) {
-      DEBUG ((EFI_D_ERROR, "%a: Couldnt Find the %a Port Status\n", __FUNCTION__, Name));
+      DEBUG ((DEBUG_ERROR, "%a: Couldnt Find the %a Port Status\n", __FUNCTION__, Name));
       continue;
     }
 
@@ -830,7 +830,7 @@ InitPlatInfo (
         continue;
       }
     } else {
-      DEBUG ((EFI_D_ERROR, "%a: Cant find USB2 Companion Port for %a\n", __FUNCTION__, Name));
+      DEBUG ((DEBUG_ERROR, "%a: Cant find USB2 Companion Port for %a\n", __FUNCTION__, Name));
       continue;
     }
 
@@ -839,7 +839,7 @@ InitPlatInfo (
      * in USB2 DT Entry and vbus wont be enabled unless USB2 port is enabled
      */
     if (Usb2Ports[Usb3Ports[i].CompanionPort].PortEnabled == FALSE) {
-      DEBUG ((EFI_D_ERROR, "%a:USB2 Companion Port for %a is not enabled in DT\n", __FUNCTION__, Name));
+      DEBUG ((DEBUG_ERROR, "%a:USB2 Companion Port for %a is not enabled in DT\n", __FUNCTION__, Name));
       continue;
     }
 
@@ -851,7 +851,7 @@ InitPlatInfo (
 
     /* Enable the USB3 Port as we got all the necessary Information */
     Usb3Ports[i].PortEnabled = TRUE;
-    DEBUG ((EFI_D_INFO, "Usb SS Port: %d Enabled\n", i));
+    DEBUG ((DEBUG_INFO, "Usb SS Port: %u Enabled\n", i));
   }
 
   /* If atleast one port is enabled, return Success */

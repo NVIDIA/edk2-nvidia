@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -20,6 +20,7 @@
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/PciIo.h>
 #include <Protocol/KernelCmdLineUpdate.h>
 #include <Protocol/AndroidBootImg.h>
 
@@ -29,9 +30,19 @@
 
 extern EFI_GUID  mBmAutoCreateBootOptionGuid;
 
-EFI_EVENT  mEndOfDxeEvent;
-CHAR16     KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
+CHAR16  KernelCommandRemoveAcpi[][NVIDIA_KERNEL_COMMAND_MAX_LEN] = {
   L"console="
+};
+
+UINT8  RemovableMessagingDeviceSubType[] = {
+  MSG_SD_DP,
+  MSG_USB_DP,
+  MSG_USB_CLASS_DP,
+  MSG_USB_WWID_DP
+};
+
+UINT8  RemovableHardwareDeviceSubType[] = {
+  HW_PCI_DP
 };
 
 /*
@@ -49,20 +60,36 @@ IsValidLoadOption (
   IN  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption
   )
 {
-  EFI_STATUS              Status;
-  EFI_HANDLE              Handle;
-  EFI_DEVICE_PATH         *DevicePath;
-  VOID                    *DevicePathNode;
-  CONTROLLER_DEVICE_PATH  *Controller;
+  EFI_STATUS                        Status;
+  EFI_HANDLE                        Handle;
+  EFI_DEVICE_PATH                   *DevicePath;
+  VOID                              *DevicePathNode;
+  CONTROLLER_DEVICE_PATH            *Controller;
+  EFI_PCI_IO_PROTOCOL               *PciIo;
+  NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY  *EnabledPcieNicTopology;
+  BOOLEAN                           NicFilteringEnabled;
+  UINTN                             Segment;
+  UINTN                             Bus;
+  UINTN                             Device;
+  UINTN                             Function;
 
   if (CompareGuid ((EFI_GUID *)LoadOption->OptionalData, &mBmAutoCreateBootOptionGuid)) {
     DevicePath = LoadOption->FilePath;
 
     // Load options with FirmwareVolume2 protocol are not supported
     // on the platform.
+    Handle = NULL;
     Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid, &DevicePath, &Handle);
     if (!EFI_ERROR (Status)) {
       return FALSE;
+    }
+
+    EnabledPcieNicTopology = PcdGetPtr (PcdEnabledPcieNicTopology);
+    NicFilteringEnabled    = FALSE;
+    if ((EnabledPcieNicTopology != NULL) &&
+        (EnabledPcieNicTopology->Enabled))
+    {
+      NicFilteringEnabled = TRUE;
     }
 
     DevicePathNode = DevicePath;
@@ -84,11 +111,105 @@ IsValidLoadOption (
         break;
       }
 
+      if (NicFilteringEnabled) {
+        if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+            (DevicePathSubType (DevicePathNode) == MSG_MAC_ADDR_DP))
+        {
+          while (TRUE) {
+            Handle = NULL;
+            Status = gBS->LocateDevicePath (&gEfiPciIoProtocolGuid, &DevicePath, &Handle);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            Status = gBS->HandleProtocol (Handle, &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+            if (EFI_ERROR (Status)) {
+              break;
+            }
+
+            if (EnabledPcieNicTopology->Segment == ENABLED_PCIE_ALLOW_ALL) {
+              Segment = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Bus == ENABLED_PCIE_ALLOW_ALL) {
+              Bus = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Device == ENABLED_PCIE_ALLOW_ALL) {
+              Device = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if (EnabledPcieNicTopology->Function == ENABLED_PCIE_ALLOW_ALL) {
+              Function = ENABLED_PCIE_ALLOW_ALL;
+            }
+
+            if ((EnabledPcieNicTopology->Segment != Segment) ||
+                (EnabledPcieNicTopology->Bus != Bus) ||
+                (EnabledPcieNicTopology->Device != Device) ||
+                (EnabledPcieNicTopology->Function != Function))
+            {
+              return FALSE;
+            }
+
+            break;
+          }
+
+          break;
+        }
+      }
+
       DevicePathNode = NextDevicePathNode (DevicePathNode);
     }
   }
 
   return TRUE;
+}
+
+/*
+  Checks whether the auto-enumerated boot option is removable or not.
+
+  @param[in] LoadOption            Load option buffer.
+
+  @retval TRUE                     Load option valid.
+
+  @retval FALSE                    Load option invalid.
+*/
+STATIC
+BOOLEAN
+IsRemovableLoadOption (
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption
+  )
+{
+  EFI_DEVICE_PATH  *DevicePath;
+  VOID             *DevicePathNode;
+  UINTN            Count;
+
+  DevicePath     = LoadOption->FilePath;
+  DevicePathNode = DevicePath;
+  while (!IsDevicePathEndType (DevicePathNode)) {
+    if (DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) {
+      for (Count = 0; Count < sizeof (RemovableMessagingDeviceSubType)/sizeof (RemovableMessagingDeviceSubType[0]); Count++) {
+        if (DevicePathSubType (DevicePathNode) == RemovableMessagingDeviceSubType[Count]) {
+          return TRUE;
+        }
+      }
+    } else if (DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) {
+      for (Count = 0; Count < sizeof (RemovableHardwareDeviceSubType)/sizeof (RemovableHardwareDeviceSubType[0]); Count++) {
+        if (DevicePathSubType (DevicePathNode) == RemovableHardwareDeviceSubType[Count]) {
+          return TRUE;
+        }
+      }
+    }
+
+    DevicePathNode = NextDevicePathNode (DevicePathNode);
+  }
+
+  return FALSE;
 }
 
 /*
@@ -236,63 +357,6 @@ GetDtbCommandLine (
 
   *OutCmdLine = CmdLineDtb;
   return EFI_SUCCESS;
-}
-
-/*
-  Check if platform forces the kernel command line to be picked from DTB
-  and not from android boot image.
-
-  @retval TRUE    Use kernel command line from DTB.
-
-  @retval FALSE   Platform does not force using kernel dtb for cmdline.
-*/
-STATIC
-BOOLEAN
-ForceUseDtbCommandLine (
-  VOID
-  )
-{
-  EFI_STATUS   Status;
-  VOID         *DeviceTreeBase;
-  UINTN        DeviceTreeSize;
-  INT32        NodeOffset;
-  CONST CHAR8  *Property;
-  BOOLEAN      DTBoot;
-  VOID         *AcpiBase;
-
-  DTBoot = FALSE;
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    DTBoot = TRUE;
-  }
-
-  DeviceTreeBase = NULL;
-  if (DTBoot) {
-    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
-    if (EFI_ERROR (Status)) {
-      return FALSE;
-    }
-  } else {
-    Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
-    if (EFI_ERROR (Status)) {
-      return FALSE;
-    }
-  }
-
-  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
-  if (NodeOffset < 0) {
-    return FALSE;
-  }
-
-  Property = NULL;
-  Property = (CONST CHAR8 *)fdt_getprop (DeviceTreeBase, NodeOffset, "use_dts_cmdline", NULL);
-  if (NULL == Property) {
-    return FALSE;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: Platform forced to use kernel command line from DTB.\n", __FUNCTION__));
-
-  return TRUE;
 }
 
 /*
@@ -620,7 +684,6 @@ RefreshAutoEnumeratedBootOptions (
   EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
   UINTN                         Count;
-  BOOLEAN                       ForceUseDtbCmdLine;
 
   if ((BootOptions == NULL) ||
       (BootOptionsCount == 0) ||
@@ -630,11 +693,10 @@ RefreshAutoEnumeratedBootOptions (
     return EFI_INVALID_PARAMETER;
   }
 
-  ImgKernelArgs      = NULL;
-  DtbKernelArgs      = NULL;
-  CmdLine            = NULL;
-  CmdLen             = 0;
-  ForceUseDtbCmdLine = FALSE;
+  ImgKernelArgs = NULL;
+  DtbKernelArgs = NULL;
+  CmdLine       = NULL;
+  CmdLen        = 0;
 
   Status = gBS->AllocatePool (
                   EfiBootServicesData,
@@ -677,13 +739,11 @@ RefreshAutoEnumeratedBootOptions (
                       );
       ASSERT_EFI_ERROR (Status);
 
-      ForceUseDtbCmdLine = ForceUseDtbCommandLine ();
-
       // Always use DTB arguments on pre-silicon targets
       if ((TegraGetPlatform () == TEGRA_PLATFORM_SILICON) &&
           (ImgKernelArgs != NULL) &&
           (StrLen (ImgKernelArgs) != 0) &&
-          (ForceUseDtbCmdLine == FALSE))
+          (PcdGetBool (PcdBootAndroidImage) == FALSE))
       {
         DEBUG ((DEBUG_ERROR, "%a: Using Image Kernel Command Line\n", __FUNCTION__));
         InputKernelArgs = ImgKernelArgs;
@@ -865,9 +925,11 @@ RefreshNvBootOptions (
 
     for (Index = 0; Index < BootOptionsCount; Index++) {
       if (EfiBootManagerFindLoadOption (&BootOptions[Index], NvBootOptions, NvBootOptionsCount) == -1) {
-        Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
-        if (EFI_ERROR (Status)) {
-          goto Error;
+        if (PcdGetBool (PcdBootAndroidImage) || IsRemovableLoadOption (&BootOptions[Index])) {
+          Status = EfiBootManagerAddLoadOptionVariable (&BootOptions[Index], 0);
+          if (EFI_ERROR (Status)) {
+            goto Error;
+          }
         }
       }
     }

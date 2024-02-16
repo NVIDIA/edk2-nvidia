@@ -1,7 +1,7 @@
 ## @file
 #  Configuration Manager Data Dxe
 #
-#  Copyright (c) 2020 - 2023, NVIDIA Corporation. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020 - 2024, NVIDIA Corporation. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -38,6 +38,7 @@
   ConfigurationSmbiosType1.c
   ConfigurationSmbiosType2.c
   ConfigurationSmbiosType3.c
+  ConfigurationSmbiosProcSub.c
   ConfigurationSmbiosType8.c
   ConfigurationSmbiosType9.c
   ConfigurationSmbiosType11.c
@@ -47,6 +48,7 @@
   ConfigurationSmbiosType39.c
   ConfigurationSmbiosType41.c
   ConfigurationSmbiosType43.c
+  ConfigurationSmbiosType45.c
   ConfigurationHbm.c
   ConfigurationIpmiDev.c
   ConfigurationSmbiosMem.c
@@ -66,6 +68,7 @@
   Silicon/NVIDIA/NVIDIA.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
   SecurityPkg/SecurityPkg.dec
+  FmpDevicePkg/FmpDevicePkg.dec
 
 [LibraryClasses]
   AmlLib
@@ -83,10 +86,11 @@
   ConfigurationManagerLib
   FruLib
   IpmiBaseLib
-  PciSegmentLib
   Tpm2CommandLib
+  TpmMeasurementLib
   PcdLib
-  UefiRuntimeServicesTableLib
+  DevicePathLib
+  OemMiscLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -111,6 +115,8 @@
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
   gNVIDIATokenSpaceGuid.PcdType3Info
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber
+  gNVIDIATokenSpaceGuid.PcdChassisSku
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
   gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
@@ -126,6 +132,9 @@
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLangCodes
   gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLang
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
@@ -134,6 +143,8 @@
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gEfiPciIoProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gEfiFirmwareManagementProtocolGuid
+  gEfiTcg2ProtocolGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
@@ -176,10 +187,14 @@
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
 
 [Guids]
   gNVIDIAPublicVariableGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid AND
-  gNVIDIARasNsCommPcieDpcDataProtocolGuid
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid AND
+  gEfiFirmwareManagementProtocolGuid AND
+  gNVIDIABdsDeviceConnectCompleteGuid

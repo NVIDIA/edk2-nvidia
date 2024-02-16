@@ -136,16 +136,16 @@ JsonValueToRedfishValue (
   type = JsonGetType (Value);
   switch (type) {
     case EdkiiJsonTypeString:
-      RedfishValue->Type         = REDFISH_VALUE_TYPE_STRING;
+      RedfishValue->Type         = RedfishValueTypeString;
       RedfishValue->Value.Buffer = (CHAR8 *)JsonValueGetAsciiString (Value);
       break;
     case EdkiiJsonTypeInteger:
-      RedfishValue->Type          = REDFISH_VALUE_TYPE_INTEGER;
+      RedfishValue->Type          = RedfishValueTypeInteger;
       RedfishValue->Value.Integer = JsonValueGetInteger (Value);
       break;
     case EdkiiJsonTypeTrue:
     case EdkiiJsonTypeFalse:
-      RedfishValue->Type          = REDFISH_VALUE_TYPE_BOOLEAN;
+      RedfishValue->Type          = RedfishValueTypeBoolean;
       RedfishValue->Value.Boolean = JsonValueGetBoolean (Value);
       break;
     default:
@@ -178,13 +178,13 @@ RedfishValueToJsonValue (
   }
 
   switch (RedfishValue->Type) {
-    case REDFISH_VALUE_TYPE_STRING:
+    case RedfishValueTypeString:
       *Value = JsonValueInitAsciiString (RedfishValue->Value.Buffer);
       break;
-    case REDFISH_VALUE_TYPE_INTEGER:
+    case RedfishValueTypeInteger:
       *Value = JsonValueInitInteger (RedfishValue->Value.Integer);
       break;
-    case REDFISH_VALUE_TYPE_BOOLEAN:
+    case RedfishValueTypeBoolean:
       *Value = JsonValueInitBoolean (RedfishValue->Value.Boolean);
       break;
     default:
@@ -217,16 +217,16 @@ AttributeTypeToJsonValue (
   }
 
   switch (Type) {
-    case REDFISH_ATTRIBUTE_TYPE_ENUMERATION:
+    case RedfishAttributeTypeEnumeration:
       *Value = JsonValueInitAsciiString ("Enumeration");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_STRING:
+    case RedfishAttributeTypeString:
       *Value = JsonValueInitAsciiString ("String");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_INTEGER:
+    case RedfishAttributeTypeInteger:
       *Value = JsonValueInitAsciiString ("Integer");
       break;
-    case REDFISH_ATTRIBUTE_TYPE_BOOLEAN:
+    case RedfishAttributeTypeBoolean:
       *Value = JsonValueInitAsciiString ("Boolean");
       break;
     default:
@@ -267,6 +267,8 @@ GenerateAttributeDetails (
   EDKII_REDFISH_ATTRIBUTE  Attribute;
   EDKII_REDFISH_VALUE      DefaultValue;
   CHAR16                   ConfigureLang[REDFISH_BIOS_CONFIG_LANG_SIZE];
+  CHAR8                    *FullMenuPath;
+  UINTN                    MenuPathSize;
   UINTN                    Index;
   BOOLEAN                  NoDefaultValue;
 
@@ -276,6 +278,8 @@ GenerateAttributeDetails (
 
   AttributeArray = NULL;
   AttributeValue = NULL;
+  FullMenuPath   = NULL;
+  MenuPathSize   = 0;
   ZeroMem (&DefaultValue, sizeof (EDKII_REDFISH_VALUE));
   ZeroMem (&Attribute, sizeof (EDKII_REDFISH_ATTRIBUTE));
 
@@ -371,13 +375,19 @@ GenerateAttributeDetails (
   //
   // MenuPath
   //
-  AttributeValue = JsonValueInitAsciiString (Attribute.MenuPath);
-  if (AttributeValue == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto RELEASE;
-  }
+  MenuPathSize = AsciiStrLen (REDFISH_TOP_MENU_PATH) + AsciiStrLen (Attribute.MenuPath) + 1;
+  FullMenuPath = AllocateZeroPool (MenuPathSize);
+  if (FullMenuPath != NULL) {
+    AsciiSPrint (FullMenuPath, MenuPathSize, "%a%a", REDFISH_TOP_MENU_PATH, Attribute.MenuPath);
 
-  JsonObjectSetValue (*AttributeObj, "MenuPath", AttributeValue);
+    AttributeValue = JsonValueInitAsciiString (FullMenuPath);
+    if (AttributeValue == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto RELEASE;
+    }
+
+    JsonObjectSetValue (*AttributeObj, "MenuPath", AttributeValue);
+  }
 
   //
   // ReadOnly
@@ -414,7 +424,7 @@ GenerateAttributeDetails (
   //
   // String length
   //
-  if (Attribute.Type == REDFISH_ATTRIBUTE_TYPE_STRING) {
+  if (Attribute.Type == RedfishAttributeTypeString) {
     //
     // MaxLength
     //
@@ -441,7 +451,7 @@ GenerateAttributeDetails (
   //
   // Numeric boundary
   //
-  if (Attribute.Type == REDFISH_ATTRIBUTE_TYPE_INTEGER) {
+  if (Attribute.Type == RedfishAttributeTypeInteger) {
     //
     // UpperBound
     //
@@ -479,7 +489,7 @@ GenerateAttributeDetails (
   //
   // Values
   //
-  if ((Attribute.Type == REDFISH_ATTRIBUTE_TYPE_ENUMERATION) && (Attribute.Values.ValueCount > 0)) {
+  if ((Attribute.Type == RedfishAttributeTypeEnumeration) && (Attribute.Values.ValueCount > 0)) {
     AttributeArray = JsonValueInitArray ();
 
     for (Index = 0; Index < Attribute.Values.ValueCount; Index++) {
@@ -510,6 +520,10 @@ RELEASE:
 
   if (Attribute.MenuPath != NULL) {
     FreePool (Attribute.MenuPath);
+  }
+
+  if (FullMenuPath != NULL) {
+    FreePool (FullMenuPath);
   }
 
   return Status;
@@ -554,7 +568,7 @@ PlatformRedfishBiosAddendumData (
   }
 
   if (!IsSupportedBiosSchema (SchemaInfo)) {
-    DEBUG ((DEBUG_ERROR, "%a, unsupported schema: %a version: %a at %a\n", __FUNCTION__, SchemaInfo->Schema, SchemaInfo->Version, SchemaInfo->Uri));
+    DEBUG ((REDFISH_BIOS_DEBUG_DUMP, "%a, unsupported schema: %a version: %a at %a\n", __FUNCTION__, SchemaInfo->Schema, SchemaInfo->Version, SchemaInfo->Uri));
     return EFI_UNSUPPORTED;
   }
 
@@ -625,11 +639,11 @@ PlatformRedfishBiosAddendumData (
   // If array is not empty, replace input JSON object with this one.
   //
   if (JsonArrayCount (AttributeArray) > 0) {
-    JsonValueFree (JsonData);
-    JsonData = JsonValueInitObject ();
-    if (JsonData == NULL) {
+    Status = JsonObjectClear (JsonValueGetObject (JsonData));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to clear JSON object\n", __func__));
       JsonValueFree (AttributeArray);
-      return EFI_OUT_OF_RESOURCES;
+      return EFI_DEVICE_ERROR;
     }
 
     JsonObjectSetValue (JsonData, REDFISH_BIOS_ATTRIBUTES_NAME, AttributeArray);

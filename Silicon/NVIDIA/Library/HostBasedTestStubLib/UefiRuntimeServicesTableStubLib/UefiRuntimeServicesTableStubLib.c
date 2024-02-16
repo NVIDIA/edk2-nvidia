@@ -2,17 +2,11 @@
 
   UEFI Runtime Services Table Lib stubs for host based tests
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdint.h>
-#include <cmocka.h>
-
 #include <HostBasedTestStubLib/UefiRuntimeServicesTableStubLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseLib.h>

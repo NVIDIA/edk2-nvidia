@@ -69,7 +69,7 @@ SetupNotificationStructure (
       break;
 
     default:
-      DEBUG ((EFI_D_ERROR, "%a: Unsupported notification type=%d\n", __FUNCTION__, NotificationStructure->Type));
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported notification type=%d\n", __FUNCTION__, NotificationStructure->Type));
   }
 }
 
@@ -113,7 +113,7 @@ HESTCreateAcpiTable (
         HestTableSize += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) * 2;
       }
     } else {
-      DEBUG ((EFI_D_ERROR, "%a: Unsupported type=%d\n", __FUNCTION__, ErrorSource[i].GhesType));
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported type=%d\n", __FUNCTION__, ErrorSource[i].GhesType));
     }
   }
 
@@ -195,7 +195,7 @@ HESTCreateAcpiTable (
     HestTable->ErrorSourceCount++;
 
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "%a: Added GHES entry for SourceId=%d. ErrStatusAddress=0x%llx\n",
       __FUNCTION__,
       GHESv2Instance.SourceId,
@@ -227,7 +227,7 @@ HESTCreateAcpiTable (
       HestTable->ErrorSourceCount++;
 
       DEBUG ((
-        EFI_D_INFO,
+        DEBUG_INFO,
         "%a: Added duplicate SDEI entry for SourceId=%d SDEI=%d. ErrStatusAddress=0x%llx\n",
         __FUNCTION__,
         GHESv2Instance.SourceId,
@@ -294,7 +294,7 @@ BERTCreateAcpiTable (
   }
 
   if (BERTErrorSourceInfo == NULL) {
-    DEBUG ((EFI_D_ERROR, "%a: BERT error source missing. Cannot create BERT table.\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: BERT error source missing. Cannot create BERT table.\n", __FUNCTION__));
     return;
   }
 
@@ -347,14 +347,14 @@ HestBertSetupTables (
 
   Status = GetErrorSources (RasFwBufferInfo);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to get ErrorSourceInfo: %u\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get ErrorSourceInfo: %u\n", __FUNCTION__, Status));
     return Status;
   }
 
   CommunicationHeader = (EFI_MM_COMMUNICATE_HEADER *)RasFwBufferInfo->CommBase;
 
   if (CommunicationHeader->MessageLength == 0) {
-    DEBUG ((EFI_D_ERROR, "%a: No data from RAS_FW\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: No data from RAS_FW\n", __FUNCTION__));
     return Status;
   }
 
@@ -362,7 +362,7 @@ HestBertSetupTables (
   MmioReadBuffer64 ((UINTN)&(CommunicationHeader->Data), RasFwBufferInfo->CommSize, (UINT64 *)ErrorSourceInfo);
 
   DEBUG ((
-    EFI_D_INFO,
+    DEBUG_INFO,
     "%a: ErrorRecordRegion 0x%p (Size: 0x%x) Entries : %d\n",
     __FUNCTION__,
     ErrorSourceInfo->ErrorRecordsRegionBase,

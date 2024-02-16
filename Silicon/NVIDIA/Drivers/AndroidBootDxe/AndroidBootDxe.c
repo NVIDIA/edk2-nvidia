@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -11,13 +11,16 @@
 **/
 
 #include "AndroidBootDxe.h"
+#include "AndroidBootConfig.h"
+#include <libfdt.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
 #include <Library/HobLib.h>
 #include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
-#include <Library/BootChainInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
 STATIC UINT64                     mRamLoadedSize         = 0;
@@ -117,6 +120,265 @@ AndroidBootOnReadyToBootHandler (
 }
 
 /**
+  Locate sibling partition's handle
+
+  @param[in]   Handle                 Partition handle whose sibling is needed
+  @param[in]   SiblingPartitionName   Name of sibling partition
+
+**/
+STATIC
+EFI_HANDLE
+EFIAPI
+AndroidBootGetSiblingPartitionHandle (
+  IN EFI_HANDLE  Handle,
+  IN CHAR16      *SiblingPartitionName
+  )
+{
+  EFI_STATUS                   Status;
+  EFI_HANDLE                   *ParentHandles = NULL;
+  UINTN                        ParentCount;
+  UINTN                        ParentIndex;
+  EFI_HANDLE                   *ChildHandles = NULL;
+  UINTN                        ChildCount;
+  UINTN                        ChildIndex;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
+  EFI_HANDLE                   SiblingHandle  = NULL;
+
+  Status = PARSE_HANDLE_DATABASE_PARENTS (Handle, &ParentCount, &ParentHandles);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find parents - %r\r\n", __FUNCTION__, Status));
+    return NULL;
+  }
+
+  for (ParentIndex = 0; ParentIndex < ParentCount; ParentIndex++) {
+    Status = ParseHandleDatabaseForChildControllers (ParentHandles[ParentIndex], &ChildCount, &ChildHandles);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find child controllers - %r\r\n", __FUNCTION__, Status));
+      goto Exit;
+    }
+
+    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
+      Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartitionInfoProtocolGuid, (VOID **)&PartitionInfo);
+      if (!EFI_ERROR (Status)) {
+        if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+          goto Exit;
+        }
+
+        if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+          goto Exit;
+        }
+
+        if (StrCmp (PartitionInfo->Info.Gpt.PartitionName, SiblingPartitionName) == 0) {
+          SiblingHandle = ChildHandles[ChildIndex];
+          goto Exit;
+        }
+      }
+    }
+  }
+
+Exit:
+  if (ParentHandles != NULL) {
+    FreePool (ParentHandles);
+    ParentHandles = NULL;
+  }
+
+  if (ChildHandles != NULL) {
+    FreePool (ChildHandles);
+    ChildHandles = NULL;
+  }
+
+  return SiblingHandle;
+}
+
+/**
+  Check if loadfile is installed for correct config. If not,
+  uninstall it.
+
+  @param[in]   Event                  Event structure
+  @param[in]   Context                Notification context
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootOnEndOfDxeHandler (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_STATUS                 Status;
+  ANDROID_BOOT_PRIVATE_DATA  *Private;
+  BOOLEAN                    RecoveryMode;
+  EFI_HANDLE                 MscHandle;
+  MiscCmdType                MiscCmd;
+  UINTN                      DataSize;
+  UINT32                     BootMode;
+  CHAR16                     PartitionName[MAX_PARTITION_NAME_LEN];
+
+  gBS->CloseEvent (Event);
+
+  Private      = (ANDROID_BOOT_PRIVATE_DATA *)Context;
+  RecoveryMode = FALSE;
+
+  // Check recovery mode
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    MscHandle = AndroidBootGetSiblingPartitionHandle (
+                  Private->ControllerHandle,
+                  MISC_PARTITION_BASE_NAME
+                  );
+    Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
+      RecoveryMode = TRUE;
+    }
+  } else {
+    DataSize = sizeof (BootMode);
+    Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
+    if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
+      RecoveryMode = TRUE;
+    }
+  }
+
+  if (RecoveryMode) {
+    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
+  } else {
+    Status = GetActivePartitionName (L"kernel", PartitionName);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+  }
+
+  if (StrCmp (Private->PartitionName, PartitionName) != 0) {
+    gBS->UninstallMultipleProtocolInterfaces (
+           Private->AndroidBootHandle,
+           &gEfiLoadFileProtocolGuid,
+           &Private->LoadFile,
+           &gNVIDIALoadfileKernelArgsGuid,
+           Private->KernelArgs,
+           &gEfiDevicePathProtocolGuid,
+           Private->AndroidBootDevicePath,
+           NULL
+           );
+  }
+}
+
+/**
+  Locate and install associated device tree
+
+  @param[in]   Private       Private driver data for android kernel instance
+                             being loaded
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootDxeLoadDtb (
+  IN ANDROID_BOOT_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS             Status;
+  VOID                   *AcpiBase   = NULL;
+  VOID                   *CurrentDtb = NULL;
+  CHAR16                 DtbPartitionName[MAX_PARTITION_NAME_LEN];
+  EFI_HANDLE             DtbPartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  UINT64                 Size;
+  VOID                   *KernelDtb = NULL;
+  VOID                   *Dtb;
+  VOID                   *DtbCopy;
+
+  if (Private == NULL) {
+    return;
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return;
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  if (StrCmp (Private->PartitionName, L"A_kernel") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"A_kernel-dtb");
+  } else if (StrCmp (Private->PartitionName, L"B_kernel") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"B_kernel-dtb");
+  } else if (StrCmp (Private->PartitionName, L"recovery") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"recovery-dtb");
+  } else {
+    ASSERT (FALSE);
+  }
+
+  DtbPartitionHandle = AndroidBootGetSiblingPartitionHandle (
+                         Private->ControllerHandle,
+                         DtbPartitionName
+                         );
+  if (DtbPartitionHandle != NULL) {
+    Status = gBS->HandleProtocol (
+                    DtbPartitionHandle,
+                    &gEfiBlockIoProtocolGuid,
+                    (VOID **)&BlockIo
+                    );
+    if (EFI_ERROR (Status) || (BlockIo == NULL)) {
+      goto Exit;
+    }
+
+    Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
+
+    KernelDtb = AllocatePool (Size);
+    if (KernelDtb == NULL) {
+      goto Exit;
+    }
+
+    Status = BlockIo->ReadBlocks (
+                        BlockIo,
+                        BlockIo->Media->MediaId,
+                        0,
+                        Size,
+                        KernelDtb
+                        );
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+
+    Dtb = KernelDtb;
+    if (fdt_check_header (Dtb) != 0) {
+      Dtb += PcdGet32 (PcdSignedImageHeaderSize);
+      if (fdt_check_header (Dtb) != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
+        goto Exit;
+      }
+    }
+
+    DtbCopy = NULL;
+    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
+    if ((DtbCopy != NULL) &&
+        (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
+    {
+      DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB from %s\r\n", __FUNCTION__, DtbPartitionName));
+      Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
+      if (EFI_ERROR (Status)) {
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
+        DtbCopy = NULL;
+      } else {
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+      }
+    }
+  }
+
+Exit:
+  if (KernelDtb != NULL) {
+    FreePool (KernelDtb);
+    KernelDtb = NULL;
+  }
+}
+
+/**
   Causes the driver to load a specified file.
 
   @param  This       Protocol instance pointer.
@@ -193,10 +455,13 @@ EFI_LOAD_FILE2_PROTOCOL  mAndroidBootDxeLoadFile2 = {
 };
 
 /**
-  Attempt to read the data from source to destination buffer.
+  Attempt to read data from an Android boot.img to destination buffer. If
+  BlockIo and DiskIo are provided, the data will be read from there. Otherwise,
+  we'll next try to read from the kernel address set in the DTB. Finally, we'll
+  try to use the RCM kernel address.
 
-  @param[in]  BlockIo             BlockIo protocol interface which is already located.
-  @param[in]  DiskIo              DiskIo protocol interface which is already located.
+  @param[in]  BlockIo             Optional. BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              Optional. DiskIo protocol interface which is already located.
   @param[in]  Offset              Data offset to read from.
   @param[in]  Buffer              The memory buffer to transfer the data to.
   @param[in]  BufferSize          Size of the memory buffer to transfer the data to.
@@ -209,14 +474,16 @@ AndroidBootRead (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
   IN EFI_DISK_IO_PROTOCOL   *DiskIo,
   IN UINT32                 Offset,
-  IN VOID                   *Buffer,
+  OUT VOID                  *Buffer,
   IN UINTN                  BufferSize
   )
 {
-  VOID  *RcmKernelBase;
+  VOID        *RcmKernelBase;
+  UINT64      KernelStart;
+  UINT64      KernelDtbStart;
+  EFI_STATUS  Status;
 
-  RcmKernelBase = (VOID *)PcdGet64 (PcdRcmKernelBase);
-
+  // Read from BlockIo and DiskIo, if provided.
   if ((BlockIo != NULL) && (DiskIo != NULL)) {
     return DiskIo->ReadDisk (
                      DiskIo,
@@ -227,12 +494,151 @@ AndroidBootRead (
                      );
   }
 
+  // Otherwise, try the address specified by the DTB.
+  Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+  if (Status == EFI_SUCCESS) {
+    gBS->CopyMem (Buffer, (VOID *)((UINTN)KernelStart + Offset), BufferSize);
+    return EFI_SUCCESS;
+  }
+
+  // Finally, fallback to an RCM boot
+  RcmKernelBase = (VOID *)PcdGet64 (PcdRcmKernelBase);
   if (RcmKernelBase != NULL) {
     gBS->CopyMem (Buffer, (VOID *)((UINTN)RcmKernelBase + Offset), BufferSize);
     return EFI_SUCCESS;
   }
 
   return EFI_INVALID_PARAMETER;
+}
+
+/**
+  Verify if there is the Android Vendor Boot image file by reading the magic word at the first
+  block of the Android Vendor Boot image and save the important size information when a container
+  is provided.
+
+  @param[in]  BlockIo             BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              DiskIo protocol interface which is already located.
+  @param[out] ImgData             A pointer to the internal data structure to retain
+                                  the important size data of kernel and initrd images
+                                  contained in the Android Boot image header.
+
+  @retval EFI_SUCCESS             Operation successful.
+  @retval others                  Error occurred
+**/
+EFI_STATUS
+VendorBootGetVerify (
+  IN  EFI_BLOCK_IO_PROTOCOL  *BlockIo,
+  IN  EFI_DISK_IO_PROTOCOL   *DiskIo,
+  OUT VENDOR_BOOT_DATA       *ImgData OPTIONAL,
+  OUT CHAR16                 *KernelArgs OPTIONAL
+  )
+{
+  EFI_STATUS                   Status;
+  VENDOR_BOOTIMG_TYPE4_HEADER  *Header;
+  UINT32                       Offset;
+  UINTN                        PartitionSize;
+  UINTN                        ImageSize;
+  UINT32                       PageSize;
+  UINT32                       VendorRamdiskSize;
+  UINT32                       BootConfigSize;
+  UINT32                       DtbSize;
+  UINT32                       VendorRamdiskTableSize;
+  CHAR8                        *HeaderKernelArgs;
+
+  // Allocate a buffer large enough to hold any header type.
+  Header = (VENDOR_BOOTIMG_TYPE4_HEADER *)AllocatePool (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER));
+  if (Header == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Read enough to get the header version.
+  // - This is a minimal read.  We can assume it will fit in Header as it was
+  // sized for a full header.
+  Offset = 0;
+  Status = AndroidBootRead (
+             BlockIo,
+             DiskIo,
+             Offset,
+             Header,
+             sizeof (VENDOR_BOOTIMG_TYPE4_HEADER)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  // Make sure it's an Android vendor boot image
+  if (AsciiStrnCmp (
+        (CONST CHAR8 *)Header->Magic,
+        VENDOR_BOOT_MAGIC,
+        VENDOR_BOOT_MAGIC_SIZE
+        ) != 0)
+  {
+    goto Exit;
+  }
+
+  // We have an Android vendor boot image.
+  // Vendor boot support version 4 for GKI
+  switch (Header->HeaderVersion) {
+    case 4:
+      PageSize               = Header->PageSize;
+      VendorRamdiskSize      = Header->VendorRamdiskSize;
+      DtbSize                = Header->DtbSize;
+      VendorRamdiskTableSize = Header->VendorRamdiskTableSize;
+      BootConfigSize         = Header->BootConfigSize;
+      HeaderKernelArgs       = Header->KernelArgs;
+
+      break;
+
+    default:
+      // Unsupported header type
+      Status = EFI_INCOMPATIBLE_VERSION;
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported header type %x\n", __FUNCTION__, Header->HeaderVersion));
+      goto Exit;
+  }
+
+  // The page size is not specified, but it should be power of 2 at least
+  if (!IS_VALID_ANDROID_PAGE_SIZE (PageSize)) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Make sure that the image fits in the partition
+  if ((BlockIo != NULL) && (DiskIo != NULL)) {
+    // Ignore RcmLoad case for now
+    PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+    ImageSize     = Offset + PageSize
+                    + ALIGN_VALUE (VendorRamdiskSize, PageSize);
+    if (ImageSize > PartitionSize) {
+      Status = EFI_NOT_FOUND;
+      goto Exit;
+    }
+  }
+
+  // Set up the internal data structure when ImgData is not NULL
+  if (ImgData != NULL) {
+    // Calculate a size of the kernel image, aligned in BlockSize
+    // This size will be a reference when boot manger allocates a pool for LoadFile service
+    // Kernel image to be loaded to a buffer allocated by boot manager
+    // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
+    ImgData->Offset                 = Offset;
+    ImgData->VendorRamdiskSize      = VendorRamdiskSize;
+    ImgData->PageSize               = PageSize;
+    ImgData->HeaderVersion          = Header->HeaderVersion;
+    ImgData->DtbSize                = DtbSize;
+    ImgData->VendorRamdiskTableSize = VendorRamdiskTableSize;
+    ImgData->BootConfigSize         = BootConfigSize;
+  }
+
+  if (KernelArgs != NULL) {
+    AsciiStrToUnicodeStrS (HeaderKernelArgs, KernelArgs, VENDOR_BOOT_ARGS_SIZE);
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  FreePool (Header);
+
+  return Status;
 }
 
 /**
@@ -259,44 +665,75 @@ AndroidBootGetVerify (
   OUT CHAR16                 *KernelArgs OPTIONAL
   )
 {
-  EFI_STATUS              Status;
-  ANDROID_BOOTIMG_HEADER  *Header;
-  UINT32                  Offset;
-  UINT32                  SignatureHeaderSize;
-  VOID                    *RcmKernelBase;
-  UINT64                  RcmKernelSize;
-  UINTN                   PartitionSize;
-  UINTN                   ImageSize;
+  EFI_STATUS                      Status;
+  VOID                            *Header;
+  ANDROID_BOOTIMG_VERSION_HEADER  *VersionHeader;
+  ANDROID_BOOTIMG_TYPE0_HEADER    *Type0Header;
+  ANDROID_BOOTIMG_TYPE1_HEADER    *Type1Header;
+  ANDROID_BOOTIMG_TYPE2_HEADER    *Type2Header;
+  ANDROID_BOOTIMG_TYPE3_HEADER    *Type3Header;
+  ANDROID_BOOTIMG_TYPE4_HEADER    *Type4Header;
+  UINT32                          Offset;
+  UINT32                          SignatureHeaderSize;
+  UINTN                           PartitionSize;
+  UINTN                           ImageSize;
+  UINT32                          PageSize;
+  UINT32                          KernelSize;
+  UINT32                          RamdiskSize;
+  CHAR8                           *HeaderKernelArgs;
+  UINT64                          KernelStart;
+  UINT64                          KernelDtbStart;
 
-  // Get the image header of Android Boot image
-  Header = AllocatePool (sizeof (ANDROID_BOOTIMG_HEADER));
+  // Allocate a buffer large enough to hold any header type.
+  // - This chain of MAX's is awkward looking, but it's safe and the compiler
+  // will optimize this down to a single number anyway.
+  Header = AllocatePool (
+             MAX (
+               MAX (
+                 MAX (
+                   MAX (
+                     sizeof (ANDROID_BOOTIMG_TYPE0_HEADER),
+                     sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+                     ),
+                   sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
+                   ),
+                 sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
+                 ),
+               sizeof (ANDROID_BOOTIMG_TYPE4_HEADER)
+               )
+             );
   if (Header == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
   SignatureHeaderSize = PcdGet32 (PcdSignedImageHeaderSize);
-  RcmKernelBase       = (VOID *)PcdGet64 (PcdRcmKernelBase);
-  RcmKernelSize       = PcdGet64 (PcdRcmKernelSize);
 
+  // Read enough to get the header version.
+  // - This is a minimal read.  We can assume it will fit in Header as it was
+  // sized for a full header.
   Offset = 0;
   Status = AndroidBootRead (
              BlockIo,
              DiskIo,
              Offset,
-             (VOID *)Header,
-             sizeof (*Header)
+             Header,
+             sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
              );
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
 
-  // Make sure the Android Boot image
+  VersionHeader = (ANDROID_BOOTIMG_VERSION_HEADER *)Header;
+
+  // Make sure it's an Android boot image
   if (AsciiStrnCmp (
-        (CONST CHAR8 *)Header->BootMagic,
+        (CONST CHAR8 *)VersionHeader->BootMagic,
         ANDROID_BOOT_MAGIC,
         ANDROID_BOOT_MAGIC_LENGTH
         ) != 0)
   {
+    // It's not an Android boot image.  We might need to skip
+    // past our signature.
     Status = EFI_NOT_FOUND;
     if (SignatureHeaderSize != 0) {
       Offset = SignatureHeaderSize;
@@ -304,16 +741,18 @@ AndroidBootGetVerify (
                  BlockIo,
                  DiskIo,
                  Offset,
-                 (VOID *)Header,
-                 sizeof (*Header)
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_VERSION_HEADER)
                  );
       if (EFI_ERROR (Status)) {
         goto Exit;
       }
 
-      // Make sure the Android Boot image
+      VersionHeader = (ANDROID_BOOTIMG_VERSION_HEADER *)Header;
+
+      // Check for an Android boot image again
       if (AsciiStrnCmp (
-            (CONST CHAR8 *)Header->BootMagic,
+            (CONST CHAR8 *)VersionHeader->BootMagic,
             ANDROID_BOOT_MAGIC,
             ANDROID_BOOT_MAGIC_LENGTH
             ) != 0)
@@ -327,22 +766,151 @@ AndroidBootGetVerify (
     }
   }
 
+  // We have an Android boot image.
+
+  // Handle each version
+  switch (VersionHeader->HeaderVersion) {
+    case 0:
+      // Read the full Type0 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE0_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type0Header      = (ANDROID_BOOTIMG_TYPE0_HEADER *)Header;
+      PageSize         = Type0Header->PageSize;
+      KernelSize       = Type0Header->KernelSize;
+      RamdiskSize      = Type0Header->RamdiskSize;
+      HeaderKernelArgs = Type0Header->KernelArgs;
+
+      break;
+
+    case 1:
+      // Read the full Type1 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE1_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type1Header      = (ANDROID_BOOTIMG_TYPE1_HEADER *)Header;
+      PageSize         = Type1Header->PageSize;
+      KernelSize       = Type1Header->KernelSize;
+      RamdiskSize      = Type1Header->RamdiskSize;
+      HeaderKernelArgs = Type1Header->KernelArgs;
+
+      break;
+
+    case 2:
+      // Read the full Type2 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE2_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type2Header      = (ANDROID_BOOTIMG_TYPE2_HEADER *)Header;
+      PageSize         = Type2Header->PageSize;
+      KernelSize       = Type2Header->KernelSize;
+      RamdiskSize      = Type2Header->RamdiskSize;
+      HeaderKernelArgs = Type2Header->KernelArgs;
+
+      break;
+
+    case 3:
+      // Read the full Type3 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE3_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type3Header      = (ANDROID_BOOTIMG_TYPE3_HEADER *)Header;
+      PageSize         = SIZE_4KB;
+      KernelSize       = Type3Header->KernelSize;
+      RamdiskSize      = Type3Header->RamdiskSize;
+      HeaderKernelArgs = Type3Header->KernelArgs;
+
+      break;
+
+    case 4:
+      // Read the full Type4 header.
+      Status = AndroidBootRead (
+                 BlockIo,
+                 DiskIo,
+                 Offset,
+                 Header,
+                 sizeof (ANDROID_BOOTIMG_TYPE4_HEADER)
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      Type4Header      = (ANDROID_BOOTIMG_TYPE4_HEADER *)Header;
+      PageSize         = SIZE_4KB;
+      KernelSize       = Type4Header->KernelSize;
+      RamdiskSize      = Type4Header->RamdiskSize;
+      HeaderKernelArgs = Type4Header->KernelArgs;
+
+      break;
+
+    default:
+      // Unsupported header type
+      Status = EFI_INCOMPATIBLE_VERSION;
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported header type %x\n", __FUNCTION__, VersionHeader->HeaderVersion));
+      goto Exit;
+  }
+
   // The page size is not specified, but it should be power of 2 at least
-  if (!IS_VALID_ANDROID_PAGE_SIZE (Header->PageSize)) {
+  if (!IS_VALID_ANDROID_PAGE_SIZE (PageSize)) {
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
 
-  // Make sure that the image fits in the partition
+  // Make sure that the image fits in the partition.  If the image is bigger
+  // than the space allocated, then we have to assume it has been truncated and
+  // we don't want to use it.
+  ImageSize = Offset + PageSize
+              + ALIGN_VALUE (KernelSize, PageSize)
+              + ALIGN_VALUE (RamdiskSize, PageSize);
+
   if ((BlockIo != NULL) && (DiskIo != NULL)) {
+    // We're booting from a partition.  Get the size from the Media descriptor.
     PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
   } else {
-    PartitionSize = RcmKernelSize;
+    // We're booting from memory.
+    Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+    if (Status == EFI_SUCCESS) {
+      // When the kernel is handed off to us via the DTB, a size is not provided.
+      // Just assume the partition is big enough.
+      PartitionSize = ImageSize;
+    } else {
+      // Otherwise, assume this is an RCM load.
+      PartitionSize = PcdGet64 (PcdRcmKernelSize);
+    }
   }
 
-  ImageSize = Offset + Header->PageSize
-              + ALIGN_VALUE (Header->KernelSize, Header->PageSize)
-              + ALIGN_VALUE (Header->RamdiskSize, Header->PageSize);
   if (ImageSize > PartitionSize) {
     Status = EFI_NOT_FOUND;
     goto Exit;
@@ -354,14 +922,15 @@ AndroidBootGetVerify (
     // This size will be a reference when boot manger allocates a pool for LoadFile service
     // Kernel image to be loaded to a buffer allocated by boot manager
     // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
-    ImgData->Offset      = Offset;
-    ImgData->KernelSize  = Header->KernelSize;
-    ImgData->RamdiskSize = Header->RamdiskSize;
-    ImgData->PageSize    = Header->PageSize;
+    ImgData->Offset        = Offset;
+    ImgData->KernelSize    = KernelSize;
+    ImgData->RamdiskSize   = RamdiskSize;
+    ImgData->PageSize      = PageSize;
+    ImgData->HeaderVersion = VersionHeader->HeaderVersion;
   }
 
   if (KernelArgs != NULL) {
-    AsciiStrToUnicodeStrS (Header->KernelArgs, KernelArgs, ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+    AsciiStrToUnicodeStrS (HeaderKernelArgs, KernelArgs, ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
   }
 
   Status = EFI_SUCCESS;
@@ -392,15 +961,22 @@ AndroidBootLoadFile (
   IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
   IN EFI_DISK_IO_PROTOCOL   *DiskIo,
   IN ANDROID_BOOT_DATA      *ImgData,
+  IN EFI_BLOCK_IO_PROTOCOL  *VendorBlockIo,
+  IN EFI_DISK_IO_PROTOCOL   *VendorDiskIo,
+  IN VENDOR_BOOT_DATA       *VendorImgData,
   IN VOID                   *Buffer
   )
 {
-  EFI_STATUS  Status;
-  EFI_HANDLE  InitrdHandle;
-  EFI_EVENT   InitrdEvent;
-  UINTN       Addr;
-  UINTN       BufSize;
-  UINTN       BufBase;
+  EFI_STATUS   Status;
+  EFI_HANDLE   InitrdHandle;
+  EFI_EVENT    InitrdEvent;
+  UINTN        Addr;
+  UINTN        BufSize;
+  UINTN        BufBase;
+  UINTN        BufBaseRamdisk;
+  UINTN        BufSizeRamdisk         = 0;
+  UINTN        BootConfigReservedSize = 0;
+  MiscCmdType  MiscCmd;
 
   mInitRdBaseAddress = 0;
   mInitRdSize        = 0;
@@ -449,12 +1025,26 @@ AndroidBootLoadFile (
     return Status;
   }
 
+  BufSize = ImgData->RamdiskSize;
+
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
+    // if kernel boot and vendor_boot ramdisk exists
+    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+       && (VendorImgData != NULL))
+    {
+      BufSize               += VendorImgData->VendorRamdiskSize + BOOTCONFIG_RESERVED_SIZE;
+      BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
+    }
+  }
+
   // Allocate a buffer reserved in EfiBootServicesData
   // to make this buffer persist until the completion of kernel booting
   Status = gBS->AllocatePages (
                   AllocateAnyPages,
                   EfiBootServicesData,
-                  EFI_SIZE_TO_PAGES (ImgData->RamdiskSize),
+                  EFI_SIZE_TO_PAGES (BufSize),
                   (EFI_PHYSICAL_ADDRESS *)&BufBase
                   );
   if (EFI_ERROR (Status)) {
@@ -462,7 +1052,50 @@ AndroidBootLoadFile (
     return Status;
   }
 
-  Addr   += ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
+  BufBaseRamdisk = BufBase;
+  BufSizeRamdisk = BufSize - BootConfigReservedSize;
+
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    // recovery kernel has dedicated ramdisk in recovery.img
+    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+       && (VendorImgData != NULL))
+    {
+      // ramdisk layout in memory
+      // - vendor_boot ramdisk, followed by
+      // - generic_boot ramdisk, then
+      // - boot_config
+      Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize);
+      BufSize = VendorImgData->VendorRamdiskSize;
+      Status  = AndroidBootRead (
+                  VendorBlockIo,
+                  VendorDiskIo,
+                  Addr,
+                  (VOID *)BufBase,
+                  BufSize
+                  );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Unable to read disk for vendor ramdisk from offset %x" \
+          " to %09p: %r\n",
+          __FUNCTION__,
+          Addr,
+          BufBase,
+          Status
+          ));
+        goto ErrorExit;
+      }
+
+      DEBUG ((DEBUG_INFO, "%a: Vendor RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+
+      // Android Boot Ramdisk is following Vendor Boot Ramdisk
+      BufBase += BufSize;
+    }
+  }
+
+  Addr = ImgData->PageSize + ImgData->Offset + \
+         ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
   BufSize = ImgData->RamdiskSize;
   Status  = AndroidBootRead (
               BlockIo,
@@ -486,8 +1119,54 @@ AndroidBootLoadFile (
 
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
-  mInitRdBaseAddress = BufBase;
-  mInitRdSize        = BufSize;
+  if ((PcdGetBool (PcdBootAndroidImage)) && (ImgData->HeaderVersion >= 3)) {
+    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+       && (VendorImgData != NULL))
+    {
+      // load BootConfig right behind the ramdisk memory
+      BufBase += BufSize;
+
+      Addr = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->VendorRamdiskSize, VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->DtbSize, VendorImgData->PageSize) + \
+             ALIGN_VALUE (VendorImgData->VendorRamdiskTableSize, VendorImgData->PageSize);
+      BufSize = VendorImgData->BootConfigSize;
+
+      Status = AndroidBootRead (
+                 VendorBlockIo,
+                 VendorDiskIo,
+                 Addr,
+                 (VOID *)BufBase,
+                 BufSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Unable to read disk for bootconfig from offset %x" \
+          " to %09p: %r\n",
+          __FUNCTION__,
+          Addr,
+          BufBase,
+          Status
+          ));
+        goto ErrorExit;
+      }
+
+      Status = AddBootConfigTrailer ((UINT64)BufBase, VendorImgData->BootConfigSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: BootConfig trailer create failed\n", __FUNCTION__));
+        goto ErrorExit;
+      }
+
+      BufSizeRamdisk += VendorImgData->BootConfigSize + BOOTCONFIG_TRAILER_SIZE;
+
+      DEBUG ((DEBUG_ERROR, "%a: BootConfig loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+    }
+  }
+
+  mInitRdBaseAddress = BufBaseRamdisk;
+  mInitRdSize        = BufSizeRamdisk;
 
   if (mInitRdSize != 0) {
     InitrdHandle = NULL;
@@ -522,7 +1201,7 @@ AndroidBootLoadFile (
   return Status;
 
 ErrorExit:
-  gBS->FreePages ((EFI_PHYSICAL_ADDRESS)BufBase, EFI_SIZE_TO_PAGES (ImgData->RamdiskSize));
+  gBS->FreePages ((EFI_PHYSICAL_ADDRESS)BufBase, EFI_SIZE_TO_PAGES (BufSizeRamdisk));
   mInitRdBaseAddress = 0;
   mInitRdSize        = 0;
   return Status;
@@ -573,6 +1252,12 @@ AndroidBootDxeLoadFile (
   EFI_STATUS                 Status;
   ANDROID_BOOT_PRIVATE_DATA  *Private;
   ANDROID_BOOT_DATA          ImgData;
+  VENDOR_BOOT_DATA           VendorImgData;
+  VENDOR_BOOT_DATA           *VendorImgDataPtr = NULL;
+  EFI_BLOCK_IO_PROTOCOL      *VendorBlockIo    = NULL;
+  EFI_DISK_IO_PROTOCOL       *VendorDiskIo     = NULL;
+  EFI_HANDLE                 VendorBootHandle;
+  CHAR16                     VendorBootPartitionName[MAX_PARTITION_NAME_LEN];
 
   // Verify if the valid parameters
   if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
@@ -591,6 +1276,8 @@ AndroidBootDxeLoadFile (
     return EFI_INVALID_PARAMETER;
   }
 
+  DEBUG ((DEBUG_ERROR, "%a: Attempting to boot kernel from %s\n", __FUNCTION__, Private->PartitionName));
+
   // Verify the image header and set the internal data structure ImgData
   Status = AndroidBootGetVerify (Private->BlockIo, Private->DiskIo, &ImgData, NULL);
   if (EFI_ERROR (Status)) {
@@ -608,8 +1295,61 @@ AndroidBootDxeLoadFile (
     return EFI_BUFFER_TOO_SMALL;
   }
 
+  // Vendor_boot is very Android specific
+  // and it requires boot_img header version to be at least 3
+  if ((PcdGetBool (PcdBootAndroidImage)) && (ImgData.HeaderVersion >= 3)) {
+    Status = GetActivePartitionName (L"vendor_boot", VendorBootPartitionName);
+    // Ignore vendor_boot ramdisk if vendor_boot partition not exist
+    if (!EFI_ERROR (Status)) {
+      // Get BlockIo/DiskIo for vendor_boot img
+      VendorBootHandle = AndroidBootGetSiblingPartitionHandle (
+                           Private->ControllerHandle,
+                           VendorBootPartitionName
+                           );
+
+      if (VendorBootHandle != NULL) {
+        Status = gBS->HandleProtocol (
+                        VendorBootHandle,
+                        &gEfiBlockIoProtocolGuid,
+                        (VOID **)&VendorBlockIo
+                        );
+        if (EFI_ERROR (Status) || (VendorBlockIo == NULL)) {
+          return Status;
+        }
+
+        Status = gBS->HandleProtocol (
+                        VendorBootHandle,
+                        &gEfiDiskIoProtocolGuid,
+                        (VOID **)&VendorDiskIo
+                        );
+        if (EFI_ERROR (Status) || (VendorDiskIo == NULL)) {
+          return Status;
+        }
+
+        // Examine if the Android Vendor Boot Image can be found
+        Status = VendorBootGetVerify (VendorBlockIo, VendorDiskIo, &VendorImgData, NULL);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
+        VendorImgDataPtr = &VendorImgData;
+      }
+    }
+  }
+
+  // Load kernel dtb
+  AndroidBootDxeLoadDtb (Private);
+
   // Load Android Boot image
-  Status = AndroidBootLoadFile (Private->BlockIo, Private->DiskIo, &ImgData, Buffer);
+  Status = AndroidBootLoadFile (
+             Private->BlockIo,
+             Private->DiskIo,
+             &ImgData,
+             VendorBlockIo,
+             VendorDiskIo,
+             VendorImgDataPtr,
+             Buffer
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -681,15 +1421,12 @@ AndroidBootDriverBindingSupported (
   EFI_DISK_IO_PROTOCOL         *DiskIo        = NULL;
   EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
   EFI_HANDLE                   *ParentHandles = NULL;
-  CHAR16                       PartitionName[MAX_PARTITION_NAME_LEN];
   UINTN                        ParentCount;
   UINTN                        ParentIndex;
   EFI_HANDLE                   *ChildHandles = NULL;
   UINTN                        ChildCount;
   UINTN                        ChildIndex;
   VOID                         *Protocol;
-  UINTN                        DataSize;
-  UINT32                       BootMode;
 
   // This driver will be accessed while boot manager attempts to connect
   // all drivers to the controllers for each partition entry.
@@ -749,28 +1486,12 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
-  DataSize = sizeof (BootMode);
-  Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
-  if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
-    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
-  } else {
-    Status = GetActivePartitionName (L"kernel", PartitionName);
-    if (EFI_ERROR (Status)) {
-      goto ErrorExit;
-    }
-  }
-
   if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
   if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-    Status = EFI_UNSUPPORTED;
-    goto ErrorExit;
-  }
-
-  if (0 != StrCmp (PartitionInfo->Info.Gpt.PartitionName, PartitionName)) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
@@ -890,15 +1611,16 @@ AndroidBootDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  EFI_BLOCK_IO_PROTOCOL      *BlockIo = NULL;
-  EFI_DISK_IO_PROTOCOL       *DiskIo  = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *ParentDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL   *AndroidBootDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL   *Node;
-  ANDROID_BOOT_PRIVATE_DATA  *Private;
-  UINT32                     *Id;
-  CHAR16                     *KernelArgs;
+  EFI_STATUS                   Status;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
+  EFI_BLOCK_IO_PROTOCOL        *BlockIo       = NULL;
+  EFI_DISK_IO_PROTOCOL         *DiskIo        = NULL;
+  EFI_DEVICE_PATH_PROTOCOL     *ParentDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL     *AndroidBootDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL     *Node;
+  ANDROID_BOOT_PRIVATE_DATA    *Private;
+  UINT32                       *Id;
+  CHAR16                       *KernelArgs;
 
   // BindingSupported() filters out the unsupported attempts and the multiple attempts
   // from a successful ControllerHandle such that BindingStart() runs only once
@@ -916,6 +1638,20 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get DevicePath: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  // Open PartitionInfo protocol to obtain the access to the flash partition
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gEfiPartitionInfoProtocolGuid,
+                  (VOID **)&PartitionInfo,
+                  This->DriverBindingHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to open PartitionInfo: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -989,6 +1725,7 @@ AndroidBootDriverBindingStart (
   Private->ControllerHandle      = ControllerHandle;
   Private->ProtocolsInstalled    = FALSE;
   Private->KernelArgs            = KernelArgs;
+  StrCpyS (Private->PartitionName, MAX_PARTITION_NAME_LEN, PartitionInfo->Info.Gpt.PartitionName);
   CopyMem (&Private->LoadFile, &mAndroidBootDxeLoadFile, sizeof (Private->LoadFile));
 
   // Install LoadFile and AndroidBootDevicePath protocols on child, AndroidBootHandle
@@ -1008,6 +1745,19 @@ AndroidBootDriverBindingStart (
   }
 
   Private->ProtocolsInstalled = TRUE;
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  AndroidBootOnEndOfDxeHandler,
+                  Private,
+                  &gEfiEndOfDxeEventGroupGuid,
+                  &Private->EndOfDxeEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: fail to create end of dxe event callback: %r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
 
   // Install and open CallerId to link the Private data structure
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -1074,6 +1824,10 @@ Exit:
                Private->AndroidBootDevicePath,
                NULL
                );
+      }
+
+      if (Private->EndOfDxeEvent != NULL) {
+        gBS->CloseEvent (Private->EndOfDxeEvent);
       }
 
       FreePool (Private);
@@ -1357,7 +2111,7 @@ RcmLoadFile (
   }
 
   // Load Android Boot image
-  Status = AndroidBootLoadFile (NULL, NULL, &ImgData, Buffer);
+  Status = AndroidBootLoadFile (NULL, NULL, &ImgData, NULL, NULL, NULL, Buffer);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1386,6 +2140,58 @@ EFI_DRIVER_BINDING_PROTOCOL  mAndroidBootDriverBinding = {
 };
 
 /**
+  Setup to boot from an image in memory.
+
+  @param[in]  ImageHandle       The firmware allocated handle for the UEFI image.
+
+  @retval EFI_SUCCESS           The operation completed successfully.
+  @retval Others                An unexpected error occurred.
+
+**/
+STATIC
+EFI_STATUS
+AndroidBootPrepareBootFromMemory (
+  IN EFI_HANDLE  ImageHandle
+  )
+{
+  EFI_STATUS  Status;
+  CHAR16      *KernelArgs = NULL;
+
+  // Allocate KernelArgs
+  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  if (KernelArgs == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Verify the image header
+  Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
+  if (EFI_ERROR (Status)) {
+    FreePool (KernelArgs);
+    return Status;
+  }
+
+  // Copy NVIDIA RCM Kernel GUID to device path
+  CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
+
+  // Install Rcm Loadfile protocol
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &ImageHandle,
+                  &gEfiLoadFileProtocolGuid,
+                  &mRcmLoadFile,
+                  &gNVIDIALoadfileKernelArgsGuid,
+                  KernelArgs,
+                  &gEfiDevicePathProtocolGuid,
+                  &mRcmLoadFileDevicePath,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to install Load File Protocol (%r)\r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+/**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers including
   both device drivers and bus drivers.
@@ -1407,7 +2213,11 @@ AndroidBootDxeDriverEntryPoint (
   EFI_STATUS  Status;
   VOID        *Hob;
   UINTN       EmmcMagic;
-  CHAR16      *KernelArgs;
+  UINT64      KernelStart;
+  UINT64      KernelDtbStart;
+  UINTN       NewKernelDtbPages;
+  VOID        *NewKernelDtb = NULL;
+  INT32       MemoryNode;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -1420,39 +2230,60 @@ AndroidBootDxeDriverEntryPoint (
     return Status;
   }
 
-  if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
-      (PcdGet64 (PcdRcmKernelSize) != 0))
+  // Look for a kernel address in the DTB.  If found, then a boot.img has
+  // already been loaded for us.  We'll boot it.
+  Status = GetKernelAddress (&KernelStart, &KernelDtbStart);
+
+  if (Status == EFI_SUCCESS) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Booting image at %lx with DTB %lx\r\n",
+      __FUNCTION__,
+      KernelStart,
+      KernelDtbStart
+      ));
+
+    Status = AndroidBootPrepareBootFromMemory (ImageHandle);
+    if (EFI_ERROR (Status)) {
+      goto Done;
+    }
+
+    // Copy the kernel DTB.  We need to provide a modified version.
+    NewKernelDtbPages = EFI_SIZE_TO_PAGES (2 * fdt_totalsize ((VOID *)KernelDtbStart));
+    NewKernelDtb      = AllocatePages (NewKernelDtbPages);
+    if (NewKernelDtb == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
+      goto Done;
+    }
+
+    if (fdt_open_into ((UINT8 *)KernelDtbStart, NewKernelDtb, EFI_PAGES_TO_SIZE (NewKernelDtbPages)) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
+      goto Done;
+    }
+
+    // Remove the /memory node.  We want to be sure the kernel gets its memory
+    // information from UEFI instead of the DTB.
+    MemoryNode = fdt_path_offset (NewKernelDtb, "/memory");
+    if (MemoryNode > 0) {
+      DEBUG ((DEBUG_INFO, "%a: Deleting /memory at %x\r\n", __FUNCTION__, MemoryNode));
+      fdt_del_node (NewKernelDtb, MemoryNode);
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: Using DTB %p\r\n", __FUNCTION__, NewKernelDtb));
+
+    // Install the modified DTB
+    gBS->InstallConfigurationTable (&gFdtTableGuid, NewKernelDtb);
+  } else if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
+             (PcdGet64 (PcdRcmKernelSize) != 0))
   {
-    // Allocate KernelArgs
-    KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
-    if (KernelArgs == NULL) {
-      Status = EFI_OUT_OF_RESOURCES;
-      return Status;
-    }
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Booting image at %lx with RCM\r\n",
+      __FUNCTION__,
+      PcdGet64 (PcdRcmKernelBase)
+      ));
 
-    // Verify the image header and set the internal data structure ImgData
-    Status = AndroidBootGetVerify (NULL, NULL, NULL, KernelArgs);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    // Copy NVIDIA RCM Kernel GUID to device path
-    CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
-
-    // Install Rcm Loadfile protocol
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &ImageHandle,
-                    &gEfiLoadFileProtocolGuid,
-                    &mRcmLoadFile,
-                    &gNVIDIALoadfileKernelArgsGuid,
-                    KernelArgs,
-                    &gEfiDevicePathProtocolGuid,
-                    &mRcmLoadFileDevicePath,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
-    }
+    AndroidBootPrepareBootFromMemory (ImageHandle);
   } else {
     EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (TegraGetChipID ()) + SYSIMG_EMMC_MAGIC_OFFSET));
     if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
@@ -1509,5 +2340,6 @@ AndroidBootDxeDriverEntryPoint (
     }
   }
 
+Done:
   return EFI_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -10,6 +10,7 @@
 #define __TH500_RESOURCE_CONFIG_PRIVATE_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/PlatformResourceLib.h>
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 
@@ -236,6 +237,10 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO DramInfo[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariablesDefaults[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (UINT32 UniqueId[TH500_MAX_SOCKETS][UID_NUM_DWORDS], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__

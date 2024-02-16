@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library's Private Structures.
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,8 @@
 #define HIDREV_OFFSET             0x4
 #define HIDREV_CHIPID_SHIFT       8
 #define HIDREV_CHIPID_MASK        0xff
+#define HIDREV_MINORREV_SHIFT     16
+#define HIDREV_MINORREV_MASK      0xf
 #define HIDREV_MAJORVER_SHIFT     4
 #define HIDREV_MAJORVER_MASK      0xf
 #define HIDREV_PRE_SI_PLAT_SHIFT  0x14

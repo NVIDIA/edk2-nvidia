@@ -1,7 +1,7 @@
 /** @file
   SSDT Pci Osc (Operating System Capabilities)
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -36,38 +36,35 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     //
     // OS Control Handoff
     //
-    Name (SUPP, Zero) // PCI _OSC Support Field value
-    Name (CTRL, Zero) // PCI _OSC Control Field value
+    Local1 = Zero // PCI _OSC Control Field value
 
     // Create DWord-addressable fields from the Capabilities Buffer
     CreateDWordField (Arg3, 0, CDW1)
-    CreateDWordField (Arg3, 4, CDW2)
     CreateDWordField (Arg3, 8, CDW3)
 
     // Check for proper UUID
     If (LEqual (Arg0,ToUUID ("33DB4D5B-1FF7-401C-9657-7441C03DD766"))) {
 
-      // Save Capabilities DWord2 & 3
-      Store (CDW2, SUPP)
-      Store (CDW3, CTRL)
+      // Save Capabilities DWord3
+      Store (CDW3, Local1)
 
       /* Do not allow SHPC (No SHPC controller in this system) */
       /* Do not allow Native PME (TODO: Confirm it) */
       /* Do not allow Native AER (RAS-FW handles it) */
       /* Allow Native PCIe capability */
       /* Allow Native LTR control */
-      And(CTRL,0x31,CTRL)
+      And(Local1,0x31,Local1)
 
       If (LNotEqual (Arg1, One)) {  // Unknown revision
         Or (CDW1, 0x08, CDW1)
       }
 
-      If (LNotEqual (CDW3, CTRL)) {  // Capabilities bits were masked
+      If (LNotEqual (CDW3, Local1)) {  // Capabilities bits were masked
         Or (CDW1, 0x10, CDW1)
       }
 
       // Update DWORD3 in the buffer
-      Store (CTRL,CDW3)
+      Store (Local1,CDW3)
       Return (Arg3)
     } Else {
       Or (CDW1, 4, CDW1) // Unrecognized UUID
@@ -77,18 +74,15 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
   Device (RP00)
   {
-      Name (_ADR, 0x0000)  // _ADR: Address
+    Name (_ADR, 0x0000)  // _ADR: Address
 
     // The "ADDR" named object would be patched by UEFI to have the correct
     // address of the NS shared memory region of this particular instance.
     Name (ADDR, 0xFFFFFFFFFFFFFFFF)
-    // The "LICA" named object would be patched by UEFI to have the correct
-    // address of the LIC region of this particular instance.
-    Name (LICA, 0xFFFFFFFFFFFFFFFF)
 
-    // The "_SEG " named object would be added dynamically by UEFI at the
-    // time of generating the PCIe node.
-    External (_SEG)
+    // The "_LOC" named object would be patched by UEFI to have the correct
+    // physical PCIe segment location.
+    Name (_LOC, 0xFFFFFFFFFFFFFFFF)
 
     OperationRegion (SMEM, SystemMemory, ADDR, 0x10)
     Field (SMEM, DWordAcc, NoLock, Preserve) {
@@ -105,13 +99,13 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
             // Standard query - A bitmask of functions supported
             //
             Case (0) {
-              Name(OPTS, Buffer(2) {0, 0})
-              CreateBitField(OPTS, 0, FUN0)
-              CreateBitField(OPTS, 13, FUND)
+              Local0 = Buffer(2) {0, 0}
+              CreateBitField(Local0, 0, FUN0)
+              CreateBitField(Local0, 13, FUND)
 
               Store(1, FUN0)
               Store(1, FUND)
-              Return(OPTS)
+              Return(Local0)
             }
             //
             // Function Index: D
@@ -131,9 +125,14 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
           } // End of switch(Arg2)
         } // end Check for Revision ID
       } // end Check UUID
+      //
+      // If not one of the UUIDs we recognize, then return a buffer
+      // with bit 0 set to 0 indicating no functions supported.
+      //
+      Return (Buffer () {0})
     } // end _DSM
 
-    OperationRegion (LIC4, SystemMemory, LICA, TH500_SW_IO4_SIZE)
+    OperationRegion (LIC4, SystemMemory, TH500_SW_IO4_BASE_SOCKET_0, TH500_SW_IO4_SIZE)
     Field (LIC4, DWordAcc, NoLock, Preserve) {
       STS4, 32,
       SET4, 32,
@@ -157,13 +156,13 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
         Local0 = (Arg1 >> 16)
 
         /* Embed Segment number also in DAH4 */
-        Store (_SEG, Local1)
+        Store (_LOC, Local1)
         Local0 |= (Local1 << 16)
 
         /* Make sure DAH4 is zero to avoid overwriting the value of
            an ongoing RAS-FW handling of _OST() call */
         Local1 = Zero
-        While ((Local1 < 60000) && (LNotEqual (DAH4, 0))) {
+        While ((Local1 < (TH500_ACPI_MAX_LOOP_TIMEOUT * 1000)) && (LNotEqual (DAH4, 0))) {
           Local1 += 2;
           Sleep (2)
         }
@@ -175,21 +174,28 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
   }
 
   Device(GPU0) {
-    Name(_ADR, 0x0000)
+    Name (_ADR, 0x0000)
+
+    // The "_LOC" named object is inherited from the RP00 node
+    External (_LOC)
 
     // The "LICA" named object would be patched by UEFI to have the correct
     // address of the LIC region of this particular instance.
     Name (LICA, 0xFFFFFFFFFFFFFFFF)
 
     OperationRegion (LIC1, SystemMemory, LICA, TH500_SW_IO1_SIZE)
-    Field (LIC1, DWordAcc, NoLock, Preserve)
+        Field (LIC1, DWordAcc, NoLock, Preserve)
     {
       STAT, 32,
       SET, 32,
       CLR, 32,
       RSV0, 32,
-      DALO, 32,
-      DAHI, 32,
+      C9RS, 1,
+      C8RS, 1,
+      RSV1, 30,
+      C9CO, 2,
+      C8CO, 2,
+      RSV2, 28
     }
 
     // The "FSPA" named object is patched by UEFI to provide the correct location
@@ -204,20 +210,31 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
 
     Method(_RST, 0) {
       /* Issue GPU reset request via LIC IO1 interrupt */
-      Store (0x1, DALO)
-      Store (0x1, SET)
+      If ((_LOC & 0xF) == 8) {
+        C8RS = 1
+      } ElseIf ((_LOC & 0xF) == 9) {
+        C9RS = 1
+      } Else {
+        Return
+      }
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      Local0 = Zero
-      While ((Local0 < 60000) && (LNotEqual (DALO, 0))) {
-        Local0 += 2;
+      SET = 1
+
+      /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
+      For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
+        If (((_LOC & 0xF) == 8) && (C8RS == 0)) {
+          Break
+        } ElseIf (((_LOC & 0xF) == 9) && (C9RS == 0)){
+          Break
+        }
         Sleep(2)
       }
 
-      /* Wait for reset to complete, poll for 6sec (as per from Linux) */
-      Local0 = Zero
-      While ((Local0 < 60000) && (LNotEqual (TI2S, 0xFF))) {
-        Local0 += 2;
+      /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
+      For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
+        If (TI2S == 0xFF) {
+          Break
+        }
         Sleep(2)
       }
     }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -250,6 +250,37 @@ EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
 SerialTCUIoInitialize (
   VOID
+  );
+
+/**
+  Retrieve the object of tegra serial port library
+
+  @retval TEGRA_UART_OBJ *      Pointer to the Tegra UART library object
+**/
+typedef
+TEGRA_UART_OBJ *
+(EFIAPI *SERIAL_PORT_GET_OBJECT)(
+  VOID
+  );
+
+/**
+  Describe compatibility mapping regions terminated with NULL Compatibility string
+**/
+typedef struct {
+  UINT32                    Type;
+  SERIAL_PORT_GET_OBJECT    GetObject;
+  CONST CHAR8               *Compatibility;
+  BOOLEAN                   IsFound;
+  EFI_PHYSICAL_ADDRESS      BaseAddress;
+} SERIAL_MAPPING;
+
+/** Identify the serial device hardware
+
+ **/
+VOID
+EFIAPI
+SerialPortIdentify (
+  SERIAL_MAPPING  **SerialMapping OPTIONAL
   );
 
 #endif //__TEGRA_SERIAL_PORT_LIB_H__

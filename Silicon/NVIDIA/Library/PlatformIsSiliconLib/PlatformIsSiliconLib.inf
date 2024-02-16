@@ -1,0 +1,31 @@
+## @file
+#  A hook-in library for drivers.
+#
+#  Plugging this library instance into a driver makes it conditional on running
+#  on a silicon target
+#
+#  Copyright (C) 2017, Red Hat, Inc.
+#  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = PlatformIsSiliconLib
+  FILE_GUID                      = ceb876ff-fe63-40de-96b9-10724a81b5d3
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformIsSiliconLib|DXE_DRIVER
+  CONSTRUCTOR                    = PlatformIsSiliconInitialize
+
+[Sources]
+  PlatformIsSiliconLib.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Depex]
+  gNVIDIAIsSiliconDeviceGuid

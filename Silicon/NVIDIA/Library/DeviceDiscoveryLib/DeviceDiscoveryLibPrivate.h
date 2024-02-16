@@ -48,6 +48,20 @@ typedef enum {
 } MRQ_PG_COMMANDS;
 
 typedef enum {
+  CmdUphyPcieLaneMarginCtl    = 1,
+  CmdUphyPcieLaneMarginStatus = 2,
+  CmdUphyPcieEpCtlrPllInit    = 3,
+  CmdUphyPcieCtlrState        = 4,
+  CmdUphyPcieEpCtlrPllOff     = 5,
+  CmdUphyDisplayPortInit      = 6,
+  CmdUphyDisplayPortOff       = 7,
+  CmdUphyXUsbDynLanesRestore  = 8,
+  CmdUphyLaneEomScan          = 9,
+  CmdUphyPcieConfigVdm        = 10,
+  CmdUphyMax,
+} MRQ_UPHY_COMMANDS;
+
+typedef enum {
   CmdC2cQueryAbi            = 0,
   CmdC2cStartInitialization = 1,
   CmdC2cGetStatus           = 2,
@@ -62,6 +76,13 @@ typedef struct {
   UINT32    PgId;
   UINT32    Argument;
 } MRQ_PG_COMMAND_PACKET;
+
+typedef struct {
+  UINT16    Lane;
+  UINT16    Command;
+  UINT8     Controller;
+  UINT16    BusDeviceFunction;
+} MRQ_UPHY_COMMAND_PACKET;
 
 typedef struct {
   UINT32    Command;

@@ -2,13 +2,7 @@
 #
 #  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #**/
 
@@ -23,7 +17,7 @@
 
   ENTRY_POINT                   = NVIDIAGpuDriverEntryPoint
   UNLOAD_IMAGE                  = NVIDIAGpuDriverUnloadImage
-  DEFINE TH500GPUDXE_SDK_PREFIX = Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/sdk/
+  DEFINE TH500GPUDXE_SDK_PREFIX = Sdk/TH500Gpu/
 
 [Sources]
   core/GPUMemoryInfo.c
@@ -56,13 +50,13 @@
   gEfiPciIoProtocolGuid
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiNVIDIAGpuFirmwareBootCompleteGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
 
 [Ppis]
 
 [Guids]
-  # Used to set and get shell and nvram variables
-  gShellEnvProtocolGuid
-
   # EDK guids
   gEfiSmbiosTableGuid
   gEfiEventReadyToBootGuid
@@ -72,7 +66,6 @@
 
   gNVIDIAPlatformResourceDataGuid
 
-  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Pcd]
 
@@ -91,6 +84,7 @@
   HobLib
   UefiLib
   UefiDriverEntryPoint
+  TegraPlatformInfoLib
   DevicePathLib
   DebugLib
 
@@ -99,6 +93,5 @@
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.dec
-  $(TH500GPUDXE_SDK_PREFIX)TH500GpuDxe-sdk.dec
+  $(TH500GPUDXE_SDK_PREFIX)TH500GpuSdk.dec
 

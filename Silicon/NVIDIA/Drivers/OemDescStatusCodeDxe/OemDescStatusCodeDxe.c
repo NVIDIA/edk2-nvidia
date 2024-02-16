@@ -2,7 +2,7 @@
 
   OEM Status code handler to log addtional data as string
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,20 +17,24 @@
 #include <Library/DebugLib.h>
 #include <Library/DebugPrintErrorLevelLib.h>
 #include <Library/DevicePathLib.h>
-#include <Library/IpmiBaseLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 #include <Protocol/ReportStatusCodeHandler.h>
+#include <Protocol/IpmiTransportProtocol.h>
 
 #include <OemStatusCodes.h>
 #include "OemDescStatusCodeDxe.h"
 
-STATIC EFI_RSC_HANDLER_PROTOCOL  *mRscHandler           = NULL;
-STATIC EFI_EVENT                 mExitBootServicesEvent = NULL;
-STATIC BOOLEAN                   mEnableOemDesc         = FALSE;
+STATIC IPMI_TRANSPORT            *mIpmiTransport            = NULL;
+STATIC VOID                      *mIpmiTransportSearchToken = NULL;
+STATIC EFI_RSC_HANDLER_PROTOCOL  *mRscHandler               = NULL;
+STATIC EFI_EVENT                 mExitBootServicesEvent     = NULL;
+STATIC BOOLEAN                   mEnableOemDesc             = FALSE;
+STATIC OEM_DESC_FIFO_ENTRY       mOemDescFifo[MAX_STAGED_OEM_DESC_ENTRIES];
+STATIC UINTN                     mOemDescFifoCount = 0;
 
 /**
   Checks if the data is a string and returns the length of it
@@ -84,13 +88,11 @@ OemDescStatusCodeCallback (
   )
 {
   EFI_STATUS                   Status;
-  IPMI_OEM_SEND_DESC_REQ_DATA  *RequestData = NULL;
-  IPMI_OEM_SEND_DESC_RSP_DATA  ResponseData;
-  UINT32                       RequestDataSize  = 0;
-  UINT32                       ResponseDataSize = sizeof (ResponseData);
-  UINT8                        *DataPtr         = (UINT8 *)(Data + 1);
-  UINT16                       DataSize         = Data->Size;
-  UINTN                        ErrorLevel       = 0;
+  IPMI_OEM_SEND_DESC_REQ_DATA  *RequestData    = NULL;
+  UINT32                       RequestDataSize = 0;
+  UINT8                        *DataPtr        = (UINT8 *)(Data + 1);
+  UINT16                       DataSize        = Data->Size;
+  UINTN                        ErrorLevel      = 0;
   CHAR16                       *Str;
   CHAR8                        *DevicePathStr = NULL;
   INT32                        NumRetries;
@@ -130,6 +132,20 @@ OemDescStatusCodeCallback (
 
   if ((ErrorLevel & GetDebugPrintErrorLevel ()) == 0) {
     return EFI_SUCCESS;
+  }
+
+  //
+  // Ignore non-error messages before IPMI is up
+  //
+  if (mIpmiTransport == NULL) {
+    if (ErrorLevel != DEBUG_ERROR) {
+      return EFI_SUCCESS;
+    }
+
+    if (mOemDescFifoCount >= MAX_STAGED_OEM_DESC_ENTRIES) {
+      mOemDescFifoCount++;
+      return EFI_SUCCESS;
+    }
   }
 
   //
@@ -192,54 +208,23 @@ OemDescStatusCodeCallback (
   }
 
   //
+  // If IPMI is not up yet, store OEM descriptions to send them later
+  //
+  if (mIpmiTransport == NULL) {
+    mOemDescFifo[mOemDescFifoCount].RequestData     = RequestData;
+    mOemDescFifo[mOemDescFifoCount].RequestDataSize = RequestDataSize;
+    mOemDescFifoCount++;
+    if (DevicePathStr != NULL) {
+      FreePool (DevicePathStr);
+    }
+
+    return EFI_SUCCESS;
+  }
+
+  //
   // Send IPMI packet to BMC
   //
-  do {
-    Status = IpmiSubmitCommand (
-               IPMI_NETFN_OEM,
-               IPMI_CMD_OEM_SEND_DESCRIPTION,
-               (UINT8 *)RequestData,
-               RequestDataSize,
-               (UINT8 *)&ResponseData,
-               &ResponseDataSize
-               );
-  } while (EFI_ERROR (Status) && (NumRetries-- > 0));
-
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
-    goto Exit;
-  }
-
-  if (ResponseDataSize != sizeof (ResponseData)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed unexpected response size, Got: %d, Expected: %d\r\n",
-      __FUNCTION__,
-      ResponseDataSize,
-      sizeof (ResponseData)
-      ));
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
-  }
-
-  if (ResponseData.CompletionCode == IPMI_COMP_CODE_INVALID_COMMAND) {
-    DEBUG ((DEBUG_ERROR, "%a: BMC does not support status codes, disabling\r\n", __FUNCTION__));
-    mEnableOemDesc = FALSE;
-    Status         = EFI_UNSUPPORTED;
-    goto Exit;
-  } else if (ResponseData.CompletionCode != IPMI_COMP_CODE_NORMAL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed unexpected command completion code, Got: %x, Expected: %x\r\n",
-      __FUNCTION__,
-      ResponseData.CompletionCode,
-      IPMI_COMP_CODE_NORMAL
-      ));
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
-  }
-
-  Status = EFI_SUCCESS;
+  Status = OemDescSend (RequestData, RequestDataSize, NumRetries);
 
 Exit:
   if (DevicePathStr != NULL) {
@@ -251,6 +236,121 @@ Exit:
   }
 
   return Status;
+}
+
+/**
+  Helper function for sending OEM IPMI command
+
+  @param[in]    RequestData     IPMI request data
+  @param[in]    RequestDataSize IPMI request data size
+**/
+EFI_STATUS
+OemDescSend (
+  IN  IPMI_OEM_SEND_DESC_REQ_DATA  *RequestData,
+  IN  UINT32                       RequestDataSize,
+  IN  INT32                        NumRetries
+  )
+{
+  EFI_STATUS                   Status;
+  IPMI_OEM_SEND_DESC_RSP_DATA  ResponseData;
+  UINT32                       ResponseDataSize = sizeof (ResponseData);
+
+  do {
+    Status = mIpmiTransport->IpmiSubmitCommand (
+                               mIpmiTransport,
+                               IPMI_NETFN_OEM,
+                               0,
+                               IPMI_CMD_OEM_SEND_DESCRIPTION,
+                               (UINT8 *)RequestData,
+                               RequestDataSize,
+                               (UINT8 *)&ResponseData,
+                               &ResponseDataSize
+                               );
+  } while (EFI_ERROR (Status) && (NumRetries-- > 0));
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to send IPMI command - %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (ResponseDataSize != sizeof (ResponseData)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed unexpected response size, Got: %u, Expected: %u\r\n",
+      __FUNCTION__,
+      ResponseDataSize,
+      sizeof (ResponseData)
+      ));
+    Status = EFI_DEVICE_ERROR;
+    return Status;
+  }
+
+  if (ResponseData.CompletionCode == IPMI_COMP_CODE_INVALID_COMMAND) {
+    DEBUG ((DEBUG_ERROR, "%a: BMC does not support status codes, disabling\r\n", __FUNCTION__));
+    mEnableOemDesc = FALSE;
+    Status         = EFI_UNSUPPORTED;
+    return Status;
+  } else if (ResponseData.CompletionCode != IPMI_COMP_CODE_NORMAL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed unexpected command completion code, Got: %x, Expected: %x\r\n",
+      __FUNCTION__,
+      ResponseData.CompletionCode,
+      IPMI_COMP_CODE_NORMAL
+      ));
+    Status = EFI_DEVICE_ERROR;
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Callback function for locating the IpmiTransport protocol.
+
+  @param[in]    Event   The Event that is being processed
+  @param[in]    Context Event Context
+**/
+STATIC
+VOID
+EFIAPI
+OemDescIpmiTransportEvent (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      Index;
+  INT32       NumRetries = 5;
+
+  if (mIpmiTransport != NULL) {
+    return;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gIpmiTransportProtocolGuid,
+                  NULL,
+                  (VOID **)&mIpmiTransport
+                  );
+  if (EFI_ERROR (Status)) {
+    mIpmiTransport = NULL;
+    return;
+  }
+
+  gBS->CloseEvent (Event);
+
+  //
+  // Send all OEM descriptions that had been staged before IPMI available
+  //
+  for (Index = 0; (Index < mOemDescFifoCount) && (Index < MAX_STAGED_OEM_DESC_ENTRIES); Index++) {
+    if (mEnableOemDesc) {
+      OemDescSend (mOemDescFifo[Index].RequestData, mOemDescFifo[Index].RequestDataSize, NumRetries);
+    }
+
+    FreePool (mOemDescFifo[Index].RequestData);
+  }
+
+  mOemDescFifoCount = 0;
 }
 
 /**
@@ -290,13 +390,21 @@ OemDescStatusCodeDxeDriverEntryPoint (
   )
 {
   EFI_STATUS  Status;
+  EFI_EVENT   Event;
 
   //
-  // IpmiBaseLib does not have constructor, need to initialize it manually
+  // Get notified when IPMI protocol is avaiable
   //
-  Status = InitializeIpmiBase ();
-  if (EFI_ERROR (Status)) {
-    return Status;
+  Event = EfiCreateProtocolNotifyEvent (
+            &gIpmiTransportProtocolGuid,
+            TPL_CALLBACK,
+            OemDescIpmiTransportEvent,
+            NULL,
+            &mIpmiTransportSearchToken
+            );
+  if (Event == NULL) {
+    ASSERT (FALSE);
+    return EFI_OUT_OF_RESOURCES;
   }
 
   //
@@ -324,7 +432,7 @@ OemDescStatusCodeDxeDriverEntryPoint (
                   &mExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
     return Status;
   }
 

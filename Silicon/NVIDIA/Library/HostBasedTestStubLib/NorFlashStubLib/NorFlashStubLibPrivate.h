@@ -14,6 +14,14 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Uefi.h>
 #include <Protocol/NorFlash.h>
 
+// Note: These values DO NOT need to be kept in sync with the real values used by the real driver
+// They simply need to be reasonably valid values
+#define NOR_SFDP_WRITE_DEF_PAGE                        256
+#define NOR_SFDP_PROGRAM_FIRST_BYTE_TIME_DEFAULT       15
+#define NOR_SFDP_PROGRAM_ADDITIONAL_BYTE_TIME_DEFAULT  1
+#define NOR_SFDP_PROGRAM_PAGE_TIME_DEFAULT             120
+#define NOR_SFDP_PROGRAM_MAX_TIME_MULTIPLIER_DEFAULT   24
+
 typedef struct {
   UINT32                       Signature;
   UINT8                        *Memory;

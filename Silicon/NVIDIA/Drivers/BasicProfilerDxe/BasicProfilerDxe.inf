@@ -1,0 +1,42 @@
+## @file
+#  Basic Profiler Dxe
+#
+#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = BasicProfilerDxe
+  FILE_GUID                 = 5f4c4d13-776f-463d-aeba-b55d432e0c89
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = BasicProfilerDxeInitialize
+
+[Sources]
+  BasicProfilerDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  PlatformResourceLib
+  DxeServicesTableLib
+  HobLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gNVIDIAKernelCmdLineUpdateGuid
+  gNVIDIAPlatformResourceDataGuid
+  gEfiFirmwarePerformanceGuid
+
+[Depex]
+  TRUE

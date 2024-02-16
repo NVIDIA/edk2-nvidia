@@ -2,7 +2,7 @@
 #
 #  FW Image Library
 #
-#  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -15,6 +15,7 @@
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = FwImageLib|DXE_DRIVER
   CONSTRUCTOR                    = FwImageLibConstructor
+  DESTRUCTOR                     = FwImageLibDestructor
 
 [Sources.common]
   FwImageLib.c
@@ -27,9 +28,10 @@
   BaseLib
   DebugLib
   UefiBootServicesTableLib
+  UefiLib
 
 [Protocols]
   gNVIDIAFwImageProtocolGuid
 
 [Depex]
-  gNVIDIAFwImageProtocolGuid
+  TRUE

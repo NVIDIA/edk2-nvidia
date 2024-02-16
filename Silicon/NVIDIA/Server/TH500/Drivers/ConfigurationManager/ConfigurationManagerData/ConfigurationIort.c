@@ -1,20 +1,23 @@
 /** @file
   Configuration Manager Data of IO Remapping Table
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <libfdt.h>
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
+#include <Protocol/AmlPatchProtocol.h>
 
 #include <TH500/TH500Definitions.h>
 #include "ConfigurationIortPrivate.h"
@@ -24,11 +27,14 @@
              !IsNull (list, tmp);            \
              tmp = GetNextNode (list, tmp))
 
+extern NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol;
+
 STATIC IORT_PRIVATE_DATA  mIortPrivate = {
   .Signature                                               = IORT_DATA_SIGNATURE,
   .IoNodes[IORT_TYPE_INDEX (EArmObjNamedComponent)]        = { sizeof (CM_ARM_NAMED_COMPONENT_NODE), },
   .IoNodes[IORT_TYPE_INDEX (EArmObjRootComplex)]           = { sizeof (CM_ARM_ROOT_COMPLEX_NODE), },
   .IoNodes[IORT_TYPE_INDEX (EArmObjSmmuV3)]                = { sizeof (CM_ARM_SMMUV3_NODE), },
+  .IoNodes[IORT_TYPE_INDEX (EArmObjPmcg)]                  = { sizeof (CM_ARM_PMCG_NODE), },
   .IoNodes[IORT_TYPE_INDEX (EArmObjIdMappingArray)]        = { sizeof (CM_ARM_ID_MAPPING), },
   .IoNodes[IORT_TYPE_INDEX (EArmObjItsGroup)]              = { sizeof (CM_ARM_ITS_GROUP_NODE), },
   .IoNodes[IORT_TYPE_INDEX (EArmObjGicItsIdentifierArray)] = { sizeof (CM_ARM_ITS_IDENTIFIER), }
@@ -70,7 +76,7 @@ AddIortMemoryRegion (
     Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_INFO,
+        DEBUG_INFO,
         "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n",
         __FUNCTION__,
         ScanLocation,
@@ -89,7 +95,7 @@ AddIortMemoryRegion (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_INFO,
+          DEBUG_INFO,
           "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n",
           __FUNCTION__,
           ScanLocation,
@@ -106,7 +112,7 @@ AddIortMemoryRegion (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_INFO,
+          DEBUG_INFO,
           "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n",
           __FUNCTION__,
           ScanLocation,
@@ -287,12 +293,13 @@ AddIortPropNodes (
   CONST UINT32    *MsiProp;
   CONST UINT32    *IommusProp;
   CONST UINT32    *IommuMapProp;
+  CONST UINT32    *DevicesProp;
   INT32           PropSize;
   CONST CHAR8     *AliasName;
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
     if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->ObjectName == NULL)) {
-      DEBUG ((EFI_D_WARN, "%a: Invalid named component \r\n", __FUNCTION__));
+      DEBUG ((DEBUG_WARN, "%a: Invalid named component \r\n", __FUNCTION__));
       continue;
     }
 
@@ -302,7 +309,7 @@ AddIortPropNodes (
       if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
         AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
         if (AliasName == NULL) {
-          DEBUG ((EFI_D_WARN, "%a: Invalid alias for named component \r\n", __FUNCTION__));
+          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component \r\n", __FUNCTION__));
           break;
         }
 
@@ -323,12 +330,13 @@ AddIortPropNodes (
       // The reg property is mandatory with requested entries
       RegProp = fdt_getprop (Private->DtbBase, NodeOffset, "reg", NULL);
       if (RegProp == NULL) {
-        DEBUG ((EFI_D_WARN, "%a: Device does not have a reg property. It could be a test device.\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_WARN, "%a: Device does not have a reg property. It could be a test device.\r\n", __FUNCTION__));
       }
 
       MsiProp      = NULL;
       IommusProp   = NULL;
       IommuMapProp = NULL;
+      DevicesProp  = NULL;
 
       if (DevMap->ObjectId == EArmObjItsGroup) {
         Private->IoNodes[ITSIDENT_TYPE_INDEX].NumberOfNodes++;
@@ -364,8 +372,8 @@ AddIortPropNodes (
         Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
       }
 
-      // Check "iommu-map" property only for non-SMMUv3 nodes
-      if (DevMap->ObjectId != EArmObjSmmuV3) {
+      // Check "iommu-map" property only for non-SMMUv3 and non-PMCG nodes
+      if ((DevMap->ObjectId != EArmObjSmmuV3) && (DevMap->ObjectId != EArmObjPmcg)) {
         IommusProp = fdt_getprop (Private->DtbBase, NodeOffset, "iommus", &PropSize);
         if ((IommusProp != NULL) && (PropSize == IOMMUS_PROP_LENGTH)) {
           // Check DTB status and skip if it's not enabled
@@ -407,13 +415,31 @@ AddIortPropNodes (
           }
         }
       } else {
+        // Check "devices" property for all PMCG nodes
+        if (DevMap->ObjectId == EArmObjPmcg) {
+          DevicesProp = fdt_getprop (Private->DtbBase, NodeOffset, "devices", &PropSize);
+          if ((DevicesProp == NULL) || (PropSize != sizeof (UINT32))) {
+            DevicesProp = NULL;
+          } else {
+            // Skip if the target DTB node is not valid
+            if (FindPropNodeByPhandle (Private, SwapBytes32 (*DevicesProp)) == NULL) {
+              // Alias path would be unique
+              if (DevMap->Alias != NULL) {
+                break;
+              }
+
+              continue;
+            }
+          }
+        }
+
         Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
       }
 
 AllocatePropNode:
       PropNode = AllocateZeroPool (sizeof (IORT_PROP_NODE));
       if (PropNode == NULL) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
         return EFI_OUT_OF_RESOURCES;
       }
 
@@ -467,14 +493,14 @@ AllocateIortNodes (
     }
 
     if (IoNode->NumberOfNodes == 0) {
-      DEBUG ((EFI_D_INFO, "%a: No IORT nodes of %d\r\n", __FUNCTION__, (Index + MIN_IORT_OBJID)));
+      DEBUG ((DEBUG_INFO, "%a: No IORT nodes of %d\r\n", __FUNCTION__, (Index + MIN_IORT_OBJID)));
       continue;
     }
 
     IoNode->NodeArray = AllocateZeroPool (IoNode->NumberOfNodes * IoNode->SizeOfNode);
     if (IoNode->NodeArray == NULL) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to allocate IORT node of %d\r\n",
         __FUNCTION__,
         (Index + MIN_IORT_OBJID)
@@ -634,6 +660,84 @@ SetupIortIdMappingForSmmuV3 (
 }
 
 /**
+  patch SMMUv3 _UID info in dsdt/ssdt table to SMMUv3 iort identifier
+
+  @param[in] IortNode       Pointer to the CM_ARM_SMMUV3_NODE
+
+  @retval EFI_SUCCESS       Success
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+UpdateSmmuV3UidInfo (
+  IN  CM_ARM_SMMUV3_NODE  *IortNode
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT32                Identifier;
+  UINT32                AcpiSmmuUidPatchNameSize;
+  STATIC UINT32         Index = 0;
+
+  STATIC CHAR8 *CONST  AcpiSmmuUidPatchName[] = {
+    "_SB_.SQ00._UID",
+    "_SB_.SQ01._UID",
+    "_SB_.SQ02._UID",
+    "_SB_.GQ00._UID",
+    "_SB_.GQ01._UID",
+    "_SB_.SQ10._UID",
+    "_SB_.SQ11._UID",
+    "_SB_.SQ12._UID",
+    "_SB_.GQ10._UID",
+    "_SB_.GQ11._UID",
+    "_SB_.SQ20._UID",
+    "_SB_.SQ21._UID",
+    "_SB_.SQ22._UID",
+    "_SB_.GQ20._UID",
+    "_SB_.GQ21._UID",
+    "_SB_.SQ30._UID",
+    "_SB_.SQ31._UID",
+    "_SB_.SQ32._UID",
+    "_SB_.GQ30._UID",
+    "_SB_.GQ31._UID",
+  };
+
+  Status = EFI_SUCCESS;
+
+  AcpiSmmuUidPatchNameSize = ARRAY_SIZE (AcpiSmmuUidPatchName);
+  if (Index >= AcpiSmmuUidPatchNameSize) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %u is larger than AcpiSmmuUidPatchNameSize %u\n", __FUNCTION__, Index, AcpiSmmuUidPatchNameSize));
+    goto ErrorExit;
+  }
+
+  Identifier = 0;
+
+  Status = PatchProtocol->FindNode (PatchProtocol, AcpiSmmuUidPatchName[Index], &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find the node %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+  if (AcpiNodeInfo.Size != sizeof (Identifier)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unexpected size of node %a - %d\n", __FUNCTION__, AcpiSmmuUidPatchName[Index], AcpiNodeInfo.Size));
+    goto ErrorExit;
+  }
+
+  Identifier = IortNode->Identifier;
+  Status     = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &Identifier, sizeof (Identifier));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set data for %a\n", __FUNCTION__, AcpiSmmuUidPatchName[Index]));
+    goto ErrorExit;
+  }
+
+ErrorExit:
+  Index++;
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "SMMUv3 UID Patching Failure.\n");
+  return Status;
+}
+
+/**
   Populate data of SMMUv3 from the device tree and install the IORT nodes of SmmuV3
 
   @param[in, out] Private   Pointer to the module private data
@@ -677,6 +781,8 @@ SetupIortNodeForSmmuV3 (
   IortNode->Identifier      = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
+  UpdateSmmuV3UidInfo (IortNode);
+
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->Flags |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
   }
@@ -688,13 +794,13 @@ SetupIortNodeForSmmuV3 (
 
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupt-names", &PropSize);
   if ((Prop == NULL) || (PropSize == 0)) {
-    DEBUG ((EFI_D_VERBOSE, "%a: Failed to find \"interrupt-names\"\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupt-names\"\r\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
   if ((IrqProp == NULL) || (IrqPropSize == 0)) {
-    DEBUG ((EFI_D_VERBOSE, "%a: Failed to find \"interrupts\"\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupts\"\r\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
@@ -708,20 +814,20 @@ SetupIortNodeForSmmuV3 (
     IortNode->SyncInterrupt  = InterruptId;
   } else if ((IrqPropCnt <= MAX_NUM_IRQS_OF_SMMU_V3) && (IrqPropSize >= MIN_NUM_IRQS_OF_SMMU_V3)) {
     UINT32       IrqPropIndex;
-    UINT32       StrSize;
+    UINT32       StrLength;
     CONST CHAR8  *IrqPropNames[MAX_NUM_IRQS_OF_SMMU_V3] = {
       "eventq", "priq", "gerror", "cmdq-sync"
     };
     UINT32       *Interrupts = &IortNode->EventInterrupt;
 
     while (PropSize > 0) {
-      StrSize = AsciiStrSize (Prop);
-      if ((StrSize == 0) || (StrSize > (UINT32)PropSize)) {
+      StrLength = AsciiStrSize (Prop);
+      if ((StrLength == 0) || (StrLength > (UINT32)PropSize)) {
         return EFI_NOT_FOUND;
       }
 
       for (IrqPropIndex = 0; IrqPropIndex < MAX_NUM_IRQS_OF_SMMU_V3; IrqPropIndex++) {
-        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrSize)) {
+        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrLength)) {
           break;
         }
       }
@@ -729,12 +835,12 @@ SetupIortNodeForSmmuV3 (
       InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
       Interrupts[IrqPropIndex] = InterruptId;
 
-      PropSize -= StrSize;
-      Prop     += StrSize;
+      PropSize -= StrLength;
+      Prop     += StrLength;
       IrqProp  += IRQ_PROP_CELL_SIZE;
     }
   } else {
-    DEBUG ((EFI_D_VERBOSE, "%a: Failed to find interrupts\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find interrupts\r\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
@@ -923,6 +1029,100 @@ SetupIortNodeForNComp (
   return EFI_SUCCESS;
 }
 
+/**
+  Populate data of PMCG from the device tree and install the IORT nodes of PMCG
+
+  @param[in, out] Private   Pointer to the module private data
+  @param[in, out] PropNode  Pointer to the PropNode
+
+  @return EFI_SUCCESS       PMCG nodes are populated and installed
+  @retval !(EFI_SUCCESS)    Other errors
+
+**/
+STATIC
+EFI_STATUS
+SetupIortNodeForPmcg (
+  IN OUT  IORT_PRIVATE_DATA  *Private,
+  IN OUT  IORT_PROP_NODE     *PropNode
+  )
+{
+  CM_ARM_PMCG_NODE     *IortNode;
+  CM_ARM_ID_MAPPING    *IdMapping;
+  CM_OBJECT_TOKEN      Token;
+  CONST UINT64         *RegProp;
+  CONST UINT32         *Prop;
+  CONST UINT32         *IrqProp;
+  INT32                PropSize;
+  INT32                RegPropSize;
+  INT32                IrqPropSize;
+  UINT32               InterruptId;
+  TEGRA_PLATFORM_TYPE  PlatformType;
+
+  PlatformType = TegraGetPlatform ();
+  if (PlatformType != TEGRA_PLATFORM_SILICON) {
+    return EFI_SUCCESS;
+  }
+
+  IortNode = PropNode->IortNode;
+  if (IortNode->Token != 0) {
+    return EFI_SUCCESS;
+  }
+
+  IortNode->Token = (CM_OBJECT_TOKEN)(VOID *)IortNode;
+  if (PropNode->RegProp != NULL) {
+    IortNode->BaseAddress = SwapBytes64 (*PropNode->RegProp);
+  }
+
+  RegProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "reg", &RegPropSize);
+  if ((RegProp != NULL) && ((RegPropSize / REG_PROP_LENGTH) > 1)) {
+    IortNode->Page1BaseAddress = SwapBytes64 (*(RegProp + REG_PROP_CELL_SIZE));
+  }
+
+  IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
+  if ((IrqProp == NULL) || (IrqPropSize == 0)) {
+    IortNode->IdMappingCount = 1;
+  } else {
+    IortNode->IdMappingCount    = 0;
+    InterruptId                 = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
+    IortNode->OverflowInterrupt = InterruptId;
+  }
+
+  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "devices", &PropSize);
+  if (Prop == NULL) {
+    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"devices\"\r\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  Token                    = FindIortNodeByPhandle (Private, SwapBytes32 (*Prop));
+  IortNode->ReferenceToken = Token;
+
+  IortNode->Identifier = UniqueIdentifier++;
+  ASSERT (UniqueIdentifier < 0xFFFFFFFF);
+
+  if (IortNode->IdMappingCount == 1) {
+    ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
+    PropNode->IdMapCount = 1;
+    IdMapping            = Private->IoNodes[IDMAP_TYPE_INDEX].NodeArray;
+    IdMapping           += Private->IdMapIndex;
+    Private->IdMapIndex += PropNode->IdMapCount;
+    PropNode->IdMapArray = IdMapping;
+
+    Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "msi-parent", &PropSize);
+    ASSERT (Prop != NULL);
+
+    IdMapping->InputBase            = 0;
+    IdMapping->OutputBase           = SwapBytes32 (Prop[1]);
+    IdMapping->NumIds               = 0;
+    IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
+    IdMapping->OutputReferenceToken = FindIortNodeByPhandle (Private, SwapBytes32 (Prop[0]));
+    ASSERT (IdMapping->OutputReferenceToken != 0);
+    IortNode->IdMappingCount = PropNode->IdMapCount;
+    IortNode->IdMappingToken = (CM_OBJECT_TOKEN)(PropNode->IdMapArray);
+  }
+
+  return EFI_SUCCESS;
+}
+
 // The order must be ITS, SMMUv3, RootComplex and NamedComponent
 STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjItsGroup,       "arm,gic-v3-its",        SetupIortNodeForItsGroup, NULL,            NULL          },
@@ -931,6 +1131,7 @@ STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "socket0_qspi1", "\\_SB_.QSP1" },
   { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    NULL,            "\\_SB_.HWP0" },
   { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    NULL,            "\\_SB_.PSC0" },
+  { EArmObjPmcg,           "arm,smmu-v3-pmcg",      SetupIortNodeForPmcg,     NULL,            NULL          },
   { EArmObjMax,            NULL,                    NULL,                     NULL,            NULL          }
 };
 
@@ -954,7 +1155,7 @@ InitializeIoRemappingNodes (
 
   Status = DtPlatformLoadDtb (&Private->DtbBase, &Private->DtbSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a failed to get device tree: %r\r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -984,7 +1185,7 @@ InitializeIoRemappingNodes (
 
       Status = DevMap->SetupIortNode (Private, PropNode);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to setup IORT ObjectId=%d err=%r\r\n", PropNode->ObjectId, Status));
+        DEBUG ((DEBUG_ERROR, "Failed to setup IORT ObjectId=%d err=%r\r\n", PropNode->ObjectId, Status));
         goto ErrorExit;
       }
     }
@@ -1012,8 +1213,10 @@ InstallIoRemappingTable (
   IORT_PROP_NODE                  *PropNode;
   IORT_PRIVATE_DATA               *Private;
   UINTN                           Index;
+  TEGRA_PLATFORM_TYPE             PlatformType;
 
-  Private = &mIortPrivate;
+  Private      = &mIortPrivate;
+  PlatformType = TegraGetPlatform ();
 
   // Create a ACPI Table Entry
   for (Index = 0; Index < PcdGet32 (PcdConfigMgrObjMax); Index++) {
@@ -1036,6 +1239,7 @@ InstallIoRemappingTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -1048,6 +1252,12 @@ InstallIoRemappingTable (
   Repo = *PlatformRepositoryInfo;
 
   for (Index = 0; Index < MAX_NUMBER_OF_IORT_TYPE; Index++) {
+    if ((Index == IORT_TYPE_INDEX (EArmObjPmcg)) &&
+        (PlatformType != TEGRA_PLATFORM_SILICON))
+    {
+      continue;
+    }
+
     IoNode = &Private->IoNodes[Index];
     if ((IoNode->NumberOfNodes != 0) && (Index != IDMAP_TYPE_INDEX)) {
       Repo->CmObjectId    = CREATE_CM_ARM_OBJECT_ID (Index + MIN_IORT_OBJID);
@@ -1056,7 +1266,7 @@ InstallIoRemappingTable (
       Repo->CmObjectCount = IoNode->NumberOfNodes;
       Repo->CmObjectPtr   = IoNode->NodeArray;
       Repo++;
-      DEBUG ((EFI_D_INFO, "%a: Installed IORT %d\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
+      DEBUG ((DEBUG_INFO, "%a: Installed IORT %d\r\n", __FUNCTION__, Index + MIN_IORT_OBJID));
     }
   }
 
@@ -1074,7 +1284,7 @@ InstallIoRemappingTable (
       ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
     }
   }
-  DEBUG ((EFI_D_INFO, "%a: Installed IORT\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "%a: Installed IORT\r\n", __FUNCTION__));
 
   *PlatformRepositoryInfo = Repo;
 

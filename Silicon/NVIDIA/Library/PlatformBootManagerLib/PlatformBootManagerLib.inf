@@ -1,7 +1,7 @@
 ## @file
 #  Implementation for PlatformBootManagerLib library class interfaces.
 #
-#  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (C) 2015-2016, Red Hat, Inc.
 #  Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
 #  Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
@@ -37,6 +37,7 @@
   Silicon/NVIDIA/NVIDIA.dec
   CryptoPkg/CryptoPkg.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -50,6 +51,7 @@
   HobLib
   MemoryAllocationLib
   PcdLib
+  PerformanceLib
   PrintLib
   UefiBootManagerLib
   UefiBootServicesTableLib
@@ -59,6 +61,10 @@
   BaseCryptLib
   PlatformResourceLib
   DtPlatformDtbLoaderLib
+  Tcg2PhysicalPresenceLib
+  TpmPlatformHierarchyLib
+  TimerLib
+  StatusRegLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
@@ -77,9 +83,15 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut
+  gEfiMdeModulePkgTokenSpaceGuid.PcdConInConnectOnDemand
   gNVIDIATokenSpaceGuid.PcdQuickBootEnabled
   gNVIDIATokenSpaceGuid.PcdBootMenuAppFile
   gNVIDIATokenSpaceGuid.PcdBootManagerWaitMessage
+  gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gNVIDIATokenSpaceGuid.PcdMemoryTest
+  gNVIDIATokenSpaceGuid.PcdSingleBootSupport
+  gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid
 
 [Guids]
   gEfiFileInfoGuid
@@ -92,7 +104,6 @@
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
   gEfiRtPropertiesTableGuid
-  gEnrollFromDefaultKeysAppFileGuid
   gNVIDIABeforeConsoleEventGuid
 
 [Protocols]
@@ -114,3 +125,5 @@
   gEfiAcpiSdtProtocolGuid
   gNVIDIABdsDeviceConnectCompleteGuid
   gEfiDeferredImageLoadProtocolGuid             ## CONSUMES
+  gNVIDIAMemoryTestConfig
+  gNVIDIAAsyncDriverStatusProtocol

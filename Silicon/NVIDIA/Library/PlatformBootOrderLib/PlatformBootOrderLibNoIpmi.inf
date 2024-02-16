@@ -1,0 +1,45 @@
+#/** @file
+#
+#    SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#    SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = PlatformBootOrderLibIpmiNull
+  FILE_GUID                      = 20fe1c3a-1ee5-457f-aa62-051bd907d0d6
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformBootOrderLib
+
+[Sources.common]
+  PlatformBootOrderLib.c
+  PlatformBootOrderNoIpmiLib.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  UefiBootManagerLib
+  SortLib
+  DebugLib
+  PcdLib
+  FwVariableLib
+  PlatformResourceLib
+  StatusRegLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid          ## CONSUMES
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gNVIDIATokenSpaceGuid
+  gNVIDIABmBootOptionGuid
+  gEfiEventReadyToBootGuid

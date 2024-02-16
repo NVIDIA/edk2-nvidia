@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent)
 *
@@ -28,14 +28,14 @@ extern NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[];
 
 typedef struct {
   CONST CHAR16    *DriverName;
-  BOOLEAN         UseDriverBinding;
   BOOLEAN         AutoEnableClocks;
   BOOLEAN         AutoDeassertReset;
   BOOLEAN         AutoResetModule;
   BOOLEAN         AutoDeassertPg;
   BOOLEAN         SkipEdkiiNondiscoverableInstall;
   BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
-  BOOLEAN         DirectEnumerationSupport;
+  BOOLEAN         DelayEnumeration;
+  BOOLEAN         ThreadedDeviceStart;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig;
 
@@ -266,6 +266,35 @@ DeviceDiscoverySetProd (
   IN  EFI_HANDLE                              ControllerHandle,
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
   IN  CONST CHAR8                             *ProdSetting
+  );
+
+/**
+  Enumerate all matching devices. Called automatically if DelayEnumeration is
+  false. Used if device enumeration needs to not happen at driver start.
+  For example, if device needs to wait for a protocol notification.
+
+  @retval EFI_SUCCESS             Device Enumeration started
+  @retval others                  Error occured
+**/
+EFI_STATUS
+DeviceDiscoveryEnumerateDevices (
+  VOID
+  );
+
+/**
+  Stalls for at least the given number of microseconds.
+
+  Switches back to main thread for at least the given number of microseconds
+
+  @param  MicroSeconds  The minimum number of microseconds to delay.
+
+  @return The value of MicroSeconds inputted.
+
+**/
+UINTN
+EFIAPI
+DeviceDiscoveryThreadMicroSecondDelay (
+  IN      UINTN  MicroSeconds
   );
 
 /**

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -9,7 +9,9 @@
 #ifndef __QSPI_CONTROLLER_LIB_H__
 #define __QSPI_CONTROLLER_LIB_H__
 
-#define QSPI_CONTROLLER_CONTROL_FAST_MODE  0x01
+#define QSPI_CONTROLLER_CONTROL_FAST_MODE             0x01
+#define QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_3B_ADDR  0x02
+#define QSPI_CONTROLLER_CONTROL_CMB_SEQ_MODE_4B_ADDR  0x04
 
 typedef struct {
   VOID      *TxBuf;
@@ -19,6 +21,8 @@ typedef struct {
   UINT8     WaitCycles;
   UINT8     ChipSelect;
   UINT8     Control;
+  UINT32    Command;    // Only valid if 'Control' = CMB_SEQ_MODE_xxx
+  UINT32    Address;    // Only valid if 'Control' = CMB_SEQ_MODE_xxx
 } QSPI_TRANSACTION_PACKET;
 
 /**
@@ -64,16 +68,78 @@ QspiPerformTransaction (
   );
 
 /**
-  Enable polling for wait state
+  Enable/disable polling for wait state
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Enable                   TRUE: enable wait state, FALSE: disable wait state
 
   @retval EFI_SUCCESS              Wait state is enabled
   @retval Others                   Wait state cannot be enabled
 **/
 EFI_STATUS
 QspiEnableWaitState (
-  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN BOOLEAN               Enable
+  );
+
+/**
+  Transmit data over QSPI
+
+  Configure controller in TX mode and start transaction in PIO mode.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Buffer                   Address of buffer containing data to
+                                   be transmitted.
+  @param  Len                      Number of packets.
+  @param  PacketLen                Size of individual packet.
+
+  @retval EFI_SUCCESS              Data transmitted successfully.
+  @retval Others                   Data transmission failed.
+**/
+EFI_STATUS
+QspiPerformTransmit (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  );
+
+/**
+  Receive data over QSPI
+
+  Configure controller in RX mode and start transaction in PIO mode.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  Buffer                   Address of buffer where data should be
+                                   received.
+  @param  Len                      Number of packets.
+  @param  PacketLen                Size of individual packet.
+
+  @retval EFI_SUCCESS              Data received successfully.
+  @retval Others                   Data reception failed.
+**/
+EFI_STATUS
+QspiPerformReceive (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN VOID                  *Buffer,
+  IN UINT32                Len,
+  IN UINT32                PacketLen
+  );
+
+/**
+  Configure the CS pin
+
+  Configure whether to enable or disable CS for a slave
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+  @param  ChipSelect               Chip select to configure
+  @param  Enable                   TRUE for Tx Fifo, FALSE for Rx Fifo
+**/
+VOID
+QspiConfigureCS (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
+  IN UINT8                 ChipSelect,
+  IN BOOLEAN               Enable
   );
 
 #endif //__QSPI_CONTROLLER_LIB_H__

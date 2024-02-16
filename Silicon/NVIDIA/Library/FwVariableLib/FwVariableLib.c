@@ -10,6 +10,7 @@
 
 #include <Uefi.h>
 #include <Library/DebugLib.h>
+#include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/ReportStatusCodeLib.h>
@@ -18,6 +19,7 @@
 #include <Library/FwVariableLib.h>
 #include <Protocol/MmCommunication2.h>
 #include <Guid/NVIDIAMmMb1Record.h>
+#include <NVIDIAConfiguration.h>
 
 #include <OemStatusCodes.h>
 
@@ -95,6 +97,56 @@ EraseMb1VariablePartition (
 }
 
 /**
+  Is variable protected
+
+  @retval  True   Variable is protected.
+  @retval  False  Variable is not protected.
+
+**/
+BOOLEAN
+EFIAPI
+IsVariableProtected (
+  EFI_GUID  VariableGuid,
+  CHAR16    *VariableName
+  )
+{
+  EFI_STATUS           Status;
+  UINTN                ProductInfoSize;
+  NVIDIA_PRODUCT_INFO  ProductInfo;
+  CHAR16               ProductInfoVariableName[] = L"ProductInfo";
+
+  ProductInfoSize = sizeof (ProductInfo);
+
+  //
+  // Avoid deleting user password variables
+  //
+  if (CompareGuid (&VariableGuid, &gUserAuthenticationGuid)) {
+    return TRUE;
+  }
+
+  //
+  // Check if we have to protect product asset tag info.
+  //
+  Status = gRT->GetVariable (
+                  ProductInfoVariableName,
+                  &gNVIDIAPublicVariableGuid,
+                  NULL,
+                  &ProductInfoSize,
+                  &ProductInfo
+                  );
+  if (Status == EFI_SUCCESS) {
+    if ((ProductInfo.AssetTagProtection != 0) &&
+        (StrnCmp (VariableName, ProductInfoVariableName, StrLen (ProductInfoVariableName)) == 0) &&
+        CompareGuid (&VariableGuid, &gNVIDIAPublicVariableGuid))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
   Delete all Firmware Variables
 
   @retval         EFI_SUCCESS          All variables deleted
@@ -147,6 +199,11 @@ FwVariableDeleteAll (
 
     NameSize     = MAX_VARIABLE_NAME;
     VarGetStatus = gRT->GetNextVariableName (&NameSize, NextName, &NextGuid);
+
+    if (IsVariableProtected (CurrentGuid, CurrentName)) {
+      DEBUG ((DEBUG_ERROR, "Delete Variable %g:%s Write Protected\r\n", &CurrentGuid, CurrentName));
+      continue;
+    }
 
     // Delete Current Name variable
     VarDeleteStatus = gRT->SetVariable (

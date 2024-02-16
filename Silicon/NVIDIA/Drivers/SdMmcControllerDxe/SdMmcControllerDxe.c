@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -104,7 +104,7 @@ SdMmcNotify (
 
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Slot, &SlotBaseAddress, &SlotSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "SdMmcNotify: Unable to locate address range for slot %d\n", Slot));
+    DEBUG ((DEBUG_ERROR, "SdMmcNotify: Unable to locate address range for slot %u\n", Slot));
     return EFI_UNSUPPORTED;
   }
 
@@ -131,7 +131,6 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA SdMmc controller driver",
-  .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = FALSE
@@ -220,7 +219,7 @@ DeviceDiscoveryNotify (
     case DeviceDiscoveryDriverBindingStart:
       Status = gBS->LocateProtocol (&gEfiPlatformToDriverConfigurationProtocolGuid, NULL, (VOID **)&PlatformToDriverInterface);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Could not locate Platform to Driver Config protocol %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Could not locate Platform to Driver Config protocol %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -240,7 +239,7 @@ DeviceDiscoveryNotify (
           (SdMmcParameterInfoGuid == NULL) ||
           (SdMmcParameterSize == 0))
       {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to call Query %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to call Query %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -276,7 +275,7 @@ DeviceDiscoveryNotify (
                                             EfiPlatformConfigurationActionNone
                                             );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to call Response %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to call Response %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -325,7 +324,7 @@ DeviceDiscoveryNotify (
         if (!EFI_ERROR (Status)) {
           Status = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, SD_MMC_MAX_CLOCK);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
+            DEBUG ((DEBUG_ERROR, "%a, Failed to set clock frequency %r\r\n", __FUNCTION__, Status));
             return Status;
           }
 
@@ -333,7 +332,7 @@ DeviceDiscoveryNotify (
           Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &Rate);
           if (!EFI_ERROR (Status)) {
             if (Rate > SD_MMC_MAX_CLOCK) {
-              DEBUG ((EFI_D_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n", __FUNCTION__, Rate));
+              DEBUG ((DEBUG_ERROR, "%a: Clock rate %llu out of range for SDHCI\r\n", __FUNCTION__, Rate));
               return EFI_DEVICE_ERROR;
             }
 
@@ -375,7 +374,7 @@ DeviceDiscoveryNotify (
 
       Status = gBS->LocateProtocol (&gNVIDIARegulatorProtocolGuid, NULL, (VOID **)&RegulatorProtocol);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "%a, Failed to locate regulator protocol %r\r\n", __FUNCTION__, Status));
+        DEBUG ((DEBUG_ERROR, "%a, Failed to locate regulator protocol %r\r\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -388,7 +387,7 @@ DeviceDiscoveryNotify (
 
         Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
           return Status;
         }
 
@@ -402,7 +401,7 @@ DeviceDiscoveryNotify (
           if (Microvolts != RegulatorInfo.CurrentMicrovolts) {
             Status = RegulatorProtocol->SetVoltage (RegulatorProtocol, MmcRegulator, Microvolts);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
+              DEBUG ((DEBUG_ERROR, "%a, Failed to set regulator voltage %x, %u, %r\r\n", __FUNCTION__, MmcRegulator, Microvolts, Status));
               return Status;
             }
           }
@@ -410,7 +409,7 @@ DeviceDiscoveryNotify (
           if (!RegulatorInfo.IsEnabled) {
             Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
             if (EFI_ERROR (Status)) {
-              DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+              DEBUG ((DEBUG_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
               return Status;
             }
           }
@@ -421,14 +420,14 @@ DeviceDiscoveryNotify (
         UINT32  MmcRegulator = SdMmcInfo.VmmcRegulatorId;
         Status = RegulatorProtocol->GetInfo (RegulatorProtocol, MmcRegulator, &RegulatorInfo);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+          DEBUG ((DEBUG_ERROR, "%a, Failed to get regulator info %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
           return Status;
         }
 
         if (RegulatorInfo.IsAvailable) {
           Status = RegulatorProtocol->Enable (RegulatorProtocol, MmcRegulator, TRUE);
           if (EFI_ERROR (Status)) {
-            DEBUG ((EFI_D_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
+            DEBUG ((DEBUG_ERROR, "%a, Failed to enable regulator %x, %r\r\n", __FUNCTION__, MmcRegulator, Status));
             return Status;
           }
         }

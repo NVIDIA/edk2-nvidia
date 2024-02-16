@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of Static Resource Affinity Table
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -36,25 +36,23 @@ InstallStaticResourceAffinityTable (
   IN      EDKII_PLATFORM_REPOSITORY_INFO  *NVIDIAPlatformRepositoryInfo
   )
 {
-  UINTN                            Index;
-  UINTN                            Socket;
-  EFI_STATUS                       Status;
-  CM_STD_OBJ_ACPI_TABLE_INFO       *NewAcpiTables;
-  EDKII_PLATFORM_REPOSITORY_INFO   *Repo;
-  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  *Descriptors;
-  UINTN                            DescriptorCount;
-  CM_ARM_MEMORY_AFFINITY_INFO      *MemoryAffinityInfo;
-  HBM_MEMORY_INFO                  *HbmMemInfo;
-  UINTN                            MemoryAffinityInfoCount;
-  UINTN                            MemoryAffinityInfoIndex;
-  UINTN                            GpuMemoryAffinityId;
-  UINT8                            NumEnabledSockets;
-  UINT8                            NumGpuEnabledSockets;
-  EFI_HANDLE                       *Handles = NULL;
-  UINTN                            NumberOfHandles;
-  UINTN                            HandleIdx;
-  VOID                             *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+  UINTN                           Index;
+  UINTN                           Socket;
+  EFI_STATUS                      Status;
+  CM_STD_OBJ_ACPI_TABLE_INFO      *NewAcpiTables;
+  EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
+  CM_ARM_MEMORY_AFFINITY_INFO     *MemoryAffinityInfo;
+  HBM_MEMORY_INFO                 *HbmMemInfo;
+  UINTN                           MemoryAffinityInfoCount;
+  UINTN                           MemoryAffinityInfoIndex;
+  UINTN                           GpuMemoryAffinityId;
+  UINT8                           NumEnabledSockets;
+  UINT8                           NumGpuEnabledSockets;
+  EFI_HANDLE                      *Handles = NULL;
+  UINTN                           NumberOfHandles;
+  UINTN                           HandleIdx;
+  VOID                            *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO    *PlatformResourceInfo;
 
   // Get platform resource info
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -88,6 +86,7 @@ InstallStaticResourceAffinityTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -99,24 +98,9 @@ InstallStaticResourceAffinityTable (
 
   Repo = *PlatformRepositoryInfo;
 
-  MemoryAffinityInfoCount = 0;
   NumEnabledSockets       = 0;
   NumGpuEnabledSockets    = 0;
-
-  Status = gDS->GetMemorySpaceMap (&DescriptorCount, &Descriptors);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get Memory Space Map: %r\r\n", __FUNCTION__, Status));
-    return EFI_DEVICE_ERROR;
-  }
-
-  for (Index = 0; Index < DescriptorCount; Index++) {
-    if (Descriptors[Index].GcdMemoryType == EfiGcdMemoryTypeSystemMemory) {
-      MemoryAffinityInfoCount++;
-    }
-  }
-
-  // Should be no way to get this far in boot without system memory
-  ASSERT (MemoryAffinityInfoCount != 0);
+  MemoryAffinityInfoCount = PlatformResourceInfo->ResourceInfo->DramRegionsCount;
 
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (IsSocketEnabled (Socket)) {
@@ -142,18 +126,12 @@ InstallStaticResourceAffinityTable (
     return EFI_DEVICE_ERROR;
   }
 
-  MemoryAffinityInfoIndex = 0;
-  for (Index = 0; Index < DescriptorCount; Index++) {
-    if (Descriptors[Index].GcdMemoryType == EfiGcdMemoryTypeSystemMemory) {
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (Descriptors[Index].BaseAddress);
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = Descriptors[Index].BaseAddress;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = Descriptors[Index].Length;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
-      MemoryAffinityInfoIndex++;
-    }
+  for (MemoryAffinityInfoIndex = 0; MemoryAffinityInfoIndex < PlatformResourceInfo->ResourceInfo->DramRegionsCount; MemoryAffinityInfoIndex++) {
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress);
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress;
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryLength;
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
   }
-
-  FreePool (Descriptors);
 
   // Allocate space to save EGM info in case of hypervisor
   if (PlatformResourceInfo->HypervisorMode) {
@@ -186,8 +164,9 @@ InstallStaticResourceAffinityTable (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
-    return Status;
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
+    Status = EFI_NOT_FOUND;
+    goto Exit;
   }
 
   for (HandleIdx = 0; HandleIdx < NumberOfHandles; HandleIdx++) {
@@ -199,13 +178,13 @@ InstallStaticResourceAffinityTable (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        EFI_D_ERROR,
+        DEBUG_ERROR,
         "%a: Failed to get protocol for handle %p, %r.\r\n",
         __FUNCTION__,
         Handles[HandleIdx],
         Status
         ));
-      return Status;
+      goto Exit;
     }
 
     if (PciRbCfg->NumProximityDomains > 0) {
@@ -228,8 +207,6 @@ InstallStaticResourceAffinityTable (
 
     for (GpuMemoryAffinityId = 0; GpuMemoryAffinityId < TH500_GPU_MAX_NR_MEM_PARTITIONS; GpuMemoryAffinityId++) {
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Socket) + GpuMemoryAffinityId;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmBase;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = HbmMemInfo[MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain].HbmSize;
       MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED|EFI_ACPI_6_4_MEMORY_HOT_PLUGGABLE;
       MemoryAffinityInfoIndex++;
     }
@@ -249,6 +226,10 @@ InstallStaticResourceAffinityTable (
   ASSERT ((UINTN)Repo <= PlatformRepositoryInfoEnd);
 
   *PlatformRepositoryInfo = Repo;
+Exit:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
 
-  return EFI_SUCCESS;
+  return Status;
 }

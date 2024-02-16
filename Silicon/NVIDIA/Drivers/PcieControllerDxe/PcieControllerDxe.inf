@@ -2,7 +2,7 @@
 #
 #  PCIe Controller Driver
 #
-#  Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -37,6 +37,7 @@
   PrintLib
   UefiDriverEntryPoint
   IoLib
+  SortLib
   TimerLib
   FdtLib
   DeviceDiscoveryDriverLib
@@ -62,6 +63,8 @@
   gNVIDIAC2cNodeProtocolGuid
   gNVIDIABdsDeviceConnectCompleteGuid
   gEfiPciIoProtocolGuid
+  gEmbeddedGpioProtocolGuid
+  gNVIDIAConfigurationManagerTokenProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableTH500PcieDeviceGuid
@@ -72,3 +75,7 @@
   gNVIDIAAllRegulatorsPresentProtocolGuid
   AND
   gNVIDIAUphyConfigurationCompleteGuid
+  AND
+  gEmbeddedGpioProtocolGuid
+  AND
+  gNVIDIAConfigurationManagerTokenProtocolGuid

@@ -11,6 +11,7 @@
 #ifndef _USER_AUTHENTICATION_DXE_H_
 #define _USER_AUTHENTICATION_DXE_H_
 
+#include <Base.h>
 #include <Protocol/ReportStatusCodeHandler.h>
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/MmCommunication2.h>
@@ -35,6 +36,7 @@
 #include <Library/PlatformPasswordLib.h>
 #include <Library/ReportStatusCodeLib.h>
 #include <Library/SecurityManagementLib.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 #include "UserAuthenticationDxeFormset.h"
 
@@ -141,6 +143,50 @@ GetPasswordVerificationPolicy (
 BOOLEAN
 WasPasswordVerified (
   VOID
+  );
+
+/**
+  Set a new password hash and password salt.
+
+  @param[in] NewPasswordSalt        The new password salt value.
+                                    NULL means clear password.
+  @param[in] NewPasswordSaltSize    The size of NewPasswordSalt in byte.
+  @param[in] NewPasswordHash        The new password hash value.
+                                    NULL means clear password.
+  @param[in] NewPasswordHashSize    The size of NewPasswordHash in byte.
+
+  @retval EFI_SUCCESS               The NewPassword is set successfully.
+  @retval EFI_INVALID_PARAMETER     The password or size is invalid.
+  @retval EFI_OUT_OF_RESOURCES      Insufficient resources to set the password.
+
+**/
+EFI_STATUS
+SetPasswordHash (
+  IN   UINT8 *NewPasswordSalt, OPTIONAL
+  IN   UINTN  NewPasswordSaltSize,
+  IN   UINT8  *NewPasswordHash, OPTIONAL
+  IN   UINTN  NewPasswordHashSize
+  );
+
+/**
+  Get password hash and password salt.
+
+  @param[out]    PasswordSalt       Password salt.
+  @param[in,out] PasswordSaltSize   The size of Password in byte.
+  @param[out]    PasswordHash       Password hash.
+  @param[in,out] PasswordHashSize   The size of PasswordHash in byte.
+
+  @retval EFI_SUCCESS               The password salt and hash are returned successfully.
+  @retval EFI_INVALID_PARAMETER     One of input parameter is NULL.
+  @retval EFI_OUT_OF_RESOURCES      Insufficient resources to send get password command.
+
+**/
+EFI_STATUS
+GetPasswordHash (
+  OUT    UINT8  *PasswordSalt,
+  IN OUT UINTN  *PasswordSaltSize,
+  IN     UINT8  *PasswordHash,
+  IN OUT UINTN  *PasswordHashSize
   );
 
 #endif

@@ -1,0 +1,46 @@
+## @file
+#  Wfi App.
+#
+#  This application exits boot services and then does a WFI loop
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = WfiApp
+  FILE_GUID                      = 2ecc727c-9d50-4467-a5f1-768ca4e9c23e
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeWfiApp
+  MODULE_UNI_FILE                = WfiApp.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  WfiApp.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  BaseMemoryLib
+  DebugLib
+  UefiLib
+  MemoryAllocationLib
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  WfiApp.uni
+

@@ -1,0 +1,45 @@
+#/** @file
+#  NVIDIA Oem Partition Sample Driver Inf
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = OemPartitionMm
+  FILE_GUID                      = ae1a7765-2012-48c6-9142-128baf164a1a
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = OemPartitionMmInitialize
+
+[Sources.Common]
+  OemPartitionMm.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  StandaloneMmDriverEntryPoint
+  DebugLib
+  MemoryAllocationLib
+  MmServicesTableLib
+  PlatformResourceLib
+  BaseMemoryLib
+  StandaloneMmOpteeLib
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid         # ALWAYS_CONSUMED
+  gNVIDIAOemPartitionProtocolGuid     # SOMETIMES_PRODUCES
+
+[Guids]
+  gNVIDIAOemPartitionGuid
+
+[Depex]
+  TRUE

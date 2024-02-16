@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  Copyright (c) 2019 - 2023, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -12,6 +12,7 @@
 **/
 
 #include <ConfigurationManagerDataDxePrivate.h>
+#include <Library/HobLib.h>
 
 // Platform CPU configuration
 #define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
@@ -35,18 +36,18 @@ STATIC UINTN  ThermalZoneSoc4_List[]  = { MAX_UINTN };
 STATIC UINTN  ThermalZoneTjMax_List[] = { 0x00, MAX_UINTN };
 
 STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
-  { TH500_THERMAL_ZONE_CPU0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu0_List,  L"Thermal Zone Skt%d CPU0"  },
-  { TH500_THERMAL_ZONE_CPU1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu1_List,  L"Thermal Zone Skt%d CPU1"  },
-  { TH500_THERMAL_ZONE_CPU2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu2_List,  L"Thermal Zone Skt%d CPU2"  },
-  { TH500_THERMAL_ZONE_CPU3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneCpu3_List,  L"Thermal Zone Skt%d CPU3"  },
-  { TH500_THERMAL_ZONE_SOC0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc0_List,  L"Thermal Zone Skt%d SOC0"  },
-  { TH500_THERMAL_ZONE_SOC1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc1_List,  L"Thermal Zone Skt%d SOC1"  },
-  { TH500_THERMAL_ZONE_SOC2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc2_List,  L"Thermal Zone Skt%d SOC2"  },
-  { TH500_THERMAL_ZONE_SOC3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc3_List,  L"Thermal Zone Skt%d SOC3"  },
-  { TH500_THERMAL_ZONE_SOC4,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE,  ThermalZoneSoc4_List,  L"Thermal Zone Skt%d SOC4"  },
-  { TH500_THERMAL_ZONE_TJ_MAX, FixedPcdGetBool (PcdUseSinglePassiveThermalZone),  TRUE,  ThermalZoneTjMax_List, L"Thermal Zone Skt%d TJMax" },
-  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             FALSE, NULL,                  L"Thermal Zone Skt%d TJMin" },
-  { TH500_THERMAL_ZONE_TJ_AVG, FALSE,                                             TRUE,  NULL,                  L"Thermal Zone Skt%d TJAvg" }
+  { TH500_THERMAL_ZONE_CPU0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu0_List,  L"Thermal Zone Skt%d CPU0"  },
+  { TH500_THERMAL_ZONE_CPU1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu1_List,  L"Thermal Zone Skt%d CPU1"  },
+  { TH500_THERMAL_ZONE_CPU2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu2_List,  L"Thermal Zone Skt%d CPU2"  },
+  { TH500_THERMAL_ZONE_CPU3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu3_List,  L"Thermal Zone Skt%d CPU3"  },
+  { TH500_THERMAL_ZONE_SOC0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc0_List,  L"Thermal Zone Skt%d SOC0"  },
+  { TH500_THERMAL_ZONE_SOC1,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc1_List,  L"Thermal Zone Skt%d SOC1"  },
+  { TH500_THERMAL_ZONE_SOC2,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc2_List,  L"Thermal Zone Skt%d SOC2"  },
+  { TH500_THERMAL_ZONE_SOC3,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc3_List,  L"Thermal Zone Skt%d SOC3"  },
+  { TH500_THERMAL_ZONE_SOC4,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneSoc4_List,  L"Thermal Zone Skt%d SOC4"  },
+  { TH500_THERMAL_ZONE_TJ_MAX, FixedPcdGetBool (PcdUseSinglePassiveThermalZone),  TRUE, ThermalZoneTjMax_List, L"Thermal Zone Skt%d TJMax" },
+  { TH500_THERMAL_ZONE_TJ_MIN, FALSE,                                             TRUE, NULL,                  L"Thermal Zone Skt%d TJMin" },
+  { TH500_THERMAL_ZONE_TJ_AVG, FALSE,                                             TRUE, NULL,                  L"Thermal Zone Skt%d TJAvg" }
 };
 
 /** The platform configuration repository information.
@@ -105,7 +106,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdFadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // GTDT Table
   {
@@ -114,16 +116,18 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdGtdt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // MADT Table
   {
-    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
-    EFI_ACPI_6_4_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
+    EFI_ACPI_6_5_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE,
+    EFI_ACPI_6_5_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION,
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMadt),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // DSDT Table
   {
@@ -132,7 +136,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDsdt),
     (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_aml_code,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // PPTT Table
   {
@@ -142,6 +147,7 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     NULL,
     0,
     FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
   // SSDT Table - Cpu Topology
   {
@@ -150,7 +156,8 @@ CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
     CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtCpuTopology),
     NULL,
     0,
-    FixedPcdGet64 (PcdAcpiDefaultOemRevision)
+    FixedPcdGet64 (PcdAcpiDefaultOemRevision),
+    0
   },
 };
 
@@ -261,6 +268,7 @@ UpdateSerialPortInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData = NULL;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId    = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -323,6 +331,7 @@ AddAcpiTable (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = AcpiTable;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -375,6 +384,7 @@ UpdateEthernetInfo (
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdteth_aml_code;
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
       NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+      NewAcpiTables[NVIDIAPlatformRepositoryInfo[Index].CmObjectCount].MinorRevision      = 0;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectCount++;
       NVIDIAPlatformRepositoryInfo[Index].CmObjectSize += sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
 
@@ -385,6 +395,35 @@ UpdateEthernetInfo (
   }
 
   return EFI_SUCCESS;
+}
+
+/** patch PLAT data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePlatInfo (
+  IN TEGRA_PLATFORM_TYPE  PlatformType
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_PLAT_INFO, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: STA node is not found for patching %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PlatformType, AcpiNodeInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
+  }
+
+  return Status;
 }
 
 /** patch GED data in DSDT.
@@ -409,7 +448,7 @@ UpdateGedInfo (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      EFI_D_ERROR,
+      DEBUG_ERROR,
       "%a: Couldn't get gNVIDIARasNsCommPcieDpcDataProtocolGuid protocol: %r\n",
       __FUNCTION__,
       Status
@@ -605,94 +644,62 @@ ErrorExit:
   return Status;
 }
 
-/** patch TPM1 data in DSDT.
+/** Install SSDT for TPM
 
-  @retval EFI_SUCCESS   Success
+  @param Repo Pointer to a repo structure that will be added to and updated with the data updated
+
+  @retval EFI_SUCCESS       Success
+  @retval !(EFI_SUCCESS)    Other errors
 
 **/
 STATIC
 EFI_STATUS
 EFIAPI
 UpdateTpmInfo (
-  VOID
+  EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo
   )
 {
-  EFI_STATUS            Status;
-  UINT32                NumberOfTpmControllers;
-  VOID                  *Dtb;
-  INT32                 NodeOffset;
-  INT32                 BusNodeOffset;
-  CONST VOID            *Property;
-  UINT32                *TpmHandles;
-  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
-  UINT8                 TpmStatus;
+  EFI_STATUS  Status;
+  UINT32      ManufacturerID;
 
-  NumberOfTpmControllers = 0;
-  Status                 = GetMatchingEnabledDeviceTreeNodes ("tcg,tpm_tis-spi", NULL, &NumberOfTpmControllers);
-  if (Status == EFI_NOT_FOUND) {
+  if (!PcdGetBool (PcdTpmEnable)) {
     return EFI_SUCCESS;
-  } else if (Status != EFI_BUFFER_TOO_SMALL) {
+  }
+
+  //
+  // Check if TPM is accessible
+  //
+  Status = Tpm2GetCapabilityManufactureID (&ManufacturerID);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: TPM is inaccessible - %r\n", __FUNCTION__, Status));
+    return EFI_SUCCESS;
+  }
+
+  //
+  // Measure to PCR[0] with event EV_POST_CODE ACPI DATA.
+  // The measurement has to be done before any update.
+  // Otherwise, the PCR record would be different after TPM FW update
+  // or the PCD configuration change.
+  //
+  TpmMeasureAndLogData (
+    0,
+    EV_POST_CODE,
+    EV_POSTCODE_INFO_ACPI_DATA,
+    ACPI_DATA_LEN,
+    ssdttpm_aml_code,
+    ((EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_aml_code)->Length
+    );
+
+  //
+  // Install SSDT with TPM node
+  //
+  Status = AddAcpiTable (PlatformRepositoryInfo, (EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_aml_code);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to add SSDT for TPM - %r\r\n", Status));
     return Status;
   }
 
-  TpmHandles = NULL;
-  TpmHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * NumberOfTpmControllers);
-  if (TpmHandles == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = GetMatchingEnabledDeviceTreeNodes ("tcg,tpm_tis-spi", TpmHandles, &NumberOfTpmControllers);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
-  // Only support one TPM per system
-  ASSERT (NumberOfTpmControllers == 1);
-
-  Status = GetDeviceTreeNode (TpmHandles[0], &Dtb, &NodeOffset);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get TPM DT node - %r\r\n", __FUNCTION__, Status));
-    goto ErrorExit;
-  }
-
-  //
-  // Check if the bus that TPM is on is enabled
-  //
-  BusNodeOffset = fdt_parent_offset (Dtb, NodeOffset);
-  if (BusNodeOffset != 0) {
-    Property = fdt_getprop (Dtb, BusNodeOffset, "status", NULL);
-    if ((Property != NULL) && (AsciiStrCmp (Property, "okay") != 0)) {
-      DEBUG ((DEBUG_INFO, "%a: TPM is present but the bus is disabled\r\n", __FUNCTION__));
-      Status = EFI_SUCCESS;
-      goto ErrorExit;
-    }
-  }
-
-  //
-  // Patch to enable TPM1 device
-  //
-  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_TPM1_STA, &AcpiNodeInfo);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
-  if (AcpiNodeInfo.Size > sizeof (TpmStatus)) {
-    Status = EFI_DEVICE_ERROR;
-    goto ErrorExit;
-  }
-
-  TpmStatus = 0xF;
-  Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &TpmStatus, sizeof (TpmStatus));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_TPM1_STA, Status));
-  }
-
-ErrorExit:
-  if (TpmHandles != NULL) {
-    FreePool (TpmHandles);
-  }
-
-  return Status;
+  return EFI_SUCCESS;
 }
 
 /** patch OEM Table IDs in pre compile AML code
@@ -737,12 +744,15 @@ UpdateThermalZoneInfoAndInstallSsdt (
   UINT16                       CrtTemp;
   UINT8                        ThermCoeff1;
   UINT8                        ThermCoeff2;
+  UINT32                       FastSampPeriod;
   AML_ROOT_NODE_HANDLE         RootNode;
   AML_OBJECT_NODE_HANDLE       ScopeNode;
+  AML_OBJECT_NODE_HANDLE       LimitNode;
   AML_OBJECT_NODE_HANDLE       TZNode;
   AML_OBJECT_NODE_HANDLE       Node;
   EFI_ACPI_DESCRIPTION_HEADER  *BpmpTable;
   CHAR8                        ThermalZoneString[ACPI_PATCH_MAX_PATH];
+  CHAR8                        LimitString[ACPI_PATCH_MAX_PATH];
   CHAR16                       UnicodeString[MAX_UNICODE_STRING_LEN];
   UINTN                        ThermalZoneIndex;
   UINTN                        ThermalZoneUid = 0;
@@ -765,10 +775,11 @@ UpdateThermalZoneInfoAndInstallSsdt (
     return EFI_SUCCESS;
   }
 
-  PsvTemp     = MAX_UINT16;
-  CrtTemp     = MAX_UINT16;
-  ThermCoeff1 = MAX_UINT8;
-  ThermCoeff2 = MAX_UINT8;
+  PsvTemp        = MAX_UINT16;
+  CrtTemp        = MAX_UINT16;
+  FastSampPeriod = MAX_UINT32;
+  ThermCoeff1    = MAX_UINT8;
+  ThermCoeff2    = MAX_UINT8;
 
   Temp = NULL;
   Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-zone-passive-cooling-trip-point-temp", &TempLen);
@@ -810,6 +821,16 @@ UpdateThermalZoneInfoAndInstallSsdt (
     ThermCoeff2 = TH500_THERMAL_ZONE_TC2;
   }
 
+  Temp = NULL;
+  Temp = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-thermal-fast-sampling-period", &TempLen);
+  if ((Temp != NULL) && (TempLen == sizeof (UINT32))) {
+    FastSampPeriod = SwapBytes32 (*Temp);
+  }
+
+  if (FastSampPeriod == MAX_UINT32) {
+    FastSampPeriod = TH500_THERMAL_ZONE_TFP;
+  }
+
   for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
     if (!IsSocketEnabled (SocketId)) {
       continue;
@@ -823,7 +844,22 @@ UpdateThermalZoneInfoAndInstallSsdt (
 
     Status = AmlFindNode (RootNode, "_SB", &ScopeNode);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to find node %a\r\n", ThermalZoneString));
+      DEBUG ((DEBUG_ERROR, "Failed to find scope node\r\n"));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
+    }
+
+    AsciiSPrint (LimitString, sizeof (LimitString), "_SB_.TZL%01x", SocketId);
+    Status = AmlFindNode (RootNode, LimitString, &LimitNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to find node %a\r\n", LimitString));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
+    }
+
+    Status = AmlDetachNode (LimitNode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to detach node %a\r\n", LimitString));
       ASSERT_EFI_ERROR (Status);
       return Status;
     }
@@ -869,7 +905,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
           return Status;
         }
 
-        AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB.BPM%0d.TEMP", SocketId);
+        AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB.BPM%0u.TEMP", SocketId);
         Status = AmlCodeGenMethodRetNameStringIntegerArgument (
                    "_TMP",
                    ThermalZoneString,
@@ -940,6 +976,13 @@ UpdateThermalZoneInfoAndInstallSsdt (
             return Status;
           }
 
+          Status = AmlCodeGenNameInteger ("_TFP", FastSampPeriod, TZNode, NULL);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "-->Failed to create _TFP node - %r\r\n", Status));
+            ASSERT_EFI_ERROR (Status);
+            return Status;
+          }
+
           Status = AmlCodeGenNamePackage ("_PSL", TZNode, &Node);
           if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "Failed to create _PSL node - %r\r\n", Status));
@@ -972,7 +1015,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
             }
 
             AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCpu);
-            Status = AmlAddStringToNamedPackage (ThermalZoneString, Node);
+            Status = AmlAddNameStringToNamedPackage (ThermalZoneString, Node);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "Failed to add %a to _PSL node - %r\r\n", ThermalZoneString, Status));
               ASSERT_EFI_ERROR (Status);
@@ -983,6 +1026,15 @@ UpdateThermalZoneInfoAndInstallSsdt (
           }
         }
       }
+    }
+
+    Status = AmlAttachNode (RootNode, LimitNode);
+    if (EFI_ERROR (Status)) {
+      // Free the detached node.
+      AmlDeleteTree (LimitNode);
+      DEBUG ((DEBUG_ERROR, "Failed to detach node %a\r\n", LimitString));
+      ASSERT_EFI_ERROR (Status);
+      return Status;
     }
 
     Status = AmlSerializeDefinitionBlock (RootNode, &BpmpTable);
@@ -1067,7 +1119,7 @@ UpdatePowerLimitInfo (
   }
 
   if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMaxPatchName)) {
-    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMaxPatchName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeding AcpiMrqPwrLimitMaxPatchName size\r\n", __FUNCTION__, SocketId));
     goto ErrorExit;
   }
 
@@ -1112,7 +1164,7 @@ UpdatePowerLimitInfo (
   }
 
   if (SocketId >= ARRAY_SIZE (AcpiMrqPwrLimitMinPatchName)) {
-    DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeding AcpiMrqPwrLimitMinPatchName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeding AcpiMrqPwrLimitMinPatchName size\r\n", __FUNCTION__, SocketId));
     goto ErrorExit;
   }
 
@@ -1168,7 +1220,7 @@ UpdateAcpiTimerOprInfo (
   AcpiTimerEnableFlag = ACPI_TIMER_INSTRUCTION_ENABLE;
 
   if (SocketId >= ARRAY_SIZE (AcpiTimerInstructionEnableVarName)) {
-    DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
+    DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiTimerInstructionEnableVarName size\r\n", __FUNCTION__, SocketId));
     Status = EFI_INVALID_PARAMETER;
     goto ErrorExit;
   }
@@ -1189,6 +1241,133 @@ UpdateAcpiTimerOprInfo (
 
 ErrorExit:
   return Status;
+}
+
+/** patch _STA to enable/disable power meter device
+
+  @param[in]     SocketId                Socket Id
+  @param[in]     TelemetryDataBuffAddr   Telemetry Data Buff Addr
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePowerMeterStaInfo (
+  IN  UINT32  SocketId,
+  IN  UINT64  TelemetryDataBuffAddr
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT32                Index;
+  UINT32                TelLayoutValidFlags0;
+  UINT32                TelLayoutValidFlags1;
+  UINT32                TelLayoutValidFlags2;
+  UINT32                PwrMeterIndex;
+  UINT8                 PwrMeterStatus;
+  UINT32                *TelemetryData;
+
+  STATIC CHAR8 *CONST  AcpiPwrMeterStaPatchName[] = {
+    "_SB_.PM00._STA",
+    "_SB_.PM01._STA",
+    "_SB_.PM02._STA",
+    "_SB_.PM03._STA",
+    "_SB_.PM10._STA",
+    "_SB_.PM11._STA",
+    "_SB_.PM12._STA",
+    "_SB_.PM13._STA",
+    "_SB_.PM20._STA",
+    "_SB_.PM21._STA",
+    "_SB_.PM22._STA",
+    "_SB_.PM23._STA",
+    "_SB_.PM30._STA",
+    "_SB_.PM31._STA",
+    "_SB_.PM32._STA",
+    "_SB_.PM33._STA",
+  };
+
+  Status               = EFI_SUCCESS;
+  TelemetryData        = NULL;
+  TelemetryData        = (UINT32 *)TelemetryDataBuffAddr;
+  TelLayoutValidFlags0 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS0_IDX];
+  TelLayoutValidFlags1 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS1_IDX];
+  TelLayoutValidFlags2 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS2_IDX];
+
+  if (SocketId >= ((ARRAY_SIZE (AcpiPwrMeterStaPatchName)) / TH500_MAX_PWR_METER)) {
+    DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiPwrMeterStaPatchName size\r\n", __FUNCTION__, SocketId));
+    Status = EFI_INVALID_PARAMETER;
+    goto ErrorExit;
+  }
+
+  for (Index = 0; Index < TH500_MAX_PWR_METER; Index++) {
+    if ((TelLayoutValidFlags0 & (TH500_MODULE_PWR_IDX_VALID_FLAG << Index)) ||
+        (TelLayoutValidFlags2 & (TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG << Index)))
+    {
+      PwrMeterIndex = (SocketId * TH500_MAX_PWR_METER) + Index;
+      Status        = PatchProtocol->FindNode (PatchProtocol, AcpiPwrMeterStaPatchName[PwrMeterIndex], &AcpiNodeInfo);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Acpi pwr meter sta node is not found for patching %a - %r\r\n",
+          __FUNCTION__,
+          AcpiPwrMeterStaPatchName[PwrMeterIndex],
+          Status
+          ));
+        Status = EFI_SUCCESS;
+        goto ErrorExit;
+      }
+
+      PwrMeterStatus = 0xF;
+      Status         = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PwrMeterStatus, sizeof (PwrMeterStatus));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, AcpiPwrMeterStaPatchName[PwrMeterIndex], Status));
+        Status = EFI_SUCCESS;
+        goto ErrorExit;
+      }
+    }
+  }
+
+ErrorExit:
+  return Status;
+}
+
+/** Get the Dram speed from the telemtry data and update the dram info in the
+    PlatformResourceData Hob.
+
+  @param[in]     SocketId                Socket Id
+  @param[in]     TelemetryDataBuffAddr   Telemetry Data Buff Addr
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateDramSpeed (
+  IN  UINT32  SocketId,
+  IN  UINT64  TelemetryDataBuffAddr
+  )
+{
+  TEGRA_DRAM_DEVICE_INFO  *DramInfo;
+  VOID                    *Hob;
+  UINT32                  *TelemetryData;
+
+  TelemetryData = NULL;
+  TelemetryData = (UINT32 *)TelemetryDataBuffAddr;
+  Hob           = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    DramInfo                    = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    DramInfo[SocketId].SpeedKhz = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
+    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramInfo[SocketId].SpeedKhz, SocketId));
+  } else {
+    return EFI_NOT_FOUND;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /** patch MRQ_TELEMETRY data in DSDT.
@@ -1277,7 +1456,7 @@ UpdateTelemetryInfo (
 
     Property = fdt_getprop (Dtb, NodeOffset, "nvidia,bpmp", &PropertySize);
     if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle for index - %d\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle for index - %u\n", __FUNCTION__, Index));
       goto ErrorExit;
     } else {
       CopyMem ((VOID *)&BpmpHandle, Property, sizeof (UINT32));
@@ -1287,7 +1466,7 @@ UpdateTelemetryInfo (
     SocketId = 0;
     Property = fdt_getprop (Dtb, NodeOffset, "nvidia,hw-instance-id", &PropertySize);
     if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get Socket Id for index - %d\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get Socket Id for index - %u\n", __FUNCTION__, Index));
       goto ErrorExit;
     } else {
       CopyMem ((VOID *)&SocketId, Property, sizeof (UINT32));
@@ -1295,7 +1474,7 @@ UpdateTelemetryInfo (
     }
 
     if (SocketId >= PcdGet32 (PcdTegraMaxSockets)) {
-      DEBUG ((DEBUG_ERROR, "%a: SocketId %d exceeds number of sockets\r\n", __FUNCTION__, SocketId));
+      DEBUG ((DEBUG_ERROR, "%a: SocketId %u exceeds number of sockets\r\n", __FUNCTION__, SocketId));
       Status = EFI_SUCCESS;
       goto ErrorExit;
     }
@@ -1325,7 +1504,7 @@ UpdateTelemetryInfo (
     TelemetryDataBuffAddr = TH500_AMAP_GET_ADD (TelemetryDataBuffAddr, SocketId);
 
     if (Index >= ARRAY_SIZE (AcpiMrqTelemetryBufferPatchName)) {
-      DEBUG ((DEBUG_ERROR, "%a: Index %d exceeding AcpiMrqTelemetryBufferPatchName size\r\n", __FUNCTION__, Index));
+      DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiMrqTelemetryBufferPatchName size\r\n", __FUNCTION__, Index));
       goto ErrorExit;
     }
 
@@ -1343,6 +1522,12 @@ UpdateTelemetryInfo (
       goto ErrorExit;
     }
 
+    Status = UpdatePowerMeterStaInfo (SocketId, TelemetryDataBuffAddr);
+    if (EFI_ERROR (Status)) {
+      Status = EFI_SUCCESS;
+      goto ErrorExit;
+    }
+
     Status = UpdateAcpiTimerOprInfo (SocketId);
     if (EFI_ERROR (Status)) {
       Status = EFI_SUCCESS;
@@ -1353,6 +1538,12 @@ UpdateTelemetryInfo (
     if (EFI_ERROR (Status)) {
       Status = EFI_SUCCESS;
       goto ErrorExit;
+    }
+
+    Status = UpdateDramSpeed (SocketId, TelemetryDataBuffAddr);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to update Dram speed %r\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
     }
   }
 
@@ -1540,6 +1731,11 @@ InitializePlatformRepository (
     return Status;
   }
 
+  Status = UpdateTpmInfo (NVIDIAPlatformRepositoryInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   // SSDT for socket1 onwards
   for (SocketId = 1; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
     if (!IsSocketEnabled (SocketId)) {
@@ -1553,6 +1749,11 @@ InitializePlatformRepository (
   }
 
   PlatformType = TegraGetPlatform ();
+  Status       = UpdatePlatInfo (PlatformType);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     Status = UpdateThermalZoneInfoAndInstallSsdt (NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
@@ -1581,13 +1782,13 @@ InitializePlatformRepository (
   }
 
   Status = GenerateHbmMemPxmDmnMap ();
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     return Status;
   }
 
   if (!SkipSrat) {
     Status = InstallStaticResourceAffinityTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
-    if (EFI_ERROR (Status)) {
+    if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
       return Status;
     }
   }
@@ -1600,7 +1801,7 @@ InitializePlatformRepository (
   }
 
   if (!SkipHmat) {
-    Status = InstallHeterogeneousMemoryAttributeTable (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
+    Status = InstallHeterogeneousMemoryAttributeTable (NVIDIAPlatformRepositoryInfo);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -1627,7 +1828,7 @@ InitializePlatformRepository (
     }
   }
 
-  Status = InstallCmSmbiosTableList (&Repo, (UINTN)RepoEnd);
+  Status = InstallCmSmbiosTableList (&Repo, (UINTN)RepoEnd, NVIDIAPlatformRepositoryInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1694,11 +1895,6 @@ ConfigurationManagerDataDxeInitialize (
   }
 
   Status = UpdateSSIFInfo ();
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = UpdateTpmInfo ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

@@ -1,7 +1,7 @@
 ## @file
 # Ssdt Serial Port Table Support Library
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2021-2022, Arm Limited. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -24,18 +24,21 @@
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.dec
 
 [LibraryClasses]
   AcpiHelperLib
   AmlLib
   BaseLib
+  PrintLib
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiPciIoProtocolGuid
+
+[Guids]
+  gNVIDIAPublicVariableGuid
 
 [Depex]
   gNVIDIAPcieControllerInitCompleteProtocolGuid AND

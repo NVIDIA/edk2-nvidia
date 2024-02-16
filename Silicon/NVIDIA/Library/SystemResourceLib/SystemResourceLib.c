@@ -9,7 +9,7 @@
 #include <libfdt.h>
 #include <Library/DramCarveoutLib.h>
 #include <Pi/PiPeiCis.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -43,7 +43,7 @@ RegisterDeviceTree (
 
       EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 4));
       if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize) != 0) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
         return;
       }
 
@@ -51,7 +51,7 @@ RegisterDeviceTree (
       if (fdt_check_header ((VOID *)DtbNext) == 0) {
         Status = ApplyTegraDeviceTreeOverlay ((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "DTB Overlay failed. Using base DTB.\n"));
+          DEBUG ((DEBUG_ERROR, "DTB Overlay failed. Using base DTB.\n"));
           fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize);
         }
       }
@@ -65,7 +65,7 @@ RegisterDeviceTree (
       if (NULL != DeviceTreeHobData) {
         *DeviceTreeHobData = DtbCopy;
       } else {
-        DEBUG ((EFI_D_ERROR, "Failed to build guid hob\r\n"));
+        DEBUG ((DEBUG_ERROR, "Failed to build guid hob\r\n"));
       }
     }
   }
@@ -154,10 +154,6 @@ InstallMmioRegions (
                          SIZE_4KB
                          );
   *MmioRegionsCount += InstallMmioRegion (
-                         FixedPcdGet64 (PcdMiscRegBaseAddress),
-                         SIZE_4KB
-                         );
-  *MmioRegionsCount += InstallMmioRegion (
                          TegraGetGicDistributorBaseAddress (ChipID),
                          SIZE_64KB
                          );
@@ -194,6 +190,8 @@ InstallMmioRegions (
   This function is called by the platform memory initialization library.
 
   @param  NumberOfMemoryRegions Number of regions installed into HOB list.
+  @param  MaxRegionStart        Base address of largest region in dram
+  @param  MaxRegionSize         Size of largest region
 
   @retval EFI_SUCCESS           Resources have been installed
   @retval EFI_DEVICE_ERROR      Error setting up memory
@@ -201,7 +199,9 @@ InstallMmioRegions (
 **/
 EFI_STATUS
 InstallSystemResources (
-  OUT UINTN  *MemoryRegionsCount
+  OUT UINTN                 *MemoryRegionsCount,
+  OUT EFI_PHYSICAL_ADDRESS  *MaxRegionStart,
+  OUT UINTN                 *MaxRegionSize
   )
 {
   EFI_STATUS           Status;
@@ -221,10 +221,7 @@ InstallSystemResources (
 
   // Install MMIO regions
   Status = InstallMmioRegions (ChipID, MemoryRegionsCount);
-  ASSERT_EFI_ERROR (Status);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  NV_ASSERT_EFI_ERROR_RETURN (Status, return Status);
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
@@ -235,24 +232,9 @@ InstallSystemResources (
     return EFI_DEVICE_ERROR;
   }
 
-  PlatformInfo->InputDramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount);
-  ASSERT (PlatformInfo->InputDramRegions != NULL);
-  if (PlatformInfo->InputDramRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  CopyMem (
-    PlatformInfo->InputDramRegions,
-    PlatformInfo->DramRegions,
-    sizeof (NVDA_MEMORY_REGION) * PlatformInfo->DramRegionsCount
-    );
-
   CarveoutSize                       = sizeof (NVDA_MEMORY_REGION) * PlatformInfo->CarveoutRegionsCount;
   PlatformInfo->InputCarveoutRegions = AllocatePages (EFI_SIZE_TO_PAGES (CarveoutSize));
-  ASSERT (PlatformInfo->InputCarveoutRegions != NULL);
-  if (PlatformInfo->InputCarveoutRegions == NULL) {
-    return EFI_DEVICE_ERROR;
-  }
+  NV_ASSERT_RETURN (PlatformInfo->InputCarveoutRegions != NULL, return EFI_DEVICE_ERROR);
 
   CopyMem (
     PlatformInfo->InputCarveoutRegions,
@@ -261,15 +243,20 @@ InstallSystemResources (
     );
 
   AlignCarveoutRegions64KiB (PlatformInfo->CarveoutRegions, PlatformInfo->CarveoutRegionsCount);
+  AlignCarveoutRegions64KiB (PlatformInfo->UsableCarveoutRegions, PlatformInfo->UsableCarveoutRegionsCount);
 
   FinalDramRegionsCount = 0;
   Status                = InstallDramWithCarveouts (
-                            PlatformInfo->DramRegions,
+                            (CONST NVDA_MEMORY_REGION *)PlatformInfo->DramRegions,
                             PlatformInfo->DramRegionsCount,
                             PlatformInfo->UefiDramRegionIndex,
                             PlatformInfo->CarveoutRegions,
                             PlatformInfo->CarveoutRegionsCount,
-                            &FinalDramRegionsCount
+                            PlatformInfo->UsableCarveoutRegions,
+                            PlatformInfo->UsableCarveoutRegionsCount,
+                            &FinalDramRegionsCount,
+                            MaxRegionStart,
+                            MaxRegionSize
                             );
 
   if (!EFI_ERROR (Status)) {

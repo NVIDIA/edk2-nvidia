@@ -2,7 +2,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2016, Linaro, Ltd. All rights reserved.<BR>
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,6 +13,7 @@
 #include <Library/DxeServicesTableLib.h>
 
 #include <IndustryStandard/Acpi.h>
+#include <IndustryStandard/Pci22.h>
 
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformToDriverConfiguration.h>
@@ -1654,6 +1655,12 @@ PciIoSetBarAttributes (
   @param [in]  ControllerHandle Handle of controller to bind driver to.
   @param [out] DcbImage         On return, points to the DCB image.
   @param [out] DcbImageSize     On return, contains size of the DCB image.
+
+  @retval EFI_SUCCESS           DCB image successfully retrieved.
+  @retval EFI_NOT_FOUND         DCB image not found.
+  @retval EFI_BAD_BUFFER_SIZE   Parameter block size mismatch.
+  @retval EFI_OUT_OF_RESOURCES  Failed to allocate buffer for the DCB.
+  @retval others                Failed to retrieve the DCB image.
 **/
 STATIC
 EFI_STATUS
@@ -1727,6 +1734,18 @@ T234DisplayGetDcbImage (
     goto Response;
   }
 
+  if (  (GopParameterInfo->DcbImage == NULL)
+     || (GopParameterInfo->DcbImageLen == 0))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: DCB image not available\r\n",
+      __FUNCTION__
+      ));
+    Status = EFI_NOT_FOUND;
+    goto Response;
+  }
+
   DcbImageBufferLen = GopParameterInfo->DcbImageLen;
   DcbImageBuffer    = (UINT8 *)AllocateCopyPool (
                                  DcbImageBufferLen,
@@ -1770,33 +1789,41 @@ Exit:
 
   @param  Dev               Point to NON_DISCOVERABLE_PCI_DEVICE instance.
   @param  ControllerHandle  Handle of controller to bind driver to.
+
+  @retval EFI_SUCCESS       Protocol successfully initialized.
+  @retval EFI_DEVICE_ERROR  Protocol could not be initialized.
 **/
-VOID
+STATIC
+EFI_STATUS
 T234DisplayInitializePciIoProtocol (
   NON_DISCOVERABLE_PCI_DEVICE  *Dev,
   EFI_HANDLE                   ControllerHandle
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                Status;
+  VOID                      *RomImage;
+  UINT64                    RomSize;
+  PCI_EXPANSION_ROM_HEADER  *RomHdr;
+  PCI_DATA_STRUCTURE        *Pcir;
 
-  Dev->ConfigSpace.Hdr.VendorId     = PCI_ID_VENDOR_NVIDIA;
-  Dev->ConfigSpace.Hdr.DeviceId     = PCI_ID_DEVICE_T234_DISP;
-  Dev->ConfigSpace.Hdr.ClassCode[0] = PCI_IF_VGA_VGA;
-  Dev->ConfigSpace.Hdr.ClassCode[1] = PCI_CLASS_DISPLAY_VGA;
-  Dev->ConfigSpace.Hdr.ClassCode[2] = PCI_CLASS_DISPLAY;
+  Status = T234DisplayGetDcbImage (ControllerHandle, &RomImage, &RomSize);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  RomHdr = (PCI_EXPANSION_ROM_HEADER *)RomImage;
+  Pcir   = (PCI_DATA_STRUCTURE *)((UINT8 *)RomHdr + RomHdr->PcirOffset);
+
+  Dev->PciIo.RomImage               = RomImage;
+  Dev->PciIo.RomSize                = RomSize;
+  Dev->ConfigSpace.Hdr.VendorId     = Pcir->VendorId;
+  Dev->ConfigSpace.Hdr.DeviceId     = Pcir->DeviceId;
+  Dev->ConfigSpace.Hdr.ClassCode[0] = Pcir->ClassCode[0];
+  Dev->ConfigSpace.Hdr.ClassCode[1] = Pcir->ClassCode[1];
+  Dev->ConfigSpace.Hdr.ClassCode[2] = Pcir->ClassCode[2];
   Dev->BarOffset                    = 0;
 
-  Status = T234DisplayGetDcbImage (ControllerHandle, &Dev->PciIo.RomImage, &Dev->PciIo.RomSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve DCB image: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Dev->PciIo.RomImage = NULL;
-    Dev->PciIo.RomSize  = 0;
-  }
+  return EFI_SUCCESS;
 }
 
 STATIC CONST EFI_PCI_IO_PROTOCOL  PciIoTemplate =
@@ -1826,13 +1853,16 @@ STATIC CONST EFI_PCI_IO_PROTOCOL  PciIoTemplate =
   @param  Dev               Point to NON_DISCOVERABLE_PCI_DEVICE instance.
   @param  ControllerHandle  Handle of controller to bind driver to.
 
+  @retval EFI_SUCCESS       Protocol successfully initialized.
+  @retval EFI_DEVICE_ERROR  Protocol could not be initialized.
 **/
-VOID
+EFI_STATUS
 InitializePciIoProtocol (
   NON_DISCOVERABLE_PCI_DEVICE  *Dev,
   EFI_HANDLE                   ControllerHandle
   )
 {
+  EFI_STATUS                         Status;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
   INTN                               Idx;
 
@@ -1852,7 +1882,10 @@ InitializePciIoProtocol (
   }
 
   if (CompareGuid (Dev->Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
-    T234DisplayInitializePciIoProtocol (Dev, ControllerHandle);
+    Status = T234DisplayInitializePciIoProtocol (Dev, ControllerHandle);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   } else {
     ASSERT_EFI_ERROR (EFI_INVALID_PARAMETER);
   }
@@ -1893,4 +1926,6 @@ InitializePciIoProtocol (
 
     Idx++;
   }
+
+  return EFI_SUCCESS;
 }

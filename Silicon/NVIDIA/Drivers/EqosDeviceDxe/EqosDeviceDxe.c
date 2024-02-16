@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -43,10 +43,10 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA EQoS ethernet controller driver",
-  .UseDriverBinding                = TRUE,
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
+  .ThreadedDeviceStart             = TRUE
 };
 
 STATIC
@@ -176,6 +176,7 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                   Status;
+  UINTN                        ChipID;
   UINTN                        RegionSize;
   SIMPLE_NETWORK_DRIVER        *Snp;
   EFI_SIMPLE_NETWORK_PROTOCOL  *SnpProtocol;
@@ -266,6 +267,11 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
         return EFI_UNSUPPORTED;
       }
+
+      // Assign Adapter Information Protocol Pointers
+      Snp->Aip.GetInformation    = EqosAipGetInformation;
+      Snp->Aip.SetInformation    = EqosAipSetInformation;
+      Snp->Aip.GetSupportedTypes = EqosAipGetSupportedTypes;
 
       // Assign fields and func pointers
       Snp->Snp.Revision       = EFI_SIMPLE_NETWORK_PROTOCOL_REVISION;
@@ -491,6 +497,14 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
+      // If booting Android on T234, skip ethernet initialization in UEFI
+      ChipID = TegraGetChipID ();
+      if ((ChipID == T234_CHIP_ID) &&
+          (PcdGetBool (PcdBootAndroidImage)))
+      {
+        return EFI_UNSUPPORTED;
+      }
+
       Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);
 
       // Init EMAC
@@ -593,6 +607,8 @@ DeviceDiscoveryNotify (
                       &ControllerHandle,
                       &gEfiSimpleNetworkProtocolGuid,
                       &(Snp->Snp),
+                      &gEfiAdapterInformationProtocolGuid,
+                      &(Snp->Aip),
                       NULL
                       );
 
@@ -628,6 +644,8 @@ DeviceDiscoveryNotify (
                       ControllerHandle,
                       &gEfiSimpleNetworkProtocolGuid,
                       &Snp->Snp,
+                      &gEfiAdapterInformationProtocolGuid,
+                      &(Snp->Aip),
                       NULL
                       );
       if (EFI_ERROR (Status)) {

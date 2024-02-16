@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,7 +33,6 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA EFuse driver",
-  .UseDriverBinding                           = TRUE,
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
   .AutoResetModule                            = FALSE,
@@ -165,7 +164,7 @@ DeviceDiscoveryNotify (
                  );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a: Couldn't find Efuse address range\n",
           __FUNCTION__
           ));
@@ -174,7 +173,7 @@ DeviceDiscoveryNotify (
 
       Private = AllocatePool (sizeof (EFUSE_DXE_PRIVATE));
       if (NULL == Private) {
-        DEBUG ((EFI_D_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Memory\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         return Status;
       }
@@ -202,7 +201,7 @@ DeviceDiscoveryNotify (
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((
-          EFI_D_ERROR,
+          DEBUG_ERROR,
           "%a, Failed to install protocols: %r\r\n",
           __FUNCTION__,
           Status
@@ -211,7 +210,7 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      DEBUG ((EFI_D_ERROR, "%a: Efuse Installed\r\n", __FUNCTION__));
+      DEBUG ((DEBUG_ERROR, "%a: Efuse Installed\r\n", __FUNCTION__));
       break;
 
     case DeviceDiscoveryDriverBindingStop:

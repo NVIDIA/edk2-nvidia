@@ -2,7 +2,7 @@
 
   QSPI Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -67,7 +67,6 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Qspi controller driver",
-  .UseDriverBinding                           = TRUE,
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
@@ -267,7 +266,7 @@ SetSpiFrequency (
 }
 
 /**
-  Initialize QSPI controller for a specific device
+  Apply QSPI controller settings for a specific device
 
   @param[in] This                  Instance of protocol
   @param[in] DeviceFeature         Device feature to initialize
@@ -278,7 +277,7 @@ SetSpiFrequency (
 **/
 EFI_STATUS
 EFIAPI
-QspiControllerDeviceSpecificInit (
+QspiControllerApplyDeviceSpecificSettings (
   IN NVIDIA_QSPI_CONTROLLER_PROTOCOL  *This,
   IN QSPI_DEV_FEATURE                 DeviceFeature
   )
@@ -289,20 +288,25 @@ QspiControllerDeviceSpecificInit (
   Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   //
-  // Enable wait state
+  // Enable/Disable wait state
   //
-  if (DeviceFeature == QspiDevFeatWaitState) {
-    if ((TegraGetChipID () == T194_CHIP_ID) ||
-        (Private->ControllerType == CONTROLLER_TYPE_SPI))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Wait state is not supported.\n", __FUNCTION__));
-      return EFI_UNSUPPORTED;
+  if ((TegraGetChipID () != T194_CHIP_ID) &&
+      (Private->ControllerType == CONTROLLER_TYPE_QSPI))
+  {
+    if (DeviceFeature == QspiDevFeatWaitStateEn) {
+      Status = QspiEnableWaitState (Private->QspiBaseAddress, TRUE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Fail to enable wait state\n", __FUNCTION__));
+        return Status;
+      }
     }
 
-    Status = QspiEnableWaitState (Private->QspiBaseAddress);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Fail to enable wait state\n", __FUNCTION__));
-      return Status;
+    if (DeviceFeature == QspiDevFeatWaitStateDis) {
+      Status = QspiEnableWaitState (Private->QspiBaseAddress, FALSE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Fail to disable wait state\n", __FUNCTION__));
+        return Status;
+      }
     }
   }
 
@@ -598,13 +602,13 @@ DeviceDiscoveryNotify (
 
       Status = QspiInitialize (Private->QspiBaseAddress, NumChipSelects);
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "QSPI Initialization Failed.\n"));
+        DEBUG ((DEBUG_ERROR, "QSPI Initialization Failed.\n"));
         goto ErrorExit;
       }
 
-      Private->QspiControllerProtocol.PerformTransaction = QspiControllerPerformTransaction;
-      Private->QspiControllerProtocol.GetNumChipSelects  = QspiControllerGetNumChipSelects;
-      Private->QspiControllerProtocol.DeviceSpecificInit = QspiControllerDeviceSpecificInit;
+      Private->QspiControllerProtocol.PerformTransaction          = QspiControllerPerformTransaction;
+      Private->QspiControllerProtocol.GetNumChipSelects           = QspiControllerGetNumChipSelects;
+      Private->QspiControllerProtocol.ApplyDeviceSpecificSettings = QspiControllerApplyDeviceSpecificSettings;
       if (Private->ClockId != MAX_UINT32) {
         Private->QspiControllerProtocol.GetClockSpeed = QspiControllerGetClockSpeed;
         Private->QspiControllerProtocol.SetClockSpeed = QspiControllerSetClockSpeed;
@@ -619,7 +623,7 @@ DeviceDiscoveryNotify (
                       &Private->VirtualAddrChangeEvent
                       );
       if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_ERROR, "Failed to create virtual address event\r\n"));
+        DEBUG ((DEBUG_ERROR, "Failed to create virtual address event\r\n"));
         goto ErrorExit;
       }
 

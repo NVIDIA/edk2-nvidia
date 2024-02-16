@@ -1,7 +1,7 @@
 /** @file
   SDMMC Driver specific Query and Response functions
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -35,7 +35,7 @@ ResponseSdMmcParameters (
     case EfiPlatformConfigurationActionRestartController:
     case EfiPlatformConfigurationActionRestartPlatform:
     case EfiPlatformConfigurationActionNvramFailed:
-      DEBUG ((DEBUG_ERROR, "Handling not supported for ConfigurationAction %a\r\n", ConfigurationAction));
+      DEBUG ((DEBUG_ERROR, "Handling not supported for ConfigurationAction %d\r\n", ConfigurationAction));
       return EFI_INVALID_PARAMETER;
 
     default:

@@ -82,14 +82,14 @@ FalconRead32 (
   UINT32  *Register32;
 
   if (XusbHostCfgAddr == 0) {
-    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
     return 0;
   }
 
   Register32 = (UINT32 *)FalconMapReg (Address);
   UINT32  Value = MmioRead32 ((UINTN)Register32);
 
-  DEBUG ((EFI_D_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
 
   return Value;
 }
@@ -103,13 +103,13 @@ FalconWrite32 (
   UINT32  *Register32;
 
   if (XusbHostCfgAddr == 0) {
-    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
     return 0;
   }
 
   Register32 = (UINT32 *)FalconMapReg (Address);
 
-  DEBUG ((EFI_D_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
 
   MmioWrite32 ((UINTN)Register32, Value);
 
@@ -124,14 +124,14 @@ Fpci2Read32 (
   UINT32  *Register32;
 
   if (XusbHostBase2Addr == 0) {
-    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
     return 0;
   }
 
   Register32 = (UINT32 *)(XusbHostBase2Addr + Address);
   UINT32  Value = MmioRead32 ((UINTN)Register32);
 
-  DEBUG ((EFI_D_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x --> %x\r\n", __FUNCTION__, Address, Value));
 
   return Value;
 }
@@ -145,12 +145,12 @@ Fpci2Write32 (
   UINT32  *Register32;
 
   if (XusbHostBase2Addr == 0) {
-    DEBUG ((EFI_D_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a:Invalid Xhci Config Address\n", __FUNCTION__));
     return 0;
   }
 
   Register32 = (UINT32 *)(XusbHostBase2Addr + Address);
-  DEBUG ((EFI_D_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x <-- %x\r\n", __FUNCTION__, Address, Value));
 
   MmioWrite32 ((UINTN)Register32, Value);
 
@@ -169,7 +169,7 @@ FalconDumpDMEM (
   FalconWrite32 (0x1c0, Value);
   for (i = 0; i < 16; i++) {
     Value = FalconRead32 (0x1c4);
-    DEBUG ((EFI_D_VERBOSE, "%a: [%u] 0x1c4 = %x\r\n", __FUNCTION__, i, Value));
+    DEBUG ((DEBUG_VERBOSE, "%a: [%u] 0x1c4 = %x\r\n", __FUNCTION__, i, Value));
   }
 }
 
@@ -192,20 +192,20 @@ FalconFirmwareIfrLoad (
   Value  = 0;
 
   if (XusbAoAddr == 0) {
-    DEBUG ((EFI_D_ERROR, "%a: XUSB AO Address is not init\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: XUSB AO Address is not init\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
   Value = FalconRead32 (XUSB_CSB_MEMPOOL_IDIRECT_PC);
   if (Value != 0) {
-    DEBUG ((EFI_D_ERROR, "%a: XUSB FW is loaded before, Failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: XUSB FW is loaded before, Failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
   Pages  = EFI_SIZE_TO_PAGES (FirmwareSize);
   Status = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, 256, (void **)&FirmwareBuffer);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -218,23 +218,23 @@ FalconFirmwareIfrLoad (
                  &FirmwareBufferMapping
                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: DmaMap Failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: DmaMap Failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
-  DEBUG ((EFI_D_ERROR, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((DEBUG_ERROR, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
   SetMem (FirmwareBuffer, BufferSize, 0xdf);
   CopyMem (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++) {
     if (FirmwareBuffer[i] != Firmware[i]) {
-      DEBUG ((EFI_D_ERROR, "%a: FirmwareBuffer[%d] != Firmware[%d]\r\n", __FUNCTION__, i, i));
+      DEBUG ((DEBUG_ERROR, "%a: FirmwareBuffer[%u] != Firmware[%u]\r\n", __FUNCTION__, i, i));
       return Status;
     }
   }
 
   MemoryFence ();
   Firmware = FirmwareBuffer;
-  DEBUG ((EFI_D_ERROR, "%a: Firmware %p FirmwareSize %x (aligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((DEBUG_ERROR, "%a: Firmware %p FirmwareSize %x (aligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
 
   #define XUSB_BAR2_ARU_IFRDMA_CFG0            0x1bc
   #define XUSB_BAR2_ARU_IFRDMA_CFG1            0x1c0
@@ -282,7 +282,7 @@ FalconFirmwareLoad (
   UINTN                        FirmwareBufferBusAddress;
   VOID                         *FirmwareBufferMapping;
 
-  DEBUG ((EFI_D_VERBOSE, "%a\r\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "%a\r\n", __FUNCTION__));
 
   if (LoadIfrRom == TRUE) {
     Status = FalconFirmwareIfrLoad (Firmware, FirmwareSize);
@@ -293,14 +293,14 @@ FalconFirmwareLoad (
   Value = FalconRead32 (XUSB_CSB_MEMPOOL_ILOAD_BASE_LO_0);
   if (Value != 0) {
     Value = FalconRead32 (FALCON_CPUCTL_0);
-    DEBUG ((EFI_D_VERBOSE, "%s: firmware already running cpu state %x\r\n", __FUNCTION__, Value));
+    DEBUG ((DEBUG_VERBOSE, "%s: firmware already running cpu state %x\r\n", __FUNCTION__, Value));
     return Status;
   }
 
   Pages  = EFI_SIZE_TO_PAGES (FirmwareSize);
   Status = DmaAllocateAlignedBuffer (EfiRuntimeServicesData, Pages, 256, (void **)&FirmwareBuffer);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: DmaAllocateAlignedBuffer Failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -313,59 +313,59 @@ FalconFirmwareLoad (
                  &FirmwareBufferMapping
                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "%a: DmaMap Failed: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: DmaMap Failed: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
-  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((DEBUG_VERBOSE, "%a: Firmware %p FirmwareSize %x (unaligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
   SetMem (FirmwareBuffer, BufferSize, 0xdf);
   CopyMem (FirmwareBuffer, Firmware, FirmwareSize);
   for (i = 0; i < FirmwareSize; i++) {
     if (FirmwareBuffer[i] != Firmware[i]) {
-      DEBUG ((EFI_D_VERBOSE, "%a: FirmwareBuffer[%u] != Firmware[%u]\r\n", __FUNCTION__, i, i));
+      DEBUG ((DEBUG_VERBOSE, "%a: FirmwareBuffer[%u] != Firmware[%u]\r\n", __FUNCTION__, i, i));
       return Status;
     }
   }
 
   MemoryFence ();
   Firmware = FirmwareBuffer;
-  DEBUG ((EFI_D_VERBOSE, "%a: Firmware %p FirmwareSize %x (aligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
+  DEBUG ((DEBUG_VERBOSE, "%a: Firmware %p FirmwareSize %x (aligned)\r\n", __FUNCTION__, Firmware, FirmwareSize));
 
   /* Configure FW */
   FirmwareCfg = (struct tegra_xhci_fw_cfgtbl *)Firmware;
-  DEBUG ((EFI_D_VERBOSE, "%a: %x %x\r\n", __FUNCTION__, Firmware[0], Firmware[1]));
-  DEBUG ((EFI_D_VERBOSE, "%a: %x %x\r\n", __FUNCTION__, Firmware[2], Firmware[3]));
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p ss_portmap %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->ss_portmap));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x %x\r\n", __FUNCTION__, Firmware[0], Firmware[1]));
+  DEBUG ((DEBUG_VERBOSE, "%a: %x %x\r\n", __FUNCTION__, Firmware[2], Firmware[3]));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p ss_portmap %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->ss_portmap));
   FirmwareCfg->ss_portmap = 0xff;
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p ss_portmap %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->ss_portmap));
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p num_hsic_port %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->num_hsic_port));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p ss_portmap %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->ss_portmap));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p num_hsic_port %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->num_hsic_port));
   FirmwareCfg->num_hsic_port = 0;
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p num_hsic_port %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->num_hsic_port));
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p boot_codetag %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->boot_codetag));
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p boot_codesize %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->boot_codesize));
-  DEBUG ((EFI_D_VERBOSE, "%a: FirmwareCfg %p fwimg_len %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->fwimg_len));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p num_hsic_port %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->num_hsic_port));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p boot_codetag %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->boot_codetag));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p boot_codesize %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->boot_codesize));
+  DEBUG ((DEBUG_VERBOSE, "%a: FirmwareCfg %p fwimg_len %x\r\n", __FUNCTION__, FirmwareCfg, FirmwareCfg->fwimg_len));
 
   /* program system memory address where FW code starts */
   FirmwareAddress = FirmwareBufferBusAddress + sizeof (*FirmwareCfg);
   SIZE            = FirmwareSize / 256;
-  DEBUG ((EFI_D_VERBOSE, "%a: SIZE %x\r\n", __FUNCTION__, SIZE));
+  DEBUG ((DEBUG_VERBOSE, "%a: SIZE %x\r\n", __FUNCTION__, SIZE));
   Value  = 0;
   Value |= ((SIZE & 0xfff)) << 8;
   FalconWrite32 (XUSB_CSB_MEMPOOL_ILOAD_ATTR_0, Value);
   SRC_ADDR = (FirmwareAddress >> 0) & 0xffffffff;
-  DEBUG ((EFI_D_VERBOSE, "%a: SRC_ADDR %x\r\n", __FUNCTION__, SRC_ADDR));
+  DEBUG ((DEBUG_VERBOSE, "%a: SRC_ADDR %x\r\n", __FUNCTION__, SRC_ADDR));
   Value  = 0;
   Value |= ((SRC_ADDR & /*0xff*/ 0xffffffff)) << 0;
   FalconWrite32 (XUSB_CSB_MEMPOOL_ILOAD_BASE_LO_0, Value);
   SRC_ADDR = (FirmwareAddress >> 32) & 0xffffffff;
-  DEBUG ((EFI_D_VERBOSE, "%a: SRC_ADDR %x\r\n", __FUNCTION__, SRC_ADDR));
+  DEBUG ((DEBUG_VERBOSE, "%a: SRC_ADDR %x\r\n", __FUNCTION__, SRC_ADDR));
   Value  = 0;
   Value |= ((SRC_ADDR & /*0xff*/ 0xffffffff)) << 0;
   FalconWrite32 (XUSB_CSB_MEMPOOL_ILOAD_BASE_HI_0, Value);
 
   /* set BOOTPATH to 1 in APMAP */
   BOOTPATH = 1;
-  DEBUG ((EFI_D_VERBOSE, "%a: BOOTPATH %x\r\n", __FUNCTION__, BOOTPATH));
+  DEBUG ((DEBUG_VERBOSE, "%a: BOOTPATH %x\r\n", __FUNCTION__, BOOTPATH));
   Value  = 0;
   Value  = FalconRead32 (XUSB_CSB_MEMPOOL_APMAP_0);
   Value |= ((BOOTPATH & 0x1)) << 31;
@@ -373,9 +373,9 @@ FalconFirmwareLoad (
 
   /* invalidate L2IMEM entries */
   ACTION = 0x40 /* L2IMEM_INVALIDATE_ALL */;
-  DEBUG ((EFI_D_VERBOSE, "%a: ACTION %x\r\n", __FUNCTION__, ACTION));
+  DEBUG ((DEBUG_VERBOSE, "%a: ACTION %x\r\n", __FUNCTION__, ACTION));
   DEST_INDEX = 0;
-  DEBUG ((EFI_D_VERBOSE, "%a: DEST_INDEX %x\r\n", __FUNCTION__, DEST_INDEX));
+  DEBUG ((DEBUG_VERBOSE, "%a: DEST_INDEX %x\r\n", __FUNCTION__, DEST_INDEX));
   Value  = 0;
   Value |= (ACTION & 0xff) << 24;
   Value |= (DEST_INDEX & 0x3ff) << 8;
@@ -383,17 +383,17 @@ FalconFirmwareLoad (
 
   /* fetch complete bootstrap into L2IMEM */
   SRC_OFFSET = (FirmwareCfg->boot_codetag + (IMEM_BLOCK_SIZE - 1)) / IMEM_BLOCK_SIZE;
-  DEBUG ((EFI_D_VERBOSE, "%a: SRC_OFFSET %x\r\n", __FUNCTION__, SRC_OFFSET));
+  DEBUG ((DEBUG_VERBOSE, "%a: SRC_OFFSET %x\r\n", __FUNCTION__, SRC_OFFSET));
   SRC_COUNT = (FirmwareCfg->boot_codesize + (IMEM_BLOCK_SIZE - 1)) / IMEM_BLOCK_SIZE;
-  DEBUG ((EFI_D_VERBOSE, "%a: SRC_COUNT %x\r\n", __FUNCTION__, SRC_COUNT));
+  DEBUG ((DEBUG_VERBOSE, "%a: SRC_COUNT %x\r\n", __FUNCTION__, SRC_COUNT));
   Value  = 0;
   Value |= ((SRC_OFFSET & 0xfff)) << 8;
   Value |= ((SRC_COUNT & 0xff)) << 24;
   FalconWrite32 (XUSB_CSB_MEMPOOL_L2IMEMOP_SIZE_0, Value);
   ACTION = 0x11 /* L2IMEM_LOAD_LOCKED_RESULT */;
-  DEBUG ((EFI_D_VERBOSE, "%a: ACTION %x\r\n", __FUNCTION__, ACTION));
+  DEBUG ((DEBUG_VERBOSE, "%a: ACTION %x\r\n", __FUNCTION__, ACTION));
   DEST_INDEX = 0;
-  DEBUG ((EFI_D_VERBOSE, "%a: DEST_INDEX %x\r\n", __FUNCTION__, DEST_INDEX));
+  DEBUG ((DEBUG_VERBOSE, "%a: DEST_INDEX %x\r\n", __FUNCTION__, DEST_INDEX));
   Value  = 0;
   Value |= (ACTION & 0xff) << 24;
   Value |= (DEST_INDEX & 0x3ff) << 8;
@@ -401,16 +401,16 @@ FalconFirmwareLoad (
 
   /* reserve required IMEM blocks by writing to IMEMFILLCTL register */
   NBLOCKS = SRC_COUNT;
-  DEBUG ((EFI_D_VERBOSE, "%a: NBLOCKS %x\r\n", __FUNCTION__, NBLOCKS));
+  DEBUG ((DEBUG_VERBOSE, "%a: NBLOCKS %x\r\n", __FUNCTION__, NBLOCKS));
   Value  = 0;
   Value |= ((NBLOCKS & 0xff)) << 0;
   FalconWrite32 (FALCON_IMFILLCTL_0, Value);
 
   /* enable auto-fill mode for bootstrap code range */
   TAG_LO = (SRC_OFFSET & 0xffff);
-  DEBUG ((EFI_D_VERBOSE, "%a: TAG_LO %x\r\n", __FUNCTION__, TAG_LO));
+  DEBUG ((DEBUG_VERBOSE, "%a: TAG_LO %x\r\n", __FUNCTION__, TAG_LO));
   TAG_HI = ((SRC_OFFSET + SRC_COUNT) & 0xffff);
-  DEBUG ((EFI_D_VERBOSE, "%a: TAG_HI %x\r\n", __FUNCTION__, TAG_HI));
+  DEBUG ((DEBUG_VERBOSE, "%a: TAG_HI %x\r\n", __FUNCTION__, TAG_HI));
   Value  = 0;
   Value |= ((TAG_HI & 0xffff)) << 16;
   Value |= ((TAG_LO & 0xffff)) << 0;
@@ -423,7 +423,7 @@ FalconFirmwareLoad (
   /* wait for RESULT_VLD to get set */
   for (i = 0; i < 100; i++) {
     Value = FalconRead32 (XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0);
-    DEBUG ((EFI_D_VERBOSE, "%a: XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0 = %x\r\n", __FUNCTION__, Value));
+    DEBUG ((DEBUG_VERBOSE, "%a: XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT_0 = %x\r\n", __FUNCTION__, Value));
     if (Value & L2IMEMOP_RESULT_VLD) {
       break;
     }
@@ -433,7 +433,7 @@ FalconFirmwareLoad (
 
   /* program BOOTVEC with Falcon boot code location in IMEM */
   VEC = FirmwareCfg->boot_codetag;
-  DEBUG ((EFI_D_VERBOSE, "%a: VEC %x\r\n", __FUNCTION__, VEC));
+  DEBUG ((DEBUG_VERBOSE, "%a: VEC %x\r\n", __FUNCTION__, VEC));
   Value  = 0;
   Value |= ((VEC & 0xffffffff)) << 0;
   FalconWrite32 (FALCON_BOOTVEC_0, Value);
@@ -448,13 +448,13 @@ FalconFirmwareLoad (
 
   for (i = 0; i < 10; i++) {
     Value = FalconRead32 (FALCON_CPUCTL_0);
-    DEBUG ((EFI_D_VERBOSE, "%a: FALCON_CPUCTL_0 = %x\r\n", __FUNCTION__, Value));
+    DEBUG ((DEBUG_VERBOSE, "%a: FALCON_CPUCTL_0 = %x\r\n", __FUNCTION__, Value));
     if (Value & 0x20 /* stopped */) {
       break;
     }
   }
 
-  DEBUG ((EFI_D_VERBOSE, "%a: FALCON_CPUCTL_0 = %x\r\n", __FUNCTION__, Value));
+  DEBUG ((DEBUG_VERBOSE, "%a: FALCON_CPUCTL_0 = %x\r\n", __FUNCTION__, Value));
 
   /* dump DMEM */
   FalconDumpDMEM ();

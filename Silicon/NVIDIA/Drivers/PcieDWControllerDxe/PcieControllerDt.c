@@ -361,7 +361,7 @@ UpdateFdtPcieControllerNode (
     return FALSE;
   }
 
-  Result = fdt_delprop (Fdt, NodeOffset, "power-domains");
+  Result = fdt_nop_property (Fdt, NodeOffset, "power-domains");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -375,7 +375,7 @@ UpdateFdtPcieControllerNode (
 
   /* Disable IOMMU nodes. WARNING: This will likely cause crashes when
      the attached device attempts to perform DMA! */
-  Result = fdt_delprop (Fdt, NodeOffset, "iommus");
+  Result = fdt_nop_property (Fdt, NodeOffset, "iommus");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -387,7 +387,7 @@ UpdateFdtPcieControllerNode (
     return FALSE;
   }
 
-  Result = fdt_delprop (Fdt, NodeOffset, "iommu-map");
+  Result = fdt_nop_property (Fdt, NodeOffset, "iommu-map");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -399,7 +399,7 @@ UpdateFdtPcieControllerNode (
     return FALSE;
   }
 
-  Result = fdt_delprop (Fdt, NodeOffset, "iommu-map-mask");
+  Result = fdt_nop_property (Fdt, NodeOffset, "iommu-map-mask");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,

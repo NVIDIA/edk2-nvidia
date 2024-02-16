@@ -1,4 +1,4 @@
-#Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -43,8 +43,9 @@
       RealTimeClockLib|Silicon/NVIDIA/Library/NuvotonRealTimeClockLib/NuvotonRealTimeClockLib.inf
       TimerLib|MdePkg/Library/BaseTimerLibNullTemplate/BaseTimerLibNullTemplate.inf
       TimeBaseLib|EmbeddedPkg/Library/TimeBaseLib/TimeBaseLib.inf
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
     <BuildOptions>
-      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=LibPcdGetBool,--wrap=EfiGetVariable,--wrap=EfiSetVariable,--wrap=EfiCreateProtocolNotifyEvent,--wrap=GetPerformanceCounter,--wrap=GetTimeInNanoSecond,--wrap=EfiAtRuntime,--wrap=EfiGetSystemConfigurationTable
+      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=EfiGetVariable,--wrap=EfiSetVariable,--wrap=EfiCreateProtocolNotifyEvent,--wrap=GetPerformanceCounter,--wrap=GetTimeInNanoSecond,--wrap=EfiAtRuntime,--wrap=EfiGetSystemConfigurationTable
   }
 
   # IPMI Blob Transfer protocol unit tests
@@ -64,7 +65,7 @@
       DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
       DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
     <BuildOptions>
-      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=IpmiSubmitCommand,--wrap=GetDebugPrintErrorLevel
+      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=IpmiSubmitCommand,--wrap=GetDebugPrintErrorLevel,--wrap=EfiCreateProtocolNotifyEvent
   }
 
   #
@@ -81,6 +82,7 @@
   Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/UnitTest/RedfishHostInterfaceUnitTest.inf {
     <LibraryClasses>
       NULL|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
+      NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
       UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
   }
@@ -118,6 +120,40 @@
       HobLib|MdeModulePkg/Library/BaseHobLibNull/BaseHobLibNull.inf
       PcdLib|Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbPcdStubLib/FvbPcdStubLib.inf
       FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
+  }
+
+  #
+  # AndroidBootDxe Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/UnitTest/AndroidBootDxeUnitTest.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+      HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
+      ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
+      ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
+  }
+
+  #
+  # MmVarLib Host Base GoogleTest
+  Silicon/NVIDIA/Library/MmVarLib/GoogleTest/MmVarLibGoogleTest.inf {
+    <LibraryClasses>
+      MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
+      MmServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockMmStTableLib/MockMmStTableLib.inf
+      SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
+  }
+
+  Silicon/NVIDIA/Library/MpCoreInfoLib/UnitTest/MpCoreInfoLibGoogleTest.inf {
+    <LibraryClasses>
+      MpCoreInfoLib|Silicon/NVIDIA/Library/MpCoreInfoLib/MpCoreInfoLib.inf
+      HobLib|MdePkg/Test/Mock/Library/GoogleTest/MockHobLib/MockHobLib.inf
+  }
+
+  Silicon/NVIDIA/Library/DeviceTreeHelperLib/UnitTest/DeviceTreeHelperLibGoogleTest.inf {
+    <LibraryClasses>
+      DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
+      FdtLib|MdePkg/Test/Mock/Library/GoogleTest/MockFdtLib/MockFdtLib.inf
+      DtPlatformDtbLoaderLib|EmbeddedPkg/Test/Mock/Library/GoogleTest/MockDtPlatformDtbLoaderLib/MockDtPlatformDtbLoaderLib.inf
   }
 
 [PcdsDynamicDefault]

@@ -1,0 +1,43 @@
+## @file
+#  This driver registers a 5 minute watchdog between when it starts and ReadyToBoot.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootWatchdog
+  FILE_GUID                      = 0fdef844-074c-45fd-b43d-99fe09c7ef55
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeWatchdog
+
+[Sources]
+  BootWatchdog.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  DebugLib
+  DtPlatformDtbLoaderLib
+  DxeServicesLib
+  FdtLib
+  UefiLib
+  StatusRegLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBootWatchdogTime
+
+[Protocols]
+  gEfiWatchdogTimerArchProtocolGuid
+
+[Depex]
+  TRUE

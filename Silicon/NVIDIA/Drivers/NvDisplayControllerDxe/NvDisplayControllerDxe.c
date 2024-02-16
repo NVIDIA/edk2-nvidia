@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -25,15 +26,17 @@
 #include <Library/UefiLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
-#include <Protocol/DevicePath.h>
 #include <Protocol/EmbeddedGpio.h>
-#include <Protocol/KernelCmdLineUpdate.h>
 
 #include <libfdt.h>
+#include <NVIDIAConfiguration.h>
 
 #define DISPLAY_SOR_COUNT      8
 #define DISPLAY_FE_SW_SYS_CAP  0x00030000
-#define DISPLAY_FE_CMGR_CLK_SOR(i)  (0x00002300 + (i) * SIZE_2KB)
+#define DISPLAY_FE_SW_SYS_CAP_SOR_EXISTS_GET(x, i)     (BOOLEAN)(BitFieldRead32 ((x), 8 + (i), 8 + (i)) != 0)
+#define DISPLAY_FE_CMGR_CLK_SOR(i)                     (0x00002300 + (i) * SIZE_2KB)
+#define DISPLAY_FE_CMGR_CLK_SOR_MODE_BYPASS_SET(x, v)  BitFieldWrite32 ((x), 16, 17, (v))
+#define DISPLAY_FE_CMGR_CLK_SOR_MODE_BYPASS_DP_SAFE  2
 
 #define DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
@@ -41,13 +44,14 @@ typedef struct {
   UINT32                     Signature;
   EFI_HANDLE                 DriverHandle;
   EFI_HANDLE                 ControllerHandle;
+  UINT8                      HandoffMode;
   NON_DISCOVERABLE_DEVICE    EdkiiNonDiscoverableDevice;
   BOOLEAN                    ResetsDeasserted;
   BOOLEAN                    ClocksEnabled;
   BOOLEAN                    OutputGpiosConfigured;
+  BOOLEAN                    FdtUpdated;
   EFI_EVENT                  OnFdtInstalledEvent;
   EFI_EVENT                  OnReadyToBootEvent;
-  EFI_EVENT                  OnExitBootServicesEvent;
 } NVIDIA_DISPLAY_CONTROLLER_CONTEXT;
 
 #define DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE(a)  CR(\
@@ -66,22 +70,8 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NV Display Controller Driver",
-  .UseDriverBinding                = TRUE,
-  .AutoEnableClocks                = FALSE,
-  .AutoDeassertReset               = FALSE,
-  .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
-};
-
-/* Extra command-line arguments passed to the kernel to disable EFIFB
-   support. This is used to prevent the kernel from using the EFI
-   framebuffer that becomes unusable after we turn the display off at
-   UEFI exit.
-*/
-STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbOffKernelCmdLineUpdateProtocol = {
-  .ExistingCommandLineArgument = NULL,
-  .NewCommandLineArgument      = L"video=efifb:off",
 };
 
 /**
@@ -476,6 +466,54 @@ ConfigureOutputGpios (
 }
 
 /**
+   Retrieves base and size of the framebuffer region.
+
+   @param[out] Base  Base of the framebuffer region.
+   @param[out] Size  Size of the framebuffer region.
+
+   @retval EFI_SUCCESS    Region details retrieved successfully.
+   @retval EFI_NOT_FOUND  No framebuffer region was not found.
+*/
+STATIC
+EFI_STATUS
+GetFramebufferRegion (
+  OUT EFI_PHYSICAL_ADDRESS *CONST  Base,
+  OUT UINTN                *CONST  Size
+  )
+{
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_BASE_AND_SIZE_INFO      *FbInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve platform resource information\r\n",
+      __FUNCTION__
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  FbInfo               = &PlatformResourceInfo->FrameBufferInfo;
+
+  if ((FbInfo->Base == 0) || (FbInfo->Size == 0)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: no framebuffer region present\r\n",
+      __FUNCTION__
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  *Base = FbInfo->Base;
+  *Size = FbInfo->Size;
+
+  return EFI_SUCCESS;
+}
+
+/**
    Creates an ACPI address space descriptor suitable for use as a
    framebuffer.
 
@@ -490,42 +528,23 @@ CreateFramebufferResource (
   OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
   )
 {
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  EFI_PHYSICAL_ADDRESS          Address;
-  UINTN                         Size;
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINTN                 Size;
 
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve platform resource information\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
-  }
-
-  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  Address              = PlatformResourceInfo->FrameBufferInfo.Base;
-  Size                 = PlatformResourceInfo->FrameBufferInfo.Size;
-
-  if ((Address == 0) || (Size == 0)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: no framebuffer region present\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
+  Status = GetFramebufferRegion (&Base, &Size);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   ZeroMem (Desc, sizeof (*Desc));
   Desc->Desc                 = ACPI_ADDRESS_SPACE_DESCRIPTOR;
   Desc->Len                  = sizeof (*Desc) - 3;
-  Desc->AddrRangeMin         = Address;
+  Desc->AddrRangeMin         = Base;
   Desc->AddrLen              = Size;
-  Desc->AddrRangeMax         = Address + Size - 1;
+  Desc->AddrRangeMax         = Base + Size - 1;
   Desc->ResType              = ACPI_ADDRESS_SPACE_TYPE_MEM;
-  Desc->AddrSpaceGranularity = Address + Size > SIZE_4GB ? 64 : 32;
+  Desc->AddrSpaceGranularity = Base + Size > SIZE_4GB ? 64 : 32;
 
   return EFI_SUCCESS;
 }
@@ -630,325 +649,70 @@ CopyAndInsertResource (
 }
 
 /**
-   Updates Device Tree simple-framebuffer node(s) with details about
-   the given graphics output mode.
+   Switch all SOR clocks to a safe source to prevent a lingering bad
+   display HW state.
 
-   @param[in] Fdt   Device Tree to update.
-   @param[in] Info  Pointer to the mode information to use.
+   @param[in] Context  Controller context to use.
 
-   @retval TRUE   Update successful.
-   @retval FALSE  Update failed.
-*/
-STATIC
-BOOLEAN
-UpdateFdtSimpleFramebufferModeInfo (
-  IN VOID *CONST                                  Fdt,
-  IN EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *CONST  Info
-  )
-{
-  STATIC CONST CHAR8  FbRgbxFormat[] = "x8b8g8r8";
-  STATIC CONST CHAR8  FbBgrxFormat[] = "x8r8g8b8";
-
-  CONST CHAR8  *FbFormat;
-  UINTN        PixelSize;
-  INT32        Result, NodeOffset;
-
-  switch (Info->PixelFormat) {
-    case PixelRedGreenBlueReserved8BitPerColor:
-      FbFormat  = FbRgbxFormat;
-      PixelSize = 4;
-      break;
-    case PixelBlueGreenRedReserved8BitPerColor:
-      FbFormat  = FbBgrxFormat;
-      PixelSize = 4;
-      break;
-    default:
-      return FALSE;
-  }
-
-  Result = fdt_path_offset (Fdt, "/chosen");
-  if (Result < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: cannot find node '/chosen': %a",
-      __FUNCTION__,
-      fdt_strerror (Result)
-      ));
-    return FALSE;
-  }
-
-  fdt_for_each_subnode (NodeOffset, Fdt, Result) {
-    Result = fdt_node_check_compatible (Fdt, NodeOffset, "simple-framebuffer");
-    if (Result != 0) {
-      continue;
-    }
-
-    Result = fdt_setprop_u32 (
-               Fdt,
-               NodeOffset,
-               "width",
-               Info->HorizontalResolution
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'width' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_setprop_u32 (
-               Fdt,
-               NodeOffset,
-               "height",
-               Info->VerticalResolution
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'height' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_setprop_u32 (
-               Fdt,
-               NodeOffset,
-               "stride",
-               Info->PixelsPerScanLine * PixelSize
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'stride' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_setprop_string (
-               Fdt,
-               NodeOffset,
-               "format",
-               FbFormat
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'format' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_setprop_string (
-               Fdt,
-               NodeOffset,
-               "status",
-               "okay"
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'status' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/**
-   Updates Device Tree framebuffer node(s) under /reserved-memory with
-   the framebuffer region address and size.
-
-   @param[in] Fdt   Device Tree to update.
-   @param[in] Base  Base address of the framebuffer region.
-   @param[in] Size  Size of the framebuffer region.
-
-   @retval TRUE   Update successful.
-   @retval FALSE  Update failed.
-*/
-STATIC
-BOOLEAN
-UpdateFdtFramebufferReservedMemory (
-  IN VOID *CONST   Fdt,
-  IN CONST UINT64  Base,
-  IN CONST UINT64  Size
-  )
-{
-  INT32        Result;
-  INT32        NodeOffset;
-  CONST VOID   *Property;
-  UINT32       IommuAddressesProperty[5];
-  CONST CHAR8  *Name, *NameEnd;
-  CHAR8        NameBuffer[64];
-
-  CONST UINT32  BaseLo = (UINT32)Base;
-  CONST UINT32  BaseHi = (UINT32)(Base >> 32);
-
-  CONST UINT64  RegProperty[2] = {
-    SwapBytes64 (Base),
-    SwapBytes64 (Size),
-  };
-
-  /* Setting up IOMMU identity mapping */
-  CopyMem (&IommuAddressesProperty[1], RegProperty, sizeof (RegProperty));
-
-  Result = fdt_path_offset (Fdt, "/reserved-memory");
-  if (Result < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: cannot find node '/reserved-memory': %a\r\n",
-      __FUNCTION__,
-      fdt_strerror (Result)
-      ));
-    return FALSE;
-  }
-
-  fdt_for_each_subnode (NodeOffset, Fdt, Result) {
-    Result = fdt_node_check_compatible (Fdt, NodeOffset, "framebuffer");
-    if (Result != 0) {
-      continue;
-    }
-
-    Name = fdt_get_name (Fdt, NodeOffset, &Result);
-    if (Name == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to get name: %r\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    NameEnd = AsciiStrStr (Name, "@");
-    if (NameEnd == NULL) {
-      NameEnd = Name + Result;
-    }
-
-    if (BaseHi != 0) {
-      Result = (INT32)AsciiSPrint (
-                        NameBuffer,
-                        sizeof (NameBuffer),
-                        "%.*a@%x,%x",
-                        (UINTN)(NameEnd - Name),
-                        Name,
-                        BaseHi,
-                        BaseLo
-                        );
-    } else {
-      Result = (INT32)AsciiSPrint (
-                        NameBuffer,
-                        sizeof (NameBuffer),
-                        "%.*a@%x",
-                        (UINTN)(NameEnd - Name),
-                        Name,
-                        BaseLo
-                        );
-    }
-
-    /* AsciiSPrint returns the number of written ASCII charaters not
-       including the Null-terminator. Adding +1 ensures we would have
-       had room for another character, therefore the result was not
-       truncated. */
-    if (!(Result + 1 < ARRAY_SIZE (NameBuffer))) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: name '%a' is too long\r\n",
-        __FUNCTION__,
-        Name
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_set_name (Fdt, NodeOffset, NameBuffer);
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set name: %r\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Result = fdt_setprop_inplace (
-               Fdt,
-               NodeOffset,
-               "reg",
-               RegProperty,
-               sizeof (RegProperty)
-               );
-    if (Result != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to set 'reg' property: %a\r\n",
-        __FUNCTION__,
-        fdt_strerror (Result)
-        ));
-      return FALSE;
-    }
-
-    Property = fdt_getprop (Fdt, NodeOffset, "iommu-addresses", &Result);
-    if (Property != NULL) {
-      if (Result != sizeof (IommuAddressesProperty)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: 'iommu-addresses' property size mismatch: expected %lu, got %lu\r\n",
-          __FUNCTION__,
-          (UINT64)sizeof (IommuAddressesProperty),
-          (UINT64)Result
-          ));
-        return FALSE;
-      }
-
-      /* Copy device phandle */
-      IommuAddressesProperty[0] = *(CONST UINT32 *)Property;
-
-      Result = fdt_setprop_inplace (
-                 Fdt,
-                 NodeOffset,
-                 "iommu-addresses",
-                 IommuAddressesProperty,
-                 sizeof (IommuAddressesProperty)
-                 );
-      if (Result != 0) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to set 'iommu-addresses' property: %a\r\n",
-          __FUNCTION__,
-          fdt_strerror (Result)
-          ));
-        return FALSE;
-      }
-    }
-  }
-
-  return TRUE;
-}
-
-/**
-  Performs the necessary teardown of the display hardware.
-
-  @retval EFI_SUCCESS              Operation successful.
-  @retval others                   Error occurred
+   @retval EFI_SUCCESS    Operation successful.
+   @retval !=EFI_SUCCESS  Error(s) occurred
 */
 STATIC
 EFI_STATUS
-DisplayStop (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  IN CONST BOOLEAN                             OnExitBootServices
+DisplayBypassSorClocks (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  DisplayBase;
+  UINTN                 DisplaySize;
+  UINTN                 SorIndex;
+  UINT32                FeSwSysCap, FeCmgrClkSor;
+  CONST UINTN           DisplayRegion = 0;
+
+  Status = DeviceDiscoveryGetMmioRegion (
+             Context->ControllerHandle,
+             DisplayRegion,
+             &DisplayBase,
+             &DisplaySize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve display region: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  FeSwSysCap = MmioRead32 (DisplayBase + DISPLAY_FE_SW_SYS_CAP);
+  for (SorIndex = 0; SorIndex < DISPLAY_SOR_COUNT; ++SorIndex) {
+    if (DISPLAY_FE_SW_SYS_CAP_SOR_EXISTS_GET (FeSwSysCap, SorIndex)) {
+      FeCmgrClkSor = MmioRead32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex));
+      FeCmgrClkSor = DISPLAY_FE_CMGR_CLK_SOR_MODE_BYPASS_SET (
+                       FeCmgrClkSor,
+                       DISPLAY_FE_CMGR_CLK_SOR_MODE_BYPASS_DP_SAFE
+                       );
+      MmioWrite32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex), FeCmgrClkSor);
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Performs teardown of the display hardware during ExitBootServices.
+
+  @param[in] Context  Context of the display controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred
+*/
+STATIC
+EFI_STATUS
+DisplayStopOnExitBootServices (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
   EFI_STATUS     Status = EFI_SUCCESS;
@@ -958,24 +722,6 @@ DisplayStop (
 
   if (Context != NULL) {
     ControllerHandle = Context->ControllerHandle;
-
-    if (Context->OnExitBootServicesEvent != NULL) {
-      Status1 = gBS->CloseEvent (Context->OnExitBootServicesEvent);
-      if (EFI_ERROR (Status1)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to close OnExitBootServices event: %r\r\n",
-          __FUNCTION__,
-          Status1
-          ));
-      }
-
-      if (!EFI_ERROR (Status)) {
-        Status = Status1;
-      }
-
-      Context->OnExitBootServicesEvent = NULL;
-    }
 
     if (Context->OnFdtInstalledEvent != NULL) {
       Status1 = gBS->CloseEvent (Context->OnFdtInstalledEvent);
@@ -1035,10 +781,34 @@ DisplayStop (
 
       Context->ResetsDeasserted = FALSE;
     }
+  }
 
-    if (!OnExitBootServices) {
-      FreePool (Context);
-    }
+  return Status;
+}
+
+/**
+  Performs teardown of the display hardware.
+
+  Cannot be called during ExitBootServices since it also frees the
+  display context.
+
+  @param[in] Context  Context of the display controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred
+*/
+STATIC
+EFI_STATUS
+DisplayStop (
+  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DisplayStopOnExitBootServices (Context);
+
+  if (Context != NULL) {
+    FreePool (Context);
   }
 
   return Status;
@@ -1047,17 +817,19 @@ DisplayStop (
 /**
    Locates a child handle with the GOP protocol installed.
 
-   @param[in]  Context  Context whose child handle shall be located.
-   @param[out] Handle   The located child handle.
+   @param[in]  DriverHandle      Handle of the driver.
+   @param[in]  ControllerHandle  Handle of the controller.
+   @param[out] ChildHandle       The located child handle.
 
    @retval EFI_SUCCESS    Child handle found successfully.
    @retval !=EFI_SUCCESS  Error occurred.
 */
 STATIC
 EFI_STATUS
-DisplayLocateGopChildHandle (
-  IN  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  OUT EFI_HANDLE *CONST                         Handle
+LocateChildGopHandle (
+  IN  CONST EFI_HANDLE   DriverHandle,
+  IN  CONST EFI_HANDLE   ControllerHandle,
+  OUT EFI_HANDLE *CONST  ChildHandle
   )
 {
   EFI_STATUS                Status;
@@ -1087,8 +859,8 @@ DisplayLocateGopChildHandle (
                     Handles[HandleIndex],
                     &gEfiDevicePathProtocolGuid,
                     (VOID **)&DevicePath,
-                    Context->DriverHandle,
-                    Context->ControllerHandle,
+                    DriverHandle,
+                    ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
                     );
     if (EFI_ERROR (Status)) {
@@ -1123,15 +895,15 @@ DisplayLocateGopChildHandle (
       continue;
     }
 
-    if (ParentHandle == Context->ControllerHandle) {
+    if (ParentHandle == ControllerHandle) {
       /* This handle is our child handle. */
       break;
     }
   }
 
   if (HandleIndex < HandleCount) {
-    *Handle = Handles[HandleIndex];
-    Status  = EFI_SUCCESS;
+    *ChildHandle = Handles[HandleIndex];
+    Status       = EFI_SUCCESS;
   } else {
     Status = EFI_NOT_FOUND;
   }
@@ -1145,34 +917,38 @@ Exit:
 }
 
 /**
-   Updates the given Device Tree with information about the currently
-   set mode (including framebuffer address and size) using the GOP
-   protocol installed on the given handle.
+   Locates an instance of the GOP protocol installed on a child
+   handle.
 
-   @param[in] Context    Controller context to use.
-   @param[in] Fdt        Device Tree to update.
-   @param[in] GopHandle  Handle with GOP protocol instance to use.
+   @param[in]  DriverHandle      Handle of the driver.
+   @param[in]  ControllerHandle  Handle of the controller.
+   @param[out] Protocol          The located GOP instance.
+
+   @retval EFI_SUCCESS    Child handle found successfully.
+   @retval !=EFI_SUCCESS  Error occurred.
 */
 STATIC
-VOID
-DisplayUpdateFdtFramebuffer (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context,
-  IN VOID *CONST                               Fdt,
-  IN CONST EFI_HANDLE                          GopHandle
+EFI_STATUS
+LocateChildGop (
+  IN  CONST EFI_HANDLE                      DriverHandle,
+  IN  CONST EFI_HANDLE                      ControllerHandle,
+  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL **CONST  Protocol
   )
 {
-  EFI_STATUS                            Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL          *Gop;
-  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  *Info;
-  EFI_PHYSICAL_ADDRESS                  FrameBufferBase;
-  UINTN                                 FrameBufferSize;
+  EFI_STATUS  Status;
+  EFI_HANDLE  GopHandle;
+
+  Status = LocateChildGopHandle (DriverHandle, ControllerHandle, &GopHandle);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Status = gBS->OpenProtocol (
                   GopHandle,
                   &gEfiGraphicsOutputProtocolGuid,
-                  (VOID **)&Gop,
-                  Context->DriverHandle,
-                  Context->ControllerHandle,
+                  (VOID **)Protocol,
+                  DriverHandle,
+                  ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
@@ -1183,176 +959,163 @@ DisplayUpdateFdtFramebuffer (
       GopHandle,
       Status
       ));
-    return;
-  }
-
-  if (Gop->Mode != NULL) {
-    Info            = Gop->Mode->Info;
-    FrameBufferBase = Gop->Mode->FrameBufferBase;
-    FrameBufferSize = Gop->Mode->FrameBufferSize;
-
-    if (Info != NULL) {
-      if (!UpdateFdtSimpleFramebufferModeInfo (Fdt, Info)) {
-        return;
-      }
-    }
-
-    if ((FrameBufferBase != 0) && (FrameBufferSize != 0)) {
-      if (!UpdateFdtFramebufferReservedMemory (Fdt, (UINT64)FrameBufferBase, (UINT64)FrameBufferSize)) {
-        return;
-      }
-    }
-  }
-}
-
-/**
-   Event handler for whenever a new Device Tree is installed on the
-   system.
-
-   @param[in] Event    Event used for the notification.
-   @param[in] Context  Controller context to use.
-*/
-STATIC
-VOID
-EFIAPI
-DisplayOnFdtInstalled (
-  IN EFI_EVENT                                 Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
-  )
-{
-  VOID        *Fdt;
-  EFI_STATUS  Status;
-  EFI_HANDLE  GopHandle;
-
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve FDT: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    return;
-  }
-
-  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
-  if (!EFI_ERROR (Status)) {
-    DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
-  }
-}
-
-/**
-   Event handler for when the read-to-boot event is signalled.
-
-   @param[in] Event    Event used for the notification.
-   @param[in] Context  Controller context to use.
-*/
-STATIC
-VOID
-EFIAPI
-DisplayOnReadyToBoot (
-  IN EFI_EVENT                                 Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
-  )
-{
-  VOID        *AcpiBase, *Fdt;
-  EFI_STATUS  Status;
-  EFI_HANDLE  GopHandle;
-
-  /* Leave display active for ACPI boot. */
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    return;
-  }
-
-  Status = DisplayLocateGopChildHandle (Context, &GopHandle);
-  if (!EFI_ERROR (Status)) {
-    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
-    if (!EFI_ERROR (Status)) {
-      DisplayUpdateFdtFramebuffer (Context, Fdt, GopHandle);
-    }
-
-    /* We have a child handle with GOP protocol installed, disable the
-       kernel EFI FB driver. Ignore "protocol already installed" error
-       since this function may be run more than once. */
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &gImageHandle,
-                    &gNVIDIAKernelCmdLineUpdateGuid,
-                    (VOID **)&mEfifbOffKernelCmdLineUpdateProtocol,
-                    NULL
-                    );
-    if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to install the kernel command-line update protocol: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-    }
-  }
-}
-
-STATIC
-EFI_STATUS
-DisplayBypassSorClocks (
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
-  )
-{
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  DisplayBase;
-  UINTN                 DisplaySize;
-  UINTN                 SorIndex;
-  UINT32                FeSwSysCap, FeCmgrClkSor;
-  CONST UINTN           DisplayRegion = 0;
-
-  Status = DeviceDiscoveryGetMmioRegion (
-             Context->ControllerHandle,
-             DisplayRegion,
-             &DisplayBase,
-             &DisplaySize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve display region: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
     return Status;
-  }
-
-  FeSwSysCap = MmioRead32 (DisplayBase + DISPLAY_FE_SW_SYS_CAP);
-  for (SorIndex = 0; SorIndex < DISPLAY_SOR_COUNT; ++SorIndex) {
-    if ((FeSwSysCap & (BIT8 << SorIndex)) != 0) {
-      FeCmgrClkSor = MmioRead32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex));
-      FeCmgrClkSor = (FeCmgrClkSor & ~BIT16) | BIT17;
-      MmioWrite32 (DisplayBase + DISPLAY_FE_CMGR_CLK_SOR (SorIndex), FeCmgrClkSor);
-    }
   }
 
   return EFI_SUCCESS;
 }
 
+/**
+   Checks if the given GOP instance has an active mode.
+
+   @param[in] Gop  The GOP protocol instance to check.
+
+   @return TRUE   A mode is active.
+   @return FALSE  No mode is active.
+*/
+STATIC
+BOOLEAN
+CheckGopModeActive (
+  IN CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *CONST  Gop
+  )
+{
+  CONST EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode = Gop->Mode;
+
+  return (  (Mode != NULL)
+         && (Mode->Mode < Mode->MaxMode)
+         && (Mode->Info != NULL)
+         && (Mode->SizeOfInfo >= sizeof (*Mode->Info)));
+}
+
+/**
+   Update the Device Tree with mode and framebuffer info using a GOP
+   instance installed on a child handle.
+
+   @param[in] DriverHandle      Handle of the driver.
+   @param[in] ControllerHandle  Handle of the controller.
+
+   @return TRUE   Device Tree updated successfully.
+   @return FALSE  No Device Tree was found.
+   @return FALSE  No GOP child handle was found.
+   @return FALSE  The GOP child handle was inactive.
+   @return FALSE  Could not retrieve the framebuffer region.
+   @return FALSE  Failed to update the Device Tree.
+*/
+STATIC
+BOOLEAN
+UpdateFdtTableChildGop (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS                    Status;
+  VOID                          *Fdt;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  EFI_PHYSICAL_ADDRESS          FrameBufferBase;
+  UINT64                        FrameBufferSize;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  Status = LocateChildGop (DriverHandle, ControllerHandle, &Gop);
+  if (EFI_ERROR (Status) || !CheckGopModeActive (Gop)) {
+    return FALSE;
+  }
+
+  FrameBufferBase = Gop->Mode->FrameBufferBase;
+  FrameBufferSize = Gop->Mode->FrameBufferSize;
+
+  if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
+     || (FrameBufferBase == 0) || (FrameBufferSize == 0))
+  {
+    Status = GetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
+    if (EFI_ERROR (Status)) {
+      return FALSE;
+    }
+  }
+
+  return UpdateDeviceTreeSimpleFramebufferInfo (
+           Fdt,
+           Gop->Mode->Info,
+           (UINT64)FrameBufferBase,
+           (UINT64)FrameBufferSize
+           );
+}
+
+/**
+   Event notification function for updating the Device Tree with mode
+   and framebuffer info.
+
+   @param[in] Event          Event used for the notification.
+   @param[in] NotifyContext  Context for the notification.
+*/
 STATIC
 VOID
 EFIAPI
-DisplayOnExitBootServices (
-  IN EFI_EVENT                                  Event,
-  IN NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *CONST  Context
+UpdateFdtTableNotifyFunction (
+  IN EFI_EVENT    Event,
+  IN VOID *CONST  NotifyContext
   )
 {
-  CONST BOOLEAN  OnExitBootServices = TRUE;
-  VOID           *AcpiBase;
-  EFI_STATUS     Status;
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context =
+    (NVIDIA_DISPLAY_CONTROLLER_CONTEXT *)NotifyContext;
 
-  /* Leave display active for ACPI boot. */
-  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (!EFI_ERROR (Status)) {
-    return;
+  Context->FdtUpdated = UpdateFdtTableChildGop (
+                          Context->DriverHandle,
+                          Context->ControllerHandle
+                          );
+}
+
+/**
+  Check if we should perform display hand-off or not.
+
+  @param[in] Context  The display context to use.
+
+  @return TRUE   Leave the display running on UEFI exit.
+  @return FALSE  Reset the display on UEFI exit.
+*/
+STATIC
+BOOLEAN
+DisplayCheckPerformHandoff (
+  IN CONST NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  VOID                          *Table;
+
+  switch (Context->HandoffMode) {
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
+    default:
+      return FALSE;
+
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS:
+      return TRUE;
+
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
+      Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
+      if (!EFI_ERROR (Status)) {
+        /* ACPI boot: reset the display unless it is active. */
+        Status = LocateChildGop (
+                   Context->DriverHandle,
+                   Context->ControllerHandle,
+                   &Gop
+                   );
+        return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
+      }
+
+      Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);
+      if (!EFI_ERROR (Status)) {
+        /* DT boot: reset the display unless the last FDT update was
+           successful. */
+        return Context->FdtUpdated;
+      }
+
+      /* Default to display reset. */
+      return FALSE;
   }
-
-  DisplayBypassSorClocks (Context);
-  DisplayStop (Context, OnExitBootServices);
 }
 
 /**
@@ -1376,9 +1139,8 @@ DisplayStart (
   UINTN                              ResourcesSize;
   NON_DISCOVERABLE_DEVICE            *NvNonDiscoverableDevice;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  FramebufferDescriptor, *FramebufferResource = NULL;
-  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result            = NULL;
-  CONST BOOLEAN                      UseDpOutput        = FALSE;
-  CONST BOOLEAN                      OnExitBootServices = FALSE;
+  NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result     = NULL;
+  CONST BOOLEAN                      UseDpOutput = FALSE;
 
   CONST UINTN  FramebufferResourceIndex = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
 
@@ -1441,6 +1203,7 @@ DisplayStart (
   Result->Signature        = DISPLAY_CONTROLLER_SIGNATURE;
   Result->DriverHandle     = DriverHandle;
   Result->ControllerHandle = ControllerHandle;
+  Result->HandoffMode      = PcdGet8 (PcdSocDisplayHandoffMode);
 
   CopyMem (
     &Result->EdkiiNonDiscoverableDevice,
@@ -1489,68 +1252,59 @@ DisplayStart (
 
   Result->OutputGpiosConfigured = TRUE;
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  (EFI_EVENT_NOTIFY)DisplayOnFdtInstalled,
-                  Result,
-                  &gFdtTableGuid,
-                  &Result->OnFdtInstalledEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnFdtInstalled event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnFdtInstalledEvent = NULL;
-    goto Exit;
-  }
+  switch (Result->HandoffMode) {
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
+    default:
+      break;
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  (EFI_EVENT_NOTIFY)DisplayOnReadyToBoot,
-                  Result,
-                  &gEfiEventReadyToBootGuid,
-                  &Result->OnReadyToBootEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnReadyToBoot event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnReadyToBootEvent = NULL;
-    goto Exit;
-  }
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS:
+    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      UpdateFdtTableNotifyFunction,
+                      Result,
+                      &gFdtTableGuid,
+                      &Result->OnFdtInstalledEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to create OnFdtInstalled event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        Result->OnFdtInstalledEvent = NULL;
+        goto Exit;
+      }
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  (EFI_EVENT_NOTIFY)DisplayOnExitBootServices,
-                  Result,
-                  &gEfiEventExitBootServicesGuid,
-                  &Result->OnExitBootServicesEvent
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to create OnExitBootServices event: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    Result->OnExitBootServicesEvent = NULL;
-    goto Exit;
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      UpdateFdtTableNotifyFunction,
+                      Result,
+                      &gEfiEventReadyToBootGuid,
+                      &Result->OnReadyToBootEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to create OnReadyToBoot event: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        Result->OnReadyToBootEvent = NULL;
+        goto Exit;
+      }
+
+      break;
   }
 
   *Context = Result;
 
 Exit:
   if (EFI_ERROR (Status)) {
-    DisplayStop (Result, OnExitBootServices);
+    DisplayStop (Result);
   }
 
   return Status;
@@ -1584,7 +1338,6 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE                Platform;
   NON_DISCOVERABLE_DEVICE            *EdkiiNonDiscoverableDevice;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Context;
-  CONST BOOLEAN                      OnExitBootServices = FALSE;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -1614,12 +1367,13 @@ DeviceDiscoveryNotify (
           __FUNCTION__,
           Status
           ));
-        DisplayStop (Context, OnExitBootServices);
+        DisplayStop (Context);
       }
 
       return Status;
 
     case DeviceDiscoveryDriverBindingStop:
+    case DeviceDiscoveryOnExit:
       Status = gBS->OpenProtocol (
                       ControllerHandle,
                       &gEdkiiNonDiscoverableDeviceProtocolGuid,
@@ -1640,24 +1394,40 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      Status = gBS->UninstallMultipleProtocolInterfaces (
-                      ControllerHandle,
-                      &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                      EdkiiNonDiscoverableDevice,
-                      NULL
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
-        return Status;
-      }
-
       Context = DISPLAY_CONTROLLER_CONTEXT_FROM_EDKII_DEVICE (EdkiiNonDiscoverableDevice);
-      return DisplayStop (Context, OnExitBootServices);
+
+      if (Phase == DeviceDiscoveryDriverBindingStop) {
+        Status = gBS->UninstallMultipleProtocolInterfaces (
+                        ControllerHandle,
+                        &gEdkiiNonDiscoverableDeviceProtocolGuid,
+                        EdkiiNonDiscoverableDevice,
+                        NULL
+                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: failed to uninstall non-discoverable device protocol: %r\r\n",
+            __FUNCTION__,
+            Status
+            ));
+          return Status;
+        }
+
+        return DisplayStop (Context);
+      } else {
+        /* Phase == DeviceDiscoveryOnExit */
+
+        if (DisplayCheckPerformHandoff (Context)) {
+          /* We should perform hand-off, leave the display running. */
+          return EFI_ABORTED;
+        } else {
+          /* No hand-off, reset the display to a known good state. */
+          Status = DisplayBypassSorClocks (Context);
+          ASSERT_EFI_ERROR (Status);
+
+          return DisplayStopOnExitBootServices (Context);
+        }
+      }
 
     default:
       return EFI_SUCCESS;
