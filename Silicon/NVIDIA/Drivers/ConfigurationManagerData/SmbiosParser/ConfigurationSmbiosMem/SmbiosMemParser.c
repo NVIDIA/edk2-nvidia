@@ -140,36 +140,35 @@ InstallSmbiosType17Type19Cm (
         );
     }
 
-    //
-    // For solder-down DRAMs design, now using processor board info
-    // for DRAM part number reporting.
-    //
-    AsciiSPrint (
-      Type4NodeStr,
-      sizeof (Type4NodeStr),
-      "/firmware/smbios/type4@%u",
-      Index
-      );
+    if (AsciiStrLen ((CHAR8 *)DramInfo[Index].PartNumber) != 0) {
+      CmMemDevicesInfo[Index].PartNum = AllocateCopyString ((CHAR8 *)DramInfo[Index].PartNumber);
+    } else {
+      //
+      // For solder-down DRAMs design, now using processor board info
+      // for DRAM part number reporting.
+      //
+      AsciiSPrint (
+        Type4NodeStr,
+        sizeof (Type4NodeStr),
+        "/firmware/smbios/type4@%u",
+        Index
+        );
 
-    NodeOffset = 0;
-    NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
-    if (NodeOffset > 0) {
-      Property = NULL;
-      Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
-      if (Property != NULL) {
-        FruInfo = NULL;
-        FruDesc = (CHAR8 *)Property;
-        FruInfo = FindFruByDescription (Private, FruDesc);
-        if ((FruInfo != NULL) && (FruInfo->BoardPartNum != NULL)) {
-          CmMemDevicesInfo[Index].PartNum = AllocateCopyString (FruInfo->BoardPartNum);
+      NodeOffset = 0;
+      NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
+      if (NodeOffset > 0) {
+        Property = NULL;
+        Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+        if (Property != NULL) {
+          FruInfo = NULL;
+          FruDesc = (CHAR8 *)Property;
+          FruInfo = FindFruByDescription (Private, FruDesc);
+          if ((FruInfo != NULL) && (FruInfo->BoardPartNum != NULL)) {
+            CmMemDevicesInfo[Index].PartNum = AllocateCopyString (FruInfo->BoardPartNum);
+          }
         }
       }
     }
-
-    //
-    // Set the memory module manufacturer as NVIDIA.
-    //
-    CmMemDevicesInfo[Index].ModuleManufacturerId = 0x6B03;
 
     //
     // Set the memory min/max/config voltage.

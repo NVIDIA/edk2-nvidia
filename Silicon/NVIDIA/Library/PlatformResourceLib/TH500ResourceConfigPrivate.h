@@ -171,9 +171,10 @@ typedef struct {
   UINT64    SerialNumber;
   UINT16    TotalWidth;
   UINT16    DataWidth;
-  UINT8     ManufacturerId;
+  UINT16    ManufacturerId;
   UINT8     Rank;
-  UINT8     Reserved[34];
+  UINT8     PartNumber[30];
+  UINT8     Reserved[3];
 } TEGRABL_DRAM_INFO;
 
 #pragma pack()

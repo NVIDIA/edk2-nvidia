@@ -1124,6 +1124,11 @@ TH500GetPlatformResourceInformation (
     TH500DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
     TH500DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
     TH500DramDeviceInfo[Index].SpeedKhz       = 0;
+    CopyMem (
+      TH500DramDeviceInfo[Index].PartNumber,
+      CpuBootloaderParams->DramInfo[Index].PartNumber,
+      sizeof (CpuBootloaderParams->DramInfo[Index].PartNumber)
+      );
   }
 
   for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {

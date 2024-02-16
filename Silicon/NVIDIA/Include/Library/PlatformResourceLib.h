@@ -81,10 +81,11 @@ typedef struct {
   UINT64    SerialNumber;
   UINT16    TotalWidth;
   UINT16    DataWidth;
-  UINT8     ManufacturerId;
+  UINT16    ManufacturerId;
   UINT8     Rank;
   UINT64    Size;
   UINT32    SpeedKhz;
+  UINT8     PartNumber[30];
 } TEGRA_DRAM_DEVICE_INFO;
 
 typedef struct {
