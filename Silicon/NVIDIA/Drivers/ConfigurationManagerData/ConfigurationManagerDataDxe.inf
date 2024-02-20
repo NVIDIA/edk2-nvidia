@@ -25,6 +25,7 @@
 [Sources]
   ConfigurationManagerDataDxe.c
   PlatformASLTablesLib.c
+  ResourceTokenUtility.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

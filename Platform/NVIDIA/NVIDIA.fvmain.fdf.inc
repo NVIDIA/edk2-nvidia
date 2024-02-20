@@ -142,11 +142,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   # ACPI Support
   #
   INF MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
-
-  #
-  # ACPI device from DTB
-  #
-  INF Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
 !endif
 
   #

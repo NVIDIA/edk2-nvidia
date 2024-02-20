@@ -1325,7 +1325,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|EmbeddedPkg/Library/PlatformHasAcpiLib/PlatformHasAcpiLib.inf
 !endif
   }
-  Silicon/NVIDIA/Drivers/AcpiDtbSsdtGenerator/AcpiDtbSsdtGenerator.inf
 !endif
 
   #
@@ -1463,6 +1462,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_SOC_GRACE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SmbiosParser/SmbiosParser.inf
 !endif
+
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/UsbInfo/UsbInfoParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/VirtioMmioInfo/VirtioMmioParser.inf
 
       # Note: SsdtTableGenerator must be last!
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SsdtTableGenerator/SsdtTableGenerator.inf
@@ -2105,6 +2107,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiTpm2LibArm/AcpiTpm2LibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtCpuTopologyLibArm/SsdtCpuTopologyLibArm.inf
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtPcieLibArm/SsdtPcieLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtGenericDeviceLibArm/AcpiSsdtGenericDeviceLibArm.inf
       # AML Fixup
       NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSsdtSerialPortLibArm/SsdtSerialPortLibArm.inf
 !endif
