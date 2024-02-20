@@ -4,7 +4,7 @@
   This driver listen to Redfish ready-to-provision event and install TLS
   cipher suites if it does not exist.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,9 +16,7 @@ EFI_EVENT  mEvent = NULL;
 
 EFI_TLS_CIPHER  mTlsHttpsCipher[] = {
   TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-  TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-  TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
-  TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+  TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
 };
 
 /**
