@@ -234,7 +234,7 @@
 
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
 
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0c280000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0
 
 [PcdsDynamicHii]
 !if $(TARGET) == RELEASE
