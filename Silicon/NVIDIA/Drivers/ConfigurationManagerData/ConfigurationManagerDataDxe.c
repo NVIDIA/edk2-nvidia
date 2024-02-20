@@ -191,6 +191,35 @@ AddParsers (
     ADD_SINGLE_PARSER (IortInfoParser);
   }
 
+  if (!SkipApmt) {
+    ADD_SINGLE_PARSER (ApmtParser);
+  }
+
+  if (!SkipTpm2) {
+    ADD_SINGLE_PARSER (Tpm2Parser);
+  }
+
+  if (!SkipSlit) {
+    GenerateHbmMemPxmDmnMap ();
+    ADD_SINGLE_PARSER (SlitParser);
+  }
+
+  if (!SkipSrat) {
+    ADD_SINGLE_PARSER (SratParser);
+  }
+
+  if (!SkipHmat) {
+    ADD_SINGLE_PARSER (HmatParser);
+  }
+
+  if ((!SkipMpam) && (IsMpamEnabled ())) {
+    ADD_SINGLE_PARSER (MpamParser);
+  }
+
+  if (!SkipSpmi) {
+    ADD_SINGLE_PARSER (SpmiParser);
+  }
+
   // SSDT table generator - note: should not be run until parsers that add to it are complete!
   ADD_SINGLE_PARSER (SsdtTableGeneratorParser);
 

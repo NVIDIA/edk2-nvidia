@@ -55,6 +55,15 @@
   TelemetryInfo/TelemetryInfoParser.c
   ThermalZoneInfo/ThermalZoneInfoParser.c
   TpmInfo/TpmInfoParser.c
+  ConfigurationApmt/ApmtParser.c
+  ConfigurationTpm2/Tpm2Parser.c
+  ConfigurationHbm/HbmParser.c
+  ConfigurationSlit/SlitParser.c
+  ConfigurationSrat/SratParser.c
+  ConfigurationHmat/HmatParser.c
+  ConfigurationMpam/MpamParser.c
+  ConfigurationIpmiDev/IpmiParser.c
+  ConfigurationSpmi/SpmiParser.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -89,6 +98,7 @@
   MpCoreInfoLib
   TpmMeasurementLib
   Tpm2CommandLib
+  Tpm2DeviceLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
@@ -124,6 +134,52 @@
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
   gNVIDIATokenSpaceGuid.PcdTpmEnable
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
+  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLaml
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLasa
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gNVIDIATokenSpaceGuid.PcdLocalDistance
+  gNVIDIATokenSpaceGuid.PcdUnreachableDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalGpuDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteGpuDistance
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
 
 [Guids]
   gNVIDIATokenSpaceGuid
@@ -140,6 +196,7 @@
   gNVIDIAConfigurationManagerTokenProtocolGuid
   gNVIDIARasNsCommPcieDpcDataProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Depex]
   gEfiVariableArchProtocolGuid

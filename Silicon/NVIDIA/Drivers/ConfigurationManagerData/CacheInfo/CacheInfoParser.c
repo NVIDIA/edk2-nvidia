@@ -33,6 +33,8 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
 
+#define GET_CACHE_ID(Level, Type, Core, Cluster, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
+
 /** A helper macro for populating the Cache Type Structure's attributes
 */
 #define CACHE_ATTRIBUTES(                                               \
@@ -45,8 +47,6 @@
     (CacheType << 2) |                                                  \
     (WritePolicy << 4)                                                  \
   )
-
-#define GET_CACHE_ID(Level, Type, Core, Cluster, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
 
 #define UNDEFINED_SOCKET   MAX_UINT32
 #define UNDEFINED_CLUSTER  MAX_UINT32
