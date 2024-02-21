@@ -16,13 +16,16 @@
 
 /** Create a CM_OBJ_DESCRIPTOR.
 
+  NOTE: This behaves different from ARM's CreateCmObjDesc!
+
   @param [in]  ObjectId       CM_OBJECT_ID of the node.
   @param [in]  Count          Number of CmObj stored in the
                               data field.
   @param [in]  Data           Pointer to one or more CmObj objects.
-                              The content of this Data buffer is copied.
+                              The pointer is used AS IS - DATA IS NOT COPIED
   @param [in]  Size           Size of the Data buffer.
-  @param [out] NewCmObjDesc   The created CM_OBJ_DESCRIPTOR.
+  @param [out] NewCmObjDesc   The created CM_OBJ_DESCRIPTOR. The caller is
+                              responsible for freeing this when done.
 
   @retval EFI_SUCCESS             The function completed successfully.
   @retval EFI_INVALID_PARAMETER   Invalid parameter.
@@ -38,12 +41,9 @@ NvCreateCmObjDesc (
   OUT CM_OBJ_DESCRIPTOR  **NewCmObjDesc
   )
 {
-  EFI_STATUS         Status;
   CM_OBJ_DESCRIPTOR  *CmObjDesc;
-  VOID               *DataBuffer;
 
-  CmObjDesc  = NULL;
-  DataBuffer = NULL;
+  CmObjDesc = NULL;
 
   NV_ASSERT_RETURN (Count > 0, return EFI_INVALID_PARAMETER, "%a: Count can't be 0\n", __FUNCTION__);
   NV_ASSERT_RETURN (NewCmObjDesc != NULL, return EFI_INVALID_PARAMETER, "%a: NewCmObjDesc pointer can't be NULL\n", __FUNCTION__);
@@ -51,37 +51,19 @@ NvCreateCmObjDesc (
   CmObjDesc = AllocateZeroPool (sizeof (CM_OBJ_DESCRIPTOR));
   NV_ASSERT_RETURN (CmObjDesc != NULL, return EFI_OUT_OF_RESOURCES, "%a: Unable to allocate space for a CM_OBJ_DESCRIPTOR\n", __FUNCTION__);
 
-  if (Size > 0) {
-    DataBuffer = AllocateCopyPool (Size, Data);
-    NV_ASSERT_RETURN (
-      DataBuffer != NULL,
-      { Status = EFI_OUT_OF_RESOURCES;
-        goto CleanupAndReturn;
-      },
-      "%a: Unable to allocate %u bytes to add the data to the descriptor\n",
-      __FUNCTION__,
-      Size
-      );
-  }
-
   CmObjDesc->ObjectId = ObjectId;
   CmObjDesc->Count    = Count;
-  CmObjDesc->Data     = DataBuffer;
+  CmObjDesc->Data     = Data;
   CmObjDesc->Size     = Size;
 
   *NewCmObjDesc = CmObjDesc;
-  Status        = EFI_SUCCESS;
 
-CleanupAndReturn:
-  if (EFI_ERROR (Status)) {
-    FREE_NON_NULL (CmObjDesc);
-    FREE_NON_NULL (DataBuffer);
-  }
-
-  return Status;
+  return EFI_SUCCESS;
 }
 
 /** Free resources allocated for the CM_OBJ_DESCRIPTOR.
+
+  NOTE: Unlike the ARM version, this doesn't free the Data pointer!
 
   @param [in] CmObjDesc           Pointer to the CM_OBJ_DESCRIPTOR.
 
@@ -95,10 +77,6 @@ NvFreeCmObjDesc (
   )
 {
   NV_ASSERT_RETURN (CmObjDesc != NULL, return EFI_INVALID_PARAMETER, "%a: CmObjDesc can't be NULL\n", __FUNCTION__);
-
-  if (CmObjDesc->Data != NULL) {
-    FreePool (CmObjDesc->Data);
-  }
 
   FreePool (CmObjDesc);
   return EFI_SUCCESS;

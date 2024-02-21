@@ -23,13 +23,16 @@
 
 /** Create a CM_OBJ_DESCRIPTOR.
 
+  NOTE: This behaves different from ARM's CreateCmObjDesc!
+
   @param [in]  ObjectId       CM_OBJECT_ID of the node.
   @param [in]  Count          Number of CmObj stored in the
                               data field.
   @param [in]  Data           Pointer to one or more CmObj objects.
-                              The content of this Data buffer is copied.
+                              The pointer is used AS IS - DATA IS NOT COPIED
   @param [in]  Size           Size of the Data buffer.
-  @param [out] NewCmObjDesc   The created CM_OBJ_DESCRIPTOR.
+  @param [out] NewCmObjDesc   The created CM_OBJ_DESCRIPTOR. The caller is
+                              responsible for freeing this when done.
 
   @retval EFI_SUCCESS             The function completed successfully.
   @retval EFI_INVALID_PARAMETER   Invalid parameter.
@@ -46,6 +49,8 @@ NvCreateCmObjDesc (
   );
 
 /** Free resources allocated for the CM_OBJ_DESCRIPTOR.
+
+  NOTE: Unlike the ARM version, this doesn't free the Data pointer!
 
   @param [in] CmObjDesc           Pointer to the CM_OBJ_DESCRIPTOR.
 
