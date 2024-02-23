@@ -1110,9 +1110,11 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
-  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|$(CONFIG_FIRMWARE_CAPSULE_SIZE)
+  !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
+    gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
+    gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
+    gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule|$(CONFIG_FIRMWARE_CAPSULE_SIZE)
+  !endif
 !endif
 
 !ifdef CONFIG_SOC_XAVIER
