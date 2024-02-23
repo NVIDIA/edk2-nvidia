@@ -56,7 +56,7 @@ ANDROID_BOOT_DATA  ExpectedImgData_Type0_Valid = {
   Valid type0 after signature
  */
 ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type0_Valid = {
-  .Offset      = 0x1000,
+  .Offset      = 0x2000,
   .KernelSize  = 0x42000,
   .RamdiskSize = 0x64000,
   .PageSize    = 0x1000
@@ -100,7 +100,7 @@ ANDROID_BOOT_DATA  ExpectedImgData_Type1_Valid = {
   Valid type1 after signature
  */
 ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type1_Valid = {
-  .Offset      = 0x1000,
+  .Offset      = 0x2000,
   .KernelSize  = 0x42000,
   .RamdiskSize = 0x64000,
   .PageSize    = 0x1000
@@ -144,7 +144,7 @@ ANDROID_BOOT_DATA  ExpectedImgData_Type2_Valid = {
   Valid type2 after signature
  */
 ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type2_Valid = {
-  .Offset      = 0x1000,
+  .Offset      = 0x2000,
   .KernelSize  = 0x49000,
   .RamdiskSize = 0x69000,
   .PageSize    = 0x2000
@@ -184,7 +184,7 @@ ANDROID_BOOT_DATA  ExpectedImgData_Type3_Valid = {
   Valid type3 after signature
  */
 ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type3_Valid = {
-  .Offset      = 0x1000,
+  .Offset      = 0x2000,
   .KernelSize  = 0x81000,
   .RamdiskSize = 0x9A000,
   .PageSize    = 0x1000
@@ -224,7 +224,7 @@ ANDROID_BOOT_DATA  ExpectedImgData_Type4_Valid = {
   Valid type4 after signature
  */
 ANDROID_BOOT_DATA  ExpectedImgData_Sig_Type4_Valid = {
-  .Offset      = 0x1000,
+  .Offset      = 0x2000,
   .KernelSize  = 0x918000,
   .RamdiskSize = 0x11C000,
   .PageSize    = 0x1000
@@ -311,7 +311,7 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Type0_DiskIo_After_Sig = {
   .WithDiskIo     = TRUE,
   .ReadReturn     = EFI_SUCCESS,
   .ReadBuffer     = &Hdr_Type0_Valid,
-  .ExpectedOffset = 0x1000  // Must be value of PcdSignedImageHeaderSize
+  .ExpectedOffset = 0x2000  // Must be value of PcdSignedImageHeaderSize
 };
 
 /**
@@ -322,7 +322,7 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Failure_After_Sig = {
   .WithDiskIo     = TRUE,
   .ReadReturn     = EFI_ACCESS_DENIED,
   .ReadBuffer     = &Hdr_Type0_Valid,
-  .ExpectedOffset = 0x1000  // Must be value of PcdSignedImageHeaderSize
+  .ExpectedOffset = 0x2000  // Must be value of PcdSignedImageHeaderSize
 };
 
 /**
@@ -333,7 +333,7 @@ TEST_PLAN_ANDROID_BOOT_READ  ABR_Invalid_After_Sig = {
   .WithDiskIo     = TRUE,
   .ReadReturn     = EFI_SUCCESS,
   .ReadBuffer     = &Hdr_Invalid_Magic,
-  .ExpectedOffset = 0x1000  // Must be value of PcdSignedImageHeaderSize
+  .ExpectedOffset = 0x2000  // Must be value of PcdSignedImageHeaderSize
 };
 
 /**

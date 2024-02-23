@@ -301,11 +301,13 @@ AndroidBootDxeLoadDtb (
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &CurrentDtb);
   if (EFI_ERROR (Status)) {
-    return;
+    DEBUG ((DEBUG_ERROR, "%a: No DTB currently installed.\r\n", __FUNCTION__));
   }
 
   if (StrCmp (Private->PartitionName, L"A_kernel") == 0) {
     StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"A_kernel-dtb");
+  } else if (StrCmp (Private->PartitionName, L"kernel") == 0) {
+    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"kernel-dtb");
   } else if (StrCmp (Private->PartitionName, L"B_kernel") == 0) {
     StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"B_kernel-dtb");
   } else if (StrCmp (Private->PartitionName, L"recovery") == 0) {
@@ -356,6 +358,7 @@ AndroidBootDxeLoadDtb (
     }
 
     DtbCopy = NULL;
+    // Allowing space for overlays
     DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
     if ((DtbCopy != NULL) &&
         (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
@@ -366,7 +369,9 @@ AndroidBootDxeLoadDtb (
         gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
         DtbCopy = NULL;
       } else {
-        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+        if (CurrentDtb != NULL) {
+          gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+        }
       }
     }
   }
