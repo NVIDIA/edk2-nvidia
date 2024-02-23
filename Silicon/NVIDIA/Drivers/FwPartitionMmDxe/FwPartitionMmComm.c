@@ -2,7 +2,7 @@
 
   MM FW partition protocol communication
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
   Copyright (c) Microsoft Corporation.<BR>
 
@@ -163,7 +163,7 @@ MmSendGetPartitions  (
     return Status;
   }
 
-  ASSERT (GetPartitionsPayload->Count <= MaxCount);
+  NV_ASSERT_RETURN ((GetPartitionsPayload->Count <= MaxCount), return EFI_INVALID_PARAMETER, "%a: bad Count=%u/%u\n", __FUNCTION__, GetPartitionsPayload->Count, MaxCount);
 
   *BrBctEraseBlockSize = GetPartitionsPayload->BrBctEraseBlockSize;
   *Count               = GetPartitionsPayload->Count;

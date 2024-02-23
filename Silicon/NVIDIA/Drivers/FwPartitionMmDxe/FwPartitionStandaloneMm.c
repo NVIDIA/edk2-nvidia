@@ -69,6 +69,11 @@ FwPartitionMmHandler (
         (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0]))
         );
 
+      if (NumImages > ImagesPayload->MaxCount) {
+        FwImageCommHeader->ReturnStatus = EFI_BUFFER_TOO_SMALL;
+        break;
+      }
+
       EraseBlockSize = 0;
       Partition      = FwPartitionGetPrivateArray ();
       for (Index = 0; Index < NumImages; Index++, Partition++) {
