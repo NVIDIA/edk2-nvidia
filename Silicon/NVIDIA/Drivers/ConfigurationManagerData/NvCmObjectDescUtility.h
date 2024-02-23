@@ -257,4 +257,23 @@ NvFindEntry (
   OUT       CM_OBJ_DESCRIPTOR      **DescPtr
   );
 
+/** Conditionally add an ACPI table Generator to the list
+
+  @param [in]  ParserHandle    A handle to the parser instance.
+  @param [in]  NewGenerator    The new Generator to add if not already present.
+
+  @retval EFI_SUCCESS             The table was added, or an existing version
+                                  was found to be already present.
+  @retval EFI_ABORTED             An error occurred.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           Not found.
+  @retval EFI_UNSUPPORTED         Unsupported.
+**/
+EFI_STATUS
+EFIAPI
+NvAddAcpiTableGenerator (
+  IN  CONST HW_INFO_PARSER_HANDLE       ParserHandle,
+  IN        CM_STD_OBJ_ACPI_TABLE_INFO  *NewGenerator
+  );
+
 #endif // NV_CM_OBJECT_DESC_UTILITY_H_

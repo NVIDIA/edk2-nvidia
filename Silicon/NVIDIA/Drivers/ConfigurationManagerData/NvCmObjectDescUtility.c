@@ -490,3 +490,137 @@ NvFindEntry (
 
   return Status;
 }
+
+/** Conditionally add an ACPI table Generator to the list
+
+  @param [in]  ParserHandle    A handle to the parser instance.
+  @param [in]  NewGenerator    The new Generator to add if not already present.
+
+  @retval EFI_SUCCESS             The table was added, or an existing version
+                                  was found to be already present.
+  @retval EFI_ABORTED             An error occurred.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           Not found.
+  @retval EFI_UNSUPPORTED         Unsupported.
+**/
+EFI_STATUS
+EFIAPI
+NvAddAcpiTableGenerator (
+  IN  CONST HW_INFO_PARSER_HANDLE       ParserHandle,
+  IN        CM_STD_OBJ_ACPI_TABLE_INFO  *NewGenerator
+  )
+{
+  EFI_STATUS                  Status;
+  CM_OBJ_DESCRIPTOR           *Desc;
+  CM_OBJ_DESCRIPTOR           NewGeneratorDesc;
+  UINT32                      GeneratorIndex;
+  CM_STD_OBJ_ACPI_TABLE_INFO  *Generator;
+
+  if ((ParserHandle == NULL) || (NewGenerator == NULL)) {
+    ASSERT (0);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Desc   = NULL;
+  Status = NvFindEntry (ParserHandle, CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList), CM_NULL_TOKEN, &Desc);
+  if (EFI_ERROR (Status)) {
+    if (Status == EFI_NOT_FOUND) {
+      // Start the list with this entry
+      Status = NvAddSingleCmObj (ParserHandle, CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList), NewGenerator, sizeof (*NewGenerator), NULL);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to create the AcpiTableList\n", __FUNCTION__, Status));
+      }
+
+      return Status;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the AcpiTableList\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  NV_ASSERT_RETURN (Desc != NULL, return EFI_DEVICE_ERROR, "%a: Code bug getting Desc for AcpiTableList\n", __FUNCTION__);
+
+  // Search for the NewGenerator in the list, and check if we need to add it or not
+  for (GeneratorIndex = 0; GeneratorIndex < Desc->Count; GeneratorIndex++) {
+    Generator = &((CM_STD_OBJ_ACPI_TABLE_INFO *)Desc->Data)[GeneratorIndex];
+    if (Generator->TableGeneratorId != NewGenerator->TableGeneratorId) {
+      continue;
+    }
+
+    if (NewGenerator->AcpiTableData != Generator->AcpiTableData) {
+      // Mismatched table data means we need both
+      break;
+    }
+
+    // Other mismatched data should generate a warning and return success
+    if (Generator->AcpiTableSignature != NewGenerator->AcpiTableSignature) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Existing Generator has a signature of %c%c%c%c but NewGenerator has a signature of %c%c%c%c\n",
+        __FUNCTION__,
+        ((CHAR8 *)&Generator->AcpiTableSignature)[0],
+        ((CHAR8 *)&Generator->AcpiTableSignature)[1],
+        ((CHAR8 *)&Generator->AcpiTableSignature)[2],
+        ((CHAR8 *)&Generator->AcpiTableSignature)[3],
+        ((CHAR8 *)&NewGenerator->AcpiTableSignature)[0],
+        ((CHAR8 *)&NewGenerator->AcpiTableSignature)[1],
+        ((CHAR8 *)&NewGenerator->AcpiTableSignature)[2],
+        ((CHAR8 *)&NewGenerator->AcpiTableSignature)[3]
+        ));
+    }
+
+    if (Generator->AcpiTableRevision != NewGenerator->AcpiTableRevision) {
+      DEBUG ((DEBUG_ERROR, "%a: Existing Generator has an AcpiTableRevision of 0x%x, but NewGenerator has 0x%x\n", __FUNCTION__, Generator->AcpiTableRevision, NewGenerator->AcpiTableRevision));
+    }
+
+    if (Generator->MinorRevision != NewGenerator->MinorRevision) {
+      DEBUG ((DEBUG_ERROR, "%a: Existing Generator has a MinorRevision of 0x%x, but NewGenerator has 0x%x\n", __FUNCTION__, Generator->MinorRevision, NewGenerator->MinorRevision));
+    }
+
+    if (Generator->OemTableId != NewGenerator->OemTableId) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Existing Generator has an OemTableId of %c%c%c%c%c%c%c%c, ",
+        __FUNCTION__,
+        ((CHAR8 *)&Generator->OemTableId)[0],
+        ((CHAR8 *)&Generator->OemTableId)[1],
+        ((CHAR8 *)&Generator->OemTableId)[2],
+        ((CHAR8 *)&Generator->OemTableId)[3],
+        ((CHAR8 *)&Generator->OemTableId)[4],
+        ((CHAR8 *)&Generator->OemTableId)[5],
+        ((CHAR8 *)&Generator->OemTableId)[6],
+        ((CHAR8 *)&Generator->OemTableId)[7]
+        ));
+      DEBUG ((
+        DEBUG_ERROR,
+        "but NewGenerator has %c%c%c%c%c%c%c%c\n",
+        ((CHAR8 *)&NewGenerator->OemTableId)[0],
+        ((CHAR8 *)&NewGenerator->OemTableId)[1],
+        ((CHAR8 *)&NewGenerator->OemTableId)[2],
+        ((CHAR8 *)&NewGenerator->OemTableId)[3],
+        ((CHAR8 *)&NewGenerator->OemTableId)[4],
+        ((CHAR8 *)&NewGenerator->OemTableId)[5],
+        ((CHAR8 *)&NewGenerator->OemTableId)[6],
+        ((CHAR8 *)&NewGenerator->OemTableId)[7]
+        ));
+    }
+
+    if (Generator->OemRevision != NewGenerator->OemRevision) {
+      DEBUG ((DEBUG_ERROR, "%a: Existing Generator has an OemRevision of 0x%x, but NewGenerator has 0x%x\n", __FUNCTION__, Generator->OemRevision, NewGenerator->OemRevision));
+    }
+
+    return EFI_SUCCESS;
+  }
+
+  // Extend the list with the new Generator
+  NewGeneratorDesc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  NewGeneratorDesc.Data     = NewGenerator;
+  NewGeneratorDesc.Size     = sizeof (*NewGenerator);
+  NewGeneratorDesc.Count    = 1;
+  Status                    = NvExtendCmObj (ParserHandle, &NewGeneratorDesc, CM_NULL_TOKEN, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add a new Generator with ID 0x%x to the AcpiTableList\n", __FUNCTION__, Status, NewGenerator->TableGeneratorId));
+  }
+
+  return Status;
+}

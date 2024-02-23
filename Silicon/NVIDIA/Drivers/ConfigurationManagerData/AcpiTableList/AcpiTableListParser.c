@@ -35,9 +35,9 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T194[] = {
   SSDT_I2CTEMP_OffsetTable
 };
 
-// CmAcpiTableList_T194_T234 is shared between T194 and T234
+// CmAcpiTableList is shared between T194 and T234
 STATIC
-CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList_T194_T234[] = {
+CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
   // FADT Table
   {
     EFI_ACPI_6_4_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
@@ -141,7 +141,6 @@ AcpiTableListParser (
   )
 {
   EFI_STATUS                   Status;
-  CM_OBJ_DESCRIPTOR            Desc;
   UINTN                        ChipID;
   UINTN                        Index;
   EFI_ACPI_DESCRIPTION_HEADER  **AcpiTableArray;
@@ -162,33 +161,26 @@ AcpiTableListParser (
 
   ChipID = TegraGetChipID ();
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
+  // Locate the tables based on ChipID
+  switch (ChipID) {
+    case T194_CHIP_ID:
+      DsdtTable        = dsdt_t194_aml_code;
+      AcpiTableArray   = AcpiTableArray_T194;
+      OffsetTableArray = OffsetTableArray_T194;
+      ArraySize        = ARRAY_SIZE (AcpiTableArray_T194);
+      break;
 
-  // add Tables to Desc
-  if (ChipID == T194_CHIP_ID) {
-    DsdtTable = dsdt_t194_aml_code;
+    case T234_CHIP_ID:
+      DsdtTable        = dsdt_t234_aml_code;
+      AcpiTableArray   = AcpiTableArray_T234;
+      OffsetTableArray = OffsetTableArray_T234;
+      ArraySize        = ARRAY_SIZE (AcpiTableArray_T234);
+      break;
 
-    AcpiTableArray   = AcpiTableArray_T194;
-    OffsetTableArray = OffsetTableArray_T194;
-    ArraySize        = ARRAY_SIZE (AcpiTableArray_T194);
-
-    Desc.Size  = sizeof (CmAcpiTableList_T194_T234);
-    Desc.Count = sizeof (CmAcpiTableList_T194_T234) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-    Desc.Data  = &CmAcpiTableList_T194_T234;
-  } else if (ChipID == T234_CHIP_ID) {
-    DsdtTable = dsdt_t234_aml_code;
-
-    AcpiTableArray   = AcpiTableArray_T234;
-    OffsetTableArray = OffsetTableArray_T234;
-    ArraySize        = ARRAY_SIZE (AcpiTableArray_T234);
-
-    Desc.Size  = sizeof (CmAcpiTableList_T194_T234);
-    Desc.Count = sizeof (CmAcpiTableList_T194_T234) / sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-    Desc.Data  = &CmAcpiTableList_T194_T234;
-  } else {
-    // Not currently supported
-    Status = EFI_NOT_FOUND;
-    goto CleanupAndReturn;
+    default:
+      // Not currently supported
+      Status = EFI_NOT_FOUND;
+      goto CleanupAndReturn;
   }
 
   Status = PatchProtocol->RegisterAmlTables (
@@ -201,22 +193,21 @@ AcpiTableListParser (
     goto CleanupAndReturn;
   }
 
-  // Table fixups
-  for (Index = 0; Index < Desc.Count; Index++) {
-    if (((CM_STD_OBJ_ACPI_TABLE_INFO *)Desc.Data)[Index].AcpiTableSignature != EFI_ACPI_6_4_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE) {
-      // Fix the OemTableId on all entries except SPCR
-      ((CM_STD_OBJ_ACPI_TABLE_INFO *)Desc.Data)[Index].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
+  // Add each table to CM, and fix up the DSDT pointer
+  for (Index = 0; Index < ARRAY_SIZE (CmAcpiTableList); Index++) {
+    // Fix the OemTableId on all entries
+    CmAcpiTableList[Index].OemTableId =  PcdGet64 (PcdAcpiDefaultOemTableId);
 
-      // Fill in the DSDT table pointer in DSDT entry
-      if (((CM_STD_OBJ_ACPI_TABLE_INFO *)Desc.Data)[Index].AcpiTableSignature == EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
-        ((CM_STD_OBJ_ACPI_TABLE_INFO *)Desc.Data)[Index].AcpiTableData = DsdtTable;
-      }
+    // Fill in the DSDT table pointer in DSDT entry
+    if (CmAcpiTableList[Index].AcpiTableSignature == EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
+      CmAcpiTableList[Index].AcpiTableData = DsdtTable;
     }
-  }
 
-  Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
+    Status = NvAddAcpiTableGenerator (ParserHandle, &CmAcpiTableList[Index]);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add parser at index %lu\n", __FUNCTION__, Status, Index));
+      goto CleanupAndReturn;
+    }
   }
 
 CleanupAndReturn:
