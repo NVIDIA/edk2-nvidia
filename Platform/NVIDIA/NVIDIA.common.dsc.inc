@@ -1501,6 +1501,7 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SmscLanInfo/SmscLanInfoParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/UsbInfo/UsbInfoParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/VirtioMmioInfo/VirtioMmioParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/NvdlaInfo/NvdlaInfoParser.inf
 
       # Note: SsdtTableGenerator must be last!
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SsdtTableGenerator/SsdtTableGenerator.inf

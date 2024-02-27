@@ -1730,6 +1730,7 @@ STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjRootComplex,    "pci-host-ecam-generic", SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjNamedComponent, "nvidia,tegra234-nvdla", SetupIortNodeForNComp,    "nvdla0",        "\\_SB.DLA0",  1 },
+  { EArmObjNamedComponent, "nvidia,tegra264-nvdla", SetupIortNodeForNComp,    NULL,            "\\_SB.DLA0",  0 },
   { EArmObjNamedComponent, "nvidia,tegra186-qspi",  SetupIortNodeForNComp,    "socket0_qspi1", "\\_SB_.QSP1", 0 },
   { EArmObjNamedComponent, "nvidia,th500-soc-hwpm", SetupIortNodeForNComp,    NULL,            "\\_SB_.HWP0", 0 },
   { EArmObjNamedComponent, "nvidia,th500-psc",      SetupIortNodeForNComp,    NULL,            "\\_SB_.PSC0", 0 },
