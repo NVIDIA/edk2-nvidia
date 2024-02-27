@@ -2,7 +2,7 @@
   The StMM Library provides functions to get EFI Variables. This is meant for use from
   StMM Drivers and Libraries.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -268,7 +268,6 @@ MmGetVariable3 (
     *Attr = 0;
   }
 
-  DEBUG ((DEBUG_ERROR, "%a:%d\n", __FUNCTION__, __LINE__));
   Status = mSmmVar->SmmGetVariable (
                       (CHAR16 *)Name,
                       (EFI_GUID *)Guid,
@@ -280,8 +279,6 @@ MmGetVariable3 (
     return Status;
   }
 
-  DEBUG ((DEBUG_ERROR, "%a:%d\n", __FUNCTION__, __LINE__));
-
   //
   // Allocate buffer to get the variable.
   //
@@ -291,7 +288,6 @@ MmGetVariable3 (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  DEBUG ((DEBUG_ERROR, "%a:%d\n", __FUNCTION__, __LINE__));
   //
   // Get the variable data.
   //
@@ -366,7 +362,6 @@ MmGetVariable (
   // Try to get the variable size.
   //
   BufferSize = 0;
-  DEBUG ((DEBUG_ERROR, "%a:%d\n", __FUNCTION__, __LINE__));
 
   Status = mSmmVar->SmmGetVariable (
                       (CHAR16 *)Name,
