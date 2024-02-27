@@ -348,14 +348,17 @@ STATIC
 BOOLEAN
 EFIAPI
 PhandleIsNextLevelCache (
-  IN VOID   *Dtb,
-  IN INT32  CpusOffset,
-  UINT32    Phandle
+  IN VOID    *Dtb,
+  IN INT32   CpusOffset,
+  IN UINT32  Phandle,
+  IN UINTN   Level
   )
 {
   INT32       NodeOffset;
   CONST VOID  *Property;
-  UINT32      CachePhandle;
+  UINT32      L2CachePhandle;
+  UINT32      L3CachePhandle;
+  INT32       L2NodeOffset;
 
   fdt_for_each_subnode (NodeOffset, Dtb, CpusOffset) {
     Property = fdt_getprop (Dtb, NodeOffset, "device_type", NULL);
@@ -363,11 +366,32 @@ PhandleIsNextLevelCache (
       continue;
     }
 
+    // L2
     Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
     if (Property != NULL) {
-      CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
-      DEBUG ((DEBUG_VERBOSE, "%a: checking phandle 0x%x for 0x%x\r\n", __FUNCTION__, CachePhandle, Phandle));
-      if (CachePhandle == Phandle) {
+      L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+      DEBUG ((DEBUG_VERBOSE, "%a: checking phandle 0x%x for 0x%x\r\n", __FUNCTION__, L2CachePhandle, Phandle));
+      if (L2CachePhandle == Phandle) {
+        return TRUE;
+      }
+    }
+
+    if (Level < 3) {
+      continue;
+    }
+
+    // L3
+    L2NodeOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
+    if (L2NodeOffset < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: no l2 at phandle=0x%x\n", __FUNCTION__, L2CachePhandle));
+      continue;
+    }
+
+    Property = fdt_getprop (Dtb, L2NodeOffset, "next-level-cache", NULL);
+    if (Property != NULL) {
+      L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+      DEBUG ((DEBUG_VERBOSE, "%a: checking l3 phandle 0x%x for 0x%x\r\n", __FUNCTION__, L3CachePhandle, Phandle));
+      if (L3CachePhandle == Phandle) {
         return TRUE;
       }
     }
@@ -402,7 +426,8 @@ UpdateCpuFloorsweepingConfig (
   INT32        TmpOffset;
   CHAR8        CoreNodeStr[] = "coreXX";
   EFI_STATUS   Status;
-  UINT32       CachePhandle;
+  UINT32       L2CachePhandle;
+  UINT32       L3CachePhandle;
 
   AddressCells = fdt_address_cells (Dtb, CpusOffset);
 
@@ -473,7 +498,7 @@ UpdateCpuFloorsweepingConfig (
     } else {
       Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
       if (Property != NULL) {
-        CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+        L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
       }
 
       TmpOffset  = NodeOffset;
@@ -487,24 +512,52 @@ UpdateCpuFloorsweepingConfig (
 
       DEBUG ((DEBUG_INFO, "Deleted cpu-%u node in FDT\r\n", Cpu));
 
-      if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, CachePhandle)) {
-        TmpOffset = fdt_node_offset_by_phandle (Dtb, CachePhandle);
+      if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
+        TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
+
+        Property = fdt_getprop (Dtb, TmpOffset, "next-level-cache", NULL);
+        if (Property != NULL) {
+          L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+        }
+
         // special case if cache node to delete is node after deleted cpu node
         if (TmpOffset == NodeOffset) {
           NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, CachePhandle, Cpu));
+          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
         }
 
         if (TmpOffset >= 0) {
           FdtErr = fdt_nop_node (Dtb, TmpOffset);
           if (FdtErr < 0) {
-            DEBUG ((DEBUG_ERROR, "Failed to delete l2 cache node 0x%x: %a\r\n", CachePhandle, fdt_strerror (FdtErr)));
+            DEBUG ((DEBUG_ERROR, "Failed to delete l2 cache node 0x%x: %a\r\n", L2CachePhandle, fdt_strerror (FdtErr)));
             return EFI_DEVICE_ERROR;
           }
 
-          DEBUG ((DEBUG_INFO, "Deleted l2 cache node 0x%x\r\n", CachePhandle));
+          DEBUG ((DEBUG_INFO, "Deleted l2 cache node 0x%x\r\n", L2CachePhandle));
+
+          if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L3CachePhandle, 3)) {
+            TmpOffset = fdt_node_offset_by_phandle (Dtb, L3CachePhandle);
+
+            // special case if l3 node to delete is node after deleted l2 node
+            if (TmpOffset == NodeOffset) {
+              NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+              DEBUG ((DEBUG_INFO, "%a: l3 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L3CachePhandle, Cpu));
+            }
+
+            if (TmpOffset >= 0) {
+              FdtErr = fdt_nop_node (Dtb, TmpOffset);
+              if (FdtErr < 0) {
+                DEBUG ((DEBUG_ERROR, "Failed to delete l3 cache node 0x%x: %a\r\n", L3CachePhandle, fdt_strerror (FdtErr)));
+                return EFI_DEVICE_ERROR;
+              }
+
+              DEBUG ((DEBUG_INFO, "Deleted l3 cache node 0x%x\r\n", L3CachePhandle));
+            } else {
+              DEBUG ((DEBUG_ERROR, "%a: Missing l3 cache phandle=0x%x\r\n", __FUNCTION__, L3CachePhandle));
+            }
+          }
         } else {
-          DEBUG ((DEBUG_ERROR, "%a: Missing cache phandle=0x%x\r\n", __FUNCTION__, CachePhandle));
+          DEBUG ((DEBUG_ERROR, "%a: Missing l2 cache phandle=0x%x\r\n", __FUNCTION__, L2CachePhandle));
         }
       }
     }
