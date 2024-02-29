@@ -64,7 +64,7 @@
   gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
-  gEfiEndOfDxeEventGroupGuid
+  gNVIDIAConnectCompleteEventGuid
   gNVIDIAPublicVariableGuid
 
 [Pcd]

@@ -64,6 +64,27 @@ STATIC INITRD_DEVICE_PATH  mInitrdDevicePath = {
   }
 };
 
+STATIC CHAR16  *pKernelPartitionDtbMapping[][2] = {
+  {
+    L"A_kernel", L"A_kernel-dtb"
+  },
+  {
+    L"B_kernel", L"B_kernel-dtb"
+  },
+  {
+    L"kernel", L"kernel-dtb"
+  }
+};
+
+STATIC CHAR16  *pRecoveryKernelPartitionDtbMapping[][2] = {
+  {
+    L"recovery", L"recovery-dtb"
+  },
+  {
+    L"SOS", L"kernel-dtb"
+  }
+};
+
 /**
   Check if loadfile2 protocol is already installed. If yes,
   uninstall it.
@@ -191,6 +212,32 @@ Exit:
 }
 
 /**
+  Uninstall all protocols for the boot option
+
+  @param[in]   Private       Private driver data for android kernel instance
+                             being loaded
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootUninstallProtocols (
+  IN ANDROID_BOOT_PRIVATE_DATA  *Private
+  )
+{
+  gBS->UninstallMultipleProtocolInterfaces (
+         Private->AndroidBootHandle,
+         &gEfiLoadFileProtocolGuid,
+         &Private->LoadFile,
+         &gNVIDIALoadfileKernelArgsGuid,
+         Private->KernelArgs,
+         &gEfiDevicePathProtocolGuid,
+         Private->AndroidBootDevicePath,
+         NULL
+         );
+}
+
+/**
   Check if loadfile is installed for correct config. If not,
   uninstall it.
 
@@ -201,24 +248,24 @@ Exit:
 STATIC
 VOID
 EFIAPI
-AndroidBootOnEndOfDxeHandler (
+AndroidBootOnConnectCompleteHandler (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
 {
   EFI_STATUS                 Status;
   ANDROID_BOOT_PRIVATE_DATA  *Private;
-  BOOLEAN                    RecoveryMode;
   EFI_HANDLE                 MscHandle;
   MiscCmdType                MiscCmd;
   UINTN                      DataSize;
   UINT32                     BootMode;
   CHAR16                     PartitionName[MAX_PARTITION_NAME_LEN];
+  UINTN                      Count;
+  BOOLEAN                    RecoveryPartitonFound;
 
   gBS->CloseEvent (Event);
 
-  Private      = (ANDROID_BOOT_PRIVATE_DATA *)Context;
-  RecoveryMode = FALSE;
+  Private = (ANDROID_BOOT_PRIVATE_DATA *)Context;
 
   // Check recovery mode
   if (PcdGetBool (PcdBootAndroidImage)) {
@@ -232,36 +279,40 @@ AndroidBootOnEndOfDxeHandler (
     }
 
     if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
-      RecoveryMode = TRUE;
+      Private->RecoveryMode = TRUE;
     }
   } else {
     DataSize = sizeof (BootMode);
     Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
     if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
-      RecoveryMode = TRUE;
+      Private->RecoveryMode = TRUE;
     }
   }
 
-  if (RecoveryMode) {
-    StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, L"recovery");
+  if (Private->RecoveryMode) {
+    RecoveryPartitonFound = FALSE;
+    for (Count = 0;
+         Count < sizeof (pRecoveryKernelPartitionDtbMapping) / sizeof (pRecoveryKernelPartitionDtbMapping[0]);
+         Count++)
+    {
+      if (StrCmp (Private->PartitionName, pRecoveryKernelPartitionDtbMapping[Count][0]) == 0) {
+        RecoveryPartitonFound = TRUE;
+        break;
+      }
+    }
+
+    if (!RecoveryPartitonFound) {
+      AndroidBootUninstallProtocols (Private);
+    }
   } else {
     Status = GetActivePartitionName (L"kernel", PartitionName);
     if (EFI_ERROR (Status)) {
       return;
     }
-  }
 
-  if (StrCmp (Private->PartitionName, PartitionName) != 0) {
-    gBS->UninstallMultipleProtocolInterfaces (
-           Private->AndroidBootHandle,
-           &gEfiLoadFileProtocolGuid,
-           &Private->LoadFile,
-           &gNVIDIALoadfileKernelArgsGuid,
-           Private->KernelArgs,
-           &gEfiDevicePathProtocolGuid,
-           Private->AndroidBootDevicePath,
-           NULL
-           );
+    if (StrCmp (Private->PartitionName, PartitionName) != 0) {
+      AndroidBootUninstallProtocols (Private);
+    }
   }
 }
 
@@ -289,6 +340,8 @@ AndroidBootDxeLoadDtb (
   VOID                   *KernelDtb = NULL;
   VOID                   *Dtb;
   VOID                   *DtbCopy;
+  UINTN                  Count;
+  BOOLEAN                KernelDtbMappingFound;
 
   if (Private == NULL) {
     return;
@@ -304,16 +357,35 @@ AndroidBootDxeLoadDtb (
     DEBUG ((DEBUG_ERROR, "%a: No DTB currently installed.\r\n", __FUNCTION__));
   }
 
-  if (StrCmp (Private->PartitionName, L"A_kernel") == 0) {
-    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"A_kernel-dtb");
-  } else if (StrCmp (Private->PartitionName, L"kernel") == 0) {
-    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"kernel-dtb");
-  } else if (StrCmp (Private->PartitionName, L"B_kernel") == 0) {
-    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"B_kernel-dtb");
-  } else if (StrCmp (Private->PartitionName, L"recovery") == 0) {
-    StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, L"recovery-dtb");
+  KernelDtbMappingFound = FALSE;
+
+  if (!Private->RecoveryMode) {
+    for (Count = 0;
+         Count < sizeof (pKernelPartitionDtbMapping) / sizeof (pKernelPartitionDtbMapping[0]);
+         Count++)
+    {
+      if (StrCmp (Private->PartitionName, pKernelPartitionDtbMapping[Count][0]) == 0) {
+        StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, pKernelPartitionDtbMapping[Count][1]);
+        KernelDtbMappingFound = TRUE;
+        break;
+      }
+    }
   } else {
-    ASSERT (FALSE);
+    for (Count = 0;
+         Count < sizeof (pRecoveryKernelPartitionDtbMapping) / sizeof (pRecoveryKernelPartitionDtbMapping[0]);
+         Count++)
+    {
+      if (StrCmp (Private->PartitionName, pRecoveryKernelPartitionDtbMapping[Count][0]) == 0) {
+        StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, pRecoveryKernelPartitionDtbMapping[Count][1]);
+        KernelDtbMappingFound = TRUE;
+        break;
+      }
+    }
+  }
+
+  if (!KernelDtbMappingFound) {
+    DEBUG ((DEBUG_ERROR, "%a: Using pre-installed DTB if any.\r\n", __FUNCTION__));
+    return;
   }
 
   DtbPartitionHandle = AndroidBootGetSiblingPartitionHandle (
@@ -1754,10 +1826,10 @@ AndroidBootDriverBindingStart (
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  AndroidBootOnEndOfDxeHandler,
+                  AndroidBootOnConnectCompleteHandler,
                   Private,
-                  &gEfiEndOfDxeEventGroupGuid,
-                  &Private->EndOfDxeEvent
+                  &gNVIDIAConnectCompleteEventGuid,
+                  &Private->ConnectCompleteEvent
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to create end of dxe event callback: %r\n", __FUNCTION__, Status));
@@ -1831,8 +1903,8 @@ Exit:
                );
       }
 
-      if (Private->EndOfDxeEvent != NULL) {
-        gBS->CloseEvent (Private->EndOfDxeEvent);
+      if (Private->ConnectCompleteEvent != NULL) {
+        gBS->CloseEvent (Private->ConnectCompleteEvent);
       }
 
       FreePool (Private);

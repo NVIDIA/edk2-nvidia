@@ -123,7 +123,7 @@ typedef struct {
   EFI_DISK_IO_PROTOCOL           *DiskIo;
   EFI_DEVICE_PATH_PROTOCOL       *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL       *AndroidBootDevicePath;
-  EFI_EVENT                      EndOfDxeEvent;
+  EFI_EVENT                      ConnectCompleteEvent;
   CHAR16                         *KernelArgs;
 
   UINT32                         Id;
@@ -132,6 +132,8 @@ typedef struct {
   EFI_HANDLE                     ControllerHandle;
   EFI_HANDLE                     DriverBindingHandle;
   EFI_HANDLE                     AndroidBootHandle;
+
+  BOOLEAN                        RecoveryMode;
 } ANDROID_BOOT_PRIVATE_DATA;
 
 //

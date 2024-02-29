@@ -1810,6 +1810,11 @@ PlatformBootManagerBeforeConsole (
       EfiBootManagerConnectAll ();
 
       //
+      // Signal ConnectComplete Event
+      //
+      EfiEventGroupSignal (&gNVIDIAConnectCompleteEventGuid);
+
+      //
       // Enumerate all possible boot options.
       //
       EfiBootManagerRefreshAllBootOption ();
@@ -1851,6 +1856,11 @@ PlatformBootManagerBeforeConsole (
     // Connect the rest of the devices.
     //
     EfiBootManagerConnectAll ();
+
+    //
+    // Signal ConnectComplete Event
+    //
+    EfiEventGroupSignal (&gNVIDIAConnectCompleteEventGuid);
 
     PlatformRegisterFvBootOption (
       FixedPcdGetPtr (PcdSingleBootApplicationGuid),
