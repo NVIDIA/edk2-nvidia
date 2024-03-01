@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -764,6 +764,7 @@ UpdateThermalZoneInfoAndInstallSsdt (
   UINTN                        CurrentDevice;
   UINTN                        FirstAvailCorePerSkt;
   UINTN                        CurrentCpu;
+  BOOLEAN                      IsMultiSocketSystem;
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -829,6 +830,14 @@ UpdateThermalZoneInfoAndInstallSsdt (
 
   if (FastSampPeriod == MAX_UINT32) {
     FastSampPeriod = TH500_THERMAL_ZONE_TFP;
+  }
+
+  IsMultiSocketSystem = FALSE;
+  for (SocketId = 1; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
+    if (IsSocketEnabled (SocketId)) {
+      IsMultiSocketSystem = TRUE;
+      break;
+    }
   }
 
   for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
@@ -1014,7 +1023,12 @@ UpdateThermalZoneInfoAndInstallSsdt (
               continue;
             }
 
-            AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCpu);
+            if (IsMultiSocketSystem) {
+              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C000.C%03x.C%03x", SocketId, CurrentCpu);
+            } else {
+              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCpu);
+            }
+
             Status = AmlAddNameStringToNamedPackage (ThermalZoneString, Node);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "Failed to add %a to _PSL node - %r\r\n", ThermalZoneString, Status));
