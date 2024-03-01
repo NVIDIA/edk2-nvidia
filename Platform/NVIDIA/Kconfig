@@ -598,6 +598,11 @@ if FIRMWARE_MANAGEMENT
     bool "eROT access"
     help
       Update via eROT
+
+  config FIRMWARE_MANAGEMENT_BLOB
+    bool "Blob access"
+    help
+      Blob update
   endchoice
 
   config FIRMWARE_MANAGEMENT_FMP_ESRT_GUID

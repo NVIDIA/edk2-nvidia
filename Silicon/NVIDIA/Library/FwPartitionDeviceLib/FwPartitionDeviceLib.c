@@ -41,6 +41,8 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
   L"BCT",
   L"BCT-boot-chain_backup",
   L"mb2-applet",
+  L"NorFlash-Blob",
+  L"MM-NorFlash",
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
@@ -440,6 +442,59 @@ FwPartitionWriteToUpdateInactivePartitions (
   }
 
   DEBUG ((DEBUG_INFO, "%a: Finished update\n", __FUNCTION__));
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+FwDeviceAddAsPartition (
+  IN  CONST CHAR16              *Name,
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes
+  )
+{
+  FW_PARTITION_PRIVATE_DATA  *Private;
+  FW_PARTITION_INFO          *PartitionInfo;
+
+  if (mNumFwPartitions >= mMaxFwPartitions) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Can't add partition %s, reached MaxFwPartitions=%u\n",
+      __FUNCTION__,
+      Name,
+      mMaxFwPartitions
+      ));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Private       = &mPrivate[mNumFwPartitions];
+  PartitionInfo = &Private->PartitionInfo;
+
+  Private->Signature = FW_PARTITION_PRIVATE_DATA_SIGNATURE;
+
+  StrnCpyS (PartitionInfo->Name, FW_PARTITION_NAME_LENGTH, Name, StrLen (Name));
+  PartitionInfo->Offset            = Offset;
+  PartitionInfo->Bytes             = Bytes;
+  PartitionInfo->IsActivePartition = FwPartitionIsActive (Name);
+
+  Private->DeviceInfo = DeviceInfo;
+
+  Private->Protocol.PartitionName = Private->PartitionInfo.Name;
+  Private->Protocol.Read          = FwPartitionRead;
+  Private->Protocol.Write         = FwPartitionWrite;
+  Private->Protocol.GetAttributes = FwPartitionGetAttributes;
+
+  mNumFwPartitions++;
+
+  DEBUG ((
+    DEBUG_INFO,
+    "Added partition %s, Offset=%llu, Bytes=%u\n",
+    PartitionInfo->Name,
+    PartitionInfo->Offset,
+    PartitionInfo->Bytes
+    ));
 
   return EFI_SUCCESS;
 }

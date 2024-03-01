@@ -25,8 +25,9 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Protocol/NorFlash.h>
+#include <Library/FwPartitionDeviceLib.h>
 
-#define MAX_NOR_FLASH_DEVICES                  1
+#define MAX_NOR_FLASH_DEVICES                  2
 #define FW_PARTITION_NOR_FLASH_INFO_SIGNATURE  SIGNATURE_32 ('F','W','N','S')
 
 // private device data structure
@@ -41,6 +42,7 @@ typedef struct {
 
 STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo   = NULL;
 STATIC UINTN                        mNumDevices      = 0;
+STATIC UINTN                        mNumDevicesBlob  = 0;
 STATIC UINT32                       mActiveBootChain = 0;
 
 /**
@@ -368,12 +370,12 @@ FPNorFlashInitDevices (
       break;
     }
 
-    NorFlashInfo                     = &mNorFlashInfo[mNumDevices];
-    NorFlashInfo->Signature          = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes             = Attributes.MemoryDensity;
-    mNorFlashInfo->Attributes        = Attributes;
-    mNorFlashInfo->NorFlash          = NorFlash;
-    mNorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
+    NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
+    NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
+    NorFlashInfo->Bytes             = Attributes.MemoryDensity;
+    NorFlashInfo->Attributes        = Attributes;
+    NorFlashInfo->NorFlash          = NorFlash;
+    NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = L"MM-NorFlash";
@@ -382,6 +384,112 @@ FPNorFlashInitDevices (
     DeviceInfo->BlockSize   = Attributes.BlockSize;
 
     mNumDevices++;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Find NorFlash devices and initialize private data structures.
+
+  @retval EFI_SUCCESS           Operation successful
+  @retval others                Error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FPNorFlashInitDevicesBlob (
+  VOID
+  )
+{
+  EFI_STATUS            Status;
+  UINTN                 HandleBufferSize;
+  EFI_HANDLE            HandleBuffer[MAX_NOR_FLASH_DEVICES];
+  UINTN                 NumHandles;
+  UINTN                 Index;
+  NOR_FLASH_ATTRIBUTES  Attributes;
+
+  HandleBufferSize = sizeof (HandleBuffer);
+  Status           = gMmst->MmLocateHandle (
+                              ByProtocol,
+                              &gNVIDIANorFlash2ProtocolGuid,
+                              NULL,
+                              &HandleBufferSize,
+                              HandleBuffer
+                              );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "Error locating MM-NorFlash handles: %r\n", Status));
+    return Status;
+  }
+
+  NumHandles = HandleBufferSize / sizeof (EFI_HANDLE);
+
+  for (Index = 0; Index < NumHandles; Index++) {
+    EFI_HANDLE                   Handle;
+    NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
+    FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo;
+    FW_PARTITION_DEVICE_INFO     *DeviceInfo;
+
+    Handle = HandleBuffer[Index];
+    Status = gMmst->MmHandleProtocol (
+                      Handle,
+                      &gNVIDIANorFlash2ProtocolGuid,
+                      (VOID **)&NorFlash
+                      );
+    if (EFI_ERROR (Status) || (NorFlash == NULL)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed to get MM-NorFlash for handle index %u: %r\n",
+        Index,
+        Status
+        ));
+      continue;
+    }
+
+    Status = NorFlash->GetAttributes (NorFlash, &Attributes);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "MM-NorFlash attributes for handle %u failed: %r\n",
+        Index,
+        Status
+        ));
+      continue;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "Found NorFlash BlockSize=%u, MemoryDensity=%llu\n",
+      Attributes.BlockSize,
+      Attributes.MemoryDensity
+      ));
+
+    if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Max devices=%d exceeded\n",
+        __FUNCTION__,
+        MAX_NOR_FLASH_DEVICES
+        ));
+      break;
+    }
+
+    NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
+    NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
+    NorFlashInfo->Bytes             = Attributes.MemoryDensity;
+    NorFlashInfo->Attributes        = Attributes;
+    NorFlashInfo->NorFlash          = NorFlash;
+    NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
+
+    DeviceInfo              = &NorFlashInfo->DeviceInfo;
+    DeviceInfo->DeviceName  = L"NorFlash-Blob";
+    DeviceInfo->DeviceRead  = FPNorFlashRead;
+    DeviceInfo->DeviceWrite = FPNorFlashWrite;
+    DeviceInfo->BlockSize   = Attributes.BlockSize;
+
+    mNumDevices++;
+    mNumDevicesBlob++;
   }
 
   return EFI_SUCCESS;
@@ -459,6 +567,39 @@ FwPartitionNorFlashStmmInitialize (
         DeviceInfo->DeviceName,
         Status
         ));
+    }
+  }
+
+  if (ChipId == TH500_CHIP_ID) {
+    Status = FPNorFlashInitDevicesBlob ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Error initializing NorFlash-Blob devices: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+
+    for (Index = 0; Index < mNumDevices; Index++) {
+      FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
+      FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
+
+      Status = FwDeviceAddAsPartition (
+                 DeviceInfo->DeviceName,
+                 DeviceInfo,
+                 0,
+                 NorFlashInfo->Bytes
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Error adding FW device %s as a partition: %r\n",
+          __FUNCTION__,
+          DeviceInfo->DeviceName,
+          Status
+          ));
+      }
     }
   }
 

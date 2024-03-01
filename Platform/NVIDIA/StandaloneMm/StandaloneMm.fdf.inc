@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -12,11 +12,17 @@
   # MM NorFlash Driver
   #
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
 
   #
   # MM NOR FvB driver
   #
   INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf
+
+  #
+  # MM FW Partition Driver
+  #
+  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
   #
   # FTW Driver

@@ -1,0 +1,62 @@
+#/** @file
+#
+#  NOR Flash Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NorFlashStandaloneMmBlob
+  FILE_GUID                      = a485a47e-f003-46c3-99fa-9e4697d24f07
+  MODULE_TYPE                    = MM_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  ENTRY_POINT                    = NorFlashInitialise
+
+[Sources.common]
+  NorFlashStandaloneMmBlob.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  QspiControllerLib
+  StandaloneMmDriverEntryPoint
+  HobLib
+  ArmSvcLib
+  MmServicesTableLib
+  StandaloneMmOpteeLib
+
+[Guids]
+  gEfiStandaloneMmDeviceMemoryRegions
+
+[Guids]
+  gEfiStandaloneMmDeviceMemoryRegions
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols
+  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead
+
+[Protocols]
+  gNVIDIANorFlash2ProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiEraseBlockProtocolGuid
+  gNVIDIAQspiControllerProtocolGuid
+  gNVIDIASocketIdProtocolGuid
+
+[Depex]
+  TRUE

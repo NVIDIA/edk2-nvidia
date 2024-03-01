@@ -96,6 +96,7 @@
   # MM NorFlash Driver
   #
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
+  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
 
   #
   # MM NOR FvB driver
@@ -104,6 +105,11 @@
     <LibraryClasses>
       GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
   }
+
+  #
+  # MM FW Partition Driver
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
   #
   # MM Fault Tolerant Write Driver

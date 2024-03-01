@@ -10,7 +10,7 @@
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = FwPartitionStandaloneMm
-  FILE_GUID                      = 19cffafe-c4ff-4f32-b35f-1dc8fafd4693
+  FILE_GUID                      = 54a89701-b8f6-4572-909e-f6b5dbaf3fcc
   MODULE_TYPE                    = MM_STANDALONE
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
@@ -42,6 +42,7 @@
 [Protocols]
   gNVIDIANorFlashProtocolGuid
   gNVIDIAFwPartitionProtocolGuid
+  gNVIDIANorFlash2ProtocolGuid
 
 [Depex]
   TRUE

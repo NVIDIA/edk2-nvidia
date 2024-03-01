@@ -304,6 +304,9 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   PldmFwUpdateTaskLib|Silicon/NVIDIA/Library/PldmFwUpdateTaskLib/PldmFwUpdateTaskLib.inf
   ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
 !endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+  FmpDeviceLib|Silicon/NVIDIA/Library/FmpBlobLib/FmpBlobLib.inf
+!endif
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf
   SsdtSerialPortFixupLib|Silicon/NVIDIA/Library/SsdtSerialPortFixupLib/SsdtSerialPortFixupLib.inf
@@ -2011,6 +2014,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # MM MCTP
   #
   Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
+!endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+  #
+  # FW Partition
+  #
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
 
 !ifdef CONFIG_CONFIG_MANAGER

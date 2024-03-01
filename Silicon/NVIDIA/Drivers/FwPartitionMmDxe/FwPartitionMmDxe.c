@@ -400,7 +400,7 @@ FwPartitionMmDxeInitialize (
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_INFO,
+      DEBUG_ERROR,
       "%a: Error initializing MM interface: %r\n",
       __FUNCTION__,
       Status
@@ -411,7 +411,7 @@ FwPartitionMmDxeInitialize (
   Status = FPMmAddPartitions (&BrBctEraseBlockSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_INFO,
+      DEBUG_ERROR,
       "%a: Error initializing MM devices: %r\n",
       __FUNCTION__,
       Status
@@ -425,35 +425,37 @@ FwPartitionMmDxeInitialize (
     goto Done;
   }
 
-  Status = BrBctUpdateDeviceLibInit (
-             ActiveBootChain,
-             BrBctEraseBlockSize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Error initializing BrBct lib: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
+  if (BrBctEraseBlockSize != 0) {
+    Status = BrBctUpdateDeviceLibInit (
+               ActiveBootChain,
+               BrBctEraseBlockSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Error initializing BrBct lib: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Done;
+    }
 
-  BrBctUpdatePrivate = BrBctUpdateGetPrivate ();
-  Status             = gBS->InstallMultipleProtocolInterfaces (
-                              &BrBctUpdatePrivate->Handle,
-                              &gNVIDIABrBctUpdateProtocolGuid,
-                              &BrBctUpdatePrivate->Protocol,
-                              NULL
-                              );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Couldn't install BR-BCT update protocol: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
+    BrBctUpdatePrivate = BrBctUpdateGetPrivate ();
+    Status             = gBS->InstallMultipleProtocolInterfaces (
+                                &BrBctUpdatePrivate->Handle,
+                                &gNVIDIABrBctUpdateProtocolGuid,
+                                &BrBctUpdatePrivate->Protocol,
+                                NULL
+                                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Couldn't install BR-BCT update protocol: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Done;
+    }
   }
 
   Status = gBS->CreateEventEx (

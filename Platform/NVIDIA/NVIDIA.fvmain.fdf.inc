@@ -111,6 +111,9 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
+!endif
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   #

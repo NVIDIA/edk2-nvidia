@@ -135,6 +135,15 @@ FwPartitionAdd (
   IN  UINTN                     Bytes
   );
 
+EFI_STATUS
+EFIAPI
+FwDeviceAddAsPartition (
+  IN  CONST CHAR16              *Name,
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes
+  );
+
 /**
   Add new FW partitions for all partitions in the device's secondary GPT.
   Initializes a FW_PARTITION_PRIVATE_DATA structure for each partition.
