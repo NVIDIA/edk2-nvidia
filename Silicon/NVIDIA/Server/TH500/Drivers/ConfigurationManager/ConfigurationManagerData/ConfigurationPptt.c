@@ -229,7 +229,7 @@ UpdateCpuInfo (
   UINT32                          NumCpus;
   UINT32                          ProcHierarchyIndex;
   UINT32                          Socket;
-  UINT32                          NumSockets;
+  BOOLEAN                         IsMultiSocketSystem;
   CACHE_NODE                      *CacheNode;
   CM_ARM_CACHE_INFO               *CacheInfoStruct;
   CM_ARM_CACHE_INFO               *CacheInfo;
@@ -426,17 +426,18 @@ UpdateCpuInfo (
   }
 
   // Build top level node
-  ProcHierarchyIndex = 0;
-  RootToken          = CM_NULL_TOKEN;
-  NumSockets         = 0;
+  ProcHierarchyIndex  = 0;
+  RootToken           = CM_NULL_TOKEN;
+  IsMultiSocketSystem = FALSE;
 
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+  for (Socket = 1; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (IsSocketEnabled (Socket)) {
-      NumSockets++;
+      IsMultiSocketSystem = TRUE;
+      break;
     }
   }
 
-  if (NumSockets > 1) {
+  if (IsMultiSocketSystem) {
     // Build Root Node
     ProcHierarchyInfo[ProcHierarchyIndex].Token = REFERENCE_TOKEN (ProcHierarchyInfo[ProcHierarchyIndex]);
     ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
@@ -450,6 +451,8 @@ UpdateCpuInfo (
     ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
     ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
+    ProcHierarchyInfo[ProcHierarchyIndex].OverrideUid                = PcdGet32 (PcdTegraMaxSockets);
 
     RootToken = ProcHierarchyInfo[ProcHierarchyIndex].Token;
 
