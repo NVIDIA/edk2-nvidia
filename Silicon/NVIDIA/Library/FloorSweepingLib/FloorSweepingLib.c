@@ -368,12 +368,14 @@ PhandleIsNextLevelCache (
 
     // L2
     Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
-    if (Property != NULL) {
-      L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
-      DEBUG ((DEBUG_VERBOSE, "%a: checking phandle 0x%x for 0x%x\r\n", __FUNCTION__, L2CachePhandle, Phandle));
-      if (L2CachePhandle == Phandle) {
-        return TRUE;
-      }
+    if (Property == NULL) {
+      continue;
+    }
+
+    L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+    DEBUG ((DEBUG_VERBOSE, "%a: checking phandle 0x%x for 0x%x\r\n", __FUNCTION__, L2CachePhandle, Phandle));
+    if (L2CachePhandle == Phandle) {
+      return TRUE;
     }
 
     if (Level < 3) {
@@ -388,12 +390,14 @@ PhandleIsNextLevelCache (
     }
 
     Property = fdt_getprop (Dtb, L2NodeOffset, "next-level-cache", NULL);
-    if (Property != NULL) {
-      L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
-      DEBUG ((DEBUG_VERBOSE, "%a: checking l3 phandle 0x%x for 0x%x\r\n", __FUNCTION__, L3CachePhandle, Phandle));
-      if (L3CachePhandle == Phandle) {
-        return TRUE;
-      }
+    if (Property == NULL) {
+      continue;
+    }
+
+    L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+    DEBUG ((DEBUG_VERBOSE, "%a: checking l3 phandle 0x%x for 0x%x\r\n", __FUNCTION__, L3CachePhandle, Phandle));
+    if (L3CachePhandle == Phandle) {
+      return TRUE;
     }
   }
 
