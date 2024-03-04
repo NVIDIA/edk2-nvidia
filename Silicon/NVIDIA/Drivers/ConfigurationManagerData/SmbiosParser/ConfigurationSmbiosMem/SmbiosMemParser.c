@@ -13,6 +13,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
+#include <Library/FruLib.h>
+#include <libfdt.h>
 
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
@@ -73,6 +75,11 @@ InstallSmbiosType17Type19Cm (
   CM_OBJ_DESCRIPTOR                      Desc;
   CM_OBJECT_TOKEN                        *TokenMapType17;
   CM_OBJECT_TOKEN                        *TokenMapType19;
+  FRU_DEVICE_INFO                        *FruInfo;
+  CHAR8                                  *FruDesc;
+  INT32                                  NodeOffset;
+  CONST VOID                             *Property;
+  CHAR8                                  Type4NodeStr[] = "/firmware/smbios/type4@xx";
 
   TokenMapType17          = NULL;
   TokenMapType19          = NULL;
@@ -132,6 +139,32 @@ InstallSmbiosType17Type19Cm (
         "%lu",
         DramInfo[Index].SerialNumber
         );
+    }
+
+    //
+    // For solder-down DRAMs design, now using processor board info
+    // for DRAM part number reporting.
+    //
+    AsciiSPrint (
+      Type4NodeStr,
+      sizeof (Type4NodeStr),
+      "/firmware/smbios/type4@%u",
+      Index
+      );
+
+    NodeOffset = 0;
+    NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
+    if (NodeOffset > 0) {
+      Property = NULL;
+      Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+      if (Property != NULL) {
+        FruInfo = NULL;
+        FruDesc = (CHAR8 *)Property;
+        FruInfo = FindFruByDescription (Private, FruDesc);
+        if ((FruInfo != NULL) && (FruInfo->BoardPartNum != NULL)) {
+          CmMemDevicesInfo[Index].PartNum = AllocateCopyString (FruInfo->BoardPartNum);
+        }
+      }
     }
 
     //
