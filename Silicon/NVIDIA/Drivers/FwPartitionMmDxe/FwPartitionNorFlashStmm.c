@@ -408,7 +408,16 @@ FwPartitionNorFlashStmmInitialize (
   EFI_STATUS  Status;
   UINTN       Index;
 
-  mActiveBootChain = ActiveBootChain;
+  Status = StmmGetActiveBootChain (&mActiveBootChain);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: error getting boot chain, using %u: %r\n", __FUNCTION__, ActiveBootChain, Status));
+    mActiveBootChain = ActiveBootChain;
+  }
+
+  if (mActiveBootChain != ActiveBootChain) {
+    DEBUG ((DEBUG_ERROR, "%a: boot chain mismatch %u != %u\n", __FUNCTION__, mActiveBootChain, ActiveBootChain));
+    return EFI_INVALID_PARAMETER;
+  }
 
   Status = FwPartitionDeviceLibInit (ActiveBootChain, MAX_FW_PARTITIONS, OverwriteActiveFwPartition, ChipId, StmmGetBootChainForGpt ());
   if (EFI_ERROR (Status)) {

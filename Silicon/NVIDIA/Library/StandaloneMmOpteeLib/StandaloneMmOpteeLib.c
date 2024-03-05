@@ -804,23 +804,41 @@ IsT234 (
   return (IsOpteePresent () && IsDeviceTypePresent ("-t234", NULL));
 }
 
-UINT32
+EFI_STATUS
 EFIAPI
-StmmGetBootChainForGpt (
-  VOID
+StmmGetActiveBootChain (
+  UINT32  *BootChain
   )
 {
-  UINT32                BootChain = 0;
   EFI_MM_DEVICE_REGION  *ScratchRegions;
   UINT32                NumRegions;
   EFI_STATUS            Status;
 
   if (IsT234 ()) {
     Status = GetDeviceTypeRegions ("scratch-t234", &ScratchRegions, &NumRegions);
-    NV_ASSERT_RETURN ((!EFI_ERROR (Status) && NumRegions == 1), return BootChain, "%a: failed to get scratch region: %r\n", __FUNCTION__, Status);
+    NV_ASSERT_RETURN ((!EFI_ERROR (Status) && NumRegions == 1), return EFI_DEVICE_ERROR, "%a: failed to get scratch region: %r\n", __FUNCTION__, Status);
 
-    Status = GetActiveBootChainStMm (T234_CHIP_ID, ScratchRegions[0].DeviceRegionStart, &BootChain);
+    Status = GetActiveBootChainStMm (T234_CHIP_ID, ScratchRegions[0].DeviceRegionStart, BootChain);
     ASSERT_EFI_ERROR (Status);
+
+    return Status;
+  }
+
+  return EFI_UNSUPPORTED;
+}
+
+UINT32
+EFIAPI
+StmmGetBootChainForGpt (
+  VOID
+  )
+{
+  UINT32      BootChain;
+  EFI_STATUS  Status;
+
+  Status = StmmGetActiveBootChain (&BootChain);
+  if (EFI_ERROR (Status)) {
+    return 0;
   }
 
   return BootChain;

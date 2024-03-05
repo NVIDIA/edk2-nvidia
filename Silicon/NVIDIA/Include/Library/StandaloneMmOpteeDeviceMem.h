@@ -251,6 +251,21 @@ IsT234 (
   );
 
 /**
+ * Get active boot chain.
+ *
+ * @param[out]  BootChain       Address to return boot chain
+ *
+ * @retval EFI_SUCCESS          Active boot chain returned
+ * @retval Others               An error occurred
+ *
+ **/
+EFI_STATUS
+EFIAPI
+StmmGetActiveBootChain (
+  UINT32  *BootChain
+  );
+
+/**
  * Get boot chain value to use for GPT location.  If system does not
  * support per-boot-chain GPT, 0 is returned.
  *
