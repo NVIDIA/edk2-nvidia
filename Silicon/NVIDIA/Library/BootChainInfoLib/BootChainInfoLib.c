@@ -116,7 +116,11 @@ GetActivePartitionName (
       "%a: Error getting active boot chain\n",
       __FUNCTION__
       ));
-    return EFI_UNSUPPORTED;
+    return StrCpyS (
+             ActivePartitionName,
+             MAX_PARTITION_NAME_LEN,
+             GeneralPartitionName
+             );
   }
 
   return GetBootChainPartitionName (

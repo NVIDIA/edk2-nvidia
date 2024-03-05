@@ -244,6 +244,7 @@
 !endif
 
 [PcdsDynamicDefault.common]
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|TRUE
   gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum|0x0
