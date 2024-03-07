@@ -244,7 +244,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             ret = RunCmd("git", "-C edk2-nvidia describe --always --dirty",
                          workingdir=self.GetWorkspaceRoot(), outstream=result)
             if (ret == 0):
-                return base + "-" + result.getvalue()
+                return base + "-" + result.getvalue().strip()
             else:
                 return base + "-Unknown"
 
