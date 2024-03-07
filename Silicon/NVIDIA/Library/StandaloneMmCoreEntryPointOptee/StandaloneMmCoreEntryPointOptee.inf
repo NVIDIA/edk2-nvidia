@@ -1,9 +1,8 @@
 ## @file
 # Module entry point library for StMM.
 #
-# Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
-#
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
 ##
@@ -47,7 +46,7 @@
   gMpInformationHobGuid
   gEfiMmPeiMmramMemoryReserveGuid
   gEfiStandaloneMmNonSecureBufferGuid
-  gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiMmCpuDriverEpDescriptorGuid
   gEfiStandaloneMmDeviceMemoryRegions
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]

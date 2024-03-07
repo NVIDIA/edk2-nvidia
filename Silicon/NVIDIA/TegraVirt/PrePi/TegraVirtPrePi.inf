@@ -36,6 +36,7 @@
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
   ArmVirtPkg/ArmVirtPkg.dec
+  OvmfPkg/OvmfPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -96,5 +97,5 @@
 [Pcd]
   gArmTokenSpaceGuid.PcdSystemMemoryBase
   gArmTokenSpaceGuid.PcdSystemMemorySize
-  gArmVirtTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress
+  gUefiOvmfPkgTokenSpaceGuid.PcdDeviceTreeInitialBaseAddress
   gArmTokenSpaceGuid.PcdFvBaseAddress

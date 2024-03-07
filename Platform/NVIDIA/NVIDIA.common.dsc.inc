@@ -125,6 +125,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   UefiDecompressLib|MdePkg/Library/BaseUefiDecompressLib/BaseUefiDecompressLib.inf
   CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
   PrePiHobListPointerLib|ArmPlatformPkg/Library/PrePiHobListPointerLib/PrePiHobListPointerLib.inf
+  ImagePropertiesRecordLib|MdeModulePkg/Library/ImagePropertiesRecordLib/ImagePropertiesRecordLib.inf
 
   UefiLib|MdePkg/Library/UefiLib/UefiLib.inf
   HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
@@ -679,6 +680,10 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000
 
   gEfiNetworkPkgTokenSpaceGuid.PcdAllowHttpConnections|TRUE
+
+  # Disable SecureRng enforcement until a hardware-based RNG is available for
+  # NVIDIA platforms. CVE-2023-45237
+  gEfiNetworkPkgTokenSpaceGuid.PcdEnforceSecureRngAlgorithms|FALSE
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength|1000000
   gEfiMdePkgTokenSpaceGuid.PcdMaximumAsciiStringLength|1000000

@@ -1,9 +1,8 @@
 ## @file
 # Module entry point library for DXE core.
 #
-# Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
-#
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
 ##
@@ -60,7 +59,7 @@
   gMpInformationHobGuid
   gEfiMmPeiMmramMemoryReserveGuid
   gEfiStandaloneMmNonSecureBufferGuid
-  gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiMmCpuDriverEpDescriptorGuid
   gMmCoreDataHobGuid
   gEfiStandaloneMmDeviceMemoryRegions
   gNVIDIAPlatformResourceDataGuid

@@ -2,8 +2,8 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms running with OPTEE.
 
-Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
-SPDX-License-Identifier: BSD-2-Clause-Patent
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -59,15 +59,15 @@ typedef struct {
 
 typedef
 EFI_STATUS
-(*PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT) (
+(*PI_MM_CPU_DRIVER_ENTRYPOINT) (
   IN UINTN  EventId,
   IN UINTN  CpuNumber,
   IN UINTN  NsCommBufferAddr
   );
 
 typedef struct {
-  PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT    *ArmTfCpuDriverEpPtr;
-} ARM_TF_CPU_DRIVER_EP_DESCRIPTOR;
+  PI_MM_CPU_DRIVER_ENTRYPOINT    *MmCpuDriverEpPtr;
+} MM_CPU_DRIVER_EP_DESCRIPTOR;
 
 typedef RETURN_STATUS (*REGION_PERMISSION_UPDATE_FUNC) (
   IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
@@ -155,8 +155,8 @@ LocateStandaloneMmCorePeCoffData (
 VOID *
 EFIAPI
 CreateHobListFromBootInfo (
-  IN  OUT  PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  *CpuDriverEntryPoint,
-  IN       EFI_SECURE_PARTITION_BOOT_INFO      *PayloadBootInfo
+  IN  OUT  PI_MM_CPU_DRIVER_ENTRYPOINT     *CpuDriverEntryPoint,
+  IN       EFI_SECURE_PARTITION_BOOT_INFO  *PayloadBootInfo
   );
 
 /**

@@ -60,10 +60,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
-STMM_ARM_MEMORY_REGION_DESCRIPTOR   MemoryTable[MAX_MANIFEST_REGIONS+1];
-PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
-EFI_SECURE_PARTITION_BOOT_INFO      PayloadBootInfo;
-STATIC STMM_COMM_BUFFERS            StmmCommBuffers;
+STMM_ARM_MEMORY_REGION_DESCRIPTOR  MemoryTable[MAX_MANIFEST_REGIONS+1];
+PI_MM_CPU_DRIVER_ENTRYPOINT        CpuDriverEntryPoint = NULL;
+EFI_SECURE_PARTITION_BOOT_INFO     PayloadBootInfo;
+STATIC STMM_COMM_BUFFERS           StmmCommBuffers;
 
 STATIC CONST UINT32  mSpmMajorVer = SPM_MAJOR_VERSION;
 STATIC CONST UINT32  mSpmMinorVer = SPM_MINOR_VERSION;
