@@ -18,7 +18,7 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  10
+#define TEGRABL_MB1_BCT_MINOR_VERSION  11
 
 #pragma pack(1)
 
@@ -75,8 +75,10 @@ typedef struct {
       UINT64    MaskCompleterAbort     : 1;
       /* Supports Presence Detect */
       UINT64    SupportsPRSNT          : 1;
+      /* Advertise ACS capability */
+      UINT64    AdvertiseACS           : 1;
       /* Reserved */
-      UINT64    reserved               : 52;
+      UINT64    reserved               : 51;
     };
   };
 

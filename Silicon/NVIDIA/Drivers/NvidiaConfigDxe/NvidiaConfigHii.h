@@ -749,6 +749,47 @@
 #define KEY_SOCKET3_PCIE8_SUPPORTS_PRSNT  0x2027
 #define KEY_SOCKET3_PCIE9_SUPPORTS_PRSNT  0x2028
 
+#define KEY_SOCKET0_PCIE0_ADVERTISE_ACS  0x2101
+#define KEY_SOCKET0_PCIE1_ADVERTISE_ACS  0x2102
+#define KEY_SOCKET0_PCIE2_ADVERTISE_ACS  0x2103
+#define KEY_SOCKET0_PCIE3_ADVERTISE_ACS  0x2104
+#define KEY_SOCKET0_PCIE4_ADVERTISE_ACS  0x2105
+#define KEY_SOCKET0_PCIE5_ADVERTISE_ACS  0x2106
+#define KEY_SOCKET0_PCIE6_ADVERTISE_ACS  0x2107
+#define KEY_SOCKET0_PCIE7_ADVERTISE_ACS  0x2108
+#define KEY_SOCKET0_PCIE8_ADVERTISE_ACS  0x2109
+#define KEY_SOCKET0_PCIE9_ADVERTISE_ACS  0x210A
+#define KEY_SOCKET1_PCIE0_ADVERTISE_ACS  0x210B
+#define KEY_SOCKET1_PCIE1_ADVERTISE_ACS  0x210C
+#define KEY_SOCKET1_PCIE2_ADVERTISE_ACS  0x210D
+#define KEY_SOCKET1_PCIE3_ADVERTISE_ACS  0x210E
+#define KEY_SOCKET1_PCIE4_ADVERTISE_ACS  0x210F
+#define KEY_SOCKET1_PCIE5_ADVERTISE_ACS  0x2110
+#define KEY_SOCKET1_PCIE6_ADVERTISE_ACS  0x2111
+#define KEY_SOCKET1_PCIE7_ADVERTISE_ACS  0x2112
+#define KEY_SOCKET1_PCIE8_ADVERTISE_ACS  0x2113
+#define KEY_SOCKET1_PCIE9_ADVERTISE_ACS  0x2114
+#define KEY_SOCKET2_PCIE0_ADVERTISE_ACS  0x2115
+#define KEY_SOCKET2_PCIE1_ADVERTISE_ACS  0x2116
+#define KEY_SOCKET2_PCIE2_ADVERTISE_ACS  0x2117
+#define KEY_SOCKET2_PCIE3_ADVERTISE_ACS  0x2118
+#define KEY_SOCKET2_PCIE4_ADVERTISE_ACS  0x2119
+#define KEY_SOCKET2_PCIE5_ADVERTISE_ACS  0x211A
+#define KEY_SOCKET2_PCIE6_ADVERTISE_ACS  0x211B
+#define KEY_SOCKET2_PCIE7_ADVERTISE_ACS  0x211C
+#define KEY_SOCKET2_PCIE8_ADVERTISE_ACS  0x211D
+#define KEY_SOCKET2_PCIE9_ADVERTISE_ACS  0x211E
+#define KEY_SOCKET3_PCIE0_ADVERTISE_ACS  0x211F
+#define KEY_SOCKET3_PCIE1_ADVERTISE_ACS  0x2120
+#define KEY_SOCKET3_PCIE2_ADVERTISE_ACS  0x2121
+#define KEY_SOCKET3_PCIE3_ADVERTISE_ACS  0x2122
+#define KEY_SOCKET3_PCIE4_ADVERTISE_ACS  0x2123
+#define KEY_SOCKET3_PCIE5_ADVERTISE_ACS  0x2124
+#define KEY_SOCKET3_PCIE6_ADVERTISE_ACS  0x2125
+#define KEY_SOCKET3_PCIE7_ADVERTISE_ACS  0x2126
+#define KEY_SOCKET3_PCIE8_ADVERTISE_ACS  0x2127
+#define KEY_SOCKET3_PCIE9_ADVERTISE_ACS  0x2128
+
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
 #define PCIE_IN_OS_DISABLE  0x0
@@ -816,6 +857,7 @@ typedef struct {
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
   BOOLEAN    PCIePRSNTConfigSupported;
+  BOOLEAN    PCIeACSConfigSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -903,6 +945,10 @@ typedef struct {
   BOOLEAN    SupportsPRSNT_1[MAX_PCIE];
   BOOLEAN    SupportsPRSNT_2[MAX_PCIE];
   BOOLEAN    SupportsPRSNT_3[MAX_PCIE];
+  BOOLEAN    AdvertiseACS_0[MAX_PCIE];
+  BOOLEAN    AdvertiseACS_1[MAX_PCIE];
+  BOOLEAN    AdvertiseACS_2[MAX_PCIE];
+  BOOLEAN    AdvertiseACS_3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -1119,6 +1165,14 @@ typedef struct {
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_SUPPORTS_PRSNT,                         \
            prompt = STRING_TOKEN(STR_PCIE_SUPPORTS_PRSNT_SOCKET##socket##_PCIE##pcie##_TITLE),    \
            help = STRING_TOKEN(STR_PCIE_SUPPORTS_PRSNT_HELP),                                     \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
+  endif;                                                                                          \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeACSConfigSupported == 0;                       \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.AdvertiseACS_##socket[pcie],                         \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_ADVERTISE_ACS,                          \
+           prompt = STRING_TOKEN(STR_PCIE_ADVERTISE_ACS_SOCKET##socket##_PCIE##pcie##_TITLE),     \
+           help = STRING_TOKEN(STR_PCIE_ADVERTISE_ACS_HELP),                                      \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
   endif;                                                                                          \
