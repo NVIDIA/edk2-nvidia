@@ -26,6 +26,9 @@
 
 #define BIT_IS_SET(Data, Bit)  ((BOOLEAN)(((Data) & (Bit)) == (Bit)))
 
+STATIC CONST CHAR8  *mDefaultReleaseDate  = "Unknown";
+STATIC CONST CHAR8  *mDefaultManufacturer = "Unknown";
+
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType45 = {
   SMBIOS_TYPE_FIRMWARE_INVENTORY_INFORMATION,
   CREATE_STD_SMBIOS_TABLE_GEN_ID (EStdSmbiosTableIdType45),
@@ -558,8 +561,6 @@ FmpFirmwareInventoryUpdate (
   CHAR8                              SbiosFirmwareComponentName[] = "System ROM";
   EFI_GUID                           *SbiosDeviceGuid;
   FMP_HANDLE_INFO_SET                *FmpHandleInfoSet;
-  CHAR8                              *VendorAsciiStr;
-  CHAR8                              *ReleaseDateAsciiStr;
   UINTN                              SystemSlotInfoIndex;
   UINTN                              Segment;
   UINTN                              Bus;
@@ -572,14 +573,12 @@ FmpFirmwareInventoryUpdate (
   INT32                              PciIoHandleIndex;
   PCIIO_HANDLE_INFO_SET              *PciIoHandleInfoSet;
 
-  NumFmpHandles       = 0;
-  SbiosDeviceGuid     = NULL;
-  FmpHandleInfoSet    = NULL;
-  VendorAsciiStr      = NULL;
-  ReleaseDateAsciiStr = NULL;
-  NumPciIoHandles     = 0;
-  PciIoHandleIndex    = 0;
-  PciIoHandleInfoSet  = NULL;
+  NumFmpHandles      = 0;
+  SbiosDeviceGuid    = NULL;
+  FmpHandleInfoSet   = NULL;
+  NumPciIoHandles    = 0;
+  PciIoHandleIndex   = 0;
+  PciIoHandleInfoSet = NULL;
 
   Status = GetFmpInfoSet (&NumFmpHandles, &FmpHandleInfoSet);
   if (EFI_ERROR (Status)) {
@@ -696,10 +695,10 @@ FmpFirmwareInventoryUpdate (
 
       //
       // Update Firmware release date and manufacturer.
-      // There is no such info in UEFI FMP, so leave them as NULL.
+      // There is no such info in UEFI FMP, so leave them as default.
       //
-      FirmwareInventoryInfoElement->ReleaseDate  = NULL;
-      FirmwareInventoryInfoElement->Manufacturer = NULL;
+      FirmwareInventoryInfoElement->ReleaseDate  = AllocateCopyString ((CHAR8 *)mDefaultReleaseDate);
+      FirmwareInventoryInfoElement->Manufacturer = AllocateCopyString ((CHAR8 *)mDefaultManufacturer);
 
       //
       // Update Firmware image size.
@@ -934,10 +933,10 @@ TpmFirmwareInventoryUpdate (
   }
 
   //
-  // Update Firmware release date and manufacturer.
-  // There is no such info in UEFI FMP, so leave them as NULL.
+  // Update Firmware release date.
+  // There is no such info in UEFI FMP, so leave it as default.
   //
-  FirmwareInventoryInfoElement->ReleaseDate = NULL;
+  FirmwareInventoryInfoElement->ReleaseDate = AllocateCopyString ((CHAR8 *)mDefaultReleaseDate);
 
   FirmwareInventoryInfoElement->Characteristics.Updatable      = 1;
   FirmwareInventoryInfoElement->Characteristics.WriteProtected = 1;
