@@ -1,2 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
 __pycache__/
 edk2-acpica-iasl_extdep/
+Silicon/NVIDIA/Library/AvbLib/libavb
