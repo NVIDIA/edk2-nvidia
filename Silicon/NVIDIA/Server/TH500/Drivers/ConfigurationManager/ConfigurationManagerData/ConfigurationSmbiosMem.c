@@ -124,6 +124,11 @@ InstallSmbiosType17Type19Cm (
         );
     }
 
+    //
+    // Set the memory module manufacturer as NVIDIA.
+    //
+    CmMemDevicesInfo[Index].ModuleManufacturerId = 0x6B03;
+
     CmMemDevicesInfo[Index].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
     if (CmMemDevicesInfo[Index].DeviceLocator != NULL) {
       AsciiSPrint (
