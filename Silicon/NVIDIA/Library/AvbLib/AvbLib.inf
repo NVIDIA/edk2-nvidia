@@ -1,0 +1,58 @@
+## @file
+# Component description file for the AvbLib module.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = AvbLib
+  FILE_GUID                      = 986b6dd6-6dda-448f-b7b5-17992b8320e3
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = AvbLib
+
+[Sources]
+  AvbLibApi.c
+
+  # libavb code
+  libavb/libavb/avb_chain_partition_descriptor.c
+  libavb/libavb/avb_crc32.c
+  libavb/libavb/avb_crypto.c
+  libavb/libavb/avb_descriptor.c
+  libavb/libavb/avb_footer.c
+  libavb/libavb/avb_hash_descriptor.c
+  libavb/libavb/avb_hashtree_descriptor.c
+  libavb/libavb/avb_kernel_cmdline_descriptor.c
+  libavb/libavb/avb_cmdline.c
+  libavb/libavb/avb_property_descriptor.c
+  libavb/libavb/avb_rsa.c
+  libavb/libavb/avb_slot_verify.c
+  libavb/libavb/avb_sysdeps_posix.c
+  libavb/libavb/avb_util.c
+  libavb/libavb/avb_vbmeta_image.c
+  libavb/libavb/avb_version.c
+  libavb/libavb/sha/sha512_impl.c
+  libavb/libavb/sha/sha256_impl.c
+
+  # libavb headers
+  # - These will not be built, but listing them will ensure they are in the
+  # include path
+  libavb/libavb/avb_rsa.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  PrintLib
+  BaseMemoryLib
+  DebugLib
+  UefiLib
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -DAVB_COMPILATION
