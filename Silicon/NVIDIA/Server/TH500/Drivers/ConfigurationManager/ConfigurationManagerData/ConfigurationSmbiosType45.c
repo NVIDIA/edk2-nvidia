@@ -920,6 +920,20 @@ TpmFirmwareInventoryUpdate (
   }
 
   //
+  // Update lowest supported image version.
+  //
+  FirmwareInventoryInfoElement->LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (MAX_TPM_VERSION_LEN + 1));
+  if (FirmwareInventoryInfoElement->LowestSupportedVersion != NULL) {
+    AsciiSPrint (
+      FirmwareInventoryInfoElement->LowestSupportedVersion,
+      MAX_TPM_VERSION_LEN,
+      "%u.%u",
+      TpmInfo->FirmwareVersion1 >> 16,
+      TpmInfo->FirmwareVersion1 & 0xFFFF
+      );
+  }
+
+  //
   // Update Firmware release date and manufacturer.
   // There is no such info in UEFI FMP, so leave them as NULL.
   //
