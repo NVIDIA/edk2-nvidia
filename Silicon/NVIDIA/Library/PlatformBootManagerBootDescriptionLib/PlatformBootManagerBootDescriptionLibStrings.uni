@@ -1,7 +1,7 @@
 /** @file
   String definitions for PlatformBootManagerBootDescriptionLib library.
 
-  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,14 +9,16 @@
 
 #langdef en-US "English"
 
-#string STR_LOAD_FILE_EMMC_KERNEL_BOOT_DESCRIPTION       #language en-US  "UEFI NVIDIA eMMC Kernel Boot"
+#string STR_LOAD_FILE_EMMC_KERNEL_BOOT_DESCRIPTION               #language en-US  "UEFI NVIDIA eMMC Kernel Boot"
 
-#string STR_LOAD_FILE_SD_KERNEL_BOOT_DESCRIPTION         #language en-US  "UEFI NVIDIA SD Kernel Boot"
+#string STR_LOAD_FILE_SD_KERNEL_BOOT_DESCRIPTION                 #language en-US  "UEFI NVIDIA SD Kernel Boot"
 
-#string STR_LOAD_FILE_EMMC_RECOVERY_BOOT_DESCRIPTION     #language en-US  "UEFI NVIDIA eMMC Recovery Boot"
+#string STR_LOAD_FILE_EMMC_RECOVERY_BOOT_DESCRIPTION             #language en-US  "UEFI NVIDIA eMMC Recovery Boot"
 
-#string STR_LOAD_FILE_SD_RECOVERY_BOOT_DESCRIPTION       #language en-US  "UEFI NVIDIA SD Recovery Boot"
+#string STR_LOAD_FILE_SD_RECOVERY_BOOT_DESCRIPTION               #language en-US  "UEFI NVIDIA SD Recovery Boot"
 
-#string STR_LOAD_FILE_RAMLOADED_BOOT_DESCRIPTION         #language en-US  "UEFI NVIDIA Ramloaded Kernel Boot"
+#string STR_LOAD_FILE_RAMLOADED_BOOT_DESCRIPTION                 #language en-US  "UEFI NVIDIA Ramloaded Kernel Boot"
 
-#string STR_LOAD_FILE_RCM_BOOT_DESCRIPTION               #language en-US  "UEFI NVIDIA Rcm Kernel Boot"
+#string STR_LOAD_FILE_RCM_BOOT_DESCRIPTION                       #language en-US  "UEFI NVIDIA Rcm Kernel Boot"
+
+#string STR_LOAD_FILE_VIRTUAL_STORAGE_KERNEL_BOOT_DESCRIPTION    #language en-US  "UEFI NVIDIA Virtual Storage Kernel Boot"

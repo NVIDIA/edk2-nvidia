@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -65,6 +65,7 @@ IsValidLoadOption (
   EFI_DEVICE_PATH                   *DevicePath;
   VOID                              *DevicePathNode;
   CONTROLLER_DEVICE_PATH            *Controller;
+  UFS_DEVICE_PATH                   *Ufs;
   EFI_PCI_IO_PROTOCOL               *PciIo;
   NVIDIA_ENABLED_PCIE_NIC_TOPOLOGY  *EnabledPcieNicTopology;
   BOOLEAN                           NicFilteringEnabled;
@@ -95,20 +96,29 @@ IsValidLoadOption (
     DevicePathNode = DevicePath;
     while (!IsDevicePathEndType (DevicePathNode)) {
       // Look for eMMC and ignore the non-user partitions
-      if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
-          (DevicePathSubType (DevicePathNode) == MSG_EMMC_DP))
-      {
-        DevicePathNode = NextDevicePathNode (DevicePathNode);
-        if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
-            (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP))
-        {
-          Controller = (CONTROLLER_DEVICE_PATH *)DevicePathNode;
-          if (Controller->ControllerNumber != 0) {
+      if (DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) {
+        if (DevicePathSubType (DevicePathNode) == MSG_EMMC_DP) {
+          DevicePathNode = NextDevicePathNode (DevicePathNode);
+          if ((DevicePathType (DevicePathNode) == HARDWARE_DEVICE_PATH) &&
+              (DevicePathSubType (DevicePathNode) == HW_CONTROLLER_DP))
+          {
+            Controller = (CONTROLLER_DEVICE_PATH *)DevicePathNode;
+            if (Controller->ControllerNumber != 0) {
+              return FALSE;
+            }
+          }
+
+          break;
+        } else if (DevicePathSubType (DevicePathNode) == MSG_UFS_DP) {
+          Ufs = (UFS_DEVICE_PATH *)DevicePathNode;
+          if ((IsDevicePathEndType (NextDevicePathNode (DevicePathNode))) &&
+              (Ufs->Pun == 0xFF))
+          {
             return FALSE;
           }
-        }
 
-        break;
+          break;
+        }
       }
 
       if (NicFilteringEnabled) {

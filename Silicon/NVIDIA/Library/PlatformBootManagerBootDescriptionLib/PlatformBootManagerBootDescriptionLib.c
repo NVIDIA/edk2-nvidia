@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerBootDescriptionLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -106,6 +106,9 @@ PlatformLoadFileBootDescriptionHandler (
         break;
       } else if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
         DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_RCM_BOOT_DESCRIPTION), NULL);
+        break;
+      } else if (CompareGuid (&VendorPath->Guid, &gEfiPersistentVirtualDiskGuid)) {
+        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_VIRTUAL_STORAGE_KERNEL_BOOT_DESCRIPTION), NULL);
         break;
       }
     }

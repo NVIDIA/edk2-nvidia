@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -194,6 +194,9 @@ PrePiMain (
 
   // Create DTB memory allocation HOB
   BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);
+
+  // Create DTB location guid data HOB
+  BuildGuidDataHob (&gFdtHobGuid, &DtbBase, sizeof (DtbBase));
 
   // TODO: Call CpuPei as a library
   BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));

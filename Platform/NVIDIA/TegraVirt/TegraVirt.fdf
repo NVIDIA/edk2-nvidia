@@ -200,6 +200,16 @@ READ_LOCK_STATUS   = TRUE
   #
   INF MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
 
+  #
+  # FDT Support
+  #
+  INF Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf
+
+  #
+  # Tegra Platform Boot Manager
+  #
+  INF Silicon/NVIDIA/Drivers/TegraPlatformBootManager/TegraPlatformBootManagerDxe.inf
+
 !include Silicon/NVIDIA/TegraVirt/IvcClient.fdf.inc
 
 [FV.FVMAIN_COMPACT]

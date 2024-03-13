@@ -333,6 +333,12 @@ AndroidBootDxeLoadDtb (
   EFI_STATUS             Status;
   VOID                   *AcpiBase   = NULL;
   VOID                   *CurrentDtb = NULL;
+  INT32                  UefiDtbNodeOffset;
+  INT32                  KernelDtbNodeOffset;
+  INT32                  PropOffset;
+  CONST CHAR8            *PropName;
+  CONST CHAR8            *PropStr;
+  INT32                  PropLen;
   CHAR16                 DtbPartitionName[MAX_PARTITION_NAME_LEN];
   EFI_HANDLE             DtbPartitionHandle;
   EFI_BLOCK_IO_PROTOCOL  *BlockIo;
@@ -436,6 +442,17 @@ AndroidBootDxeLoadDtb (
         (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
     {
       DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB from %s\r\n", __FUNCTION__, DtbPartitionName));
+      if (CurrentDtb != NULL) {
+        KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
+        UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
+        if (fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL)) {
+          fdt_for_each_property_offset (PropOffset, CurrentDtb, UefiDtbNodeOffset) {
+            PropStr = fdt_getprop_by_offset (CurrentDtb, PropOffset, &PropName, &PropLen);
+            fdt_setprop (DtbCopy, KernelDtbNodeOffset, PropName, PropStr, PropLen);
+          }
+        }
+      }
+
       Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
       if (EFI_ERROR (Status)) {
         gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));

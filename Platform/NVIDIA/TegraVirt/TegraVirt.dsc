@@ -403,3 +403,16 @@
   # BootManagerMenuApp
   #
   MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
+
+  #
+  # FDT Support
+  #
+  Silicon/NVIDIA/Drivers/DtOnlyPlatformDxe/DtOnlyPlatformDxe.inf {
+    <LibraryClasses>
+      DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
+  }
+
+  #
+  # Tegra Platform Boot Manager
+  #
+  Silicon/NVIDIA/Drivers/TegraPlatformBootManager/TegraPlatformBootManagerDxe.inf
