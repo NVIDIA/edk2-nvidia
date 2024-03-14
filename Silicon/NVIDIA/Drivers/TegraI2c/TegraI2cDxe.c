@@ -11,21 +11,22 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/Crc8Lib.h>
 #include <Library/DebugLib.h>
-#include <Library/BaseMemoryLib.h>
-#include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/DxeServicesTableLib.h>
-#include <Library/TimerLib.h>
 #include <Library/IoLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/TimerLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/PinControl.h>
+#include <Protocol/TegraI2cSlaveDeviceTreeNode.h>
+#include <libfdt.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include "TegraI2c.h"
@@ -845,10 +846,6 @@ TegraI2cGetBusFrequency (
 
   Private = TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE (This);
 
-  if (0 != I2cBusConfiguration) {
-    return EFI_NO_MAPPING;
-  }
-
   *BusClockHertz = Private->BusClockHertz;
   return EFI_SUCCESS;
 }
@@ -912,8 +909,32 @@ TegraI2cEnableI2cBusConfiguration (
   IN EFI_STATUS                                           *I2cStatus OPTIONAL
   )
 {
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+  EFI_I2C_REQUEST_PACKET         RequestPacket;
+
   if (I2cBusConfiguration != 0) {
-    return EFI_NO_MAPPING;
+    EFI_STATUS   I2CRequestStatus;
+
+    Private = TEGRA_I2C_PRIVATE_DATA_FROM_BUS_CONFIGURATION (This);
+
+    // There must be an I2C mux or switch (currently we only support PCA954x compatible muxes)
+    NVIDIA_TEGRA_I2C_BUS_CONFIGURATION Config;
+    Config.Value = I2cBusConfiguration;
+
+    UINT8 MuxChannel = 0;
+    if (Config.Fields.MuxType == MUX) {
+      MuxChannel = Config.Fields.Channel;
+      MuxChannel |= (1 << Config.Fields.EnableBitNumber);
+    } else if (Config.Fields.MuxType == SWITCH) {
+      MuxChannel = (1 << Config.Fields.Channel); // This forces a single channel at a time and makes switches behave like muxes, but that's ok...
+    }
+    RequestPacket.OperationCount = 1;
+    RequestPacket.Operation[0].Flags = 0; // Write
+    RequestPacket.Operation[0].LengthInBytes = sizeof(MuxChannel);
+    RequestPacket.Operation[0].Buffer = &MuxChannel;
+
+    I2CRequestStatus = Private->I2cMaster.StartRequest(&Private->I2cMaster, Config.Fields.MuxAddress, &RequestPacket, NULL, NULL);
+    DEBUG((DEBUG_INFO, "%a: Got a non-zero I2cBusConfiguration %x, Mux: %x, Channel: %x, setting I2C Mux register status: %d\n", __FUNCTION__, I2cBusConfiguration, Config.Fields.MuxAddress, Config.Fields.Channel, I2CRequestStatus));
   }
 
   if (NULL != Event) {
@@ -928,16 +949,43 @@ TegraI2cEnableI2cBusConfiguration (
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+TegraI2cLookupSlaveDeviceTreeNode(
+  IN CONST NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL *This,
+  IN CONST EFI_GUID                                         *DeviceGuid,
+  IN UINT32                                                 DeviceIndex,
+  OUT NVIDIA_DEVICE_TREE_NODE_PROTOCOL                      *DeviceTreeNode
+  )
+{
+  NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private = NULL;
+
+  if (DeviceTreeNode == NULL || DeviceGuid == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: NULL DeviceTreeNode or DeviceGuid received\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = TEGRA_I2C_PRIVATE_DATA_FROM_SLAVE_DEVICE_TREE_NODE(This);
+  for (INT32 i = 0; i < Private->NumberOfI2cDevices; i++) {
+    if (CompareGuid (Private->I2cDevices[i].DeviceGuid, DeviceGuid ) && Private->I2cDevices[i].DeviceIndex == DeviceIndex) {
+      DeviceTreeNode->DeviceTreeBase = Private->DeviceTreeBase;
+      DeviceTreeNode->NodeOffset = Private->SlaveDeviceTreeNodeOffsets[i];
+      return EFI_SUCCESS;
+    }
+  }
+  return EFI_NOT_FOUND;
+}
+
 /**
   This routine is called to add an I2C device to the controller.
 
-  @param[in] Private            Driver's private data.
-  @param[in] I2cAddress         Address of the device.
-  @param[in] DeviceGuid         GUID to identify the device type.
-  @param[in] DeviceIndex        Index of the device derived from device tree.
+  @param[in] Private              Driver's private data.
+  @param[in] I2cAddress           Address of the device.
+  @param[in] DeviceGuid           GUID to identify the device type.
+  @param[in] I2cBusConfiguration  The bus configuration (mux + switch settings) needed to access the device
+  @param[in] DeviceTreeNodeOffset The offset of this device within the FDT
 
-  @retval EFI_SUCCESS           Device added.
-  @retval other                 Some error occurs when device is being added.
+  @retval EFI_SUCCESS             Device added.
+  @retval other                   Some error occurs when device is being added.
 
 **/
 EFI_STATUS
@@ -945,7 +993,8 @@ TegraI2cAddDevice (
   IN NVIDIA_TEGRA_I2C_PRIVATE_DATA  *Private,
   IN UINT32                         I2cAddress,
   IN EFI_GUID                       *DeviceGuid,
-  IN UINT32                         DeviceIndex
+  IN UINT32                         I2cBusConfiguration,
+  IN UINT32                         DeviceTreeNodeOffset
   )
 {
   if (Private->NumberOfI2cDevices >= MAX_I2C_DEVICES) {
@@ -956,11 +1005,13 @@ TegraI2cAddDevice (
 
   Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE] = I2cAddress;
   Private->I2cDevices[Private->NumberOfI2cDevices].DeviceGuid                     = DeviceGuid;
-  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex                    = DeviceIndex;
+  Private->I2cDevices[Private->NumberOfI2cDevices].DeviceIndex                    = Private->NumberOfI2cDevices | (Private->ControllerId << 16); // Makes sure this is unique, even if a phandle is missing due to not being referenced elsewhere in the DT;
   Private->I2cDevices[Private->NumberOfI2cDevices].HardwareRevision               = 1;
-  Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration            = 0;
+  Private->I2cDevices[Private->NumberOfI2cDevices].I2cBusConfiguration            = I2cBusConfiguration;
   Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressCount              = 1;
   Private->I2cDevices[Private->NumberOfI2cDevices].SlaveAddressArray              = &Private->SlaveAddressArray[Private->NumberOfI2cDevices * MAX_SLAVES_PER_DEVICE];
+  Private->SlaveDeviceTreeNodeOffsets[Private->NumberOfI2cDevices]                = DeviceTreeNodeOffset;
+
   Private->NumberOfI2cDevices++;
 
   return EFI_SUCCESS;
@@ -1010,7 +1061,6 @@ TegraI2CDriverBindingStart (
   EFI_DEVICE_PATH                  *OldDevicePath;
   EFI_DEVICE_PATH                  *NewDevicePath;
   EFI_DEVICE_PATH_PROTOCOL         *DevicePathNode;
-  UINT32                           Count;
   EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Descriptor;
 
   Status = gBS->HandleProtocol (
@@ -1045,6 +1095,8 @@ TegraI2CDriverBindingStart (
   Private->I2cEnumerate.Enumerate                         = TegraI2cEnumerate;
   Private->I2cEnumerate.GetBusFrequency                   = TegraI2cGetBusFrequency;
   Private->I2CConfiguration.EnableI2cBusConfiguration     = TegraI2cEnableI2cBusConfiguration;
+  Private->I2cSlaveDeviceTreeNode.LookupNode              = TegraI2cLookupSlaveDeviceTreeNode;
+
   Private->ProtocolsInstalled                             = FALSE;
   Private->DeviceTreeBase                                 = DeviceTreeNode->DeviceTreeBase;
   Private->DeviceTreeNodeOffset                           = DeviceTreeNode->NodeOffset;
@@ -1209,7 +1261,6 @@ TegraI2CDriverBindingStart (
   Private->NumberOfI2cDevices = 0;
 
   I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-  Count         = 0;
   fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (fdt_node_check_compatible (
           DeviceTreeNode->DeviceTreeBase,
@@ -1227,13 +1278,12 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       Count
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
-
-        Count++;
         DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
     } else if (fdt_node_check_compatible (
@@ -1252,7 +1302,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1276,13 +1327,112 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
         }
 
         DEBUG ((DEBUG_INFO, "%a: PCA9535 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
+      }
+    } else if (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9540") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9542") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9543") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9544") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9545") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9546") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9547") == 0 ||
+	       fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9548") == 0) {
+
+      enum MuxType MuxTypeVal;
+      UINT8 EnableBit = 0;
+      if (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9540") == 0 ||
+	  fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9542") == 0 ||
+	  fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9544") == 0) {
+	MuxTypeVal = MUX;
+	EnableBit = 2;
+      } else if (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9547") == 0) {
+	MuxTypeVal = MUX;
+	EnableBit = 3;
+      } else if (fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9543") == 0 ||
+		 fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9545") == 0 ||
+		 fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9546") == 0 ||
+		 fdt_node_check_compatible(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nxp,pca9548") == 0) {
+	MuxTypeVal = SWITCH;
+      }
+
+      Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof(UINT32))) {
+        gBS->CopyMem(&I2cAddress, (VOID *) Property, PropertyLen);
+        I2cAddress = SwapBytes32(I2cAddress);
+        DEBUG((DEBUG_INFO, "%a: PCA954x Found.\n", __FUNCTION__));
+        DeviceGuid = &gNVIDIAI2cPca954x;
+        Status = TegraI2cAddDevice(
+                Private,
+                I2cAddress,
+                DeviceGuid,
+                0,
+                I2cNodeOffset
+		);
+        if (EFI_ERROR(Status)) {
+          goto ErrorExit;
+        }
+
+        INT32 I2cMuxNodeOffset = I2cNodeOffset;
+        DEBUG((DEBUG_INFO, "%a: PCA954x Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
+        INT32 MuxI2CControlAddress = I2cAddress;
+
+        if ((Property != NULL) && (PropertyLen == sizeof(UINT32))) {
+          fdt_for_each_subnode(I2cMuxNodeOffset, DeviceTreeNode->DeviceTreeBase, I2cNodeOffset) {
+            UINT32 I2cMuxChannelReg;
+
+            Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, I2cMuxNodeOffset, "reg", &PropertyLen);
+            if ((Property != NULL) && (PropertyLen == sizeof(UINT32))) {
+              gBS->CopyMem(&I2cMuxChannelReg, (VOID *) Property, PropertyLen);
+              I2cMuxChannelReg = SwapBytes32(I2cMuxChannelReg);
+              INT32 I2cMuxSubNodeOffset = I2cNodeOffset;
+              fdt_for_each_subnode(I2cMuxSubNodeOffset, DeviceTreeNode->DeviceTreeBase, I2cMuxNodeOffset) {
+
+                if (fdt_node_check_compatible(
+                          DeviceTreeNode->DeviceTreeBase,
+                          I2cMuxSubNodeOffset,
+                          "atmel,24c02") == 0) {
+
+                  UINT32 I2cAddressEeprom;
+                  Property = fdt_getprop(DeviceTreeNode->DeviceTreeBase, I2cMuxSubNodeOffset, "reg", &PropertyLen);
+                  if ((Property != NULL) && (PropertyLen == sizeof(UINT32))) {
+                    gBS->CopyMem(&I2cAddressEeprom, (VOID *) Property, PropertyLen);
+                    I2cAddressEeprom = SwapBytes32(I2cAddressEeprom);
+                    DeviceGuid = &gNVIDIAEeprom;
+                    // encodes all the information needed to set the mux channel into 32 bits.
+                    // Might be more compliant  to allocate an array in Private and index that instead though?
+		    NVIDIA_TEGRA_I2C_BUS_CONFIGURATION BusConfiguration;
+		    BusConfiguration.Value = 0;
+		    BusConfiguration.Fields.MuxAddress = MuxI2CControlAddress;
+		    BusConfiguration.Fields.Channel    = I2cMuxChannelReg;
+		    BusConfiguration.Fields.EnableBitNumber = EnableBit;
+		    BusConfiguration.Fields.MuxType    = MuxTypeVal;
+
+                    Status = TegraI2cAddDevice(
+                            Private,
+                            I2cAddressEeprom,
+                            DeviceGuid,
+			    BusConfiguration.Value,
+			    I2cMuxSubNodeOffset
+			    );
+
+                    if (EFI_ERROR(Status)) {
+                      goto ErrorExit;
+                    }
+
+                    DEBUG((DEBUG_INFO, "%a: Got an atmel,24c02 at mux channel %x with reg address: %x\n", __FUNCTION__, I2cMuxChannelReg, I2cAddressEeprom));
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     } else if (fdt_node_check_compatible (
                  DeviceTreeNode->DeviceTreeBase,
@@ -1300,7 +1450,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1322,7 +1473,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1344,7 +1496,8 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       0,
+                       I2cNodeOffset
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1378,7 +1531,7 @@ TegraI2CDriverBindingStart (
     }
   }
 
-  Count                   = 0;
+
   EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
   if (EepromManagerNodeOffset >= 0) {
     fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
@@ -1406,13 +1559,13 @@ TegraI2CDriverBindingStart (
                          Private,
                          I2cAddress,
                          DeviceGuid,
-                         Count
+                         0,
+                         EepromNodeOffset
                          );
           if (EFI_ERROR (Status)) {
             goto ErrorExit;
           }
 
-          Count++;
           DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, I2cBusHandle));
         }
       }
@@ -1427,6 +1580,8 @@ TegraI2CDriverBindingStart (
                   &Private->I2cEnumerate,
                   &gEfiI2cBusConfigurationManagementProtocolGuid,
                   &Private->I2CConfiguration,
+                  &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+                  &Private->I2cSlaveDeviceTreeNode,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
@@ -1447,6 +1602,8 @@ ErrorExit:
                &Private->I2cEnumerate,
                &gEfiI2cBusConfigurationManagementProtocolGuid,
                &Private->I2CConfiguration,
+               &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+               &Private->I2cSlaveDeviceTreeNode,
                NULL
                );
       }
@@ -1508,6 +1665,8 @@ TegraI2CDriverBindingStop (
                   &Private->I2cEnumerate,
                   &gEfiI2cBusConfigurationManagementProtocolGuid,
                   &Private->I2CConfiguration,
+                  &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid,
+                  &Private->I2cSlaveDeviceTreeNode,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
