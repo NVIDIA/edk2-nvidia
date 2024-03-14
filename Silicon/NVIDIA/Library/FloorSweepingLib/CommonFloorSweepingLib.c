@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -390,14 +390,14 @@ CommonFloorSweepPcie (
         }
 
         /* Add 'nvidia,socket-id' property */
-        Ret = fdt_appendprop_u32 (Dtb, NodeOffset, "nvidia,socket-id", Socket);
+        Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,socket-id", Socket);
         if (Ret) {
           DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,socket-id\" property: %d\n", Ret));
           return EFI_UNSUPPORTED;
         }
 
         /* Add 'nvidia,controller-id' property */
-        Ret = fdt_appendprop_u32 (Dtb, NodeOffset, "nvidia,controller-id", CtrlId);
+        Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,controller-id", CtrlId);
         if (Ret) {
           DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,controller-id\" property: %d\n", Ret));
           return EFI_UNSUPPORTED;
@@ -426,7 +426,12 @@ CommonFloorSweepPcie (
               "Patching 'linux,pci-domain' with = %x\n",
               Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment
               ));
-            *(UINT32 *)Property = cpu_to_fdt32 ((UINT32)(Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment));
+
+            Ret = fdt_setprop_u32 (Dtb, NodeOffset, "linux,pci-domain", Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment);
+            if (Ret) {
+              DEBUG ((DEBUG_ERROR, "Failed to add \"linux,pci-domain\" property: %d\n", Ret));
+              return EFI_UNSUPPORTED;
+            }
           }
         } else {
           DEBUG ((DEBUG_WARN, "Failed to find UEFI early variables to patch \"linux,pci-domain\" property\n"));

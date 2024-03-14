@@ -42,6 +42,9 @@
 #include <TH500/TH500MB1Configuration.h>
 #include "NvidiaConfigHii.h"
 
+#define OS_CONFIG_VAR_ATTRIBUTES    (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS)
+#define UEFI_CONFIG_VAR_ATTRIBUTES  (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
+
 extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
 //
@@ -915,7 +918,8 @@ EFIAPI
 GetMb1Variable (
   CHAR16  *VariableName,
   VOID    *VariableData,
-  UINTN   VariableSize
+  UINTN   VariableSize,
+  UINT32  VariableAttributes
   )
 {
   EFI_STATUS  Status;
@@ -927,14 +931,14 @@ GetMb1Variable (
   if ((Status == EFI_NOT_FOUND) ||
       ((Status == EFI_BUFFER_TOO_SMALL) &&
        ((ReadVariableSize != VariableSize) ||
-        (Attributes != (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS)))))
+        (Attributes != VariableAttributes))))
   {
     if (Status != EFI_NOT_FOUND) {
       // Delete the variable
       gRT->SetVariable (VariableName, &gNVIDIAPublicVariableGuid, Attributes, 0, NULL);
     }
 
-    Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS;
+    Attributes = VariableAttributes;
     Status     = gRT->SetVariable (VariableName, &gNVIDIAPublicVariableGuid, Attributes, VariableSize, VariableData);
     return Status;
   } else if (Status != EFI_BUFFER_TOO_SMALL) {
@@ -963,7 +967,8 @@ ReadMb1Variables (
   Status = GetMb1Variable (
              L"Grace.MB1.FeatureData",
              (VOID *)&(EarlyVariable->Data.Mb1Data.FeatureData),
-             sizeof (EarlyVariable->Data.Mb1Data.FeatureData)
+             sizeof (EarlyVariable->Data.Mb1Data.FeatureData),
+             OS_CONFIG_VAR_ATTRIBUTES
              );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -972,7 +977,8 @@ ReadMb1Variables (
   Status = GetMb1Variable (
              L"Grace.MB1.HvRsvdMemSize",
              (VOID *)&(EarlyVariable->Data.Mb1Data.HvRsvdMemSize),
-             sizeof (EarlyVariable->Data.Mb1Data.HvRsvdMemSize)
+             sizeof (EarlyVariable->Data.Mb1Data.HvRsvdMemSize),
+             OS_CONFIG_VAR_ATTRIBUTES
              );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -981,7 +987,8 @@ ReadMb1Variables (
   Status = GetMb1Variable (
              L"Grace.MB1.UefiDebugLevel",
              (VOID *)&(EarlyVariable->Data.Mb1Data.UefiDebugLevel),
-             sizeof (EarlyVariable->Data.Mb1Data.UefiDebugLevel)
+             sizeof (EarlyVariable->Data.Mb1Data.UefiDebugLevel),
+             OS_CONFIG_VAR_ATTRIBUTES
              );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -998,7 +1005,8 @@ ReadMb1Variables (
       Status     = GetMb1Variable (
                      VariableName,
                      (VOID *)&UphyConfig,
-                     sizeof (UINT8)
+                     sizeof (UINT8),
+                     OS_CONFIG_VAR_ATTRIBUTES
                      );
       if (EFI_ERROR (Status)) {
         return Status;
@@ -1039,7 +1047,8 @@ ReadMb1Variables (
       Status = GetMb1Variable (
                  VariableName,
                  (VOID *)&(EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2]),
-                 sizeof (TEGRABL_MB1BCT_PCIE_CONFIG)
+                 sizeof (TEGRABL_MB1BCT_PCIE_CONFIG),
+                 OS_CONFIG_VAR_ATTRIBUTES
                  );
       if (EFI_ERROR (Status)) {
         return Status;
@@ -1055,7 +1064,8 @@ EFI_STATUS
 EFIAPI
 WriteMb1Variables (
   TEGRABL_EARLY_BOOT_VARIABLES  *NewVariable,
-  TEGRABL_EARLY_BOOT_VARIABLES  *CurrentVariable
+  TEGRABL_EARLY_BOOT_VARIABLES  *CurrentVariable,
+  BOOLEAN                       ForceUpdate
   )
 {
   EFI_STATUS  Status;
@@ -1067,12 +1077,48 @@ WriteMb1Variables (
   UINTN       Size;
   UINT32      Attributes;
 
-  Attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS;
+  Attributes = UEFI_CONFIG_VAR_ATTRIBUTES;
+
+  SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.Header.MajorVersion);
+  DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.Header.MajorVersion);
+  Size    = sizeof (NewVariable->Data.Mb1Data.Header.MajorVersion);
+  Status  = gRT->SetVariable (
+                   L"Grace.MB1.MajorVersion",
+                   &gNVIDIAPublicVariableGuid,
+                   Attributes,
+                   Size,
+                   SrcPtr
+                   );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  CopyMem (DestPtr, SrcPtr, Size);
+
+  SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.Header.MinorVersion);
+  DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.Header.MinorVersion);
+  Size    = sizeof (NewVariable->Data.Mb1Data.Header.MinorVersion);
+  Status  = gRT->SetVariable (
+                   L"Grace.MB1.MinorVersion",
+                   &gNVIDIAPublicVariableGuid,
+                   Attributes,
+                   Size,
+                   SrcPtr
+                   );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  CopyMem (DestPtr, SrcPtr, Size);
+
+  Attributes = OS_CONFIG_VAR_ATTRIBUTES;
 
   SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.FeatureData);
   DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.FeatureData);
   Size    = sizeof (NewVariable->Data.Mb1Data.FeatureData);
-  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+  if ((ForceUpdate) ||
+      (CompareMem (SrcPtr, DestPtr, Size) != 0))
+  {
     Status = gRT->SetVariable (
                     L"Grace.MB1.FeatureData",
                     &gNVIDIAPublicVariableGuid,
@@ -1090,7 +1136,9 @@ WriteMb1Variables (
   SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.HvRsvdMemSize);
   DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.HvRsvdMemSize);
   Size    = sizeof (NewVariable->Data.Mb1Data.HvRsvdMemSize);
-  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+  if ((ForceUpdate) ||
+      (CompareMem (SrcPtr, DestPtr, Size) != 0))
+  {
     Status = gRT->SetVariable (
                     L"Grace.MB1.HvRsvdMemSize",
                     &gNVIDIAPublicVariableGuid,
@@ -1108,7 +1156,9 @@ WriteMb1Variables (
   SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UefiDebugLevel);
   DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UefiDebugLevel);
   Size    = sizeof (NewVariable->Data.Mb1Data.UefiDebugLevel);
-  if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+  if ((ForceUpdate) ||
+      (CompareMem (SrcPtr, DestPtr, Size) != 0))
+  {
     Status = gRT->SetVariable (
                     L"Grace.MB1.UefiDebugLevel",
                     &gNVIDIAPublicVariableGuid,
@@ -1124,12 +1174,18 @@ WriteMb1Variables (
   }
 
   for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
     for (Index2 = 0; Index2 < TEGRABL_MAX_UPHY_PER_SOCKET; Index2++) {
       UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.UphyConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
       Size    = sizeof (NewVariable->Data.Mb1Data.UphyConfig.UphyConfig[Index][Index2]);
-      if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+      if ((ForceUpdate) ||
+          (CompareMem (SrcPtr, DestPtr, Size) != 0))
+      {
         Status = gRT->SetVariable (
                         VariableName,
                         &gNVIDIAPublicVariableGuid,
@@ -1147,12 +1203,18 @@ WriteMb1Variables (
   }
 
   for (Index = 0; Index < TEGRABL_SOC_MAX_SOCKETS; Index++) {
+    if (!mHiiControlSettings.SocketEnabled[Index]) {
+      continue;
+    }
+
     for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
       UnicodeSPrint (VariableName, sizeof (VariableName), L"Grace.MB1.PcieConfig.%x.%x", Index, Index2);
       SrcPtr  = (VOID *)&(NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       DestPtr = (VOID *)&(CurrentVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
       Size    = sizeof (NewVariable->Data.Mb1Data.PcieConfig[Index][Index2]);
-      if (CompareMem (SrcPtr, DestPtr, Size) != 0) {
+      if ((ForceUpdate) ||
+          (CompareMem (SrcPtr, DestPtr, Size) != 0))
+      {
         Status = gRT->SetVariable (
                         VariableName,
                         &gNVIDIAPublicVariableGuid,
@@ -1570,6 +1632,7 @@ InitializeSettings (
   UINTN                               Index;
   CONST TEGRABL_EARLY_BOOT_VARIABLES  *TH500HobConfig;
   VOID                                *HobPointer;
+  BOOLEAN                             DiscardVariableOverrides;
   CHAR16                              ProductInfoVariableName[] = L"ProductInfo";
 
   // Initialize PCIe Form Settings
@@ -1744,25 +1807,48 @@ InitializeSettings (
   if (mHiiControlSettings.TH500Config) {
     WriteFloorsweepingVariables ();
 
-    Status = AccessMb1Record (&mLastWrittenMb1Config, FALSE);
+    DiscardVariableOverrides = FALSE;
+    Status                   = AccessMb1Record (&mLastWrittenMb1Config, FALSE);
     if (EFI_ERROR (Status)) {
+      // No last written mb1 config present. Initialize with mMb1Config.
+      DiscardVariableOverrides = TRUE;
       CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+      Status = AccessMb1Record (&mLastWrittenMb1Config, TRUE);
+      if (EFI_ERROR (Status)) {
+        return;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: No last Written Mb1 Config: Variable overrides would be discarded\r\n", __FUNCTION__));
+    }
+
+    if ((!DiscardVariableOverrides) &&
+        (CompareMem (&mMb1Config.Data.Mb1Data, &mLastWrittenMb1Config.Data.Mb1Data, sizeof (TH500_MB1_CONFIGURATION)) != 0))
+    {
+      // Current MB1 config does not match last written mb1 config
+      DiscardVariableOverrides = TRUE;
+      CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+      Status = AccessMb1Record (&mLastWrittenMb1Config, TRUE);
+      if (EFI_ERROR (Status)) {
+        return;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: New Mb1 Config Not matching last Written Mb1 Config: Variable overrides would be discarded\r\n", __FUNCTION__));
     }
 
     CopyMem (&mVariableMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
-    Status = ReadMb1Variables (&mVariableMb1Config);
-    if (!EFI_ERROR (Status)) {
-      if ((CompareMem (&mVariableMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0) &&
-          (CompareMem (&mVariableMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0))
-      {
-        Status = AccessMb1Record (&mVariableMb1Config, TRUE);
-        if (!EFI_ERROR (Status)) {
-          // Mark existing boot chain as good.
-          ValidateActiveBootChain ();
+    if (!DiscardVariableOverrides) {
+      Status = ReadMb1Variables (&mVariableMb1Config);
+      if (!EFI_ERROR (Status)) {
+        if (CompareMem (&mVariableMb1Config, &mLastWrittenMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES)) != 0) {
+          Status = AccessMb1Record (&mVariableMb1Config, TRUE);
+          if (!EFI_ERROR (Status)) {
+            // Mark existing boot chain as good.
+            ValidateActiveBootChain ();
 
-          StatusRegReset ();
-          gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
-          ASSERT (FALSE);
+            StatusRegReset ();
+            gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+            ASSERT (FALSE);
+          }
         }
       }
     }
@@ -1818,7 +1904,7 @@ InitializeSettings (
       mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
 
-    WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
+    WriteMb1Variables (&mMb1Config, &mVariableMb1Config, DiscardVariableOverrides);
   }
 }
 
@@ -2002,7 +2088,7 @@ ConfigRouteConfig (
       Status = AccessMb1Record (&mMb1Config, TRUE);
       if (!EFI_ERROR (Status)) {
         CopyMem (&mLastWrittenMb1Config, &mMb1Config, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
-        Status = WriteMb1Variables (&mMb1Config, &mVariableMb1Config);
+        Status = WriteMb1Variables (&mMb1Config, &mVariableMb1Config, FALSE);
       }
 
       if (EFI_ERROR (Status)) {
