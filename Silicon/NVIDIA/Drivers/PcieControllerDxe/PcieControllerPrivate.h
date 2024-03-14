@@ -82,6 +82,7 @@ typedef struct {
 
   // C2C Init Tracking
   BOOLEAN                                             C2cInitRequired;
+  BOOLEAN                                             C2cInitSuccessful;
   NVIDIA_C2C_NODE_PROTOCOL                            *C2cProtocol;
 
   // Configuration data
