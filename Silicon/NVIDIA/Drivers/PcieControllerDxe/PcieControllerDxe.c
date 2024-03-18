@@ -31,6 +31,7 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
@@ -1554,9 +1555,11 @@ DeviceDiscoveryNotify (
   VOID                                         *Registration;
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
   CM_OBJECT_TOKEN                              *TokenMap;
+  TEGRA_PLATFORM_TYPE                          PlatformType;
 
-  Status    = EFI_SUCCESS;
-  PcieFound = FALSE;
+  PlatformType = TegraGetPlatform ();
+  Status       = EFI_SUCCESS;
+  PcieFound    = FALSE;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
@@ -1885,7 +1888,9 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      if (Private->C2cInitSuccessful) {
+      if ((Private->C2cInitSuccessful) ||
+          (PlatformType == TEGRA_PLATFORM_VDK))
+      {
         RangeSize         = (AddressCells + SizeCells) * sizeof (UINT32);
         HbmRangesProperty = fdt_getprop (
                               DeviceTreeNode->DeviceTreeBase,
