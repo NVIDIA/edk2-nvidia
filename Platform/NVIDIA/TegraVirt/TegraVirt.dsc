@@ -64,7 +64,7 @@
   # BDS Libraries
   UefiBootManagerLib|MdeModulePkg/Library/UefiBootManagerLib/UefiBootManagerLib.inf
   PlatformBootManagerLib|Silicon/NVIDIA/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
-  PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLib.inf
+  PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLibNoIpmi.inf
   BootLogoLib|MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
 
   CustomizedDisplayLib|MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
@@ -98,13 +98,12 @@
   NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
-  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/PlatformResourceLib.inf
+  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLibNull/PlatformResourceLibNull.inf
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
-  BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
+  BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLibNull/BootChainInfoLibNull.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
-  TegraPlatformInfoLib|Silicon/NVIDIA/Library/TegraPlatformInfoLib/TegraPlatformInfoLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
 
   # Override the ResetSystemLib used by ArmVirt with a Null implementation.
@@ -114,7 +113,7 @@
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
 
   DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
-  StatusRegLib|Silicon/NVIDIA/Library/StatusRegLib/StatusRegLib.inf
+  StatusRegLib|Silicon/NVIDIA/Library/StatusRegLibNull/StatusRegLibNull.inf
 
 [LibraryClasses.common.SEC, LibraryClasses.common.PEI_CORE, LibraryClasses.common.PEIM]
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf

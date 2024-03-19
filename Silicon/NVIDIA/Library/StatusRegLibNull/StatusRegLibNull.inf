@@ -1,0 +1,27 @@
+## @file
+#
+#  Null Status register library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = StatusRegLib
+  FILE_GUID                      = f0f684fd-a35d-4844-8b08-45d9c21849c1
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = StatusRegLib
+
+[Sources.common]
+  StatusRegLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib

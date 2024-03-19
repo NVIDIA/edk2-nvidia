@@ -101,10 +101,7 @@ PlatformLoadFileBootDescriptionHandler (
       break;
     } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
       VENDOR_DEVICE_PATH  *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
-      if (CompareGuid (&VendorPath->Guid, &gNVIDIARamloadKernelGuid)) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_RAMLOADED_BOOT_DESCRIPTION), NULL);
-        break;
-      } else if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
+      if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
         DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_RCM_BOOT_DESCRIPTION), NULL);
         break;
       } else if (CompareGuid (&VendorPath->Guid, &gEfiPersistentVirtualDiskGuid)) {

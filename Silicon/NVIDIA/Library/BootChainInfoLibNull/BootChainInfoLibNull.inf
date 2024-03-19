@@ -1,0 +1,28 @@
+#/** @file
+#
+#  Null Boot Chain Information Library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootChainInfoLib
+  FILE_GUID                      = a8e835ae-c66f-4f26-b2ed-b51dc06d83c3
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BootChainInfoLib
+
+[Sources.common]
+  BootChainInfoLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  PrintLib

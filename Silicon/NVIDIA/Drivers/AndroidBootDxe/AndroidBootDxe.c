@@ -15,8 +15,6 @@
 #include <libfdt.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
-#include <Library/HobLib.h>
-#include <Protocol/LoadedImage.h>
 #include <Library/HandleParsingLib.h>
 #include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
@@ -26,19 +24,6 @@ STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
 STATIC UINT64                     mRamLoadedSize         = 0;
 STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
 STATIC UINT64                     mInitRdSize            = 0;
-STATIC SINGLE_VENHW_NODE_DEVPATH  mRamLoadFileDevicePath = {
-  {
-    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) }
-    },
-    { 0 }
-  },
-
-  {
-    END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
-  }
-};
-
 STATIC SINGLE_VENHW_NODE_DEVPATH  mRcmLoadFileDevicePath = {
   {
     { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { sizeof (VENDOR_DEVICE_PATH) }
@@ -2305,8 +2290,6 @@ AndroidBootDxeDriverEntryPoint (
   )
 {
   EFI_STATUS  Status;
-  VOID        *Hob;
-  UINTN       EmmcMagic;
   UINT64      KernelStart;
   UINT64      KernelDtbStart;
   UINTN       NewKernelDtbPages;
@@ -2378,60 +2361,6 @@ AndroidBootDxeDriverEntryPoint (
       ));
 
     AndroidBootPrepareBootFromMemory (ImageHandle);
-  } else {
-    EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (TegraGetChipID ()) + SYSIMG_EMMC_MAGIC_OFFSET));
-    if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
-      Hob = GetFirstGuidHob (&gNVIDIAOSCarveoutHob);
-      if (Hob != NULL) {
-        EFI_MEMORY_DESCRIPTOR  *Descriptor;
-        EFI_HANDLE             LoadedImageHandle = 0;
-        EFI_HANDLE             LoadFileHandle    = 0;
-
-        Descriptor = (EFI_MEMORY_DESCRIPTOR *)GET_GUID_HOB_DATA (Hob);
-        DEBUG ((DEBUG_INFO, "%a: Got descriptor %x, %x\r\n", __FUNCTION__, Descriptor->PhysicalStart, Descriptor->NumberOfPages));
-        CopyMem (&mRamLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARamloadKernelGuid, sizeof (EFI_GUID));
-
-        Status = gBS->LoadImage (
-                        FALSE,
-                        ImageHandle,
-                        NULL,
-                        (VOID *)(UINTN)Descriptor->PhysicalStart + KERNEL_OFFSET,
-                        EFI_PAGES_TO_SIZE (Descriptor->NumberOfPages) - KERNEL_OFFSET,
-                        &LoadedImageHandle
-                        );
-        if (!EFI_ERROR (Status)) {
-          EFI_LOADED_IMAGE_PROTOCOL  *ImageProtocol;
-          Status = gBS->HandleProtocol (
-                          LoadedImageHandle,
-                          &gEfiLoadedImageProtocolGuid,
-                          (VOID **)&ImageProtocol
-                          );
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Failed to get loaded image protocol (%r)\r\n", __FUNCTION__, Status));
-          } else {
-            DEBUG ((DEBUG_INFO, "%a: Located at 0x%016x 0x%016x\r\n", __FUNCTION__, Descriptor->PhysicalStart, ImageProtocol->ImageSize));
-            mRamLoadedBaseAddress = Descriptor->PhysicalStart + KERNEL_OFFSET;
-            mRamLoadedSize        = ImageProtocol->ImageSize;
-            gBS->UnloadImage (LoadedImageHandle);
-            Status = gBS->InstallMultipleProtocolInterfaces (
-                            &LoadFileHandle,
-                            &gEfiLoadFileProtocolGuid,
-                            &mRamloadLoadFile,
-                            &gNVIDIALoadfileKernelArgsGuid,
-                            NULL,
-                            &gEfiDevicePathProtocolGuid,
-                            &mRamLoadFileDevicePath,
-                            NULL
-                            );
-            if (EFI_ERROR (Status)) {
-              DEBUG ((DEBUG_ERROR, "%a: Failed to image Load File Protocol (%r)\r\n", __FUNCTION__, Status));
-            }
-          }
-        } else {
-          DEBUG ((DEBUG_INFO, "%a: LoadImage failed (%r)\r\n", __FUNCTION__, Status));
-        }
-      }
-    }
   }
 
 Done:

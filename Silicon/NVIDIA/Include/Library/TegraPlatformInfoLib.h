@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -29,10 +29,6 @@
 // Server SKUs
 #define TH500_SKU         5
 #define TH500_PRESIL_SKU  253
-
-#define SYSIMG_EMMC_MAGIC_OFFSET  0x4
-#define SYSIMG_EMMC_MAGIC         0xEAAAAAAC
-#define SYSIMG_DEFAULT_MAGIC      0xE0000000
 
 #ifndef __ASSEMBLY__
 

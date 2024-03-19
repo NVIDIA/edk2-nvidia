@@ -15,8 +15,6 @@
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/TegraPlatformInfoLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 
 #include <Protocol/PlatformBootManager.h>
@@ -750,8 +748,7 @@ RefreshAutoEnumeratedBootOptions (
       ASSERT_EFI_ERROR (Status);
 
       // Always use DTB arguments on pre-silicon targets
-      if ((TegraGetPlatform () == TEGRA_PLATFORM_SILICON) &&
-          (ImgKernelArgs != NULL) &&
+      if ((ImgKernelArgs != NULL) &&
           (StrLen (ImgKernelArgs) != 0) &&
           (PcdGetBool (PcdBootAndroidImage) == FALSE))
       {

@@ -41,7 +41,6 @@
   DevicePathLib
   PcdLib
   HobLib
-  TegraPlatformInfoLib
   HandleParsingLib
   BootChainInfoLib
   AndroidBcbLib
@@ -58,9 +57,7 @@
 [Guids]
   gFdtTableGuid
   gEfiAcpiTableGuid
-  gNVIDIARamloadKernelGuid
   gNVIDIARcmKernelGuid
-  gNVIDIAOSCarveoutHob
   gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid

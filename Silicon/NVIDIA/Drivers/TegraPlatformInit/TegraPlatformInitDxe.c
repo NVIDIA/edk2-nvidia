@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -709,7 +709,6 @@ TegraPlatformInitialize (
   CONST VOID                    *Property;
   INT32                         Length;
   BOOLEAN                       T234SkuSet;
-  UINTN                         EmmcMagic;
   BOOLEAN                       EmulatedVariablesUsed;
   INTN                          NodeOffset;
   VOID                          *Hob;
@@ -763,12 +762,6 @@ TegraPlatformInitialize (
       LibPcdSetSku (TH500_PRESIL_SKU);
     }
 
-    // Override boot timeout for pre-si platforms
-    EmmcMagic = *((UINTN *)(TegraGetSystemMemoryBaseAddress (ChipID) + SYSIMG_EMMC_MAGIC_OFFSET));
-    if ((EmmcMagic != SYSIMG_EMMC_MAGIC) && (EmmcMagic == SYSIMG_DEFAULT_MAGIC)) {
-      EmulatedVariablesUsed = TRUE;
-    }
-
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ImageHandle,
                     &gNVIDIAIsPresiliconDeviceGuid,
@@ -780,7 +773,6 @@ TegraPlatformInitialize (
     }
   }
 
-  /*TODO: Retaining above logic for backward compatibility. Remove once all DTBs are updated.*/
   NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
   if (NodeOffset >= 0) {
     if (NULL != fdt_get_property (DtbBase, NodeOffset, "use-emulated-variables", NULL)) {

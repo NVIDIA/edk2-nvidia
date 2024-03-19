@@ -25,7 +25,6 @@
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
 #include <AndroidBootImgHeader.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Library/BootChainInfoLib.h>
 
 #include <Guid/LinuxEfiInitrdMedia.h>
@@ -38,7 +37,6 @@
 #include <Protocol/LoadFile2.h>
 
 #define FDT_ADDITIONAL_ENTRIES_SIZE               0x400
-#define KERNEL_OFFSET                             0x80000
 #define ANDROID_BOOT_SIGNATURE                    SIGNATURE_64 ('A','N','D','R','O','I','D','!')
 #define VENDOR_BOOT_MAGIC                         "VNDRBOOT"
 #define VENDOR_BOOT_MAGIC_SIZE                    8

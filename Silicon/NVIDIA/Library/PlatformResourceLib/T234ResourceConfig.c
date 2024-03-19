@@ -232,11 +232,10 @@ T234AddBootloaderCarveouts (
   IN     CONST UINTN                         CarveoutCount
   )
 {
-  EFI_MEMORY_DESCRIPTOR  Descriptor;
-  UINTN                  Index;
-  EFI_MEMORY_TYPE        MemoryType;
-  EFI_PHYSICAL_ADDRESS   Base;
-  UINT64                 Size, Pages;
+  UINTN                 Index;
+  EFI_MEMORY_TYPE       MemoryType;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINT64                Size, Pages;
 
   TEGRA_MMIO_INFO *CONST  FrameBufferMmioInfo =
     &T234MmioInfo[T234_FRAME_BUFFER_MMIO_INFO_INDEX];
@@ -278,15 +277,6 @@ T234AddBootloaderCarveouts (
         Pages = EFI_SIZE_TO_PAGES (Size);
         BuildMemoryAllocationHob (Base, EFI_PAGES_TO_SIZE (Pages), MemoryType);
         PlatformResourceAddMemoryRegion (UsableRegions, UsableRegionCount, Base, Size);
-
-        if (Index == CARVEOUT_OS) {
-          Descriptor.Type          = MemoryType;
-          Descriptor.PhysicalStart = Base;
-          Descriptor.VirtualStart  = Base;
-          Descriptor.NumberOfPages = Pages;
-          Descriptor.Attribute     = 0;
-          BuildGuidDataHob (&gNVIDIAOSCarveoutHob, &Descriptor, sizeof (Descriptor));
-        }
 
         break;
 
