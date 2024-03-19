@@ -842,6 +842,58 @@ VisitAllInstancesOfProtocol (
 }
 
 STATIC
+EFI_PCI_IO_PROTOCOL *
+GetRPDev (
+  EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  EFI_STATUS           Status;
+  UINTN                HandleCount;
+  EFI_HANDLE           *HandleBuffer;
+  UINTN                Index;
+  VOID                 *Instance;
+  EFI_PCI_IO_PROTOCOL  *ParentPciIo;
+  UINTN                Segment, Bus, Device, Function;
+  UINTN                PSegment, PBus, PDevice, PFunction;
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  /* Start to check all the PciIo to find all possible devices */
+  HandleCount  = 0;
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiPciIoProtocolGuid,
+                        NULL,
+                        &HandleCount,
+                        &HandleBuffer
+                        );
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Index], &gEfiPciIoProtocolGuid, &Instance);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    ParentPciIo = Instance;
+    Status      = ParentPciIo->GetLocation (ParentPciIo, &PSegment, &PBus, &PDevice, &PFunction);
+    ASSERT_EFI_ERROR (Status);
+
+    if ((PSegment == Segment) && (PBus == 0)) {
+      gBS->FreePool (HandleBuffer);
+      return ParentPciIo;
+    }
+  }
+
+  gBS->FreePool (HandleBuffer);
+  return NULL;
+}
+
+STATIC
 EFI_STATUS
 PcieEnableErrorReporting (
   EFI_PCI_IO_PROTOCOL  *PciIo
@@ -1054,6 +1106,53 @@ PcieEnableErrorReporting (
           Device,
           Function
           ));
+
+        /* If this is a switch downstream port, disable the DPC in the upstream RP */
+        if (Bus > 0) {
+          UINT32               RpDpcCapOffset;
+          UINTN                RPSegment, RPBus, RPDevice, RPFunction;
+          EFI_PCI_IO_PROTOCOL  *RPPciIo;
+
+          RPPciIo        = GetRPDev (PciIo);
+          RpDpcCapOffset = PcieFindExtCap (RPPciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
+          if (RpDpcCapOffset) {
+            Status = RPPciIo->Pci.Read (
+                                    RPPciIo,
+                                    EfiPciIoWidthUint16,
+                                    RpDpcCapOffset + PCIE_DPC_CTL,
+                                    1,
+                                    &Val_16
+                                    );
+            if (EFI_ERROR (Status)) {
+              return EFI_DEVICE_ERROR;
+            }
+
+            Val_16 &= ~(PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
+                        PCIE_DPC_CTL_DPC_ERR_COR_EN);
+
+            Status = RPPciIo->Pci.Write (
+                                    RPPciIo,
+                                    EfiPciIoWidthUint16,
+                                    RpDpcCapOffset + PCIE_DPC_CTL,
+                                    1,
+                                    &Val_16
+                                    );
+            if (EFI_ERROR (Status)) {
+              return EFI_DEVICE_ERROR;
+            }
+
+            Status = RPPciIo->GetLocation (RPPciIo, &RPSegment, &RPBus, &RPDevice, &RPFunction);
+            ASSERT_EFI_ERROR (Status);
+            DEBUG ((
+              DEBUG_INFO,
+              "Device [%04x:%02x:%02x.%x] : Disabled DPC in the corresponding RootPort\n",
+              RPSegment,
+              RPBus,
+              RPDevice,
+              RPFunction
+              ));
+          }
+        }
       } else {
         DEBUG ((
           DEBUG_INFO,
