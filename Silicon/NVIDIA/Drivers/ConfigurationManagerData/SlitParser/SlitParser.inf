@@ -1,0 +1,54 @@
+## @file
+#  SlitParser
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = SlitParser
+  FILE_GUID      = 917b7ccf-776c-41ab-820e-24a142bf1d9e
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterSlitParser
+
+[Sources]
+  SlitParser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  HbmParserLib
+  PcdLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdLocalDistance
+  gNVIDIATokenSpaceGuid.PcdUnreachableDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteGpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalGpuDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteGpuDistance
+
+[Guids]
+
+[Protocols]

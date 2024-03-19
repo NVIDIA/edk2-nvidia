@@ -1,0 +1,38 @@
+## @file
+#  Configuration Manager Data Repo Lib
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = ConfigurationManagerDataRepoLib
+  FILE_GUID      = a56482ff-706e-4ebb-a16d-c1f194091d69
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = ConfigurationManagerDataRepoLib|DXE_DRIVER
+  CONSTRUCTOR    = InitializePlatformRepository
+
+[Sources]
+  ConfigurationManagerDataRepoLib.c
+  NvCmObjectDescUtility.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerLib
+  TegraPlatformInfoLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+
+[Guids]
+  gNVIDIATokenSpaceGuid
+
+[Protocols]

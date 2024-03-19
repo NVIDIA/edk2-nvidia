@@ -6,8 +6,10 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
+#include "ProtocolBasedObjectsParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/UefiLib.h>
-#include "NvCmObjectDescUtility.h"
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/NVIDIADebugLib.h>
 
@@ -174,3 +176,5 @@ CleanupAndReturn:
   FREE_NON_NULL (ProtocolList);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (ProtocolBasedObjectsParser, NULL)

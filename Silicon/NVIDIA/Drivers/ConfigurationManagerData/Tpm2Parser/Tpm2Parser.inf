@@ -1,0 +1,46 @@
+## @file
+#  Tpm2Parser
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = Tpm2Parser
+  FILE_GUID      = eb2d88b1-4f6a-4143-b7bd-4e7907e52de9
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterTpm2Parser
+
+[Sources]
+  Tpm2Parser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  PcdLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
+  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLaml
+  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLasa
+
+[Guids]
+
+[Protocols]
+  gEfiTcg2ProtocolGuid

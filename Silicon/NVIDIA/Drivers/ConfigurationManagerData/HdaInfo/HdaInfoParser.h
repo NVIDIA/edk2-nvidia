@@ -9,8 +9,9 @@
 #ifndef HDA_INFO_PARSER_H_
 #define HDA_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 #include <Protocol/AmlPatchProtocol.h>
-#include <Library/HwInfoParserLib.h>
 
 /** hda info parser function.
 

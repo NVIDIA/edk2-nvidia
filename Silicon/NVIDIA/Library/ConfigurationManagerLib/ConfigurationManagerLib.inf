@@ -30,20 +30,17 @@
   UefiBootServicesTableLib
   UefiLib
   DynamicPlatRepoLib
+  TableHelperLib
+  HwInfoParserLib
 
 [Sources.common]
-  ConfigurationManagerGicLib.c
   ConfigurationManagerProtocolLib.c
   ConfigurationManagerDataLib.c
 
 [Pcd]
-  gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicRedistributorsBase
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
   gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
-  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
-  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
@@ -55,7 +52,6 @@
 
 [Protocols]
   gNVIDIAConfigurationManagerDataObjectGuid
-  gNVIDIATegraCpuFrequencyProtocolGuid
   gNVIDIAAmlPatchProtocolGuid
   gNVIDIAAmlGenerationProtocolGuid
   gNVIDIAConfigurationManagerTokenProtocolGuid

@@ -8,10 +8,10 @@
 
 #include <ConfigurationManagerObject.h>
 #include <Library/ConfigurationManagerDataLib.h>
+#include <Library/NvCmObjectDescUtility.h>
 #include <Library/NVIDIADebugLib.h>
 #include <ArmNameSpaceObjects.h>
 
-#include "NvCmObjectDescUtility.h"
 #include "NvCmObjectDescUtilityPrivate.h"
 
 /** Create a CM_OBJ_DESCRIPTOR.
@@ -453,7 +453,11 @@ NvGetCmPatchProtocol (
   FdtParserHandle = (FDT_HW_INFO_PARSER_HANDLE)ParserHandle;
   Repo            = (EDKII_PLATFORM_REPOSITORY_INFO  *)(FdtParserHandle->Context);
   PatchProtocol   = Repo->PatchProtocol;
-  *ProtocolPtr    = PatchProtocol;
+  if (PatchProtocol == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  *ProtocolPtr = PatchProtocol;
   return EFI_SUCCESS;
 }
 

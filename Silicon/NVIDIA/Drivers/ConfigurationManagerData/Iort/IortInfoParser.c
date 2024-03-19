@@ -7,6 +7,9 @@
 
 **/
 
+#include "IortInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DxeServicesTableLib.h>
@@ -17,11 +20,6 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <libfdt.h>
-
-#include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
-
-#include "NvCmObjectDescUtility.h"
 
 #include <T234/T234Definitions.h>
 #include <TH500/TH500Definitions.h>
@@ -1975,13 +1973,9 @@ IortInfoParser (
   AcpiTableHeader.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   AcpiTableHeader.MinorRevision      = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &AcpiTableHeader;
-
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+  Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to add IORT ACPI table - %r\r\n", __func__, Status));
     goto CleanupAndReturn;
   }
 
@@ -2016,3 +2010,5 @@ IortInfoParser (
 CleanupAndReturn:
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (IortInfoParser, "skip-iort-table")

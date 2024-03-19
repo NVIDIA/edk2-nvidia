@@ -1,0 +1,39 @@
+## @file
+#  Generic Watchdog
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = GenericWatchdogInfoParser
+  FILE_GUID      = 6c9bc3b6-a1e9-4478-8c1e-547073242562
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterGenericWatchdogInfoParser
+
+[Sources]
+  GenericWatchdogInfoParser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  TegraPlatformInfoLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
+
+[Guids]
+
+[Protocols]

@@ -9,6 +9,8 @@
 #ifndef PROC_HIERARCHY_INFO_PARSER_H_
 #define PROC_HIERARCHY_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** A helper macro for populating the Processor Hierarchy Node flags
 */
 #define PROC_NODE_FLAGS(                                                \

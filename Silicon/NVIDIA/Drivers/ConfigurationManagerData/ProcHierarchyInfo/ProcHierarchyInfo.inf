@@ -1,0 +1,49 @@
+## @file
+#  ProcHierarchyInfo
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = ProcHierarchyInfoParser
+  FILE_GUID      = 54c73b44-1aec-406a-8c19-546118bfde7f
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterProcHierarchyInfoParser
+
+[Sources]
+  ProcHierarchyInfoParser.c
+  ../CacheInfo/CacheInfoParser.c
+  ../CacheInfo/CacheInfoParserT194.c
+  ../Gic/GicCParser.c
+  ../Gic/LpiParser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  MemoryAllocationLib
+  MpCoreInfoLib
+  TegraPlatformInfoLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
+  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
+  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
+
+[Guids]
+
+[Protocols]
+  gNVIDIATegraCpuFrequencyProtocolGuid

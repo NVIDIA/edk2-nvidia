@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "BootArchInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
 
 /** Boot arch info parser function.
@@ -64,3 +65,5 @@ BootArchInfoParser (
   ASSERT_EFI_ERROR (Status);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (BootArchInfoParser, NULL)

@@ -9,6 +9,8 @@
 #ifndef FAN_INFO_PARSER_H_
 #define FAN_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 #define ACPI_FAN_FANR  "_SB_.FAN_.FANR"
 #define ACPI_FAN_STA   "_SB_.FAN_._STA"
 

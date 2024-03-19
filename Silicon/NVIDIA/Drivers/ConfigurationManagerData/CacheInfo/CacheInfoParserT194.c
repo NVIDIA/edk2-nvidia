@@ -6,11 +6,11 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "CacheInfoParser.h"
 #include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MpCoreInfoLib.h>
+#include <Library/NvCmObjectDescUtility.h>
 
 /** A helper macro for populating the Cache Type Structure's attributes
 */

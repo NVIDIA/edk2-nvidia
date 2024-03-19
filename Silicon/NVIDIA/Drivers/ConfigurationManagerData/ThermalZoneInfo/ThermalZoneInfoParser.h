@@ -10,10 +10,15 @@
 #ifndef THERMAL_ZONE_INFO_PARSER_H_
 #define THERMAL_ZONE_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Thermal Zone patcher function.
 
   The SSDT table is potentially patched with the following information:
-  JDS TODO
+  \_SB.BPM*.TEMP
+  \_SB_.C000.C*.C* or \_SB_.C*.C*
+  _SB_.TZL*
+  TZ*
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

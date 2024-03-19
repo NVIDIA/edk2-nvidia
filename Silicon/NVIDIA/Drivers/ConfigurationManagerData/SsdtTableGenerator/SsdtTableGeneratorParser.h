@@ -9,6 +9,8 @@
 #ifndef SSDT_TABLE_GENERATOR_PARSER_H_
 #define SSDT_TABLE_GENERATOR_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** SSDT table generator parser function.
 
   The SSDT table generator creates and adds the generated tables

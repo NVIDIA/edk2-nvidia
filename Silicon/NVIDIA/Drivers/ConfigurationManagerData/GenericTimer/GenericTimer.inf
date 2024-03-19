@@ -1,0 +1,40 @@
+## @file
+#  Generic Timer
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = GenericTimerParser
+  FILE_GUID      = 927ecbb8-95a2-4a62-bb96-8440698f3643
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterGenericTimerParser
+
+[Sources]
+  GenericTimerParser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  TegraPlatformInfoLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
+
+[Guids]
+
+[Protocols]

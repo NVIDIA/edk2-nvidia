@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "FixedFeatureFlagsParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
@@ -68,3 +69,5 @@ FixedFeatureFlagsParser (
   ASSERT_EFI_ERROR (Status);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (FixedFeatureFlagsParser, NULL)

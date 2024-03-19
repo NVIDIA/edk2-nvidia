@@ -9,6 +9,8 @@
 #ifndef ETHERNET_INFO_PARSER_H_
 #define ETHERNET_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Ethernet info parser function.
 
   The Ethernet SSDT is added to the ACPI table list.

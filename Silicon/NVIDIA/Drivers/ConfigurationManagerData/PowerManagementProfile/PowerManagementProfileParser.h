@@ -9,6 +9,8 @@
 #ifndef POWER_MANAGEMENT_PROFILE_PARSER_H_
 #define POWER_MANAGEMENT_PROFILE_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Power management profile parser function.
 
   The following structure is populated:

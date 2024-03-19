@@ -6,8 +6,10 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "GenericTimerParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
+#include <Library/PcdLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
@@ -147,3 +149,5 @@ GenericTimerParser (
   ASSERT_EFI_ERROR (Status);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (GenericTimerParser, NULL)

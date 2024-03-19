@@ -7,8 +7,8 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "DsdtPatcher.h"
+#include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
@@ -298,3 +298,5 @@ DsdtPatcher (
 
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (DsdtPatcher, NULL)

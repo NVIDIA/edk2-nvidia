@@ -10,10 +10,11 @@
 #ifndef TPM_INFO_PARSER_H_
 #define TPM_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** TPM info parser function.
 
-  The following structure is populated:
-  JDS TODO
+  The SSDT table for TPM is populated.
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

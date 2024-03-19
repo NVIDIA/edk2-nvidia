@@ -9,6 +9,8 @@
 #ifndef IORT_INFO_PARSER_H_
 #define IORT_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** IORT info parser function.
 
   The following structures are potentially populated:

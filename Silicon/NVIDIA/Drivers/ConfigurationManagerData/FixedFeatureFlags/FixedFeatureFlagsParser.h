@@ -9,6 +9,8 @@
 #ifndef FIXED_FEATURE_FLAGS_PARSER_H_
 #define FIXED_FEATURE_FLAGS_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Fixed feature flags parser function.
 
   The following structure is populated:

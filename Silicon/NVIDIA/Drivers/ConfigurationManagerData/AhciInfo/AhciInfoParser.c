@@ -6,15 +6,18 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "AhciInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/PcdLib.h>
 #include <Library/NVIDIADebugLib.h>
+
 #include <Protocol/PciRootBridgeIo.h>
 
-#include "SsdtAhci.hex"
-#include "SsdtAhci.offset.h"
+// #include "SsdtAhci.hex"
+extern unsigned char  ssdtahci_aml_code[];
 
 // Callback for AHCI controller connection
 EFI_EVENT   EndOfDxeEvent;
@@ -88,7 +91,6 @@ AhciInfoParser (
   EFI_STATUS                       Status;
   UINT32                           Index;
   CM_STD_OBJ_ACPI_TABLE_INFO       AcpiTableHeader;
-  CM_OBJ_DESCRIPTOR                Desc;
   UINTN                            NumOfHandles;
   EFI_HANDLE                       *HandleBuffer;
   EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL  *RootBridgeIo;
@@ -161,13 +163,9 @@ AhciInfoParser (
   AcpiTableHeader.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   AcpiTableHeader.MinorRevision      = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &AcpiTableHeader;
-
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+  Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add the Ahci SSDT table\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -175,3 +173,5 @@ CleanupAndReturn:
   FREE_NON_NULL (HandleBuffer);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (AhciInfoParser, NULL)

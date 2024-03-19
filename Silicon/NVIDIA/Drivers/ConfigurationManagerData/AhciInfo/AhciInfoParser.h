@@ -9,6 +9,8 @@
 #ifndef AHCI_INFO_PARSER_H_
 #define AHCI_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 #define AHCI_PCIE_SEGMENT  1
 
 /** AHCI info parser function.

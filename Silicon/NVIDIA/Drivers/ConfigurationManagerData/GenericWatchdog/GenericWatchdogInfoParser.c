@@ -7,8 +7,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "GenericWatchdogInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
@@ -91,3 +92,5 @@ GenericWatchdogInfoParser (
 
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (GenericWatchdogInfoParser, NULL)

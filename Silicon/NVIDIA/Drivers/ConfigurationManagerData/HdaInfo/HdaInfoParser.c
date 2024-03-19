@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "HdaInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/AmlLib/AmlLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/PrintLib.h>
@@ -15,7 +16,8 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
 
-#include "SsdtHda.hex"
+// #include "SsdtHda.hex"
+extern unsigned char  ssdthda_aml_code[];
 #define HDA_REG_OFFSET  0x8000
 
 /** HDA info parser function.
@@ -64,7 +66,6 @@ HdaInfoParser (
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
   UINT32                             Size;
   EFI_ACPI_DESCRIPTION_HEADER        *NewTable;
-  CM_OBJ_DESCRIPTOR                  Desc;
   CM_STD_OBJ_ACPI_TABLE_INFO         AcpiTableHeader;
 
   Status = AmlParseDefinitionBlock ((const EFI_ACPI_DESCRIPTION_HEADER *)ssdthda_aml_code, &RootNode);
@@ -209,14 +210,9 @@ HdaInfoParser (
     AcpiTableHeader.OemRevision        = NewTable->OemRevision;
     AcpiTableHeader.MinorRevision      = 0;
 
-    Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-    Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-    Desc.Count    = 1;
-    Desc.Data     = &AcpiTableHeader;
-
-    Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+    Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to add ACPI table - %r\r\n", __func__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add HDA ACPI table - %r\r\n", __func__, Status));
       return Status;
     }
   }
@@ -224,3 +220,5 @@ HdaInfoParser (
   AmlDeleteTree (RootNode);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (HdaInfoParser, NULL)

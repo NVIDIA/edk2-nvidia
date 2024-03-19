@@ -9,7 +9,7 @@
 #ifndef ACPI_TABLE_LIST_PARSER_H_
 #define ACPI_TABLE_LIST_PARSER_H_
 
-#include <Library/HwInfoParserLib.h>
+#include <Library/NvCmObjectDescUtility.h>
 
 /** Acpi table list parser function.
 

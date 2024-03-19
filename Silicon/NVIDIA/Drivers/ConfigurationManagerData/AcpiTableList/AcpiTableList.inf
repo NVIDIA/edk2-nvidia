@@ -1,0 +1,41 @@
+## @file
+#  Configuration Manager Data Repo Lib
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = AcpiTableListParser
+  FILE_GUID      = 8956191d-0400-4878-ae6c-ac626b187d8a
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = AcpiTableListParser|DXE_DRIVER
+  CONSTRUCTOR    = RegisterAcpiTableListParser
+
+[Sources]
+  AcpiTableListParser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AslTemplateTablesLib
+  ConfigurationManagerDataRepoLib
+  MpCoreInfoLib
+  PlatformAslTablesLib
+  TegraPlatformInfoLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+
+[Guids]
+
+[Protocols]

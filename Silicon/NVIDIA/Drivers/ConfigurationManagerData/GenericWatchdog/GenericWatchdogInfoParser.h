@@ -10,6 +10,8 @@
 #ifndef GENERIC_WATCHDOG_INFO_PARSER_H_
 #define GENERIC_WATCHDOG_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Generic watchdog info parser function.
 
   The following structure is populated:

@@ -24,197 +24,32 @@
 
 [Sources]
   ConfigurationManagerDataDxe.c
-  NvCmObjectDescUtility.c
-  AcpiTableList/AcpiTableListParser.c
-  AhciInfo/AhciInfoParser.c
-  BootArchInfo/BootArchInfoParser.c
-  CacheInfo/CacheInfoParser.c
-  CacheInfo/CacheInfoParserT194.c
-  DsdtPatcher/DsdtPatcher.c
-  EthernetInfo/EthernetInfoParser.c
-  FanInfo/FanInfoParser.c
-  FixedFeatureFlags/FixedFeatureFlagsParser.c
-  GenericTimer/GenericTimerParser.c
-  GenericWatchdog/GenericWatchdogInfoParser.c
-  Gic/GicCParser.c
-  Gic/GicDParser.c
-  Gic/GicDParserT194.c
-  Gic/GicItsParser.c
-  Gic/LpiParser.c
-  Gic/GicMsiFrameParser.c
-  Gic/GicRedistributorParser.c
-  HdaInfo/HdaInfoParser.c
-  I2cInfo/I2cInfoParser.c
-  Iort/IortInfoParser.c
-  PowerManagementProfile/PowerManagementProfileParser.c
-  ProcHierarchyInfo/ProcHierarchyInfoParser.c
-  ProtocolBasedObjects/ProtocolBasedObjectsParser.c
-  SdhciInfo/SdhciInfoParser.c
-  SerialPortInfo/SerialPortInfoParser.c
-  SsdtTableGenerator/SsdtTableGeneratorParser.c
-  TelemetryInfo/TelemetryInfoParser.c
-  ThermalZoneInfo/ThermalZoneInfoParser.c
-  TpmInfo/TpmInfoParser.c
-  ConfigurationApmt/ApmtParser.c
-  ConfigurationTpm2/Tpm2Parser.c
-  ConfigurationHbm/HbmParser.c
-  ConfigurationSlit/SlitParser.c
-  ConfigurationSrat/SratParser.c
-  ConfigurationHmat/HmatParser.c
-  ConfigurationMpam/MpamParser.c
-  ConfigurationIpmiDev/IpmiParser.c
-  ConfigurationSpmi/SpmiParser.c
+  PlatformASLTablesLib.c
 
 [Packages]
-  ArmPkg/ArmPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  ArmPlatformPkg/ArmPlatformPkg.dec
-  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
-  AmlLib
-  BaseLib
-  BaseMemoryLib
   ConfigurationManagerLib
+  ConfigurationManagerDataRepoLib
   DeviceTreeHelperLib
-  DxeServicesTableLib
-  FdtLib
-  NvgLib
-  MemoryAllocationLib
+  PcdLib
   TegraPlatformInfoLib
-  PlatformAslTablesLib
-  AslTemplateTablesLib
-  PrintLib
   UefiBootServicesTableLib
-  UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
-  TableHelperLib
-  HwInfoParserLib
-  PlatformResourceLib
-  MpCoreInfoLib
-  TpmMeasurementLib
-  Tpm2CommandLib
-  Tpm2DeviceLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision
-  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
-  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
-  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
-  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum
-  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
-  gArmTokenSpaceGuid.PcdGicDistributorBase
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
-  gArmTokenSpaceGuid.PcdPciBusMin
-  gArmTokenSpaceGuid.PcdPciBusMax
-  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
-  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
-  gNVIDIATokenSpaceGuid.PcdPciConfigurationSpaceBaseAddress
-  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
-  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
-  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
-  gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
-  gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
-  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
-  gNVIDIATokenSpaceGuid.PcdTpmEnable
-  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpmPlatformClass
-  gEfiSecurityPkgTokenSpaceGuid.PcdActiveTpmInterfaceType
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLaml
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableLasa
-  gNVIDIATokenSpaceGuid.PcdTpmEnable
-  gNVIDIATokenSpaceGuid.PcdLocalDistance
-  gNVIDIATokenSpaceGuid.PcdUnreachableDistance
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteGpuDistance
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance
-  gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance
-  gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmDistance
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance
-  gNVIDIATokenSpaceGuid.PcdHbmToLocalGpuDistance
-  gNVIDIATokenSpaceGuid.PcdHbmToRemoteGpuDistance
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
 
 [Guids]
-  gNVIDIATokenSpaceGuid
-  gEfiEndOfDxeEventGroupGuid
-  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gNVIDIAConfigurationManagerDataProtocolGuid
-  gNVIDIAConfigurationManagerDataObjectGuid
-  gNVIDIAAmlPatchProtocolGuid
-  gNVIDIAAmlGenerationProtocolGuid
-  gEfiPciRootBridgeIoProtocolGuid
-  gNVIDIATegraCpuFrequencyProtocolGuid
-  gNVIDIAConfigurationManagerTokenProtocolGuid
-  gNVIDIARasNsCommPcieDpcDataProtocolGuid
-  gNVIDIABpmpIpcProtocolGuid
-  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
 
 [Depex]
-  gEfiVariableArchProtocolGuid
-  AND
-  gNVIDIAAmlPatchProtocolGuid
-  AND
-  gNVIDIAAmlGenerationProtocolGuid
-  AND
-  gNVIDIAPcieControllerInitCompleteProtocolGuid
-  AND
-  gNVIDIATegraCpuFrequencyProtocolGuid
-  AND
   gNVIDIAConfigurationManagerTokenProtocolGuid
-  AND
-  gEfiFirmwareManagementProtocolGuid
-  AND
-  gNVIDIABdsDeviceConnectCompleteGuid
-  AND
-  gNVIDIABpmpIpcProtocolGuid
-#  AND
-#  gNVIDIARasNsCommPcieDpcDataProtocolGuid

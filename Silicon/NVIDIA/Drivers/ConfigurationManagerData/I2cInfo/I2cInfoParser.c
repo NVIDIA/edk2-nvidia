@@ -6,16 +6,17 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "I2cInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PrintLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-#include "I2cTemplate.hex"
-#include "I2cTemplate.offset.h"
+// #include "I2cTemplate.hex"
+extern unsigned char  i2ctemplate_aml_code[];
 
 /** I2C info parser function.
 
@@ -201,3 +202,5 @@ CleanupAndReturn:
   FREE_NON_NULL (I2cHandles);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (I2cInfoParser, NULL)

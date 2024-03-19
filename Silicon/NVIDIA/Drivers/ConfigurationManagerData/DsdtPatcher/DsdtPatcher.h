@@ -10,6 +10,8 @@
 #ifndef DSDT_PATCHER_H_
 #define DSDT_PATCHER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 #define ACPI_PLAT_INFO  "_SB_.PLAT"
 #define ACPI_GED1_SMR1  "_SB_.GED1.SMR1"
 #define ACPI_QSPI1_STA  "_SB_.QSP1._STA"

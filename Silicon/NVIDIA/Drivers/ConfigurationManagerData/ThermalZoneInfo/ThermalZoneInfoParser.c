@@ -7,8 +7,8 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "ThermalZoneInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/AmlLib/AmlLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
@@ -16,6 +16,7 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/MpCoreInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <TH500/TH500Definitions.h>
@@ -40,7 +41,20 @@ typedef struct {
   CONST CHAR16    *SocketFormatString;
 } THERMAL_ZONE_DATA;
 
-extern EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[];
+// #include "BpmpSsdtSocket0_TH500.hex"
+extern unsigned char  bpmpssdtsocket0_th500_aml_code[];
+// #include "BpmpSsdtSocket1_TH500.hex"
+extern unsigned char  bpmpssdtsocket1_th500_aml_code[];
+// #include "BpmpSsdtSocket2_TH500.hex"
+extern unsigned char  bpmpssdtsocket2_th500_aml_code[];
+// #include "BpmpSsdtSocket3_TH500.hex"
+extern unsigned char                bpmpssdtsocket3_th500_aml_code[];
+STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_th500_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_th500_aml_code
+};
 
 STATIC UINTN  ThermalZoneCpu0_List[]  = { 0x00, 0x02, 0x04, 0x0E, MAX_UINTN };
 STATIC UINTN  ThermalZoneCpu1_List[]  = { 0x06, 0x08, 0x0A, 0x0C, 0x1A, MAX_UINTN };
@@ -71,7 +85,10 @@ STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
 /** Thermal Zone patcher function.
 
   The SSDT table is potentially patched with the following information:
-  JDS TODO
+  \_SB.BPM*.TEMP
+  \_SB_.C000.C*.C* or \_SB_.C*.C*
+  _SB_.TZL*
+  TZ*
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -126,7 +143,6 @@ ThermalZoneInfoParser (
   UINTN                        CurrentCpu;
   BOOLEAN                      IsMultiSocketSystem;
   CM_STD_OBJ_ACPI_TABLE_INFO   NewAcpiTable;
-  CM_OBJ_DESCRIPTOR            Desc;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -412,12 +428,7 @@ ThermalZoneInfoParser (
     NewAcpiTable.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
     NewAcpiTable.MinorRevision      = 0;
 
-    Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-    Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-    Desc.Count    = 1;
-    Desc.Data     = &NewAcpiTable;
-
-    Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+    Status = NvAddAcpiTableGenerator (ParserHandle, &NewAcpiTable);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add the BPMP SSDT table for Socket %u\n", __FUNCTION__, Status, SocketId));
       return Status;
@@ -426,3 +437,5 @@ ThermalZoneInfoParser (
 
   return EFI_SUCCESS;
 }
+
+REGISTER_PARSER_FUNCTION (ThermalZoneInfoParser, NULL)

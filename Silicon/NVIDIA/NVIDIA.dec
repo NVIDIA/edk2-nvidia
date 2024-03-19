@@ -464,6 +464,9 @@
   #Build Epoch
   gNVIDIATokenSpaceGuid.PcdBuildEpoch|0|UINT64|0x00000119
 
+#Force system to use single passive thermal zone
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|FALSE|BOOLEAN|0x00000106
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
@@ -476,9 +479,6 @@
 
 #Debug HII Menu support
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|FALSE|BOOLEAN|0x00000105
-
-#Force system to use single passive thermal zone
-  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|FALSE|BOOLEAN|0x00000106
 
 #Redfish Support
   gNVIDIATokenSpaceGuid.PcdRedfishSupported|FALSE|BOOLEAN|0x00000107

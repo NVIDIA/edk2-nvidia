@@ -1,0 +1,66 @@
+## @file
+#  HmatParser
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = HmatParser
+  FILE_GUID      = eecd51c6-5edc-4c4d-b491-c23afc55107b
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterHmatParser
+
+[Sources]
+  HmatParser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  HbmParserLib
+  PcdLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
+
+[Guids]
+
+[Protocols]

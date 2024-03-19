@@ -1,0 +1,37 @@
+## @file
+#  DsdtPatcher
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = DsdtPatcher
+  FILE_GUID      = bc24a350-0e8c-4c5d-b00c-bcba4e51bf61
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterDsdtPatcher
+
+[Sources]
+  DsdtPatcher.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AcpiTableListParser
+  ConfigurationManagerDataRepoLib
+  TegraPlatformInfoLib
+
+[Pcd]
+
+[Guids]
+
+[Protocols]
+  gNVIDIARasNsCommPcieDpcDataProtocolGuid

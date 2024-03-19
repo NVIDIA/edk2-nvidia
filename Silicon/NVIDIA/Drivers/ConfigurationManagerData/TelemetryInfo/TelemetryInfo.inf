@@ -1,0 +1,39 @@
+## @file
+#  TelemetryInfo
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = TelemetryInfoParser
+  FILE_GUID      = 62b897e2-7408-4104-ba69-4f9982443a87
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterTelemetryInfoParser
+
+[Sources]
+  TelemetryInfoParser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AcpiTableListParser
+  ConfigurationManagerDataRepoLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Protocols]
+  gNVIDIABpmpIpcProtocolGuid

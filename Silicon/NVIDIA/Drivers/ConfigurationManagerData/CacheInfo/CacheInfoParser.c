@@ -23,13 +23,13 @@
 
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "CacheInfoParser.h"
 #include <Library/BaseMemoryLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MpCoreInfoLib.h>
+#include <Library/NvCmObjectDescUtility.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
 

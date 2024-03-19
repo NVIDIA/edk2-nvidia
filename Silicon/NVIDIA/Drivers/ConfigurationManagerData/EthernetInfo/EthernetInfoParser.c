@@ -6,12 +6,15 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "EthernetInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-#include "SsdtEth_TH500.hex"
+// #include "SsdtEth_TH500.hex"
+extern unsigned char  ssdteth_th500_aml_code[];
 
 /** Ethernet info parser function.
 
@@ -42,7 +45,6 @@ EthernetInfoParser (
   )
 {
   EFI_STATUS                  Status;
-  CM_OBJ_DESCRIPTOR           Desc;
   CM_STD_OBJ_ACPI_TABLE_INFO  NewAcpiTable;
 
   if (ParserHandle == NULL) {
@@ -62,12 +64,7 @@ EthernetInfoParser (
   NewAcpiTable.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   NewAcpiTable.MinorRevision      = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &NewAcpiTable;
-
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+  Status = NvAddAcpiTableGenerator (ParserHandle, &NewAcpiTable);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add the Ethernet SSDT table\n", __FUNCTION__, Status));
     return Status;
@@ -75,3 +72,5 @@ EthernetInfoParser (
 
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (EthernetInfoParser, NULL)

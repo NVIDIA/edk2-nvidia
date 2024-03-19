@@ -1,0 +1,35 @@
+## @file
+#  Fixed Feature Flags
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = FixedFeatureFlagsParser
+  FILE_GUID      = 10081f40-f12f-4627-ba4a-f6854f10184c
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterFixedFeatureFlagsParser
+
+[Sources]
+  FixedFeatureFlagsParser.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  TegraPlatformInfoLib
+
+[Pcd]
+
+[Guids]
+
+[Protocols]

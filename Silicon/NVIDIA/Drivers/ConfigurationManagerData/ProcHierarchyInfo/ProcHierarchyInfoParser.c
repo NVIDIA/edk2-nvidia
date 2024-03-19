@@ -6,13 +6,15 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "ProcHierarchyInfoParser.h"
-#include "Gic/GicParser.h"
-#include "CacheInfo/CacheInfoParser.h"
+#include "../Gic/GicParser.h"
+#include "../CacheInfo/CacheInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/BaseMemoryLib.h>
 #include <Library/MpCoreInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
 #define GEN_CONTAINER_UID(LEVEL, LVL1, LVL2, LVL3)  ((LEVEL << 28) | (LVL1 << 24) | (LVL2 << 16) | (LVL3))
@@ -344,3 +346,5 @@ CleanupAndReturn:
 
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (ProcHierarchyInfoParser, NULL)

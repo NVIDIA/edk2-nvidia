@@ -7,14 +7,15 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "TelemetryInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/HobLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -585,3 +586,5 @@ TelemetryInfoParser (
 ErrorExit:
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (TelemetryInfoParser, NULL)

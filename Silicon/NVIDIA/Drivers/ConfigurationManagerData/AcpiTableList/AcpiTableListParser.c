@@ -6,38 +6,69 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "AcpiTableListParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MpCoreInfoLib.h>
 
-#include "Dsdt_T194.hex"
-#include "Dsdt_T194.offset.h"
+#include <Protocol/AmlPatchProtocol.h>
 
-#include "Dsdt_T234.hex"
-#include "Dsdt_T234.offset.h"
+// #include "Dsdt_T194.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA194_OffsetTable[];
+// #include "Dsdt_T194.hex"
+extern unsigned char  dsdt_t194_aml_code[];
 
-#include "Dsdt_TH500.hex"
-#include "Dsdt_TH500.offset.h"
-#include "SsdtSocket1_TH500.hex"
-#include "SsdtSocket1_TH500.offset.h"
-#include "SsdtSocket2_TH500.hex"
-#include "SsdtSocket2_TH500.offset.h"
-#include "SsdtSocket3_TH500.hex"
-#include "SsdtSocket3_TH500.offset.h"
-#include "BpmpSsdtSocket0_TH500.hex"
-#include "BpmpSsdtSocket0_TH500.offset.h"
-#include "BpmpSsdtSocket1_TH500.hex"
-#include "BpmpSsdtSocket1_TH500.offset.h"
-#include "BpmpSsdtSocket2_TH500.hex"
-#include "BpmpSsdtSocket2_TH500.offset.h"
-#include "BpmpSsdtSocket3_TH500.hex"
-#include "BpmpSsdtSocket3_TH500.offset.h"
+// #include "Dsdt_T234.hex"
+extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA234_OffsetTable[];
+// #include "Dsdt_T234.offset.h"
+extern unsigned char  dsdt_t234_aml_code[];
 
-#include "SdhciInfo/SdhciInfoParser.h"
-#include "I2cInfo/I2cInfoParser.h"
+// #include "Dsdt_TH500.hex"
+extern unsigned char  dsdt_th500_aml_code[];
+// #include "Dsdt_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  DSDT_TH500_OffsetTable[];
+// #include "SsdtSocket1_TH500.hex"
+extern unsigned char  ssdtsocket1_th500_aml_code[];
+// #include "SsdtSocket1_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_TH500_S1_OffsetTable[];
+// #include "SsdtSocket2_TH500.hex"
+extern unsigned char  ssdtsocket2_th500_aml_code[];
+// #include "SsdtSocket2_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_TH500_S2_OffsetTable[];
+// #include "SsdtSocket3_TH500.hex"
+extern unsigned char  ssdtsocket3_th500_aml_code[];
+// #include "SsdtSocket3_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_TH500_S3_OffsetTable[];
+
+// #include "BpmpSsdtSocket0_TH500.hex"
+extern unsigned char  bpmpssdtsocket0_th500_aml_code[];
+// #include "BpmpSsdtSocket0_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_BPMP_S0_OffsetTable[];
+// #include "BpmpSsdtSocket1_TH500.hex"
+extern unsigned char  bpmpssdtsocket1_th500_aml_code[];
+// #include "BpmpSsdtSocket1_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_BPMP_S1_OffsetTable[];
+// #include "BpmpSsdtSocket2_TH500.hex"
+extern unsigned char  bpmpssdtsocket2_th500_aml_code[];
+// #include "BpmpSsdtSocket2_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_BPMP_S2_OffsetTable[];
+// #include "BpmpSsdtSocket3_TH500.hex"
+extern unsigned char  bpmpssdtsocket3_th500_aml_code[];
+// #include "BpmpSsdtSocket3_TH500.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_BPMP_S3_OffsetTable[];
+
+// #include "SdcTemplate.hex"
+extern unsigned char  sdctemplate_aml_code[];
+// #include "SdcTemplate.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_SDCTEMP_OffsetTable[];
+
+// #include "I2cTemplate.hex"
+extern unsigned char  i2ctemplate_aml_code[];
+// #include "I2cTemplate.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  SSDT_I2CTEMP_OffsetTable[];
 
 /** The platform ACPI info for T194.
 */
@@ -152,13 +183,6 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_TH500[] = {
   SSDT_BPMP_S1_OffsetTable,
   SSDT_BPMP_S2_OffsetTable,
   SSDT_BPMP_S3_OffsetTable
-};
-
-EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
-  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket0_th500_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket1_th500_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket2_th500_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_th500_aml_code
 };
 
 /** Acpi table list parser function.
@@ -302,3 +326,5 @@ AcpiTableListParser (
 CleanupAndReturn:
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (AcpiTableListParser, NULL)

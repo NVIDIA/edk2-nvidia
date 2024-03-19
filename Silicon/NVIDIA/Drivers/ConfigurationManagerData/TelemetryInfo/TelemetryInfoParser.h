@@ -10,6 +10,8 @@
 #ifndef TELEMETRY_INFO_PARSER_H_
 #define TELEMETRY_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** DSDT patcher for Telemetry info.
 
   The DSDT table is potentially patched with the following information:

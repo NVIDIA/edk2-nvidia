@@ -9,16 +9,13 @@
 #ifndef SDHCI_INFO_PARSER_H_
 #define SDHCI_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
 #include <Protocol/AmlPatchProtocol.h>
-#include <Library/HwInfoParserLib.h>
 
 #define ACPI_SDCT_REG0  "SDCT.REG0"
 #define ACPI_SDCT_UID   "SDCT._UID"
 #define ACPI_SDCT_INT0  "SDCT.INT0"
 #define ACPI_SDCT_RMV   "SDCT._RMV"
-
-extern AML_OFFSET_TABLE_ENTRY  SSDT_SDCTEMP_OffsetTable[];
-extern unsigned char           sdctemplate_aml_code[];
 
 /** Sdhci info parser function.
 

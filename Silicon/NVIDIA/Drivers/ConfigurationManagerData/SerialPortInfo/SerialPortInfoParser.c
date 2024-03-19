@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "SerialPortInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -192,13 +193,9 @@ SerialPortInfoParser (
   AcpiTableHeader.OemRevision   = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   AcpiTableHeader.MinorRevision = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &AcpiTableHeader;
-
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+  Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add SerialPort table generator\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -224,3 +221,5 @@ CleanupAndReturn:
   FREE_NON_NULL (SpcrSerialPort);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (SerialPortInfoParser, NULL)

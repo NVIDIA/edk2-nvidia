@@ -9,6 +9,8 @@
 #ifndef BOOT_ARCH_INFO_PARSER_H_
 #define BOOT_ARCH_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Boot arch info parser function.
 
   The following structure is populated:

@@ -6,7 +6,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
+#include <Library/NvCmObjectDescUtility.h>
 #include "GicParser.h"
 #include <Library/ArmGicLib.h>
 #include <Library/ArmLib/AArch64/AArch64Lib.h>

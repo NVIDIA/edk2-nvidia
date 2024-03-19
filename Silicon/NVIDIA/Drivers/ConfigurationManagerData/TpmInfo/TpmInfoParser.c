@@ -7,19 +7,20 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "TpmInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TpmMeasurementLib.h>
 #include <Library/Tpm2CommandLib.h>
 #include <IndustryStandard/UefiTcgPlatform.h>
 
-#include "SsdtTpm_TH500.hex"
+// #include "SsdtTpm_TH500.hex"
+extern unsigned char  ssdttpm_th500_aml_code[];
 
 /** TPM info parser function.
 
-  The following structure is populated:
-  JDS TODO
+  The SSDT table for TPM is populated.
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -48,7 +49,6 @@ TpmInfoParser (
   EFI_STATUS                  Status;
   UINT32                      ManufacturerID;
   CM_STD_OBJ_ACPI_TABLE_INFO  NewAcpiTable;
-  CM_OBJ_DESCRIPTOR           Desc;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -94,12 +94,7 @@ TpmInfoParser (
   NewAcpiTable.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   NewAcpiTable.MinorRevision      = 0;
 
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-  Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-  Desc.Count    = 1;
-  Desc.Data     = &NewAcpiTable;
-
-  Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+  Status = NvAddAcpiTableGenerator (ParserHandle, &NewAcpiTable);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to add SSDT for TPM - %r\r\n", __FUNCTION__, Status));
     return Status;
@@ -107,3 +102,5 @@ TpmInfoParser (
 
   return EFI_SUCCESS;
 }
+
+REGISTER_PARSER_FUNCTION (TpmInfoParser, NULL)

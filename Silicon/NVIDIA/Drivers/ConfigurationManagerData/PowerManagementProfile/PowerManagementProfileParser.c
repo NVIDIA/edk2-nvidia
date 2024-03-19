@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "PowerManagementProfileParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/NVIDIADebugLib.h>
 
 /** Power management profile parser function.
@@ -64,3 +65,5 @@ PowerManagementProfileParser (
   ASSERT_EFI_ERROR (Status);
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (PowerManagementProfileParser, NULL)

@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "FanInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/NVIDIADebugLib.h>
@@ -134,3 +135,5 @@ FanInfoParser (
 
   return EFI_SUCCESS;
 }
+
+REGISTER_PARSER_FUNCTION (FanInfoParser, NULL)

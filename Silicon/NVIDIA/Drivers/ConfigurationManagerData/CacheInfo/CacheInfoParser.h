@@ -9,15 +9,8 @@
 #ifndef CACHE_INFO_PARSER_H_
 #define CACHE_INFO_PARSER_H_
 
-#include <Library/DeviceTreeHelperLib.h>
-
-typedef struct CacheInfoNode {
-  NVIDIA_DEVICE_TREE_CACHE_DATA    CacheData;
-  CM_OBJECT_TOKEN                  Token;
-  UINT32                           Socket;
-  UINT32                           Cluster;
-  UINT32                           Core;
-} CACHE_NODE;
+#include <ConfigurationManagerObject.h>
+#include <Library/HwInfoParserLib.h>
 
 typedef struct CacheHierarchyInfoData {
   CM_OBJECT_TOKEN    Token;

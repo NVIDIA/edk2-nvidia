@@ -1,0 +1,44 @@
+## @file
+#  Serial Port Info
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = SerialPortInfoParser
+  FILE_GUID      = 1ff1a7a1-79c0-469b-bfab-164293b30760
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterSerialPortInfoParser
+
+[Sources]
+  SerialPortInfoParser.c
+
+[Packages]
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+
+[Pcd]
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
+  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+
+[Guids]
+
+[Protocols]

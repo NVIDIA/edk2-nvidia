@@ -1,0 +1,42 @@
+## @file
+#  Gic
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = Gic
+  FILE_GUID      = 50f30e4d-cd0e-41c7-bf4e-66745e0dfc76
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterGicParsers
+
+[Sources]
+  RegisterGicParsers.c
+  GicDParser.c
+  GicDParserT194.c
+  GicItsParser.c
+  GicMsiFrameParser.c
+  GicRedistributorParser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  MpCoreInfoLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+
+[Guids]
+
+[Protocols]

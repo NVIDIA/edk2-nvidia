@@ -9,6 +9,8 @@
 #ifndef SERIAL_PORT_INFO_PARSER_H_
 #define SERIAL_PORT_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Serial port info parser function.
 
   The following structures are populated:

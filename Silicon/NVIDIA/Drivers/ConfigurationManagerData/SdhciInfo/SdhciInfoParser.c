@@ -6,16 +6,17 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "SdhciInfoParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
 
-#include "SdcTemplate.hex"
-#include "SdcTemplate.offset.h"
+// #include "SdcTemplate.hex"
+extern unsigned char  sdctemplate_aml_code[];
 
 STATIC
 CONST CHAR8  *T194Compatibility[] = {
@@ -235,3 +236,5 @@ SdhciInfoParser (
 CleanupAndReturn:
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (SdhciInfoParser, NULL)

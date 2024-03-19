@@ -51,7 +51,9 @@ typedef struct ParserInfo {
   HW_INFO_PARSER_FUNC    Parser;
 } PARSER_INFO;
 
-#define CREATE_PARSER(PARSER)  {#PARSER, PARSER}
+#define EXPAND_MACRO(X)        X
+#define STR(X)                 #X
+#define CREATE_PARSER(PARSER)  {STR(PARSER), EXPAND_MACRO(PARSER)}
 
 /** The configuration manager version
 */

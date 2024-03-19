@@ -6,9 +6,10 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
+#include <Library/NvCmObjectDescUtility.h>
 #include "GicParser.h"
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/NVIDIADebugLib.h>
 

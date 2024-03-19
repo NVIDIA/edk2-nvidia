@@ -9,6 +9,8 @@
 #ifndef PROTOCOL_BASED_OBJECTS_PARSER_H_
 #define PROTOCOL_BASED_OBJECTS_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
+
 /** Protocol based objecsts parser function.
 
   The following structures are populated:

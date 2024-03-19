@@ -9,15 +9,12 @@
 #ifndef I2C_INFO_PARSER_H_
 #define I2C_INFO_PARSER_H_
 
+#include <Library/NvCmObjectDescUtility.h>
 #include <Protocol/AmlPatchProtocol.h>
-#include <Library/HwInfoParserLib.h>
 
 #define ACPI_I2CT_REG0  "I2CT.REG0"
 #define ACPI_I2CT_UID   "I2CT._UID"
 #define ACPI_I2CT_INT0  "I2CT.INT0"
-
-extern AML_OFFSET_TABLE_ENTRY  SSDT_I2CTEMP_OffsetTable[];
-extern unsigned char           i2ctemplate_aml_code[];
 
 /** I2C info parser function.
 

@@ -6,8 +6,9 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "NvCmObjectDescUtility.h"
 #include "SsdtTableGeneratorParser.h"
+#include "../ConfigurationManagerDataRepoLib.h"
+
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/NVIDIADebugLib.h>
 
@@ -41,7 +42,6 @@ SsdtTableGeneratorParser (
 {
   EFI_STATUS                      Status;
   CM_STD_OBJ_ACPI_TABLE_INFO      AcpiTableHeader;
-  CM_OBJ_DESCRIPTOR               Desc;
   EFI_ACPI_DESCRIPTION_HEADER     *TestTable;
   NVIDIA_AML_GENERATION_PROTOCOL  *GenerationProtocol;
 
@@ -76,13 +76,9 @@ SsdtTableGeneratorParser (
     AcpiTableHeader.OemRevision        = TestTable->OemRevision;
     AcpiTableHeader.MinorRevision      = 0;
 
-    Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList);
-    Desc.Size     = sizeof (CM_STD_OBJ_ACPI_TABLE_INFO);
-    Desc.Count    = 1;
-    Desc.Data     = &AcpiTableHeader;
-
-    Status = NvExtendCmObj (ParserHandle, &Desc, CM_NULL_TOKEN, NULL);
+    Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to add generated SSDT ACPI table - %r\r\n", __func__, Status));
       goto CleanupAndReturn;
     }
   }
@@ -90,3 +86,5 @@ SsdtTableGeneratorParser (
 CleanupAndReturn:
   return Status;
 }
+
+REGISTER_PARSER_FUNCTION (SsdtTableGeneratorParser, NULL)

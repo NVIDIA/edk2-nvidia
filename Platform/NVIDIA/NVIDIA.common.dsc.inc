@@ -623,10 +623,6 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
 !endif
 
-!ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
-  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
-!endif
-
 !ifdef CONFIG_DEBUG_LEVEL_MENU_SUPPORT
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
 !endif
@@ -641,6 +637,10 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 !endif
 
 [PcdsFixedAtBuild.common]
+!ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE
+!endif
+
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"$(PLATFORM_NAME)"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
@@ -1381,7 +1381,51 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_CONFIG_MANAGER
   Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf {
     <LibraryClasses>
+      # Note: DataRepoLib must be first!
+      ConfigurationManagerDataRepoLib|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataRepoLib.inf
       PlatformAslTablesLib|Silicon/NVIDIA/Drivers/ConfigurationManagerData/AcpiTableList/PlatformASLTablesLib/PlatformASLTablesLib.inf
+      AcpiTableListParser|Silicon/NVIDIA/Drivers/ConfigurationManagerData/AcpiTableList/AcpiTableList.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/BootArchInfo/BootArchInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/FixedFeatureFlags/FixedFeatureFlags.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericTimer/GenericTimer.inf
+!ifdef CONFIG_SOC_GRACE
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericWatchdog/GenericWatchdog.inf
+!endif
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/PowerManagementProfile/PowerManagementProfile.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SerialPortInfo/SerialPortInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProcHierarchyInfo/ProcHierarchyInfo.inf
+!ifdef CONFIG_SOC_GRACE
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/EthernetInfo/EthernetInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/DsdtPatcher/DsdtPatcher.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TelemetryInfo/TelemetryInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TpmInfo/TpmInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ThermalZoneInfo/ThermalZoneInfo.inf
+!endif
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProtocolBasedObjects/ProtocolBasedObjects.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/AhciInfo/AhciInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SdhciInfo/SdhciInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/I2cInfo/I2cInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HdaInfo/HdaInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/FanInfo/FanInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Gic/Gic.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Iort/Iort.inf
+
+!ifdef CONFIG_SOC_GRACE
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ApmtParser/ApmtParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Tpm2Parser/Tpm2Parser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/MpamParser/MpamParser.inf
+
+      HbmParserLib|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HbmParserLib/HbmParserLib.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SlitParser/SlitParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SratParser/SratParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HmatParser/HmatParser.inf
+
+      IpmiParser|Silicon/NVIDIA/Drivers/ConfigurationManagerData/IpmiParser/IpmiParser.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SpmiParser/SpmiParser.inf
+!endif
+
+      # Note: SsdtTableGenerator must be last!
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SsdtTableGenerator/SsdtTableGenerator.inf
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -I$(BIN_DIR)/Silicon/NVIDIA/Drivers/ConfigurationManagerData/AcpiTableList/PlatformASLTablesLib/PlatformASLTablesLib/OUTPUT -I$(BIN_DIR)/Silicon/NVIDIA/Library/ASLTemplateTablesLib/ASLTemplateTablesLib/OUTPUT
   }
