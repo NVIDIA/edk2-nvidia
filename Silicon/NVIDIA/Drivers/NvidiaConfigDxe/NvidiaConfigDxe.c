@@ -876,7 +876,7 @@ PrintMb1Variables (
     }
 
     for (Index2 = 0; Index2 < TEGRABL_MAX_PCIE_PER_SOCKET; Index2++) {
-      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.features: 0x%010x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].features));
+      DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.Features: 0x%010x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].Features));
       DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.MaxSpeed: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxSpeed));
       DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.MaxWidth: 0x%08x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].MaxWidth));
       DEBUG ((DEBUG_ERROR, "Grace.MB1.PcieConfig.%x.%x.SlotType: 0x%02x\n", Index, Index2, EarlyVariable->Data.Mb1Data.PcieConfig[Index][Index2].SlotType));
@@ -1949,7 +1949,9 @@ InitializeSettings (
       mHiiControlSettings.TpmEnableSettingSupported = TRUE;
     }
 
-    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 2) {
+    if ((mMb1Config.Data.Mb1Data.Header.MinorVersion >= 2) &&
+        (mMb1Config.Data.Mb1Data.Header.MinorVersion <= 10))
+    {
       mHiiControlSettings.PerfVersionSettingSupported = TRUE;
     }
 

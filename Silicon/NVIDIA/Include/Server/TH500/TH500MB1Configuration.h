@@ -49,7 +49,7 @@ typedef struct {
 
 typedef struct {
   union {
-    UINT64    features;
+    UINT64    Features;
     struct {
       /* ASPM L1 support */
       UINT64    EnableAspmL1           : 1;
@@ -78,7 +78,7 @@ typedef struct {
       /* Advertise ACS capability */
       UINT64    AdvertiseACS           : 1;
       /* Reserved */
-      UINT64    reserved               : 51;
+      UINT64    FeaturesReserved       : 51;
     };
   };
 
