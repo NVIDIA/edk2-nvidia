@@ -2,7 +2,7 @@
 *
 *  NVIDIA Config formset.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -179,11 +179,13 @@ formset
         flags  = INTERACTIVE,
         key    = KEY_BOOT_CONFIG;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.MemoryTestsSupported == 0;
     goto MEMORY_TEST_FORM_ID,
         prompt = STRING_TOKEN(STR_MEMORY_TEST_FORM_TITLE),
         help   = STRING_TOKEN(STR_MEMORY_TEST_FORM_HELP),
         flags  = INTERACTIVE,
         key    = KEY_MEMORY_TEST;
+    endif;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TH500Config == 0;
     goto TH500_CONFIGURATION_FORM_ID,

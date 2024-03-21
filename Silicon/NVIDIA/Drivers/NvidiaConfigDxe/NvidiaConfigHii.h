@@ -858,6 +858,7 @@ typedef struct {
   BOOLEAN    PCIeURCAConfigSupported;
   BOOLEAN    PCIePRSNTConfigSupported;
   BOOLEAN    PCIeACSConfigSupported;
+  BOOLEAN    MemoryTestsSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];

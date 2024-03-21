@@ -496,6 +496,9 @@
 #Variable Store Integrity
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|FALSE|BOOLEAN|0x00000118
 
+#Memory test supported
+    gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported|FALSE|BOOLEAN|0x0000011A
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
@@ -708,7 +711,6 @@
   gNVIDIATokenSpaceGuid.PcdDoInitialConsoleRegistration|TRUE|BOOLEAN|0x0000010A
 
 #Memory test options
-
   gNVIDIATokenSpaceGuid.PcdMemoryTest|{0}|NVIDIA_MEMORY_TEST_OPTIONS|0x00000112 {
     <Packages>
       Silicon/NVIDIA/NVIDIA.dec

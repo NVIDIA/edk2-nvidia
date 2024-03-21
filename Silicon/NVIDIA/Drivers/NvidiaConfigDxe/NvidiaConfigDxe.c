@@ -1811,11 +1811,12 @@ InitializeSettings (
     mOpRomDisMask = 0;
   }
 
-  mHiiControlSettings.L4TSupported       = PcdGetBool (PcdL4TConfigurationSupport);
-  mHiiControlSettings.QuickBootSupported = FeaturePcdGet (PcdQuickBootSupported);
-  mHiiControlSettings.DebugMenuSupported = FeaturePcdGet (PcdDebugMenuSupport);
-  mHiiControlSettings.RedfishSupported   = FeaturePcdGet (PcdRedfishSupported);
-  mHiiControlSettings.TpmPresent         = PcdGetBool (PcdTpmPresent);
+  mHiiControlSettings.L4TSupported         = PcdGetBool (PcdL4TConfigurationSupport);
+  mHiiControlSettings.QuickBootSupported   = FeaturePcdGet (PcdQuickBootSupported);
+  mHiiControlSettings.DebugMenuSupported   = FeaturePcdGet (PcdDebugMenuSupport);
+  mHiiControlSettings.RedfishSupported     = FeaturePcdGet (PcdRedfishSupported);
+  mHiiControlSettings.TpmPresent           = PcdGetBool (PcdTpmPresent);
+  mHiiControlSettings.MemoryTestsSupported = PcdGetBool (PcdMemoryTestsSupported);
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {

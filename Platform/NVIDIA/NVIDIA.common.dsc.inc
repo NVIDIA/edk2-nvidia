@@ -623,6 +623,11 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 !endif
 
+!ifdef CONFIG_MEMORY_TEST
+  #Memory test supported
+  gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported|TRUE
+!endif
+
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName|L"$(PLATFORM_NAME)"
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
