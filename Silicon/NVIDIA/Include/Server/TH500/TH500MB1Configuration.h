@@ -18,9 +18,20 @@
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  11
+#define TEGRABL_MB1_BCT_MINOR_VERSION  12
 
 #pragma pack(1)
+
+typedef struct {
+  /** Flags for active page*/
+  UINT8     Flags;
+  /** Reserved */
+  UINT8     Reserved[2];
+  /** Checksum for entire early boot vars starting fron size */
+  UINT8     Checksum;
+  /** Size of early boot vars */
+  UINT32    Size;
+} TEGRABL_EARLY_BOOT_VARS_DATA_HEADER;
 
 typedef struct  {
   UINT32    MajorVersion;
@@ -90,6 +101,8 @@ typedef struct {
   UINT8     Reserved[11];
 } TEGRABL_MB1BCT_PCIE_CONFIG;
 
+#pragma pack()
+
 typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARS_HEADER Header, 8);
   UEFI_DECLARE_ALIGNED (UINT8 Mb1BctHash[TEGRABL_MB1BCT_HASH_MAX_SIZE], 8);
@@ -99,18 +112,8 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (TEGRABL_MB1BCT_UPHY_CONFIG UphyConfig, 8);
   UEFI_DECLARE_ALIGNED (TEGRABL_MB1BCT_PCIE_CONFIG PcieConfig[TEGRABL_SOC_MAX_SOCKETS][TEGRABL_MAX_PCIE_PER_SOCKET], 8);
   UEFI_DECLARE_ALIGNED (UINT32 PerfVersion, 8);
+  UEFI_DECLARE_ALIGNED (UINT32 ActiveCores[TEGRABL_SOC_MAX_SOCKETS], 8);
 } TH500_MB1_CONFIGURATION;
-
-typedef struct {
-  /** Flags for active page*/
-  UINT8     Flags;
-  /** Reserved */
-  UINT8     Reserved[2];
-  /** Checksum for entire early boot vars starting fron size */
-  UINT8     Checksum;
-  /** Size of early boot vars */
-  UINT32    Size;
-} TEGRABL_EARLY_BOOT_VARS_DATA_HEADER;
 
 typedef struct {
   TEGRABL_EARLY_BOOT_VARS_DATA_HEADER    DataHeader;
@@ -123,7 +126,5 @@ typedef struct {
     TEGRABL_EARLY_BOOT_VARIABLES_DATA    Data;
   };
 } TEGRABL_EARLY_BOOT_VARIABLES;
-
-#pragma pack()
 
 #endif // TH500_MB1_CONFIGURATION_H__

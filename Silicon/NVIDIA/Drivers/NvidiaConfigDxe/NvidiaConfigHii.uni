@@ -85,7 +85,10 @@
 #string STR_PERF_VERSION_DEFAULT             #language en-US "Default"
 #string STR_PERF_VERSION_C1_NCM              #language en-US "C1-NCM"
 #string STR_EINJ_ENABLE_PROMPT               #language en-US "Error Injection"
-#string STR_EINJ_ENABLE_HELP                 #language en-US "Enable Error Injection ACPI Table\r\n"
+#string STR_EINJ_ENABLE_HELP                 #language en-US "Enable Error Injection ACPI Table"
+#string STR_MAX_CORES_PROMPT                 #language en-US "Max Enabled Cores"
+#string STR_MAX_CORES_HELP                   #language en-US "Specify Desired Number Of Cores For System.\r\nEnter 0 for system default.\r\nInput greater than system maximum would be rejected."
+
 #string STR_UPHY0_SOCKET0_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET1_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET2_PROMPT             #language en-US "UPHY 0 config"

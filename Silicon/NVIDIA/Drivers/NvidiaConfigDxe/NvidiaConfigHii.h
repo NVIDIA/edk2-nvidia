@@ -108,6 +108,7 @@
 #define KEY_PERF_VERSION               0x1020
 #define KEY_UEFI_DEBUG_LEVEL           0x1021
 #define KEY_EINJ_ENABLE                0x1022
+#define KEY_MAX_CORES                  0x1023
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -859,6 +860,7 @@ typedef struct {
   BOOLEAN    PCIePRSNTConfigSupported;
   BOOLEAN    PCIeACSConfigSupported;
   BOOLEAN    MemoryTestsSupported;
+  BOOLEAN    ActiveCoresSettingSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
@@ -878,6 +880,7 @@ typedef struct {
   UINT8      UartBaudRate;
   UINT8      PerfVersion;
   BOOLEAN    EInjEnable;
+  UINT32     ActiveCores;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];
   UINT8      UphySetting2[MAX_UPHY];

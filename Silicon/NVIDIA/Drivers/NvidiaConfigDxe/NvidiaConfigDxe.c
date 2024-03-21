@@ -75,6 +75,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PERF_VERSION_HELP),
   STRING_TOKEN (STR_EINJ_ENABLE_PROMPT),
   STRING_TOKEN (STR_EINJ_ENABLE_HELP),
+  STRING_TOKEN (STR_MAX_CORES_PROMPT),
+  STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET1_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET2_PROMPT),
@@ -1471,6 +1473,18 @@ SyncHiiSettings (
   )
 {
   UINTN  Index;
+  UINTN  AvailableSockets;
+  UINTN  SymmetricalActiveCoresPerSocket;
+  UINTN  OverflowActiveCoresPerSocket;
+
+  AvailableSockets                = 0;
+  SymmetricalActiveCoresPerSocket = 0;
+  OverflowActiveCoresPerSocket    = 0;
+  for (Index = 0; Index < MAX_SOCKETS; Index++) {
+    if (mHiiControlSettings.SocketEnabled[Index]) {
+      AvailableSockets++;
+    }
+  }
 
   if (Read) {
     mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
@@ -1479,16 +1493,23 @@ SyncHiiSettings (
     mHiiControlSettings.ModsSpEnable         = mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
     mHiiControlSettings.GpuSmmuBypassEnable  = mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable;
+
     if (mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate >= UART_BAUD_RATE_MAX) {
       mHiiControlSettings.UartBaudRate = UART_BAUD_RATE_115200;
     } else {
       mHiiControlSettings.UartBaudRate = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
     }
 
-    mHiiControlSettings.EInjEnable = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
-
+    mHiiControlSettings.EInjEnable     = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
     mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+
+    mHiiControlSettings.ActiveCores = 0;
+    for (Index = 0; Index < MAX_SOCKETS; Index++) {
+      if (mHiiControlSettings.SocketEnabled[Index]) {
+        mHiiControlSettings.ActiveCores += mMb1Config.Data.Mb1Data.ActiveCores[Index];
+      }
+    }
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
@@ -1579,6 +1600,29 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EInjEnable          = mHiiControlSettings.EInjEnable;
     mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                  = mHiiControlSettings.UefiDebugLevel;
+
+    if (mHiiControlSettings.ActiveCores < AvailableSockets) {
+      mHiiControlSettings.ActiveCores = 0;
+    }
+
+    SymmetricalActiveCoresPerSocket = mHiiControlSettings.ActiveCores / AvailableSockets;
+    OverflowActiveCoresPerSocket    = mHiiControlSettings.ActiveCores % AvailableSockets;
+    for (Index = 0; Index < MAX_SOCKETS; Index++) {
+      if (mHiiControlSettings.SocketEnabled[Index]) {
+        mMb1Config.Data.Mb1Data.ActiveCores[Index] = SymmetricalActiveCoresPerSocket;
+      }
+    }
+
+    for (Index = 0; Index < MAX_SOCKETS; Index++) {
+      if (OverflowActiveCoresPerSocket == 0) {
+        break;
+      }
+
+      if (mHiiControlSettings.SocketEnabled[Index]) {
+        mMb1Config.Data.Mb1Data.ActiveCores[Index]++;
+        OverflowActiveCoresPerSocket--;
+      }
+    }
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index] = mHiiControlSettings.UphySetting0[Index];
@@ -1960,6 +2004,10 @@ InitializeSettings (
       mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     }
 
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 12) {
+      mHiiControlSettings.ActiveCoresSettingSupported = TRUE;
+    }
+
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config, DiscardVariableOverrides);
   }
 }
@@ -2222,6 +2270,7 @@ GetDefaultValue (
   )
 {
   UINT64  Data;
+  UINTN   Index;
   UINTN   SocketIndex;
   UINTN   UphyIndex;
   UINTN   PcieIndex;
@@ -2267,6 +2316,15 @@ GetDefaultValue (
       break;
     case KEY_SERIAL_PORT_CONFIG:
       Data = mDefaultPortConfig;
+      break;
+    case KEY_MAX_CORES:
+      Data = 0;
+      for (Index = 0; Index < MAX_SOCKETS; Index++) {
+        if (mHiiControlSettings.SocketEnabled[Index]) {
+          Data += mMb1DefaultConfig.Data.Mb1Data.ActiveCores[Index];
+        }
+      }
+
       break;
     default:
       //

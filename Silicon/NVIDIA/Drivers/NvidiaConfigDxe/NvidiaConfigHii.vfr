@@ -646,6 +646,18 @@ formset
     endcheckbox;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
+    numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
+        questionid = KEY_MAX_CORES,
+        prompt = STRING_TOKEN(STR_MAX_CORES_PROMPT),
+        help   = STRING_TOKEN(STR_MAX_CORES_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 336,
+        step = 1,
+    endnumeric;
+    endif;
+
     ADD_GOTO_SOCKET_FORM(0)
     ADD_GOTO_SOCKET_FORM(1)
     ADD_GOTO_SOCKET_FORM(2)
