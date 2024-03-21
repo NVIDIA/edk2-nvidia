@@ -89,6 +89,12 @@
 #string STR_MAX_CORES_PROMPT                 #language en-US "Max Enabled Cores"
 #string STR_MAX_CORES_HELP                   #language en-US "Specify Desired Number Of Cores For System.\r\nEnter 0 for system default.\r\nInput greater than system maximum would be rejected."
 
+#string STR_SERVER_POWER_CONTROL_PROMPT                 #language en-US "Select Power Control Setting"
+#string STR_SERVER_POWER_CONTROL_HELP                   #language en-US "Helps choose input power capping timescale"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_50MS  #language en-US "Input Power Capping Using 50ms Timescale"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_1S    #language en-US "Input Power Capping Using 1s Timescale"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_5S    #language en-US "Input Power Capping Using 5s Timescale"
+
 #string STR_UPHY0_SOCKET0_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET1_PROMPT             #language en-US "UPHY 0 config"
 #string STR_UPHY0_SOCKET2_PROMPT             #language en-US "UPHY 0 config"

@@ -1,0 +1,38 @@
+## @file
+#  Server Power Control Dxe
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010019
+  BASE_NAME                 = ServerPowerControlDxe
+  FILE_GUID                 = c7837cd8-3b9b-4c1b-894d-8a5c7240151a
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = ServerPowerControlDxeInitialize
+
+[Sources]
+  ServerPowerControlDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  DeviceTreeHelperLib
+  MemoryAllocationLib
+
+[Protocols]
+  gNVIDIABpmpIpcProtocolGuid
+  gServerPowerControlProtocolGuid
+
+[Depex]
+  gNVIDIABpmpIpcProtocolGuid

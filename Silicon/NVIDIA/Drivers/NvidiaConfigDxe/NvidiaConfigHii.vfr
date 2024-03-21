@@ -130,6 +130,11 @@ formset
     name  = SocDisplayHandoffMode,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_SERVER_POWER_CONTROL,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS,  // EFI variable attributes
+    name  = ServerPowerControlSetting,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -656,6 +661,18 @@ formset
         maximum = 336,
         step = 1,
     endnumeric;
+    endif;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ServerPwrCtlSettingSupported == 0;
+    oneof varid = ServerPowerControlSetting.PowerControl,
+      questionid = KEY_SERVER_POWER_CONTROL,
+      prompt = STRING_TOKEN(STR_SERVER_POWER_CONTROL_PROMPT),
+      help   = STRING_TOKEN(STR_SERVER_POWER_CONTROL_HELP),
+      flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+      option text = STRING_TOKEN(NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_50MS), value = POWER_CTL_INPUT_PWR_CAPPING_50MS, flags = DEFAULT;
+      option text = STRING_TOKEN(NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_1S),   value = POWER_CTL_INPUT_PWR_CAPPING_1S,   flags = 0;
+      option text = STRING_TOKEN(NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_5S),   value = POWER_CTL_INPUT_PWR_CAPPING_5S,   flags = 0;
+    endoneof;
     endif;
 
     ADD_GOTO_SOCKET_FORM(0)

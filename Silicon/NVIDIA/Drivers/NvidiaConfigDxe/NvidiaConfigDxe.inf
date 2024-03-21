@@ -68,6 +68,7 @@
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES
   gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
+  gServerPowerControlProtocolGuid               ## SOMETIMES CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
@@ -96,6 +97,7 @@
   gNVIDIATokenSpaceGuid.PcdMemoryTest
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
+  gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

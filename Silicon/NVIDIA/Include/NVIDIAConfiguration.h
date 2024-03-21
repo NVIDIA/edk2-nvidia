@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -164,5 +164,9 @@ typedef struct {
 typedef struct {
   UINT8    Mode;
 } NVIDIA_SOC_DISPLAY_HANDOFF_MODE;
+
+typedef struct {
+  UINT8    PowerControl;
+} NVIDIA_SERVER_POWER_CONTROL;
 
 #endif //__NVIDIA_CONFIGURATION_H__

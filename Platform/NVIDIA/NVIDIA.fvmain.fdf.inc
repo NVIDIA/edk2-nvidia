@@ -906,3 +906,11 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
 !endif
+
+  #
+  # Server Power Control Driver
+  #
+!ifdef CONFIG_SERVER_POWER_CONTROLLERS
+  INF Silicon/NVIDIA/Drivers/ServerPowerControlDxe/ServerPowerControlDxe.inf
+!endif
+

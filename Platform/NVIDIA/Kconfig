@@ -812,3 +812,9 @@ config EBC
   bool "EFI Byte Code VM"
   help
     Adds support for EFI byte code (EBC) drivers in UEFI
+
+config SERVER_POWER_CONTROLLERS
+  bool "Server Configure Power Controllers"
+  depends on SOC_GRACE
+  help
+    Adds support for configuring power controllers for server systems via UEFI ui

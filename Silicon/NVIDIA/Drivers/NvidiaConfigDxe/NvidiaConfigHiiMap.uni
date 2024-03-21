@@ -66,6 +66,11 @@
 #string STR_PRODUCT_CHASSIS_ASSET_TAG           #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/ProductAssetTag"
 #string STR_MAX_CORES_PROMPT                    #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/ActiveCores"
 
+#string STR_SERVER_POWER_CONTROL_PROMPT                 #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/ServerPowerControl"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_50MS  #language x-uefi-redfish-Bios.v1_2_0 "InputPowerCappingUsing50msTimescale"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_1S    #language x-uefi-redfish-Bios.v1_2_0 "InputPowerCappingUsing1sTimescale"
+#string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_5S    #language x-uefi-redfish-Bios.v1_2_0 "InputPowerCappingUsing5sTimescale"
+
 #string STR_UPHY0_SOCKET0_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0UPHY0config"
 #string STR_UPHY0_SOCKET1_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY0config"
 #string STR_UPHY0_SOCKET2_PROMPT                #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2UPHY0config"

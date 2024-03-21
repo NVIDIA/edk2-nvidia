@@ -14,6 +14,7 @@
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/HiiConfigRouting.h>
 #include <Protocol/MmCommunication2.h>
+#include <Protocol/ServerPowerControl.h>
 
 #include <Library/PrintLib.h>
 #include <Library/DebugLib.h>
@@ -77,6 +78,11 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_EINJ_ENABLE_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
+  STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
+  STRING_TOKEN (STR_SERVER_POWER_CONTROL_HELP),
+  STRING_TOKEN (NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_50MS),
+  STRING_TOKEN (NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_1S),
+  STRING_TOKEN (NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_5S),
   STRING_TOKEN (STR_UPHY0_SOCKET0_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET1_PROMPT),
   STRING_TOKEN (STR_UPHY0_SOCKET2_PROMPT),
@@ -1715,18 +1721,19 @@ EFIAPI
 InitializeSettings (
   )
 {
-  EFI_STATUS                          Status;
-  VOID                                *AcpiBase;
-  NVIDIA_KERNEL_COMMAND_LINE          CmdLine;
-  UINTN                               KernelCmdLineLen;
-  NVIDIA_PRODUCT_INFO                 ProductInfo;
-  UINTN                               ProductInfoLen;
-  UINTN                               BufferSize;
-  UINTN                               Index;
-  CONST TEGRABL_EARLY_BOOT_VARIABLES  *TH500HobConfig;
-  VOID                                *HobPointer;
-  BOOLEAN                             DiscardVariableOverrides;
-  CHAR16                              ProductInfoVariableName[] = L"ProductInfo";
+  EFI_STATUS                            Status;
+  VOID                                  *AcpiBase;
+  NVIDIA_SERVER_POWER_CONTROL_PROTOCOL  *ServerPwrCtl;
+  NVIDIA_KERNEL_COMMAND_LINE            CmdLine;
+  UINTN                                 KernelCmdLineLen;
+  NVIDIA_PRODUCT_INFO                   ProductInfo;
+  UINTN                                 ProductInfoLen;
+  UINTN                                 BufferSize;
+  UINTN                                 Index;
+  CONST TEGRABL_EARLY_BOOT_VARIABLES    *TH500HobConfig;
+  VOID                                  *HobPointer;
+  BOOLEAN                               DiscardVariableOverrides;
+  CHAR16                                ProductInfoVariableName[] = L"ProductInfo";
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -2006,6 +2013,14 @@ InitializeSettings (
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 12) {
       mHiiControlSettings.ActiveCoresSettingSupported = TRUE;
+    }
+
+    // Initialize Server Power Control
+    Status = gBS->LocateProtocol (&gServerPowerControlProtocolGuid, NULL, (VOID **)&ServerPwrCtl);
+    if (!EFI_ERROR (Status)) {
+      mHiiControlSettings.ServerPwrCtlSettingSupported = TRUE;
+      PcdSet8S (PcdServerPowerControlSetting, PcdGet8 (PcdServerPowerControlSetting));
+      ServerPwrCtl->ConfigurePowerControl (ServerPwrCtl, PcdGet8 (PcdServerPowerControlSetting));
     }
 
     WriteMb1Variables (&mMb1Config, &mVariableMb1Config, DiscardVariableOverrides);

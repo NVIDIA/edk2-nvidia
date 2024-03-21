@@ -1131,6 +1131,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|L"BoardRecoveryBoot"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
 
+!ifdef CONFIG_SERVER_POWER_CONTROLLERS
+  gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting|L"ServerPowerControlSetting"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
+!endif
+
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
@@ -2300,6 +2304,13 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
 !ifdef CONFIG_SECURITY_UEFI_MENU_USER_AUTH
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationDxe.inf
+!endif
+
+  #
+  # Server Power Control Driver
+  #
+!ifdef CONFIG_SERVER_POWER_CONTROLLERS
+  Silicon/NVIDIA/Drivers/ServerPowerControlDxe/ServerPowerControlDxe.inf
 !endif
 
 [Components.AARCH64]

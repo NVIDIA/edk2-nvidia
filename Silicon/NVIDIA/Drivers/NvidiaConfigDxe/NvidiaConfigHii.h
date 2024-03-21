@@ -109,6 +109,7 @@
 #define KEY_UEFI_DEBUG_LEVEL           0x1021
 #define KEY_EINJ_ENABLE                0x1022
 #define KEY_MAX_CORES                  0x1023
+#define KEY_SERVER_POWER_CONTROL       0x1024
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -843,6 +844,10 @@
 #define PERF_VERSION_DEFAULT  0
 #define PERF_VERSION_C1_NCM   1
 
+#define POWER_CTL_INPUT_PWR_CAPPING_50MS  0
+#define POWER_CTL_INPUT_PWR_CAPPING_1S    1
+#define POWER_CTL_INPUT_PWR_CAPPING_5S    2
+
 typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;
@@ -861,6 +866,7 @@ typedef struct {
   BOOLEAN    PCIeACSConfigSupported;
   BOOLEAN    MemoryTestsSupported;
   BOOLEAN    ActiveCoresSettingSupported;
+  BOOLEAN    ServerPwrCtlSettingSupported;
   UINT32     RootfsRedundancyLevel;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
