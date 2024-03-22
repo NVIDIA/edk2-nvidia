@@ -5,7 +5,7 @@
  *      Author: mrabeda
  *
  *  Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
- *  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -23,6 +23,8 @@
 #include <Protocol/Threading.h>
 
 #include "ThreadingDxe.h"
+#include "Base.h"
+#include "Uefi/UefiBaseType.h"
 
 #define THREADING_CPU_RETRY_COUNT  10
 
@@ -31,11 +33,13 @@
 // - IDLE - doing nothing
 // - BUSY - CPU is currently executing an assigned thread
 // - BSP - CPU is a BSP and should not be executing threads
+// - TIMEOUT - CPU failed to enable but is idle
 //
 typedef enum _THREADING_CPU_STATE {
   THREADING_CPU_IDLE,
   THREADING_CPU_BUSY,
-  THREADING_CPU_BSP
+  THREADING_CPU_BSP,
+  THREADING_CPU_TIMEOUT,
 } THREADING_CPU_STATE;
 
 typedef enum _THREAD_STATE {
@@ -98,46 +102,78 @@ ThreadingRunThread (
   );
 
 //
-// Verify whether specific CPU is currently busy running tasks.
-// This information is based on saved CPU status
-//
-EFI_STATUS
-ThreadingIsCpuBusy (
-  UINTN  CpuId
-  )
-{
-  if (CpuId >= mThreadingData.CpuCount) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  switch (mThreadingData.CpuInfo[CpuId].State) {
-    case THREADING_CPU_BSP:
-      return EFI_UNSUPPORTED;
-    case THREADING_CPU_BUSY:
-      return EFI_ACCESS_DENIED;
-    case THREADING_CPU_IDLE:
-      return EFI_SUCCESS;
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-//
 // Iterate through CPU list to find first idle CPU
 //
 UINTN
 ThreadingFindFreeCpu (
   )
 {
-  UINTN  i;
+  UINTN  Cpu;
+  UINTN  FirstTimedoutCpu = MAX_UINTN;
 
-  for (i = 0; i < mThreadingData.CpuCount; i++) {
-    if ((ThreadingIsCpuBusy (i) == EFI_SUCCESS) && (mThreadingData.CpuInfo[i].Initialized == TRUE)) {
-      return i;
+  for (Cpu = 0; Cpu < mThreadingData.CpuCount; Cpu++) {
+    if (mThreadingData.CpuInfo[Cpu].Initialized == TRUE) {
+      if (mThreadingData.CpuInfo[Cpu].State == THREADING_CPU_IDLE) {
+        return Cpu;
+      } else if (mThreadingData.CpuInfo[Cpu].State == THREADING_CPU_TIMEOUT) {
+        if (FirstTimedoutCpu == MAX_UINTN) {
+          FirstTimedoutCpu = Cpu;
+        }
+      }
     }
   }
 
-  return MAX_UINTN;
+  return FirstTimedoutCpu;
+}
+
+/**
+  Executes the next thread in the threading queue on a free CPU.
+
+  This function searches for a free CPU using the ThreadingFindFreeCpu() function.
+  If a free CPU is found, it acquires the ThreadsQueuedLock spin lock and checks if there are any threads queued for execution.
+  If there are threads in the queue, it removes the first thread from the queue and releases the spin lock.
+  If there are no threads in the queue, it sets the Thread variable to NULL and releases the spin lock.
+
+  If a thread is found in the queue, it prints a debug message indicating the CPU and thread ID, and then calls the ThreadingRunThread() function to run the thread on the CPU.
+  If ThreadingRunThread() returns EFI_NOT_READY, it means the CPU was not ready to execute the thread, so the thread is reinserted into the queue and the function continues searching for another free CPU.
+  If ThreadingRunThread() returns an error status, the function breaks out of the loop.
+
+  @retval None
+**/
+VOID
+ThreadingQueueNextThread (
+  VOID
+  )
+{
+  EFI_STATUS           Status;
+  INTERNAL_EFI_THREAD  *Thread;
+  UINTN                CpuId = 0;
+
+  while ((CpuId = ThreadingFindFreeCpu ()) != MAX_UINTN) {
+    AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
+    if (!IsListEmpty (&mThreadingData.ThreadsQueued)) {
+      Thread = (INTERNAL_EFI_THREAD *)GetFirstNode (&mThreadingData.ThreadsQueued);
+      RemoveEntryList ((LIST_ENTRY *)Thread);
+    } else {
+      Thread = NULL;
+    }
+
+    ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
+
+    if (Thread == NULL) {
+      break;
+    }
+
+    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Found threads enqueued for execution. Starting\n", CpuId, (UINT64)Thread, Thread->CpuId));
+    Status = ThreadingRunThread (Thread, CpuId);
+    if (Status == EFI_NOT_READY) {
+      AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
+      InsertTailList (&mThreadingData.ThreadsQueued, &Thread->Entry);
+      ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
+    } else if (EFI_ERROR (Status)) {
+      break;
+    }
+  }
 }
 
 //
@@ -152,7 +188,6 @@ ThreadingGenericOnThreadExit (
   )
 {
   INTERNAL_EFI_THREAD  *Thread;
-  INTERNAL_EFI_THREAD  *NewThread;
   UINTN                CpuId;
   BOOLEAN              IsBsp;
 
@@ -172,26 +207,13 @@ ThreadingGenericOnThreadExit (
 
   Thread->State = THREADING_THREAD_FINISHED;
 
-  AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
-  if (!IsListEmpty (&mThreadingData.ThreadsQueued)) {
-    NewThread = (INTERNAL_EFI_THREAD *)GetFirstNode (&mThreadingData.ThreadsQueued);
-    RemoveEntryList ((LIST_ENTRY *)NewThread);
-  } else {
-    NewThread = NULL;
-  }
-
-  ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
-
   DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Thread completed\n", CpuId, (UINT64)Thread, Thread->CpuId));
 
   gBS->CloseEvent (Event);
 
   mThreadingData.CpuInfo[Thread->CpuId].State = THREADING_CPU_IDLE;
 
-  if (NewThread != NULL) {
-    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Found threads enqueued for execution. Starting\n", CpuId, (UINT64)Thread, Thread->CpuId));
-    ThreadingRunThread (NewThread, Thread->CpuId);
-  }
+  ThreadingQueueNextThread ();
 
   DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Generic OnThreadExit exit\n", CpuId, (UINT64)Thread, Thread->CpuId));
 }
@@ -344,11 +366,18 @@ ThreadingRunThread (
                            NULL
                            );
     if (Status == EFI_NOT_READY) {
-      DEBUG ((DEBUG_ERROR, "[T][CPU %u][THREAD %lX, CPU %u] Failed to start AP, retrying\n", MyCpuId, (UINT64)Thread, CpuId));
+      DEBUG ((DEBUG_INFO, "[T][CPU %u][THREAD %lX, CPU %u] Failed to start AP, retrying\n", MyCpuId, (UINT64)Thread, CpuId));
       MicroSecondDelay (10);
     } else {
       break;
     }
+  }
+
+  if (Status == EFI_NOT_READY) {
+    // Thread will be requeued.
+    Thread->State = THREADING_THREAD_SPAWNED;
+    gBS->CloseEvent (Thread->FinishedEvent);
+    goto ON_ERROR;
   }
 
   if (EFI_ERROR (Status)) {
@@ -376,7 +405,12 @@ ON_ERROR:
   //
   // Free up CPU in case something goes wrong
   //
-  mThreadingData.CpuInfo[CpuId].State = THREADING_CPU_IDLE;
+  if (Status == EFI_NOT_READY) {
+    mThreadingData.CpuInfo[CpuId].State = THREADING_CPU_TIMEOUT;
+  } else {
+    mThreadingData.CpuInfo[CpuId].State = THREADING_CPU_IDLE;
+  }
+
   return Status;
 }
 
@@ -399,7 +433,6 @@ ThreadingSpawnThread (
   )
 {
   INTERNAL_EFI_THREAD  *Thread;
-  UINTN                CpuId = 0;
   UINTN                MyCpuId;
   BOOLEAN              IsBsp;
 
@@ -432,22 +465,16 @@ ThreadingSpawnThread (
 
   *ThreadObj = Thread;
 
-  CpuId = ThreadingFindFreeCpu ();
-
-  if (CpuId == MAX_UINTN) {
-    //
-    // No free CPU now, enqueue it for later execution.
-    //
-    DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] No free CPU. Caching\n", MyCpuId, (UINT64)Thread));
-    AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
-    InsertTailList (&mThreadingData.ThreadsQueued, &Thread->Entry);
-    ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
-    return EFI_SUCCESS;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX, CPU %u] Free CPU found. Attempting to run thread\n", MyCpuId, (UINT64)Thread, CpuId));
-
-  return ThreadingRunThread (Thread, CpuId);
+  //
+  // enqueue it for later execution.
+  //
+  DEBUG ((DEBUG_VERBOSE, "[T][CPU %u][THREAD %lX] No free CPU. Caching\n", MyCpuId, (UINT64)Thread));
+  AcquireSpinLock (&mThreadingData.ThreadsQueuedLock);
+  InsertTailList (&mThreadingData.ThreadsQueued, &Thread->Entry);
+  ReleaseSpinLock (&mThreadingData.ThreadsQueuedLock);
+  // Start any pending threads if CPUs are free
+  ThreadingQueueNextThread ();
+  return EFI_SUCCESS;
 }
 
 //
