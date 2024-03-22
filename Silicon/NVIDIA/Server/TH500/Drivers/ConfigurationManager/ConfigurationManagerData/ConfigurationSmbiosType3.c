@@ -17,6 +17,14 @@
 #include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <NVIDIAConfiguration.h>
 #include "ConfigurationSmbiosPrivate.h"
+#include <Library/IpmiLib.h>
+#include <IndustryStandard/Ipmi.h>
+
+#define  LAST_POWER_EVENT_AC_FAILED                 0x01
+#define  LAST_POWER_EVENT_POWER_OVERLOAD            0x02
+#define  LAST_POWER_EVENT_POWER_INTERLOCK           0x04
+#define  LAST_POWER_EVENT_POWER_FAULT               0x08
+#define  MISC_CHASSIS_STATE_THERMAL_FAULT_DETECTED  0x04
 
 CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType3 = {
   SMBIOS_TYPE_SYSTEM_ENCLOSURE,
@@ -83,35 +91,37 @@ InstallSmbiosType3Cm (
   IN OUT CM_SMBIOS_PRIVATE_DATA  *Private
   )
 {
-  EDKII_PLATFORM_REPOSITORY_INFO  *Repo    = Private->Repo;
-  VOID                            *DtbBase = Private->DtbBase;
-  CM_SMBIOS_ENCLOSURE_INFO        *EnclosureInfo;
-  EFI_STATUS                      Status;
-  INTN                            Type3ContainedElementOffset;
-  CONST VOID                      *Property;
-  INT32                           Length;
-  FRU_DEVICE_INFO                 *Type3FruInfo;
-  UINT8                           ChassisType;
-  UINTN                           Type3Index;
-  UINTN                           Index;
-  INT32                           NodeOffset;
-  UINT32                          NumEnclosures;
-  CONTAINED_ELEMENT               *ContainedElements;
-  UINT8                           ContainedElementCount;
-  UINTN                           ProductInfoSize;
-  CHAR8                           *ManufacturerStr    = NULL;
-  CHAR8                           *SkuNumberStr       = NULL;
-  CHAR16                          *SkuNumberUniStr    = NULL;
-  CHAR8                           *SerialNumberStr    = NULL;
-  CHAR16                          *SerialNumberUniStr = NULL;
-  CHAR8                           *AssetTagStr        = NULL;
-  CHAR8                           *VersionStr         = NULL;
-  SMBIOS_TABLE_TYPE3              *Type3RecordPcd;
-  NVIDIA_PRODUCT_INFO             ProductInfo;
-  UINTN                           AssetTagLenWithNullTerminator;
-  CHAR16                          ProductInfoVariableName[]  = L"ProductInfo";
-  CHAR8                           Type3NodeStr[]             = "/firmware/smbios/type3@xx";
-  CHAR8                           DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
+  EDKII_PLATFORM_REPOSITORY_INFO    *Repo    = Private->Repo;
+  VOID                              *DtbBase = Private->DtbBase;
+  CM_SMBIOS_ENCLOSURE_INFO          *EnclosureInfo;
+  EFI_STATUS                        Status;
+  INTN                              Type3ContainedElementOffset;
+  CONST VOID                        *Property;
+  INT32                             Length;
+  FRU_DEVICE_INFO                   *Type3FruInfo;
+  UINT8                             ChassisType;
+  UINTN                             Type3Index;
+  UINTN                             Index;
+  INT32                             NodeOffset;
+  UINT32                            NumEnclosures;
+  CONTAINED_ELEMENT                 *ContainedElements;
+  UINT8                             ContainedElementCount;
+  UINTN                             ProductInfoSize;
+  CHAR8                             *ManufacturerStr    = NULL;
+  CHAR8                             *SkuNumberStr       = NULL;
+  CHAR16                            *SkuNumberUniStr    = NULL;
+  CHAR8                             *SerialNumberStr    = NULL;
+  CHAR16                            *SerialNumberUniStr = NULL;
+  CHAR8                             *AssetTagStr        = NULL;
+  CHAR8                             *VersionStr         = NULL;
+  SMBIOS_TABLE_TYPE3                *Type3RecordPcd;
+  NVIDIA_PRODUCT_INFO               ProductInfo;
+  UINTN                             AssetTagLenWithNullTerminator;
+  IPMI_GET_CHASSIS_STATUS_RESPONSE  ChassisStatusResponse;
+  UINT32                            DataSize;
+  CHAR16                            ProductInfoVariableName[]  = L"ProductInfo";
+  CHAR8                             Type3NodeStr[]             = "/firmware/smbios/type3@xx";
+  CHAR8                             DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
 
   NumEnclosures                 = 0;
   ProductInfoSize               = sizeof (ProductInfo);
@@ -261,12 +271,55 @@ InstallSmbiosType3Cm (
     }
 
     //
-    // Update chassis state by Oem functions.
+    // Update chassis state by Bmc Ipmi chassis status.
     //
-    EnclosureInfo[NumEnclosures].BootupState      = Type3RecordPcd->BootupState;
-    EnclosureInfo[NumEnclosures].PowerSupplyState = Type3RecordPcd->PowerSupplyState;
-    EnclosureInfo[NumEnclosures].ThermalState     = Type3RecordPcd->ThermalState;
-    EnclosureInfo[NumEnclosures].SecurityStatus   = Type3RecordPcd->SecurityStatus;
+    DataSize = sizeof (ChassisStatusResponse);
+    Status   = IpmiSubmitCommand (
+                 IPMI_NETFN_CHASSIS,
+                 IPMI_CHASSIS_GET_STATUS,
+                 NULL,
+                 0,
+                 (VOID *)&ChassisStatusResponse,
+                 &DataSize
+                 );
+    if (!EFI_ERROR (Status) && (ChassisStatusResponse.CompletionCode == IPMI_COMP_CODE_NORMAL)) {
+      if ((ChassisStatusResponse.LastPowerEvent &
+           (LAST_POWER_EVENT_AC_FAILED |
+            LAST_POWER_EVENT_POWER_OVERLOAD |
+            LAST_POWER_EVENT_POWER_INTERLOCK |
+            LAST_POWER_EVENT_POWER_FAULT)) == 0)
+      {
+        EnclosureInfo[NumEnclosures].PowerSupplyState = ChassisStateSafe;
+      } else {
+        EnclosureInfo[NumEnclosures].PowerSupplyState = ChassisStateCritical;
+      }
+
+      if ((ChassisStatusResponse.LastPowerEvent &
+           MISC_CHASSIS_STATE_THERMAL_FAULT_DETECTED) == 0)
+      {
+        EnclosureInfo[NumEnclosures].ThermalState = ChassisStateSafe;
+      } else {
+        EnclosureInfo[NumEnclosures].ThermalState = ChassisStateCritical;
+      }
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get chassis status - %r\r\n", __FUNCTION__, Status));
+      EnclosureInfo[NumEnclosures].PowerSupplyState = Type3RecordPcd->PowerSupplyState;
+      EnclosureInfo[NumEnclosures].ThermalState     = Type3RecordPcd->ThermalState;
+    }
+
+    //
+    //  Chassis boot state is the most serious state between the PSU and thermal state.
+    //
+    if (EnclosureInfo[NumEnclosures].ThermalState > EnclosureInfo[NumEnclosures].PowerSupplyState) {
+      EnclosureInfo[NumEnclosures].BootupState = EnclosureInfo[NumEnclosures].ThermalState;
+    } else {
+      EnclosureInfo[NumEnclosures].BootupState = EnclosureInfo[NumEnclosures].PowerSupplyState;
+    }
+
+    //
+    // Security setting for external input, for example, a keyboard, to a system.
+    //
+    EnclosureInfo[NumEnclosures].SecurityStatus = Type3RecordPcd->SecurityStatus;
 
     //
     // Get asset tag info from UEFI variable.
