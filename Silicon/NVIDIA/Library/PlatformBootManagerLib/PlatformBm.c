@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -50,12 +50,14 @@
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
 #include <Guid/EventGroup.h>
+#include <Guid/FirmwarePerformance.h>
 #include <Guid/RtPropertiesTable.h>
 #include <Guid/TtyTerm.h>
 #include <Guid/SerialPortLibVendor.h>
 #include <IndustryStandard/Ipmi.h>
 #include <libfdt.h>
 #include "PlatformBm.h"
+#include "Library/UefiRuntimeLib.h"
 #include <NVIDIAConfiguration.h>
 
 #define DP_NODE_LEN(Type)  { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
@@ -1741,6 +1743,18 @@ PlatformBootManagerBeforeConsole (
 {
   EFI_HANDLE  BdsHandle = NULL;
   BOOLEAN     UefiShellEnabled;
+
+  if (FeaturePcdGet (PcdMemoryTestsSupported)) {
+    // Attempt to delete variable to prevent forced allocation at targeted address.
+    // This can fail causing memory promotion to fail.
+    gRT->SetVariable (
+           EFI_FIRMWARE_PERFORMANCE_VARIABLE_NAME,
+           &gEfiFirmwarePerformanceGuid,
+           EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+           0,
+           NULL
+           );
+  }
 
   if (!FeaturePcdGet (PcdSingleBootSupport)) {
     //

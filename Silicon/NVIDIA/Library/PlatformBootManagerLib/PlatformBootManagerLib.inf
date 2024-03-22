@@ -69,6 +69,7 @@
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported
+  gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
@@ -97,6 +98,7 @@
   gEfiFileInfoGuid
   gEfiFileSystemInfoGuid
   gEfiFileSystemVolumeLabelInfoIdGuid
+  gEfiFirmwarePerformanceGuid
   gEfiEndOfDxeEventGroupGuid
   gEfiTtyTermGuid
   gEfiAcpiTableGuid
