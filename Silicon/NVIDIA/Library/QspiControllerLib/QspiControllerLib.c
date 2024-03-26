@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -598,6 +598,33 @@ QspiPerformTransmit (
   DEBUG ((DEBUG_INFO, "QSPI Data Transmitted.\n"));
 
   return EFI_SUCCESS;
+}
+
+/**
+  IsQspiControllerReset
+
+  Check if the QSPI Controller is reset.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+
+  @retval TRUE   Controller is in Reset State.
+  @retval FALSE  Controller has been initialized.
+**/
+BOOLEAN
+IsQspiControllerReset (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  UINT32   CmdReg;
+  BOOLEAN  IsReset;
+
+  IsReset = FALSE;
+  CmdReg  = MmioRead32 (QspiBaseAddress + QSPI_COMMAND_0);
+  if (CmdReg == QSPI_COMMAND_0_RESET_VALUE) {
+    IsReset = TRUE;
+  }
+
+  return IsReset;
 }
 
 /**
