@@ -2,7 +2,7 @@
 
   QSPI Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -91,11 +91,31 @@ QspiControllerPerformTransaction (
   )
 {
   QSPI_CONTROLLER_PRIVATE_DATA  *Private;
+  EFI_STATUS                    Status;
 
   Private = QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
 
   if (!Private->WaitCyclesSupported && (Packet->WaitCycles != 0)) {
     return EFI_UNSUPPORTED;
+  }
+
+  if (IsQspiControllerReset (Private->QspiBaseAddress) == TRUE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:%d Controller is in Reset State, re-initializing",
+      __FUNCTION__,
+      __LINE__
+      ));
+    Status = QspiInitialize (Private->QspiBaseAddress, Private->NumChipSelects);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "QSPI Initialization Failed for 0x%x %r.\n",
+        Private->QspiBaseAddress,
+        Status
+        ));
+      return Status;
+    }
   }
 
   return QspiPerformTransaction (Private->QspiBaseAddress, Packet);

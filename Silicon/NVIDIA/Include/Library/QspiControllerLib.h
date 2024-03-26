@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -140,6 +140,21 @@ QspiConfigureCS (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress,
   IN UINT8                 ChipSelect,
   IN BOOLEAN               Enable
+  );
+
+/**
+  IsQspiControllerReset
+
+  Check if the QSPI Controller is reset.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+
+  @retval TRUE   Controller is in Reset State.
+  @retval FALSE  Controller has been initialized.
+**/
+BOOLEAN
+IsQspiControllerReset (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
   );
 
 #endif //__QSPI_CONTROLLER_LIB_H__
