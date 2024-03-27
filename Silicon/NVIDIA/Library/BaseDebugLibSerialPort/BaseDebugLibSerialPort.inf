@@ -2,7 +2,7 @@
 #  Instance of Debug Library based on Serial Port Library.
 #  It uses Print Library to produce formatted output strings to seiral port device.
 #
-#  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -39,10 +39,20 @@
   BaseLib
   DebugPrintErrorLevelLib
   ResetSystemLib
+  IoLib
+  DebugLogScratchRegLib
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdDebugClearMemoryValue     ## SOMETIMES_CONSUMES
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask         ## CONSUMES
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue      ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs           ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvScratchRegBase             ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvFwNameStartReg             ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvFileNameStartReg           ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvFileNameRegLimit           ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvLineNumStartReg            ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvLineNumRegLimit            ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvFirmwareStr                ## SOMETIMES_CONSUMES
   gEfiMdePkgTokenSpaceGuid.PcdFixedDebugPrintErrorLevel ## CONSUMES
 

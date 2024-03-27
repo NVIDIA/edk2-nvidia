@@ -7,7 +7,7 @@
   being blocked.  This may occur if a key(s) are pressed in a terminal emulator
   used to monitor the DEBUG() and ASSERT() messages.
 
-  Copyright (c) 2021 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021- 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,9 +15,11 @@
 
 #include <Base.h>
 #include <Library/DebugLib.h>
+#include <Library/DebugLogScratchRegLib.h>
 #include <Library/BaseLib.h>
 #include <Library/PrintLib.h>
 #include <Library/PcdLib.h>
+#include <Library/IoLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/DebugPrintErrorLevelLib.h>
@@ -224,6 +226,9 @@ DebugAssert (
 {
   CHAR8   Buffer[MAX_DEBUG_MESSAGE_LENGTH];
   UINT32  ResetDelay;
+  UINT64  FileNameScratchBase;
+  UINT64  LineNumScratchBase;
+  UINT64  FwNameScratchBase;
 
   //
   // Generate the ASSERT() message in Ascii format
@@ -234,6 +239,27 @@ DebugAssert (
   // Send the print string to the Console Output device
   //
   SerialPortWrite ((UINT8 *)Buffer, AsciiStrLen (Buffer));
+
+  //
+  // Should we log the information to scratch registers.
+  //
+  if (PcdGetBool (PcdNvLogToScratchRegs) == TRUE && (PcdGet64 (PcdNvScratchRegBase) != 0)) {
+    FwNameScratchBase   = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvFwNameStartReg) * 4);
+    FileNameScratchBase = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvFileNameStartReg) * 4);
+    LineNumScratchBase  = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvLineNumStartReg) * 4);
+
+    LogStringToScratchRegisters ((const CHAR8 *)PcdGetPtr (PcdNvFirmwareStr), FwNameScratchBase, 1);
+    LogFileNameToScratchRegisters (
+      FileName,
+      FileNameScratchBase,
+      PcdGet32 (PcdNvFileNameRegLimit)
+      );
+    LogLineNumToScratchRegisters (
+      LineNumber,
+      LineNumScratchBase,
+      PcdGet32 (PcdNvLineNumRegLimit)
+      );
+  }
 
   //
   // Generate a Breakpoint, DeadLoop, Reset or NOP based on PCD settings

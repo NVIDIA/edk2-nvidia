@@ -486,6 +486,11 @@ menu "Debug Options"
   help
     Add support for being able to change the debug print level from early boot
 
+  config DEBUG_LOG_SCRATCH_REG
+  bool "Log debug information to Scratch Registers"
+  help
+    Add support to log debug Assert/Exception information to Scratch Registers
+
   config DEBUG_LEVEL_MENU_SUPPORT
   bool "Debug print level menu support"
   depends on DEBUG_DYNAMIC_PRINT_LEVEL

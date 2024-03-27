@@ -99,6 +99,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 
 [LibraryClasses.common]
   DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLib/DebugLogScratchRegLib.inf
 !ifdef CONFIG_DEBUG_DYNAMIC_PRINT_LEVEL
   # Configurable DebugLib
   DebugPrintErrorLevelLib|Silicon/NVIDIA/Library/DebugPrintErrorLevelLib/DebugPrintErrorLevelLib.inf
@@ -915,6 +916,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gArmTokenSpaceGuid.PcdBaseBoardProductName|L"Jetson"
 !endif
 
+!ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
+  gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs|TRUE
+!endif
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
@@ -1170,6 +1175,34 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_SOC_GRACE
 [PcdsDynamicDefault.common.TH500Presil]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
+
+[PcdsFixedAtBuild]
+ !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
+   ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
+   gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0000C3903DC
+   ## Register 21(i = 21) is to log the FW image name.
+   ## This is the starting offset of the debug data and must
+   ## be used for FW image name.
+   gNVIDIATokenSpaceGuid.PcdNvFwNameStartReg|21
+   ## Register 21 to log file name.
+   gNVIDIATokenSpaceGuid.PcdNvFileNameStartReg|22
+   ## Restrict the File Name to 20 32-bit values.
+   gNVIDIATokenSpaceGuid.PcdNvFileNameRegLimit|20
+   ## Register 42 to log line number.
+   gNVIDIATokenSpaceGuid.PcdNvLineNumStartReg|42
+   ## Restrict the line number to 2 32-bit values.
+   gNVIDIATokenSpaceGuid.PcdNvLineNumRegLimit|2
+   ## Register 44 to log Exception type.
+   gNVIDIATokenSpaceGuid.PcdExceptionTypeStartReg|44
+   ## Register 45 to log FAR Reg.
+   gNVIDIATokenSpaceGuid.PcdFARStartReg|45
+   ## Register 47 to log FP.
+   gNVIDIATokenSpaceGuid.PcdFPStartReg|47
+   ## Total number of registers for FP (across frames).
+   gNVIDIATokenSpaceGuid.PcdFPRegLimit|53
+   ## Limit of registers for each Frame.
+   gNVIDIATokenSpaceGuid.PcdPerFpLimit|7
+ !endif
 
 [PcdsDynamicDefault.common.TH500]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '

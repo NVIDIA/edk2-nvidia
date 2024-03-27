@@ -749,3 +749,42 @@
   # a platform-specific method (e.g. Board Jumper set) in a actual platform in early boot phase.<BR><BR>
   # @Prompt The password clear status
   gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE|BOOLEAN|0x00000104
+
+#Base address of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0|UINT64|0x0000011B
+
+#Start offset of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvFileNameStartReg|0x0|UINT32|0x0000011C
+
+#Max offset of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvFileNameRegLimit|0x0|UINT32|0x0000011D
+
+#Start offset of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvLineNumStartReg|0x0|UINT32|0x0000011E
+
+#Max offset of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvLineNumRegLimit|0x0|UINT32|0x0000011F
+
+#Start offset of SCRATCH Register
+  gNVIDIATokenSpaceGuid.PcdNvFwNameStartReg|0x0|UINT32|0x00000120
+
+#Option to log crash information to scratch registers
+  gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs|FALSE|BOOLEAN|0x00000121
+
+#Firmware String to log errors.
+  gNVIDIATokenSpaceGuid.PcdNvFirmwareStr|"UENS"|VOID*|0x000000122
+
+#Scratch Reg Offset for ExceptionType
+  gNVIDIATokenSpaceGuid.PcdExceptionTypeStartReg|0x0|UINT32|0x00000123
+
+#Scratch Reg Offset to log FAR reg value
+  gNVIDIATokenSpaceGuid.PcdFARStartReg|0x0|UINT32|0x00000124
+
+#Scratch Reg Offset to log FP
+  gNVIDIATokenSpaceGuid.PcdFPStartReg|0x0|UINT32|0x00000125
+
+#Number of scratch registers available for FP
+  gNVIDIATokenSpaceGuid.PcdFPRegLimit|0x0|UINT32|0x00000126
+
+#Number of scratch registers available per Frame
+  gNVIDIATokenSpaceGuid.PcdPerFpLimit|0x0|UINT32|0x00000127
