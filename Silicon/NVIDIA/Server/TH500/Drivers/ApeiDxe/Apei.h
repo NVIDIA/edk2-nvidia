@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -20,6 +20,7 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Protocol/AcpiTable.h>
 #include <Protocol/Apei.h>
 #include <Protocol/MmCommunication2.h>

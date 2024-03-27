@@ -58,6 +58,48 @@ SdeiSetupTable (
   return Status;
 }
 
+STATIC CONST CHAR8  *PcieCompatibleInfo[] = {
+  "nvidia,th500-pcie",
+  NULL
+};
+
+/**
+ * @brief Check if at least one GPU over C2C is enabled on socket 0, then communicate that result to RAS_FW.
+ *
+ * @param DtbBase           Base address of UEFI DTB
+ * @param RasFwBufferInfo   Details about RAS_FW communication buffer
+ */
+STATIC
+VOID
+ApeiDxeNotifyC2cGpuPresence (
+  VOID              *Dtb,
+  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  )
+{
+  EFI_MM_COMMUNICATE_HEADER  CommunicationHeader;
+  INT32                      NodeOffset;
+
+  CopyGuid (&(CommunicationHeader.HeaderGuid), &gNVIDIAApeiSetRasFwFlag);
+  CommunicationHeader.MessageLength = sizeof (BOOLEAN);
+  BOOLEAN  *pC2cGpuPresent = (BOOLEAN *)(RasFwBufferInfo->CommBase + sizeof (CommunicationHeader.HeaderGuid) +
+                                         sizeof (CommunicationHeader.MessageLength));
+
+  *pC2cGpuPresent = FALSE;
+  NodeOffset      = -1;
+  while (DeviceTreeGetNextCompatibleNode (PcieCompatibleInfo, &NodeOffset) != EFI_NOT_FOUND) {
+    CONST VOID  *Property;
+    INT32       Length;
+
+    Property = fdt_getprop (Dtb, NodeOffset, "c2c-partitions", &Length);
+    if ((Property != NULL)) {
+      *pC2cGpuPresent = TRUE;
+      break;
+    }
+  }
+
+  FfaGuidedCommunication (&CommunicationHeader, RasFwBufferInfo);
+}
+
 /**
  * Entry point of the driver.
  *
@@ -150,6 +192,8 @@ ApeiDxeInitialize (
         ));
       return EFI_OUT_OF_RESOURCES;
     }
+
+    ApeiDxeNotifyC2cGpuPresence (DtbBase, &RasFwBufferInfo);
 
     Status = HestBertSetupTables (&RasFwBufferInfo, SkipHest, SkipBert);
     if (EFI_ERROR (Status)) {
