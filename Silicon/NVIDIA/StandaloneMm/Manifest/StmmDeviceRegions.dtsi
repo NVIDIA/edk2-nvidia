@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,6 +9,12 @@
 
 tegra-misc {
   base-address = < 0x00000000 0x00100000 >;
+  pages-count  = < 4 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+tegra-scratch {
+  base-address = < 0x00000000 0x00C3903DC >;
   pages-count  = < 4 >;
   attributes   = < 0x3 >;                   // read-write
 };

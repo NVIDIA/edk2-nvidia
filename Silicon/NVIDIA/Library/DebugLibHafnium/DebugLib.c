@@ -11,6 +11,7 @@
 
 #include <Base.h>
 #include <Library/DebugLib.h>
+#include <Library/DebugLogScratchRegLib.h>
 #include <Library/BaseLib.h>
 #include <Library/PrintLib.h>
 #include <Library/PcdLib.h>
@@ -20,6 +21,7 @@
 #include <Library/ArmSvcLib.h>
 #include <Library/ResetSystemLib.h>
 #include <Library/TimerLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 /* Define the maximum debug and assert message length that this library supports */
 #define MAX_DEBUG_MESSAGE_LENGTH  0x100
@@ -253,8 +255,14 @@ DebugAssert (
   IN CONST CHAR8  *Description
   )
 {
-  CHAR8   Buffer[MAX_DEBUG_MESSAGE_LENGTH];
-  UINT32  ResetDelay;
+  CHAR8                Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  UINT32               ResetDelay;
+  EFI_VIRTUAL_ADDRESS  ScratchRegBase;
+  UINTN                ScratchRegSize;
+  UINT64               FileNameScratchBase;
+  UINT64               LineNumScratchBase;
+  UINT64               FwNameScratchBase;
+  EFI_STATUS           Status;
 
   //
   // Generate the ASSERT() message in Ascii format
@@ -266,6 +274,34 @@ DebugAssert (
   //
   BaseDebugHafniumPrint (Buffer);
 
+  //
+  // Should we log the information to scratch registers.
+  //
+  if (PcdGetBool (PcdNvLogToScratchRegs) == TRUE) {
+    Status = GetDeviceRegion ("tegra-scratch", &ScratchRegBase, &ScratchRegSize);
+    if (EFI_ERROR (Status)) {
+      AsciiSPrint (Buffer, sizeof (Buffer), "Failed to get Scratch Reg Base %u\n", Status);
+      goto bkpt;
+    }
+
+    FwNameScratchBase   = ScratchRegBase + (PcdGet32 (PcdNvFwNameStartReg) * sizeof (UINT32));
+    FileNameScratchBase = ScratchRegBase + (PcdGet32 (PcdNvFileNameStartReg) * sizeof (UINT32));
+    LineNumScratchBase  = ScratchRegBase + (PcdGet32 (PcdNvLineNumStartReg) * sizeof (UINT32));
+
+    LogStringToScratchRegisters ((const CHAR8 *)PcdGetPtr (PcdNvFirmwareStr), FwNameScratchBase, 1);
+    LogFileNameToScratchRegisters (
+      FileName,
+      FileNameScratchBase,
+      PcdGet32 (PcdNvFileNameRegLimit)
+      );
+    LogLineNumToScratchRegisters (
+      LineNumber,
+      LineNumScratchBase,
+      PcdGet32 (PcdNvLineNumRegLimit)
+      );
+  }
+
+bkpt:
   //
   // Generate a Breakpoint, DeadLoop, or NOP based on PCD settings
   //
