@@ -1,0 +1,40 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DefaultExceptionCallbackLibNull
+  FILE_GUID                      = a4c50b09-3fa3-4a04-b2cb-3efd4c7a7527
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DefaultExceptionCallbackLib|DXE_CORE DXE_DRIVER
+
+[Sources]
+  DefaultExceptionCallbackLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiLib
+  BaseLib
+  DebugLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs           ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdNvScratchRegBase             ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdExceptionTypeStartReg        ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdFARStartReg                  ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdFPStartReg                   ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdFPRegLimit                   ## SOMETIMES_CONSUMES
+  gNVIDIATokenSpaceGuid.PcdPerFpLimit                   ## SOMETIMES_CONSUMES
+

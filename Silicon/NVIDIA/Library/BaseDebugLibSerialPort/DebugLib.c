@@ -243,7 +243,7 @@ DebugAssert (
   //
   // Should we log the information to scratch registers.
   //
-  if (PcdGetBool (PcdNvLogToScratchRegs) == TRUE && (PcdGet64 (PcdNvScratchRegBase) != 0)) {
+  if ((PcdGetBool (PcdNvLogToScratchRegs) == TRUE) && (PcdGet64 (PcdNvScratchRegBase) != 0)) {
     FwNameScratchBase   = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvFwNameStartReg) * 4);
     FileNameScratchBase = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvFileNameStartReg) * 4);
     LineNumScratchBase  = PcdGet64 (PcdNvScratchRegBase) + (PcdGet32 (PcdNvLineNumStartReg) * 4);

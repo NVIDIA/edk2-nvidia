@@ -3,8 +3,7 @@
 
   Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2023- 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -19,6 +18,7 @@
 
 #include <Protocol/DebugSupport.h>
 #include <Protocol/LoadedImage.h>
+#include <Library/DefaultExceptionCallbackLib.h>
 
 STATIC CHAR8  *gExceptionTypeString[] = {
   "Synchronous",
@@ -268,6 +268,7 @@ DefaultExceptionHandler (
       ));
   }
 
+  DefaultExceptionCallback (ExceptionType, SystemContext);
   ASSERT (FALSE);
   CpuDeadLoop ();
 }
