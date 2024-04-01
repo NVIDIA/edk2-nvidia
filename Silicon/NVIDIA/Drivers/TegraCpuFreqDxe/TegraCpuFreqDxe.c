@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,9 +31,9 @@
 #include "TegraCpuFreqDxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,t234-cpufreq",  &gNVIDIACpuFreqT234  },
-  { "nvidia,th500-cpufreq", &gNVIDIACpuFreqTH500 },
-  { NULL,                   NULL                 }
+  { "nvidia,tegra234-ccplex-cluster", &gNVIDIACpuFreqT234  },
+  { "nvidia,th500-cpufreq",           &gNVIDIACpuFreqTH500 },
+  { NULL,                             NULL                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -113,7 +113,7 @@ GetCpuFreqAddresses (
   }
 
   if (HandleCount == 1) {
-    Status = gBS->HandleProtocol (HandleBuffer, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+    Status = gBS->HandleProtocol (HandleBuffer[0], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
     if (EFI_ERROR (Status)) {
       return Status;
     }

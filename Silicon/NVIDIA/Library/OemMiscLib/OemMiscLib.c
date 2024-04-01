@@ -35,7 +35,8 @@
 #define HZ_TO_MHZ(x)   (x/1000000)
 #define GENMASK_32(n)  (~(0U) >> (32 - n))
 
-#define CPUSNMAXSTR  (320)
+#define CPUSNMAXSTR   (320)
+#define CPUVERSTATIC  (15)
 
 STATIC TEGRA_EEPROM_BOARD_INFO  *SmEepromData;
 STATIC SMBIOS_TABLE_TYPE32      *Type32Record;
@@ -444,59 +445,104 @@ OemGetProductName (
 **/
 STATIC
 CHAR16 *
-GetProcessorVersion (
+GetProcessorVersionDtb (
   VOID
   )
 {
-  VOID        *DtbBase;
-  UINTN       DtbSize;
-  CONST VOID  *Property;
-  INT32       Length;
+  CHAR16      *ProcVersion = NULL;
   EFI_STATUS  Status;
   INTN        DtbSmbiosOffset;
   INTN        Type4Offset;
   CHAR8       *ProcessorStep = NULL;
   UINTN       ProcessorStrLen;
+  VOID        *DtbBase;
+  UINTN       DtbSize;
+  CONST VOID  *Property;
+  INT32       Length;
+
+  Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  DtbSmbiosOffset = fdt_path_offset (DtbBase, "/firmware/smbios");
+  if (DtbSmbiosOffset < 0) {
+    return NULL;
+  }
+
+  Type4Offset = fdt_subnode_offset (DtbBase, DtbSmbiosOffset, "type4@0");
+  if (Type4Offset < 0) {
+    return NULL;
+  }
+
+  Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
+  if ((Property != NULL) && (Length != 0)) {
+    ProcessorStep = TegraGetMinorVersion ();
+    if (ProcessorStep == NULL) {
+      DEBUG ((DEBUG_INFO, "%a: No Processor Step Found\n", __FUNCTION__));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Processor Step %a %u\n", __FUNCTION__, ProcessorStep, AsciiStrLen (ProcessorStep)));
+    }
+
+    ProcessorStrLen = ((Length + AsciiStrLen (ProcessorStep) + 2) * sizeof (CHAR16));
+    ProcVersion     = AllocateZeroPool (ProcessorStrLen);
+    if (ProcVersion == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+      return NULL;
+    }
+
+    UnicodeSPrint (
+      ProcVersion,
+      ProcessorStrLen,
+      L"%a %a",
+      Property,
+      ProcessorStep
+      );
+  }
+
+  return ProcVersion;
+}
+
+/**
+  GetProcessorVersion
+  Get ProcessorVersion first from the DT, if the SMBIOS node isn't found
+  hardcode the values for Jetson targets.
+
+  @param  NONE.
+
+  @return Null terminated unicode string for the processor version.
+**/
+STATIC
+CHAR16 *
+GetProcessorVersion (
+  VOID
+  )
+{
+  UINTN  ChipId;
 
   if (ProcessorVersion == NULL) {
-    Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
-    if (EFI_ERROR (Status)) {
-      return NULL;
-    }
+    ProcessorVersion = GetProcessorVersionDtb ();
+    if (ProcessorVersion == NULL) {
+      ChipId = TegraGetChipID ();
+      switch (ChipId) {
+        case T194_CHIP_ID:
+          ProcessorVersion = AllocateZeroPool (CPUVERSTATIC);
+          if (ProcessorVersion != NULL) {
+            UnicodeSPrint (ProcessorVersion, CPUVERSTATIC, L"Xavier");
+          }
 
-    DtbSmbiosOffset = fdt_path_offset (DtbBase, "/firmware/smbios");
-    if (DtbSmbiosOffset < 0) {
-      return NULL;
-    }
+          break;
+        case T234_CHIP_ID:
+          ProcessorVersion = AllocateZeroPool (CPUVERSTATIC);
+          if (ProcessorVersion != NULL) {
+            UnicodeSPrint (ProcessorVersion, CPUVERSTATIC, L"Orin");
+          }
 
-    Type4Offset = fdt_subnode_offset (DtbBase, DtbSmbiosOffset, "type4@0");
-    if (Type4Offset < 0) {
-      return NULL;
-    }
-
-    Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
-    if ((Property != NULL) && (Length != 0)) {
-      ProcessorStep = TegraGetMinorVersion ();
-      if (ProcessorStep == NULL) {
-        DEBUG ((DEBUG_INFO, "%a: No Processor Step Found\n", __FUNCTION__));
-      } else {
-        DEBUG ((DEBUG_INFO, "%a: Processor Step %a %u\n", __FUNCTION__, ProcessorStep, AsciiStrLen (ProcessorStep)));
+          break;
+        default:
+          DEBUG ((DEBUG_ERROR, "%a:%d Unhandled Chip %u\n", __FUNCTION__, __LINE__, ChipId));
+          break;
       }
-
-      ProcessorStrLen  = ((Length + AsciiStrLen (ProcessorStep) + 2) * sizeof (CHAR16));
-      ProcessorVersion = AllocateZeroPool (ProcessorStrLen);
-      if (ProcessorVersion == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
-        return NULL;
-      }
-
-      UnicodeSPrint (
-        ProcessorVersion,
-        ProcessorStrLen,
-        L"%a %a",
-        Property,
-        ProcessorStep
-        );
     }
   }
 
