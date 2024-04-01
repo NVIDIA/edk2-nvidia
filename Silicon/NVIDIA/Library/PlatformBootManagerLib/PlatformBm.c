@@ -1741,6 +1741,7 @@ PlatformBootManagerBeforeConsole (
 {
   EFI_HANDLE  BdsHandle = NULL;
   BOOLEAN     UefiShellEnabled;
+  BOOLEAN     PlatformReconfigured = FALSE;
 
   if (!FeaturePcdGet (PcdSingleBootSupport)) {
     //
@@ -1804,6 +1805,8 @@ PlatformBootManagerBeforeConsole (
 
   if (!FeaturePcdGet (PcdSingleBootSupport)) {
     if (IsPlatformConfigurationNeeded ()) {
+      PlatformReconfigured = TRUE;
+
       //
       // Connect the rest of the devices.
       //
@@ -1873,7 +1876,10 @@ PlatformBootManagerBeforeConsole (
   // Register all available consoles during intitial
   // boot, then set PCD to FALSE afterwards.
   //
-  PlatformRegisterConsoles (PcdGetBool (PcdDoInitialConsoleRegistration));
+  PlatformRegisterConsoles (
+    PcdGetBool (PcdDoInitialConsoleRegistration) ||
+    PlatformReconfigured
+    );
   if (PcdGetBool (PcdDoInitialConsoleRegistration) == TRUE) {
     PcdSetBoolS (PcdDoInitialConsoleRegistration, FALSE);
   }
