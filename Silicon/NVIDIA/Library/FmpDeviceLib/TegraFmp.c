@@ -629,6 +629,42 @@ GetPackageImageName (
 }
 
 /**
+  Get package image index for FwImage name.
+
+  @param[in]  Name                  Name of the FwImage
+  @param[in]  Header                Pointer to the FW package header
+  @param[out] ImageIndex            Pointer to return image index
+
+  @retval EFI_SUCCESS               The operation completed successfully
+  @retval Others                    An error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetPackageImageIndex (
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  IN  CONST CHAR16             *Name,
+  OUT UINTN                    *ImageIndex
+  )
+{
+  EFI_STATUS    Status;
+  CONST CHAR16  *PkgImageName;
+
+  PkgImageName = GetPackageImageName (Name, Header);
+  Status       = FwPackageGetImageIndex (
+                   Header,
+                   PkgImageName,
+                   mIsProductionFused,
+                   mPlatformCompatSpec,
+                   mPlatformSpec,
+                   ImageIndex
+                   );
+
+  return Status;
+}
+
+/**
   Write a buffer to a FwImage.
 
   @param[in]  FwImageProtocol       FwImage protocol structure pointer
@@ -713,7 +749,6 @@ WriteImage (
   UINTN                        ImageIndex;
   CONST UINT8                  *DataBuffer;
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
-  CONST CHAR16                 *PkgImageName;
 
   FwImageProtocol = FwImageFindProtocol (Name);
   if (FwImageProtocol == NULL) {
@@ -726,17 +761,13 @@ WriteImage (
     return EFI_NOT_FOUND;
   }
 
-  PkgImageName = GetPackageImageName (Name, Header);
-  Status       = FwPackageGetImageIndex (
-                   Header,
-                   PkgImageName,
-                   mIsProductionFused,
-                   mPlatformCompatSpec,
-                   mPlatformSpec,
-                   &ImageIndex
-                   );
+  Status = GetPackageImageIndex (
+             Header,
+             Name,
+             &ImageIndex
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
+    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", Name, Status));
     return Status;
   }
 
@@ -777,7 +808,6 @@ WriteRegularImages (
   UINTN                     PkgImageIndex;
   UINTN                     ImageCount;
   NVIDIA_FW_IMAGE_PROTOCOL  **FwImageProtocolArray;
-  CONST CHAR16              *PkgImageName;
 
   ImageCount           = FwImageGetCount ();
   FwImageProtocolArray = FwImageGetProtocolArray ();
@@ -793,20 +823,16 @@ WriteRegularImages (
       continue;
     }
 
-    PkgImageName = GetPackageImageName (ImageName, Header);
-    Status       = FwPackageGetImageIndex (
-                     Header,
-                     PkgImageName,
-                     mIsProductionFused,
-                     mPlatformCompatSpec,
-                     mPlatformSpec,
-                     &PkgImageIndex
-                     );
+    Status = GetPackageImageIndex (
+               Header,
+               ImageName,
+               &PkgImageIndex
+               );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+      DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
       if (NameIsInList (ImageName, mFwImagesRequired)) {
-        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         return Status;
       }
 
@@ -858,7 +884,6 @@ VerifyImage (
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   UINTN                        ImageIndex;
   FW_IMAGE_ATTRIBUTES          ImageAttributes;
-  CONST CHAR16                 *PkgImageName;
 
   if (!mPcdFmpWriteVerifyImage) {
     return EFI_SUCCESS;
@@ -886,17 +911,13 @@ VerifyImage (
     return Status;
   }
 
-  PkgImageName = GetPackageImageName (Name, Header);
-  Status       = FwPackageGetImageIndex (
-                   Header,
-                   PkgImageName,
-                   mIsProductionFused,
-                   mPlatformCompatSpec,
-                   mPlatformSpec,
-                   &ImageIndex
-                   );
+  Status = GetPackageImageIndex (
+             Header,
+             Name,
+             &ImageIndex
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", PkgImageName, Status));
+    DEBUG ((DEBUG_ERROR, "%s not found in package: %r\n", Name, Status));
     return Status;
   }
 
@@ -974,7 +995,6 @@ VerifyAllImages (
   UINTN                     PkgImageIndex;
   UINTN                     ImageCount;
   NVIDIA_FW_IMAGE_PROTOCOL  **FwImageProtocolArray;
-  CONST CHAR16              *PkgImageName;
 
   if (!mPcdFmpWriteVerifyImage) {
     return EFI_SUCCESS;
@@ -993,20 +1013,16 @@ VerifyAllImages (
       continue;
     }
 
-    PkgImageName = GetPackageImageName (ImageName, Header);
-    Status       = FwPackageGetImageIndex (
-                     Header,
-                     PkgImageName,
-                     mIsProductionFused,
-                     mPlatformCompatSpec,
-                     mPlatformSpec,
-                     &PkgImageIndex
-                     );
+    Status = GetPackageImageIndex (
+               Header,
+               ImageName,
+               &PkgImageIndex
+               );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+      DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
       if (NameIsInList (ImageName, mFwImagesRequired)) {
-        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         return Status;
       }
 
@@ -1313,9 +1329,9 @@ FmpTegraCheckImage (
   NVIDIA_FW_IMAGE_PROTOCOL     **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
-  CONST CHAR16                 *PkgImageName;
   CONST CHAR16                 *RequiredImageName;
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
+  UINTN                        GptImageIndex;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1381,8 +1397,10 @@ FmpTegraCheckImage (
   }
 
   // If supported, update inactive FwPartition meta-data by writing capsule
-  // GPT data to pseudo-image.
-  if (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) {
+  // GPT data to pseudo-image if GPT image data is present in package.
+  if ((FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
+      !EFI_ERROR (GetPackageImageIndex (Header, L"GPT", &GptImageIndex)))
+  {
     Status = WriteImage (
                Header,
                FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
@@ -1437,20 +1455,16 @@ FmpTegraCheckImage (
       continue;
     }
 
-    PkgImageName = GetPackageImageName (ImageName, Header);
-    Status       = FwPackageGetImageIndex (
-                     Header,
-                     PkgImageName,
-                     mIsProductionFused,
-                     mPlatformCompatSpec,
-                     mPlatformSpec,
-                     &PkgImageIndex
-                     );
+    Status = GetPackageImageIndex (
+               Header,
+               ImageName,
+               &PkgImageIndex
+               );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "%a: No image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+      DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
       if (NameIsInList (ImageName, mFwImagesRequired)) {
-        DEBUG ((DEBUG_ERROR, "%a: Missing required image %s for partition %s: %r\n", __FUNCTION__, PkgImageName, ImageName, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
         *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
         return EFI_ABORTED;
@@ -1534,6 +1548,7 @@ FmpTegraSetImage (
   CONST FW_PACKAGE_HEADER  *Header;
   EFI_STATUS               Status;
   BOOLEAN                  GptUpdate;
+  UINTN                    GptImageIndex;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1594,7 +1609,9 @@ FmpTegraSetImage (
 
   // detect optional GPT update
   GptUpdate = FALSE;
-  if (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) {
+  if ((FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
+      !EFI_ERROR (GetPackageImageIndex (Header, L"GPT", &GptImageIndex)))
+  {
     Status = VerifyImage (
                Header,
                L"GPT",
