@@ -1,0 +1,35 @@
+/** @file
+  UEFI Boot Order overlay for using sd card as default boot device.
+
+  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "UEFI Boot order sd default";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					variables {
+						gNVIDIATokenSpaceGuid {
+							DefaultBootPriority {
+								data = "sd";
+								locked;
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
