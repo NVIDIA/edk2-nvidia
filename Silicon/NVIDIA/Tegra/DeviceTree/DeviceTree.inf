@@ -2,8 +2,7 @@
 #
 #  Default variable device tree description of the Tegra platforms
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -23,6 +22,7 @@
   BootOrderNvme.dts
   BootOrderPxe.dts
   BootOrderSata.dts
+  BootOrderSD.dts
   BootOrderUfs.dts
   BootOrderUsb.dts
   L4TConfiguration.dts
