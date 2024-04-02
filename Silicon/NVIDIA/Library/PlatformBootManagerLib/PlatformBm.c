@@ -1105,7 +1105,7 @@ DisplaySystemAndHotkeyInformation (
   EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
-  CHAR16                         Buffer[100];
+  CHAR16                         Buffer[150];
   UINTN                          CharCount;
   UINTN                          PosX;
   UINTN                          PosY;
