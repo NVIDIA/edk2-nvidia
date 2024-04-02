@@ -17,7 +17,7 @@ class ServerSettingsManager(NVIDIASettingsManager):
         return "Server"
 
     def GetGuid(self):
-        return "25cdda40-4cf9-44e9-97f1-b0a0f5fa7b9c"
+        return "9aef2e52-dead-4f63-b895-3a504a3e63c4"
 
     def GetPackagesPath(self):
         return super().GetPackagesPath() + [
