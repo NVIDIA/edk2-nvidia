@@ -150,6 +150,11 @@
       DtPlatformDtbLoaderLib|EmbeddedPkg/Test/Mock/Library/GoogleTest/MockDtPlatformDtbLoaderLib/MockDtPlatformDtbLoaderLib.inf
   }
 
+  Silicon/NVIDIA/Library/Crc8Lib/GoogleTest/Crc8LibGoogleTest.inf {
+    <LibraryClasses>
+      Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
+  }
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

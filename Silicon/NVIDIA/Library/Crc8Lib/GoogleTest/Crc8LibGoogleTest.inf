@@ -1,0 +1,28 @@
+## @file
+# Unit test suite for the Crc8Lib using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010005
+  BASE_NAME           = Crc8LibGoogleTest
+  FILE_GUID           = 8f684fb4-4629-4590-ac9a-7f798087ee27
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+[Sources]
+Crc8LibGoogleTest.cpp
+
+[Guids]
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  Crc8Lib
