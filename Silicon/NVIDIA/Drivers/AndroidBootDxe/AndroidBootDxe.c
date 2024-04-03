@@ -1113,7 +1113,7 @@ AndroidBootLoadFile (
   DEBUG ((DEBUG_INFO, "%a: Kernel image copied to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
   // Load the initial ramdisk
-  if (ImgData->RamdiskSize == 0) {
+  if ((!PcdGetBool (PcdBootAndroidImage) || (ImgData->HeaderVersion < 3)) && (ImgData->RamdiskSize == 0)) {
     mInitRdBaseAddress = 0;
     mInitRdSize        = 0;
     return Status;
