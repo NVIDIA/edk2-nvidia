@@ -45,12 +45,9 @@ DeviceTreeGetNextCompatibleNode (
   IN OUT        INT32  *NodeOffset
   )
 {
-  EFI_STATUS   Status;
-  INT32        SearchNodeOffset;
-  VOID         *DeviceTree;
-  UINT32       CompatiblityIndex;
-  UINT32       StringIndex;
-  CONST CHAR8  *StatusString;
+  EFI_STATUS  Status;
+  INT32       SearchNodeOffset;
+  VOID        *DeviceTree;
 
   if ((CompatibleInfo == NULL) || (NodeOffset == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -62,49 +59,77 @@ DeviceTreeGetNextCompatibleNode (
   }
 
   SearchNodeOffset = FdtNextNode (DeviceTree, *NodeOffset, NULL);
-
   while (SearchNodeOffset >= 0) {
-    Status = EFI_NOT_FOUND;
-    for (CompatiblityIndex = 0; CompatibleInfo[CompatiblityIndex] != NULL; CompatiblityIndex++) {
-      Status = DeviceTreeLocateStringIndex (
-                 SearchNodeOffset,
-                 "compatible",
-                 CompatibleInfo[CompatiblityIndex],
-                 &StringIndex
-                 );
-      // Exit if not found. This covers both the case of EFI_SUCCESS and other errors
-      if (Status != EFI_NOT_FOUND) {
-        break;
-      }
-    }
-
-    // No mapping is valid and means that the compatible entry is not present
-    if (Status == EFI_NO_MAPPING) {
-      Status = EFI_NOT_FOUND;
-    }
-
+    Status = DeviceTreeCheckNodeCompatibility (CompatibleInfo, SearchNodeOffset);
     if (!EFI_ERROR (Status)) {
-      // Compatible node found, check for status node, if defined needs to be "okay"
-      Status = DeviceTreeGetNodeProperty (
-                 SearchNodeOffset,
-                 "status",
-                 (CONST VOID **)&StatusString,
-                 NULL
-                 );
-      if (Status == EFI_NOT_FOUND) {
-        // Treat missing node as valid
-        Status = EFI_SUCCESS;
-        break;
-      } else if (!EFI_ERROR (Status)) {
-        if (AsciiStrCmp (StatusString, "okay") == 0) {
-          break;
-        } else {
-          Status = EFI_NOT_FOUND;
-        }
-      }
+      break;
     }
 
     SearchNodeOffset = FdtNextNode (DeviceTree, SearchNodeOffset, NULL);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    *NodeOffset = SearchNodeOffset;
+  }
+
+  return Status;
+}
+
+/**
+  Get the next subnode node with at least one compatible property.
+
+  The status property is checked and if present needs to be "okay"
+
+  @param [in]  CompatibleInfo   Pointer to an array of compatible strings.
+                                Array is terminated with a NULL entry.
+  @param [in]  ParentOffset     Offset of parent node of subnodes to search.
+  @param [in, out]  NodeOffset  At entry: 0 to start with first subnode or
+                                          subnode offset to continue the search
+                                          after moving to next subnode.
+                                At exit:  If success, contains the offset of
+                                          the next subnode in the branch
+                                          being compatible.  May be passed as
+                                          NodeOffset in subsequent call to
+                                          continue search.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_ABORTED             An error occurred.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No matching node found.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetNextCompatibleSubnode (
+  IN      CONST CHAR8  **CompatibleInfo,
+  IN            INT32  ParentOffset,
+  IN OUT        INT32  *NodeOffset
+  )
+{
+  EFI_STATUS  Status;
+  INT32       SearchNodeOffset;
+  VOID        *DeviceTree;
+
+  if ((CompatibleInfo == NULL) || (NodeOffset == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  SearchNodeOffset = (*NodeOffset == 0) ?
+                     FdtFirstSubnode (DeviceTree, ParentOffset) :
+                     FdtNextSubnode (DeviceTree, *NodeOffset);
+
+  while (SearchNodeOffset >= 0) {
+    Status = DeviceTreeCheckNodeCompatibility (CompatibleInfo, SearchNodeOffset);
+    if (!EFI_ERROR (Status)) {
+      break;
+    }
+
+    SearchNodeOffset = FdtNextSubnode (DeviceTree, SearchNodeOffset);
   }
 
   if (!EFI_ERROR (Status)) {
@@ -905,4 +930,112 @@ DeviceTreeLocateStringIndex (
   }
 
   return Status;
+}
+
+/**
+  Check if a node has a matching compatible property.
+
+  @param [in]  CompatibleInfo   Pointer to an array of compatible strings.
+                                Array is terminated with a NULL entry.
+  @param [in]  NodeOffset       Node to check
+
+  @retval EFI_SUCCESS            The Node matches one of the compatible strings.
+  @retval EFI_NOT_FOUND          Node doesn't match or is disabled.
+  @retval Others                 An error occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeCheckNodeCompatibility (
+  IN      CONST CHAR8  **CompatibleInfo,
+  IN            INT32  NodeOffset
+  )
+{
+  EFI_STATUS   Status;
+  UINT32       CompatiblityIndex;
+  UINT32       StringIndex;
+  CONST CHAR8  *StatusString;
+
+  Status = EFI_NOT_FOUND;
+  for (CompatiblityIndex = 0; CompatibleInfo[CompatiblityIndex] != NULL; CompatiblityIndex++) {
+    Status = DeviceTreeLocateStringIndex (
+               NodeOffset,
+               "compatible",
+               CompatibleInfo[CompatiblityIndex],
+               &StringIndex
+               );
+    // Exit unless not found. This covers both the case of EFI_SUCCESS and other errors
+    if (Status != EFI_NOT_FOUND) {
+      break;
+    }
+  }
+
+  // No mapping is valid and means that the compatible entry is not present
+  if (Status == EFI_NO_MAPPING) {
+    Status = EFI_NOT_FOUND;
+  }
+
+  if (!EFI_ERROR (Status)) {
+    // Compatible node found, check for status node, if defined needs to be "okay"
+    Status = DeviceTreeGetNodeProperty (
+               NodeOffset,
+               "status",
+               (CONST VOID **)&StatusString,
+               NULL
+               );
+    if (Status == EFI_NOT_FOUND) {
+      // Treat missing status as enabled
+      Status = EFI_SUCCESS;
+    } else if (!EFI_ERROR (Status)) {
+      if (AsciiStrCmp (StatusString, "okay") == 0) {
+      } else {
+        Status = EFI_NOT_FOUND;
+      }
+    }
+  }
+
+  return Status;
+}
+
+/**
+  Set the specified property in Node
+
+  @param[in]      NodeOffset    - Node offset
+  @param[in]      Property      - Property name
+  @param[in]      PropertyData  - Data of the property
+  @param[in]      PropertySize  - Size of the property node.
+
+  @retval EFI_SUCCESS           - Property returned
+  @retval EFI_INVALID_PARAMETER - Property or PropertyData is NULL
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeSetNodeProperty (
+  IN  INT32        NodeOffset,
+  IN  CONST CHAR8  *Property,
+  IN  CONST VOID   *PropertyData,
+  IN  UINT32       PropertySize
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+  INT32       FdtErr;
+
+  if ((Property == NULL) || (PropertyData == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  FdtErr = FdtSetProp (DeviceTree, NodeOffset, Property, PropertyData, PropertySize);
+  if (FdtErr != 0) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
 }

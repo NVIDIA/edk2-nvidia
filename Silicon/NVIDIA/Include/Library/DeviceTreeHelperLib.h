@@ -142,6 +142,37 @@ DeviceTreeGetNextCompatibleNode (
   );
 
 /**
+  Get the next subnode node with at least one compatible property.
+
+  The status property is checked and if present needs to be "okay"
+
+  @param [in]  CompatibleInfo   Pointer to an array of compatible strings.
+                                Array is terminated with a NULL entry.
+  @param [in]  ParentOffset     Offset of parent node of subnodes to search.
+  @param [in, out]  NodeOffset  At entry: 0 to start with first subnode or
+                                          subnode offset to continue the search
+                                          after moving to next subnode.
+                                At exit:  If success, contains the offset of
+                                          the next subnode in the branch
+                                          being compatible.  May be passed as
+                                          NodeOffset in subsequent call to
+                                          continue search.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_ABORTED             An error occurred.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No matching node found.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetNextCompatibleSubnode (
+  IN      CONST CHAR8  **CompatibleInfo,
+  IN            INT32  ParentOffset,
+  IN OUT        INT32  *NodeOffset
+  );
+
+/**
   Get the count of nodes with at least one compatible property.
 
   The status property is checked and if present needs to be "okay"
@@ -715,6 +746,47 @@ EFIAPI
 DeviceTreeGetCacheData (
   IN INT32                              NodeOffset,
   IN OUT NVIDIA_DEVICE_TREE_CACHE_DATA  *CacheData
+  );
+
+/**
+  Check if a node has a matching compatible property.
+
+  @param [in]  CompatibleInfo   Pointer to an array of compatible strings.
+                                Array is terminated with a NULL entry.
+  @param [in]  NodeOffset       Node to check
+
+  @retval EFI_SUCCESS            The node matches one of the compatible strings.
+  @retval EFI_NOT_FOUND          Node doesn't match or is disabled.
+  @retval Others                 An error occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeCheckNodeCompatibility (
+  IN      CONST CHAR8  **CompatibleInfo,
+  IN            INT32  NodeOffset
+  );
+
+/**
+  Set the specified property in Node
+
+  @param[in]      NodeOffset    - Node offset
+  @param[in]      Property      - Property name
+  @param[in]      PropertyData  - Data of the property
+  @param[in]      PropertySize  - Size of the property node.
+
+  @retval EFI_SUCCESS           - Property returned
+  @retval EFI_INVALID_PARAMETER - Property or PropertyData is NULL
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeSetNodeProperty (
+  IN  INT32        NodeOffset,
+  IN  CONST CHAR8  *Property,
+  IN  CONST VOID   *PropertyData,
+  IN  UINT32       PropertySize
   );
 
 #endif //__DEVICE_TREE_HELPER_LIB_H__
