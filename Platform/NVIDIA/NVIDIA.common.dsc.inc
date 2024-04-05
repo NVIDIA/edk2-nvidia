@@ -701,6 +701,8 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   #  DEBUG_VERBOSE   0x00400000  // Detailed debug messages that may
   #                              // significantly impact boot performance
   #  DEBUG_ERROR     0x80000000  // Error
+  #
+  #  If this is changed the boot watchdog value should be reevaluated.
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
 
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
