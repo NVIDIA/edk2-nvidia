@@ -34,14 +34,16 @@
  * @param BootConfigStartAddr address that the boot config section is starting
  *        at in memory.
  * @param BootConfigSize size of the current bootconfig section in bytes.
- * @return number of bytes added to the boot config section. -1 for error.
+ * @param AppliedBytes number of bytes added to the boot config section.
+ * @return EFI_SUCCESS if success, else if not.
  */
 EFI_STATUS
 AddBootConfigParameters (
   CHAR8   *Params,
   UINT32  ParamsSize,
   UINT64  BootConfigStartAddr,
-  UINT32  BootConfigSize
+  UINT32  BootConfigSize,
+  UINT32  *AppliedBytes
   );
 
 /*
@@ -56,12 +58,31 @@ AddBootConfigParameters (
  * @param BootConfigStartAddr address that the boot config section is starting
  *        at in memory.
  * @param BootConfigSize size of the current bootconfig section in bytes.
- * @return number of bytes added to the boot config section. -1 for error.
+ * @param TrailerSize number of bytes added to the boot config section.
+ * @return EFI_SUCCESS if success, else if not.
  */
 EFI_STATUS
 AddBootConfigTrailer (
   UINT64  BootConfigStartAddr,
-  UINT32  BootConfigSize
+  UINT32  BootConfigSize,
+  UINT32  *TrailerSize
+  );
+
+/*
+ * Append dtb's /chosen/bootconfig to bootconfig memory
+ *
+ * @param BootConfigStartAddr bootconfig(loaded from vendor_boot) load address
+ * @param BootConfigSize current bootconfig size, may include a trailer
+ * @param AppliedBytes Applied bytes when updating bootconfig
+ * @return EFI_SUCCESS if success, else if not.
+ */
+
+EFI_STATUS
+EFIAPI
+AddBootConfigFromDtb (
+  IN UINT64   BootConfigStartAddr,
+  IN UINT32   BootConfigSize,
+  OUT UINT32  *AppliedBytes
   );
 
 #endif /* __ANDROID_BOOTCONFIG_H__ */

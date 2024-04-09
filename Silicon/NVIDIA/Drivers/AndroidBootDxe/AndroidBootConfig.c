@@ -8,12 +8,20 @@
 
 **/
 
+#include <libfdt.h>
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiLib.h>
+#include <Library/PrintLib.h>
+#include <AndroidBootImgHeader.h>
 #include "AndroidBootConfig.h"
+
+#define ANDROIDBOOT_ARG_PREFIX    L"androidboot."
+#define MAX_ANDROIDBOOT_ARG_SIZE  128
+
+CHAR16  *mLineBuffer = NULL;
 
 /*
  * Simple checksum for a buffer.
@@ -64,27 +72,27 @@ IsTrailerPresent (
  */
 EFI_STATUS
 AddBootConfigParameters (
-  IN CHAR8   *Params,
-  IN UINT32  ParamsSize,
-  IN UINT64  BootConfigStartAddr,
-  UINT32     BootConfigSize
+  IN CHAR8    *Params,
+  IN UINT32   ParamsSize,
+  IN UINT64   BootConfigStartAddr,
+  IN UINT32   BootConfigSize,
+  OUT UINT32  *AppliedBytes
   )
 {
-  if (!Params || !BootConfigStartAddr) {
+  UINT32      _AppliedBytes = 0;
+  INT32       NewSize       = 0;
+  UINT64      End;
+  EFI_STATUS  status;
+
+  if (!Params || !BootConfigStartAddr || !AppliedBytes || (ParamsSize == 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (ParamsSize == 0) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  INT32   AppliedBytes = 0;
-  INT32   NewSize      = 0;
-  UINT64  End          = BootConfigStartAddr + BootConfigSize;
+  End = BootConfigStartAddr + BootConfigSize;
 
   if (IsTrailerPresent (End)) {
-    End          -= BOOTCONFIG_TRAILER_SIZE;
-    AppliedBytes -= BOOTCONFIG_TRAILER_SIZE;
+    End           -= BOOTCONFIG_TRAILER_SIZE;
+    _AppliedBytes -= BOOTCONFIG_TRAILER_SIZE;
     CopyMem (&NewSize, (VOID *)End, BOOTCONFIG_SIZE_SIZE);
   } else {
     NewSize = BootConfigSize;
@@ -93,11 +101,19 @@ AddBootConfigParameters (
   // params
   CopyMem ((VOID *)End, Params, ParamsSize);
 
-  AppliedBytes += ParamsSize;
-  AppliedBytes += AddBootConfigTrailer (
-                    BootConfigStartAddr,
-                    BootConfigSize + AppliedBytes
-                    );
+  _AppliedBytes += ParamsSize;
+  *AppliedBytes  = _AppliedBytes;
+
+  status = AddBootConfigTrailer (
+             BootConfigStartAddr,
+             BootConfigSize + _AppliedBytes,
+             &_AppliedBytes
+             );
+  if (EFI_ERROR (status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error add trailer\n", __FUNCTION__));
+  }
+
+  *AppliedBytes += _AppliedBytes;
 
   return EFI_SUCCESS;
 }
@@ -107,13 +123,16 @@ AddBootConfigParameters (
  */
 EFI_STATUS
 AddBootConfigTrailer (
-  IN UINT64  BootConfigStartAddr,
-  IN UINT32  BootConfigSize
+  IN UINT64   BootConfigStartAddr,
+  IN UINT32   BootConfigSize,
+  OUT UINT32  *TrailerSize
   )
 {
-  if (!BootConfigStartAddr) {
+  if (!BootConfigStartAddr || !TrailerSize) {
     return EFI_INVALID_PARAMETER;
   }
+
+  *TrailerSize = 0;
 
   if (BootConfigSize == 0) {
     return EFI_SUCCESS;
@@ -146,5 +165,48 @@ AddBootConfigTrailer (
     BOOTCONFIG_MAGIC_SIZE
     );
 
+  *TrailerSize = BOOTCONFIG_TRAILER_SIZE;
+
   return EFI_SUCCESS;
+}
+
+/*
+ * Append bootconfig in dtb node to bootconfig memory
+ */
+EFI_STATUS
+EFIAPI
+AddBootConfigFromDtb (
+  IN UINT64   BootConfigStartAddr,
+  IN UINT32   BootConfigSize,
+  OUT UINT32  *AppliedBytes
+  )
+{
+  EFI_STATUS  Status;
+  INT32       NodeOffset;
+  VOID        *KernelDtb;
+  CHAR8       *BootConfigEntry = NULL;
+  INT32       BootConfigLength;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &KernelDtb);
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
+  NodeOffset = fdt_path_offset (KernelDtb, "/chosen");
+  if (NodeOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find /chosen in DTB\n", __FUNCTION__, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  BootConfigEntry = (CHAR8 *)fdt_getprop (KernelDtb, NodeOffset, "bootconfig", &BootConfigLength);
+  if (NULL == BootConfigEntry) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootargs\n", __FUNCTION__, Status));
+    // Not a fatal issue as dtb bootconfig can be empty for some platforms
+    *AppliedBytes = 0;
+    return EFI_SUCCESS;
+  }
+
+  Status = AddBootConfigParameters (BootConfigEntry, BootConfigLength, BootConfigStartAddr, BootConfigSize, AppliedBytes);
+
+  return Status;
 }

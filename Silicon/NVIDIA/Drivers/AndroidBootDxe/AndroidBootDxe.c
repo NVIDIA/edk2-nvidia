@@ -1115,6 +1115,8 @@ AndroidBootLoadFile (
   UINTN        BufSizeRamdisk         = 0;
   UINTN        BootConfigReservedSize = 0;
   MiscCmdType  MiscCmd;
+  UINT32       BootConfigAppliedBytes = 0;
+  UINT32       BootConfigSize;
 
   mInitRdBaseAddress = 0;
   mInitRdSize        = 0;
@@ -1255,9 +1257,7 @@ AndroidBootLoadFile (
 
   if (ImgData->HeaderVersion >= 3) {
     Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
-    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
-       && (VendorImgData != NULL))
-    {
+    if (  !EFI_ERROR (Status) && (VendorImgData != NULL)) {
       // load BootConfig right behind the ramdisk memory
       BufBase += BufSize;
 
@@ -1287,13 +1287,27 @@ AndroidBootLoadFile (
         goto ErrorExit;
       }
 
-      Status = AddBootConfigTrailer ((UINT64)BufBase, VendorImgData->BootConfigSize);
+      Status = AddBootConfigTrailer ((UINT64)BufBase, VendorImgData->BootConfigSize, &BootConfigAppliedBytes);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: BootConfig trailer create failed\n", __FUNCTION__));
         goto ErrorExit;
       }
 
-      BufSizeRamdisk += VendorImgData->BootConfigSize + BOOTCONFIG_TRAILER_SIZE;
+      BootConfigSize = VendorImgData->BootConfigSize + BootConfigAppliedBytes;
+
+      // Append dtb's /chosen/bootconfig to BootConfig memory
+      Status = AddBootConfigFromDtb (
+                 (UINT64)BufBase,
+                 BootConfigSize,
+                 &BootConfigAppliedBytes
+                 );
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
+      BootConfigSize += BootConfigAppliedBytes;
+
+      BufSizeRamdisk += BootConfigSize;
 
       DEBUG ((DEBUG_ERROR, "%a: BootConfig loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
     }
