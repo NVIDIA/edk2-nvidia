@@ -25,6 +25,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define HIDREV_OFFSET             0x4
 #define HIDREV_PRE_SI_PLAT_SHIFT  0x14
 #define HIDREV_PRE_SI_PLAT_MASK   0xf
+#define UEFI_VARS_SOCKET          0
 
 EFIAPI
 BOOLEAN
@@ -842,4 +843,76 @@ StmmGetBootChainForGpt (
   }
 
   return BootChain;
+}
+
+/**
+ * CorruptFvHeader.
+ * Utility function to corrupt the UEFI Variable store by corrupting
+ * the FV header forcing a re-build of the variable store during the next
+ * boot.
+ *
+ * @params[in]   FvPartitionOffset Byte Offset of the Var Store Partition.
+ * @params[in]   PartitionSize     Size of the Partition.
+ *
+ * @retval       EFI_SUCCESS      Succesfully corrupted the FV Header.
+ *               Other            Failure to get the partition Info or while
+ *                                transacting with the device.
+ **/
+EFI_STATUS
+EFIAPI
+CorruptFvHeader (
+  UINT64  FvPartitionOffset,
+  UINT64  PartitionSize
+  )
+{
+  UINT32                      FvHeaderLength;
+  UINT64                      FvHeaderOffset;
+  NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
+  EFI_STATUS                  Status;
+  EFI_FIRMWARE_VOLUME_HEADER  FvHeaderData;
+
+  NorFlashProtocol = GetSocketNorFlashProtocol (UEFI_VARS_SOCKET);
+  if (NorFlashProtocol == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get NorFlashProtocol for Socket 0\n",
+      __FUNCTION__
+      ));
+    Status = EFI_UNSUPPORTED;
+    goto ExitCorruptFvHeader;
+  }
+
+  FvHeaderOffset = FvPartitionOffset;
+  FvHeaderLength = sizeof (EFI_FIRMWARE_VOLUME_HEADER);
+  Status         = NorFlashProtocol->Read (
+                                       NorFlashProtocol,
+                                       FvHeaderOffset,
+                                       FvHeaderLength,
+                                       &FvHeaderData
+                                       );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Read FV header %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitCorruptFvHeader;
+  }
+
+  /* Corrupt the signature/revision .*/
+  FvHeaderData.Signature = FvHeaderData.Revision = 0;
+  Status                 = NorFlashProtocol->Write (
+                                               NorFlashProtocol,
+                                               FvHeaderOffset,
+                                               FvHeaderData.HeaderLength,
+                                               &FvHeaderData
+                                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to Write Partition header\r\n", __FUNCTION__));
+    goto ExitCorruptFvHeader;
+  }
+
+ExitCorruptFvHeader:
+  return Status;
 }

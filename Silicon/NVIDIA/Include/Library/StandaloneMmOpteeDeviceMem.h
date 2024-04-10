@@ -278,6 +278,26 @@ StmmGetBootChainForGpt (
   VOID
   );
 
+/**
+ * CorruptFvHeader.
+ * Utility function to corrupt the UEFI Variable store by corrupting
+ * the FV header forcing a re-build of the variable store during the next
+ * boot.
+ *
+ * @params[in]   FvPartitionOffset Byte Offset of the Var Store Partition.
+ * @params[in]   PartitionSize     Size of the Partition.
+ *
+ * @retval       EFI_SUCCESS      Succesfully corrupted the FV Header.
+ *               Other            Failure to get the partition Info or while
+ *                                transacting with the device.
+ **/
+EFI_STATUS
+EFIAPI
+CorruptFvHeader (
+  UINT64  FvPartitionOffset,
+  UINT64  PartitionSize
+  );
+
 typedef
 EFI_STATUS
 (EFIAPI *VAR_INT_COMPUTE_MEASUREMENT)(
