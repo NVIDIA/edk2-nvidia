@@ -1,13 +1,14 @@
 /** @file
   This driver registers a 5 minute watchdog between when it starts and ReadyToBoot.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <PiDxe.h>
 #include <Library/DebugLib.h>
+#include <Library/DebugPrintErrorLevelLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -54,6 +55,11 @@ WatchDogTimerReady (
 
   if (WatchdogTimout == MAX_UINT32) {
     WatchdogTimout = PcdGet16 (PcdBootWatchdogTime) * 60;
+  }
+
+  if ((GetDebugPrintErrorLevel () & ~PcdGet32 (PcdDebugPrintErrorLevel)) != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: watchdog disabled as extra debug is enabled\r\n", __FUNCTION__));
+    WatchdogTimout = 0;
   }
 
   Status = gBS->SetWatchdogTimer (WatchdogTimout, 0x0001, 0, NULL);

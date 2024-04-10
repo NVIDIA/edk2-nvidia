@@ -625,7 +625,9 @@ menu  "Watchdog settings"
   int  "Boot watchdog timeout"
   default  5
   help
-    Time in minutes to reboot system before boot options are processed
+    Time in minutes to reboot system before boot options are processed.
+    This may be customized based on changes in the boot.
+    For example changing the debug print level may impact boot time.
 
   config  ARM_WATCHDOG
     bool "Use ARM watchdog instead of timer"
