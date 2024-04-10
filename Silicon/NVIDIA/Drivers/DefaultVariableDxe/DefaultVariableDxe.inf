@@ -1,7 +1,7 @@
 ## @file
 #  Provides support for default variable creation.
 #
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -46,6 +46,7 @@
   SecureBootVariableLib
   TegraPlatformInfoLib
   DeviceTreeHelperLib
+  ResetSystemLib
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize                  ## CONSUMES
@@ -59,6 +60,7 @@
   gEfiPartTypeSystemPartGuid
   gEfiImageSecurityDatabaseGuid
   gNVIDIADefaultVarDoneGuid
+  gEfiGlobalVariableGuid
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid

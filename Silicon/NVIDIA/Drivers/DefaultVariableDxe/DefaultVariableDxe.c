@@ -1,8 +1,7 @@
 /** @file
   Provides support for default variable creation.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -28,6 +27,7 @@
 #include <Library/SecureBootVariableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/ResetSystemLib.h>
 
 #define VARIABLE_NODE_PATH     "/firmware/uefi/variables"
 #define VARIABLE_GUID_BASED    "guid-based"
@@ -42,6 +42,7 @@
                                EFI_VARIABLE_BOOTSERVICE_ACCESS |\
                                EFI_VARIABLE_RUNTIME_ACCESS)
 #define ESP_VAR_ATTR_SZ        (4)
+#define VARINT_CHECK_FAILED    L"VarIntCheckFailed"
 
 STATIC VOID     *Registration       = NULL;
 STATIC VOID     *RegistrationPolicy = NULL;
@@ -82,6 +83,50 @@ IsAgxXavier (
   }
 
   return FALSE;
+}
+
+/**
+  Check if StMM has signalled a tampered Variable Store that needs a reboot.
+
+**/
+STATIC
+VOID
+CheckVarStoreState (
+  VOID
+  )
+{
+  UINT32      VarStoreCheckFailed;
+  EFI_STATUS  Status;
+  UINT32      CurrentAttributes;
+  UINTN       DataSize;
+
+  DataSize = sizeof (UINT32);
+  Status   = gRT->GetVariable (
+                    VARINT_CHECK_FAILED,
+                    &gEfiGlobalVariableGuid,
+                    &CurrentAttributes,
+                    &DataSize,
+                    &VarStoreCheckFailed
+                    );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %s not found %r\n", __FUNCTION__, VARINT_CHECK_FAILED, Status));
+  } else {
+    if (VarStoreCheckFailed == 1) {
+      DEBUG ((DEBUG_ERROR, "Rebooting the System to re-init Var Store\n"));
+      Status = gRT->SetVariable (
+                      VARINT_CHECK_FAILED,
+                      &gEfiGlobalVariableGuid,
+                      CurrentAttributes,
+                      0,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%aFailed to Delete %s %r\n", __FUNCTION__, VARINT_CHECK_FAILED, Status));
+      }
+
+      ResetCold ();
+    }
+  }
 }
 
 /**
@@ -782,6 +827,7 @@ EspVar:
   }
 
   SetSecurityPcd ();
+  CheckVarStoreState ();
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &DefaultHandle,
                   &gNVIDIADefaultVarDoneGuid,

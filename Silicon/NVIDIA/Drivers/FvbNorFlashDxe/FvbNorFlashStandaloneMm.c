@@ -14,8 +14,16 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/IoLib.h>
 
-STATIC BOOLEAN                  CheckVarStoreIntegrity = FALSE;
-STATIC NVIDIA_VAR_INT_PROTOCOL  *VarInt                = NULL;
+#define VARINT_CHECK_FAILED  L"VarIntCheckFailed"
+
+STATIC BOOLEAN                    CheckVarStoreIntegrity = FALSE;
+STATIC NVIDIA_VAR_INT_PROTOCOL    *VarInt                = NULL;
+STATIC UINT64                     VariableOffset;
+STATIC UINT64                     VariableSize;
+STATIC UINT64                     ReservedPartitionOffset;
+STATIC UINT64                     ReservedPartitionSize;
+STATIC NOR_FLASH_ATTRIBUTES       NorFlashAttributes;
+STATIC NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -708,7 +716,6 @@ InitializeFvAndVariableStoreHeaders (
   EFI_STATUS             Status;
   VARIABLE_STORE_HEADER  *VariableStoreHeader;
 
-  DEBUG ((DEBUG_ERROR, "%s Address 0x%x\n", __FUNCTION__, (UINTN)FirmwareVolumeHeader));
   if (FirmwareVolumeHeader == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -718,9 +725,7 @@ InitializeFvAndVariableStoreHeaders (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  DEBUG ((DEBUG_ERROR, "%s: 0\n", __FUNCTION__));
   if (!IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize)) {
-    DEBUG ((DEBUG_ERROR, "%s: 1\n", __FUNCTION__));
     Status = NorFlashProtocol->Erase (
                                  NorFlashProtocol,
                                  PartitionOffset / FlashAttributes->BlockSize,
@@ -739,7 +744,6 @@ InitializeFvAndVariableStoreHeaders (
                         FirmwareVolumeHeader
                         );
     ASSERT (IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize));
-    DEBUG ((DEBUG_ERROR, "%s: 2\n", __FUNCTION__));
   }
 
   //
@@ -750,7 +754,6 @@ InitializeFvAndVariableStoreHeaders (
     sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY)
     );
   CopyGuid (&FirmwareVolumeHeader->FileSystemGuid, &gEfiSystemNvDataFvGuid);
-  DEBUG ((DEBUG_ERROR, "%s: 3\n", __FUNCTION__));
   FirmwareVolumeHeader->FvLength   = PartitionSize;
   FirmwareVolumeHeader->Signature  = EFI_FVH_SIGNATURE;
   FirmwareVolumeHeader->Attributes = (EFI_FVB_ATTRIBUTES_2)(
@@ -770,7 +773,6 @@ InitializeFvAndVariableStoreHeaders (
   FirmwareVolumeHeader->BlockMap[1].Length    = 0;
   FirmwareVolumeHeader->Checksum              = CalculateCheckSum16 ((UINT16 *)FirmwareVolumeHeader, FirmwareVolumeHeader->HeaderLength);
 
-  DEBUG ((DEBUG_ERROR, "%s: 3\n", __FUNCTION__));
   Status = NorFlashProtocol->Write (
                                NorFlashProtocol,
                                PartitionOffset,
@@ -796,7 +798,6 @@ InitializeFvAndVariableStoreHeaders (
     VariableStoreHeader->Format = VARIABLE_STORE_FORMATTED;
     VariableStoreHeader->State  = VARIABLE_STORE_HEALTHY;
 
-    DEBUG ((DEBUG_ERROR, "%s: 4\n", __FUNCTION__));
     // Write the combined super-header in the flash
     Status = NorFlashProtocol->Write (
                                  NorFlashProtocol,
@@ -809,7 +810,105 @@ InitializeFvAndVariableStoreHeaders (
     }
   }
 
-  DEBUG ((DEBUG_ERROR, "%s: 5\n", __FUNCTION__));
+  return Status;
+}
+
+/**
+ * EraseMeasurementPartition
+ * Erase the "Reserved" Partition that contain the measurements.
+ *
+ * @param[in] NorFlasProto    Pointer to the NOR Flash Protocol for the socket.
+ * @param[in] PartitionOffset Byte offset of the Measurement partition.
+ * @param[in] PartitionSize   Size of the Measurement Partition.
+ *
+ * @return EFI_SUCCESS  Successfully erased the Measurement partition.
+ *         Other        Erase Failed.
+ *
+ **/
+STATIC
+EFI_STATUS
+EraseMeasurementPartition (
+  IN UINT64  PartitionOffset,
+  IN UINT64  PartitionSize
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = NorFlashProtocol->Erase (
+                               NorFlashProtocol,
+                               PartitionOffset / NorFlashAttributes.BlockSize,
+                               PartitionSize / NorFlashAttributes.BlockSize
+                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Re-init Measurement Partition %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * CorruptFvHeader.
+ * Utility function to corrupt the UEFI Variable store by corrupting
+ * the FV header forcing a re-build of the variable store during the next
+ * boot.
+ *
+ * @params[in]   FvPartitionOffset Byte Offset of the Var Store Partition.
+ * @params[in]   PartitionSize     Size of the Partition.
+ *
+ * @retval       EFI_SUCCESS      Succesfully corrupted the FV Header.
+ *               Other            Failure to get the partition Info or while
+ *                                transacting with the device.
+ **/
+STATIC
+EFI_STATUS
+CorruptFvHeader (
+  UINT64  FvPartitionOffset,
+  UINT64  PartitionSize
+  )
+{
+  UINT32                      FvHeaderLength;
+  UINT64                      FvHeaderOffset;
+  EFI_STATUS                  Status;
+  EFI_FIRMWARE_VOLUME_HEADER  FvHeaderData;
+
+  FvHeaderOffset = FvPartitionOffset;
+  FvHeaderLength = sizeof (EFI_FIRMWARE_VOLUME_HEADER);
+  Status         = NorFlashProtocol->Read (
+                                       NorFlashProtocol,
+                                       FvHeaderOffset,
+                                       FvHeaderLength,
+                                       &FvHeaderData
+                                       );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Read FV header %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitCorruptFvHeader;
+  }
+
+  /* Corrupt the signature/revision .*/
+  FvHeaderData.Signature = FvHeaderData.Revision = 0;
+  Status                 = NorFlashProtocol->Write (
+                                               NorFlashProtocol,
+                                               FvHeaderOffset,
+                                               FvHeaderData.HeaderLength,
+                                               &FvHeaderData
+                                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to Write Partition header\r\n", __FUNCTION__));
+    goto ExitCorruptFvHeader;
+  }
+
+ExitCorruptFvHeader:
   return Status;
 }
 
@@ -836,7 +935,9 @@ MmFvbSmmVarReady (
   IN EFI_HANDLE      Handle
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                 Status;
+  EFI_SMM_VARIABLE_PROTOCOL  *SmmVariable;
+  UINT32                     VarIntCheckFail;
 
   Status = gMmst->MmLocateProtocol (
                     &gNVIDIAVarIntGuid,
@@ -853,7 +954,8 @@ MmFvbSmmVarReady (
     return Status;
   }
 
-  Status = VarInt->Validate (VarInt);
+  Status          = VarInt->Validate (VarInt);
+  VarIntCheckFail = 0;
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -862,10 +964,71 @@ MmFvbSmmVarReady (
       Status
       ));
 
+    VarIntCheckFail = 1;
+
     /* We're here, which means there is a non-erased Variable Integrity space
      * that isn't matching our expected measurement.
+     * The default behavior if we fail to validate the integrity of the Variable Store
+     * is to assert.
+     * But Users can choose to not assert (via the PCD item), if they do, then the driver
+     * will corrupt the FV header and set a volatile variable that will signal the NS UEFI
+     * to reboot the system. The subsequent reboot should re-initialize the Variable Store.
      */
-    ASSERT (FALSE);
+    if (FeaturePcdGet (PcdAssertOnVarStoreIntegrityCheckFail) == TRUE) {
+      ASSERT (FALSE);
+    } else {
+      Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&SmmVariable);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: gEfiSmmVariableProtocolGuid: NOT LOCATED!\n", __FUNCTION__));
+      }
+
+      ASSERT_EFI_ERROR (Status);
+
+      // Set a Volatile Variable that NS side will check in UEFI.
+      Status = SmmVariable->SmmSetVariable (
+                              VARINT_CHECK_FAILED,
+                              &gEfiGlobalVariableGuid,
+                              EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                              sizeof (UINT32),
+                              &VarIntCheckFail
+                              );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Set %s Variable %r\n",
+          __FUNCTION__,
+          VARINT_CHECK_FAILED,
+          Status
+          ));
+      }
+
+      ASSERT_EFI_ERROR (Status);
+
+      // Corrupt the FV header which forces a re-init of the Variable store during the next reboot.
+      DEBUG ((DEBUG_ERROR, "%a: Corrupting FV Header\n", __FUNCTION__));
+      Status = CorruptFvHeader (VariableOffset, VariableSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Corrupt FV Header %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
+
+      // Erase the Measeurement Partition.
+      Status = EraseMeasurementPartition (ReservedPartitionOffset, ReservedPartitionSize);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to Erase Partition %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
+    }
   } else {
     DEBUG ((DEBUG_ERROR, "%a: VarStore validation Succesful\n", __FUNCTION__));
   }
@@ -953,11 +1116,18 @@ ValidateFvHeader (
     // then check if the partition is erased. If it is erased, then re-initialize the varstore, as it
     // could be a possible tamper.
     if (CheckVarStoreIntegrity == TRUE) {
-      if (IsMeasurementPartitionErased (NorFlashProtocol, MeasurementOffset, MeasurementPartitionSize) == TRUE) {
+      if (IsMeasurementPartitionErasedOrZero (NorFlashProtocol, MeasurementOffset, MeasurementPartitionSize) == TRUE) {
         DEBUG ((DEBUG_ERROR, "%a: No Valid Measurements found. Re-initializing the Variable Store\n", __FUNCTION__));
-        return EFI_NOT_FOUND;
-      } else {
-        DEBUG ((DEBUG_ERROR, "%a: Var store is ok", __FUNCTION__));
+        Status = EraseMeasurementPartition (MeasurementOffset, MeasurementPartitionSize);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: Failed to Erase Partition %r\n",
+            __FUNCTION__,
+            Status
+            ));
+          return Status;
+        }
       }
     }
   }
@@ -1105,14 +1275,10 @@ FVBNORInitialize (
   )
 {
   EFI_STATUS                  Status;
-  NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
-  NOR_FLASH_ATTRIBUTES        NorFlashAttributes;
   EFI_PARTITION_TABLE_HEADER  PartitionHeader;
   VOID                        *PartitionEntryArray;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
   UINTN                       Index;
-  UINT64                      VariableOffset;
-  UINT64                      VariableSize;
   UINT64                      FtwOffset;
   UINT64                      FtwSize;
   NVIDIA_FVB_PRIVATE_DATA     *FvpData;
@@ -1121,8 +1287,6 @@ FVBNORInitialize (
   VOID                        *FtwWorkingBuffer;
   UINTN                       GptHeaderOffset;
   VOID                        *MmFvbRegistration;
-  UINT64                      ReservedPartitionOffset;
-  UINT64                      ReservedPartitionSize;
 
   if (PcdGetBool (PcdEmuVariableNvModeEnable)) {
     return EFI_SUCCESS;

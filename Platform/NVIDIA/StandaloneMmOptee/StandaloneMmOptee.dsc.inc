@@ -50,6 +50,7 @@
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|TRUE
 
 [PcdsPatchableInModule]
   #

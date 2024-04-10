@@ -355,6 +355,9 @@
 
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|FALSE|BOOLEAN|0x00000116
 
+#ASSERT and halt boot if VarStore Integrity check fails.
+  gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|FALSE|BOOLEAN|0x00000129
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C

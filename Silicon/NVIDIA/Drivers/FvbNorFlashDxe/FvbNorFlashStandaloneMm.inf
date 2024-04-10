@@ -53,6 +53,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported
+  gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
 
 [Protocols]
