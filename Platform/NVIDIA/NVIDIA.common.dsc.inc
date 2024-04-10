@@ -1703,8 +1703,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf {
       <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-      <BuildOptions>
-      GCC:*_*_*_CC_FLAGS = -mstrict-align
   }
 !endif
 !ifdef CONFIG_USB

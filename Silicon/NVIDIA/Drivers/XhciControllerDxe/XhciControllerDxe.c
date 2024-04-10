@@ -206,8 +206,8 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      // Force non-coherent DMA type device.
-      Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
+      // Force dma-coherent DMA type device.
+      Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
 
       /* Assign Platform Specific Parameters */
       if (((Offset = fdt_node_offset_by_compatible (
@@ -424,6 +424,12 @@ DeviceDiscoveryNotify (
         MmioWrite32 (CfgAddress + XUSB_CFG_7_0, reg_val);
 
         DeviceDiscoveryThreadMicroSecondDelay (200);
+
+        reg_val = MmioRead32 (CfgAddress + XUSB_CFG_AXI_CFG_0);
+        reg_val = 0x5;
+        MmioWrite32 (CfgAddress + XUSB_CFG_AXI_CFG_0, reg_val);
+
+        DeviceDiscoveryThreadMicroSecondDelay (100);
       }
 
       reg_val = MmioRead32 (CfgAddress + XUSB_CFG_1_0);
