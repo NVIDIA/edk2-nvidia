@@ -770,7 +770,36 @@ ExitInitPartition:
 }
 
 /**
-  IsMeasurementPartitionErased
+ * Check if all the buffer is filled with the Value.
+ *
+ * @param[in] Buf    Buffer to check.
+ * @param[in] Size   Size of the buffer.
+ * @param[in] Value  Value to check against.
+ *
+ * @return TRUE  Contents of buffer filled with Value.
+ *         FALSE Otherwise.
+ */
+STATIC
+BOOLEAN
+CheckBuf (
+  UINT8  *Buf,
+  UINTN  Size,
+  UINT8  Value
+  )
+{
+  UINTN  Index;
+
+  for (Index = 0; Index < Size; Index++) {
+    if (Buf[Index] != Value) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+  IsMeasurementPartitionErasedOrZero
   Check if the variable integrity storage region is erased
 
   @param This    Pointer to Variable Integrity Protocol.
@@ -780,16 +809,15 @@ ExitInitPartition:
 
 **/
 BOOLEAN
-IsMeasurementPartitionErased (
+IsMeasurementPartitionErasedOrZero (
   NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProto,
   UINT64                     PartitionStartOffset,
   UINT64                     PartitionSize
   )
 {
   UINT8       *Buf;
-  BOOLEAN     IsErased;
+  BOOLEAN     IsErasedOrZero;
   EFI_STATUS  Status;
-  UINTN       Index;
   UINT64      EndOffset;
   UINT64      PartitionOffset;
 
@@ -797,13 +825,13 @@ IsMeasurementPartitionErased (
   if (Buf == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to create read buf\n", __FUNCTION__));
     ASSERT (FALSE);
-    Status   = EFI_OUT_OF_RESOURCES;
-    IsErased = FALSE;
+    Status         = EFI_OUT_OF_RESOURCES;
+    IsErasedOrZero = FALSE;
     goto ExitIsMeasurementPartitionErased;
   }
 
-  EndOffset = PartitionStartOffset + PartitionSize;
-  IsErased  = TRUE;
+  EndOffset      = PartitionStartOffset + PartitionSize;
+  IsErasedOrZero = TRUE;
 
   for (PartitionOffset = PartitionStartOffset; PartitionOffset < EndOffset; PartitionOffset += SIZE_1KB) {
     Status = NorFlashProto->Read (
@@ -820,22 +848,15 @@ IsMeasurementPartitionErased (
         PartitionOffset,
         Status
         ));
+      IsErasedOrZero = FALSE;
       goto ExitIsMeasurementPartitionErased;
     }
 
-    for (Index = 0; Index < SIZE_1KB; Index++) {
-      if (Buf[Index] != FVB_ERASED_BYTE) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Offset 0x%lx Index %u value 0x%x, NOT ERASED\n",
-          __FUNCTION__,
-          PartitionOffset,
-          Index,
-          Buf[Index]
-          ));
-        IsErased = FALSE;
-        goto ExitIsMeasurementPartitionErased;
-      }
+    if ((CheckBuf (Buf, SIZE_1KB, FVB_ERASED_BYTE) != TRUE) &&
+        (CheckBuf (Buf, SIZE_1KB, 0) != TRUE))
+    {
+      IsErasedOrZero = FALSE;
+      goto ExitIsMeasurementPartitionErased;
     }
   }
 
@@ -844,7 +865,7 @@ ExitIsMeasurementPartitionErased:
     FreePool (Buf);
   }
 
-  return IsErased;
+  return IsErasedOrZero;
 }
 
 /**
@@ -978,7 +999,7 @@ VarIntValidate (
 
 ExitVarIntValidate:
   if (Matched != TRUE) {
-    if (IsMeasurementPartitionErased (
+    if (IsMeasurementPartitionErasedOrZero (
           This->NorFlashProtocol,
           This->PartitionByteOffset,
           This->PartitionSize

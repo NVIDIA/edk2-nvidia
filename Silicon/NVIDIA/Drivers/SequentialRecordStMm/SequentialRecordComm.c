@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,6 @@ STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *EarlyVarsProto;
 STATIC EFI_SMM_VARIABLE_PROTOCOL    *SmmVar;
 
 #define EARLY_VARS_RD_SOCKET  (0)
-#define UEFI_VARS_SOCKET      (0)
 #define MAX_VAR_NAME          (256 * sizeof (CHAR16))
 
 /**
@@ -92,106 +91,6 @@ GetSeqProto (
 
 ExitGetSeqProto:
   return ReturnProto;
-}
-
-/**
- * CorruptFvHeader.
- * Utility function to corrupt the UEFI Variable store by corrupting
- * the FV header forcing a re-build of the variable store during the next
- * boot.
- *
- * @params[in]   None.
- *
- * @retval       EFI_SUCCESS      Succesfully corrupted the FV Header.
- *               Other            Failure to get the partition Info or while
- *                                transacting with the device.
- **/
-STATIC
-EFI_STATUS
-CorruptFvHeader (
-  VOID
-  )
-{
-  UINT32                      FvHeaderLength;
-  UINT64                      FvHeaderOffset;
-  NVIDIA_NOR_FLASH_PROTOCOL   *NorFlashProtocol;
-  EFI_PHYSICAL_ADDRESS        CpuBlParamsAddr;
-  EFI_STATUS                  Status;
-  UINT64                      PartitionSize;
-  UINT16                      DeviceInstance;
-  EFI_FIRMWARE_VOLUME_HEADER  FvHeaderData;
-
-  NorFlashProtocol = GetSocketNorFlashProtocol (UEFI_VARS_SOCKET);
-  if (NorFlashProtocol == NULL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get NorFlashProtocol for Socket 0\n",
-      __FUNCTION__
-      ));
-    Status = EFI_UNSUPPORTED;
-    goto ExitCorruptFvHeader;
-  }
-
-  Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get CpuBl Addr %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto ExitCorruptFvHeader;
-  }
-
-  Status = GetPartitionInfoStMm (
-             (UINTN)CpuBlParamsAddr,
-             TEGRABL_VARIABLE_IMAGE_INDEX,
-             &DeviceInstance,
-             &FvHeaderOffset,
-             &PartitionSize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to get Variable PartitionInfo %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto ExitCorruptFvHeader;
-  }
-
-  FvHeaderLength = sizeof (EFI_FIRMWARE_VOLUME_HEADER);
-  Status         = NorFlashProtocol->Read (
-                                       NorFlashProtocol,
-                                       FvHeaderOffset,
-                                       FvHeaderLength,
-                                       &FvHeaderData
-                                       );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to Read FV header %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto ExitCorruptFvHeader;
-  }
-
-  /* Corrupt the signature/revision .*/
-  FvHeaderData.Signature = FvHeaderData.Revision = 0;
-  Status                 = NorFlashProtocol->Write (
-                                               NorFlashProtocol,
-                                               FvHeaderOffset,
-                                               FvHeaderData.HeaderLength,
-                                               &FvHeaderData
-                                               );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to Write Partition header\r\n", __FUNCTION__));
-    goto ExitCorruptFvHeader;
-  }
-
-ExitCorruptFvHeader:
-  return Status;
 }
 
 /**
@@ -761,6 +660,10 @@ SatMcMsgHandler (
 {
   EFI_STATUS                    Status;
   SATMC_MM_COMMUNICATE_PAYLOAD  *SatMcMmMsg;
+  UINT64                        FvHeaderOffset;
+  UINT64                        PartitionSize;
+  EFI_PHYSICAL_ADDRESS          CpuBlParamsAddr;
+  UINT16                        DeviceInstance;
 
   SatMcMmMsg = (SATMC_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
 
@@ -785,7 +688,35 @@ SatMcMsgHandler (
 
   switch (SatMcMmMsg->Command) {
     case CLEAR_EFI_VARIABLES:
-      Status = CorruptFvHeader ();
+      Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to get CpuBl Addr %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      Status = GetPartitionInfoStMm (
+                 (UINTN)CpuBlParamsAddr,
+                 TEGRABL_VARIABLE_IMAGE_INDEX,
+                 &DeviceInstance,
+                 &FvHeaderOffset,
+                 &PartitionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a:Failed to get Variable PartitionInfo %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        goto ExitSatMcMsgHandler;
+      }
+
+      Status = CorruptFvHeader (FvHeaderOffset, PartitionSize);
       if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,

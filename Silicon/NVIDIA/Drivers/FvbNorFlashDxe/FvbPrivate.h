@@ -28,6 +28,7 @@
 
 #include <Protocol/FirmwareVolumeBlock.h>
 #include <Protocol/NorFlash.h>
+#include <Protocol/SmmVariable.h>
 #include <Uefi/UefiGpt.h>
 
 #include <Guid/VariableFormat.h>
@@ -84,7 +85,7 @@ VarIntValidate (
   );
 
 BOOLEAN
-IsMeasurementPartitionErased (
+IsMeasurementPartitionErasedOrZero (
   NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProto,
   UINT64                     PartitionStartOffset,
   UINT64                     PartitionSize
