@@ -74,13 +74,15 @@ DeviceDiscoveryOnExitBootServices (
   IN VOID       *Context
   )
 {
-  EFI_STATUS                       Status;
-  VOID                             *AcpiBase;
-  EFI_HANDLE                       Controller;
-  NVIDIA_CLOCK_NODE_PROTOCOL       *ClockProtocol = NULL;
-  NVIDIA_RESET_NODE_PROTOCOL       *ResetProtocol = NULL;
-  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol    = NULL;
-  UINTN                            Index;
+  EFI_STATUS                         Status;
+  VOID                               *AcpiBase;
+  EFI_HANDLE                         Controller;
+  NVIDIA_CLOCK_NODE_PROTOCOL         *ClockProtocol = NULL;
+  NVIDIA_RESET_NODE_PROTOCOL         *ResetProtocol = NULL;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL    *PgProtocol    = NULL;
+  NON_DISCOVERABLE_DEVICE            *Device        = NULL;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+  UINTN                              Index;
 
   gBS->CloseEvent (Event);
 
@@ -155,6 +157,20 @@ DeviceDiscoveryOnExitBootServices (
       DEBUG ((DEBUG_ERROR, "%a, failed to assert resets %r\r\n", __FUNCTION__, Status));
       return;
     }
+  }
+
+  Status = gBS->HandleProtocol (Controller, &gEdkiiNonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
+  if (EFI_ERROR (Status)) {
+    Status = gBS->HandleProtocol (Controller, &gNVIDIANonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, no non discoverable device protocol\r\n", __FUNCTION__));
+      return;
+    }
+  }
+
+  if (Device->Resources != NULL) {
+    Desc       = Device->Resources;
+    Desc->Desc = ACPI_END_TAG_DESCRIPTOR;
   }
 
   return;
