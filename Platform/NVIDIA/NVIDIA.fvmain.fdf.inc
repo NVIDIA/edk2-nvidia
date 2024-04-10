@@ -163,6 +163,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Configuration Manager
   #
   INF Silicon/NVIDIA/Drivers/ConfigurationManagerTokenDxe/ConfigurationManagerTokenDxe.inf
+  INF Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
   INF Silicon/NVIDIA/Drivers/ConfigurationManager/ConfigurationManagerDxe.inf
 
   #
@@ -656,13 +657,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Tegra Platform Configuration
   #
   INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
-
-  #
-  # Platform Configuration Manager Data
-  #
-!ifdef CONFIG_CONFIG_MANAGER
-  INF Silicon/NVIDIA/Drivers/ConfigurationManagerData/ConfigurationManagerDataDxe.inf
-!endif
 
   #
   # Custom HII Support

@@ -43,15 +43,6 @@ NVIDIAPlatformGetObject (
   IN  OUT   CM_OBJ_DESCRIPTOR                     *CONST  CmObject
   );
 
-EFI_STATUS
-EFIAPI
-NVIDIAPlatformGetObjectLegacy (
-  IN  CONST EDKII_CONFIGURATION_MANAGER_PROTOCOL  *CONST  This,
-  IN  CONST CM_OBJECT_ID                                  CmObjectId,
-  IN  CONST CM_OBJECT_TOKEN                               Token OPTIONAL,
-  IN  OUT   CM_OBJ_DESCRIPTOR                     *CONST  CmObject
-  );
-
 /** The SetObject function defines the interface implemented by the
     Configuration Manager Protocol for updating the Configuration
     Manager Objects.
@@ -107,7 +98,6 @@ ConfigurationManagerDxeInitialize (
 {
   VOID        *PlatRepoInfo;
   EFI_STATUS  Status;
-  UINTN       ChipID;
 
   Status = gBS->LocateProtocol (
                   &gNVIDIAConfigurationManagerDataProtocolGuid,
@@ -125,20 +115,6 @@ ConfigurationManagerDxeInitialize (
   }
 
   NVIDIAPlatformConfigManagerProtocol.PlatRepoInfo = PlatRepoInfo;
-
-  // While transitioning to new CM, use legacy method for platforms that haven't been transitioned yet
-  ChipID = TegraGetChipID ();
-  switch (ChipID) {
-    case T194_CHIP_ID:
-    case T234_CHIP_ID:
-    case TH500_CHIP_ID:
-      // Use the new NVIDIAPlatfocrmGetObject function, which is default
-      break;
-
-    default:
-      NVIDIAPlatformConfigManagerProtocol.GetObject = NVIDIAPlatformGetObjectLegacy;
-      break;
-  }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
