@@ -1424,6 +1424,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SpmiParser/SpmiParser.inf
 !endif
 
+!ifdef CONFIG_SOC_GRACE
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SmbiosParser/SmbiosParser.inf
+!endif
+
       # Note: SsdtTableGenerator must be last!
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SsdtTableGenerator/SsdtTableGenerator.inf
     <BuildOptions>

@@ -1,0 +1,83 @@
+## @file
+#  Smbios Parser
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = SmbiosParser
+  FILE_GUID      = 3077abf8-ab22-499b-a867-76df8cf8a4e4
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterSmbiosParser
+
+[Sources]
+  SmbiosParser.c
+  ConfigurationSmbiosType0/SmbiosType0Parser.c
+  ConfigurationSmbiosType1/SmbiosType1Parser.c
+  ConfigurationSmbiosType2/SmbiosType2Parser.c
+  ConfigurationSmbiosType3/SmbiosType3Parser.c
+  ConfigurationSmbiosProcSub/SmbiosProcSubParser.c
+  ConfigurationSmbiosType8/SmbiosType8Parser.c
+  ConfigurationSmbiosType9/SmbiosType9Parser.c
+  ConfigurationSmbiosType11/SmbiosType11Parser.c
+  ConfigurationSmbiosType13/SmbiosType13Parser.c
+  ConfigurationSmbiosMem/SmbiosMemParser.c
+  ConfigurationSmbiosType32/SmbiosType32Parser.c
+  ConfigurationSmbiosType38/SmbiosType38Parser.c
+  ConfigurationSmbiosType39/SmbiosType39Parser.c
+  ConfigurationSmbiosType41/SmbiosType41Parser.c
+  ConfigurationSmbiosType43/SmbiosType43Parser.c
+  ConfigurationSmbiosType45/SmbiosType45Parser.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ConfigurationManagerDataRepoLib
+  FruLib
+  IpmiBaseLib
+  IpmiParser
+  OemMiscLib
+  PcdLib
+  Tpm2CommandLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gArmTokenSpaceGuid.PcdFdBaseAddress
+  gArmTokenSpaceGuid.PcdBiosCharacteristics
+  gArmTokenSpaceGuid.PcdBiosCharacteristicsExtension
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
+  gNVIDIATokenSpaceGuid.PcdType3Info
+  gNVIDIATokenSpaceGuid.PcdChassisSerialNumber
+  gNVIDIATokenSpaceGuid.PcdChassisSku
+  gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLangCodes
+  gEfiMdePkgTokenSpaceGuid.PcdUefiVariableDefaultPlatformLang
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdTpmEnable
+
+[Guids]
+  gNVIDIAPublicVariableGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[Protocols]
+  gEfiPciIoProtocolGuid
+  gEfiFirmwareManagementProtocolGuid
+
+[Depex]
+  gEfiFirmwareManagementProtocolGuid
