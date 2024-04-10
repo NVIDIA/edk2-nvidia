@@ -394,8 +394,6 @@ UpdateCoreInfoFromDtb (
     CpuMapPathFormat                         = "/socket@%u/cpus/cpu-map";
   }
 
-  DEBUG ((DEBUG_ERROR, "MaxSockets=%u\n", PlatformResourceInfo->MaxPossibleSockets));
-
   // count clusters across all sockets
   MaxClusters = 0;
   for (Socket = 0; Socket < PlatformResourceInfo->MaxPossibleSockets; Socket++) {
@@ -430,11 +428,10 @@ UpdateCoreInfoFromDtb (
       NV_ASSERT_RETURN (Cluster < 1000, return EFI_DEVICE_ERROR, "Too many clusters seen\r\n");
     }
 
-    DEBUG ((DEBUG_ERROR, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
+    DEBUG ((DEBUG_INFO, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
   }
 
   PlatformResourceInfo->MaxPossibleClusters = MaxClusters;
-  DEBUG ((DEBUG_ERROR, "MaxClusters=%u\n", PlatformResourceInfo->MaxPossibleClusters));
 
   // Use cluster0 node to find max core subnode
   Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
@@ -462,7 +459,7 @@ UpdateCoreInfoFromDtb (
   }
 
   PlatformResourceInfo->MaxPossibleCoresPerCluster = MaxCoresPerCluster;
-  DEBUG ((DEBUG_ERROR, "MaxCoresPerCluster=%u\n", PlatformResourceInfo->MaxPossibleCoresPerCluster));
+
   return EFI_SUCCESS;
 }
 
@@ -619,6 +616,8 @@ UpdatePlatformResourceInformation (
 
   PlatformResourceInfo->MaxPossibleCores = PlatformResourceInfo->MaxPossibleCoresPerCluster * PlatformResourceInfo->MaxPossibleClusters;
 
+  DEBUG ((DEBUG_ERROR, "DTB maximums: sockets=%u clusters=%u cores=%u\n", PlatformResourceInfo->MaxPossibleSockets, PlatformResourceInfo->MaxPossibleClusters, PlatformResourceInfo->MaxPossibleCores));
+
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
@@ -650,6 +649,8 @@ UpdatePlatformResourceInformation (
     PlatformResourceInfo->EnabledCoresBitMap[0] = 1;
     PlatformResourceInfo->NumberOfEnabledCores++;
   }
+
+  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, PlatformResourceInfo->NumberOfEnabledCores));
 
   switch (ChipID) {
     case T194_CHIP_ID:
