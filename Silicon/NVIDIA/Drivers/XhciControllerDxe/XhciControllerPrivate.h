@@ -46,6 +46,8 @@
 
 #define XUSB_CFG_7_0  _MK_ADDR_CONST(0x0000001C)
 
+#define XUSB_CFG_AXI_CFG_0  _MK_ADDR_CONST(0x000000F8)
+
 #define XUSB_OP_USBSTS  _MK_ADDR_CONST(0x00000004)
 #define USBSTS_CNR      (1 << 11)
 #define USBSTS_HCE      (1 << 12)
