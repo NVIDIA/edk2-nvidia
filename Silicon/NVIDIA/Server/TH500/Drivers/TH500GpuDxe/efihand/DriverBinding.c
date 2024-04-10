@@ -300,9 +300,8 @@ GetBpmpPhandle (
   IN OUT UINT32  *Phandle
   )
 {
-  NVIDIA_BPMP_IPC_PROTOCOL                          *BpmpIpcProtocol = NULL;
-  EFI_STATUS                                        Status           = EFI_SUCCESS;
-  EFI_HANDLE                                        *HandleBuffer    = NULL;
+  EFI_STATUS                                        Status        = EFI_SUCCESS;
+  EFI_HANDLE                                        *HandleBuffer = NULL;
   EFI_HANDLE                                        Handle;
   UINTN                                             NoHandles;
   UINTN                                             Index;
@@ -682,24 +681,33 @@ NVIDIAGpuDriverStart (
 
       /* Check FSP enabled and GPU Mode SHH before enabling FSP RPC calls */
       if ((bFSPEnabled) && (GpuMode == GPU_MODE_SHH)) {
-        UINT64  EgmBasePaSocketMasked = MaskEgmBaseSocketAddress (EgmBasePa);
+        UINT64   EgmBasePaSocketMasked  = MaskEgmBaseSocketAddress (EgmBasePa);
+        BOOLEAN  bMaskFspRpcDeviceError = TRUE;
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EGM_SOCKET_ADDRESS_MASK = 0x%016lx\n", __FUNCTION__, ControllerHandle, EGM_SOCKET_ADDRESS_MASK));
         DEBUG ((DEBUG_ERROR, "%a: [Controller:%p] EgmBasePaSocketMasked = 0x%016lx\n", __FUNCTION__, ControllerHandle, EgmBasePaSocketMasked));
         /* Need to adjust for size */
         Status = FspConfigurationEgmBaseAndSize (PciIo, EgmBasePaSocketMasked, EgmSize);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationEgmBaseAndSize' failed with status '%r'.\n", Status));
+          /* Check for non-FATAL FSP RPC transaction failure */
+          if ( bMaskFspRpcDeviceError && (Status == EFI_DEVICE_ERROR)) {
+            Status = EFI_SUCCESS;
+          }
+
           /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
           ASSERT_EFI_ERROR (Status);
         }
 
-        if (!EFI_ERROR (Status)) {
-          Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationAtsRange' failed with status '%r'.\n", Status));
-            /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
-            ASSERT_EFI_ERROR (Status);
+        Status = FspConfigurationAtsRange (PciIo, HbmBasePa);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "ERROR: 'FspConfigurationAtsRange' failed with status '%r'.\n", Status));
+          /* Check for non-FATAL FSP RPC transaction failure */
+          if ( bMaskFspRpcDeviceError && (Status == EFI_DEVICE_ERROR)) {
+            Status = EFI_SUCCESS;
           }
+
+          /* coverity[cert_int31_c_violation] violation in EDKII-defined macro */
+          ASSERT_EFI_ERROR (Status);
         }
       }
     }

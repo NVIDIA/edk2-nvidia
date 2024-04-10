@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
  */
@@ -70,9 +70,25 @@ typedef UINT32 NvU32;
 
 #define CONVERT_DWORD_COUNT_TO_BYTE_SIZE(dword)  ((dword)<<2)
 
+/* Local FSP ERROR code definitions */
+
 #ifndef FSP_OK
 #define FSP_OK  0
 #endif
+
+#define FSP_RPC_ERROR_CODE_0246H  0x0246
+#define FSP_RPC_ERROR_CODE_0247H  0x0247
+#define FSP_RPC_ERROR_CODE_0248H  0x0248
+#define FSP_RPC_ERROR_CODE_0249H  0x0249
+#define FSP_RPC_ERROR_CODE_024AH  0x024a
+#define FSP_RPC_ERROR_CODE_024BH  0x024b
+#define FSP_RPC_ERROR_CODE_024CH  0x024c
+#define FSP_RPC_ERROR_CODE_024DH  0x024d
+#define FSP_RPC_ERROR_CODE_024EH  0x024e
+#define FSP_RPC_ERROR_CODE_024FH  0x024f
+#define FSP_RPC_ERROR_CODE_0250H  0x0250
+#define FSP_RPC_ERROR_CODE_0251H  0x0251
+#define FSP_RPC_ERROR_CODE_0261H  0x0261
 
 /* UEFI FSP RPC configured for Single Packet mode */
 #define NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE \
@@ -829,6 +845,7 @@ FspConfigurationAtsRange (
 {
   EFI_STATUS         Status             = EFI_SUCCESS;
   EFI_STATUS         StatusDebugDump    = EFI_SUCCESS;
+  EFI_STATUS         FspRpcStatus       = EFI_SUCCESS;
   UINT8              *cmdQueueBuffer    = NULL;
   UINT32             nvdmType           = 0;
   UINT32             packetSequence     = 0;      /* One packet */
@@ -848,7 +865,7 @@ FspConfigurationAtsRange (
   UINT32             *msgQueueBuffer   = NULL;
   UINT8              msgQueueSizeBytes = NV_ALIGN_UP (NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE, sizeof (UINT32));
   UINT8              msgQueueSizeDwords;
-  BOOLEAN            bResponseAck = FALSE;
+  BOOLEAN            bResponseAck = TRUE;
 
   /* Allocate command queue buffer (DWORD aligned) */
   cmdQueueBuffer = AllocateZeroPool (cmdQueueSize);
@@ -1117,33 +1134,40 @@ FspConfigurationAtsRange (
 
       /* Process NVMT payload for FSP response payload type */
       if ( NVDM_TYPE_FSP_RESPONSE == nvdmMsgHeaderNvdmType) {
-        DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
-        if ((nvdmResponsePayloadErrCode == FSP_OK) && (nvdmResponsePayloadCmdId == NVDM_TYPE_UEFI_RM)) {
-          DEBUG ((DEBUG_INFO, "%a: MCTP message Cmd and ErrCode matched.\n", __FUNCTION__));
-          bResponseAck = TRUE;
+        if ( NVDM_TYPE_UEFI_RM == nvdmResponsePayloadCmdId ) {
+          DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
+          if (nvdmResponsePayloadErrCode == FSP_OK) {
+            DEBUG ((DEBUG_INFO, "%a: MCTP message returned 'SUCCESS'.\n", __FUNCTION__));
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_024DH) {
+            FspRpcStatus = EFI_DEVICE_ERROR;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+            /* Inline log since error level needs escalation */
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Ats->Mctp_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Ats->Nvdm_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_Ats->Nvdm_Uefi_Ats_Fsp_S.subMessageId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM HBM Base '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Ats->Nvdm_Uefi_Ats_Fsp_S.Hbm_Base));
+          } else {
+            FspRpcStatus = EFI_DEVICE_ERROR;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: ERROR; Expected MCTP message header NVDM Type - matching 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
         }
-
-        DEBUG_CODE_BEGIN ();
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
-        DEBUG_CODE_END ();
-      } else {
-        DEBUG ((DEBUG_ERROR, "%a: ERROR; Expected MCTP message header NVDM Type - matching 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
       }
     }
   } else {
-    DEBUG_CODE_BEGIN ();
-    {
-      EFI_STATUS  DebugStatus;
-      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR Expected Message Queue Response [Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
-      DebugStatus = uefifspDumpDebugState (PciIo);
-      /* Only propagate error status with DebugDumpState status if no prior error */
-      if (!EFI_ERROR (Status)) {
-        Status = DebugStatus;
-      }
+    EFI_STATUS  DebugStatus;
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR Expected Message Queue Response [Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+    DebugStatus = uefifspDumpDebugState (PciIo);
+    /* Only propagate error status with DebugDumpState status if no prior error */
+    if (!EFI_ERROR (Status)) {
+      Status = DebugStatus;
     }
-    DEBUG_CODE_END ();
   }
 
   if (bResponseAck) {
@@ -1197,6 +1221,10 @@ fspRpcResponseReceivePacketFree_exit:
     FreePool (cmdQueueBuffer);
   }
 
+  if (!EFI_ERROR (Status) && EFI_ERROR (FspRpcStatus)) {
+    Status = FspRpcStatus;
+  }
+
   return Status;
 }
 
@@ -1222,6 +1250,7 @@ FspConfigurationEgmBaseAndSize (
 {
   EFI_STATUS         Status             = EFI_SUCCESS;
   EFI_STATUS         StatusDebugDump    = EFI_SUCCESS;
+  EFI_STATUS         FspRpcStatus       = EFI_SUCCESS;
   UINT8              *cmdQueueBuffer    = NULL;
   UINT32             nvdmType           = 0;
   UINT32             packetSequence     = 0;      /* One packet */
@@ -1241,10 +1270,10 @@ FspConfigurationEgmBaseAndSize (
   UINT32             *msgQueueBuffer   = NULL;
   UINT8              msgQueueSizeBytes = NV_ALIGN_UP (NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE, sizeof (UINT32));
   UINT8              msgQueueSizeDwords;
-  BOOLEAN            bResponseAck = FALSE;
+  BOOLEAN            bResponseAck = TRUE;
 
   DEBUG_CODE_BEGIN ();
-  DEBUG ((DEBUG_INFO, "%a: [%p] Params [egm-base-pa:0x%016lx,egm-size:0x%016lx]\n", __FUNCTION__, PciIo, EgmBasePa, EgmSize));
+  DEBUG ((DEBUG_ERROR, "%a: [%p] Params [egm-base-pa:0x%016lx,egm-size:0x%016lx]\n", __FUNCTION__, PciIo, EgmBasePa, EgmSize));
   DEBUG_CODE_END ();
 
   /* Allocate command queue buffer (DWORD aligned) */
@@ -1516,33 +1545,50 @@ FspConfigurationEgmBaseAndSize (
 
       /* Process NVMT payload for FSP response payload type */
       if ( NVDM_TYPE_FSP_RESPONSE == nvdmMsgHeaderNvdmType) {
-        DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
-        if ((nvdmResponsePayloadErrCode == FSP_OK) && (nvdmResponsePayloadCmdId == NVDM_TYPE_UEFI_RM)) {
-          DEBUG ((DEBUG_INFO, "%a: MCTP message Cmd and ErrCode matched.\n", __FUNCTION__));
-          bResponseAck = TRUE;
+        if ( NVDM_TYPE_UEFI_RM == nvdmResponsePayloadCmdId) {
+          DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
+          if (nvdmResponsePayloadErrCode == FSP_OK) {
+            DEBUG ((DEBUG_INFO, "%a: MCTP message returned 'SUCCESS'.\n", __FUNCTION__));
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0261H) {
+            /* Inline log since error level needs escalation */
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC EGM already set: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Mctp_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Nvdm_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.subMessageId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Base '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Base));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Size '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Size));
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0246H) {
+            FspRpcStatus = EFI_DEVICE_ERROR;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+            /* Inline log since error level needs escalation */
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Mctp_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Nvdm_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.subMessageId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Base '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Base));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Size '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Size));
+          } else {
+            FspRpcStatus = EFI_DEVICE_ERROR;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: ERROR; Expected MCTP message header NVDM Type - matching 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
         }
-
-        DEBUG_CODE_BEGIN ();
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
-        DEBUG ((DEBUG_INFO, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
-        DEBUG_CODE_END ();
-      } else {
-        DEBUG ((DEBUG_ERROR, "%a: ERROR; Expected MCTP message header NVDM Type - matching 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
       }
     }
   } else {
-    DEBUG_CODE_BEGIN ();
-    {
-      EFI_STATUS  DebugStatus;
-      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR Expected Message Queue Response [Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
-      DebugStatus = uefifspDumpDebugState (PciIo);
-      /* Only propagate error status with DebugDumpState status if no prior error */
-      if (!EFI_ERROR (Status)) {
-        Status = DebugStatus;
-      }
+    EFI_STATUS  DebugStatus;
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR Expected Message Queue Response [Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+    DebugStatus = uefifspDumpDebugState (PciIo);
+    /* Only propagate error status with DebugDumpState status if no prior error */
+    if (!EFI_ERROR (Status)) {
+      Status = DebugStatus;
     }
-    DEBUG_CODE_END ();
   }
 
   if (bResponseAck) {
@@ -1594,6 +1640,10 @@ uefifspRpcResponseReceivePacket_exit:
 uefifspRpcCmdQueueBuffer_exit:
   if (cmdQueueBuffer) {
     FreePool (cmdQueueBuffer);
+  }
+
+  if (!EFI_ERROR (Status) && EFI_ERROR (FspRpcStatus)) {
+    Status = FspRpcStatus;
   }
 
   return Status;
