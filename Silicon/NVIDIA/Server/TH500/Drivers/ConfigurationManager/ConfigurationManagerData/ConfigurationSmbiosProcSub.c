@@ -729,9 +729,9 @@ ConfigureCacheArchitectureInformation (
 
   GetCacheAssociativity (Associativity, Type7Record);
 
-  Type7Record->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
+  Type7Record->CacheConfiguration = (CacheModeWriteBack << CACHE_OPERATION_MODE_SHIFT) |
                                     (1 << CACHE_ENABLED_SHIFT) |
-                                    (CacheLocationUnknown << CACHE_LOCATION_SHIFT) |
+                                    (CacheLocationInternal << CACHE_LOCATION_SHIFT) |
                                     (0 << CACHE_SOCKETED_SHIFT) |
                                     (CacheLevel - 1);
 }
@@ -922,9 +922,9 @@ GetL3CacheInfo (
 
   GetCacheAssociativity (Associativity, CacheInfo);
   // Cache Configuration
-  CacheInfo->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
+  CacheInfo->CacheConfiguration = (CacheModeWriteBack << CACHE_OPERATION_MODE_SHIFT) |
                                   (1 << CACHE_ENABLED_SHIFT) |
-                                  (CacheLocationUnknown << CACHE_LOCATION_SHIFT) |
+                                  (CacheLocationInternal << CACHE_LOCATION_SHIFT) |
                                   (0 << CACHE_SOCKETED_SHIFT) |
                                   (2);
 
