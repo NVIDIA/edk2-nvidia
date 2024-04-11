@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -69,20 +69,48 @@ DeviceDiscoveryAsyncStatus (
 
 VOID
 EFIAPI
+DeviceDiscoveryHideResources (
+  EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS                         Status;
+  NON_DISCOVERABLE_DEVICE            *Device;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
+
+  Device = NULL;
+  Desc   = NULL;
+
+  Status = gBS->HandleProtocol (ControllerHandle, &gEdkiiNonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
+  if (EFI_ERROR (Status)) {
+    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIANonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, no non discoverable device protocol\r\n", __FUNCTION__));
+      return;
+    }
+  }
+
+  if ((Device != NULL) &&
+      (Device->Resources != NULL))
+  {
+    Desc       = Device->Resources;
+    Desc->Desc = ACPI_END_TAG_DESCRIPTOR;
+  }
+}
+
+VOID
+EFIAPI
 DeviceDiscoveryOnExitBootServices (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
 {
-  EFI_STATUS                         Status;
-  VOID                               *AcpiBase;
-  EFI_HANDLE                         Controller;
-  NVIDIA_CLOCK_NODE_PROTOCOL         *ClockProtocol = NULL;
-  NVIDIA_RESET_NODE_PROTOCOL         *ResetProtocol = NULL;
-  NVIDIA_POWER_GATE_NODE_PROTOCOL    *PgProtocol    = NULL;
-  NON_DISCOVERABLE_DEVICE            *Device        = NULL;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Desc;
-  UINTN                              Index;
+  EFI_STATUS                       Status;
+  VOID                             *AcpiBase;
+  EFI_HANDLE                       Controller;
+  NVIDIA_CLOCK_NODE_PROTOCOL       *ClockProtocol = NULL;
+  NVIDIA_RESET_NODE_PROTOCOL       *ResetProtocol = NULL;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol    = NULL;
+  UINTN                            Index;
 
   gBS->CloseEvent (Event);
 
@@ -159,19 +187,7 @@ DeviceDiscoveryOnExitBootServices (
     }
   }
 
-  Status = gBS->HandleProtocol (Controller, &gEdkiiNonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
-  if (EFI_ERROR (Status)) {
-    Status = gBS->HandleProtocol (Controller, &gNVIDIANonDiscoverableDeviceProtocolGuid, (VOID **)&Device);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, no non discoverable device protocol\r\n", __FUNCTION__));
-      return;
-    }
-  }
-
-  if (Device->Resources != NULL) {
-    Desc       = Device->Resources;
-    Desc->Desc = ACPI_END_TAG_DESCRIPTOR;
-  }
+  DeviceDiscoveryHideResources (Controller);
 
   return;
 }

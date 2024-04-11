@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent)
 *
@@ -92,6 +92,18 @@ EFI_STATUS
 DeviceDiscoveryGetMmioRegionCount (
   IN  EFI_HANDLE  ControllerHandle,
   OUT UINTN       *RegionCount
+  );
+
+/**
+  Hides MMIO regions on this controller
+
+  @param[in]  ControllerHandle         Handle of the controller.
+
+**/
+VOID
+EFIAPI
+DeviceDiscoveryHideResources (
+  EFI_HANDLE  ControllerHandle
   );
 
 /**
