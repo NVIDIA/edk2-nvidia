@@ -723,6 +723,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
         Package () {
           Package (2) {"interrupt-names", Package () { "default", "smbus_alert" } },
+          Package (2) {"clock-frequency", 400000 },
         },
       })
 
@@ -754,7 +755,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
                  I2cSerialBusV2 (
                    0x10,
                    ControllerInitiated,
-                   100000,
+                   400000,
                    AddressingMode7Bit,
                    "\\_SB.I2C3",
                    0,
