@@ -18,6 +18,9 @@
 #string STR_SP_ENABLED_DBG2_NVIDIA_16550        #language x-uefi-redfish-Bios.v1_2_0 "SerialDebugEnabledNvidia16550"
 #string STR_SP_ENABLED_DBG2_SBSA                #language x-uefi-redfish-Bios.v1_2_0 "SerialDebugEnabledSbsa"
 
+#string STR_DBG2_NETWORK_DEVICE                 #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/Dbg2NetworkDevice"
+#string STR_NONE                                #language x-uefi-redfish-Bios.v1_2_0 "None"
+
 #string STR_QUICK_BOOT_ENABLED_PROMPT           #language x-uefi-redfish-Bios.v1_2_0 "/Bios/Attributes/EnableUefiQuickBoot"
 #string STR_DISABLED                            #language x-uefi-redfish-Bios.v1_2_0 "Disabled"
 #string STR_ENABLED                             #language x-uefi-redfish-Bios.v1_2_0 "Enabled"

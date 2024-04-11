@@ -992,3 +992,7 @@
 
 #string STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT #language en-US "SOC Display Hand-Off Mode"
 #string STR_SOC_DISPLAY_HANDOFF_MODE_HELP   #language en-US "How to hand-off the SOC display: Never - always reset the display on UEFI exit; Always - never reset the display on UEFI exit; Auto - reset the display on UEFI exit unless it is active (requires kernel support)."
+
+#string STR_NONE                     #language en-US "None"
+#string STR_DBG2_NETWORK_DEVICE      #language en-US "DBG2 Network Device"
+#string STR_DBG2_NETWORK_DEVICE_HELP #language en-US "Select the network device to use for DBG2 output."

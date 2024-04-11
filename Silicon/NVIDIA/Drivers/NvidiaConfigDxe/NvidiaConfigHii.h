@@ -110,6 +110,7 @@
 #define KEY_EINJ_ENABLE                0x1022
 #define KEY_MAX_CORES                  0x1023
 #define KEY_SERVER_POWER_CONTROL       0x1024
+#define KEY_DBG2_NETWORK_DEVICE        0x1025
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -792,6 +793,10 @@
 #define KEY_SOCKET3_PCIE8_ADVERTISE_ACS  0x2127
 #define KEY_SOCKET3_PCIE9_ADVERTISE_ACS  0x2128
 
+#define LABEL_DBG2_PCIE_DEVICE_START  0x3000
+#define LABEL_DBG2_PCIE_DEVICE_END    0x3001
+#define MAX_DBG2_STRING_LENGTH        128
+
 #define NVIDIA_CONFIG_HII_CONTROL_ID  0x1000
 
 #define PCIE_IN_OS_DISABLE  0x0
@@ -868,6 +873,7 @@ typedef struct {
   BOOLEAN    ActiveCoresSettingSupported;
   BOOLEAN    ServerPwrCtlSettingSupported;
   UINT32     RootfsRedundancyLevel;
+  UINT32     Dbg2NetworkDevice;
   BOOLEAN    TH500Config;
   BOOLEAN    SocketEnabled[MAX_SOCKETS];
   UINT8      PhysicalPcieWidth0[MAX_PCIE];

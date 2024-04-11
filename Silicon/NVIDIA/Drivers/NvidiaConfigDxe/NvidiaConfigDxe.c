@@ -11,9 +11,11 @@
 #include <Guid/MdeModuleHii.h>
 #include <Guid/HiiPlatformSetupFormset.h>
 
+#include <Protocol/ComponentName2.h>
 #include <Protocol/HiiConfigAccess.h>
 #include <Protocol/HiiConfigRouting.h>
 #include <Protocol/MmCommunication2.h>
+#include <Protocol/PciIo.h>
 #include <Protocol/ServerPowerControl.h>
 
 #include <Library/PrintLib.h>
@@ -38,10 +40,15 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/StatusRegLib.h>
 
+#include <IndustryStandard/Pci22.h>
+
 #include <Guid/NVIDIAMmMb1Record.h>
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
+#include "Base.h"
 #include "NvidiaConfigHii.h"
+#include "ProcessorBind.h"
+#include "Uefi/UefiBaseType.h"
 
 #define OS_CONFIG_VAR_ATTRIBUTES    (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS)
 #define UEFI_CONFIG_VAR_ATTRIBUTES  (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
@@ -2176,6 +2183,7 @@ ConfigRouteConfig (
 {
   EFI_STATUS  Status;
   UINTN       BufferSize;
+  UINT32      StoredDbg2NetworkDevice;
 
   Status = EFI_SUCCESS;
 
@@ -2220,6 +2228,23 @@ ConfigRouteConfig (
       if (EFI_ERROR (Status)) {
         return Status;
       }
+    }
+  }
+
+  Status = gRT->GetVariable (L"Dbg2NetworkDevice", &gNVIDIAPublicVariableGuid, NULL, &BufferSize, &StoredDbg2NetworkDevice);
+  if (EFI_ERROR (Status) ||
+      (BufferSize != sizeof (UINT32)) ||
+      (StoredDbg2NetworkDevice != mHiiControlSettings.Dbg2NetworkDevice))
+  {
+    Status = gRT->SetVariable (
+                    L"Dbg2NetworkDevice",
+                    &gNVIDIAPublicVariableGuid,
+                    EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                    sizeof (UINT32),
+                    &mHiiControlSettings.Dbg2NetworkDevice
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set Dbg2NetworkDevice variable %r\r\n", __FUNCTION__, Status));
     }
   }
 
@@ -2342,6 +2367,10 @@ GetDefaultValue (
       Data = 0;
 
       break;
+    case KEY_DBG2_NETWORK_DEVICE:
+      Data = MAX_UINT32;
+      break;
+
     default:
       //
       // UPHY
@@ -2670,6 +2699,218 @@ ConfigCallback (
   return Status;
 }
 
+// Build the DBG2 ethernet table if supported
+STATIC
+VOID
+EFIAPI
+UpdateDbg2Table (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  VOID                               *StartOpCodeHandle;
+  VOID                               *EndOpCodeHandle;
+  EFI_IFR_GUID_LABEL                 *StartGuidLabel;
+  EFI_IFR_GUID_LABEL                 *EndGuidLabel;
+  EFI_GUID                           FormsetGuid = NVIDIA_CONFIG_FORMSET_GUID;
+  EFI_HANDLE                         *HandleBuffer;
+  UINTN                              NumberOfHandles;
+  VOID                               *OptionsOpCodeHandle;
+  UINT32                             Index;
+  UINT32                             BarIndex;
+  EFI_PCI_IO_PROTOCOL                *PciIo;
+  PCI_TYPE00                         PciData;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *MmioDesc;
+  BOOLEAN                            MemoryRegionSupported;
+  BOOLEAN                            FoundSupportedNic;
+  EFI_STRING_ID                      StringToken;
+  CHAR16                             StringBuffer[MAX_DBG2_STRING_LENGTH];
+  UINTN                              SegmentNumber;
+  UINTN                              BusNumber;
+  UINTN                              DeviceNumber;
+  UINTN                              FunctionNumber;
+  BOOLEAN                            ResetRequired;
+  UINTN                              DataSize;
+
+  FoundSupportedNic = FALSE;
+  ResetRequired     = FALSE;
+
+  DataSize = sizeof (mHiiControlSettings.Dbg2NetworkDevice);
+  Status   = gRT->GetVariable (
+                    L"Dbg2NetworkDevice",
+                    &gNVIDIAPublicVariableGuid,
+                    NULL,
+                    &DataSize,
+                    &mHiiControlSettings.Dbg2NetworkDevice
+                    );
+  if (!EFI_ERROR (Status) && (DataSize == sizeof (UINT32)) && (mHiiControlSettings.Dbg2NetworkDevice != MAX_UINT32)) {
+    // Mark a reset required, will clear if the option is present.
+    ResetRequired = TRUE;
+  } else {
+    mHiiControlSettings.Dbg2NetworkDevice = MAX_UINT32;
+  }
+
+  //
+  // Init OpCode Handle and Allocate space for creation of UpdateData Buffer
+  //
+  OptionsOpCodeHandle = HiiAllocateOpCodeHandle ();
+  ASSERT (OptionsOpCodeHandle != NULL);
+
+  //
+  // Allocate space for creation of UpdateData Buffer
+  //
+  StartOpCodeHandle = HiiAllocateOpCodeHandle ();
+  ASSERT (StartOpCodeHandle != NULL);
+
+  EndOpCodeHandle = HiiAllocateOpCodeHandle ();
+  ASSERT (EndOpCodeHandle != NULL);
+  //
+  // Create Hii Extend Label OpCode as the start opcode
+  //
+  StartGuidLabel               = (EFI_IFR_GUID_LABEL *)HiiCreateGuidOpCode (StartOpCodeHandle, &gEfiIfrTianoGuid, NULL, sizeof (EFI_IFR_GUID_LABEL));
+  StartGuidLabel->ExtendOpCode = EFI_IFR_EXTEND_OP_LABEL;
+  StartGuidLabel->Number       = LABEL_DBG2_PCIE_DEVICE_START;
+  //
+  // Create Hii Extend Label OpCode as the end opcode
+  //
+  EndGuidLabel               = (EFI_IFR_GUID_LABEL *)HiiCreateGuidOpCode (EndOpCodeHandle, &gEfiIfrTianoGuid, NULL, sizeof (EFI_IFR_GUID_LABEL));
+  EndGuidLabel->ExtendOpCode = EFI_IFR_EXTEND_OP_LABEL;
+  EndGuidLabel->Number       = LABEL_DBG2_PCIE_DEVICE_END;
+
+  Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiPciIoProtocolGuid, NULL, &NumberOfHandles, &HandleBuffer);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: No PCI devices found - %r\r\n", __func__, Status));
+    goto CleanupAndReturn;
+  }
+
+  for (Index = 0; Index < NumberOfHandles; Index++) {
+    Status = gBS->HandleProtocol (HandleBuffer[Index], &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint8, 0, sizeof (PciData), &PciData);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = PciIo->GetLocation (PciIo, &SegmentNumber, &BusNumber, &DeviceNumber, &FunctionNumber);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (SegmentNumber != 0) {
+      continue;
+    }
+
+    if ((PciData.Hdr.ClassCode[2] != PCI_CLASS_NETWORK) || (PciData.Hdr.ClassCode[1] != PCI_CLASS_NETWORK_ETHERNET)) {
+      continue;
+    }
+
+    MemoryRegionSupported = FALSE;
+    for (BarIndex = 0; BarIndex < PCI_MAX_BAR; BarIndex++) {
+      Status = PciIo->GetBarAttributes (PciIo, BarIndex, NULL, (VOID **)&MmioDesc);
+      if (EFI_ERROR (Status) ||
+          (MmioDesc->ResType != ACPI_ADDRESS_SPACE_TYPE_MEM))
+      {
+        continue;
+      }
+
+      // Don't support devices with memory translation enabled.
+      if (MmioDesc->AddrTranslationOffset != 0) {
+        MemoryRegionSupported = FALSE;
+        break;
+      }
+
+      MemoryRegionSupported = TRUE;
+    }
+
+    if (!MemoryRegionSupported) {
+      continue;
+    }
+
+    FoundSupportedNic = TRUE;
+
+    UnicodeSPrint (
+      StringBuffer,
+      sizeof (StringBuffer),
+      L"PCIe Device %04x:%04x [Segment %d Bus %d Device %d Function %d]",
+      PciData.Hdr.VendorId,
+      PciData.Hdr.DeviceId,
+      SegmentNumber,
+      BusNumber,
+      DeviceNumber,
+      FunctionNumber
+      );
+    StringToken = HiiSetString (mHiiHandle, 0, StringBuffer, NULL);
+    // Create redfish token as well
+    HiiSetString (mHiiHandle, StringToken, StringBuffer, "x-uefi-redfish-Bios.v1_2_0");
+    HiiCreateOneOfOptionOpCode (
+      OptionsOpCodeHandle,
+      StringToken,
+      0,
+      EFI_IFR_NUMERIC_SIZE_4,
+      SegmentNumber << 24 | BusNumber << 16 | DeviceNumber << 8 | FunctionNumber
+      );
+
+    // Check if the selected device is present and do not reset if it is.
+    if (ResetRequired &&
+        (mHiiControlSettings.Dbg2NetworkDevice == (SegmentNumber << 24 | BusNumber << 16 | DeviceNumber << 8 | FunctionNumber)))
+    {
+      ResetRequired = FALSE;
+    }
+  }
+
+  if (ResetRequired) {
+    mHiiControlSettings.Dbg2NetworkDevice = MAX_UINT32;
+    gRT->SetVariable (
+           L"Dbg2NetworkDevice",
+           &gNVIDIAPublicVariableGuid,
+           EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+           0,
+           NULL
+           );
+  }
+
+  if (!FoundSupportedNic) {
+    goto CleanupAndReturn;
+  }
+
+  HiiCreateOneOfOptionOpCode (
+    OptionsOpCodeHandle,
+    STRING_TOKEN (STR_NONE),
+    EFI_IFR_OPTION_DEFAULT,
+    EFI_IFR_NUMERIC_SIZE_4,
+    MAX_UINT32
+    );
+
+  HiiCreateOneOfOpCode (
+    StartOpCodeHandle,
+    KEY_DBG2_NETWORK_DEVICE,
+    NVIDIA_CONFIG_HII_CONTROL_ID,
+    OFFSET_OF (NVIDIA_CONFIG_HII_CONTROL, Dbg2NetworkDevice),
+    STRING_TOKEN (STR_DBG2_NETWORK_DEVICE),
+    STRING_TOKEN (STR_DBG2_NETWORK_DEVICE_HELP),
+    EFI_IFR_FLAG_RESET_REQUIRED,
+    EFI_IFR_NUMERIC_SIZE_4,
+    OptionsOpCodeHandle,
+    NULL
+    );
+
+  HiiUpdateForm (
+    mHiiHandle,
+    &FormsetGuid,
+    NVIDIA_CONFIG_FORM_ID,
+    StartOpCodeHandle,
+    EndOpCodeHandle
+    );
+
+CleanupAndReturn:
+  HiiFreeOpCodeHandle (OptionsOpCodeHandle);
+  HiiFreeOpCodeHandle (StartOpCodeHandle);
+  HiiFreeOpCodeHandle (EndOpCodeHandle);
+}
+
 VOID
 EFIAPI
 OnEndOfDxe (
@@ -2714,6 +2955,8 @@ OnEndOfDxe (
              &mConfigAccess,
              NULL
              );
+    } else {
+      UpdateDbg2Table ();
     }
   }
 }

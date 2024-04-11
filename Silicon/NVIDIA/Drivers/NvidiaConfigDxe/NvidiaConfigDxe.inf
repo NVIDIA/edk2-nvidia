@@ -68,6 +68,7 @@
   gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
   gEfiMmCommunication2ProtocolGuid              ## CONSUMES
   gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
+  gEfiPciIoProtocolGuid                         ## CONSUMES
   gServerPowerControlProtocolGuid               ## SOMETIMES CONSUMES
 
 [Pcd]

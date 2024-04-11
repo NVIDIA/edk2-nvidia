@@ -159,6 +159,10 @@ formset
             option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_SBSA), value = NVIDIA_SERIAL_PORT_DBG2_SBSA, flags = 0;
         endif;
     endoneof;
+
+    label LABEL_DBG2_PCIE_DEVICE_START;
+    label LABEL_DBG2_PCIE_DEVICE_END;
+
     //
     // Display Enable PCIe in OS
     //

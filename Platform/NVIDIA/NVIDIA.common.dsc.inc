@@ -1437,6 +1437,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_SECURITY_MM_SUPPORT
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/WsmtParser/WsmtParser.inf
 !endif
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Dbg2NetworkParser/Dbg2NetworkParser.inf
 
 !ifdef CONFIG_SOC_GRACE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SmbiosParser/SmbiosParser.inf
