@@ -23,6 +23,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/OemMiscLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #include "ConfigurationSmbiosPrivate.h"
 
@@ -847,6 +848,13 @@ ProcessorGetMaxCacheLevel (
   return MaxCacheLevel;
 }
 
+STATIC CONST CHAR8  *L3Compatible[] = {
+  "cache",
+  // Support old DTB compatible strings as well
+  "l3-cache",
+  NULL
+};
+
 /** Collect L3 cache data and fill CacheInfo record.
 
   @param[in]  Dtb           Device Tree
@@ -866,15 +874,13 @@ GetL3CacheInfo (
   IN OUT   CM_SMBIOS_CACHE_INFO  *CacheInfo
   )
 {
-  CONST UINT32  *PropertyStr;
-  CHAR8         CacheL3Str[] = "L3 Cache\0";
-  UINT32        Size         = 0;
-  UINT32        NumberOfSets = 0;
-  UINT32        Associativity;
-  UINT16        LineSize = 0;
-  UINT32        CacheSize32;
-  UINT16        CacheSize16;
-  UINT64        CacheSize64;
+  EFI_STATUS                     Status;
+  CHAR8                          CacheL3Str[] = "L3 Cache\0";
+  UINT32                         Associativity;
+  UINT32                         CacheSize32;
+  UINT16                         CacheSize16;
+  UINT64                         CacheSize64;
+  NVIDIA_DEVICE_TREE_CACHE_DATA  CacheData;
 
   // Check if socket exists
   if (SocketOffset < 0) {
@@ -882,79 +888,89 @@ GetL3CacheInfo (
   }
 
   // Get L3 Cache data from dt
-  SocketOffset = fdt_node_offset_by_compatible (Dtb, SocketOffset, "l3-cache");
-  if (SocketOffset < 0) {
-    return EFI_INVALID_PARAMETER;
-  } else {
-    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-size", NULL);
-    if (PropertyStr != NULL) {
-      Size = SwapBytes32 (*PropertyStr);
+  CacheData.CacheLevel = 0;
+  while ((Status = DeviceTreeGetNextCompatibleNode (L3Compatible, &SocketOffset)) != EFI_NOT_FOUND) {
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get L3 cache data from DTB\n", __FUNCTION__, Status));
+      return EFI_INVALID_PARAMETER;
     }
 
-    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-sets", NULL);
-    if (PropertyStr != NULL) {
-      NumberOfSets = SwapBytes32 (*PropertyStr);
+    CacheData.Type = CACHE_TYPE_UNIFIED;
+    Status         = DeviceTreeGetCacheData (SocketOffset, &CacheData);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get cache data for cache node\n", __FUNCTION__, Status));
+      return Status;
     }
 
-    PropertyStr = fdt_getprop (Dtb, SocketOffset, "cache-line-size", NULL);
-    if (PropertyStr != NULL) {
-      LineSize = SwapBytes32 (*PropertyStr);
+    // Check if it's an L3 cache node
+    if (CacheData.CacheLevel == 3) {
+      break;
     }
-
-    // Calculate Associativity
-    Associativity = Size / (LineSize* NumberOfSets);
-    GetCacheAssociativity (Associativity, CacheInfo);
-    // Cache Configuration
-    CacheInfo->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
-                                    (1 << CACHE_ENABLED_SHIFT) |
-                                    (CacheLocationUnknown << CACHE_LOCATION_SHIFT) |
-                                    (0 << CACHE_SOCKETED_SHIFT) |
-                                    (2);
-
-    CacheSize64  = Size;
-    CacheSize64 /= 1024;   // Minimum granularity is 1K
-
-    // Encode the cache size into the format SMBIOS wants
-    if (CacheSize64 < MAX_INT16) {
-      CacheSize16 = CacheSize64;
-      CacheSize32 = CacheSize16;
-    } else if ((CacheSize64 / 64) < MAX_INT16) {
-      CacheSize16 = (1 << CACHE_16_SHIFT) | (CacheSize64 / 64);
-      CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
-    } else {
-      if ((CacheSize64 / 1024) <= 2047) {
-        CacheSize32 = CacheSize64;
-      } else {
-        CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
-      }
-
-      CacheSize16 = -1;
-    }
-
-    CacheInfo->MaximumCacheSize  = CacheSize16;
-    CacheInfo->InstalledSize     = CacheSize16;
-    CacheInfo->MaximumCacheSize2 = CacheSize32;
-    CacheInfo->InstalledSize2    = CacheSize32;
-    // Cache Socket Designation
-    if (CacheL3Str != NULL) {
-      CacheInfo->SocketDesignation = AllocateZeroPool (strlen (CacheL3Str) +1);
-      if (CacheInfo->SocketDesignation == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
-        return EFI_OUT_OF_RESOURCES;
-      }
-
-      AsciiSPrint (CacheInfo->SocketDesignation, strlen (CacheL3Str) +1, CacheL3Str);
-    }
-
-    CacheInfo->SupportedSRAMType.Unknown = 1;
-    CacheInfo->CurrentSRAMType.Unknown   = 1;
-    CacheInfo->CacheSpeed                = 0;
-    CacheInfo->ErrorCorrectionType       = CacheErrorUnknown;
-    CacheInfo->SystemCacheType           = CacheTypeUnified;
-
-    CacheInfo->CacheInfoToken = (CM_OBJECT_TOKEN)CacheInfo;
-    CacheInfoTokenL3[Index]   = CacheInfo->CacheInfoToken;
   }
+
+  if (CacheData.CacheLevel != 3) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to find an L3 cache\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Calculate Associativity
+  if ((CacheData.CacheLineSize != 0) && (CacheData.CacheSets != 0)) {
+    Associativity = CacheData.CacheSize / (CacheData.CacheLineSize* CacheData.CacheSets);
+  } else {
+    Associativity = 0;
+  }
+
+  GetCacheAssociativity (Associativity, CacheInfo);
+  // Cache Configuration
+  CacheInfo->CacheConfiguration = (CacheModeUnknown << CACHE_OPERATION_MODE_SHIFT) |
+                                  (1 << CACHE_ENABLED_SHIFT) |
+                                  (CacheLocationUnknown << CACHE_LOCATION_SHIFT) |
+                                  (0 << CACHE_SOCKETED_SHIFT) |
+                                  (2);
+
+  CacheSize64  = CacheData.CacheSize;
+  CacheSize64 /= 1024;   // Minimum granularity is 1K
+
+  // Encode the cache size into the format SMBIOS wants
+  if (CacheSize64 < MAX_INT16) {
+    CacheSize16 = CacheSize64;
+    CacheSize32 = CacheSize16;
+  } else if ((CacheSize64 / 64) < MAX_INT16) {
+    CacheSize16 = (1 << CACHE_16_SHIFT) | (CacheSize64 / 64);
+    CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
+  } else {
+    if ((CacheSize64 / 1024) <= 2047) {
+      CacheSize32 = CacheSize64;
+    } else {
+      CacheSize32 = (1U << CACHE_32_SHIFT) | (CacheSize64 / 64U);
+    }
+
+    CacheSize16 = -1;
+  }
+
+  CacheInfo->MaximumCacheSize  = CacheSize16;
+  CacheInfo->InstalledSize     = CacheSize16;
+  CacheInfo->MaximumCacheSize2 = CacheSize32;
+  CacheInfo->InstalledSize2    = CacheSize32;
+  // Cache Socket Designation
+  if (CacheL3Str != NULL) {
+    CacheInfo->SocketDesignation = AllocateZeroPool (strlen (CacheL3Str) +1);
+    if (CacheInfo->SocketDesignation == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    AsciiSPrint (CacheInfo->SocketDesignation, strlen (CacheL3Str) +1, CacheL3Str);
+  }
+
+  CacheInfo->SupportedSRAMType.Unknown = 1;
+  CacheInfo->CurrentSRAMType.Unknown   = 1;
+  CacheInfo->CacheSpeed                = 0;
+  CacheInfo->ErrorCorrectionType       = CacheErrorUnknown;
+  CacheInfo->SystemCacheType           = CacheTypeUnified;
+
+  CacheInfo->CacheInfoToken = (CM_OBJECT_TOKEN)CacheInfo;
+  CacheInfoTokenL3[Index]   = CacheInfo->CacheInfoToken;
 
   return EFI_SUCCESS;
 }
