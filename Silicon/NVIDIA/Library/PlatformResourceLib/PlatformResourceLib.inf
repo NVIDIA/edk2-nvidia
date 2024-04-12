@@ -60,3 +60,5 @@
   gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT234
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize

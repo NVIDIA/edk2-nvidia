@@ -1036,6 +1036,15 @@ TH500GetPartitionInfo (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
+  if (PcdGetBool (PcdCapsulePartitionEnabled)) {
+    if (PartitionIndex == TEGRAUEFI_CAPSULE) {
+      *PartitionSizeBytes =  PcdGet64 (PcdCapsulePartitionSize);
+      PartitionDesc       = &CpuBootloaderParams->PartitionInfo[TEGRABL_RAS_ERROR_LOGS][PRIMARY_COPY];
+      *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
+      return EFI_SUCCESS;
+    }
+  }
+
   if (PartitionIndex >= TEGRABL_BINARY_MAX) {
     DEBUG ((
       DEBUG_ERROR,
@@ -1051,6 +1060,15 @@ TH500GetPartitionInfo (
   *DeviceInstance     = PartitionDesc->DeviceInstance;
   *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
   *PartitionSizeBytes = PartitionDesc->Size;
+  if (PcdGetBool (PcdCapsulePartitionEnabled)) {
+    if (PartitionIndex == TEGRABL_RAS_ERROR_LOGS) {
+      if (PcdGet64 (PcdCapsulePartitionSize) < *PartitionSizeBytes) {
+        *PartitionStartByte += PcdGet64 (PcdCapsulePartitionSize);
+        *PartitionSizeBytes -= PcdGet64 (PcdCapsulePartitionSize);
+        DEBUG ((DEBUG_ERROR, "%a: capsule partition allocated 0x%x\n", __FUNCTION__, PcdGet64 (PcdCapsulePartitionSize)));
+      }
+    }
+  }
 
   return EFI_SUCCESS;
 }

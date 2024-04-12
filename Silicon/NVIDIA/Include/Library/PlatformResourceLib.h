@@ -33,6 +33,7 @@
 #define TEGRABL_CMET                  (17U)
 #define TEGRABL_OEM                   (28U)
 #define TEGRABL_ERST                  (29U)
+#define TEGRAUEFI_CAPSULE             64
 #define DEVICE_CS_MASK                (0xFF00)
 #define DEVICE_CS_SHIFT               (8)
 #define MAX_SUPPORTED_CORES           1024U
