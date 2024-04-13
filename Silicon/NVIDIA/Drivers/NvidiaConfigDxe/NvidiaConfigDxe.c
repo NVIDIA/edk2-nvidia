@@ -1478,10 +1478,22 @@ SyncHiiSettings (
   IN BOOLEAN  Read
   )
 {
-  UINTN  Index;
-  UINTN  AvailableSockets;
-  UINTN  SymmetricalActiveCoresPerSocket;
-  UINTN  OverflowActiveCoresPerSocket;
+  UINTN                         Index;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINTN                         AvailableSockets;
+  UINTN                         SymmetricalActiveCoresPerSocket;
+  UINTN                         OverflowActiveCoresPerSocket;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get platform resource data\n"));
+    ASSERT (FALSE);
+  }
 
   AvailableSockets                = 0;
   SymmetricalActiveCoresPerSocket = 0;
@@ -1510,12 +1522,7 @@ SyncHiiSettings (
     mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
-    mHiiControlSettings.ActiveCores = 0;
-    for (Index = 0; Index < MAX_SOCKETS; Index++) {
-      if (mHiiControlSettings.SocketEnabled[Index]) {
-        mHiiControlSettings.ActiveCores += mMb1Config.Data.Mb1Data.ActiveCores[Index];
-      }
-    }
+    mHiiControlSettings.ActiveCores = PlatformResourceInfo->NumberOfEnabledCores;
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
@@ -2285,7 +2292,6 @@ GetDefaultValue (
   )
 {
   UINT64  Data;
-  UINTN   Index;
   UINTN   SocketIndex;
   UINTN   UphyIndex;
   UINTN   PcieIndex;
@@ -2334,11 +2340,6 @@ GetDefaultValue (
       break;
     case KEY_MAX_CORES:
       Data = 0;
-      for (Index = 0; Index < MAX_SOCKETS; Index++) {
-        if (mHiiControlSettings.SocketEnabled[Index]) {
-          Data += mMb1DefaultConfig.Data.Mb1Data.ActiveCores[Index];
-        }
-      }
 
       break;
     default:
