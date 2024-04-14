@@ -319,6 +319,41 @@ Done:
 }
 
 /**
+  Set system FW version UEFI variable.
+
+  @param[in]  ActiveVersion         Version of active FW.
+  @param[in]  InactiveVersion       Version of inactive FW.
+
+  @retval     None
+
+**/
+STATIC
+VOID
+EFIAPI
+SetFwVersionVariable (
+  UINT32  ActiveVersion,
+  UINT32  InactiveVersion
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      VersionArray[BOOT_CHAIN_COUNT];
+
+  VersionArray[BOOT_CHAIN_A] = (mActiveBootChain == BOOT_CHAIN_A) ? ActiveVersion : InactiveVersion;
+  VersionArray[BOOT_CHAIN_B] = (mActiveBootChain == BOOT_CHAIN_B) ? ActiveVersion : InactiveVersion;
+
+  Status = gRT->SetVariable (
+                  L"SystemFwVersions",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  sizeof (VersionArray),
+                  VersionArray
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error setting fw versions: %r\n", __FUNCTION__, Status));
+  }
+}
+
+/**
   Get version info.
 
   @retval EFI_SUCCESS                   Operation completed successfully
@@ -339,6 +374,8 @@ GetVersionInfo (
   NVIDIA_FW_IMAGE_PROTOCOL  *Image;
   FW_IMAGE_ATTRIBUTES       Attributes;
   UINTN                     BufferSize;
+  EFI_STATUS                InactiveStatus  = EFI_NOT_FOUND;
+  UINT32                    InactiveVersion = MAX_UINT32;
 
   VerStr = NULL;
   Image  = FwImageFindProtocol (VER_PARTITION_NAME);
@@ -401,6 +438,32 @@ GetVersionInfo (
 
   mTegraVersionStatus = Status;
 
+  // read inactive version number
+  if (VerStr != NULL) {
+    FreePool (VerStr);
+    VerStr = NULL;
+  }
+
+  InactiveStatus = Image->Read (
+                            Image,
+                            0,
+                            BufferSize,
+                            mFmpDataBuffer,
+                            FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE
+                            );
+  if (EFI_ERROR (InactiveStatus)) {
+    DEBUG ((DEBUG_ERROR, "%a: inactive VER read failed: %r\n", __FUNCTION__, InactiveStatus));
+    goto Done;
+  }
+
+  ((CHAR8 *)mFmpDataBuffer)[BufferSize - 1] = '\0';
+
+  InactiveStatus = VerPartitionGetVersion (mFmpDataBuffer, BufferSize, &InactiveVersion, &VerStr);
+  if (EFI_ERROR (InactiveStatus)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to parse inactive version info: %r\n", __FUNCTION__, InactiveStatus));
+    goto Done;
+  }
+
 Done:
   if (VerStr != NULL) {
     FreePool (VerStr);
@@ -408,11 +471,12 @@ Done:
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Version=0x%x, Str=(%s), Status=%r\n",
+    "%a: Version=0x%x, Str=(%s), Status=%r, InactiveVersion=0x%x\n",
     __FUNCTION__,
     mTegraVersion,
     mTegraVersionString,
-    Status
+    Status,
+    InactiveVersion
     ));
 
   if (EFI_ERROR (Status)) {
@@ -424,6 +488,11 @@ Done:
     mTegraVersion       = 0;
     mTegraVersionStatus = EFI_UNSUPPORTED;
   }
+
+  SetFwVersionVariable (
+    (mTegraVersionStatus == EFI_SUCCESS) ? mTegraVersion : MAX_UINT32,
+    InactiveVersion
+    );
 
   return mTegraVersionStatus;
 }
