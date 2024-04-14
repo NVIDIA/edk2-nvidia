@@ -1228,7 +1228,7 @@ BpmpProcessSetCtrlState (
                               BpmpIpcProtocol,
                               NULL,
                               BpmpPhandle,
-                              69,
+                              MRQ_UPHY,
                               (VOID *)&Request,
                               sizeof (Request),
                               NULL,
@@ -2163,7 +2163,7 @@ DeviceDiscoveryNotify (
       }
 
       /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
-      DeviceDiscoveryThreadMicroSecondDelay (100000);
+      MicroSecondDelay (100000);
 
       if ((Private->CtrlId == 5) && Private->IsT194) {
         ConfigureSidebandSignals (Private);
