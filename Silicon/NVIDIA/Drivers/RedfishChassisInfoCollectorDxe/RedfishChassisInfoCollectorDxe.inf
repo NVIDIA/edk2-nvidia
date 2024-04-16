@@ -1,0 +1,61 @@
+## @file
+#
+#  (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = RedfishChassisInfoCollectorDxe
+  FILE_GUID                 = 91621b5b-4c97-4f17-9ee1-fbc3eddf8d22
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = RedfishResourceEntryPoint
+  UNLOAD_IMAGE              = RedfishResourceUnload
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  RedfishPkg/RedfishPkg.dec
+  RedfishClientPkg/RedfishClientPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[Sources]
+  Common/RedfishChassisInfoCollectorCommon.h
+  Common/RedfishChassisInfoCollectorCommon.c
+  RedfishChassisInfoCollectorDxe.c
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  RedfishLib
+  RedfishFeatureUtilityLib
+  RedfishVersionLib
+  UefiLib
+  UefiDriverEntryPoint
+  FdtLib
+  DtPlatformDtbLoaderLib
+  RedfishHttpLib
+  BaseLib
+  VariablePolicyHelperLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+
+[Guids]
+
+[Protocols]
+  gEdkIIRedfishConfigHandlerProtocolGuid          ## PRODUCED
+  gEdkIIRedfishFeatureProtocolGuid                ## CONSUMED
+  gEdkiiVariablePolicyProtocolGuid                ## CONSUMED
+
+[Pcd]
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdMaxRedfishSchemaStringSize
+  gEfiRedfishClientPkgTokenSpaceGuid.PcdMaxRedfishSchemaVersionSize
+
+[Depex]
+  TRUE
