@@ -584,7 +584,7 @@ AllocateIortNodes (
     for_each_list_entry (ListEntry, &Private->PropNodeList) {
       PropNode = IORT_PROP_NODE_FROM_LINK (ListEntry);
       if (PropNode->ObjectId == (Index + MIN_IORT_OBJID)) {
-        ASSERT (Index0 <= IoNode->SizeOfNode);
+        ASSERT (Index0 < IoNode->NumberOfNodes);
         PropNode->IortNode = IoNode->NodeArray + (IoNode->SizeOfNode * Index0);
         Index0++;
       }
