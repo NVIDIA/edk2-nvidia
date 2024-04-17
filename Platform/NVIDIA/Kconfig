@@ -617,6 +617,13 @@ if FIRMWARE_MANAGEMENT
   help
     Support for firmware update via capsule
 
+  config RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
+  bool "Support runtime firmware capsule delivery"
+  default n
+  depends on FIRMWARE_CAPSULE_SUPPORTED && FIRMWARE_MANAGEMENT_BLOB
+  help
+    Support for firmware update via runtime capsule delivery
+
   config FIRMWARE_CAPSULE_SIZE
   hex "Size of firmware capsule supported"
   default 0xc00000

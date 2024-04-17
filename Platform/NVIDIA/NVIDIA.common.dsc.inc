@@ -543,6 +543,11 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/RuntimeCryptLib.inf
   VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLibRuntimeDxe.inf
   DebugLib|MdePkg/Library/DxeRuntimeDebugLibSerialPort/DxeRuntimeDebugLibSerialPort.inf
+!ifdef CONFIG_RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+  SavedCapsuleLib|Silicon/NVIDIA/Library/SavedCapsuleDataFlashLib/SavedCapsuleDataFlashLib.inf
+!endif
+!endif
 
 [LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.DXE_DRIVER]
   PcdLib|MdePkg/Library/DxePcdLib/DxePcdLib.inf
@@ -1935,6 +1940,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Capsule Application
   #
   MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
+!endif
+!ifdef CONFIG_RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
+  Silicon/NVIDIA/Drivers/NvidiaCapsuleRuntimeDxe/NvidiaCapsuleRuntimeDxe.inf
 !endif
 
   #

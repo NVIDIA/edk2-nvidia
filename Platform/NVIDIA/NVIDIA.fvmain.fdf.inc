@@ -590,6 +590,9 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF MdeModulePkg/Application/CapsuleApp/CapsuleApp.inf
 !endif
+!ifdef CONFIG_RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
+  INF Silicon/NVIDIA/Drivers/NvidiaCapsuleRuntimeDxe/NvidiaCapsuleRuntimeDxe.inf
+!endif
 
   #
   # Test Applications

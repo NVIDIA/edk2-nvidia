@@ -48,6 +48,7 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/SavedCapsuleProtocol.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
 #include <Guid/EventGroup.h>
 #include <Guid/FirmwarePerformance.h>
@@ -1930,6 +1931,44 @@ PlatformBootManagerBeforeConsole (
 
 STATIC
 VOID
+EFIAPI
+HandleSavedCapsules (
+  OUT BOOLEAN  *NeedReset
+  )
+{
+  EFI_STATUS                     Status;
+  NVIDIA_SAVED_CAPSULE_PROTOCOL  *Protocol;
+  EFI_CAPSULE_HEADER             *CapsuleHeader;
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIASavedCapsuleProtocolGuid,
+                  NULL,
+                  (VOID **)&Protocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: no protocol: %r\n", __FUNCTION__, Status));
+    return;
+  }
+
+  Status = Protocol->GetCapsule (Protocol, &CapsuleHeader);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GetCapsule failed\n", __FUNCTION__));
+    return;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: installing capsule bytes=%u guid=%g\n", __FUNCTION__, CapsuleHeader->CapsuleImageSize, &CapsuleHeader->CapsuleGuid));
+
+  ValidateActiveBootChain ();
+  Status = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: UpdateCapsule failed: %r\n", __FUNCTION__, Status));
+  }
+
+  *NeedReset = 1;
+}
+
+STATIC
+VOID
 HandleCapsules (
   VOID
   )
@@ -1997,6 +2036,11 @@ HandleCapsules (
         ));
     }
   }
+
+  //
+  // Check for saved capsules
+  //
+  HandleSavedCapsules (&NeedReset);
 
   //
   // Activate new FW if any capsules installed

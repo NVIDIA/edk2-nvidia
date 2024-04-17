@@ -1,0 +1,48 @@
+## @file
+#
+#  NVIDIA Capsule Update Runtime DXE driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = NvidiaCapsuleRuntimeDxe
+  FILE_GUID                      = 6fed2200-6c27-4cb4-8e94-213dd97a4a63
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = NvidiaCapsuleRuntimeDxeInitialize
+
+[Sources.common]
+  NvidiaCapsuleRuntimeDxe.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  SavedCapsuleLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiCapsuleArchProtocolGuid
+  gNVIDIASavedCapsuleProtocolGuid
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+  gEfiEventReadyToBootGuid
+  gEfiEndOfDxeEventGroupGuid
+  gNVIDIAPublicVariableGuid
+
+[Depex]
+  gEfiVariableArchProtocolGuid        AND
+  gEfiVariableWriteArchProtocolGuid
