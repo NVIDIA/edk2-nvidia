@@ -2,7 +2,7 @@
 #
 #  XUDC Controller Driver
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -12,7 +12,7 @@
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = XusbControllerDxe
   FILE_GUID                      = b418034f-346b-4027-82e4-64a391e500b5
-  MODULE_TYPE                    = UEFI_DRIVER
+  MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
 
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
@@ -21,8 +21,10 @@
   XusbControllerDxe.c
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -34,9 +36,13 @@
   MemoryAllocationLib
   PlatformResourceLib
   BaseMemoryLib
+  DmaLib
 
 [Protocols]
   gNVIDIAPowerGateNodeProtocolGuid
+  gArmScmiClock2ProtocolGuid
+  gNVIDIAUsbPadCtlProtocolGuid
+  gNVIDIAXudcControllerProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableXudcDeviceGuid
@@ -44,3 +50,6 @@
   gEfiEventExitBootServicesGuid
   gEfiAcpiTableGuid
   gNVIDIAPlatformResourceDataGuid
+
+[Depex]
+  gNVIDIAUsbPadCtlProtocolGuid

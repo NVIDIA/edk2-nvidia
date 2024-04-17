@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -148,19 +148,23 @@ DeviceDiscoveryNotify (
             "nvidia,tegra194-xusb-padctl"
             ) > 0)
       {
-        Private->mUsbPadCtlProtocol.InitHw   = InitUsbHw194;
-        Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw194;
-        Private->PlatConfig                  = Tegra194UsbConfig;
+        Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw194;
+        Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw194;
+        Private->mUsbPadCtlProtocol.InitDevHw   = NULL;
+        Private->mUsbPadCtlProtocol.DeInitDevHw = NULL;
+        Private->PlatConfig                     = Tegra194UsbConfig;
       } else if (fdt_node_offset_by_compatible (
                    DeviceTreeNode->DeviceTreeBase,
                    0,
                    "nvidia,tegra234-xusb-padctl"
                    ) > 0)
       {
-        Private->mUsbPadCtlProtocol.InitHw   = InitUsbHw234;
-        Private->mUsbPadCtlProtocol.DeInitHw = DeInitUsbHw234;
-        Private->PlatConfig                  = Tegra234UsbConfig;
-        T234Platform                         = TRUE;
+        Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw234;
+        Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw234;
+        Private->mUsbPadCtlProtocol.InitDevHw   = InitUsbDevHw234;
+        Private->mUsbPadCtlProtocol.DeInitDevHw = DeInitUsbDevHw234;
+        Private->PlatConfig                     = Tegra234UsbConfig;
+        T234Platform                            = TRUE;
       }
 
       Status = gBS->LocateProtocol (

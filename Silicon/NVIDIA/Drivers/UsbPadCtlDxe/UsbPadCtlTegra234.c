@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -66,6 +66,7 @@
 #define USB2_PORTX_CAP_SHIFT(x)  ((x) * 4)
 #define USB2_PORT_CAP_MASK  (0x3)
 #define PORT_CAP_HOST       _MK_ENUM_CONST(1)
+#define PORT_CAP_DEV        _MK_ENUM_CONST(2)
 
 #define XUSB_PADCTL_SS_PORT_CAP_0  _MK_ADDR_CONST(0xc)
 #define SS_PORTX_CAP_SHIFT(x)  ((x) * 4)
@@ -92,6 +93,8 @@
 #define OC_DETECTED_VBUS_PAD(x)  (1 << (12 + (x)))
 #define OC_DETECTED_VBUS_PAD_MASK  (0xf << 12)
 #define OC_DETECTED_INT_EN_VBUS_PAD(x)  (1 << (24 + (x)))
+
+#define XUSB_PADCTL_ELPG_PROGRAM_0_0  _MK_ADDR_CONST(0x20)
 
 #define XUSB_PADCTL_ELPG_PROGRAM_1_0  _MK_ADDR_CONST(0x24)
 #define SSPX_ELPG_CLAMP_EN(x)        (1 << (0 + (x) * 3))
@@ -138,6 +141,17 @@
 #define TEGRA234_OC_PIN_NUM  (2)
 
 #define ENABLE_FUSE  (0)
+
+/* Dev Mode */
+#define XUSB_PADCTL_USB2_BIAS_PAD_CTL_1_0_RESET_VAL  (0x4820000U)
+
+/* Dev fuse */
+#define TERM_RANGE_ADJ_MASK     FUSE_USB_CALIB_TERMRANGEADJ_MASK
+#define TERM_RANGE_ADJ_SHIFT    FUSE_USB_CALIB_TERMRANGEADJ_SHIFT
+#define HS_CURR_LEVEL_MASK      HS_CURR_LEVEL_PAD_MASK
+#define HS_CURR_LEVEL_SHIFT     0
+#define HS_SQUELCH_LEVEL_MASK   FUSE_USB_CALIB_SQUELCHLEVEL_MASK
+#define HS_SQUELCH_LEVEL_SHIFT  FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT
 
 PADCTL_PLAT_CONFIG  Tegra234UsbConfig = {
   .NumHsPhys = TEGRA234_UTMI_PHYS,
@@ -1154,4 +1168,279 @@ DeInitUsbHw234 (
   PadCtlWrite (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1, RegData);
 
   return;
+}
+
+static VOID
+XudcSetupCalibPad (
+  USBPADCTL_DXE_PRIVATE  *Private
+  )
+{
+  UINT32  reg_data = 0;
+  UINT32  rpd_ctrl;
+  UINT32  hsterm_range_adj;
+  UINT32  hscurr_level;
+  UINT32  hssquelch_level;
+
+  NVIDIA_EFUSE_PROTOCOL  *mEfuse = Private->mEfuse;
+
+  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_0, &reg_data);
+
+  hsterm_range_adj = (reg_data & TERM_RANGE_ADJ_MASK) >> TERM_RANGE_ADJ_SHIFT;
+  hscurr_level     = (reg_data & HS_CURR_LEVEL_MASK) >> HS_CURR_LEVEL_SHIFT;
+  hssquelch_level  =
+    (reg_data & HS_SQUELCH_LEVEL_MASK) >> HS_SQUELCH_LEVEL_SHIFT;
+
+  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT_0, &reg_data);
+
+  rpd_ctrl = reg_data & FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
+
+  reg_data = MmioRead32 (Private->BaseAddress + USB2_OTG_PADX_CTL_0 (0));
+
+  reg_data &= ~HS_CURR_LEVEL(~0);
+  reg_data |=  HS_CURR_LEVEL (hscurr_level);
+
+  reg_data |= TERM_SEL;
+  MmioWrite32 (Private->BaseAddress + USB2_OTG_PADX_CTL_0 (0), reg_data);
+
+  reg_data = MmioRead32 (Private->BaseAddress + USB2_OTG_PADX_CTL_1 (0));
+
+  reg_data &= ~TERM_RANGE_ADJ(~0);
+  reg_data |= TERM_RANGE_ADJ (hsterm_range_adj);
+
+  reg_data &= ~RPD_CTRL(~0);
+  reg_data |= RPD_CTRL (rpd_ctrl);
+
+  MmioWrite32 (Private->BaseAddress + USB2_OTG_PADX_CTL_1 (0), reg_data);
+
+  /* Program HS Squelch and Disconnect level */
+  reg_data = MmioRead32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+
+  reg_data &= ~HS_SQUELCH_LEVEL(~0);
+  reg_data |= HS_SQUELCH_LEVEL (hssquelch_level);
+  reg_data &= ~HS_DISCON_LEVEL(~0);
+  reg_data |= HS_DISCON_LEVEL (0x7);
+  MmioWrite32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL0, reg_data);
+
+  reg_data = MmioRead32 (Private->BaseAddress + USB2_BATTERY_CHRG_OTGPADX_CTL1 (0));
+
+  reg_data |= PD_VREG;
+
+  MmioWrite32 (Private->BaseAddress + USB2_BATTERY_CHRG_OTGPADX_CTL1 (0), reg_data);
+}
+
+static void
+XudcPadTracking (
+  USBPADCTL_DXE_PRIVATE  *Private
+  )
+{
+  UINT32  reg_data;
+
+  reg_data = XUSB_PADCTL_USB2_BIAS_PAD_CTL_1_0_RESET_VAL;
+
+  /* Setting PD_TRK de-assertion to TRK_START. 30 TRK clock cycles */
+  reg_data &= ~USB2_TRK_START_TIMER(~0);
+  reg_data |= USB2_TRK_START_TIMER (0x1E);
+
+  /* Setting TRK_DONE to PD_TRK assertion. 10 TRK clock cycles */
+  reg_data &= ~USB2_TRK_DONE_RESET_TIMER(~0);
+  reg_data |= USB2_TRK_DONE_RESET_TIMER (0xA);
+
+  MmioWrite32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL1, reg_data);
+
+  /* Power up the pads and tracking circuit */
+  reg_data &= ~USB2_PD_TRK;
+
+  MmioWrite32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL1, reg_data);
+
+  DeviceDiscoveryThreadMicroSecondDelay (100);
+
+  reg_data |= USB2_PD_TRK;
+
+  MmioWrite32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL1, reg_data);
+
+  /* Giving some time for powerdown.(30 trk clk cycles @0.1us) */
+  DeviceDiscoveryThreadMicroSecondDelay (10);
+}
+
+static void
+XudcRemovePowerdownPad (
+  USBPADCTL_DXE_PRIVATE  *Private
+  )
+{
+  UINT32  reg_data;
+
+  reg_data = MmioRead32 (Private->BaseAddress + USB2_OTG_PADX_CTL_0 (0));
+
+  reg_data &= ~USB2_OTG_PD_ZI;
+
+  reg_data &= ~USB2_OTG_PD;
+
+  MmioWrite32 (Private->BaseAddress + USB2_OTG_PADX_CTL_0 (0), reg_data);
+
+  reg_data = MmioRead32 (Private->BaseAddress + USB2_OTG_PADX_CTL_1 (0));
+
+  reg_data &= ~USB2_OTG_PD_DR;
+
+  MmioWrite32 (Private->BaseAddress + USB2_OTG_PADX_CTL_1 (0), reg_data);
+
+  reg_data = MmioRead32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+
+  reg_data &= ~BIAS_PAD_PD;
+
+  MmioWrite32 (Private->BaseAddress + XUSB_PADCTL_USB2_BIAS_PAD_CTL0, reg_data);
+}
+
+/**
+  This function Initializes USB DEV Pad.
+
+  @param[in]     This                The instance of NVIDIA_USBPADCTL_PROTOCOL.
+
+  @return EFI_SUCCESS                Successfully programmed PAD Registers.
+  @return EFI_DEVICE_ERROR           Other error occured.
+**/
+EFI_STATUS
+InitUsbDevHw234 (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  )
+{
+  USBPADCTL_DXE_PRIVATE  *Private;
+  EFI_STATUS             Status;
+  TEGRA_PLATFORM_TYPE    PlatformType;
+
+  Status = EFI_SUCCESS;
+
+  if (NULL == This) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PlatformType = TegraGetPlatform ();
+  Private      = PADCTL_PRIVATE_DATA_FROM_THIS (This);
+
+  /* XUSB PADCTL Block's clocks are enabled and corresponding RESETs are
+   * deasserted by the DeviceDiscovery Lib Driver when PadctlDriver is loaded
+   */
+
+  if (PlatformType == TEGRA_PLATFORM_SILICON) {
+    UINT32  val;
+
+    /* Setup OTG Pad and BIAS Pad ownership to XUSB */
+    val = MmioRead32 (
+            Private->BaseAddress +
+            XUSB_PADCTL_USB2_PAD_MUX_0
+            );
+
+    val &= ~(USB2_PAD_MUX_PORT_MASK << USB2_PAD_MUX_PORT_SHIFT (0));
+    val |= (PAD_MUX_PORT_XUSB << USB2_PAD_MUX_PORT_SHIFT (0));
+
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_USB2_PAD_MUX_0,
+      val
+      );
+
+    XudcSetupCalibPad (Private);
+
+    XudcPadTracking (Private);
+
+    XudcRemovePowerdownPad (Private);
+
+    /* Set port cap to device */
+    val = MmioRead32 (
+            Private->BaseAddress +
+            XUSB_PADCTL_USB2_PORT_CAP_0
+            );
+
+    val &= ~(USB2_PORT_CAP_MASK << USB2_PORTX_CAP_SHIFT (0));
+    val |= (PORT_CAP_DEV << USB2_PORTX_CAP_SHIFT (0));
+
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_USB2_PORT_CAP_0,
+      val
+      );
+
+    /* Set SS port cap to device */
+    val = MmioRead32 (
+            Private->BaseAddress +
+            XUSB_PADCTL_SS_PORT_CAP_0
+            );
+
+    val &= ~(SS_PORT_CAP_MASK << SS_PORTX_CAP_SHIFT (1));
+    val |= (PORT_CAP_DEV << SS_PORTX_CAP_SHIFT (1));
+
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_SS_PORT_CAP_0,
+      val
+      );
+
+    /* Set ELPG=0 */
+    val = 0;
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_ELPG_PROGRAM_0_0,
+      val
+      );
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_ELPG_PROGRAM_1_0,
+      val
+      );
+
+    val = MmioRead32 (Private->BaseAddress + XUSB_PADCTL_USB2_VBUS_ID);
+
+    val &= ~VBUS_SOURCE_SELECT(~0);
+    val |= VBUS_SOURCE_SELECT (SOURCE_VBUS_OVERRIDE);
+
+    val &= ~ID_SOURCE_SELECT(~0);
+    val |= ID_SOURCE_SELECT (SOURCE_ID_OVERRIDE);
+
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_USB2_VBUS_ID,
+      val
+      );
+
+    val = MmioRead32 (
+            Private->BaseAddress +
+            XUSB_PADCTL_USB2_VBUS_ID
+            );
+    val |= VBUS_OVERRIDE;
+
+    val &= ~ID_OVERRIDE(~0);
+    val |= ID_OVERRIDE_FLOATING;
+
+    MmioWrite32 (
+      Private->BaseAddress +
+      XUSB_PADCTL_USB2_VBUS_ID,
+      val
+      );
+    return Status;
+  } else {
+    return EFI_PROTOCOL_ERROR;
+  }
+}
+
+VOID
+DeInitUsbDevHw234 (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  )
+{
+  USBPADCTL_DXE_PRIVATE  *Private;
+  UINT32                 RegData;
+
+  if (NULL == This) {
+    return;
+  }
+
+  Private = PADCTL_PRIVATE_DATA_FROM_THIS (This);
+
+  /* Clear Each PAD's PD and PD_DR Bits */
+  RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_0 (0));
+  RegData |= USB2_OTG_PD;
+  PadCtlWrite (Private, USB2_OTG_PADX_CTL_0 (0), RegData);
+
+  RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_1 (0));
+  RegData |= USB2_OTG_PD_DR;
+  PadCtlWrite (Private, USB2_OTG_PADX_CTL_1 (0), RegData);
 }

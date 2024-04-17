@@ -2,7 +2,7 @@
 
   USB Pad Control Driver private structures
 
-  Copyright (c) 2019-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -126,6 +126,16 @@ InitUsbHw234 (
 
 VOID
 DeInitUsbHw234 (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
+EFI_STATUS
+InitUsbDevHw234 (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
+VOID
+DeInitUsbDevHw234 (
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   );
 
