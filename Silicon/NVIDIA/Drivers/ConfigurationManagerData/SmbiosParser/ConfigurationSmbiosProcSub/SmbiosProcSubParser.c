@@ -24,6 +24,7 @@
 #include <Library/OemMiscLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosProcSubParser.h"
@@ -349,6 +350,9 @@ InstallSmbiosType4Cm (
   CONST VOID                      *Property;
   UINTN                           ChipID;
   CM_OBJ_DESCRIPTOR               Desc;
+  INT32                           DataSize;
+  EFI_STRING                      MaxSpeedVarName;
+  UINT64                          ProcessorMaxSpeed;
 
   ProcessorInfo = NULL;
   Status        = EFI_SUCCESS;
@@ -393,10 +397,30 @@ InstallSmbiosType4Cm (
       // Processor Manufacturer
       GetPropertyFromDT (DtbBase, NodeOffset, "manufacturer", &ProcessorInfo[Index].ProcessorManufacturer);
 
+      MaxSpeedVarName   = NULL;
+      ProcessorMaxSpeed = 0;
+      Property          = fdt_getprop (DtbBase, NodeOffset, "uefivar-maxspeed", &DataSize);
+      if (Property != NULL) {
+        MaxSpeedVarName = AllocateZeroPool ((DataSize + 1) * sizeof (CHAR16));
+        if (MaxSpeedVarName != NULL) {
+          AsciiStrToUnicodeStrS (
+            Property,
+            MaxSpeedVarName,
+            DataSize
+            );
+          DataSize = sizeof (ProcessorMaxSpeed);
+          Status   = gRT->GetVariable (MaxSpeedVarName, &gNVIDIATokenSpaceGuid, NULL, (UINTN *)&DataSize, &ProcessorMaxSpeed);
+          if (!EFI_ERROR (Status)) {
+            ProcessorInfo[Index].MaxSpeed = ProcessorMaxSpeed / 1000000;
+          }
+
+          FreePool (MaxSpeedVarName);
+        }
+      }
+
       //
       // Get data from FRU
       //
-
       Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
       if (Property != NULL) {
         FruDesc      = (CHAR8 *)Property;
@@ -449,7 +473,7 @@ InstallSmbiosType4Cm (
     ProcessorData.ThreadCount             = 0;
     ProcessorData.MaxSpeed                = 0;
     ProcessorInfo[Index].ProcessorType    = CentralProcessor;
-    ProcessorInfo[Index].ProcessorUpgrade = ProcessorUpgradeUnknown;
+    ProcessorInfo[Index].ProcessorUpgrade = ProcessorUpgradeNone;
 
     OemGetProcessorInformation (
       Index,
@@ -462,8 +486,11 @@ InstallSmbiosType4Cm (
     LegacyVoltage                     = (UINT8 *)&ProcessorInfo[Index].Voltage;
     *LegacyVoltage                    = ProcessorData.Voltage;
     ProcessorInfo[Index].CurrentSpeed = ProcessorData.CurrentSpeed;
-    ProcessorInfo[Index].MaxSpeed     = ProcessorData.MaxSpeed;
     ProcessorInfo[Index].Status       = ProcessorStatus.Data;
+
+    if (ProcessorInfo[Index].MaxSpeed == 0) {
+      ProcessorInfo[Index].MaxSpeed = ProcessorData.MaxSpeed;
+    }
 
     if (ProcessorData.CoreCount > 255) {
       ProcessorInfo[Index].CoreCount = 0xFF;
