@@ -218,7 +218,17 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The return from this method will be used as the prefix when setting
             BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
-        return "202404.0"
+        import io
+        result = io.StringIO()
+        ret = RunCmd("git", "-C edk2-nvidia describe --tags --abbrev=0",
+                     workingdir=self.GetWorkspaceRoot(), outstream=result)
+        if (ret == 0):
+            ver = result.getvalue().strip()
+            if ver.startswith("uefi-"):
+                ver = ver.replace("uefi-", "")
+            return ver
+        else:
+            return os.getenv("USER") or "000000.0"
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.
