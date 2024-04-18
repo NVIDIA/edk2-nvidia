@@ -259,6 +259,7 @@ AcpiTableListParser (
 
     default:
       // Not currently supported
+      DEBUG ((DEBUG_ERROR, "%a: Unknown ChipID 0x%x\n", __FUNCTION__, ChipID));
       Status = EFI_NOT_FOUND;
       goto CleanupAndReturn;
   }
