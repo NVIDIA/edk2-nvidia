@@ -172,6 +172,13 @@ InstallSmbiosType17Type19Cm (
     //
     CmMemDevicesInfo[Index].ModuleManufacturerId = 0x6B03;
 
+    //
+    // Set the memory min/max/config voltage.
+    //
+    CmMemDevicesInfo[Index].MinVolt  = 1100;
+    CmMemDevicesInfo[Index].MaxVolt  = 1100;
+    CmMemDevicesInfo[Index].ConfVolt = 1100;
+
     CmMemDevicesInfo[Index].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
     if (CmMemDevicesInfo[Index].DeviceLocator != NULL) {
       AsciiSPrint (
