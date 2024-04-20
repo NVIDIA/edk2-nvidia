@@ -2,7 +2,7 @@
 
   A driver that sends SMBIOS tables to an OpenBMC receiver
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,16 +14,104 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/ReportStatusCodeLib.h>
+#include <Guid/NVIDIAPublicVariableGuid.h>
 
 #include <Protocol/IpmiBlobTransfer.h>
+#include <Library/BaseCryptLib.h>
 
 #include <NVIDIAStatusCodes.h>
 #include <OemStatusCodes.h>
 
 #define SMBIOS_TRANSFER_DEBUG  0
+
+/**
+  This function will calculate smbios hash, compares it with stored
+  hash, updates UEFI variable if smbios data changed and return status.
+
+  @param[in]    The smbios data to detect if changed.
+  @param[in]    The smbios data size.
+  @retval TRUE  If smbios data changed, otherwise FALSE.
+**/
+BOOLEAN
+DetectSmbiosChange (
+  UINT8   *SmbiosData,
+  UINT32  SmbiosDataSize
+  )
+{
+  BOOLEAN     UpdateRequired = TRUE;
+  BOOLEAN     DeleteVar      = FALSE;
+  BOOLEAN     Response;
+  UINT8       ComputedHashValue[SHA256_DIGEST_SIZE];
+  UINT8       StoredHashValue[SHA256_DIGEST_SIZE];
+  UINTN       StoredHashValueSize;
+  EFI_STATUS  Status;
+
+  Response = Sha256HashAll ((VOID *)SmbiosData, SmbiosDataSize, ComputedHashValue);
+
+  if (Response == FALSE) {
+    // Delete the SmbiosHash variable and continue with smbios transfer to BMC
+    Status = gRT->SetVariable (
+                    L"SmbiosHash",
+                    &gNVIDIAPublicVariableGuid,
+                    EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                    0,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to delete UEFI Variable SmbiosHash %r\n", __FUNCTION__, Status));
+    }
+
+    DeleteVar = TRUE;
+  } else {
+    StoredHashValueSize = SHA256_DIGEST_SIZE;
+    // Get the stored smbios data hash
+    Status = gRT->GetVariable (
+                    L"SmbiosHash",
+                    &gNVIDIAPublicVariableGuid,
+                    NULL,
+                    &StoredHashValueSize,
+                    (VOID *)StoredHashValue
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get UEFI Variable SmbiosHash %r\n", __FUNCTION__, Status));
+    } else {
+      // Compare StoredHash with currently ComputedHash
+      if (StoredHashValueSize != SHA256_DIGEST_SIZE) {
+        DEBUG ((DEBUG_ERROR, "%a: Invalid Hash Size %u\n", __FUNCTION__, StoredHashValueSize));
+      }
+
+      if (CompareMem (StoredHashValue, ComputedHashValue, SHA256_DIGEST_SIZE) == 0) {
+        DEBUG ((DEBUG_INFO, "%a: Same Keys , Hash values match\n", __FUNCTION__));
+        UpdateRequired = FALSE;
+      }
+    }
+  }
+
+  if (UpdateRequired == FALSE) {
+    return UpdateRequired;
+  }
+
+  if (DeleteVar == FALSE) {
+    // ComputedHashValue is valid
+    // store the computed hash and transfer smbios tables if smbios hash variable not found or hash mismatched.
+    Status = gRT->SetVariable (
+                    L"SmbiosHash",
+                    &gNVIDIAPublicVariableGuid,
+                    EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                    SHA256_DIGEST_SIZE,
+                    (VOID *)ComputedHashValue
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set UEFI Variable SmbiosHash %r\n", __FUNCTION__, Status));
+    }
+  }
+
+  return UpdateRequired;
+}
 
 /**
   This function will send all installed SMBIOS tables to the BMC
@@ -47,6 +135,7 @@ SmbiosBmcTransferSendTables (
   UINT8                         *SendData;
   UINT32                        SendDataSize;
   UINT32                        RemainingDataSize;
+  BOOLEAN                       SmbiosTransferRequired;
 
   gBS->CloseEvent (Event);
 
@@ -88,6 +177,13 @@ SmbiosBmcTransferSendTables (
   CopyMem (SendData + sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT), (UINT8 *)Smbios30Table->TableAddress, Smbios30Table->TableMaximumSize);
   SendDataSize      = sizeof (SMBIOS_TABLE_3_0_ENTRY_POINT) + Smbios30Table->TableMaximumSize;
   RemainingDataSize = SendDataSize;
+
+  SmbiosTransferRequired = DetectSmbiosChange (SendData, SendDataSize);
+
+  if (SmbiosTransferRequired == FALSE) {
+    DEBUG ((DEBUG_INFO, "%a: Smbios tables are not changed, skipping transfer to BMC\n", __FUNCTION__));
+    return;
+  }
 
  #if SMBIOS_TRANSFER_DEBUG
   DEBUG ((DEBUG_INFO, "%a: SMBIOS BINARY DATA OUTPUT\n", __FUNCTION__));

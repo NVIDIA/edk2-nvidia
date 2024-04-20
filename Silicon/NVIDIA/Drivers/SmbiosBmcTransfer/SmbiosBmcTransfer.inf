@@ -1,7 +1,7 @@
 ## @file
 #  A simple implementation to transfer SMBIOS tables to a BMC
 
-#  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+#  SPDX-FileCopyrightText: copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -25,12 +25,15 @@
   BaseMemoryLib
   DebugLib
   UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
   UefiLib
   MemoryAllocationLib
   ReportStatusCodeLib
+  BaseCryptLib
 
 [Packages]
+  CryptoPkg/CryptoPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
@@ -42,6 +45,7 @@
 [Guids]
   gEfiSmbios3TableGuid                    ## CONSUMES ## SystemTable
   gEfiEventReadyToBootGuid                ## CONSUMES ## Event
+  gNVIDIAPublicVariableGuid               ## CONSUMES ## Variable
 
 [Protocols]
   gNVIDIAIpmiBlobTransferProtocolGuid    ## CONSUMES
