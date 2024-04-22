@@ -1742,6 +1742,7 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
+  EFI_STATUS  Status;
   EFI_HANDLE  BdsHandle = NULL;
   BOOLEAN     UefiShellEnabled;
   BOOLEAN     PlatformReconfigured = FALSE;
@@ -1926,7 +1927,12 @@ PlatformBootManagerBeforeConsole (
          NULL,
          NULL
          );
-  gDS->Dispatch ();
+  Status = gDS->Dispatch ();
+  // Connect drivers if new driver was dispatched.
+  // Do this if the platform is doing full connects
+  if (PlatformReconfigured && !EFI_ERROR (Status)) {
+    EfiBootManagerConnectAll ();
+  }
 }
 
 STATIC
