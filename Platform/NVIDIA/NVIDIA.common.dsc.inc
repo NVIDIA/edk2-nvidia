@@ -1590,7 +1590,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
 !endif
 !ifdef CONFIG_NETWORKING_ISCSI
-  NetworkPkg/IScsiDxe/IScsiDxe.inf
+  NetworkPkg/IScsiDxe/IScsiDxe.inf {
+    <LibraryClasses>
+!ifdef CONFIG_CONFIG_MANAGER
+    NULL|Silicon/NVIDIA/Library/PlatformHasConfigManagerLib/PlatformHasConfigManagerLib.inf
+!endif
+  }
 !endif
 !ifdef CONFIG_NETWORKING_HTTP
   NetworkPkg/TlsDxe/TlsDxe.inf
