@@ -214,6 +214,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   AcpiLib|EmbeddedPkg/Library/AcpiLib/AcpiLib.inf
 
   ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
+  ShellCEntryLib|ShellPkg/Library/UefiShellCEntryLib/UefiShellCEntryLib.inf
   FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
   SortLib|MdeModulePkg/Library/UefiSortLib/UefiSortLib.inf
 
@@ -1948,6 +1949,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   }
 !endif
   MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+  Silicon/NVIDIA/Application/HiiKeywordUtil/HiiKeywordUtil.inf
 
 !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
   #

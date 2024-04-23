@@ -587,6 +587,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF ShellPkg/DynamicCommand/DpDynamicCommand/DpDynamicCommand.inf
 !endif
   INF MdeModulePkg/Application/VariableInfo/VariableInfo.inf
+  INF Silicon/NVIDIA/Application/HiiKeywordUtil/HiiKeywordUtil.inf
 
 !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
   #

@@ -1,0 +1,50 @@
+## @file
+#
+#  Shell application HiiKeywordUtil.
+#
+#  This application is used to set and get Hii Keyword information for the platform.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = HiiKeywordUtil
+  FILE_GUID                      = 0002e596-0df0-4ff9-9f1e-82c1b179bc2c
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ShellCEntryLib
+  MODULE_UNI_FILE                = HiiKeywordUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  HiiKeywordUtil.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  ShellLib
+  ShellCEntryLib
+  PrintLib
+  UefiLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiConfigKeywordHandlerProtocolGuid          ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  HiiKeywordUtilExtra.uni
