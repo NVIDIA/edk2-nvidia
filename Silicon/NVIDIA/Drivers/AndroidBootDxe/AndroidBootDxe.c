@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -21,6 +21,8 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/SiblingPartitionLib.h>
 #include <Library/BootConfigProtocolLib.h>
+
+#include <Library/AvbLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
 STATIC UINT64                     mInitRdSize            = 0;
@@ -1360,7 +1362,6 @@ AndroidBootLoadFile (
       }
 
       BootConfigSize += BootConfigAppliedBytes;
-
       BufSizeRamdisk += BootConfigSize;
 
       DEBUG ((DEBUG_ERROR, "%a: BootConfig loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
@@ -1461,6 +1462,7 @@ AndroidBootDxeLoadFile (
   EFI_HANDLE                 VendorBootHandle;
   CHAR16                     VendorBootPartitionName[MAX_PARTITION_NAME_LEN];
   ANDROID_BOOTIMG_PROTOCOL   *AndroidBootImgProtocol;
+  CHAR8                      *AvbCmdline = NULL;
 
   // Verify if the valid parameters
   if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
@@ -1500,6 +1502,19 @@ AndroidBootDxeLoadFile (
 
   // Vendor_boot requires boot_img header version to be at least 3
   if (ImgData.HeaderVersion >= 3) {
+    if ((PcdGetBool (PcdBootAndroidImage))) {
+      Status = AvbVerifyBoot (FALSE, Private->ControllerHandle, &AvbCmdline);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to AVB verify\n", __FUNCTION__, Status));
+      }
+
+      Status = CopyAndroidBootArgsToBootConfig (AvbCmdline);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add AVB cmdline to bootconfig protocol\n", __FUNCTION__, Status));
+        return Status;
+      }
+    }
+
     Status = GetActivePartitionName (L"vendor_boot", VendorBootPartitionName);
     // Ignore vendor_boot ramdisk if vendor_boot partition not exist
     if (!EFI_ERROR (Status)) {

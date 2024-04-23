@@ -2366,7 +2366,10 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 
   # Boot support for mkbootimg partitions
 !ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
-  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf {
+    <LibraryClasses>
+      AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
+  }
 !endif
 
   #

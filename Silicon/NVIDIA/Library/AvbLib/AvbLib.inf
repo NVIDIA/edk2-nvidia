@@ -18,6 +18,10 @@
 [Sources]
   AvbLibApi.c
 
+  # Compatibility layer
+  AvbSysdepsEdk2/AvbSysdepsEdk2.c
+  AvbSysdepsEdk2/AvbStdEdk2.h
+
   # libavb code
   libavb/libavb/avb_chain_partition_descriptor.c
   libavb/libavb/avb_crc32.c
@@ -31,20 +35,21 @@
   libavb/libavb/avb_property_descriptor.c
   libavb/libavb/avb_rsa.c
   libavb/libavb/avb_slot_verify.c
-  libavb/libavb/avb_sysdeps_posix.c
   libavb/libavb/avb_util.c
   libavb/libavb/avb_vbmeta_image.c
   libavb/libavb/avb_version.c
-  libavb/libavb/sha/sha512_impl.c
   libavb/libavb/sha/sha256_impl.c
+  libavb/libavb/sha/sha512_impl.c
 
   # libavb headers
   # - These will not be built, but listing them will ensure they are in the
   # include path
   libavb/libavb/avb_rsa.h
+  libavb/libavb/avb_slot_verify.h
 
 [Packages]
   MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -53,6 +58,14 @@
   BaseMemoryLib
   DebugLib
   UefiLib
+  HandleParsingLib
+  BootChainInfoLib
+  MemoryAllocationLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
 
 [BuildOptions]
-  GCC:*_*_*_CC_FLAGS = -DAVB_COMPILATION
+  GCC:*_*_*_CC_FLAGS = -DAVB_COMPILATION -DAVB_ENABLE_DEBUG

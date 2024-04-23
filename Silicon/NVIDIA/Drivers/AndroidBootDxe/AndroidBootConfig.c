@@ -2,7 +2,7 @@
 
   Android Boot Config Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,11 +15,16 @@
 #include <Library/DebugLib.h>
 #include <Library/UefiLib.h>
 #include <Library/PrintLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/BootConfigProtocolLib.h>
 #include <AndroidBootImgHeader.h>
 #include "AndroidBootConfig.h"
 
-#define ANDROIDBOOT_ARG_PREFIX    L"androidboot."
-#define MAX_ANDROIDBOOT_ARG_SIZE  128
+#define ANDROIDBOOT_ARG_PREFIX    "androidboot."
+#define MAX_ANDROIDBOOT_ARG_SIZE  32
+#define MAX_ANDROIDBOOT_VAL_SIZE  256
+
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 CHAR16  *mLineBuffer = NULL;
 
@@ -168,6 +173,87 @@ AddBootConfigTrailer (
   *TrailerSize = BOOTCONFIG_TRAILER_SIZE;
 
   return EFI_SUCCESS;
+}
+
+/*
+ * Copy all "androidboot.<arg>" from cmdline and add to bootconfig protocol
+ *
+ * @param[in]  Cmdline cmdline buffer in uefi, which may include "androidboot.<arg>"
+ * @return EFI_SUCCESS if success, else if not.
+ */
+EFI_STATUS
+CopyAndroidBootArgsToBootConfig (
+  IN CHAR8  *Cmdline
+  )
+{
+  EFI_STATUS                         Status                             = EFI_SUCCESS;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate                  = NULL;
+  CHAR8                              *AndroidBootArg                    = NULL;
+  CHAR8                              *RemainingCmdline                  = NULL;
+  CHAR8                              *TokenEndPtr                       = NULL;
+  CHAR8                              *EndPtr                            = NULL;
+  CHAR8                              Arg[MAX_ANDROIDBOOT_ARG_SIZE]      = { 0 };
+  CHAR8                              ArgValue[MAX_ANDROIDBOOT_VAL_SIZE] = { 0 };
+  UINT32                             Length;
+
+  if (Cmdline == NULL) {
+    Status = EFI_SUCCESS;
+    goto Exit;
+  }
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %r to get BootConfigUpdateProtocol\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  EndPtr           = Cmdline + AsciiStrLen (Cmdline);
+  RemainingCmdline = Cmdline;
+
+  do {
+    AndroidBootArg = AsciiStrStr (RemainingCmdline, ANDROIDBOOT_ARG_PREFIX);
+    if (AndroidBootArg == NULL) {
+      break;
+    }
+
+    // Arg name
+    AndroidBootArg += AsciiStrLen (ANDROIDBOOT_ARG_PREFIX);
+    TokenEndPtr     = AsciiStrStr (AndroidBootArg, "=");
+    if (TokenEndPtr == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Bad androidboot.args, missing a \'=\'\n", __FUNCTION__));
+      Status = EFI_INVALID_PARAMETER;
+      goto Exit;
+    }
+
+    Length = MIN (TokenEndPtr - AndroidBootArg, MAX_ANDROIDBOOT_ARG_SIZE - 1);
+    AsciiStrnCpyS (Arg, MAX_ANDROIDBOOT_ARG_SIZE, AndroidBootArg, Length);
+    Arg[Length] = '\0';
+    if (Length < TokenEndPtr - AndroidBootArg) {
+      DEBUG ((DEBUG_ERROR, "%a: Potential buffer overflow, may break arg=%a\n", __FUNCTION__, Arg));
+    }
+
+    // Arg Value
+    AndroidBootArg = TokenEndPtr + 1;
+    TokenEndPtr    = AsciiStrStr (AndroidBootArg, " ");
+    TokenEndPtr    = (TokenEndPtr == NULL) ? EndPtr : TokenEndPtr;
+    Length         = MIN (TokenEndPtr - AndroidBootArg, MAX_ANDROIDBOOT_VAL_SIZE - 1);
+    AsciiStrnCpyS (ArgValue, MAX_ANDROIDBOOT_VAL_SIZE, AndroidBootArg, Length);
+    ArgValue[Length] = '\0';
+    if (Length < TokenEndPtr - AndroidBootArg) {
+      DEBUG ((DEBUG_ERROR, "%a: Potential buffer overflow, may break argval=%a\n", __FUNCTION__, ArgValue));
+    }
+
+    Status = BootConfigUpdate->UpdateBootConfigs (BootConfigUpdate, Arg, ArgValue);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %r to update BootConfigUpdateProtocol\n", __FUNCTION__, Status));
+      goto Exit;
+    }
+
+    RemainingCmdline = TokenEndPtr;
+  } while (RemainingCmdline < EndPtr);
+
+Exit:
+  return Status;
 }
 
 /*

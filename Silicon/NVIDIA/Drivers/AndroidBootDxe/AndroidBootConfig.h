@@ -2,7 +2,7 @@
 
   Android Boot Config Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -66,6 +66,17 @@ AddBootConfigTrailer (
   UINT64  BootConfigStartAddr,
   UINT32  BootConfigSize,
   UINT32  *TrailerSize
+  );
+
+/*
+ * Copy all "androidboot.<arg>" from cmdline and add to bootconfig protocol
+ *
+ * @param[in]  Cmdline cmdline buffer in uefi, which may include "androidboot.<arg>"
+ * @return EFI_SUCCESS if success, else if not.
+ */
+EFI_STATUS
+CopyAndroidBootArgsToBootConfig (
+  IN CHAR8  *Cmdline
   );
 
 /*
