@@ -210,7 +210,7 @@ FmpBlobGetVersion (
 
   if (VersionString != NULL) {
     // version string must be in allocated pool memory that caller frees
-    VersionStringSize = StrSize (mVersionString) * sizeof (CHAR16);
+    VersionStringSize = StrSize (mVersionString);
     *VersionString    = (CHAR16 *)AllocateRuntimeCopyPool (
                                     VersionStringSize,
                                     mVersionString
@@ -392,6 +392,64 @@ FmpBlobSetImage (
 }
 
 /**
+  Get system firmware version info.
+
+  @retval EFI_SUCCESS               No errors found.
+  @retval Others                    Error detected.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+FmpBlobGetVersionInfo (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       VersionStrLen;
+  UINT64      Version64;
+  CHAR16      *VersionStr;
+
+  VersionStrLen  = StrSize ((CHAR16 *)PcdGetPtr (PcdUefiVersionString));
+  mVersionString = (CHAR16 *)AllocateRuntimePool (VersionStrLen);
+  if (mVersionString == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: string alloc failed\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  StrCpyS (mVersionString, VersionStrLen / sizeof (CHAR16), (CHAR16 *)PcdGetPtr (PcdUefiVersionString));
+
+  VersionStr = (CHAR16 *)PcdGetPtr (PcdUefiHexVersionNumber);
+  if (VersionStr == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Version data doesn't exist\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  if (VersionStr[0] == 0x0) {
+    Version64 = 0;
+  } else {
+    Status = StrHexToUint64S (VersionStr, NULL, &Version64);
+    if (EFI_ERROR (Status) || (Version64 > MAX_UINT32)) {
+      DEBUG ((DEBUG_ERROR, "%a: Version data invalid\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+    }
+  }
+
+  mVersion       = Version64;
+  mVersionStatus = EFI_SUCCESS;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: got version=0x%x (%s)\n",
+    __FUNCTION__,
+    mVersion,
+    mVersionString
+    ));
+
+  return EFI_SUCCESS;
+}
+
+/**
   Handle EndOfDxe event - send BootComplete and install FMP protocol.
 
   @param[in]  Event         Event pointer.
@@ -409,6 +467,11 @@ FmpBlobEndOfDxeNotify (
   )
 {
   EFI_STATUS  Status;
+
+  Status = FmpBlobGetVersionInfo ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP blob get version information %r\n", __FUNCTION__, Status));
+  }
 
   if (mInstaller == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: installer not registered!\n", __FUNCTION__));

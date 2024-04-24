@@ -50,8 +50,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiHexVersionNumber
 
 [Protocols]
   gNVIDIAFwPartitionProtocolGuid

@@ -469,9 +469,12 @@
 #Force system to use single passive thermal zone
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|FALSE|BOOLEAN|0x00000106
 
-  # Capsule partition in data flash support
+# Capsule partition in data flash support
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled|FALSE|BOOLEAN|0x0000012A
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize|0x1900000|UINT64|0x0000012B
+
+# UEFI hex version for FMP bolb library
+  gNVIDIATokenSpaceGuid.PcdUefiHexVersionNumber|L""|VOID*|0x0000012C
 
 [PcdsFeatureFlag]
 #OPTEE presence
