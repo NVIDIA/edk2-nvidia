@@ -1,0 +1,29 @@
+#/** @file
+#
+#  Tegra USB Null Library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TegraUsbNullLib
+  FILE_GUID                      = 26dc3638-1e14-4bdc-9cc5-2805f9be8f27
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NULL|UEFI_DRIVER
+  CONSTRUCTOR                    = TegraUsbNullLibConstructor
+
+[Sources]
+  TegraUsbNullLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[Depex]
+  gUsbDeviceProtocolGuid
+
