@@ -554,6 +554,10 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Intel 700 series NIC
   #
   INF IntelUndiPkg/I40eUndiDxe/I40eUndiDxe.inf
+  #
+  # Intel 200 series NIC
+  #
+  INF IntelUndiPkg/GigUndiDxe/GigUndiDxe.inf
 !endif
 !endif
 !ifdef CONFIG_NETWORKING_DEVICE_REALTEK

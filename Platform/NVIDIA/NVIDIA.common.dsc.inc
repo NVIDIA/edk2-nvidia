@@ -1627,6 +1627,15 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
     <BuildOptions>
       *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-multistatement-macros -Wno-incompatible-pointer-types -Wno-deprecated-non-prototype
   }
+  #
+  # Intel 200 series NIC
+  #
+  IntelUndiPkg/GigUndiDxe/GigUndiDxe.inf {
+    <LibraryClasses>
+      StdLibC|IntelUndiPkg/LibC/LibC.inf
+    <BuildOptions>
+      *_*_*_PLATFORM_FLAGS = -Wno-unused -Wno-incompatible-pointer-types -Wno-pointer-sign -Wno-misleading-indentation
+  }
 !endif
 !endif
 !ifdef CONFIG_NETWORKING_DEVICE_REALTEK
