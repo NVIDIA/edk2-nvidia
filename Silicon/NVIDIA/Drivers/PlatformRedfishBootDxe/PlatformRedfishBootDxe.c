@@ -53,7 +53,7 @@ HII_VENDOR_DEVICE_PATH  mHiiVendorDevicePath = {
 };
 
 /**
-  This function add 'x-uefi-' configuration language to given string ID.
+  This function add 'x-UEFI-' configuration language to given string ID.
 
   @param[in] HiiHandle                HII handle
   @param[in] StringId                 String token ID
@@ -203,7 +203,7 @@ RefreshBootOrderList (
       );
 
     //
-    // Add x-uefi configure language for boot options.
+    // Add x-UEFI configure language for boot options.
     //
     UpdateConfigLanguageToValues (mHiiHandle, Token, OptionIndex, &BootOption[Index]);
   }
