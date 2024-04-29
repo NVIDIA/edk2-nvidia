@@ -39,9 +39,11 @@ WatchDogTimerReady (
   INTN          NodeOffset;
   CONST UINT32  *Property;
   INT32         PropertyLen;
+  UINT32        WatchdogPrintLevelEnableMask;
 
-  WatchdogTimout = MAX_UINT32;
-  Status         = DtPlatformLoadDtb (&DtbBase, &DtbSize);
+  WatchdogTimout               = MAX_UINT32;
+  WatchdogPrintLevelEnableMask = PcdGet32 (PcdDebugPrintErrorLevel);
+  Status                       = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (!EFI_ERROR (Status)) {
     NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
     if (NodeOffset > 0) {
@@ -50,6 +52,11 @@ WatchDogTimerReady (
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         WatchdogTimout = SwapBytes32 (*Property);
       }
+
+      Property = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-boot-watchdog-print-level-mask", &PropertyLen);
+      if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
+        WatchdogPrintLevelEnableMask = SwapBytes32 (*Property);
+      }
     }
   }
 
@@ -57,7 +64,9 @@ WatchDogTimerReady (
     WatchdogTimout = PcdGet16 (PcdBootWatchdogTime) * 60;
   }
 
-  if ((GetDebugPrintErrorLevel () & ~PcdGet32 (PcdDebugPrintErrorLevel)) != 0) {
+  // Disable watch dog if there are levels enabled in the current status that are not set in the mask.
+  // This is done as extra bits may cause extra boot time that might exceed watchdog timeout.
+  if ((GetDebugPrintErrorLevel () & ~WatchdogPrintLevelEnableMask) != 0) {
     DEBUG ((DEBUG_ERROR, "%a: watchdog disabled as extra debug is enabled\r\n", __FUNCTION__));
     WatchdogTimout = 0;
   }
