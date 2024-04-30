@@ -1,7 +1,7 @@
 /** @file
 *  RCM Boot Dxe
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,6 +14,7 @@
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 /**
   Install rcm driver.
@@ -83,6 +84,11 @@ RcmDxeInitialize (
 
   PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
   PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
+
+  // Force DTB kernel cmdline on pre-silicon targets, don't use boot.img cmdline
+  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+    PcdSetBoolS (PcdBootAndroidImage, TRUE);
+  }
 
   OsCarveoutBase = PlatformResourceInfo->RamdiskOSInfo.Base;
   OsCarveoutSize = PlatformResourceInfo->RamdiskOSInfo.Size;
