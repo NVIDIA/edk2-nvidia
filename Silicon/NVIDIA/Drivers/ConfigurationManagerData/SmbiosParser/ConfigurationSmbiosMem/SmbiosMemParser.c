@@ -197,11 +197,16 @@ InstallSmbiosType17Type19Cm (
     CmMemDevicesInfo[Index].TotalWidth = DramInfo[Index].TotalWidth;
     CmMemDevicesInfo[Index].Rank       = DramInfo[Index].Rank;
     // Per spec the speed is to be reported in MT/s (Mega Transfers / second)
-    CmMemDevicesInfo[Index].Speed              = ((DramInfo[Index].SpeedKhz / 1000) * 2);
-    CmMemDevicesInfo[Index].PhysicalArrayToken = PhysMemArrayToken;
-    CmMemDevicesInfo[Index].DeviceType         = MemoryTypeLpddr5;
-    CmMemDevicesInfo[Index].DeviceTechnology   = MemoryTechnologyDram;
-    CmMemDevicesInfo[Index].FormFactor         = MemoryFormFactorDie;
+    CmMemDevicesInfo[Index].Speed                                             = ((DramInfo[Index].SpeedKhz / 1000) * 2);
+    CmMemDevicesInfo[Index].PhysicalArrayToken                                = PhysMemArrayToken;
+    CmMemDevicesInfo[Index].DeviceType                                        = MemoryTypeLpddr5;
+    CmMemDevicesInfo[Index].TypeDetail.Synchronous                            = 1;
+    CmMemDevicesInfo[Index].TypeDetail.Unbuffered                             = 1;
+    CmMemDevicesInfo[Index].DeviceTechnology                                  = MemoryTechnologyDram;
+    CmMemDevicesInfo[Index].FormFactor                                        = MemoryFormFactorDie;
+    CmMemDevicesInfo[Index].MemoryErrorInformationHandle                      = 0xFFFE;
+    CmMemDevicesInfo[Index].ConfiguredMemorySpeed                             = CmMemDevicesInfo[Index].Speed;
+    CmMemDevicesInfo[Index].MemoryOperatingModeCapability.Bits.VolatileMemory = 1;
 
     CmMemArrayMappedAddress[Index].StartingAddress = ResourceInfo->DramRegions[Index].MemoryBaseAddress;
     CmMemArrayMappedAddress[Index].EndingAddress   =
@@ -351,10 +356,11 @@ InstallSmbiosType16Cm (
     CmMemPhysMemArray->NumMemDevices++;
   }
 
-  CmMemPhysMemArray->Location                  = MemoryArrayLocationSystemBoard;
-  CmMemPhysMemArray->MemoryErrorCorrectionType = MemoryErrorCorrectionSingleBitEcc;
-  CmMemPhysMemArray->Use                       = MemoryArrayUseSystemMemory;
-  CmMemPhysMemArray->Size                      = DramSize;
+  CmMemPhysMemArray->Location                     = MemoryArrayLocationSystemBoard;
+  CmMemPhysMemArray->MemoryErrorCorrectionType    = MemoryErrorCorrectionMultiBitEcc;
+  CmMemPhysMemArray->Use                          = MemoryArrayUseSystemMemory;
+  CmMemPhysMemArray->Size                         = DramSize;
+  CmMemPhysMemArray->MemoryErrorInformationHandle = 0xFFFE;
 
   //
   // Install CM object for type 16
