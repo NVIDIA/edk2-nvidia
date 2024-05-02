@@ -821,6 +821,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/redfish/v1/"
   gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpGetRetry|0x05
   gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
+  gEfiRedfishPkgTokenSpaceGuid.PcdRedfishPlatformConfigFeatureProperty|1
 !endif
 
 !ifdef CONFIG_SECURITY_TPM_DISCRETE
