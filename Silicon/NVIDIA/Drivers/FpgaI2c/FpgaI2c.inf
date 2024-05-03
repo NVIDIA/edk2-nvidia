@@ -2,9 +2,9 @@
 #
 # FPGA I2C Driver
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# SPDX-License-Identifier: BSD-2-Clause-Patent
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #**/
 
@@ -33,8 +33,9 @@
   UefiDriverEntryPoint
 
 [Guids]
-  gEfiEventReadyToBootGuid
+  gEfiEventAfterReadyToBootGuid
   gNVIDIAI2cFpga
+  gNVIDIAEndOfPostToBmcGuid
 
 [Protocols]
   gEfiI2cIoProtocolGuid

@@ -225,6 +225,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
   INF Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
+  INF Silicon/NVIDIA/Drivers/SmbiosHmcTransfer/SmbiosHmcTransfer.inf
 !endif
 
   #

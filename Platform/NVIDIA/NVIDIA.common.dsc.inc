@@ -1498,6 +1498,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
   Silicon/NVIDIA/Drivers/SmbiosBmcTransfer/SmbiosBmcTransfer.inf
+  Silicon/NVIDIA/Drivers/SmbiosHmcTransfer/SmbiosHmcTransfer.inf
 !endif
 
   #

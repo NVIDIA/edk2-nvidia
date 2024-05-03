@@ -2,7 +2,7 @@
 
   FPGA I2C Driver
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,6 +36,7 @@ EndOfPostSignalToFpga (
   UINT8                   Address;
   UINT8                   Data;
   UINT8                   WriteData[2];
+  EFI_EVENT               EndofPostToBmcEvent;
 
   gBS->CloseEvent (Event);
 
@@ -102,6 +103,8 @@ EndOfPostSignalToFpga (
           DEBUG ((DEBUG_ERROR, "%a: I2c read data %r\n", __FUNCTION__, Status));
         } else if (Data != NV_FPGA_I2C_POST_END_STATUS) {
           DEBUG ((DEBUG_ERROR, "%a: FPGA End of POST is not set\n", __FUNCTION__));
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Set FPGA End of POST %r\n", __FUNCTION__, Status));
         }
       }
 
@@ -111,6 +114,19 @@ EndOfPostSignalToFpga (
 
   FreePool (Handles);
   FreePool (RequestPacket);
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  EfiEventEmptyFunction,
+                  NULL,
+                  &gNVIDIAEndOfPostToBmcGuid,
+                  &EndofPostToBmcEvent
+                  );
+  if (!EFI_ERROR (Status)) {
+    gBS->SignalEvent (EndofPostToBmcEvent);
+    gBS->CloseEvent (EndofPostToBmcEvent);
+  }
 
   return;
 }
@@ -139,7 +155,7 @@ FpgaI2cInitialize (
                   TPL_CALLBACK,
                   EndOfPostSignalToFpga,
                   NULL,
-                  &gEfiEventReadyToBootGuid,
+                  &gEfiEventAfterReadyToBootGuid,
                   &Event
                   );
 
