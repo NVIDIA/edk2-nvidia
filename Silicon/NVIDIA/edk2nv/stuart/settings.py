@@ -57,6 +57,14 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         else:
             raise AttributeError("WORKSPACE not defined")
 
+    def GetEdk2NvidiaDir(self):
+        ''' Return the root of the edk2-nvidia directory, relative to WORKSPACE.
+
+            Don't assume it's named edk2-nvidia.  Instead, discover it relative
+            to this python module.
+        '''
+        return Path(__file__).parent.parent.parent.parent.parent.name + "/"
+
     def GetPackagesPath(self):
         ''' Return paths that should be mapped as edk2 PACKAGE_PATH.
 
@@ -78,7 +86,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             packages_paths.append(confdir_name)
 
         packages_paths.extend([
-            "edk2/BaseTools/", "edk2/", "edk2-platforms/", "edk2-nvidia/",
+            "edk2/BaseTools/", "edk2/", "edk2-platforms/", self.GetEdk2NvidiaDir(),
             "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
         ])
 
@@ -220,7 +228,8 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         '''
         import io
         result = io.StringIO()
-        ret = RunCmd("git", "-C edk2-nvidia describe --tags --abbrev=0",
+        edk2_nvidia_dir = self.GetEdk2NvidiaDir()
+        ret = RunCmd(f"git", "-C {edk2_nvidia_dir} describe --tags --abbrev=0",
                      workingdir=self.GetWorkspaceRoot(), outstream=result)
         if (ret == 0):
             ver = result.getvalue().strip()
@@ -251,7 +260,8 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         else:
             import io
             result = io.StringIO()
-            ret = RunCmd("git", "-C edk2-nvidia describe --always --dirty",
+            edk2_nvidia_dir = self.GetEdk2NvidiaDir()
+            ret = RunCmd(f"git", "-C {edk2_nvidia_dir} describe --always --dirty",
                          workingdir=self.GetWorkspaceRoot(), outstream=result)
             if (ret == 0):
                 return base + "-" + result.getvalue().strip()
@@ -438,7 +448,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             The path must be relative to GetWorkspaceRoot().
         '''
-        return "edk2-nvidia/Platform/NVIDIA/Kconfig"
+        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Kconfig"
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
                               CiSetupSettingsManager, CiBuildSettingsManager,

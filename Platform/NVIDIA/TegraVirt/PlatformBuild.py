@@ -20,7 +20,7 @@ class TegraVirtSettingsManager(NVIDIASettingsManager):
         return "FV/FVMAIN_COMPACT.Fv"
 
     def GetDscName(self):
-        return "edk2-nvidia/Platform/NVIDIA/TegraVirt/TegraVirt.dsc"
+        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/TegraVirt/TegraVirt.dsc"
 
 
 class PlatformBuilder(NVIDIAPlatformBuilder):

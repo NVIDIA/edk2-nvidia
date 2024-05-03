@@ -1,4 +1,4 @@
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,8 +19,9 @@ class StandaloneMmOpteeSettingsManager(NVIDIASettingsManager):
         return "FV/UEFI_MM.Fv"
 
     def GetDscName(self):
-        return ("edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/"
-                "StandaloneMmOptee.dsc")
+        return (self.GetEdk2NvidiaDir() +
+                "Platform/NVIDIA/StandaloneMmOptee/StandaloneMmOptee.dsc"
+                )
 
 
 class PlatformBuilder(NVIDIAPlatformBuilder):

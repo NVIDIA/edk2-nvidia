@@ -22,7 +22,9 @@ class StandaloneMmSettingsManager(NVIDIASettingsManager):
         return "FV/UEFI_MM.Fv"
 
     def GetDscName(self):
-        return ("edk2-nvidia/Platform/NVIDIA/StandaloneMm/StandaloneMm.dsc")
+        return (self.GetEdk2NvidiaDir() +
+                "Platform/NVIDIA/StandaloneMm/StandaloneMm.dsc"
+                )
 
     def GetDtbManifestFile(self):
         ''' Return the name of the built DTB manifest file. '''

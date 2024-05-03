@@ -14,11 +14,11 @@
 
 set -e
 
-PLATFORM_BUILD=$( dirname "${BASH_SOURCE[0]}" )/PlatformBuild.py
-HELPER_SCRIPT_DIR=edk2-nvidia/Silicon/NVIDIA/scripts
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PLATFORM_BUILD=${SCRIPT_DIR}/PlatformBuild.py
+HELPER_SCRIPT_DIR=${SCRIPT_DIR}/../../../Silicon/NVIDIA/scripts
 
 # Change directory to the root of the workspace
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd ${SCRIPT_DIR}/../../../..
 
 # Prepare and build

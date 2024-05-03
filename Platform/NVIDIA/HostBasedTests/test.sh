@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,11 +13,11 @@
 
 set -e
 
-TEST_BUILD=edk2-nvidia/Platform/NVIDIA/HostBasedTests/TestBuild.py
-HELPER_SCRIPT_DIR=edk2-nvidia/Silicon/NVIDIA/scripts
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+TEST_BUILD=${SCRIPT_DIR}/TestBuild.py
+HELPER_SCRIPT_DIR=${SCRIPT_DIR}/../../../Silicon/NVIDIA/scripts
 
 # Change directory to the root of the workspace
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd ${SCRIPT_DIR}/../../../..
 
 # Prepare and build

@@ -28,10 +28,12 @@ class ServerSettingsManager(NVIDIASettingsManager):
         return "FV/UEFI_NS.Fv"
 
     def GetDscName(self):
-        return ("edk2-nvidia/Platform/NVIDIA/NVIDIA.common.dsc")
+        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
     def GetConfigFiles(self):
-        return ["edk2-nvidia/Platform/NVIDIA/Server/Server.defconfig"]
+        return [
+            self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Server/Server.defconfig"
+        ]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Server. '''

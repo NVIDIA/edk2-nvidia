@@ -26,13 +26,15 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return "AARCH64/L4TLauncher.efi"
 
     def GetDscName(self):
-        return "edk2-nvidia/Platform/NVIDIA/NVIDIA.common.dsc"
+        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
 
     def GetConfigFiles(self):
-        return ["edk2-nvidia/Platform/NVIDIA/Jetson/Jetson.defconfig"]
+        return [
+            self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Jetson/Jetson.defconfig"
+        ]
 
 class PlatformBuilder(NVIDIAPlatformBuilder):
     ''' PlatformBuilder for NVIDIA's Jetson. '''
