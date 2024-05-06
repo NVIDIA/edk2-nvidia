@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Oem Partition Sample Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -422,7 +422,7 @@ MmOemPartitionHandler (
 
   switch (MmFunctionHeader->Function) {
     case OEM_PARTITION_FUNC_GET_INFO:
-      if (CommBufferPayloadSize != sizeof (OEM_PARTITION_COMMUNICATE_READ)) {
+      if (CommBufferPayloadSize != sizeof (OEM_PARTITION_COMMUNICATE_GET_INFO)) {
         DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MmFunctionHeader->Function));
         Status = EFI_INVALID_PARAMETER;
         break;
