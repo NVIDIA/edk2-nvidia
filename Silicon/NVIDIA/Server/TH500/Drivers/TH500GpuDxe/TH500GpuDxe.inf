@@ -23,6 +23,8 @@
   core/GPUMemoryInfo.c
   core/GPUSupport.c
   core/UEFIFspRpc.c
+  core/hopper/GPUSupportMemSizeLegacy.c
+  core/blackwell/GPUSupportMemSize.c
   efihand/ComponentName2.c
   efihand/DriverBinding.c
   efihand/GpuDsdAmlGeneration.c

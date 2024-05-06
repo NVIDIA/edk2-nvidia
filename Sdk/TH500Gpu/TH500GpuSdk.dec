@@ -17,6 +17,7 @@
 
 [Includes.common]
     include/src/common/inc/swref
+    include/src/common/inc/swref/published
     include/src/common/inc/swref/published/blackwell/gb100
     include/src/common/inc/swref/published/hopper/gh100
     include/src/common/sdk/nvidia/inc

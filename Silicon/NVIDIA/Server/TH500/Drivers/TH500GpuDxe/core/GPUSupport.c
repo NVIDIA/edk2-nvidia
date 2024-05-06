@@ -30,31 +30,21 @@
 
 /* Don't define legacy BIT macros, conflict with UEFI macros */
 #define NVIDIA_UNDEF_LEGACY_BIT_MACROS
-#include "nvmisc.h"
+#include <nvmisc.h>
 
 ///
 /// Chip includes
 ///
 #include "dev_therm.h"
 #include "published/hopper/gh100/dev_therm_addendum.h"
-#include "dev_fb.h"
-// Conditionally include gp102/dev_fb.h for NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE
-// if it is missing from the SDK being used
-// Create a TH500 alias for NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_LOWER_MAG
-//   to get the correct field size for _LOWER_MAG depending on the source of the definiton.
-// Default is to map the alias to the header defined value.
-#ifndef NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE
-  #include "published/pascal/gp102/dev_fb.h"
-// WAR _LOWER_MAG field size needs to be extended if sourced from gp102 header.
-#define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_TH500_LOWER_MAG  27:4
-#else
-#define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_TH500_LOWER_MAG   \
-    NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_LOWER_MAG
-#endif
 
 #include "GPUMemoryInfo.h"
 
 #include "GPUSupport.h"
+
+/// Support for Memory Size is broken out based on architecture
+#include "hopper/GPUSupportMemSizeLegacy.h"
+#include "blackwell/GPUSupportMemSize.h"
 
 ///
 /// External resources
@@ -233,12 +223,10 @@ GetGPUMemSize (
   IN EFI_HANDLE  ControllerHandle
   )
 {
-  UINT32               RegVal32 = 0;
-  UINT32               lowerRangeMag;
-  UINT32               lowerRangeScale;
   UINT64               fbSize = 0ULL;
   EFI_PCI_IO_PROTOCOL  *PciIo = NULL;
   EFI_STATUS           Status;
+  PCI_TYPE00           Pci;
 
   if (NULL == ControllerHandle) {
     ASSERT (FALSE);
@@ -261,26 +249,29 @@ GetGPUMemSize (
     return 0ULL;
   }
 
-  Status = PciIo->Mem.Read (
-                        PciIo,
-                        EfiPciIoWidthUint32,
-                        PCI_BAR_IDX0,
-                        NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE,
-                        1,
-                        &RegVal32
-                        );
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, ControllerHandle, "NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE", Status));
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of '%a' = '0x%08x'\n", __FUNCTION__, ControllerHandle, "NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE", RegVal32));
+  /* Read PciIo config space for Vendor ID and Device ID */
+  Status =
+    PciIo->Pci.Read (
+                 PciIo,
+                 EfiPciIoWidthUint8,
+                 0,
+                 sizeof (Pci),
+                 &Pci
+                 );
 
-  // Adjustment code
-  /* Use the TH500 alias for _LOWER_MAG which is adjusted appropriately for the source */
-  /*   of the register defininitio. Details: see 'dev_fb.h' comments in includes section. */
-  lowerRangeMag   = DRF_VAL (_PFB, _PRI_MMU_LOCAL_MEMORY_RANGE, _TH500_LOWER_MAG, RegVal32);
-  lowerRangeScale = DRF_VAL (_PFB, _PRI_MMU_LOCAL_MEMORY_RANGE, _LOWER_SCALE, RegVal32);
-  fbSize          = ((UINT64)lowerRangeMag << (lowerRangeScale + 20));
+  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of Pci TYPE00 returned '%r'\n", __FUNCTION__, PciIo, Status));
+  if (EFI_ERROR (Status)) {
+    /* PciIo error accessing configuration space */
+    DEBUG ((DEBUG_ERROR, "%a: [ImageHandle:%p] 'PciIo' configuration space structure read returned '%r'\n", __FUNCTION__, gImageHandle, Status));
+    ASSERT (0);
+    return 0ULL;
+  }
 
-  if (FLD_TEST_DRF (_PFB, _PRI_MMU_LOCAL_MEMORY_RANGE, _ECC_MODE, _ENABLED, RegVal32)) {
-    fbSize = fbSize / 16 * 15;
+  // Call appropriate support call for architecture
+  if ((TH500_GB180_GPU_MODE_CHECK_SHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) || (TH500_GB180_GPU_MODE_CHECK_EH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId))) {
+    fbSize = GetGPUMemSizeSupport (ControllerHandle);
+  } else {
+    fbSize = GetGPUMemSizeSupportLegacy (ControllerHandle);
   }
 
   return fbSize;
