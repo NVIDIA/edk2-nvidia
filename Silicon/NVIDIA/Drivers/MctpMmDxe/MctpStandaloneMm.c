@@ -2,7 +2,7 @@
 
   MCTP protocol standalone MM
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -99,6 +99,16 @@ MctpMmHandler (
   MCTP_MM_DEVICE_INFO     *DeviceInfo;
   MCTP_DEVICE_ATTRIBUTES  Attributes;
 
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (MCTP_COMM_HEADER)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
+
   MctpCommHeader = (MCTP_COMM_HEADER *)CommBuffer;
   DEBUG ((DEBUG_INFO, "%a: Func=%u\n", __FUNCTION__, MctpCommHeader->Function));
 
@@ -108,6 +118,12 @@ MctpMmHandler (
     case MCTP_COMM_FUNCTION_INITIALIZE:
     {
       MCTP_COMM_INITIALIZE  *Payload = (MCTP_COMM_INITIALIZE *)MctpCommHeader->Data;
+      if (PayloadSize < sizeof (MCTP_COMM_INITIALIZE)) {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MctpCommHeader->Function));
+        MctpCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
+
       Status                       = MctpMmInitProtocols (&Payload->NumDevices);
       MctpCommHeader->ReturnStatus = Status;
       break;
@@ -116,11 +132,11 @@ MctpMmHandler (
     case MCTP_COMM_FUNCTION_GET_DEVICES:
     {
       MCTP_COMM_GET_DEVICES  *Payload = (MCTP_COMM_GET_DEVICES *)MctpCommHeader->Data;
-
       if ((PayloadSize != OFFSET_OF (MCTP_COMM_GET_DEVICES, Devices) +
            (Payload->MaxCount * sizeof (Payload->Devices))) ||
           (mNumDevices > Payload->MaxCount))
       {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MctpCommHeader->Function));
         MctpCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
         break;
       }
@@ -145,10 +161,10 @@ MctpMmHandler (
     case MCTP_COMM_FUNCTION_SEND:
     {
       MCTP_COMM_SEND  *Payload = (MCTP_COMM_SEND *)MctpCommHeader->Data;
-
       if ((PayloadSize != OFFSET_OF (MCTP_COMM_SEND, Data) + Payload->Length) ||
           (Payload->MmIndex >= mNumDevices))
       {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MctpCommHeader->Function));
         MctpCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
         break;
       }
@@ -182,10 +198,10 @@ MctpMmHandler (
     case MCTP_COMM_FUNCTION_RECV:
     {
       MCTP_COMM_RECV  *Payload = (MCTP_COMM_RECV *)MctpCommHeader->Data;
-
       if ((PayloadSize != OFFSET_OF (MCTP_COMM_RECV, Data) + Payload->MaxLength) ||
           (Payload->MmIndex >= mNumDevices))
       {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MctpCommHeader->Function));
         MctpCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
         break;
       }
@@ -219,10 +235,10 @@ MctpMmHandler (
     case MCTP_COMM_FUNCTION_DO_REQUEST:
     {
       MCTP_COMM_DO_REQUEST  *Payload = (MCTP_COMM_DO_REQUEST *)MctpCommHeader->Data;
-
       if ((PayloadSize != OFFSET_OF (MCTP_COMM_DO_REQUEST, Data) + MAX (Payload->RequestLength, Payload->ResponseBufferLength)) ||
           (Payload->MmIndex >= mNumDevices))
       {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MctpCommHeader->Function));
         MctpCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
         break;
       }

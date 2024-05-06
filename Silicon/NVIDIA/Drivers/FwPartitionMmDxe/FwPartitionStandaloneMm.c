@@ -32,6 +32,16 @@ FwPartitionMmHandler (
   UINTN                     PayloadSize;
   EFI_STATUS                Status;
 
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (FW_PARTITION_COMM_HEADER)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
+
   FwImageCommHeader = (FW_PARTITION_COMM_HEADER *)CommBuffer;
 
   PayloadSize = *CommBufferSize - FW_PARTITION_COMM_HEADER_SIZE;
@@ -42,6 +52,17 @@ FwPartitionMmHandler (
     case FW_PARTITION_COMM_FUNCTION_INITIALIZE:
     {
       FW_PARTITION_COMM_INITIALIZE  *InitPayload;
+      if (PayloadSize < sizeof (FW_PARTITION_COMM_INITIALIZE)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       InitPayload = (FW_PARTITION_COMM_INITIALIZE *)FwImageCommHeader->Data;
       Status      = FwPartitionNorFlashStmmInitialize (
@@ -64,10 +85,19 @@ FwPartitionMmHandler (
 
       NumImages     = FwPartitionGetCount ();
       ImagesPayload = (FW_PARTITION_COMM_GET_PARTITIONS *)FwImageCommHeader->Data;
-      ASSERT (
-        PayloadSize == OFFSET_OF (FW_PARTITION_COMM_GET_PARTITIONS, Partitions) +
-        (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0]))
-        );
+      if (PayloadSize != OFFSET_OF (FW_PARTITION_COMM_GET_PARTITIONS, Partitions) +
+          (ImagesPayload->MaxCount * sizeof (ImagesPayload->Partitions[0])))
+      {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       if (NumImages > ImagesPayload->MaxCount) {
         FwImageCommHeader->ReturnStatus = EFI_BUFFER_TOO_SMALL;
@@ -102,9 +132,30 @@ FwPartitionMmHandler (
       FW_PARTITION_COMM_READ_DATA  *ReadDataPayload;
       FW_PARTITION_PRIVATE_DATA    *Partition;
       FW_PARTITION_DEVICE_INFO     *DeviceInfo;
+      if (PayloadSize < sizeof (FW_PARTITION_COMM_READ_DATA)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       ReadDataPayload = (FW_PARTITION_COMM_READ_DATA *)FwImageCommHeader->Data;
-      ASSERT (PayloadSize == OFFSET_OF (FW_PARTITION_COMM_READ_DATA, Data) + ReadDataPayload->Bytes);
+      if (PayloadSize != OFFSET_OF (FW_PARTITION_COMM_READ_DATA, Data) + ReadDataPayload->Bytes) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       DEBUG ((
         DEBUG_INFO,
@@ -139,9 +190,30 @@ FwPartitionMmHandler (
       FW_PARTITION_COMM_WRITE_DATA  *WriteDataPayload;
       FW_PARTITION_PRIVATE_DATA     *Partition;
       FW_PARTITION_DEVICE_INFO      *DeviceInfo;
+      if (PayloadSize < sizeof (FW_PARTITION_COMM_WRITE_DATA)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       WriteDataPayload = (FW_PARTITION_COMM_WRITE_DATA *)FwImageCommHeader->Data;
-      ASSERT (PayloadSize == OFFSET_OF (FW_PARTITION_COMM_WRITE_DATA, Data) + WriteDataPayload->Bytes);
+      if (PayloadSize != OFFSET_OF (FW_PARTITION_COMM_WRITE_DATA, Data) + WriteDataPayload->Bytes) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Command [%d], payload buffer : %r!\n",
+          __FUNCTION__,
+          FwImageCommHeader->Function,
+          EFI_INVALID_PARAMETER
+          ));
+        FwImageCommHeader->ReturnStatus = EFI_INVALID_PARAMETER;
+        break;
+      }
 
       DEBUG ((
         DEBUG_INFO,

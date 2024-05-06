@@ -118,6 +118,16 @@ CmetMsgHandler (
   RAS_MM_COMMUNICATE_PAYLOAD  *CmetHeader;
   UINT8                       *CmetPayload;
 
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (RAS_MM_COMMUNICATE_PAYLOAD)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
+
   CmetHeader  = (RAS_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
   CmetPayload = CmetHeader->Data;
 
@@ -243,6 +253,16 @@ RasLogMsgHandler (
   EFI_STATUS                  Status;
   RAS_MM_COMMUNICATE_PAYLOAD  *RasHeader;
   UINT8                       *RasPayload;
+
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (RAS_MM_COMMUNICATE_PAYLOAD)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
 
   RasHeader  = (RAS_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
   RasPayload = RasHeader->Data;
@@ -390,6 +410,16 @@ EarlyVarsMsgHandler (
   UINTN                         SocketIdx;
   EFI_PHYSICAL_ADDRESS          CpuBlAddr;
   UINT32                        RecSize;
+
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (NVIDIA_MM_MB1_RECORD_PAYLOAD)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
 
   EarlyVars = (NVIDIA_MM_MB1_RECORD_PAYLOAD *)CommBuffer;
   RecSize   = TEGRABL_EARLY_BOOT_VARS_MAX_SIZE - sizeof (TEGRABL_EARLY_BOOT_VARS_DATA_HEADER);
@@ -664,6 +694,16 @@ SatMcMsgHandler (
   UINT64                        PartitionSize;
   EFI_PHYSICAL_ADDRESS          CpuBlParamsAddr;
   UINT16                        DeviceInstance;
+
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_SUCCESS;
+  }
+
+  if (*CommBufferSize < sizeof (SATMC_MM_COMMUNICATE_PAYLOAD)) {
+    DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_BUFFER_TOO_SMALL));
+    return EFI_SUCCESS;
+  }
 
   SatMcMmMsg = (SATMC_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
 
