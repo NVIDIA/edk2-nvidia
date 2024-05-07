@@ -366,6 +366,11 @@ PhandleIsNextLevelCache (
       continue;
     }
 
+    Property = fdt_getprop (Dtb, NodeOffset, "status", NULL);
+    if ((Property != NULL) && (AsciiStrCmp (Property, "fail") == 0)) {
+      continue;
+    }
+
     // L2
     Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
     if (Property == NULL) {
@@ -442,7 +447,6 @@ UpdateCpuFloorsweepingConfig (
   while (NodeOffset > 0) {
     CONST VOID  *Property;
     INT32       Length;
-    EFI_STATUS  Status;
 
     Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
@@ -505,16 +509,15 @@ UpdateCpuFloorsweepingConfig (
         L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
       }
 
-      TmpOffset  = NodeOffset;
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-
-      FdtErr = fdt_nop_node (Dtb, TmpOffset);
+      FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
       if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+        DEBUG ((DEBUG_ERROR, "Failed to disable /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+
         return EFI_DEVICE_ERROR;
       }
 
-      DEBUG ((DEBUG_INFO, "Deleted cpu-%u node in FDT\r\n", Cpu));
+      DEBUG ((DEBUG_INFO, "Disabled cpu-%u node in FDT\r\n", Cpu));
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
 
       if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
         TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
@@ -524,10 +527,11 @@ UpdateCpuFloorsweepingConfig (
           L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
         }
 
-        // special case if cache node to delete is node after deleted cpu node
+        // special case if cache node to delete is node after disabled cpu node
+        // when cache nodes are subnodes of cpus node.
         if (TmpOffset == NodeOffset) {
           NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
+          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed disabled cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
         }
 
         if (TmpOffset >= 0) {
