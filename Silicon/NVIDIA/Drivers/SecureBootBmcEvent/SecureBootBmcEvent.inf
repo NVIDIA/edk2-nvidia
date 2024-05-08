@@ -1,0 +1,56 @@
+## @file
+#  This driver sends event to BMC when there is user action to enable secure boot or
+#  disable secure. An event is also send to BMC when secure boot failure happens.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SecureBootBmcEvent
+  FILE_GUID                      = 7d8d42c9-634c-45cc-b165-299d67b902e2
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = SecureBootBmcEventEntry
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  SecureBootBmcEvent.c
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  PrintLib
+  MemoryAllocationLib
+  ReportStatusCodeLib
+  SecureBootVariableLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Protocols]
+  gEfiPciIoProtocolGuid                   ## CONSUMES
+  gEfiDevicePathProtocolGuid              ## CONSUMES
+  gEdkiiConfigurationManagerProtocolGuid  ## CONSUMES
+
+[Guids]
+  gEfiEventReadyToBootGuid    ## CONSUMES
+  gEfiGlobalVariableGuid      ## CONSUMES
+  gNVIDIATokenSpaceGuid       ## CONSUMES
+
+[Depex]
+  TRUE

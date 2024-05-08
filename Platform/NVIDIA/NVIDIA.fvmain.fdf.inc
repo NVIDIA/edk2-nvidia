@@ -681,6 +681,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Secure Boot Support
   #
   INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+  INF Silicon/NVIDIA/Drivers/SecureBootBmcEvent/SecureBootBmcEvent.inf
 !endif
 
   #

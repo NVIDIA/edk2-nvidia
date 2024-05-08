@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -91,6 +91,15 @@
 
 #define OEM_EC_DESC_TPM_CLEAR_FAILED \
         "TPM Clear failed"
+
+#define OEM_EC_DESC_SECURE_BOOT_ENABLED \
+        "Secure boot is enabled"
+
+#define OEM_EC_DESC_SECURE_BOOT_DISABLED \
+        "Secure boot is disabled"
+
+#define OEM_EC_DESC_SECURE_BOOT_FAILURE \
+        "Secure boot failure "
 
 ///@}
 

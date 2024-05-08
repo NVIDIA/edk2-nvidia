@@ -2175,6 +2175,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   # Secure Boot Support
   #
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+  Silicon/NVIDIA/Drivers/SecureBootBmcEvent/SecureBootBmcEvent.inf
 !endif
 
   #
