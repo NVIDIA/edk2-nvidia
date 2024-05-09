@@ -34,9 +34,11 @@ UpdateResourceNodeInfo (
   EFI_STATUS                 Status;
   CM_OBJ_DESCRIPTOR          Desc;
   UINT32                     CacheId;
+  CM_OBJECT_TOKEN            *TokenMap;
 
   ResourceNodeInfo    = NULL;
   ResourceNodeHandles = NULL;
+  TokenMap            = NULL;
   ResourceNodeCount   = 0;
 
   // Get Resource node count from the device tree
@@ -50,7 +52,12 @@ UpdateResourceNodeInfo (
     goto Exit;
   }
 
-  ResourceNodeHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * ResourceNodeCount);
+  Status = NvAllocateCmTokens (ParserHandle, ResourceNodeCount, &TokenMap);
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  ResourceNodeHandles = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * ResourceNodeCount);
   if (ResourceNodeHandles == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -61,7 +68,7 @@ UpdateResourceNodeInfo (
     goto Exit;
   }
 
-  ResourceNodeInfo = (CM_ARM_RESOURCE_NODE_INFO *)AllocatePool (sizeof (CM_ARM_RESOURCE_NODE_INFO) * ResourceNodeCount);
+  ResourceNodeInfo = (CM_ARM_RESOURCE_NODE_INFO *)AllocateZeroPool (sizeof (CM_ARM_RESOURCE_NODE_INFO) * ResourceNodeCount);
   if (ResourceNodeInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for Resource Nodes\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
@@ -69,6 +76,7 @@ UpdateResourceNodeInfo (
   }
 
   for (Index = 0; Index < ResourceNodeCount; Index++) {
+    ResourceNodeInfo[Index].Token       = TokenMap[Index];
     ResourceNodeInfo[Index].RisIndex    = 0;
     ResourceNodeInfo[Index].LocatorType = EFI_ACPI_MPAM_LOCATION_TYPE_PROCESSOR_CACHE;
 
@@ -107,7 +115,7 @@ UpdateResourceNodeInfo (
   Desc.Count    = ResourceNodeCount;
   Desc.Data     = ResourceNodeInfo;
 
-  Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
+  Status = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMap, CM_NULL_TOKEN);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add ResourceNodes for MPAM\n", __FUNCTION__, Status));
     goto Exit;
@@ -115,14 +123,11 @@ UpdateResourceNodeInfo (
 
 Exit:
   if (EFI_ERROR (Status)) {
-    if (ResourceNodeInfo != NULL) {
-      FreePool (ResourceNodeInfo);
-    }
+    FREE_NON_NULL (ResourceNodeInfo);
   }
 
-  if (ResourceNodeHandles != NULL) {
-    FreePool (ResourceNodeHandles);
-  }
+  FREE_NON_NULL (ResourceNodeHandles);
+  FREE_NON_NULL (TokenMap);
 
   return Status;
 }
@@ -151,11 +156,13 @@ UpdateMscNodeInfo (
   INT32                              SubNodeOffset;
   INT32                              PrevSubNodeOffset;
   CM_OBJ_DESCRIPTOR                  Desc;
+  CM_OBJECT_TOKEN                    *TokenMap;
 
   MscNodeInfo    = NULL;
   MscNodeHandles = NULL;
   RegisterData   = NULL;
   InterruptData  = NULL;
+  TokenMap       = NULL;
   MscNodeCount   = 0;
   MscNodeEntries = 0;
 
@@ -169,7 +176,12 @@ UpdateMscNodeInfo (
     goto Exit;
   }
 
-  MscNodeHandles = (UINT32 *)AllocatePool (sizeof (UINT32) * MscNodeCount);
+  Status = NvAllocateCmTokens (ParserHandle, MscNodeCount, &TokenMap);
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  MscNodeHandles = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * MscNodeCount);
   if (MscNodeHandles == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -180,7 +192,7 @@ UpdateMscNodeInfo (
     goto Exit;
   }
 
-  MscNodeInfo = (CM_ARM_MSC_NODE_INFO *)AllocatePool (sizeof (CM_ARM_MSC_NODE_INFO) * MscNodeCount);
+  MscNodeInfo = (CM_ARM_MSC_NODE_INFO *)AllocateZeroPool (sizeof (CM_ARM_MSC_NODE_INFO) * MscNodeCount);
   if (MscNodeInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for MSC Nodes\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
@@ -197,7 +209,7 @@ UpdateMscNodeInfo (
         RegisterData = NULL;
       }
 
-      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
+      RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocateZeroPool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
       if (RegisterData == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
@@ -217,6 +229,7 @@ UpdateMscNodeInfo (
       goto Exit;
     }
 
+    MscNodeInfo[Index].Token       = TokenMap[Index];
     MscNodeInfo[Index].BaseAddress = RegisterData->BaseAddress;
     MscNodeInfo[Index].MmioSize    =  RegisterData->Size;
 
@@ -229,7 +242,7 @@ UpdateMscNodeInfo (
         InterruptData = NULL;
       }
 
-      InterruptData = (NVIDIA_DEVICE_TREE_INTERRUPT_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_DATA) * InterruptSize);
+      InterruptData = (NVIDIA_DEVICE_TREE_INTERRUPT_DATA *)AllocateZeroPool (sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_DATA) * InterruptSize);
       if (InterruptData == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         goto Exit;
@@ -329,30 +342,21 @@ UpdateMscNodeInfo (
   Desc.Count    = MscNodeEntries;
   Desc.Data     = MscNodeInfo;
 
-  Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
+  Status = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMap, CM_NULL_TOKEN);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add MscNodes for MPAM\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add MSC Nodes for MPAM\n", __FUNCTION__, Status));
     goto Exit;
   }
 
 Exit:
   if (EFI_ERROR (Status)) {
-    if (MscNodeInfo != NULL) {
-      FreePool (MscNodeInfo);
-    }
+    FREE_NON_NULL (MscNodeInfo);
   }
 
-  if (MscNodeHandles != NULL) {
-    FreePool (MscNodeHandles);
-  }
-
-  if (RegisterData != NULL) {
-    FreePool (RegisterData);
-  }
-
-  if (InterruptData != NULL) {
-    FreePool (InterruptData);
-  }
+  FREE_NON_NULL (MscNodeHandles);
+  FREE_NON_NULL (RegisterData);
+  FREE_NON_NULL (InterruptData);
+  FREE_NON_NULL (TokenMap);
 
   return Status;
 }
