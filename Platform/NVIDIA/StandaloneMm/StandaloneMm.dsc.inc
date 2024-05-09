@@ -50,6 +50,16 @@
   gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
+  # DEBUG_ASSERT_ENABLED       0x01
+  # DEBUG_PRINT_ENABLED        0x02
+  # DEBUG_CODE_ENABLED         0x04
+  # CLEAR_MEMORY_ENABLED       0x08
+  # ASSERT_BREAKPOINT_ENABLED  0x10
+  # ASSERT_DEADLOOP_ENABLED    0x20
+  # ASSERT_RESET_ENABLED       0x40
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
+  gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
+
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 

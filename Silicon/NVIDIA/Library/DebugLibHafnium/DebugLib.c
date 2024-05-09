@@ -2,8 +2,8 @@
   Base Debug library instance based on Hafnium VM API.
   It is based on the original, serial enabled, DebugLib.
 
-  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,9 +18,13 @@
 #include <Uefi/UefiBaseType.h>
 #include <Library/DebugPrintErrorLevelLib.h>
 #include <Library/ArmSvcLib.h>
+#include <Library/ResetSystemLib.h>
+#include <Library/TimerLib.h>
 
 /* Define the maximum debug and assert message length that this library supports */
 #define MAX_DEBUG_MESSAGE_LENGTH  0x100
+
+#define DEBUG_PROPERTY_ASSERT_RESET_ENABLED  0x40
 
 /*
  * VA_LIST can not initialize to NULL for all compiler, so we use this to
@@ -249,7 +253,8 @@ DebugAssert (
   IN CONST CHAR8  *Description
   )
 {
-  CHAR8  Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  CHAR8   Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  UINT32  ResetDelay;
 
   //
   // Generate the ASSERT() message in Ascii format
@@ -268,7 +273,16 @@ DebugAssert (
     CpuBreakpoint ();
   } else if ((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED) != 0) {
     CpuDeadLoop ();
+  } else if ((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_ASSERT_RESET_ENABLED) != 0) {
+    ResetDelay = PcdGet32 (PcdAssertResetTimeoutValue);
+    if (ResetDelay > 0) {
+      AsciiSPrint (Buffer, sizeof (Buffer), "\nResetting the system in %u seconds.\n", ResetDelay);
+      BaseDebugHafniumPrint (Buffer);
+      MicroSecondDelay (ResetDelay * 1000000);
+    }
   }
+
+  ResetCold ();
 }
 
 /**

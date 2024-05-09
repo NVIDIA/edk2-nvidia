@@ -1,9 +1,5 @@
-## @file
-#  Base Debug library instance based on Hafnium VM API.
-#  It is based on the original, serial enabled, DebugLib.
-#
-#  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 #  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -24,6 +20,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   ArmPkg/ArmPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
@@ -34,6 +31,7 @@
   BaseLib
   DebugPrintErrorLevelLib
   ArmSvcLib
+  ResetSystemLib
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdDebugClearMemoryValue  ## SOMETIMES_CONSUMES
@@ -41,3 +39,4 @@
   gEfiMdePkgTokenSpaceGuid.PcdFixedDebugPrintErrorLevel ## CONSUMES
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
+  gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue      ## SOMETIMES_CONSUMES
