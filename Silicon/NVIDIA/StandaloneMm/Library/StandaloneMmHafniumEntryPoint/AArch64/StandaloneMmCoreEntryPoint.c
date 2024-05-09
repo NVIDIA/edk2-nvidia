@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -55,8 +55,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define STMM_GET_ERST_UNCACHED_BUFFER  0xC0270002
 #define STMM_GET_ERST_CACHED_BUFFER    0xC0270003
 #define STMM_SATMC_EVENT               0xC0270005
-#define RASFW_VMID                     0x8003
-#define SATMC_VMID                     0x8001
 
 #define TH500_ERST_SW_IO_6_GIC_ID_SOCKET0  230
 

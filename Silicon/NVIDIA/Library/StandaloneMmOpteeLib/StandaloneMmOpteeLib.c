@@ -743,6 +743,55 @@ ExitGetPartitionData:
 }
 
 /**
+ * Get the Shared Memory Mailbox size/address of a given SP.
+ *
+ * @param[in]  SpId           SP Id used in FF-A messages.
+ * @param[out] MboxStartAddr  Mailbox start address.
+ * @param[out] MboxSize       Mailbox size.
+
+ * @retval    EFI_SUCCESS      Found the Address/size of the Maibox for the SP.
+ *            EFI_UNSUPPORTED  SP Id isn't known or the Hob having these
+ *                             addresses isn't found.
+ **/
+EFIAPI
+EFI_STATUS
+GetMboxAddrSize (
+  UINT16  SpId,
+  UINT64  *MboxStartAddr,
+  UINT32  *MboxSize
+  )
+{
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+  EFI_STATUS         Status;
+
+  Status  = EFI_UNSUPPORTED;
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    goto GetMboxAddrSize,
+    "Failed to find Buffers GUID HOB"
+    );
+
+  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+  if (SpId == RASFW_VMID) {
+    *MboxStartAddr = StmmCommBuffers->RasMmBufferAddr;
+    *MboxSize      = StmmCommBuffers->RasMmBufferSize;
+    Status         = EFI_SUCCESS;
+  } else if (SpId == SATMC_VMID) {
+    *MboxStartAddr = StmmCommBuffers->SatMcMmBufferAddr;
+    *MboxSize      = StmmCommBuffers->SatMcMmBufferSize;
+    Status         = EFI_SUCCESS;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported VM %u\n", __FUNCTION__, SpId));
+    goto GetMboxAddrSize;
+  }
+
+GetMboxAddrSize:
+  return Status;
+}
+
+/**
  * Check if a Buffer address is in the Mailbox of a given SP.
  *
  * @param[in] Buf   Buffer Address to check.
@@ -758,34 +807,24 @@ IsBufInSecSpMbox (
   UINT16  SpId
   )
 {
-  BOOLEAN            IsBufInSpRange;
-  EFI_HOB_GUID_TYPE  *GuidHob;
-  STMM_COMM_BUFFERS  *StmmCommBuffers;
-  UINT64             SecBufStart;
-  UINT32             SecBufRange;
-  UINT64             SecBufEnd;
+  BOOLEAN     IsBufInSpRange;
+  UINT64      SecBufStart;
+  UINT32      SecBufRange;
+  UINT64      SecBufEnd;
+  EFI_STATUS  Status;
 
   IsBufInSpRange = FALSE;
 
-  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  Status = GetMboxAddrSize (SpId, &SecBufStart, &SecBufRange);
   NV_ASSERT_RETURN (
-    GuidHob != NULL,
+    !EFI_ERROR (Status),
     goto ExitIsBufInSecSpMbox,
-    "Failed to find Buffers GUID HOB"
+    "%a: Failed to find Buffers for SP %u %r",
+    __FUNCTION__,
+    SpId,
+    Status
     );
-
-  StmmCommBuffers = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
-  if (SpId == RASFW_VMID) {
-    SecBufStart = StmmCommBuffers->RasMmBufferAddr;
-    SecBufRange = StmmCommBuffers->RasMmBufferSize;
-    SecBufEnd   = SecBufStart + SecBufRange;
-  } else if (SpId == SATMC_VMID) {
-    SecBufStart = StmmCommBuffers->SatMcMmBufferAddr;
-    SecBufRange = StmmCommBuffers->SatMcMmBufferSize;
-    SecBufEnd   = SecBufStart + SecBufRange;
-  } else {
-    goto ExitIsBufInSecSpMbox;
-  }
+  SecBufEnd = SecBufStart + SecBufRange;
 
   if (ADDRESS_IN_RANGE (Buf, SecBufStart, SecBufEnd)) {
     IsBufInSpRange = TRUE;

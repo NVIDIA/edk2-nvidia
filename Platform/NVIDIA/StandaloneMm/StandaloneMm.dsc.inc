@@ -30,6 +30,7 @@
   ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
   PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
   PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
+  ResetSystemLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumResetLib/StandaloneMmHafniumResetLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 

@@ -15,15 +15,18 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/QspiController.h>
 #include <Protocol/SequentialRecord.h>
 
-#define DEVICE_REGION_NAME_MAX_LEN  32
-#define MAX_DEVICE_REGIONS          10
-#define OPTEE_OS_UID0               0x384fb3e0
-#define OPTEE_OS_UID1               0xe7f811e3
-#define OPTEE_OS_UID2               0xaf630002
-#define OPTEE_OS_UID3               0xa5d5c51b
-#define VERSION_STR_MAX             0x100
-#define RASFW_VMID                  0x8003
-#define SATMC_VMID                  0x8001
+#define DEVICE_REGION_NAME_MAX_LEN      32
+#define MAX_DEVICE_REGIONS              10
+#define OPTEE_OS_UID0                   0x384fb3e0
+#define OPTEE_OS_UID1                   0xe7f811e3
+#define OPTEE_OS_UID2                   0xaf630002
+#define OPTEE_OS_UID3                   0xa5d5c51b
+#define VERSION_STR_MAX                 0x100
+#define RASFW_VMID                      0x8003
+#define STMM_VMID                       0x8002
+#define SATMC_VMID                      0x8001
+#define RAS_FW_MM_RESET_REQ             0xC0270006
+#define ARM_SVC_ID_FFA_SUCCESS_AARCH64  0xC4000061
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
@@ -239,6 +242,25 @@ IsBufInSecSpMbox (
   );
 
 /**
+ * Get the Shared Memory Mailbox size/address of a given SP.
+ *
+ * @param[in]  SpId           SP Id used in FF-A messages.
+ * @param[out] MboxStartAddr  Mailbox start address.
+ * @param[out] MboxSize       Mailbox size.
+
+ * @retval    EFI_SUCCESS      Found the Address/size of the Maibox for the SP.
+ *            EFI_UNSUPPORTED  SP Id isn't known or the Hob having these
+ *                             addresses isn't found.
+ **/
+EFIAPI
+EFI_STATUS
+GetMboxAddrSize (
+  UINT16  SpId,
+  UINT64  *MboxStartAddr,
+  UINT32  *MboxSize
+  );
+
+/**
  * Check if system is T234
  *
  * @retval    TRUE    System is T234
@@ -336,5 +358,19 @@ struct _NVIDIA_VAR_INT_PROTOCOL {
   UINT8                          *CurMeasurement;
   UINT32                         MeasurementSize;
 };
+
+/*
+ * Send an FF-A msg to RASFW to do an L2 Reset. Only supported on Hafnium
+ * deployments.
+ *
+ * @retval EFI_SUCCESS   Succesfully reset (odds are you won't process this).
+ *         Other         RASFW wasn't able to process the message.
+ *
+ **/
+EFI_STATUS
+EFIAPI
+MmCommSendResetReq (
+  VOID
+  );
 
 #endif //STANDALONEMM_OPTEE_DEVICE_MEM_H
