@@ -681,10 +681,10 @@ GetDeviceTreeRegisters (
 
   @param  [in]      NodeOffset         - Node offset of the device
   @param  [out]     InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
-  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
+  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required entries.
 
   @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required registers
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required entries
   @retval EFI_INVALID_PARAMETER - NumberOfInterrupts pointer is NULL
   @retval EFI_INVALID_PARAMETER - InterruptArray is NULL when *NumberOfInterrupts is not 0
   @retval EFI_NOT_FOUND         - No interrupts

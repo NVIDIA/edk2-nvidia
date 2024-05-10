@@ -10,7 +10,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/FdtLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -415,15 +415,50 @@ GetInterruptParentOffset (
   }
 }
 
+STATIC
+EFI_STATUS
+ParseInterruptCells (
+  IN CONST UINT32                        *IntProperty,
+  IN UINT32                              InterruptCells,
+  OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptData
+  )
+{
+  UINT32  CellIndex;
+
+  DEBUG ((DEBUG_VERBOSE, "%a: IntProperty = 0x%p, InterruptCells = %u, InterruptData = 0x%p\n", __FUNCTION__, IntProperty, InterruptCells, InterruptData));
+  NV_ASSERT_RETURN (InterruptCells <= 3, return EFI_UNSUPPORTED, "%a: Don't know how to parse interrupts that have more than 3 cells\n", __FUNCTION__);
+  NV_ASSERT_RETURN (IntProperty != NULL, return EFI_INVALID_PARAMETER, "%a: IntProperty was NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN (InterruptData != NULL, return EFI_INVALID_PARAMETER, "%a: InterruptData was NULL\n", __FUNCTION__);
+
+  CellIndex = 0;
+  if (InterruptCells > 2) {
+    InterruptData->Type = Fdt32ToCpu (IntProperty[CellIndex++]);
+    DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Type = %d\n", __FUNCTION__, CellIndex, InterruptData->Type));
+  }
+
+  if (InterruptCells > 0) {
+    InterruptData->Interrupt = Fdt32ToCpu (IntProperty[CellIndex++]);
+    DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Interrupt = %u\n", __FUNCTION__, CellIndex, InterruptData->Interrupt));
+  }
+
+  if (InterruptCells > 1) {
+    InterruptData->Flag = Fdt32ToCpu (IntProperty[CellIndex++]);
+    DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Flag = %d\n", __FUNCTION__, CellIndex, InterruptData->Flag));
+  }
+
+  NV_ASSERT_RETURN (CellIndex == InterruptCells, return EFI_DEVICE_ERROR, "%a: Code bug parsing %u InterruptCells\n", __FUNCTION__, InterruptCells);
+  return EFI_SUCCESS;
+}
+
 /**
   Returns information about the interrupts of a given device tree node
 
   @param  [in]      NodeOffset         - Node offset of the device
   @param  [out]     InterruptArray     - Buffer of size NumberOfInterrupts that will contain the list of interrupt information
-  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required registers.
+  @param  [in, out] NumberOfInterrupts - On input contains size of InterruptArray, on output number of required entries.
 
   @retval EFI_SUCCESS           - Operation successful
-  @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required registers
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfInterrupts is less than required entries
   @retval EFI_INVALID_PARAMETER - NumberOfInterrupts pointer is NULL
   @retval EFI_INVALID_PARAMETER - InterruptArray is NULL when *NumberOfInterrupts is not 0
   @retval EFI_NOT_FOUND         - No interrupts
@@ -440,7 +475,7 @@ DeviceTreeGetInterrupts (
 {
   EFI_STATUS    Status;
   VOID          *DeviceTree;
-  UINT64        InterruptCells;
+  UINT32        InterruptCells;
   CONST UINT32  *IntProperty;
   CONST VOID    *IntNames;
   UINT32        PropertySize;
@@ -477,7 +512,7 @@ DeviceTreeGetInterrupts (
         return Status;
       }
 
-      Status = DeviceTreeGetNodePropertyValue64 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
         return Status;
@@ -489,7 +524,7 @@ DeviceTreeGetInterrupts (
         return EFI_DEVICE_ERROR;
       }
 
-      DEBUG ((DEBUG_VERBOSE, "%a: Parent has %llu interrupt cells\n", __FUNCTION__, InterruptCells));
+      DEBUG ((DEBUG_VERBOSE, "%a: Parent has %u interrupt cells\n", __FUNCTION__, InterruptCells));
       ASSERT (CellIndex + InterruptCells <= NumCells);
       IntPropertyEntries++;
       CellIndex += InterruptCells;
@@ -509,7 +544,7 @@ DeviceTreeGetInterrupts (
     Status   = GetInterruptParentOffset (DeviceTree, NodeOffset, &ParentNodeOffset);
 
     if (!EFI_ERROR (Status)) {
-      Status = DeviceTreeGetNodePropertyValue64 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
         return Status;
@@ -547,7 +582,7 @@ DeviceTreeGetInterrupts (
         return Status;
       }
 
-      Status = DeviceTreeGetNodePropertyValue64 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
+      Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
         return Status;
@@ -565,16 +600,11 @@ DeviceTreeGetInterrupts (
       InterruptArray[IntIndex].ControllerCompatible = NULL;
     }
 
-    if (InterruptCells >= 3) {
-      DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Type = %u\n", __FUNCTION__, CellIndex, Fdt32ToCpu (IntProperty[CellIndex])));
-      InterruptArray[IntIndex].Type = Fdt32ToCpu (IntProperty[CellIndex++]);
-    }
-
-    DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Interrupt = %u\n", __FUNCTION__, CellIndex, Fdt32ToCpu (IntProperty[CellIndex])));
-    InterruptArray[IntIndex].Interrupt = Fdt32ToCpu (IntProperty[CellIndex++]);
-    if (InterruptCells >= 2) {
-      DEBUG ((DEBUG_INFO, "%a: IntProperty[%u] - Flag = %u\n", __FUNCTION__, CellIndex, Fdt32ToCpu (IntProperty[CellIndex])));
-      InterruptArray[IntIndex].Flag = Fdt32ToCpu (IntProperty[CellIndex++]);
+    Status     = ParseInterruptCells (&IntProperty[CellIndex], InterruptCells, &InterruptArray[IntIndex]);
+    CellIndex += InterruptCells;
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to parse %u Interrupt Cells for interrupt index %u\n", __FUNCTION__, Status, InterruptCells, IntIndex));
+      return Status;
     }
 
     if (NameOffset < NameSize) {
