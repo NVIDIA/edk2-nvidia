@@ -623,6 +623,236 @@ DeviceTreeGetInterrupts (
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+ParseAddressCells (
+  IN CONST UINT32           *Property,
+  IN UINT32                 NumCells,
+  OUT EFI_PHYSICAL_ADDRESS  *AddrHigh,
+  OUT EFI_PHYSICAL_ADDRESS  *AddrLow
+  )
+{
+  UINT32  CellOffset;
+
+  DEBUG ((DEBUG_VERBOSE, "%a: Property = 0x%p, NumCells = %u, AddrHigh = 0x%p, AddrLow = 0x%p\n", __FUNCTION__, Property, NumCells, AddrHigh, AddrLow));
+  NV_ASSERT_RETURN ((Property != NULL) || (NumCells == 0), return EFI_INVALID_PARAMETER, "%a: Property is NULL when NumCells is %u\n", __FUNCTION__, NumCells);
+  NV_ASSERT_RETURN ((AddrHigh != NULL) || (NumCells <= 2), return EFI_INVALID_PARAMETER, "%a: NumCells (%u) > 2 but AddrHigh is NULL\n", __FUNCTION__, NumCells);
+  NV_ASSERT_RETURN ((AddrLow != NULL) || (NumCells == 0), return EFI_INVALID_PARAMETER, "%a: NumCells is %u but AddrLow is NULL\n", __FUNCTION__, NumCells);
+
+  if (AddrHigh != NULL) {
+    *AddrHigh = 0;
+  }
+
+  if (AddrLow != NULL) {
+    *AddrLow = 0;
+  }
+
+  CellOffset = 0;
+  switch (NumCells) {
+    default:
+      NV_ASSERT_RETURN (NumCells <= 4, return EFI_UNSUPPORTED, "%a: NumCells more than 4 aren't currently supported, but found %u\n", __FUNCTION__, NumCells);
+      break;
+
+    case 4:
+      *AddrHigh |= (((UINT64)Fdt32ToCpu (Property[CellOffset])) << 32);
+      CellOffset++;
+    case 3:
+      *AddrHigh |= Fdt32ToCpu (Property[CellOffset]);
+      CellOffset++;
+    case 2:
+      *AddrLow |= (((UINT64)Fdt32ToCpu (Property[CellOffset])) << 32);
+      CellOffset++;
+    case 1:
+      *AddrLow |= Fdt32ToCpu (Property[CellOffset]);
+      CellOffset++;
+    case 0:
+      break;
+  }
+
+  return EFI_SUCCESS;
+}
+
+#define PARENT_PHANDLE_CELLS  1
+
+/**
+  Returns information about the interrupt map of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     InterruptMapArray  - Buffer of size NumberOfMaps that will contain the list of interrupt map information
+  @param  [in, out] NumberOfMaps       - On input contains size of InterruptMapArray, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfMaps is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfMaps pointer is NULL
+  @retval EFI_INVALID_PARAMETER - InterruptMapArray is NULL when *NumberOfMaps is not 0
+  @retval EFI_NOT_FOUND         - No interrupt maps
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetInterruptMap (
+  IN INT32                                   NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA  *InterruptMapArray OPTIONAL,
+  IN OUT UINT32                              *NumberOfMaps
+  )
+{
+  EFI_STATUS    Status;
+  VOID          *DeviceTree;
+  CONST UINT32  *MapProperty;
+  UINT32        PropertySize;
+  UINT32        MapIndex;
+  UINT32        CellIndex;
+  UINT32        NumCells;
+  INT32         ParentNodeOffset;
+  INT32         ParentPhandle;
+  UINT32        ChildAddressCells;
+  UINT32        ChildInterruptCells;
+  UINT32        ParentAddressCells;
+  UINT32        ParentInterruptCells;
+  UINT32        EntryCells;
+  INT32         ChildAddressOffset;
+  INT32         ChildInterruptOffset;
+  INT32         ParentPhandleOffset;
+  INT32         ParentAddressOffset;
+  INT32         ParentInterruptOffset;
+  BOOLEAN       TryZeroAddressCells;
+
+  NV_ASSERT_RETURN (NumberOfMaps != NULL, return EFI_INVALID_PARAMETER, "%a: NumberOfMaps is not allowed to be NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN ((InterruptMapArray != NULL) || (*NumberOfMaps == 0), return EFI_INVALID_PARAMETER, "%a: InterruptMapArray can only be NULL if NumberOfMaps is zero\n", __FUNCTION__);
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DeviceTreePointer\n", __FUNCTION__, Status));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "interrupt-map", (CONST VOID **)&MapProperty, &PropertySize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get interrupt-map property of NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  NumCells = PropertySize/sizeof (UINT32);
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "#address-cells", &ChildAddressCells);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get #address-cells for NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  ChildAddressOffset = 0;
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "#interrupt-cells", &ChildInterruptCells);
+  if (Status == EFI_NOT_FOUND) {
+    DEBUG ((DEBUG_ERROR, "%a: Didn't find #interrupt-cells in the node containing #interrupt-cells, which is a DTB bug. Assuming a default of 1\n", __FUNCTION__));
+    ChildInterruptCells = 1;
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get #interrupt-cells for NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  ChildInterruptOffset = ChildAddressOffset + ChildAddressCells;
+  ParentPhandleOffset  = ChildInterruptOffset + ChildInterruptCells;
+  DEBUG ((DEBUG_VERBOSE, "%a: ChildAddressCells = %u, ChildInterruptCells = %u, ChildInterruptOffset = %d, ParentPhandleOffset = %d\n", __FUNCTION__, ChildAddressCells, ChildInterruptCells, ChildInterruptOffset, ParentPhandleOffset));
+
+  // Loop through each entry, parsing it
+  TryZeroAddressCells = FALSE;
+ParseInterruptMapEntries:
+  if (TryZeroAddressCells) {
+    DEBUG ((DEBUG_ERROR, "%a: DTB might have missing required #address-cells field. Trying to work around it by using zero for the value\n", __FUNCTION__));
+  }
+
+  for (MapIndex = 0, CellIndex = 0; CellIndex < NumCells; MapIndex++, CellIndex += EntryCells) {
+    DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, CellIndex = %u, NumCells = %u, TryZeroAddressCells = %a\n", __FUNCTION__, MapIndex, CellIndex, NumCells, TryZeroAddressCells ? "true" : "false"));
+    NV_ASSERT_RETURN (CellIndex + ParentPhandleOffset < NumCells, return EFI_DEVICE_ERROR, "%a: Cell parsing bug - parent phandle offset exceeds map property size for Node Offset 0x%x, MapIndex %u\n", __FUNCTION__, NodeOffset, MapIndex);
+    ParentPhandle = Fdt32ToCpu (MapProperty[CellIndex + ParentPhandleOffset]);
+    Status        = DeviceTreeGetNodeByPHandle (ParentPhandle, &ParentNodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get node offset of phandle 0x%x\n", __FUNCTION__, Status, ParentPhandle));
+      break;
+    }
+
+    Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#address-cells", &ParentAddressCells);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get #address-cells for NodeOffset 0x%x\n", __FUNCTION__, Status, ParentNodeOffset));
+      break;
+    }
+
+    if ((ParentAddressCells == DEFAULT_ADDRESS_CELLS_VALUE) && TryZeroAddressCells) {
+      ParentAddressCells = 0;
+    }
+
+    Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &ParentInterruptCells);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get #interrupt-cells for (Interrupt Parent) NodeOffset 0x%x\n", __FUNCTION__, Status, ParentNodeOffset));
+      break;
+    }
+
+    ParentAddressOffset   = ParentPhandleOffset + PARENT_PHANDLE_CELLS;
+    ParentInterruptOffset = ParentAddressOffset + ParentAddressCells;
+    EntryCells            = ParentInterruptOffset + ParentInterruptCells;
+    DEBUG ((DEBUG_VERBOSE, "%a: ParentAddressOffset = %d, ParentInterruptOffset = %d, EntryCells = %u\n", __FUNCTION__, ParentAddressOffset, ParentInterruptOffset, EntryCells));
+
+    // Sanity check the number of cells
+    if ((CellIndex + EntryCells > NumCells) &&
+        (!TryZeroAddressCells))
+    {
+      TryZeroAddressCells = TRUE;
+      goto ParseInterruptMapEntries;
+    }
+
+    NV_ASSERT_RETURN (CellIndex + EntryCells <= NumCells, return EFI_DEVICE_ERROR, "%a: Cell size bug in parsing interrupt-map of node offset 0x%x\n", __FUNCTION__, NodeOffset);
+
+    if (MapIndex < *NumberOfMaps) {
+      NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA  *Map = &InterruptMapArray[MapIndex];
+      DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, *NumberOfMaps = %u\n", __FUNCTION__, MapIndex, *NumberOfMaps));
+
+      Status = ParseAddressCells (&MapProperty[CellIndex + ChildAddressOffset], ChildAddressCells, &Map->ChildAddressHigh, &Map->ChildAddressLow);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ChildAddressCells\n", __FUNCTION__, ChildAddressCells));
+        break;
+      }
+
+      Status = ParseInterruptCells (&MapProperty[CellIndex + ChildInterruptOffset], ChildInterruptCells, &Map->ChildInterrupt);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ChildInterruptCells\n", __FUNCTION__, ChildInterruptCells));
+        break;
+      }
+
+      Map->InterruptParentPhandle = ParentPhandle;
+
+      Status = ParseAddressCells (&MapProperty[CellIndex + ParentAddressOffset], ParentAddressCells, &Map->ParentAddressHigh, &Map->ParentAddressLow);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ParentAddressCells\n", __FUNCTION__, ParentAddressCells));
+        break;
+      }
+
+      Status = ParseInterruptCells (&MapProperty[CellIndex + ParentInterruptOffset], ParentInterruptCells, &Map->ParentInterrupt);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ParentInterruptCells\n", __FUNCTION__, ParentInterruptCells));
+        break;
+      }
+    }
+  }
+
+  // Older DTB had a bug where if parent address cells was missing it was treated as zero rather than the default value, so try that to see if it fixes the error
+  if (EFI_ERROR (Status) && !TryZeroAddressCells) {
+    TryZeroAddressCells = TRUE;
+    goto ParseInterruptMapEntries;
+  }
+
+  if (*NumberOfMaps < MapIndex) {
+    Status = EFI_BUFFER_TOO_SMALL;
+  } else {
+    Status = EFI_SUCCESS;
+  }
+
+  *NumberOfMaps = MapIndex;
+  return Status;
+}
+
 STATIC CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  ICacheFieldStrings = {
   "i-cache-size",
   "i-cache-sets",

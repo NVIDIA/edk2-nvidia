@@ -54,6 +54,16 @@ typedef struct {
   CONST CHAR8                          *ControllerCompatible;
 } NVIDIA_DEVICE_TREE_INTERRUPT_DATA;
 
+typedef struct {
+  EFI_PHYSICAL_ADDRESS                 ChildAddressLow;
+  EFI_PHYSICAL_ADDRESS                 ChildAddressHigh;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA    ChildInterrupt;
+  INT32                                InterruptParentPhandle;
+  EFI_PHYSICAL_ADDRESS                 ParentAddressLow;
+  EFI_PHYSICAL_ADDRESS                 ParentAddressHigh;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA    ParentInterrupt;
+} NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA;
+
 typedef enum {
   CACHE_TYPE_UNIFIED = 0, // MPAM wants Type to be 0 for L3 caches
   CACHE_TYPE_ICACHE,
@@ -697,6 +707,30 @@ DeviceTreeGetInterrupts (
   IN INT32                               NodeOffset,
   OUT NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptArray OPTIONAL,
   IN OUT UINT32                          *NumberOfInterrupts
+  );
+
+/**
+  Returns information about the interrupt map of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     InterruptMapArray  - Buffer of size NumberOfMaps that will contain the list of interrupt map information
+  @param  [in, out] NumberOfMaps       - On input contains size of InterruptMapArray, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfMaps is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfMaps pointer is NULL
+  @retval EFI_INVALID_PARAMETER - InterruptMapArray is NULL when *NumberOfMaps is not 0
+  @retval EFI_NOT_FOUND         - No interrupt maps
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetInterruptMap (
+  IN INT32                                   NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA  *InterruptMapArray OPTIONAL,
+  IN OUT UINT32                              *NumberOfMaps
   );
 
 #ifndef DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
