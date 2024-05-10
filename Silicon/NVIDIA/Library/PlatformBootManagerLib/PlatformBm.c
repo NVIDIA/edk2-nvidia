@@ -1109,11 +1109,10 @@ DisplaySystemAndHotkeyInformation (
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
   CHAR16                         Buffer[150];
-  UINTN                          CharCount;
+  UINTN                          ScreenWidthChars;
   UINTN                          PosX;
   UINTN                          PosY;
   UINTN                          StartLineX = EFI_GLYPH_WIDTH+2;
-  UINTN                          StartLineY = EFI_GLYPH_HEIGHT+1;
   UINTN                          LineDeltaY = EFI_GLYPH_HEIGHT+1;
 
   //
@@ -1132,14 +1131,19 @@ DisplaySystemAndHotkeyInformation (
   //
   // firmware version.
   //
-  CharCount = UnicodeSPrint (
-                Buffer,
-                sizeof (Buffer),
-                L"%s System firmware version %s date %s\n\r",
-                (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-                (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
-                );
+  UnicodeSPrint (
+    Buffer,
+    sizeof (Buffer),
+    L"%s System firmware version %s date %s\n\r",
+    (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
+    (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
+    (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
+    );
+
+  //
+  // Serial console only.
+  //
+  Print (Buffer);
 
   //
   // Check and see if GOP is available.
@@ -1149,24 +1153,70 @@ DisplaySystemAndHotkeyInformation (
                   &gEfiGraphicsOutputProtocolGuid,
                   (VOID **)&GraphicsOutput
                   );
+
   if (!EFI_ERROR (Status)) {
     //
-    // Find the center position on screen.
+    // Determine the character width of the screen.  We cannot write more
+    // characters than this.
     //
-    PosX = (GraphicsOutput->Mode->Info->HorizontalResolution -
-            StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
+    ScreenWidthChars = GraphicsOutput->Mode->Info->HorizontalResolution / EFI_GLYPH_WIDTH;
+
+    //
+    // Don't assume our buffer is larger than the screen
+    //
+    ScreenWidthChars = MIN (ScreenWidthChars, sizeof (Buffer) / sizeof (CHAR16) - 1);
+
+    //
+    // Print the system name, version, and date on three separate lines to
+    // avoid running out of space on small screens.
+    //
+    // We'll start from the top and center it up.
+    //
+
+    // System name
     PosY = 0;
-
+    UnicodeSPrint (
+      Buffer,
+      sizeof (Buffer),
+      L"%s System firmware",
+      (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName)
+      );
+    Buffer[ScreenWidthChars] = '\0';
+    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
+                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
     PrintXY (PosX, PosY, NULL, NULL, Buffer);
-    PrintXY (StartLineX, StartLineY+LineDeltaY*0, &White, &Black, L"ESC   to enter Setup.                              ");
-    PrintXY (StartLineX, StartLineY+LineDeltaY*1, &White, &Black, L"F11   to enter Boot Manager Menu.");
-    PrintXY (StartLineX, StartLineY+LineDeltaY*2, &White, &Black, L"Enter to continue boot.");
-  }
 
-  //
-  // Serial console only.
-  //
-  Print (Buffer);
+    // Version
+    PosY += LineDeltaY;
+    UnicodeSPrint (
+      Buffer,
+      sizeof (Buffer),
+      L"version %s",
+      (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString)
+      );
+    Buffer[ScreenWidthChars] = '\0';
+    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
+                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
+    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+
+    // Date
+    PosY += LineDeltaY;
+    UnicodeSPrint (
+      Buffer,
+      sizeof (Buffer),
+      L"date %s",
+      (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
+      );
+    Buffer[ScreenWidthChars] = '\0';
+    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
+                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
+    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+
+    PosY += LineDeltaY;
+    PrintXY (StartLineX, PosY+LineDeltaY*0, &White, &Black, L"ESC   to enter Setup.");
+    PrintXY (StartLineX, PosY+LineDeltaY*1, &White, &Black, L"F11   to enter Boot Manager Menu.");
+    PrintXY (StartLineX, PosY+LineDeltaY*2, &White, &Black, L"Enter to continue boot.");
+  }
 
   //
   // If Timeout is 0, next message comes in same line as previous message.
