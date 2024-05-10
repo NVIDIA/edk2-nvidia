@@ -860,6 +860,21 @@ DeviceTreeGetNodePropertyValue64 (
   }
 
   Status = DeviceTreeGetNodeProperty (NodeOffset, Property, &PropertyData, &PropertySize);
+  if (Status == EFI_NOT_FOUND) {
+    // DTB Spec says to use defaults if not present for these properties
+    if (AsciiStrCmp (Property, "#address-cells") == 0) {
+      *PropertyValue = DEFAULT_ADDRESS_CELLS_VALUE;
+      DEBUG ((DEBUG_ERROR, "%a: NodeOffset 0x%x doesn't have #address-cells, so defaulting to %lu\n", __FUNCTION__, NodeOffset, *PropertyValue));
+      Status = EFI_SUCCESS;
+    } else if (AsciiStrCmp (Property, "#size-cells") == 0) {
+      *PropertyValue = DEFAULT_SIZE_CELLS_VALUE;
+      DEBUG ((DEBUG_ERROR, "%a: NodeOffset 0x%x doesn't have #size-cells, so defaulting to %lu\n", __FUNCTION__, NodeOffset, *PropertyValue));
+      Status = EFI_SUCCESS;
+    }
+
+    return Status;
+  }
+
   if (!EFI_ERROR (Status)) {
     if (PropertySize == sizeof (UINT32)) {
       *PropertyValue = Fdt32ToCpu (ReadUnaligned32 ((UINT32 *)PropertyData));

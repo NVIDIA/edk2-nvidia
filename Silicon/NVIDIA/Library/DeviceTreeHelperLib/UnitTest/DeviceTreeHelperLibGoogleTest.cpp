@@ -14,6 +14,7 @@ extern "C" {
   #include <Uefi.h>
   #include <Library/DeviceTreeHelperLib.h>
   #include <Library/PlatformResourceLib.h>
+  #include "../DeviceTreeHelperLibPrivate.h"
 }
 
 using namespace testing;
@@ -2089,42 +2090,47 @@ DeviceRegisters::GenericMemoryTest (
     }
 
     if (!EFI_ERROR (Status)) {
-      for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
-        unsigned int  AddressOffset = Index * (AddressCells + SizeCells);
-        unsigned int  SizeOffset    = Index * (AddressCells + SizeCells) + AddressCells;
-        if (Address64BBit) {
-          ExpectedAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressOffset]);
-        } else {
-          ExpectedAddress = be32toh (RegisterProperty.ValueBigEndian[AddressOffset]);
-        }
-
-        EXPECT_EQ (ExpectedAddress, RegisterArray[Index].BaseAddress);
-        if (Size64Bit) {
-          ExpectedSize = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[SizeOffset]);
-        } else {
-          ExpectedSize = be32toh (RegisterProperty.ValueBigEndian[SizeOffset]);
-        }
-
-        EXPECT_EQ (ExpectedSize, RegisterArray[Index].Size);
-        if (Index < (unsigned int)NumberOfNames) {
-          switch (Index) {
-            case 0:
-              EXPECT_STREQ (RegisterArray[Index].Name, "reg0");
-              break;
-            case 1:
-              EXPECT_STREQ (RegisterArray[Index].Name, "reg10");
-              break;
-            case 2:
-              EXPECT_STREQ (RegisterArray[Index].Name, "reg100");
-              break;
-            case 3:
-              EXPECT_STREQ (RegisterArray[Index].Name, "reg1000");
-              break;
-            default:
-              break;
+      if (NumberOfEntries != NULL) {
+        EXPECT_EQ ((UINT32)DeviceRegisters::NumberOfEntries, *NumberOfEntries);
+      }
+      if (RegisterArray != NULL) {
+        for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
+          unsigned int  AddressOffset = Index * (AddressCells + SizeCells);
+          unsigned int  SizeOffset    = Index * (AddressCells + SizeCells) + AddressCells;
+          if (Address64BBit) {
+            ExpectedAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressOffset]);
+          } else {
+            ExpectedAddress = be32toh (RegisterProperty.ValueBigEndian[AddressOffset]);
           }
-        } else {
-          EXPECT_EQ (RegisterArray[Index].Name, nullptr);
+
+          EXPECT_EQ (ExpectedAddress, RegisterArray[Index].BaseAddress);
+          if (Size64Bit) {
+            ExpectedSize = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[SizeOffset]);
+          } else {
+            ExpectedSize = be32toh (RegisterProperty.ValueBigEndian[SizeOffset]);
+          }
+
+          EXPECT_EQ (ExpectedSize, RegisterArray[Index].Size);
+          if (Index < (unsigned int)NumberOfNames) {
+            switch (Index) {
+              case 0:
+                EXPECT_STREQ (RegisterArray[Index].Name, "reg0");
+                break;
+              case 1:
+                EXPECT_STREQ (RegisterArray[Index].Name, "reg10");
+                break;
+              case 2:
+                EXPECT_STREQ (RegisterArray[Index].Name, "reg100");
+                break;
+              case 3:
+                EXPECT_STREQ (RegisterArray[Index].Name, "reg1000");
+                break;
+              default:
+                break;
+            }
+          } else {
+            EXPECT_EQ (RegisterArray[Index].Name, nullptr);
+          }
         }
       }
     }
@@ -2221,36 +2227,53 @@ TEST_P (DeviceRegisters, GetRegisters) {
   EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
   AddressCellsProperty.ValueBigEndian = htobe32 (AddressCells);
 
-  EXPECT_CALL (
-    FdtMock,
-    FdtGetProperty (
-      Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
-      TEST_PARENT_NODE_OFFSET,
-      StrEq ("#address-cells"),
-      NotNull ()
+  // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
+  if (AddressCells == DEFAULT_ADDRESS_CELLS_VALUE) {
+    EXPECT_CALL (
+      FdtMock,
+      FdtGetProperty (
+        Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+        TEST_PARENT_NODE_OFFSET,
+        StrEq ("#address-cells"),
+        NotNull ()
+        )
       )
-    )
-    .WillOnce (
-       ReturnNull ()
-       )
-    .RetiresOnSaturation ();
-  NumberOfRegisters = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  EXPECT_CALL (
-    FdtMock,
-    FdtGetProperty (
-      Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
-      TEST_PARENT_NODE_OFFSET,
-      StrEq ("#size-cells"),
-      NotNull ()
+      .WillOnce (
+         ReturnNull ()
+         )
+      .RetiresOnSaturation ();
+    NumberOfRegisters = 0;
+    if (NumberOfEntries != 0) {
+      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+    } else {
+      EXPECT_EQ (EFI_NOT_FOUND, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+    }
+  }
+
+  // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
+  if (SizeCells == DEFAULT_SIZE_CELLS_VALUE) {
+    EXPECT_CALL (
+      FdtMock,
+      FdtGetProperty (
+        Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+        TEST_PARENT_NODE_OFFSET,
+        StrEq ("#size-cells"),
+        NotNull ()
+        )
       )
-    )
-    .WillOnce (
-       ReturnNull ()
-       )
-    .RetiresOnSaturation ();
-  NumberOfRegisters = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      .WillOnce (
+         ReturnNull ()
+         )
+      .RetiresOnSaturation ();
+    NumberOfRegisters = 0;
+    if (NumberOfEntries != 0) {
+      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+    } else {
+      EXPECT_EQ (EFI_NOT_FOUND, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+    }
+  }
 
   if (TestData != NULL) {
     free (TestData);

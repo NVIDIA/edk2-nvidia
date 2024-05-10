@@ -12,6 +12,10 @@
 
 #define GET_NODE_HIERARCHY_DEPTH_GUESS  32
 
+// DTB v0.4 spec says to use the defaults if the parameter is missing
+#define DEFAULT_ADDRESS_CELLS_VALUE  2
+#define DEFAULT_SIZE_CELLS_VALUE     1
+
 /**
   Gets the node hierarchy for a given node
 
