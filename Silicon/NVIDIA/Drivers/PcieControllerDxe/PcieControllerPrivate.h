@@ -24,24 +24,14 @@
 #define lower_32_bits(n)  ((UINT32)(n))
 
 #define PCIE_NUMBER_OF_MAPPING_SPACE  3
-#define PCIE_NUMBER_OF_INTERUPT_MAP   4
-#define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERUPT_MAP) // 2 Reference Arrays, Mappings, End of list
-#define PCIE_COMMON_REPO_OBJECTS      (3)                                                              // Config Space, Acpi Tables, end of list
-#define SPI_OFFSET                    (32U)
+#define PCIE_NUMBER_OF_INTERRUPT_MAP  4
+#define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERRUPT_MAP) // 2 Reference Arrays, Mappings, End of list
+#define PCIE_COMMON_REPO_OBJECTS      (3)                                                               // Config Space, Acpi Tables, end of list
 
 #define GPU_SENSE_MAX_COUNT  500
 #define GPU_KICK_MAX_COUNT   5
 #define GPU_SENSE_DELAY      1
 #define GPU_RESET_DELAY      30000
-
-#define PCIE_CHILD_ADDRESS_OFFSET           0
-#define PCIE_CHILD_INT_OFFSET               3
-#define PCIE_INTERRUPT_PARENT_OFFSET        4
-#define PCIE_PARENT_ADDRESS_OFFSET          5
-#define PCIE_PARENT_INTERRUPT_OFFSET        6
-#define PCIE_PARENT_INTERRUPT_SENSE_OFFSET  7
-#define PCIE_INTERRUPT_MAP_ENTRIES          8
-#define PCIE_INTERRUPT_MAP_ENTRY_SIZE       (PCIE_INTERRUPT_MAP_ENTRIES * sizeof (UINT32))
 
 #define PCIE_FW_OSC_CTRL_PCIE_NATIVE_HP      BIT(0)
 #define PCIE_FW_OSC_CTRL_SHPC_NATIVE_HP      BIT(1)
@@ -101,8 +91,8 @@ typedef struct {
   UINT32                                              AddressMapCount;
   CM_ARM_PCI_ADDRESS_MAP_INFO                         AddressMapInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
   CM_ARM_OBJ_REF                                      AddressMapRefInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
-  CM_ARM_PCI_INTERRUPT_MAP_INFO                       InterruptMapInfo[PCIE_NUMBER_OF_INTERUPT_MAP];
-  CM_ARM_OBJ_REF                                      InterruptRefInfo[PCIE_NUMBER_OF_INTERUPT_MAP];
+  CM_ARM_PCI_INTERRUPT_MAP_INFO                       InterruptMapInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
+  CM_ARM_OBJ_REF                                      InterruptRefInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
   EDKII_PLATFORM_REPOSITORY_INFO                      RepoInfo[PCIE_REPO_OBJECTS];
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a)  CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)
