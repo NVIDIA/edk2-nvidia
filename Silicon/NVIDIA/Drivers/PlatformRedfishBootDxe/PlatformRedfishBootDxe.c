@@ -131,6 +131,9 @@ RefreshBootOrderList (
   VOID                          *OptionsOpCodeHandle;
   UINTN                         OptionIndex;
 
+  BootOption      = NULL;
+  BootOptionCount = 0;
+
   if (FeaturePcdGet (PcdSingleBootSupport)) {
     return EFI_SUCCESS;
   }
@@ -143,6 +146,7 @@ RefreshBootOrderList (
   EfiBootManagerRefreshAllBootOption ();
 
   BootOption = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+  DEBUG ((REDFISH_BOOT_DEBUG_DUMP, "%a: total boot options: %u\n", __func__, BootOptionCount));
 
   if (BootOptionCount == 0) {
     return EFI_NOT_FOUND;
@@ -179,7 +183,7 @@ RefreshBootOrderList (
   OptionsOpCodeHandle = HiiAllocateOpCodeHandle ();
   ASSERT (OptionsOpCodeHandle != NULL);
 
-  for (Index = 0, OptionIndex = 0; Index < BootOptionCount; Index++) {
+  for (Index = 0, OptionIndex = 0; Index < BootOptionCount && OptionIndex < MAX_BOOT_OPTIONS; Index++) {
     //
     // Don't display hidden boot options, but retain inactive ones.
     //
