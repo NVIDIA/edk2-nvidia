@@ -477,6 +477,9 @@
 # UEFI hex version for FMP bolb library
   gNVIDIATokenSpaceGuid.PcdUefiHexVersionNumber|L""|VOID*|0x0000012C
 
+  ## The maximum number of boot options supported.
+  gNVIDIATokenSpaceGuid.PcdMaximumBootOptions|0xFF|UINT16|0x0000012D
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

@@ -2,7 +2,7 @@
   The header file of Platform Redfish boot order driver.
 
   (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,7 +25,7 @@ extern EFI_GUID  gPlatformRedfishBootFormsetGuid;
 #define LABEL_BOOT_OPTION         0x200
 #define LABEL_BOOT_OPTION_END     0x201
 #define BOOT_ORDER_LIST           0x300
-#define MAX_BOOT_OPTIONS          100
+#define MAX_BOOT_OPTIONS          FixedPcdGet16 (PcdMaximumBootOptions)
 #define BOOT_OPTION_VAR_STORE_ID  0x800
 //
 // VarOffset that will be used to create question
