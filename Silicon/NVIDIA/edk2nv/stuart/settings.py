@@ -38,7 +38,11 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         )
 
     def GetGuid(self):
-        return "fb0e2152-1441-49e0-b376-5f8593d66678"
+        ''' Get the GUID of the platform being built. '''
+        raise NotImplementedError(
+            "GetGuid() must be implemented in NVIDIASettingsManager "
+            "subclasses."
+        )
 
     #######################################
     # Edk2InvocableSettingsInterface

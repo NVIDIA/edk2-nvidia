@@ -16,6 +16,9 @@ class TegraVirtSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "TegraVirt"
 
+    def GetGuid(self):
+        return "fb0e2152-1441-49e0-b376-5f8593d66678"
+
     def GetFirmwareVolume(self):
         return "FV/FVMAIN_COMPACT.Fv"
 
