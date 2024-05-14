@@ -85,8 +85,7 @@ RcmDxeInitialize (
   PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
   PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
 
-  // Force DTB kernel cmdline on pre-silicon targets, don't use boot.img cmdline
-  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
+  if (PcdGetBool (PcdRcmUseDtbCmdline)) {
     PcdSetBoolS (PcdBootAndroidImage, TRUE);
   }
 

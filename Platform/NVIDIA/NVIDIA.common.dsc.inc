@@ -1195,6 +1195,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 [PcdsDynamicDefault.common.T234Presil]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
+  gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|TRUE
 !endif
 
 !ifdef CONFIG_SOC_GRACE

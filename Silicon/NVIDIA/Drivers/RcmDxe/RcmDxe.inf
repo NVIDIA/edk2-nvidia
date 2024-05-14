@@ -35,6 +35,7 @@
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+  gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid
