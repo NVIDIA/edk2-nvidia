@@ -2,8 +2,7 @@
 
   FwVariableLib - Firmware variable support library
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2023 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -17,6 +16,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/FwVariableLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/MmCommunication2.h>
 #include <Guid/NVIDIAMmMb1Record.h>
 #include <NVIDIAConfiguration.h>
@@ -167,6 +167,7 @@ FwVariableDeleteAll (
   EFI_GUID    CurrentGuid;
   EFI_GUID    NextGuid;
   UINTN       NameSize;
+  UINTN       ChipId;
 
   CurrentName = NULL;
   NextName    = NULL;
@@ -227,15 +228,19 @@ FwVariableDeleteAll (
     goto CleanupAndReturn;
   }
 
-  Status = EraseMb1VariablePartition ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to Erase Mb1 Var Partition %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto CleanupAndReturn;
+  ChipId = TegraGetChipID ();
+
+  if (ChipId == TH500_CHIP_ID) {
+    Status = EraseMb1VariablePartition ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to Erase Mb1 Var Partition %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto CleanupAndReturn;
+    }
   }
 
   Status = EFI_SUCCESS;
