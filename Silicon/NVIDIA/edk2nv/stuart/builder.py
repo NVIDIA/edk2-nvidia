@@ -194,8 +194,18 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         kconf.warn_assign_override = False
         kconf.warn_assign_redun = False
 
-        configs = self.settings.GetConfigFiles()
-        print(kconf.load_config(ws_dir /configs[0]))
+        configs = []
+
+        # Start with the global defconfig
+        global_defconfig = Path(
+            self.settings.GetEdk2NvidiaDir()) / "Platform" / "NVIDIA" / "NVIDIA.defconfig"
+        configs.append(str(global_defconfig))
+
+        # Add the platform's configs
+        configs += self.settings.GetConfigFiles()
+
+        # Load configs, allowing each to override previous configuration
+        print(kconf.load_config(ws_dir / configs[0]))
         for config in configs[1:]:
             # replace=False creates a merged configuration
             print(kconf.load_config(ws_dir / config, replace=False))
