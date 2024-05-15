@@ -236,10 +236,19 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             os.environ["KCONFIG_CONFIG"] = str(config_out)
             menuconfig(kconf)
 
-        # Create version of config that edk2 can consume, strip the file of "
+        # Create version of config that edk2 can consume
         with open(config_out, "r") as f, open(config_out_dsc, "w") as fo:
             for line in f:
-                fo.write(line.replace('"', "").replace("'", ""))
+                # strip the file of "
+                line = line.replace('"', "").replace("'", "")
+
+                # Skip empty variables. edk2 cannot define something as empty,
+                # so leave it as undefined.
+                if line.startswith("CONFIG_") and line.strip().endswith("="):
+                    line = "# Undefining empty: " + line
+
+                # Keep the new line
+                fo.write(line)
 
         return 0
 
