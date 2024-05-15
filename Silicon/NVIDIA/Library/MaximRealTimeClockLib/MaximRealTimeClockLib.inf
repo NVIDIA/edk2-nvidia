@@ -40,6 +40,7 @@
   gNVIDIAI2cMaxim20024
   gNVIDIAI2cVrsPseq
   gNVIDIATokenSpaceGuid
+  gNVIDIAPublicVariableGuid
   gEfiRtPropertiesTableGuid
 
 [Protocols]
