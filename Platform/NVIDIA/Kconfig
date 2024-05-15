@@ -8,6 +8,14 @@
 #
 #
 
+menu "General"
+  config LOCALNAME
+  string "String appended to platform names"
+  default ""
+  help
+    Optional string appended to platform names.
+endmenu
+
 menu "SOC Support"
   config SOC_XAVIER
   bool "Xavier"

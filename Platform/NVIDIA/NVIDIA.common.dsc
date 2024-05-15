@@ -11,7 +11,6 @@
 #
 ################################################################################
 [Defines]
-  PLATFORM_NAME               = $(BUILD_NAME)
   PLATFORM_GUID               = $(BUILD_GUID)
   FLASH_DEFINITION            = Platform/NVIDIA/NVIDIA.common.fdf
 

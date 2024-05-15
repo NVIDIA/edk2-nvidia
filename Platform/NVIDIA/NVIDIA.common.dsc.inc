@@ -7,14 +7,20 @@
 !include Platform/NVIDIA/NVIDIA.global.dsc.inc
 
 [Defines]
+
+!include config.dsc.inc
+
+!ifdef CONFIG_LOCALNAME
+  PLATFORM_NAME               = $(BUILD_NAME)$(CONFIG_LOCALNAME)
+!else
+  PLATFORM_NAME               = $(BUILD_NAME)
+!endif
   SKUID_IDENTIFIER            = ALL
   PLATFORM_VERSION            = 0.1
   DSC_SPECIFICATION           = 0x00010005
   SUPPORTED_ARCHITECTURES     = AARCH64
   BUILD_TARGETS               = DEBUG|RELEASE|NOOPT
-  OUTPUT_DIRECTORY            = Build/$(PLATFORM_NAME)
-
-!include config.dsc.inc
+  OUTPUT_DIRECTORY            = Build/$(BUILD_NAME)
 
 # Value defines are parsed even if there is a guarding ifdef, define some defaults
 !ifndef CONFIG_BOOT_DEFAULT_TIMEOUT
