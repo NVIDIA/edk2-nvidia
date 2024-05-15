@@ -323,7 +323,7 @@ GetWriteOffset (
   }
 
   if ((*Offset % This->BlockSize) == 0) {
-    DEBUG ((DEBUG_ERROR, "Erasing BLock %lu\n", *Offset));
+    DEBUG ((DEBUG_INFO, "Erasing BLock %lu\n", *Offset));
     Status = NorFlashProtocol->Erase (
                                  NorFlashProtocol,
                                  (*Offset / This->BlockSize),
@@ -1019,6 +1019,7 @@ ExitVarIntValidate:
     }
   }
 
+  ZeroMem (This->CurMeasurement, This->MeasurementSize);
   return Status;
 }
 
@@ -1069,7 +1070,7 @@ VarIntInit (
   }
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "%a: Partition Start 0x%lx %lu Size %u\n",
     __FUNCTION__,
     PartitionStartOffset,

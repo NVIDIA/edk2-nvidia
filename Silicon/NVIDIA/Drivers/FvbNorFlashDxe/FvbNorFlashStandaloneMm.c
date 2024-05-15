@@ -1045,6 +1045,8 @@ MmFvbSmmVarReady (
   @param CheckVariableStore   - TRUE if the variable data should be checked
   @param NorFlashProtocol     - Pointer to nor flash protocol
   @param FlashAttributes      - Pointer to flash attributes for the nor flash partition is on
+  @param MeasurementOffset    - Offset of the Measuremet partition
+  @param MeasurementSize      - Size of the Measurement partition
 
 **/
 EFI_STATUS
@@ -1116,7 +1118,12 @@ ValidateFvHeader (
     // then check if the partition is erased. If it is erased, then re-initialize the varstore, as it
     // could be a possible tamper.
     if (CheckVarStoreIntegrity == TRUE) {
-      if (IsMeasurementPartitionErasedOrZero (NorFlashProtocol, MeasurementOffset, MeasurementPartitionSize) == TRUE) {
+      if (IsMeasurementPartitionErasedOrZero (
+            NorFlashProtocol,
+            MeasurementOffset,
+            MeasurementPartitionSize
+            ) == TRUE)
+      {
         DEBUG ((DEBUG_ERROR, "%a: No Valid Measurements found. Re-initializing the Variable Store\n", __FUNCTION__));
         Status = EraseMeasurementPartition (MeasurementOffset, MeasurementPartitionSize);
         if (EFI_ERROR (Status)) {
@@ -1126,8 +1133,10 @@ ValidateFvHeader (
             __FUNCTION__,
             Status
             ));
-          return Status;
         }
+
+        // return EFI_NOT_FOUND to force a re-init.
+        return EFI_NOT_FOUND;
       }
     }
   }
