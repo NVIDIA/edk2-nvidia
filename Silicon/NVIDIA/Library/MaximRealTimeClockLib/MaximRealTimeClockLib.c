@@ -689,13 +689,16 @@ LibRtcInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_EVENT   Event;
-  EFI_STATUS  Status;
-  UINTN       VariableSize = sizeof (mRtcOffset);
+  EFI_EVENT                Event;
+  EFI_STATUS               Status;
+  UINTN                    VariableSize;
+  BOOLEAN                  ExposeRtRtcService;
+  EFI_RT_PROPERTIES_TABLE  *RtProperties;
 
   mVirtualRTC = PcdGetBool (PcdVirtualRTC);
 
-  Status = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
+  VariableSize = sizeof (mRtcOffset);
+  Status       = EfiGetVariable (L"RTC_OFFSET", &gNVIDIATokenSpaceGuid, NULL, &VariableSize, &mRtcOffset);
   if (EFI_ERROR (Status)) {
     if (mVirtualRTC) {
       mRtcOffset = PcdGet64 (PcdBuildEpoch);
@@ -722,19 +725,33 @@ LibRtcInitialize (
   }
 
   //
-  // Register for the virtual address change event
+  // Register for the virtual address change event unless platform tells not to
   //
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  LibRtcExitBootServicesEvent,
-                  NULL,
-                  &gEfiEventExitBootServicesGuid,
-                  &mRtcExitBootServicesEvent
-                  );
+  VariableSize       = sizeof (ExposeRtRtcService);
+  ExposeRtRtcService = TRUE;
+  Status             = EfiGetVariable (L"ExposeRtRtcService", &gNVIDIAPublicVariableGuid, NULL, &VariableSize, &ExposeRtRtcService);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
-    gBS->CloseEvent (Event);
+    DEBUG ((DEBUG_INFO, "%a: ExposeRtRtcService variable not found. Keeping service enabled.\r\n", __FUNCTION__));
+  }
+
+  if (ExposeRtRtcService) {
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    LibRtcExitBootServicesEvent,
+                    NULL,
+                    &gEfiEventExitBootServicesGuid,
+                    &mRtcExitBootServicesEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to create exit boot services event\r\n", __FUNCTION__));
+      gBS->CloseEvent (Event);
+    }
+  } else {
+    Status = EfiGetSystemConfigurationTable (&gEfiRtPropertiesTableGuid, (VOID **)&RtProperties);
+    if (!EFI_ERROR (Status)) {
+      RtProperties->RuntimeServicesSupported &= ~(EFI_RT_SUPPORTED_GET_TIME | EFI_RT_SUPPORTED_SET_TIME);
+    }
   }
 
   return EFI_SUCCESS;
