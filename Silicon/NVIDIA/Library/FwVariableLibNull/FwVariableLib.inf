@@ -1,0 +1,27 @@
+## @file
+#
+#  FwVariableLib - Firmware variable support library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = FwVariableLibNull
+  FILE_GUID                      = 1a2fdba4-93fa-4b64-bb92-2c5792a76caa
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FwVariableLib
+
+[Sources.common]
+  FwVariableLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+
