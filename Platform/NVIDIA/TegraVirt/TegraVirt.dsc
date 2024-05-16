@@ -91,7 +91,7 @@
   TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
   Tcg2PhysicalPresenceLib|Silicon/NVIDIA/Library/DxeTcg2PhysicalPresenceLibNull/DxeTcg2PhysicalPresenceLibNull.inf
   IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLib/IpmiBaseLib.inf
-  FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
+  FwVariableLib|Silicon/NVIDIA/Library/FwVariableLibNull/FwVariableLib.inf
 
   # AndroidBootDxe Libraries
   NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
