@@ -19,6 +19,7 @@
 #include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/SiblingPartitionLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
 STATIC UINT64                     mRamLoadedSize         = 0;
@@ -126,77 +127,6 @@ AndroidBootOnReadyToBootHandler (
 }
 
 /**
-  Locate sibling partition's handle
-
-  @param[in]   Handle                 Partition handle whose sibling is needed
-  @param[in]   SiblingPartitionName   Name of sibling partition
-
-**/
-STATIC
-EFI_HANDLE
-EFIAPI
-AndroidBootGetSiblingPartitionHandle (
-  IN EFI_HANDLE  Handle,
-  IN CHAR16      *SiblingPartitionName
-  )
-{
-  EFI_STATUS                   Status;
-  EFI_HANDLE                   *ParentHandles = NULL;
-  UINTN                        ParentCount;
-  UINTN                        ParentIndex;
-  EFI_HANDLE                   *ChildHandles = NULL;
-  UINTN                        ChildCount;
-  UINTN                        ChildIndex;
-  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo = NULL;
-  EFI_HANDLE                   SiblingHandle  = NULL;
-
-  Status = PARSE_HANDLE_DATABASE_PARENTS (Handle, &ParentCount, &ParentHandles);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to find parents - %r\r\n", __FUNCTION__, Status));
-    return NULL;
-  }
-
-  for (ParentIndex = 0; ParentIndex < ParentCount; ParentIndex++) {
-    Status = ParseHandleDatabaseForChildControllers (ParentHandles[ParentIndex], &ChildCount, &ChildHandles);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to find child controllers - %r\r\n", __FUNCTION__, Status));
-      goto Exit;
-    }
-
-    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
-      Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartitionInfoProtocolGuid, (VOID **)&PartitionInfo);
-      if (!EFI_ERROR (Status)) {
-        if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
-          goto Exit;
-        }
-
-        if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
-          goto Exit;
-        }
-
-        if (StrCmp (PartitionInfo->Info.Gpt.PartitionName, SiblingPartitionName) == 0) {
-          SiblingHandle = ChildHandles[ChildIndex];
-          goto Exit;
-        }
-      }
-    }
-  }
-
-Exit:
-  if (ParentHandles != NULL) {
-    FreePool (ParentHandles);
-    ParentHandles = NULL;
-  }
-
-  if (ChildHandles != NULL) {
-    FreePool (ChildHandles);
-    ChildHandles = NULL;
-  }
-
-  return SiblingHandle;
-}
-
-/**
   Uninstall all protocols for the boot option
 
   @param[in]   Private       Private driver data for android kernel instance
@@ -254,7 +184,7 @@ AndroidBootOnConnectCompleteHandler (
 
   // Check recovery mode
   if (PcdGetBool (PcdBootAndroidImage)) {
-    MscHandle = AndroidBootGetSiblingPartitionHandle (
+    MscHandle = GetSiblingPartitionHandle (
                   Private->ControllerHandle,
                   MISC_PARTITION_BASE_NAME
                   );
@@ -402,7 +332,7 @@ AndroidBootDxeLoadDtb (
     return;
   }
 
-  DtbPartitionHandle = AndroidBootGetSiblingPartitionHandle (
+  DtbPartitionHandle = GetSiblingPartitionHandle (
                          Private->ControllerHandle,
                          DtbPartitionName
                          );
@@ -1406,7 +1336,7 @@ AndroidBootDxeLoadFile (
     // Ignore vendor_boot ramdisk if vendor_boot partition not exist
     if (!EFI_ERROR (Status)) {
       // Get BlockIo/DiskIo for vendor_boot img
-      VendorBootHandle = AndroidBootGetSiblingPartitionHandle (
+      VendorBootHandle = GetSiblingPartitionHandle (
                            Private->ControllerHandle,
                            VendorBootPartitionName
                            );

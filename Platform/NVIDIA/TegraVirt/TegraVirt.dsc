@@ -105,6 +105,7 @@
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLibNull/BootChainInfoLibNull.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
+  SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
 
   # Override the ResetSystemLib used by ArmVirt with a Null implementation.
   # ArmVirtPsciResetSystemLib is not compatible with our DTB.  It expects

@@ -1,0 +1,36 @@
+## @file
+#
+# SiblingPartitionLib functions
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = SiblingPartitionLib
+  FILE_GUID                      = 4e4f353b-d79e-43de-85cc-72812eb89d27
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SiblingPartitionLib
+
+[Sources.common]
+  SiblingPartitionLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiLib
+  PrintLib
+  HandleParsingLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
