@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016-2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -103,9 +103,12 @@ SendFfaDirectReqStMm (
   if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Invalid Response 0x%x, \n",
+      "%a: Invalid Response Arg0:0x%x, Arg1:0x%x, Arg2:0x%x, Arg3:0x%x\n",
       __FUNCTION__,
-      LocalArgs.Arg0
+      LocalArgs.Arg0,
+      LocalArgs.Arg1,
+      LocalArgs.Arg2,
+      LocalArgs.Arg3
       ));
     for (Index = 0; Index < MaxRetries; Index++) {
       DEBUG ((
@@ -124,10 +127,13 @@ SendFfaDirectReqStMm (
       if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
         DEBUG ((
           DEBUG_ERROR,
-          "%a:%d Invalid Response 0x%x\n",
+          "%a:%d Invalid Response Arg0:0x%x, Arg1:0x%x, Arg2:0x%x, Arg3:0x%x\n",
           __FUNCTION__,
           __LINE__,
-          LocalArgs.Arg0
+          LocalArgs.Arg0,
+          LocalArgs.Arg1,
+          LocalArgs.Arg2,
+          LocalArgs.Arg3
           ));
         continue;
       } else {
@@ -796,6 +802,15 @@ GetNsBufferAddr (
   UINT64      NsBufferSize;
 
   Status = GetBufferAddr (STMM_GET_NS_BUFFER, &NsBufferBase, &NsBufferSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get NS Buffer Details. %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
 
   PcdSet64S (PcdMmBufferBase, NsBufferBase);
   PcdSet64S (PcdMmBufferSize, NsBufferSize);
@@ -822,6 +837,15 @@ GetErstBufferAddr (
   UINT64      ErstBufferSize;
 
   Status = GetBufferAddr (STMM_GET_ERST_UNCACHED_BUFFER, &ErstBufferBase, &ErstBufferSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Erst Buffer Details. %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
 
   PcdSet64S (PcdErstBufferBase, ErstBufferBase);
   PcdSet64S (PcdErstBufferSize, ErstBufferSize);
