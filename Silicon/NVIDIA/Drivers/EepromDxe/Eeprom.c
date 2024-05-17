@@ -21,12 +21,14 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/Crc8Lib.h>
+#include <libfdt.h>
 
 #include <Protocol/DriverBinding.h>
 #include <Protocol/I2cIo.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/Rng.h>
 #include <Protocol/KernelCmdLineUpdate.h>
+#include <Protocol/TegraI2cSlaveDeviceTreeNode.h>
 
 #define SERIAL_NUM_CMD_MAX_LEN  64
 #define EEPROM_DATA_SIZE        256
@@ -315,6 +317,11 @@ EepromDxeDriverBindingStart (
   TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
   TEGRA_EEPROM_BOARD_INFO  *IdBoardInfo;
   BOOLEAN                  SkipEepromCRC;
+  INT32                    DeviceTreePathLen;
+
+  NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL *I2cSlaveDeviceTreeNode = NULL;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL                 EepromDeviceTreeNode;
+
 
   RawData       = NULL;
   CvmBoardInfo  = NULL;
@@ -336,6 +343,36 @@ EepromDxeDriverBindingStart (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to open I2cIo Protocol\n", __FUNCTION__));
       goto ErrorExit;
+    }
+
+    EFI_HANDLE  Handle[10]; // Usually only 8 Tegra I2C buses to choose from
+    UINTN       HandleSize = sizeof(Handle);
+    Status     = gBS->LocateHandle(ByProtocol,  &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid, NULL,  &HandleSize, &Handle[0]);
+
+    if ((EFI_ERROR (Status))) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to LocateHandle for I2cSlaveDeviceTreeNode Protocol (Status: %d)\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+
+    INT32 NumHandles = HandleSize/sizeof(Handle[0]);
+    for (INT32 i = 0; i < NumHandles; i++) {
+      Status = gBS->HandleProtocol (Handle[i], &gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid, (VOID **)&I2cSlaveDeviceTreeNode);
+      if ((EFI_ERROR (Status))) {
+	DEBUG ((DEBUG_ERROR, "%a: Unable to HandleProtocol for index %d I2cSlaveDeviceTreeNode Protocol (Status: %d)\n", __FUNCTION__, i, Status));
+	return Status;
+      }
+
+      Status = I2cSlaveDeviceTreeNode->LookupNode(I2cSlaveDeviceTreeNode, I2cIo->DeviceGuid, I2cIo->DeviceIndex, &EepromDeviceTreeNode);
+      if (!(EFI_ERROR (Status))) {
+	// found
+	break;
+      }
+    }
+
+    if ((EFI_ERROR (Status))) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to LookupNode using any of the %d I2cSlaveDeviceTreeNode Protocols (device index %x, Status: %d)\n", __FUNCTION__, NumHandles, I2cIo->DeviceIndex, Status));
+      return Status;
     }
 
     // Allocate EEPROM Data
@@ -366,8 +403,8 @@ EepromDxeDriverBindingStart (
 
     FreePool (Request);
     Request = NULL;
-
-    if (0 == AsciiStrnCmp (
+    if (fdt_get_property(EepromDeviceTreeNode.DeviceTreeBase, EepromDeviceTreeNode.NodeOffset, "uefi-skip-crc", NULL) != NULL ||
+	0 == AsciiStrnCmp (
                (CHAR8 *)&RawData[CAMERA_EEPROM_PART_OFFSET],
                CAMERA_EEPROM_PART_NAME,
                AsciiStrLen (CAMERA_EEPROM_PART_NAME)
@@ -386,6 +423,14 @@ EepromDxeDriverBindingStart (
     if (IdBoardInfo == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto ErrorExit;
+    }
+
+    DeviceTreePathLen = fdt_get_path(EepromDeviceTreeNode.DeviceTreeBase, EepromDeviceTreeNode.NodeOffset, IdBoardInfo->EepromDeviceTreePath, MAX_I2C_DEVICE_DT_PATH);
+
+    if (DeviceTreePathLen != 0) {
+      DEBUG((DEBUG_ERROR, "%a: Failed to get device tree path length for I2c sub-device 0x%lx on I2c Bus 0x%lx (error: %d).\n", __FUNCTION__, I2cIo->DeviceIndex >> 16, I2cIo->DeviceIndex & 0xFFFF, DeviceTreePathLen));
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: Starting (TEGRA_PLATFORM_SILICON) Bus %x Device %x %a\r\n", __FUNCTION__,   I2cIo->DeviceIndex >> 16, I2cIo->DeviceIndex & 0xFFFF, IdBoardInfo->EepromDeviceTreePath));
     }
 
     Status = PopulateEepromData (RawData, IdBoardInfo);

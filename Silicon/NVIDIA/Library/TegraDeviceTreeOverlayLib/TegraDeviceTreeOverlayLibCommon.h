@@ -18,6 +18,7 @@ typedef struct {
   UINTN                 FuseCount;
   EEPROM_PART_NUMBER    *ProductIds;
   UINTN                 IdCount;
+  CHAR8                 **EepromDeviceTreePaths;
 } OVERLAY_BOARD_INFO;
 
 EFI_STATUS
