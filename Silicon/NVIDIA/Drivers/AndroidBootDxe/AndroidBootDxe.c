@@ -302,6 +302,29 @@ AndroidBootOnConnectCompleteHandler (
 }
 
 /**
+  CLeanup Kernel Dtb
+
+  @param[in]  KernelDtb     Pointer to kernel dtb being processed
+
+**/
+STATIC
+VOID
+EFIAPI
+AndroidBootDxeCleanKernelDtb (
+  IN VOID  *KernelDtb
+  )
+{
+  INT32  KernelDtbNodeOffset;
+
+  // Remove the /memory node.  We want to be sure the kernel gets its memory
+  // information from UEFI instead of the DTB.
+  KernelDtbNodeOffset = fdt_path_offset (KernelDtb, "/memory");
+  if (KernelDtbNodeOffset > 0) {
+    fdt_nop_node (KernelDtb, KernelDtbNodeOffset);
+  }
+}
+
+/**
   Locate and install associated device tree
 
   @param[in]   Private       Private driver data for android kernel instance
@@ -437,6 +460,8 @@ AndroidBootDxeLoadDtb (
           }
         }
       }
+
+      AndroidBootDxeCleanKernelDtb (DtbCopy);
 
       Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
       if (EFI_ERROR (Status)) {
@@ -2294,7 +2319,6 @@ AndroidBootDxeDriverEntryPoint (
   UINT64      KernelDtbStart;
   UINTN       NewKernelDtbPages;
   VOID        *NewKernelDtb = NULL;
-  INT32       MemoryNode;
 
   // Install UEFI Driver Model protocol(s).
   Status = EfiLibInstallDriverBinding (
@@ -2338,13 +2362,7 @@ AndroidBootDxeDriverEntryPoint (
       goto Done;
     }
 
-    // Remove the /memory node.  We want to be sure the kernel gets its memory
-    // information from UEFI instead of the DTB.
-    MemoryNode = fdt_path_offset (NewKernelDtb, "/memory");
-    if (MemoryNode > 0) {
-      DEBUG ((DEBUG_INFO, "%a: Deleting /memory at %x\r\n", __FUNCTION__, MemoryNode));
-      fdt_del_node (NewKernelDtb, MemoryNode);
-    }
+    AndroidBootDxeCleanKernelDtb (NewKernelDtb);
 
     DEBUG ((DEBUG_INFO, "%a: Using DTB %p\r\n", __FUNCTION__, NewKernelDtb));
 
