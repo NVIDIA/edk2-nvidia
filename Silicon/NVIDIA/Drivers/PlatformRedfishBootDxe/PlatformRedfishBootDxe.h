@@ -43,11 +43,13 @@ extern UINT8  PlatformRedfishBootVfrBin[];
 //
 // Define driver version Driver Binding Protocol
 //
-#define ADDENDUM_PROTOCOL_VERSION       0x01
-#define COMPUTER_SYSTEM_SCHEMA_VERSION  "x-UEFI-redfish-ComputerSystem.v1_17_0"
-#define REDFISH_BOOT_OBJECT_NAME        "Boot"
-#define REDFISH_BOOTORDER_OBJECT_NAME   "BootOrder"
-#define REDFISH_BOOT_DEBUG_DUMP         DEBUG_INFO
+#define ADDENDUM_PROTOCOL_VERSION      0x01
+#define CONFIGURE_LANGUAGE_PREFIX      "x-UEFI-redfish-"
+#define SCHEMA_STRING_SIZE             64
+#define CONFIG_LANGUAGE_SIZE           32
+#define REDFISH_BOOT_OBJECT_NAME       "Boot"
+#define REDFISH_BOOTORDER_OBJECT_NAME  "BootOrder"
+#define REDFISH_BOOT_DEBUG_DUMP        DEBUG_VERBOSE
 
 #pragma pack(1)
 

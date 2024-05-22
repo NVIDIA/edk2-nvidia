@@ -24,6 +24,11 @@ REDFISH_RESOURCE_SCHEMA_INFO  mSupportComputerSystemSchema[] = {
     "*",
     "ComputerSystem",
     "v1_17_0"
+  },
+  {
+    "*",
+    "ComputerSystem",
+    "v1_22_0"
   }
 };
 
@@ -71,22 +76,34 @@ UpdateConfigLanguageToValues (
   IN  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
   )
 {
-  CHAR16  ConfigLanguage[10];
+  CHAR16  ConfigLanguage[CONFIG_LANGUAGE_SIZE];
+  CHAR8   SchemaString[SCHEMA_STRING_SIZE];
+  UINTN   SchemaIndex;
+  UINTN   SchemaCount;
 
   if ((HiiHandle == NULL) || (StringId == 0) || (BootOption == NULL)) {
     return EFI_INVALID_LANGUAGE;
   }
 
+  SchemaCount = ARRAY_SIZE (mSupportComputerSystemSchema);
+  if (SchemaCount == 0) {
+    return EFI_NOT_FOUND;
+  }
+
   UnicodeSPrint (ConfigLanguage, sizeof (ConfigLanguage), L"Boot%04x", BootOption->OptionNumber);
 
-  DEBUG ((REDFISH_BOOT_DEBUG_DUMP, "%a: add config-language for string(0x%x): %s\n", __func__, StringId, ConfigLanguage));
+  for (SchemaIndex = 0; SchemaIndex < SchemaCount; SchemaIndex++) {
+    AsciiSPrint (SchemaString, sizeof (SchemaString), "%a%a.%a", CONFIGURE_LANGUAGE_PREFIX, mSupportComputerSystemSchema[SchemaIndex].Schema, mSupportComputerSystemSchema[SchemaIndex].Version);
 
-  HiiSetString (
-    HiiHandle,
-    StringId,
-    ConfigLanguage,
-    COMPUTER_SYSTEM_SCHEMA_VERSION
-    );
+    DEBUG ((REDFISH_BOOT_DEBUG_DUMP, "%a: %u) add config-language(%a) for string(0x%x): %s\n", __func__, Index, SchemaString, StringId, ConfigLanguage));
+
+    HiiSetString (
+      HiiHandle,
+      StringId,
+      ConfigLanguage,
+      SchemaString
+      );
+  }
 
   return EFI_SUCCESS;
 }
@@ -559,7 +576,7 @@ IsSupportedComputerSystemSchema (
     return FALSE;
   }
 
-  SchemaCount = sizeof (mSupportComputerSystemSchema) / sizeof (REDFISH_RESOURCE_SCHEMA_INFO);
+  SchemaCount = ARRAY_SIZE (mSupportComputerSystemSchema);
   if (SchemaCount == 0) {
     return TRUE;
   }
