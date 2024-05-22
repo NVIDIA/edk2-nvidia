@@ -330,11 +330,20 @@ menu "OS Hardware description"
   help
     Platform supports SMBIOS
 
-  config SMBIOS_ARM
-  bool "ARM SMBIOS Driver"
-  depends on SMBIOS
-  help
-    Non-DynamicTablesPkg based SMBIOS generator
+  choice SMBIOS_TYPE
+    prompt "SMBIOS generator type"
+    config SMBIOS_ARM
+    bool "ARM SMBIOS Driver"
+    depends on SMBIOS
+    help
+      Non-DynamicTablesPkg based SMBIOS generator
+
+    config SMBIOS_DYNAMICTABLESPKG
+    bool "SMBIOS Dynamic Tables Pkg Driver"
+    depends on SMBIOS
+    help
+      DynamicTablesPkg based SMBIOS generator
+  endchoice
 
   config ACPI_THERMAL_ZONE_SINGLE
   bool "Single thermal zone per package"
