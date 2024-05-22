@@ -370,6 +370,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   RedfishVersionLib|RedfishClientPkg/Library/RedfishVersionLib/RedfishVersionLib.inf
   RedfishPlatformCredentialLib|Silicon/NVIDIA/Library/RedfishPlatformCredentialLib/RedfishPlatformCredentialLib.inf
   ComputerSystemV1_17_0Lib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystem/v1_17_0/Lib.inf
+  ComputerSystemV1_22_0Lib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystem/v1_22_0/Lib.inf
   ComputerSystemCollectionLib|RedfishClientPkg/ConverterLib/edk2library/ComputerSystemCollection/Lib.inf
   BiosV1_2_0Lib|RedfishClientPkg/ConverterLib/edk2library/Bios/v1_2_0/Lib.inf
   SecureBootV1_1_0Lib|RedfishClientPkg/ConverterLib/edk2library/SecureBoot/v1_1_0/Lib.inf
@@ -2313,9 +2314,14 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
     <LibraryClasses>
       RedfishResourceIdentifyLib|Silicon/NVIDIA/Library/RedfishResourceIdentifyLibComputerSystem/v1_17_0/RedfishResourceIdentifyLibComputerSystem.inf
   }
+  RedfishClientPkg/Features/ComputerSystem/v1_22_0/Dxe/ComputerSystemDxe.inf {
+    <LibraryClasses>
+      RedfishResourceIdentifyLib|Silicon/NVIDIA/Library/RedfishResourceIdentifyLibComputerSystem/v1_22_0/RedfishResourceIdentifyLibComputerSystem.inf
+  }
   RedfishClientPkg/Features/Bios/v1_2_0/Dxe/BiosDxe.inf
   RedfishClientPkg/Features/SecureBoot/v1_1_0/Dxe/SecureBootDxe.inf
   RedfishClientPkg/Converter/ComputerSystem/v1_17_0/RedfishComputerSystem_V1_17_0_Dxe.inf
+  RedfishClientPkg/Converter/ComputerSystem/v1_22_0/RedfishComputerSystem_V1_22_0_Dxe.inf
   RedfishClientPkg/Converter/ComputerSystemCollection/RedfishComputerSystemCollection_Dxe.inf
   RedfishClientPkg/Features/BootOptionCollection/BootOptionCollectionDxe.inf
   RedfishClientPkg/Features/BootOption/v1_0_4/Dxe/BootOptionDxe.inf
