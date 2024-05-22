@@ -10,5 +10,7 @@
 
 /=#
 #langdef   x-uefi-redfish-ComputerSystem.v1_17_0 "ComputerSystem.v1_17_0"
+#langdef   x-uefi-redfish-ComputerSystem.v1_22_0 "ComputerSystem.v1_22_0"
 
 #string STR_BOOT_ORDER_LIST   #language x-uefi-redfish-ComputerSystem.v1_17_0   "/Systems/{1}/Boot/BootOrder"
+#string STR_BOOT_ORDER_LIST   #language x-uefi-redfish-ComputerSystem.v1_22_0   "/Systems/{1}/Boot/BootOrder"
