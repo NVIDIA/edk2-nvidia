@@ -178,8 +178,8 @@
 #string STR_PCIE_MAX_WIDTH_SOCKET0_PCIE7_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie7MaxPCIewidth"
 #string STR_PCIE_MAX_WIDTH_SOCKET0_PCIE8_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie8MaxPCIewidth"
 #string STR_PCIE_MAX_WIDTH_SOCKET0_PCIE9_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie9MaxPCIewidth"
-#string STR_PCIE_MAX_WIDTH_SOCKET0_PCIE0_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie0MaxPCIewidth"
 
+#string STR_PCIE_MAX_WIDTH_SOCKET1_PCIE0_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie0MaxPCIewidth"
 #string STR_PCIE_MAX_WIDTH_SOCKET1_PCIE1_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie1MaxPCIewidth"
 #string STR_PCIE_MAX_WIDTH_SOCKET1_PCIE2_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie2MaxPCIewidth"
 #string STR_PCIE_MAX_WIDTH_SOCKET1_PCIE3_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1Pcie3MaxPCIewidth"
