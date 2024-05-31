@@ -2,7 +2,7 @@
   UserAuthentication DXE password wrapper.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -231,6 +231,7 @@ IsPasswordInstalled (
 {
   EFI_STATUS  Status;
   VOID        *Buffer;
+  BOOLEAN     PasswordInstalled = TRUE;
 
   Buffer = InitCommunicateBuffer (
              NULL,
@@ -238,15 +239,19 @@ IsPasswordInstalled (
              MM_PASSWORD_FUNCTION_IS_PASSWORD_SET
              );
   if (Buffer == NULL) {
-    return FALSE;
+    PasswordInstalled = FALSE;
+    goto Done;
   }
 
   Status = SendCommunicateBuffer (Buffer, 0);
   if (EFI_ERROR (Status)) {
-    return FALSE;
+    PasswordInstalled = FALSE;
+    goto Done;
   }
 
-  return TRUE;
+Done:
+  PcdSetBoolS (PcdPasswordCleared, PasswordInstalled ? FALSE : TRUE);
+  return PasswordInstalled;
 }
 
 /**

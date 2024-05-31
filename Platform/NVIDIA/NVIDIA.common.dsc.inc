@@ -1074,6 +1074,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !else
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
 !endif
+  gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables

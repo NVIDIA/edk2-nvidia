@@ -5,7 +5,7 @@
 #  does user authentication before entering Setup.
 #
 # Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,6 +34,7 @@
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -54,9 +55,15 @@
   VariablePolicyHelperLib
   PlatformResourceLib
   StatusRegLib
+  PcdLib
 
 [Guids]
   gUserAuthenticationGuid                       ## CONSUMES  ## GUID
+  gEfiSecurityPkgTokenSpaceGuid
+
+[Pcd]
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
+  gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared     ## CONSUMES
 
 [Protocols]
   gEfiDevicePathProtocolGuid                    ## PRODUCES
