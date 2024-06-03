@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library private structures
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -32,5 +32,17 @@ typedef struct {
   EFI_HANDLE                             Controller;
   IN NVIDIA_DEVICE_TREE_NODE_PROTOCOL    *Node;
 } NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT;
+
+// Make the DEBUG prints in this Library print the name of the Driver that called them
+#ifdef _DEBUG_PRINT
+  #undef _DEBUG_PRINT
+#define _DEBUG_PRINT(PrintLevel, ...)              \
+    do {                                             \
+      if (DebugPrintLevelEnabled (PrintLevel)) {     \
+        DebugPrint (PrintLevel, "%a:", gEfiCallerBaseName); \
+        DebugPrint (PrintLevel, ##__VA_ARGS__);      \
+      }                                              \
+    } while (FALSE)
+#endif
 
 #endif
