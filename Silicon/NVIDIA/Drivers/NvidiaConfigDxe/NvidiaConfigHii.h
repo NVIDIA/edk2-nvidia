@@ -72,6 +72,12 @@
 #define DEBUG_CONFIGURATION_FORM_ID                0x0032
 #define NVIDIA_PRODUCT_INFO_FORM_ID                0x0033
 #define MEMORY_TEST_FORM_ID                        0x0034
+#define TH500_MPAM_CONFIGURATION_FORM_ID           0x0035
+#define TH500_MPAM40_CONFIGURATION_FORM_ID         0x0036
+#define TH500_MPAM41_CONFIGURATION_FORM_ID         0x0037
+#define TH500_MPAM42_CONFIGURATION_FORM_ID         0x0038
+#define TH500_MPAM43_CONFIGURATION_FORM_ID         0x0039
+#define TH500_MPAM44_CONFIGURATION_FORM_ID         0x003A
 
 #define KEY_ENABLE_PCIE_CONFIG         0x1000
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG   0x1001
@@ -793,6 +799,22 @@
 #define KEY_SOCKET3_PCIE8_ADVERTISE_ACS  0x2127
 #define KEY_SOCKET3_PCIE9_ADVERTISE_ACS  0x2128
 
+#define KEY_MPAM40_CPOR_WAYMASK  0x2300
+#define KEY_MPAM41_CPOR_WAYMASK  0x2301
+#define KEY_MPAM42_CPOR_WAYMASK  0x2302
+#define KEY_MPAM43_CPOR_WAYMASK  0x2303
+#define KEY_MPAM44_CPOR_WAYMASK  0x2304
+#define KEY_MPAM40_MAX_BW        0x2305
+#define KEY_MPAM41_MAX_BW        0x2306
+#define KEY_MPAM42_MAX_BW        0x2307
+#define KEY_MPAM43_MAX_BW        0x2308
+#define KEY_MPAM44_MAX_BW        0x2309
+#define KEY_MPAM40_MIN_BW        0x230A
+#define KEY_MPAM41_MIN_BW        0x230B
+#define KEY_MPAM42_MIN_BW        0x230C
+#define KEY_MPAM43_MIN_BW        0x230D
+#define KEY_MPAM44_MIN_BW        0x230E
+
 #define LABEL_DBG2_PCIE_DEVICE_START  0x3000
 #define LABEL_DBG2_PCIE_DEVICE_END    0x3001
 #define MAX_DBG2_STRING_LENGTH        128
@@ -823,9 +845,11 @@
 #define ASSET_TAG_PROTECTION_DISABLE  0x0
 #define ASSET_TAG_PROTECTION_ENABLE   0x1
 
-#define MAX_SOCKETS  4
-#define MAX_PCIE     10
-#define MAX_UPHY     6
+#define MAX_SOCKETS         4
+#define MAX_PCIE            10
+#define MAX_UPHY            6
+#define MAX_MPAM_PARTID     45
+#define MPAM_PARTID_OFFSET  40
 
 #define EXPOSE_PCIE_FLOORSWEEPING_VARIABLE          0x0001
 #define EXPOSE_NVML_FLOORSWEEPING_VARIABLE          0x0002
@@ -872,6 +896,7 @@ typedef struct {
   BOOLEAN    MemoryTestsSupported;
   BOOLEAN    ActiveCoresSettingSupported;
   BOOLEAN    ServerPwrCtlSettingSupported;
+  BOOLEAN    MpamPartidConfigSupported;
   UINT32     RootfsRedundancyLevel;
   UINT32     Dbg2NetworkDevice;
   BOOLEAN    TH500Config;
@@ -965,6 +990,9 @@ typedef struct {
   BOOLEAN    AdvertiseACS_1[MAX_PCIE];
   BOOLEAN    AdvertiseACS_2[MAX_PCIE];
   BOOLEAN    AdvertiseACS_3[MAX_PCIE];
+  UINT16     CporWayMask[MAX_MPAM_PARTID];
+  UINT8      MaxBw[MAX_MPAM_PARTID];
+  UINT8      MinBw[MAX_MPAM_PARTID];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -978,6 +1006,49 @@ typedef struct {
   goto TH500_SOCKET##socket##_PCIE##pcie##_CONFIGURATION_FORM_ID, \
       prompt = STRING_TOKEN(STR_PCIE##pcie##_CONFIG_FORM_TITLE),  \
       help = STRING_TOKEN(STR_NULL);
+
+#define ADD_GOTO_MPAM_FORM(mpam)                                       \
+  goto TH500_MPAM##mpam##_CONFIGURATION_FORM_ID,                       \
+      prompt = STRING_TOKEN(STR_MPAM##mpam##_CONFIG_FORM_TITLE),       \
+      help = STRING_TOKEN(STR_NULL);
+
+#define ADD_MPAM_FORM(mpam)                                                       \
+  form formid = TH500_MPAM##mpam##_CONFIGURATION_FORM_ID,                         \
+       title = STRING_TOKEN(STR_MPAM##mpam##_CONFIG_FORM_TITLE);                  \
+  subtitle text = STRING_TOKEN(STR_NULL);                                         \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.MpamPartidConfigSupported == 0;    \
+  numeric varid = NVIDIA_CONFIG_HII_CONTROL.CporWayMask[mpam],                    \
+          questionid = KEY_MPAM##mpam##_CPOR_WAYMASK,                             \
+          prompt = STRING_TOKEN(STR_MPAM##mpam##_CPOR_WAYMASK_TITLE),             \
+          help = STRING_TOKEN(STR_MPAM##mpam##_CPOR_WAYMASK_HELP),                \
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_HEX,                \
+          minimum = 0,                                                            \
+          maximum = 4095,                                                         \
+          step = 1,                                                               \
+          default = 4095,                                                         \
+          endnumeric;                                                             \
+  numeric varid = NVIDIA_CONFIG_HII_CONTROL.MaxBw[mpam],                          \
+          questionid = KEY_MPAM##mpam##_MAX_BW,                                   \
+          prompt = STRING_TOKEN(STR_MPAM##mpam##_MAX_BW_TITLE),                   \
+          help = STRING_TOKEN(STR_MPAM##mpam##_MAX_BW_HELP),                      \
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,                \
+          minimum = 0,                                                            \
+          maximum = 100,                                                          \
+          step = 1,                                                               \
+          default = 100,                                                          \
+          endnumeric;                                                             \
+   numeric varid = NVIDIA_CONFIG_HII_CONTROL.MinBw[mpam],                         \
+          questionid = KEY_MPAM##mpam##_MIN_BW,                                   \
+          prompt = STRING_TOKEN(STR_MPAM##mpam##_MIN_BW_TITLE),                   \
+          help = STRING_TOKEN(STR_MPAM##mpam##_MIN_BW_HELP),                      \
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,                \
+          minimum = 0,                                                            \
+          maximum = 100,                                                          \
+          step = 1,                                                               \
+          default = 0,                                                            \
+          endnumeric;                                                             \
+  endif;                                                                          \
+  endform;
 
 #define ADD_SOCKET_FORM(socket)                                                          \
   form formid = TH500_SOCKET##socket##_CONFIGURATION_FORM_ID,                            \

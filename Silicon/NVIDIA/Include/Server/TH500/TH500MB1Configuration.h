@@ -16,9 +16,10 @@
 #define TEGRABL_SOC_MAX_SOCKETS           4
 #define TEGRABL_MAX_UPHY_PER_SOCKET       6
 #define TEGRABL_MAX_PCIE_PER_SOCKET       10
+#define TEGRABL_MAX_MPAM_PARTID           5
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  13
+#define TEGRABL_MB1_BCT_MINOR_VERSION  15
 
 #pragma pack(1)
 
@@ -101,6 +102,17 @@ typedef struct {
   UINT8     Reserved[11];
 } TEGRABL_MB1BCT_PCIE_CONFIG;
 
+typedef struct {
+  union {
+    UINT64    PartIdFields;
+    struct {
+      UINT64    CporWayMask : 12;
+      UINT64    MinBw       : 7;
+      UINT64    MaxBw       : 7;
+    };
+  };
+} TEGRABL_MPAM_PARTID_CONFIG;
+
 #pragma pack()
 
 typedef struct {
@@ -115,6 +127,7 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (UINT32 ActiveCores[TEGRABL_SOC_MAX_SOCKETS], 8);
   UEFI_DECLARE_ALIGNED (UINT32 NvIntConfig0, 4);
   UEFI_DECLARE_ALIGNED (UINT32 NvIntConfig1, 4);
+  UEFI_DECLARE_ALIGNED (TEGRABL_MPAM_PARTID_CONFIG MpamConfig[TEGRABL_MAX_MPAM_PARTID], 8);
 } TH500_MB1_CONFIGURATION;
 
 typedef struct {

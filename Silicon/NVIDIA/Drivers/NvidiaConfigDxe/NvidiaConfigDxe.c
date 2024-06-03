@@ -808,6 +808,43 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_HELP),
+  STRING_TOKEN (STR_MPAM_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_MPAM40_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM41_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM42_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM43_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM44_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_MPAM40_CPOR_WAYMASK_TITLE),
+  STRING_TOKEN (STR_MPAM41_CPOR_WAYMASK_TITLE),
+  STRING_TOKEN (STR_MPAM42_CPOR_WAYMASK_TITLE),
+  STRING_TOKEN (STR_MPAM43_CPOR_WAYMASK_TITLE),
+  STRING_TOKEN (STR_MPAM44_CPOR_WAYMASK_TITLE),
+  STRING_TOKEN (STR_MPAM40_CPOR_WAYMASK_HELP),
+  STRING_TOKEN (STR_MPAM41_CPOR_WAYMASK_HELP),
+  STRING_TOKEN (STR_MPAM42_CPOR_WAYMASK_HELP),
+  STRING_TOKEN (STR_MPAM43_CPOR_WAYMASK_HELP),
+  STRING_TOKEN (STR_MPAM44_CPOR_WAYMASK_HELP),
+  STRING_TOKEN (STR_MPAM40_MAX_BW_TITLE),
+  STRING_TOKEN (STR_MPAM41_MAX_BW_TITLE),
+  STRING_TOKEN (STR_MPAM42_MAX_BW_TITLE),
+  STRING_TOKEN (STR_MPAM43_MAX_BW_TITLE),
+  STRING_TOKEN (STR_MPAM44_MAX_BW_TITLE),
+  STRING_TOKEN (STR_MPAM40_MAX_BW_HELP),
+  STRING_TOKEN (STR_MPAM41_MAX_BW_HELP),
+  STRING_TOKEN (STR_MPAM42_MAX_BW_HELP),
+  STRING_TOKEN (STR_MPAM43_MAX_BW_HELP),
+  STRING_TOKEN (STR_MPAM44_MAX_BW_HELP),
+  STRING_TOKEN (STR_MPAM40_MIN_BW_TITLE),
+  STRING_TOKEN (STR_MPAM41_MIN_BW_TITLE),
+  STRING_TOKEN (STR_MPAM42_MIN_BW_TITLE),
+  STRING_TOKEN (STR_MPAM43_MIN_BW_TITLE),
+  STRING_TOKEN (STR_MPAM44_MIN_BW_TITLE),
+  STRING_TOKEN (STR_MPAM40_MIN_BW_HELP),
+  STRING_TOKEN (STR_MPAM41_MIN_BW_HELP),
+  STRING_TOKEN (STR_MPAM42_MIN_BW_HELP),
+  STRING_TOKEN (STR_MPAM43_MIN_BW_HELP),
+  STRING_TOKEN (STR_MPAM44_MIN_BW_HELP),
 };
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
@@ -1610,6 +1647,13 @@ SyncHiiSettings (
       mHiiControlSettings.SupportsPRSNT_3[Index]          = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsPRSNT;
       mHiiControlSettings.AdvertiseACS_3[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].AdvertiseACS;
     }
+
+    // MPAM non architected part ids 40-44 per socket
+    for (Index = MPAM_PARTID_OFFSET; Index < (MPAM_PARTID_OFFSET + TEGRABL_MAX_MPAM_PARTID); Index++) {
+      mHiiControlSettings.CporWayMask[Index] = mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].CporWayMask;
+      mHiiControlSettings.MaxBw[Index]       = mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MaxBw;
+      mHiiControlSettings.MinBw[Index]       = mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MinBw;
+    }
   } else {
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable           = mHiiControlSettings.EgmEnabled;
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                   = mHiiControlSettings.EgmHvSizeMb;
@@ -1723,6 +1767,21 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaskCompleterAbort     = mHiiControlSettings.MaskCompleterAbort_3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsPRSNT          = mHiiControlSettings.SupportsPRSNT_3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].AdvertiseACS           = mHiiControlSettings.AdvertiseACS_3[Index];
+    }
+
+    // MPAM non architected part ids 40-44 per socket
+    for (Index = MPAM_PARTID_OFFSET; Index < (MPAM_PARTID_OFFSET + TEGRABL_MAX_MPAM_PARTID); Index++) {
+      mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].CporWayMask =  mHiiControlSettings.CporWayMask[Index];
+
+      // Check for incorrectness in entries from user
+      if (mHiiControlSettings.MaxBw[Index] < mHiiControlSettings.MinBw[Index]) {
+        DEBUG ((DEBUG_ERROR, "%a: Max les than Min fix it!!\r\n", __FUNCTION__));
+        mHiiControlSettings.MaxBw[Index] = mHiiControlSettings.MinBw[Index];
+      }
+
+      mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MaxBw = mHiiControlSettings.MaxBw[Index];
+      mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MinBw = mHiiControlSettings.MinBw[Index];
+      mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MaxBw = mHiiControlSettings.MaxBw[Index];
     }
   }
 }
@@ -2031,6 +2090,10 @@ InitializeSettings (
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 12) {
       mHiiControlSettings.ActiveCoresSettingSupported = TRUE;
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 15) {
+      mHiiControlSettings.MpamPartidConfigSupported = TRUE;
     }
 
     // Initialize Server Power Control
@@ -2368,12 +2431,55 @@ GetDefaultValue (
       break;
     case KEY_MAX_CORES:
       Data = 0;
-
       break;
     case KEY_DBG2_NETWORK_DEVICE:
       Data = MAX_UINT32;
       break;
-
+    case KEY_MPAM40_CPOR_WAYMASK:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[0].CporWayMask;
+      break;
+    case KEY_MPAM41_CPOR_WAYMASK:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[1].CporWayMask;
+      break;
+    case KEY_MPAM42_CPOR_WAYMASK:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[2].CporWayMask;
+      break;
+    case KEY_MPAM43_CPOR_WAYMASK:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[3].CporWayMask;
+      break;
+    case KEY_MPAM44_CPOR_WAYMASK:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[4].CporWayMask;
+      break;
+    case KEY_MPAM40_MAX_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[0].MaxBw;
+      break;
+    case KEY_MPAM41_MAX_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[1].MaxBw;
+      break;
+    case KEY_MPAM42_MAX_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[2].MaxBw;
+      break;
+    case KEY_MPAM43_MAX_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[3].MaxBw;
+      break;
+    case KEY_MPAM44_MAX_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[4].MaxBw;
+      break;
+    case KEY_MPAM40_MIN_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[0].MinBw;
+      break;
+    case KEY_MPAM41_MIN_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[1].MinBw;
+      break;
+    case KEY_MPAM42_MIN_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[2].MinBw;
+      break;
+    case KEY_MPAM43_MIN_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[3].MinBw;
+      break;
+    case KEY_MPAM44_MIN_BW:
+      Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[4].MinBw;
+      break;
     default:
       //
       // UPHY
