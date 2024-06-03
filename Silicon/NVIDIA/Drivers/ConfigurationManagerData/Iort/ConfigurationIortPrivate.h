@@ -20,8 +20,6 @@
 #define IRQ_PROP_CELL_SIZE        3
 #define IRQ_PROP_OFFSET_TO_INTID  1
 #define IRQ_PROP_LENGTH           (IRQ_PROP_CELL_SIZE * sizeof (UINT32))
-#define REG_PROP_CELL_SIZE        2
-#define REG_PROP_LENGTH           (REG_PROP_CELL_SIZE * sizeof (UINT64))
 #define SPI_OFFSET                32
 
 #define IOMMUMAP_PROP_LENGTH  (4 * sizeof (UINT32))
@@ -59,25 +57,26 @@ typedef struct {
 
 #define IORT_PROP_NODE_SIGNATURE  SIGNATURE_32('I','O','P','N')
 typedef struct {
-  UINT32             Signature;
-  INT32              NodeOffset;
-  UINT32             Phandle;
-  EARM_OBJECT_ID     ObjectId;
-  CM_OBJECT_TOKEN    Token;
-  UINT32             DualSmmuPresent;
-  CONST UINT32       *IommusProp;   // Pointer to DTB, or NULL
-  CONST UINT32       *IommuMapProp; // Pointer to DTB, or NULL
-  CONST UINT32       *MsiProp;      // Pointer to DTB, or NULL
-  CONST UINT64       *RegProp;      // Pointer to DTB
-  VOID               *IortNode;     // Pointer to a spot within Private->IoNodes[Type].NodeArray
-  UINT32             ContextInterruptCnt;
-  VOID               *ContextInterruptArray;
-  UINT32             PmuInterruptCnt;
-  VOID               *PmuInterruptArray;
-  UINT32             IdMapCount;
-  VOID               *IdMapArray;  // Pointer to a spot within Private->IoNodes[IdMap].NodeArray
-  LIST_ENTRY         Link;
-  CHAR8              *ObjectName;
+  UINT32                                    Signature;
+  INT32                                     NodeOffset;
+  UINT32                                    Phandle;
+  EARM_OBJECT_ID                            ObjectId;
+  CM_OBJECT_TOKEN                           Token;
+  UINT32                                    DualSmmuPresent;
+  CONST UINT32                              *IommusProp;   // Pointer to DTB, or NULL
+  CONST UINT32                              *IommuMapProp; // Pointer to DTB, or NULL
+  CONST UINT32                              *MsiProp;      // Pointer to DTB, or NULL
+  UINT32                                    RegCount;
+  CONST NVIDIA_DEVICE_TREE_REGISTER_DATA    *RegArray; // Allocated Array
+  VOID                                      *IortNode; // Pointer to a spot within Private->IoNodes[Type].NodeArray
+  UINT32                                    ContextInterruptCnt;
+  VOID                                      *ContextInterruptArray;
+  UINT32                                    PmuInterruptCnt;
+  VOID                                      *PmuInterruptArray;
+  UINT32                                    IdMapCount;
+  VOID                                      *IdMapArray; // Pointer to a spot within Private->IoNodes[IdMap].NodeArray
+  LIST_ENTRY                                Link;
+  CHAR8                                     *ObjectName;
 } IORT_PROP_NODE;
 #define IORT_PROP_NODE_FROM_LINK(a) \
         CR(a, IORT_PROP_NODE, Link, IORT_PROP_NODE_SIGNATURE)

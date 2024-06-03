@@ -275,61 +275,6 @@ GetAddressLimit (
 }
 
 /**
-  Get #address-cells and #size-cells properties from nvidia,tegra234-host1x
-
-  @param[in]      Private       Pointer to the module private data
-  @param[in, out] AddressCells  Pointer to #address-cells data
-  @param[in, out] SizeCells     Pointer to #size-cells data
-
-  @return EFI_SUCCESS           AddressCells and SizeCells values updated
-
-**/
-STATIC
-EFI_STATUS
-GetAddressSizeCells (
-  IN IORT_PRIVATE_DATA  *Private,
-  IN OUT INT32          *AddressCells,
-  IN OUT INT32          *SizeCells
-  )
-{
-  INT32        NodeOffset;
-  INT32        Length;
-  CONST INT32  *Prop;
-
-  NodeOffset = -1;
-
-  NodeOffset = fdt_node_offset_by_compatible (
-                 Private->DtbBase,
-                 NodeOffset,
-                 "nvidia,tegra234-host1x"
-                 );
-
-  if (NodeOffset <= 0) {
-    return EFI_SUCCESS;
-  }
-
-  Prop = fdt_getprop (Private->DtbBase, NodeOffset, "#address-cells", &Length);
-  if (Prop == NULL) {
-    DEBUG ((DEBUG_WARN, "%a: Device does not have #address-cells property.\r\n", __FUNCTION__));
-  }
-
-  if (Length == 4) {
-    *AddressCells = fdt32_to_cpu (*Prop);
-  }
-
-  Prop = fdt_getprop (Private->DtbBase, NodeOffset, "#size-cells", &Length);
-  if (Prop == NULL) {
-    DEBUG ((DEBUG_WARN, "%a: Device does not have #size-cells property.\r\n", __FUNCTION__));
-  }
-
-  if (Length == 4) {
-    *SizeCells = fdt32_to_cpu (*Prop);
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
   Add all IORT property nodes in the device tree to the list
 
   @param[in, out] Private       Pointer to the module private data
@@ -347,29 +292,23 @@ AddIortPropNodes (
   IN CONST IORT_DEVICE_NODE_MAP   *DevMap
   )
 {
-  INT32           NodeOffset;
-  IORT_PROP_NODE  *PropNode;
-  CONST VOID      *Prop;
-  CONST UINT64    *RegProp;
-  CONST UINT64    *IortNodeRegProp;
-  CONST UINT32    *MsiProp;
-  CONST UINT32    *IommusProp;
-  CONST UINT32    *IommuMapProp;
-  CONST UINT32    *DevicesProp;
-  INT32           PropSize;
-  INT32           RegPropSize;
-  UINT32          ItsNodePresent;
-  UINT32          DualSmmuPresent;
-  UINT32          Indx;
-  CONST CHAR8     *AliasName;
-  INT32           AddressCells;
-  INT32           SizeCells;
+  EFI_STATUS                        Status;
+  INT32                             NodeOffset;
+  IORT_PROP_NODE                    *PropNode;
+  CONST VOID                        *Prop;
+  CONST UINT32                      *MsiProp;
+  CONST UINT32                      *IommusProp;
+  CONST UINT32                      *IommuMapProp;
+  CONST UINT32                      *DevicesProp;
+  INT32                             PropSize;
+  UINT32                            ItsNodePresent;
+  UINT32                            DualSmmuPresent;
+  UINT32                            Indx;
+  CONST CHAR8                       *AliasName;
+  UINT32                            NumberOfRegisters;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
 
   ItsNodePresent = 0;
-  AddressCells   = 1;
-  SizeCells      = 1;
-
-  GetAddressSizeCells (Private, &AddressCells, &SizeCells);
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
     if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->ObjectName == NULL)) {
@@ -402,27 +341,42 @@ AddIortPropNodes (
       }
 
       // The reg property is mandatory with requested entries
-      RegProp = fdt_getprop (Private->DtbBase, NodeOffset, "reg", &RegPropSize);
-      if (RegProp == NULL) {
-        DEBUG ((DEBUG_WARN, "%a: Device does not have a reg property. It could be a test device.\r\n", __FUNCTION__));
+      NumberOfRegisters = 0;
+      Status            = DeviceTreeGetRegisters (NodeOffset, NULL, &NumberOfRegisters);
+      if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get register count for %a node\n", __FUNCTION__, Status, DevMap->Compatibility));
+        break;
       }
 
-      if (RegPropSize < (AddressCells + SizeCells) * sizeof (INT32)) {
-        DEBUG ((DEBUG_WARN, "%a: Reg property size is smaller than expected\r\n", __FUNCTION__));
+      if (NumberOfRegisters == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Found zero registers for %a node\n", __FUNCTION__, DevMap->Compatibility));
+        Status = EFI_DEVICE_ERROR;
+        break;
+      }
+
+      RegisterArray = (NVIDIA_DEVICE_TREE_REGISTER_DATA  *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * NumberOfRegisters);
+      if (RegisterArray == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate space for %u registers for %a node\n", __FUNCTION__, NumberOfRegisters, DevMap->Compatibility));
+        Status = EFI_OUT_OF_RESOURCES;
+        break;
+      }
+
+      Status = DeviceTreeGetRegisters (NodeOffset, RegisterArray, &NumberOfRegisters);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get registers for %a node\n", __FUNCTION__, Status, DevMap->Compatibility));
         break;
       }
 
       DualSmmuPresent = 0;
-      if ((DevMap->ObjectId == EArmObjSmmuV1SmmuV2) && ((RegPropSize / ((AddressCells + SizeCells) * sizeof (INT32))) > 1)) {
+      if ((DevMap->ObjectId == EArmObjSmmuV1SmmuV2) && (NumberOfRegisters > 1)) {
         DualSmmuPresent = 1;
       }
 
       for (Indx = 0; Indx <= DualSmmuPresent; Indx++) {
-        IortNodeRegProp = RegProp + (Indx * REG_PROP_CELL_SIZE);
-        MsiProp         = NULL;
-        IommusProp      = NULL;
-        IommuMapProp    = NULL;
-        DevicesProp     = NULL;
+        MsiProp      = NULL;
+        IommusProp   = NULL;
+        IommuMapProp = NULL;
+        DevicesProp  = NULL;
 
         // Check DTB status and skip if it's not enabled
         Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
@@ -543,7 +497,8 @@ AllocatePropNode:
         }
 
         PropNode->Phandle         = fdt_get_phandle (Private->DtbBase, NodeOffset);
-        PropNode->RegProp         = IortNodeRegProp;
+        PropNode->RegCount        = NumberOfRegisters;
+        PropNode->RegArray        = &RegisterArray[Indx];
         PropNode->MsiProp         = MsiProp;
         PropNode->IommusProp      = IommusProp;
         PropNode->IommuMapProp    = IommuMapProp;
@@ -1155,14 +1110,11 @@ SetupIortNodeForSmmuV1V2 (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS                        Status;
-  CM_ARM_SMMUV1_SMMUV2_NODE         *IortNode;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterData;
-  UINT32                            RegisterSize;
+  EFI_STATUS                 Status;
+  CM_ARM_SMMUV1_SMMUV2_NODE  *IortNode;
 
-  Status       = EFI_SUCCESS;
-  RegisterData = NULL;
-  IortNode     = PropNode->IortNode;
+  Status   = EFI_SUCCESS;
+  IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
     goto ErrorExit;
   }
@@ -1172,40 +1124,13 @@ SetupIortNodeForSmmuV1V2 (
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
   IortNode->BaseAddress = 0;
-  RegisterSize          = 0;
-  Status                = GetDeviceTreeRegisters (PropNode->NodeOffset, RegisterData, &RegisterSize);
-  if (Status == EFI_BUFFER_TOO_SMALL) {
-    if (RegisterData != NULL) {
-      FreePool (RegisterData);
-      RegisterData = NULL;
-    }
 
-    RegisterData = (NVIDIA_DEVICE_TREE_REGISTER_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * RegisterSize);
-    if (RegisterData == NULL) {
-      Status = EFI_OUT_OF_RESOURCES;
-      goto ErrorExit;
-    }
+  NV_ASSERT_RETURN (PropNode->RegArray != NULL, return EFI_DEVICE_ERROR, "%a: Trying to parse a node that has a NULL RegArray\n", __FUNCTION__);
 
-    Status = GetDeviceTreeRegisters (PropNode->NodeOffset, RegisterData, &RegisterSize);
-    if (EFI_ERROR (Status)) {
-      goto ErrorExit;
-    }
-  } else if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
-  if ((PropNode->RegProp != NULL) && (RegisterData[0].BaseAddress == SwapBytes64 (*PropNode->RegProp)) && (RegisterData != NULL)) {
-    IortNode->BaseAddress = RegisterData[0].BaseAddress;
-    IortNode->Span        = RegisterData[0].Size;
-  }
-
-  if ((RegisterSize > 1) && (RegisterData[1].BaseAddress == SwapBytes64 (*PropNode->RegProp))) {
-    IortNode->BaseAddress = RegisterData[1].BaseAddress;
-    IortNode->Span        = RegisterData[1].Size;
-  }
-
-  IortNode->Model = EFI_ACPI_IORT_SMMUv1v2_MODEL_MMU500;
-  IortNode->Flags = EFI_ACPI_IORT_SMMUv1v2_FLAG_COH_WALK;
+  IortNode->BaseAddress = PropNode->RegArray[0].BaseAddress;
+  IortNode->Span        = PropNode->RegArray[0].Size;
+  IortNode->Model       = EFI_ACPI_IORT_SMMUv1v2_MODEL_MMU500;
+  IortNode->Flags       = EFI_ACPI_IORT_SMMUv1v2_FLAG_COH_WALK;
 
   Status = SetupGlobalContextIrqForSmmuV1V2 (ParserHandle, Private, PropNode);
   if (EFI_ERROR (Status)) {
@@ -1226,10 +1151,6 @@ SetupIortNodeForSmmuV1V2 (
   return SetupIortIdMappingForSmmuV1V2 (ParserHandle, Private, PropNode);
 
 ErrorExit:
-  if (RegisterData != NULL) {
-    FreePool (RegisterData);
-  }
-
   return Status;
 }
 
@@ -1352,11 +1273,8 @@ SetupIortNodeForSmmuV3 (
 
   IortNode->Token        = PropNode->Token;
   IortNode->VatosAddress = 0;
-  IortNode->BaseAddress  = 0;
-  if (PropNode->RegProp != NULL) {
-    IortNode->BaseAddress = SwapBytes64 (*PropNode->RegProp);
-  }
-
+  NV_ASSERT_RETURN (PropNode->RegArray != NULL, return EFI_DEVICE_ERROR, "%a: Trying to parse a node that has a NULL RegArray\n", __FUNCTION__);
+  IortNode->BaseAddress     = PropNode->RegArray[0].BaseAddress;
   IortNode->ProximityDomain = 0;
   IortNode->Model           = EFI_ACPI_IORT_SMMUv3_MODEL_GENERIC;
   IortNode->Flags           = EFI_ACPI_IORT_SMMUv3_FLAG_PROXIMITY_DOMAIN;
@@ -1759,11 +1677,9 @@ SetupIortNodeForPmcg (
   EFI_STATUS           Status;
   CM_ARM_PMCG_NODE     *IortNode;
   CM_ARM_ID_MAPPING    *IdMapping;
-  CONST UINT64         *RegProp;
   CONST UINT32         *Prop;
   CONST UINT32         *IrqProp;
   INT32                PropSize;
-  INT32                RegPropSize;
   INT32                IrqPropSize;
   UINT32               InterruptId;
   TEGRA_PLATFORM_TYPE  PlatformType;
@@ -1781,13 +1697,11 @@ SetupIortNodeForPmcg (
   }
 
   IortNode->Token = PropNode->Token;
-  if (PropNode->RegProp != NULL) {
-    IortNode->BaseAddress = SwapBytes64 (*PropNode->RegProp);
-  }
+  NV_ASSERT_RETURN (PropNode->RegArray != NULL, return EFI_DEVICE_ERROR, "%a: Trying to parse a node that has a NULL RegArray\n", __FUNCTION__);
+  IortNode->BaseAddress = PropNode->RegArray[0].BaseAddress;
 
-  RegProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "reg", &RegPropSize);
-  if ((RegProp != NULL) && ((RegPropSize / REG_PROP_LENGTH) > 1)) {
-    IortNode->Page1BaseAddress = SwapBytes64 (*(RegProp + REG_PROP_CELL_SIZE));
+  if (PropNode->RegCount > 1) {
+    IortNode->Page1BaseAddress = PropNode->RegArray[1].BaseAddress;
   }
 
   IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
