@@ -1490,6 +1490,9 @@ SetupIortNodeForPciRc (
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
+  }
+
+  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,dacs-supported", NULL) != NULL) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
@@ -1652,6 +1655,9 @@ SetupIortNodeForNComp (
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
     IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
+  }
+
+  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,dacs-supported", NULL) != NULL) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
