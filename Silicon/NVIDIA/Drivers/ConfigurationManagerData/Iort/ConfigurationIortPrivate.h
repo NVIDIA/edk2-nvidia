@@ -15,12 +15,8 @@
 
 #define IORT_TABLE_GEN  L"IortTableGen"
 
-#define MIN_NUM_IRQS_OF_SMMU_V3   2
-#define MAX_NUM_IRQS_OF_SMMU_V3   4
-#define IRQ_PROP_CELL_SIZE        3
-#define IRQ_PROP_OFFSET_TO_INTID  1
-#define IRQ_PROP_LENGTH           (IRQ_PROP_CELL_SIZE * sizeof (UINT32))
-#define SPI_OFFSET                32
+#define MIN_NUM_IRQS_OF_SMMU_V3  2
+#define MAX_NUM_IRQS_OF_SMMU_V3  4
 
 #define IOMMUMAP_PROP_LENGTH  (4 * sizeof (UINT32))
 #define IOMMUS_PROP_LENGTH    (2 * sizeof (UINT32))

@@ -930,7 +930,7 @@ SetupGlobalContextIrqForSmmuV1V2 (
   IrqCnt                          = InterruptSize;
   IortNode->ContextInterruptCount = IrqCnt - GlobalInterruptCnt;
 
-  if (GlobalInterruptCnt == 1) {
+  if (GlobalInterruptCnt >= 1) {
     IortNode->SMMU_NSgIrpt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[0]);
 
     IortNode->SMMU_NSgIrptFlags = (InterruptData[0].Flag == INTERRUPT_HI_LEVEL ?
@@ -938,10 +938,6 @@ SetupGlobalContextIrqForSmmuV1V2 (
   }
 
   if (GlobalInterruptCnt == 2) {
-    IortNode->SMMU_NSgIrpt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[0]);
-
-    IortNode->SMMU_NSgIrptFlags = (InterruptData[0].Flag == INTERRUPT_HI_LEVEL ?
-                                   EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
     IortNode->SMMU_NSgCfgIrpt      = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[1]);
     IortNode->SMMU_NSgCfgIrptFlags = (InterruptData[1].Flag == INTERRUPT_HI_LEVEL ?
                                       EFI_ACPI_IRQ_LEVEL_TRIGGERED : EFI_ACPI_IRQ_EDGE_TRIGGERED);
@@ -1257,14 +1253,14 @@ SetupIortNodeForSmmuV3 (
   IN OUT  IORT_PROP_NODE           *PropNode
   )
 {
-  EFI_STATUS          Status;
-  CM_ARM_SMMUV3_NODE  *IortNode;
-  CONST VOID          *Prop;
-  CONST UINT32        *IrqProp;
-  INT32               PropSize;
-  INT32               IrqPropSize;
-  INT32               IrqPropCnt;
-  UINT32              InterruptId;
+  EFI_STATUS                         Status;
+  CM_ARM_SMMUV3_NODE                 *IortNode;
+  CONST VOID                         *Prop;
+  INT32                              PropSize;
+  UINT32                             InterruptId;
+  UINT32                             NumberOfInterrupts;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData[MAX_NUM_IRQS_OF_SMMU_V3];
+  UINT32                             IntIndex;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1292,55 +1288,48 @@ SetupIortNodeForSmmuV3 (
     IortNode->ProximityDomain = SwapBytes32 (*(CONST UINT32 *)Prop);
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupt-names", &PropSize);
-  if ((Prop == NULL) || (PropSize == 0)) {
-    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupt-names\"\r\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+  // Parse the interrupt information
+  NumberOfInterrupts = MAX_NUM_IRQS_OF_SMMU_V3;
+  Status             = DeviceTreeGetInterrupts (PropNode->NodeOffset, InterruptData, &NumberOfInterrupts);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get up to %d interrupts (DTB says there are %u)\n", __FUNCTION__, Status, MAX_NUM_IRQS_OF_SMMU_V3, NumberOfInterrupts));
+    return Status;
   }
 
-  IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
-  if ((IrqProp == NULL) || (IrqPropSize == 0)) {
-    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"interrupts\"\r\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+  for (IntIndex = 0; IntIndex < NumberOfInterrupts; IntIndex++) {
+    if (InterruptData[IntIndex].Name == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Found interrupt data without name data for interrupt index %u\n", __FUNCTION__, IntIndex));
+      return EFI_NOT_FOUND;
+    }
   }
 
-  IrqPropCnt = IrqPropSize / IRQ_PROP_LENGTH;
-
-  if (0 == AsciiStrCmp (Prop, "combined")) {
-    InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
+  if (0 == AsciiStrCmp (InterruptData[0].Name, "combined")) {
+    InterruptId              = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[0]);
     IortNode->EventInterrupt = InterruptId;
     IortNode->PriInterrupt   = InterruptId;
     IortNode->GerrInterrupt  = InterruptId;
     IortNode->SyncInterrupt  = InterruptId;
-  } else if ((IrqPropCnt <= MAX_NUM_IRQS_OF_SMMU_V3) && (IrqPropSize >= MIN_NUM_IRQS_OF_SMMU_V3)) {
-    UINT32       IrqPropIndex;
-    UINT32       StrLength;
-    CONST CHAR8  *IrqPropNames[MAX_NUM_IRQS_OF_SMMU_V3] = {
-      "eventq", "priq", "gerror", "cmdq-sync"
-    };
-    UINT32       *Interrupts = &IortNode->EventInterrupt;
+  } else if ((NumberOfInterrupts <= MAX_NUM_IRQS_OF_SMMU_V3) && (NumberOfInterrupts >= MIN_NUM_IRQS_OF_SMMU_V3)) {
+    for (IntIndex = 0; IntIndex < NumberOfInterrupts; IntIndex++) {
+      UINT32  *Interrupt;
 
-    while (PropSize > 0) {
-      StrLength = AsciiStrSize (Prop);
-      if ((StrLength == 0) || (StrLength > (UINT32)PropSize)) {
-        return EFI_NOT_FOUND;
+      if (0 == AsciiStrCmp (InterruptData[IntIndex].Name, "eventq")) {
+        Interrupt = &IortNode->EventInterrupt;
+      } else if (0 == AsciiStrCmp (InterruptData[IntIndex].Name, "priq")) {
+        Interrupt = &IortNode->PriInterrupt;
+      } else if (0 == AsciiStrCmp (InterruptData[IntIndex].Name, "gerror")) {
+        Interrupt = &IortNode->GerrInterrupt;
+      } else if (0 == AsciiStrCmp (InterruptData[IntIndex].Name, "cmdq-sync")) {
+        Interrupt = &IortNode->SyncInterrupt;
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Found unknown interrupt name \"%a\"\n", __FUNCTION__, InterruptData[IntIndex].Name));
+        return EFI_DEVICE_ERROR;
       }
 
-      for (IrqPropIndex = 0; IrqPropIndex < MAX_NUM_IRQS_OF_SMMU_V3; IrqPropIndex++) {
-        if (0 == AsciiStrnCmp (Prop, IrqPropNames[IrqPropIndex], StrLength)) {
-          break;
-        }
-      }
-
-      InterruptId              = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
-      Interrupts[IrqPropIndex] = InterruptId;
-
-      PropSize -= StrLength;
-      Prop     += StrLength;
-      IrqProp  += IRQ_PROP_CELL_SIZE;
+      *Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData[IntIndex]);
     }
   } else {
-    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find interrupts\r\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: NumInterrupts was %u, but must be between %d and %d\r\n", __FUNCTION__, NumberOfInterrupts, MIN_NUM_IRQS_OF_SMMU_V3, MAX_NUM_IRQS_OF_SMMU_V3));
     return EFI_NOT_FOUND;
   }
 
@@ -1674,17 +1663,16 @@ SetupIortNodeForPmcg (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS           Status;
-  CM_ARM_PMCG_NODE     *IortNode;
-  CM_ARM_ID_MAPPING    *IdMapping;
-  CONST UINT32         *Prop;
-  CONST UINT32         *IrqProp;
-  INT32                PropSize;
-  INT32                IrqPropSize;
-  UINT32               InterruptId;
-  TEGRA_PLATFORM_TYPE  PlatformType;
-  IORT_PROP_NODE       *IortPropNode;
-  CM_OBJ_DESCRIPTOR    Desc;
+  EFI_STATUS                         Status;
+  CM_ARM_PMCG_NODE                   *IortNode;
+  CM_ARM_ID_MAPPING                  *IdMapping;
+  CONST UINT32                       *Prop;
+  INT32                              PropSize;
+  TEGRA_PLATFORM_TYPE                PlatformType;
+  IORT_PROP_NODE                     *IortPropNode;
+  CM_OBJ_DESCRIPTOR                  Desc;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
+  UINT32                             NumberOfInterrupts;
 
   PlatformType = TegraGetPlatform ();
   if (PlatformType != TEGRA_PLATFORM_SILICON) {
@@ -1704,13 +1692,19 @@ SetupIortNodeForPmcg (
     IortNode->Page1BaseAddress = PropNode->RegArray[1].BaseAddress;
   }
 
-  IrqProp = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "interrupts", &IrqPropSize);
-  if ((IrqProp == NULL) || (IrqPropSize == 0)) {
+  // Only expect 1 interrupt
+  NumberOfInterrupts = 1;
+  Status             = DeviceTreeGetInterrupts (PropNode->NodeOffset, &InterruptData, &NumberOfInterrupts);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get the interrupt for node. DTB says it has %u interrupts\n", __FUNCTION__, Status, NumberOfInterrupts));
+    NumberOfInterrupts = 0;
+  }
+
+  if (NumberOfInterrupts == 0) {
     IortNode->IdMappingCount = 1;
   } else {
     IortNode->IdMappingCount    = 0;
-    InterruptId                 = SwapBytes32 (*(IrqProp + IRQ_PROP_OFFSET_TO_INTID)) + SPI_OFFSET;
-    IortNode->OverflowInterrupt = InterruptId;
+    IortNode->OverflowInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
   }
 
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "devices", &PropSize);
