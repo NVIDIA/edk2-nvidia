@@ -1193,7 +1193,7 @@ FmpTegraSetSingleImage (
 
   // Get capsule package image name
   PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
-  FwPackageCopyImageName (PkgName, PkgImageInfo, FW_IMAGE_NAME_LENGTH);
+  FwPackageCopyImageName (PkgName, PkgImageInfo, sizeof (PkgName));
 
   // Get boot chain from variable
   VariableSize = sizeof (BootChain);
