@@ -878,8 +878,6 @@ SetupGlobalContextIrqForSmmuV1V2 (
 {
   EFI_STATUS                         Status;
   CM_ARM_SMMUV1_SMMUV2_NODE          *IortNode;
-  CONST VOID                         *Prop;
-  INT32                              PropSize;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  *InterruptData;
   UINT32                             InterruptSize;
   UINT32                             GlobalInterruptCnt;
@@ -892,14 +890,13 @@ SetupGlobalContextIrqForSmmuV1V2 (
   InterruptSize = 0;
   InterruptData = NULL;
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "#global-interrupts", &PropSize);
-  if ((Prop == NULL) || (PropSize == 0)) {
-    DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"#global-interrupts\"\r\n", __FUNCTION__));
+  Status = DeviceTreeGetNodePropertyValue32 (PropNode->NodeOffset, "#global-interrupts", &GlobalInterruptCnt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find \"#global-interrupts\"\r\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;
   }
 
-  GlobalInterruptCnt = SwapBytes32 (*(CONST UINT32 *)Prop);
   if (GlobalInterruptCnt > 2) {
     DEBUG ((DEBUG_ERROR, "Global interrupts %u more than 2. No space to store more than 2 global interrupts\n", GlobalInterruptCnt));
     Status = EFI_OUT_OF_RESOURCES;
@@ -1255,8 +1252,6 @@ SetupIortNodeForSmmuV3 (
 {
   EFI_STATUS                         Status;
   CM_ARM_SMMUV3_NODE                 *IortNode;
-  CONST VOID                         *Prop;
-  INT32                              PropSize;
   UINT32                             InterruptId;
   UINT32                             NumberOfInterrupts;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData[MAX_NUM_IRQS_OF_SMMU_V3];
@@ -1279,13 +1274,14 @@ SetupIortNodeForSmmuV3 (
 
   UpdateSmmuV3UidInfo (ParserHandle, IortNode);
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "dma-coherent", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "numa-node-id", &PropSize);
-  if (Prop != NULL) {
-    IortNode->ProximityDomain = SwapBytes32 (*(CONST UINT32 *)Prop);
+  Status = DeviceTreeGetNodePropertyValue32 (PropNode->NodeOffset, "numa-node-id", &IortNode->ProximityDomain);
+  if (EFI_ERROR (Status)) {
+    IortNode->ProximityDomain = 0;
   }
 
   // Parse the interrupt information
@@ -1368,10 +1364,10 @@ SetupIortNodeForPciRc (
   CM_ARM_ROOT_COMPLEX_NODE  *IortNode;
   CM_ARM_ID_MAPPING         *IdMapping;
   CONST UINT32              *Prop;
-  INT32                     PropSize;
   UINT32                    IdMapFlags;
   IORT_PROP_NODE            *IortPropNode;
   CM_OBJ_DESCRIPTOR         Desc;
+  UINT32                    IommuMapMask;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1394,33 +1390,36 @@ SetupIortNodeForPciRc (
   IortNode->Identifier       = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "dma-coherent", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
   }
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,canwbs-supported", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "nvidia,canwbs-supported", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CANWBS;
   }
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,dacs-supported", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "nvidia,dacs-supported", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "ats-supported", NULL);
-  if (Prop == NULL) {
-    IortNode->AtsAttribute = EFI_ACPI_IORT_ROOT_COMPLEX_ATS_UNSUPPORTED;
-  } else {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "ats-supported", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->AtsAttribute = EFI_ACPI_IORT_ROOT_COMPLEX_ATS_SUPPORTED;
+  } else {
+    IortNode->AtsAttribute = EFI_ACPI_IORT_ROOT_COMPLEX_ATS_UNSUPPORTED;
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "linux,pci-domain", NULL);
-  if (Prop != NULL) {
-    IortNode->PciSegmentNumber = SwapBytes32 (Prop[0]);
+  Status = DeviceTreeGetNodePropertyValue32 (PropNode->NodeOffset, "linux,pci-domain", &IortNode->PciSegmentNumber);
+  if (EFI_ERROR (Status)) {
+    IortNode->PciSegmentNumber = 0;
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "iommu-map-mask", &PropSize);
-  if ((Prop == NULL) || (PropSize == 0) || (SwapBytes32 (*(CONST UINT32 *)Prop) != 0)) {
+  Status = DeviceTreeGetNodePropertyValue32 (PropNode->NodeOffset, "iommu-map-mask", &IommuMapMask);
+  if (EFI_ERROR (Status) || (IommuMapMask != 0)) {
     IdMapFlags = 0;
   } else {
     IdMapFlags = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
@@ -1563,12 +1562,14 @@ SetupIortNodeForNComp (
   IortNode->Identifier = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "dma-coherent", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->CacheCoherent     |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
   }
 
-  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,dacs-supported", NULL) != NULL) {
+  Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "nvidia,dacs-supported", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
 
