@@ -1254,7 +1254,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   ## Type 0 Table (BIOS Information)
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"NVIDIA"
   ## RTC
-  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|TRUE
+  gNVIDIATokenSpaceGuid.PcdCpuHasRtcControl|FALSE
   ## TPM
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2AcpiTableRev|4
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags|0x00002
