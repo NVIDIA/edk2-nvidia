@@ -156,13 +156,8 @@ CleanIortPropNodes (
 
   for (Index = 0; Index < MAX_NUMBER_OF_IORT_TYPE; Index++) {
     IoNode = &mIortPrivate.IoNodes[Index];
-    if (IoNode->NodeArray != NULL) {
-      FreePool (IoNode->NodeArray);
-    }
-
-    if (IoNode->TokenArray != NULL) {
-      FreePool (IoNode->TokenArray);
-    }
+    FREE_NON_NULL (IoNode->NodeArray);
+    FREE_NON_NULL (IoNode->TokenArray);
   }
 
   while (!IsListEmpty (&Private->PropNodeList)) {
@@ -905,10 +900,7 @@ SetupGlobalContextIrqForSmmuV1V2 (
 
   Status = GetDeviceTreeInterrupts (PropNode->NodeOffset, InterruptData, &InterruptSize);
   if (Status == EFI_BUFFER_TOO_SMALL) {
-    if (InterruptData != NULL) {
-      FreePool (InterruptData);
-      InterruptData = NULL;
-    }
+    FREE_NON_NULL (InterruptData);
 
     InterruptData = (NVIDIA_DEVICE_TREE_INTERRUPT_DATA *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_DATA) * InterruptSize);
     if (InterruptData == NULL) {
@@ -972,10 +964,7 @@ SetupGlobalContextIrqForSmmuV1V2 (
   }
 
 ErrorExit:
-  if (InterruptData != NULL) {
-    FreePool (InterruptData);
-    InterruptData = NULL;
-  }
+  FREE_NON_NULL (InterruptData);
 
   return Status;
 }
@@ -1077,10 +1066,7 @@ SetupPmuIrqForSmmuV1V2 (
   }
 
 ErrorExit:
-  if (PmuInterruptData != NULL) {
-    FreePool (PmuInterruptData);
-    PmuInterruptData = NULL;
-  }
+  FREE_NON_NULL (PmuInterruptData);
 
   return Status;
 }
