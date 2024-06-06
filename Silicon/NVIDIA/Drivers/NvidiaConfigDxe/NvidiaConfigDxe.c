@@ -39,6 +39,7 @@
 #include <Library/FwVariableLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/StatusRegLib.h>
+#include <Library/TegraSerialPortLib.h>
 
 #include <IndustryStandard/Pci22.h>
 
@@ -858,7 +859,7 @@ STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
 STATIC VOID                            *mMmCommunicationBuffer = NULL;
 UINT64                                 mOpRomDisMask           = 0;
 EFI_HII_HANDLE                         mHiiHandle;
-UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
+UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_DISABLED;
 
 // Print TEGRABL_EARLY_BOOT_VARIABLES
 VOID
@@ -2970,21 +2971,29 @@ UpdateSerialPcds (
   VOID
   )
 {
-  UINT32      NumSbsaUartControllers;
-  EFI_STATUS  Status;
-  UINTN       SerialPortVarLen;
+  UINT8           SerialPortType;
+  EFI_STATUS      Status;
+  UINTN           SerialPortVarLen;
+  SERIAL_MAPPING  *SerialMapping;
 
-  NumSbsaUartControllers = 0;
+  SerialPortType = NVIDIA_SERIAL_PORT_TYPE_UNDEFINED;
 
-  // Obtain SBSA Handle Info
-  Status = GetMatchingEnabledDeviceTreeNodes ("arm,sbsa-uart", NULL, &NumSbsaUartControllers);
-  if (Status == EFI_NOT_FOUND) {
-    PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_16550);
-    mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
-  } else {
-    PcdSet8S (PcdSerialTypeConfig, NVIDIA_SERIAL_PORT_TYPE_SBSA);
-    mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
+  SerialPortIdentify (&SerialMapping);
+  for ( ; SerialMapping->Compatibility != NULL; SerialMapping++) {
+    if (SerialMapping->IsFound) {
+      if (SerialMapping->Type == TEGRA_UART_TYPE_16550) {
+        SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_16550;
+        mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
+        break;
+      } else if (SerialMapping->Type == TEGRA_UART_TYPE_SBSA) {
+        SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_SBSA;
+        mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
+        break;
+      }
+    }
   }
+
+  PcdSet8S (PcdSerialTypeConfig, SerialPortType);
 
   SerialPortVarLen = 0;
   Status           = gRT->GetVariable (L"SerialPortConfig", &gNVIDIATokenSpaceGuid, NULL, &SerialPortVarLen, NULL);

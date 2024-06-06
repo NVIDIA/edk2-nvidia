@@ -143,6 +143,7 @@ formset
 
     subtitle text = STRING_TOKEN(STR_NULL);
 
+    suppressif ideqval NVIDIA_SERIAL_TYPE_CONFIG.Type == NVIDIA_SERIAL_PORT_TYPE_UNDEFINED;
     oneof varid = SerialPortConfig.Configuration,
         questionid = KEY_SERIAL_PORT_CONFIG,
         prompt = STRING_TOKEN(STR_SERIAL_PORT_CONFIG_PROMPT),
@@ -159,6 +160,7 @@ formset
             option text = STRING_TOKEN(STR_SP_ENABLED_DBG2_SBSA), value = NVIDIA_SERIAL_PORT_DBG2_SBSA, flags = 0;
         endif;
     endoneof;
+    endif;
 
     label LABEL_DBG2_PCIE_DEVICE_START;
     label LABEL_DBG2_PCIE_DEVICE_END;
