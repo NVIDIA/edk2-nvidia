@@ -18,6 +18,7 @@
   ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
 
 [Sources.common]
+  NvDisplayChildGop.c
   NvDisplayControllerDxe.c
   NvDisplayHw.c
   NvDisplayMmioRegions.c

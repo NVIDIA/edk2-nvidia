@@ -559,236 +559,6 @@ DisplayStop (
 }
 
 /**
-   Locates a child handle with the GOP protocol installed.
-
-   @param[in]  DriverHandle      Handle of the driver.
-   @param[in]  ControllerHandle  Handle of the controller.
-   @param[out] ChildHandle       The located child handle.
-
-   @retval EFI_SUCCESS    Child handle found successfully.
-   @retval !=EFI_SUCCESS  Error occurred.
-*/
-STATIC
-EFI_STATUS
-LocateChildGopHandle (
-  IN  CONST EFI_HANDLE   DriverHandle,
-  IN  CONST EFI_HANDLE   ControllerHandle,
-  OUT EFI_HANDLE *CONST  ChildHandle
-  )
-{
-  EFI_STATUS                Status;
-  EFI_HANDLE                ParentHandle, *Handles = NULL;
-  UINTN                     HandleIndex, HandleCount;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiGraphicsOutputProtocolGuid,
-                  NULL,
-                  &HandleCount,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to enumerate graphics output device handles: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Exit;
-  }
-
-  for (HandleIndex = 0; HandleIndex < HandleCount; ++HandleIndex) {
-    Status = gBS->OpenProtocol (
-                    Handles[HandleIndex],
-                    &gEfiDevicePathProtocolGuid,
-                    (VOID **)&DevicePath,
-                    DriverHandle,
-                    ControllerHandle,
-                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                    );
-    if (EFI_ERROR (Status)) {
-      if (Status != EFI_UNSUPPORTED) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to retrieve device path from handle %p: %r\r\n",
-          __FUNCTION__,
-          Handles[HandleIndex],
-          Status
-          ));
-      }
-
-      continue;
-    }
-
-    Status = gBS->LocateDevicePath (
-                    &gEdkiiNonDiscoverableDeviceProtocolGuid,
-                    &DevicePath,
-                    &ParentHandle
-                    );
-    if (EFI_ERROR (Status)) {
-      if (Status != EFI_NOT_FOUND) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to locate parent handle: %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
-      }
-
-      continue;
-    }
-
-    if (ParentHandle == ControllerHandle) {
-      /* This handle is our child handle. */
-      break;
-    }
-  }
-
-  if (HandleIndex < HandleCount) {
-    *ChildHandle = Handles[HandleIndex];
-    Status       = EFI_SUCCESS;
-  } else {
-    Status = EFI_NOT_FOUND;
-  }
-
-Exit:
-  if (Handles != NULL) {
-    FreePool (Handles);
-  }
-
-  return Status;
-}
-
-/**
-   Locates an instance of the GOP protocol installed on a child
-   handle.
-
-   @param[in]  DriverHandle      Handle of the driver.
-   @param[in]  ControllerHandle  Handle of the controller.
-   @param[out] Protocol          The located GOP instance.
-
-   @retval EFI_SUCCESS    Child handle found successfully.
-   @retval !=EFI_SUCCESS  Error occurred.
-*/
-STATIC
-EFI_STATUS
-LocateChildGop (
-  IN  CONST EFI_HANDLE                      DriverHandle,
-  IN  CONST EFI_HANDLE                      ControllerHandle,
-  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL **CONST  Protocol
-  )
-{
-  EFI_STATUS  Status;
-  EFI_HANDLE  GopHandle;
-
-  Status = LocateChildGopHandle (DriverHandle, ControllerHandle, &GopHandle);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = gBS->OpenProtocol (
-                  GopHandle,
-                  &gEfiGraphicsOutputProtocolGuid,
-                  (VOID **)Protocol,
-                  DriverHandle,
-                  ControllerHandle,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve graphics output protocol from handle %p: %r\r\n",
-      __FUNCTION__,
-      GopHandle,
-      Status
-      ));
-    return Status;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
-   Checks if the given GOP instance has an active mode.
-
-   @param[in] Gop  The GOP protocol instance to check.
-
-   @return TRUE   A mode is active.
-   @return FALSE  No mode is active.
-*/
-STATIC
-BOOLEAN
-CheckGopModeActive (
-  IN CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *CONST  Gop
-  )
-{
-  CONST EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE *CONST  Mode = Gop->Mode;
-
-  return (  (Mode != NULL)
-         && (Mode->Mode < Mode->MaxMode)
-         && (Mode->Info != NULL)
-         && (Mode->SizeOfInfo >= sizeof (*Mode->Info)));
-}
-
-/**
-   Update the Device Tree with mode and framebuffer info using a GOP
-   instance installed on a child handle.
-
-   @param[in] DriverHandle      Handle of the driver.
-   @param[in] ControllerHandle  Handle of the controller.
-
-   @return TRUE   Device Tree updated successfully.
-   @return FALSE  No Device Tree was found.
-   @return FALSE  No GOP child handle was found.
-   @return FALSE  The GOP child handle was inactive.
-   @return FALSE  Could not retrieve the framebuffer region.
-   @return FALSE  Failed to update the Device Tree.
-*/
-STATIC
-BOOLEAN
-UpdateFdtTableChildGop (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle
-  )
-{
-  EFI_STATUS                    Status;
-  VOID                          *Fdt;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
-  EFI_PHYSICAL_ADDRESS          FrameBufferBase;
-  UINT64                        FrameBufferSize;
-
-  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
-  if (EFI_ERROR (Status)) {
-    return FALSE;
-  }
-
-  Status = LocateChildGop (DriverHandle, ControllerHandle, &Gop);
-  if (EFI_ERROR (Status) || !CheckGopModeActive (Gop)) {
-    return FALSE;
-  }
-
-  FrameBufferBase = Gop->Mode->FrameBufferBase;
-  FrameBufferSize = Gop->Mode->FrameBufferSize;
-
-  if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
-     || (FrameBufferBase == 0) || (FrameBufferSize == 0))
-  {
-    Status = NvDisplayGetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
-    if (EFI_ERROR (Status)) {
-      return FALSE;
-    }
-  }
-
-  return UpdateDeviceTreeSimpleFramebufferInfo (
-           Fdt,
-           Gop->Mode->Info,
-           (UINT64)FrameBufferBase,
-           (UINT64)FrameBufferSize
-           );
-}
-
-/**
    Event notification function for updating the Device Tree with mode
    and framebuffer info.
 
@@ -806,7 +576,7 @@ UpdateFdtTableNotifyFunction (
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context =
     (NVIDIA_DISPLAY_CONTROLLER_CONTEXT *)NotifyContext;
 
-  Context->FdtUpdated = UpdateFdtTableChildGop (
+  Context->FdtUpdated = NvDisplayUpdateFdtTableActiveChildGop (
                           Context->DriverHandle,
                           Context->ControllerHandle
                           );
@@ -826,9 +596,8 @@ DisplayCheckPerformHandoff (
   IN CONST NVIDIA_DISPLAY_CONTROLLER_CONTEXT *CONST  Context
   )
 {
-  EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
-  VOID                          *Table;
+  EFI_STATUS  Status;
+  VOID        *Table;
 
   switch (Context->HandoffMode) {
     case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
@@ -842,12 +611,12 @@ DisplayCheckPerformHandoff (
       Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
       if (!EFI_ERROR (Status)) {
         /* ACPI boot: reset the display unless it is active. */
-        Status = LocateChildGop (
+        Status = NvDisplayLocateActiveChildGop (
                    Context->DriverHandle,
                    Context->ControllerHandle,
-                   &Gop
+                   NULL
                    );
-        return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
+        return !EFI_ERROR (Status);
       }
 
       Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);

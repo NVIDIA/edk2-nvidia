@@ -11,6 +11,8 @@
 #ifndef __NV_DISPLAY_H__
 #define __NV_DISPLAY_H__
 
+#include <Protocol/GraphicsOutput.h>
+
 /**
   Retrieves base and size of the framebuffer region.
 
@@ -100,6 +102,43 @@ NvDisplayEnableClocks (
   IN CONST CHAR8 *CONST  Clocks[],
   IN CONST CHAR8 *CONST  ClockParents[][2],
   IN BOOLEAN             Enable
+  );
+
+/**
+  Locates a child handle with an active GOP instance installed.
+
+  @param[in]  DriverHandle      Handle of the driver.
+  @param[in]  ControllerHandle  Handle of the controller.
+  @param[out] Protocol          The located active GOP instance.
+
+  @retval EFI_SUCCESS    Child handle found successfully.
+  @retval !=EFI_SUCCESS  Error occurred.
+*/
+EFI_STATUS
+NvDisplayLocateActiveChildGop (
+  IN  EFI_HANDLE                    DriverHandle,
+  IN  EFI_HANDLE                    ControllerHandle,
+  OUT EFI_GRAPHICS_OUTPUT_PROTOCOL  **Protocol  OPTIONAL
+  );
+
+/**
+  Update the Device Tree with mode and framebuffer info using an
+  active GOP instance installed on a child handle.
+
+  @param[in] DriverHandle      Handle of the driver.
+  @param[in] ControllerHandle  Handle of the controller.
+
+  @return TRUE   Device Tree updated successfully.
+  @return FALSE  No Device Tree was found.
+  @return FALSE  No GOP child handle was found.
+  @return FALSE  The GOP child handle was inactive.
+  @return FALSE  Could not retrieve the framebuffer region.
+  @return FALSE  Failed to update the Device Tree.
+*/
+BOOLEAN
+NvDisplayUpdateFdtTableActiveChildGop (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
   );
 
 #endif // __NV_DISPLAY_H__
