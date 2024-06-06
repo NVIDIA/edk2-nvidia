@@ -2,7 +2,7 @@
 #
 #  NV Display Controller Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
 
 [Sources.common]
   NvDisplayControllerDxe.c
+  NvDisplayMmioRegions.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -28,8 +29,10 @@
 
 [LibraryClasses]
   BaseLib
+  BaseMemoryLib
   DebugLib
   DeviceDiscoveryDriverLib
+  DeviceTreeHelperLib
   DisplayDeviceTreeHelperLib
   HobLib
   IoLib
@@ -58,7 +61,6 @@
   gNVIDIADeviceTreeNodeProtocolGuid             ## CONSUMES
 
 [Pcd]
-  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
 
 [Depex]

@@ -409,11 +409,6 @@
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported|0xf|UINT64|0x00000056
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting|0xf|UINT64|0x00000057
 
-#Index of the PCI BAR register through which the framebuffer should be
-#accessible. The value of -1 (0xFF) means no framebuffer will be
-#allocated.
-  gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|0xFF|UINT8|0x00000064
-
 #Name of Recovery Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdRecoveryKernelDtbPartitionName|L"recovery-dtb"|VOID*|0x00000066
 #Firmware Prefix printed during hafnium boot

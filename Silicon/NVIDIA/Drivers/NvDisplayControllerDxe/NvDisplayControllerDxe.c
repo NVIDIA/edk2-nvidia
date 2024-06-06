@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,12 +15,9 @@
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
-#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
-#include <Library/PlatformResourceLib.h>
-#include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -30,6 +27,8 @@
 
 #include <libfdt.h>
 #include <NVIDIAConfiguration.h>
+
+#include "NvDisplay.h"
 
 #define DISPLAY_SOR_COUNT      8
 #define DISPLAY_FE_SW_SYS_CAP  0x00030000
@@ -466,189 +465,6 @@ ConfigureOutputGpios (
 }
 
 /**
-   Retrieves base and size of the framebuffer region.
-
-   @param[out] Base  Base of the framebuffer region.
-   @param[out] Size  Size of the framebuffer region.
-
-   @retval EFI_SUCCESS    Region details retrieved successfully.
-   @retval EFI_NOT_FOUND  No framebuffer region was not found.
-*/
-STATIC
-EFI_STATUS
-GetFramebufferRegion (
-  OUT EFI_PHYSICAL_ADDRESS *CONST  Base,
-  OUT UINTN                *CONST  Size
-  )
-{
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  TEGRA_BASE_AND_SIZE_INFO      *FbInfo;
-
-  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-  if ((Hob == NULL) || (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (*PlatformResourceInfo))) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to retrieve platform resource information\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
-  }
-
-  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  FbInfo               = &PlatformResourceInfo->FrameBufferInfo;
-
-  if ((FbInfo->Base == 0) || (FbInfo->Size == 0)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: no framebuffer region present\r\n",
-      __FUNCTION__
-      ));
-    return EFI_NOT_FOUND;
-  }
-
-  *Base = FbInfo->Base;
-  *Size = FbInfo->Size;
-
-  return EFI_SUCCESS;
-}
-
-/**
-   Creates an ACPI address space descriptor suitable for use as a
-   framebuffer.
-
-   @param[out] Desc  Resulting descriptor
-
-   @retval EFI_SUCCESS Descriptor successfully created
-   @retval others      Failed to create the descriptor
-*/
-STATIC
-EFI_STATUS
-CreateFramebufferResource (
-  OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *CONST  Desc
-  )
-{
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  Base;
-  UINTN                 Size;
-
-  Status = GetFramebufferRegion (&Base, &Size);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  ZeroMem (Desc, sizeof (*Desc));
-  Desc->Desc                 = ACPI_ADDRESS_SPACE_DESCRIPTOR;
-  Desc->Len                  = sizeof (*Desc) - 3;
-  Desc->AddrRangeMin         = Base;
-  Desc->AddrLen              = Size;
-  Desc->AddrRangeMax         = Base + Size - 1;
-  Desc->ResType              = ACPI_ADDRESS_SPACE_TYPE_MEM;
-  Desc->AddrSpaceGranularity = Base + Size > SIZE_4GB ? 64 : 32;
-
-  return EFI_SUCCESS;
-}
-
-/**
-   Copies resource descriptors from @a SourceResources to @a
-   DestinationResources, optionally inserting @a *NewResource at index
-   @a NewResourceIndex in the process.
-
-   If @a DestinationResources is NULL, no copying is performed.
-
-   If @a DestinationResourcesSize is not NULL, it will hold the
-   minimum required size of @a DestinationResources (in bytes) upon
-   return.
-
-   Note that @a DestinationResources is assumed to have enough space
-   available.
-
-   @param[out]     DestinationResources      Where to put the result
-   @param[out]     DestinationResourcesSize  Size of the result
-   @param[in]      SourceResources           Resources to copy
-   @param[in,out]  NewResource               Resource to insert on call; inserted resource on return
-   @param[in]      NewResourceIndex          Index to insert the resource at
-
-   @retval EFI_SUCCESS           Operation completed successfully
-   @retval EFI_INVALID_PARAMETER SourceResources is NULL
-   @retval EFI_INVALID_PARAMETER DestinationResources and DestinationResourcesSize are both NULL
-   @retval EFI_INVALID_PARAMETER *NewResource is not NULL, but NewResourceIndex is out of bounds
-*/
-STATIC
-EFI_STATUS
-CopyAndInsertResource (
-  OUT       EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST     DestinationResources OPTIONAL,
-  OUT       UINTN                              *CONST     DestinationResourcesSize OPTIONAL,
-  IN     CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *CONST  SourceResources,
-  IN OUT CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **CONST  NewResource,
-  IN     CONST UINTN                                      NewResourceIndex
-  )
-{
-  UINTN                                    DestIndex, DestSize;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR        *DestDesc;
-  CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *SrcDesc, *NewDesc;
-
-  if (  (  (DestinationResources == NULL)
-        && (DestinationResourcesSize == NULL))
-     || (SourceResources == NULL))
-  {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  NewDesc   = NewResource != NULL ? *NewResource : NULL;
-  SrcDesc   = SourceResources;
-  DestDesc  = DestinationResources;
-  DestIndex = DestSize = 0;
-  while (1) {
-    if ((NewDesc != NULL) && (DestIndex == NewResourceIndex)) {
-      if (DestDesc != NULL) {
-        CopyMem (DestDesc, NewDesc, NewDesc->Len + 3);
-        NewDesc  = DestDesc;
-        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)DestDesc + DestDesc->Len + 3);
-      }
-
-      DestIndex++;
-      DestSize += NewDesc->Len + 3;
-    } else if (SrcDesc->Desc != ACPI_END_TAG_DESCRIPTOR) {
-      if (DestDesc != NULL) {
-        CopyMem (DestDesc, SrcDesc, SrcDesc->Len + 3);
-        DestDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)DestDesc + DestDesc->Len + 3);
-      }
-
-      SrcDesc = (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)((UINT8 *)SrcDesc + SrcDesc->Len + 3);
-      DestIndex++;
-      DestSize += SrcDesc->Len + 3;
-    } else {
-      if (DestDesc != NULL) {
-        CopyMem (DestDesc, SrcDesc, sizeof (EFI_ACPI_END_TAG_DESCRIPTOR));
-      }
-
-      DestSize += sizeof (EFI_ACPI_END_TAG_DESCRIPTOR);
-      break;
-    }
-  }
-
-  if (DestinationResourcesSize != NULL) {
-    *DestinationResourcesSize = DestSize;
-  }
-
-  if (NewResource != NULL) {
-    *NewResource = NewDesc;
-  }
-
-  // DestIndex is now equal to the total number of resources in
-  // DestinationResources. If we wanted to insert NewDesc,
-  // NewResourceIndex must be smaller than number of resources in
-  // DestinationResources, otherwise NewResourceIndex is out of
-  // bounds.
-  if ((NewDesc != NULL) && !(NewResourceIndex < DestIndex)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
    Switch all SOR clocks to a safe source to prevent a lingering bad
    display HW state.
 
@@ -1030,7 +846,7 @@ UpdateFdtTableChildGop (
   if (  (Gop->Mode->Info->PixelFormat == PixelBltOnly)
      || (FrameBufferBase == 0) || (FrameBufferSize == 0))
   {
-    Status = GetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
+    Status = NvDisplayGetFramebufferRegion (&FrameBufferBase, &FrameBufferSize);
     if (EFI_ERROR (Status)) {
       return FALSE;
     }
@@ -1138,11 +954,8 @@ DisplayStart (
   EFI_STATUS                         Status;
   UINTN                              ResourcesSize;
   NON_DISCOVERABLE_DEVICE            *NvNonDiscoverableDevice;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  FramebufferDescriptor, *FramebufferResource = NULL;
   NVIDIA_DISPLAY_CONTROLLER_CONTEXT  *Result     = NULL;
   CONST BOOLEAN                      UseDpOutput = FALSE;
-
-  CONST UINTN  FramebufferResourceIndex = (UINTN)(PcdGet8 (PcdFramebufferBarIndex) + 1) - 1;
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
@@ -1162,29 +975,8 @@ DisplayStart (
     goto Exit;
   }
 
-  if (FramebufferResourceIndex != MAX_UINTN) {
-    Status = CreateFramebufferResource (&FramebufferDescriptor);
-    if (EFI_ERROR (Status)) {
-      goto Exit;
-    }
-
-    FramebufferResource = &FramebufferDescriptor;
-  }
-
-  Status = CopyAndInsertResource (
-             NULL,
-             &ResourcesSize,
-             NvNonDiscoverableDevice->Resources,
-             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **)&FramebufferResource,
-             FramebufferResourceIndex
-             );
+  Status = NvDisplayGetMmioRegions (DriverHandle, ControllerHandle, NULL, &ResourcesSize);
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: could not determine size of resources: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
     goto Exit;
   }
 
@@ -1214,20 +1006,13 @@ DisplayStart (
   Result->EdkiiNonDiscoverableDevice.Resources =
     (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *)(Result + 1);
 
-  Status = CopyAndInsertResource (
+  Status = NvDisplayGetMmioRegions (
+             DriverHandle,
+             ControllerHandle,
              Result->EdkiiNonDiscoverableDevice.Resources,
-             NULL,
-             NvNonDiscoverableDevice->Resources,
-             (CONST EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR **)&FramebufferResource,
-             FramebufferResourceIndex
+             &ResourcesSize
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: could not insert resource: %r\r\n",
-      __FUNCTION__,
-      Status
-      ));
     goto Exit;
   }
 
