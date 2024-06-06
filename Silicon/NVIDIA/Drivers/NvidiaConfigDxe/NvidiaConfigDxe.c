@@ -1803,6 +1803,9 @@ InitializeSettings (
   // Initialize SOC display hand-off mode
   PcdSet8S (PcdSocDisplayHandoffMode, PcdGet8 (PcdSocDisplayHandoffMode));
 
+  // Initialize Server Power Control settings
+  PcdSet8S (PcdServerPowerControlSetting, PcdGet8 (PcdServerPowerControlSetting));
+
   // Initialize board recovery boot mode Form Settings
   if (PcdGetBool (PcdBoardRecoveryBoot)) {
     PcdSetBoolS (PcdBoardRecoveryBoot, FALSE);
@@ -2034,7 +2037,6 @@ InitializeSettings (
     Status = gBS->LocateProtocol (&gServerPowerControlProtocolGuid, NULL, (VOID **)&ServerPwrCtl);
     if (!EFI_ERROR (Status)) {
       mHiiControlSettings.ServerPwrCtlSettingSupported = TRUE;
-      PcdSet8S (PcdServerPowerControlSetting, PcdGet8 (PcdServerPowerControlSetting));
       ServerPwrCtl->ConfigurePowerControl (ServerPwrCtl, PcdGet8 (PcdServerPowerControlSetting));
     }
 

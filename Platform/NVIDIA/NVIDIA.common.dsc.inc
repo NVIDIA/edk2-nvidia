@@ -1157,9 +1157,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|L"BoardRecoveryBoot"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
 
-!ifdef CONFIG_SERVER_POWER_CONTROLLERS
   gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting|L"ServerPowerControlSetting"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV,RT
-!endif
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
