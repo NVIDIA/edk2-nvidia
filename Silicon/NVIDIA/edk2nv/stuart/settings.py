@@ -233,7 +233,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         import io
         result = io.StringIO()
         edk2_nvidia_dir = self.GetEdk2NvidiaDir()
-        ret = RunCmd(f"git", "-C {edk2_nvidia_dir} describe --tags --abbrev=0",
+        ret = RunCmd("git", f"-C {edk2_nvidia_dir} describe --tags --abbrev=0",
                      workingdir=self.GetWorkspaceRoot(), outstream=result)
         if (ret == 0):
             ver = result.getvalue().strip()
@@ -265,7 +265,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             import io
             result = io.StringIO()
             edk2_nvidia_dir = self.GetEdk2NvidiaDir()
-            ret = RunCmd(f"git", "-C {edk2_nvidia_dir} describe --always --dirty",
+            ret = RunCmd(f"git", f"-C {edk2_nvidia_dir} describe --always --dirty",
                          workingdir=self.GetWorkspaceRoot(), outstream=result)
             if (ret == 0):
                 return base + "-" + result.getvalue().strip()
