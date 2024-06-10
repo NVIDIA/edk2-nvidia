@@ -868,3 +868,16 @@ config SERVER_POWER_CONTROLLERS
   depends on SOC_GRACE
   help
     Adds support for configuring power controllers for server systems via UEFI ui
+
+config PRM_RAS_CPER_MODULE
+  bool "PRM RAS module support"
+  help
+    Exposes API to pull RW SPI flash data from OS via PRM ACPI method
+
+config PRM_PACKAGE_SUPPORT
+  bool "edk2 PrmPkg support"
+  default y if PRM_RAS_CPER_MODULE
+
+config FIRMWARE_PARTITION_MM_DXE_DRIVER
+  bool
+  default y if (FIRMWARE_PARTITION_SUPPORT || FIRMWARE_MANAGEMENT_BLOB || PRM_RAS_CPER_MODULE)

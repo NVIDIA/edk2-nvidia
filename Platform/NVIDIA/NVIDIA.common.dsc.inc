@@ -578,6 +578,11 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
+!ifdef CONFIG_PRM_PACKAGE_SUPPORT
+  PrmContextBufferLib|PrmPkg/Library/DxePrmContextBufferLib/DxePrmContextBufferLib.inf
+  PrmModuleDiscoveryLib|PrmPkg/Library/DxePrmModuleDiscoveryLib/DxePrmModuleDiscoveryLib.inf
+  PrmPeCoffLib|PrmPkg/Library/DxePrmPeCoffLib/DxePrmPeCoffLib.inf
+!endif
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   #
@@ -2063,7 +2068,6 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
   Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
   Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
-  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
@@ -2094,9 +2098,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   Silicon/NVIDIA/Drivers/MctpMmDxe/MctpMmDxe.inf
 !endif
-!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+!ifdef CONFIG_FIRMWARE_PARTITION_MM_DXE_DRIVER
   #
-  # FW Partition
+  # FW Partition MM driver
   #
   Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
@@ -2464,6 +2468,23 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   OvmfPkg/Virtio10Dxe/Virtio10.inf
 !ifdef CONFIG_NETWORKING_DEVICE_VIRTIO
   OvmfPkg/VirtioNetDxe/VirtioNet.inf
+!endif
+!endif
+
+!ifdef CONFIG_PRM_PACKAGE_SUPPORT
+  #
+  # PRM package
+  #
+  PrmPkg/PrmConfigDxe/PrmConfigDxe.inf {
+    <LibraryClasses>
+!ifdef CONFIG_PRM_RAS_CPER_MODULE
+      NULL|Silicon/NVIDIA/Drivers/PrmRasModule/Library/PrmRasModuleBufferConfigLib/PrmRasModuleBufferConfigLib.inf
+!endif
+  }
+  PrmPkg/PrmLoaderDxe/PrmLoaderDxe.inf
+  PrmPkg/PrmSsdtInstallDxe/PrmSsdtInstallDxe.inf
+!ifdef CONFIG_PRM_RAS_CPER_MODULE
+  Silicon/NVIDIA/Drivers/PrmRasModule/PrmRasModule.inf
 !endif
 !endif
 

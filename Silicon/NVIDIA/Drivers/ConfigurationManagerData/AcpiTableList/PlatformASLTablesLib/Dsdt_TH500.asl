@@ -1159,5 +1159,76 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
         Return (Buffer () {0})
       } // end _DSM
     } // end device DAT0
+
+    //
+    // CPER parser virtual device.
+    //
+    Device (CPER) {
+      External(\_SB.PRMT, DeviceObj)
+      External(\_SB.PRMT.RUNS, MethodObj)
+      External(\_SB.PRMT.ULCK, MethodObj)
+      External(\_SB.PRMT.LCKH, MethodObj)
+      //
+      // vendor-specific for CPER log collection
+      Name (_HID, "NVDA2012")
+      Name (_UID, 0)
+
+      //
+      // PRM cper parser handler guid
+      // Below GUID must be consistant with PRM firmware handler.
+      // {0xad16d36e, 0x1933, 0x480e, {0x9b, 0x52, 0xd1, 0x7d, 0xe5, 0xb4, 0xe6, 0x32}}
+      Name (PCPG, ToUUID("AD16D36E-1933-480E-9B52-D17DE5B4E632"))
+
+      //
+      // _DSM - Device Specific Method
+      //
+      // Arg0   Function UUID
+      // Arg1   Revision ID
+      // Arg2   Command value
+      // Arg3   Package containing function-specific parameters
+      Method (_DSM, 4, Serialized) {
+        If (LEqual (Arg0, PCPG)) {
+          // Check for Revision ID
+          If (Arg1 >= 0) {
+            Switch (ToInteger (Arg2)) {
+              // 0x0 – run the PRM service associated with the GUID parameter
+              case (0x0) {
+                //
+                // Invoke PRM handler, if \_SB.PRMT.RUNS is available.
+                If (CondRefOf (\_SB.PRMT.RUNS)) {
+                  Store (\_SB.PRMT.RUNS(PCPG), Local0)
+                  Return (Local0)
+                }
+                Return (0xFF)
+              }
+              // 0x1 – start a sequence of PRM calls
+              case (0x1) {
+                //
+                // Invoke PRM handler, if \_SB.PRMT.ULCK is available.
+                If (CondRefOf (\_SB.PRMT.ULCK)) {
+                  Store (\_SB.PRMT.ULCK(PCPG), Local0)
+                  Return (Local0)
+                }
+                Return (0xFF)
+              }
+              // 0x2 – terminate a sequence of PRM calls
+              case (0x2) {
+                //
+                // Invoke PRM handler, if \_SB.PRMT.LCKH is available.
+                If (CondRefOf (\_SB.PRMT.LCKH)) {
+                  Store (\_SB.PRMT.LCKH(PCPG), Local0)
+                  Return (Local0)
+                }
+                Return (0xFF)
+              }
+
+              default {
+                Return (0xFF)
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

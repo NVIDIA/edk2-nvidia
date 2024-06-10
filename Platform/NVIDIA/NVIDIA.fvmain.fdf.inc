@@ -109,9 +109,8 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/FwPartitionNorFlashDxe/FwPartitionNorFlashDxe.inf
   INF Silicon/NVIDIA/Drivers/FwPartitionBlockIoDxe/FwPartitionBlockIoDxe.inf
   INF Silicon/NVIDIA/Drivers/FwImageDxe/FwImageDxe.inf
-  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
-!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+!ifdef CONFIG_FIRMWARE_PARTITION_MM_DXE_DRIVER
   INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionMmDxe.inf
 !endif
 
@@ -938,4 +937,16 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
 !ifdef CONFIG_INFINEON_TPM_FW_UPDATE
   INF IFXTPMUpdate_Driver/Src/TPMToolsUEFIPkg/IFXTPMUpdate.inf
+!endif
+
+!ifdef CONFIG_PRM_PACKAGE_SUPPORT
+  #
+  # PRM package support
+  #
+  INF PrmPkg/PrmConfigDxe/PrmConfigDxe.inf
+  INF PrmPkg/PrmLoaderDxe/PrmLoaderDxe.inf
+  INF PrmPkg/PrmSsdtInstallDxe/PrmSsdtInstallDxe.inf
+!ifdef CONFIG_PRM_RAS_CPER_MODULE
+  INF Silicon/NVIDIA/Drivers/PrmRasModule/PrmRasModule.inf
+!endif
 !endif

@@ -1,0 +1,35 @@
+## @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION         = 0x00010005
+  BASE_NAME           = PrmRasModuleBufferConfigLib
+  FILE_GUID           = 0DE84504-E649-4E07-B020-BDBA56654273
+  MODULE_TYPE         = DXE_DRIVER
+  VERSION_STRING      = 1.0
+  LIBRARY_CLASS       = NULL |DXE_DRIVER
+  CONSTRUCTOR         = PrmRasModuleBufferConfigLibConstructor
+
+[Sources]
+  PrmRasModuleBufferConfigLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  PrmPkg/PrmPkg.dec
+
+[Protocols]
+  gPrmConfigProtocolGuid
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint

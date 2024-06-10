@@ -1,0 +1,48 @@
+## @file
+#  CPER PRM RAS Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION         = 0x00010005
+  BASE_NAME           = PrmRasModule
+  FILE_GUID           = 06A95D5B-06C8-4004-A55F-230BABCC649A
+  MODULE_TYPE         = DXE_RUNTIME_DRIVER
+  VERSION_STRING      = 1.0
+  ENTRY_POINT         = PrmRasModuleInit
+
+[Sources]
+  PrmRasModule.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  PrmPkg/PrmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiDriverEntryPoint
+  UefiLib
+  PlatformResourceLib
+  UefiRuntimeLib
+
+[Protocols]
+  gNVIDIAFwPartitionProtocolGuid
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[Depex]
+  gNVIDIAFwPartitionProtocolGuid
+
+[BuildOptions.common]
+  MSFT:*_*_*_DLINK_FLAGS  = /DLL /SUBSYSTEM:CONSOLE /VERSION:1.0
+  MSFT:*_*_*_GENFW_FLAGS = --keepoptionalheader
+
+  GCC:*_*_AARCH64_GENFW_FLAGS = --prm
+  GCC:*_*_AARCH64_DLINK_FLAGS = -Wl,--no-gc-sections -Wl,--require-defined=PrmModuleExportDescriptor -Wl,--require-defined=RasPrmHandler

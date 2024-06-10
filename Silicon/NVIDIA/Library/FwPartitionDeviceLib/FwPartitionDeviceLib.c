@@ -18,6 +18,7 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Uefi/UefiBaseType.h>
+#include <Library/PlatformResourceLib.h>
 
 #define FW_PARTITION_PSEUDO_DEVICE_SIGNATURE  SIGNATURE_32 ('F','W','P','P')
 
@@ -43,6 +44,8 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
   L"mb2-applet",
   L"NorFlash-Blob",
   L"MM-NorFlash",
+  L"MM-RAS",
+  L"MM-Capsule",
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
   NULL
 };
@@ -455,8 +458,12 @@ FwDeviceAddAsPartition (
   IN  UINTN                     Bytes
   )
 {
+  EFI_STATUS                 Status;
   FW_PARTITION_PRIVATE_DATA  *Private;
   FW_PARTITION_INFO          *PartitionInfo;
+  UINT16                     DeviceInstance;
+  UINT64                     PartitionOffset;
+  UINT64                     PartitionSize;
 
   if (mNumFwPartitions >= mMaxFwPartitions) {
     DEBUG ((
@@ -467,6 +474,34 @@ FwDeviceAddAsPartition (
       mMaxFwPartitions
       ));
     return EFI_OUT_OF_RESOURCES;
+  }
+
+  if ((StrCmp (Name, L"MM-NorFlash") == 0)) {
+    Status = GetPartitionInfo (TEGRABL_RAS_ERROR_LOGS, &DeviceInstance, &PartitionOffset, &PartitionSize);
+    if (!EFI_ERROR (Status)) {
+      Status = FwPartitionAdd (
+                 L"MM-RAS",
+                 DeviceInfo,
+                 PartitionOffset,
+                 PartitionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-RAS\n", __FUNCTION__));
+      }
+    }
+
+    Status = GetPartitionInfo (TEGRAUEFI_CAPSULE, &DeviceInstance, &PartitionOffset, &PartitionSize);
+    if (!EFI_ERROR (Status)) {
+      Status = FwPartitionAdd (
+                 L"MM-Capsule",
+                 DeviceInfo,
+                 PartitionOffset,
+                 PartitionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-Capsule\n", __FUNCTION__));
+      }
+    }
   }
 
   Private       = &mPrivate[mNumFwPartitions];
