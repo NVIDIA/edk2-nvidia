@@ -293,6 +293,31 @@ GetGRBlobBaseAddress (
 }
 
 /**
+  InValidate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+InValidateActiveBootChain (
+  VOID
+  )
+{
+  UINTN  ChipID;
+  UINTN  CpuBootloaderAddress;
+
+  ChipID = TegraGetChipID ();
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      return TH500InValidateActiveBootChain (CpuBootloaderAddress);
+    default:
+      return EFI_UNSUPPORTED;
+  }
+}
+
+/**
   Validate Active Boot Chain
 
 **/

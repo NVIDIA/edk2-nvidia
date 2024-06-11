@@ -805,13 +805,14 @@ TH500GetActiveBootChain (
 }
 
 /**
-  Validate Active Boot Chain
+  Set Active Boot Chain State
 
 **/
 EFI_STATUS
 EFIAPI
-TH500ValidateActiveBootChain (
-  IN  UINTN  CpuBootloaderAddress
+TH500SetBootChainState (
+  IN  UINTN   CpuBootloaderAddress,
+  IN  UINT32  BootChainState
   )
 {
   UINT32      SocketMask;
@@ -838,11 +839,37 @@ TH500ValidateActiveBootChain (
       ScratchAddr,
       BOOT_CHAIN_STATUS_LO + BootChain,
       BOOT_CHAIN_STATUS_LO + BootChain,
-      BOOT_CHAIN_GOOD
+      BootChainState
       );
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500ValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  return TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_GOOD);
+}
+
+/**
+  InValidate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500InValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  )
+{
+  return TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_BAD);
 }
 
 /**

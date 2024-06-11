@@ -239,6 +239,16 @@ ValidateActiveBootChain (
   );
 
 /**
+  InValidate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+InValidateActiveBootChain (
+  VOID
+  );
+
+/**
   Update boot chain scratch register to boot given boot chain on next reset
 
   @param[in]  BootChain             Boot chain

@@ -69,6 +69,16 @@ TH500ValidateActiveBootChain (
   );
 
 /**
+  Validate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+TH500InValidateActiveBootChain (
+  IN  UINTN  CpuBootloaderAddress
+  );
+
+/**
   Get Socket Mask
 
 **/
