@@ -42,3 +42,6 @@
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs

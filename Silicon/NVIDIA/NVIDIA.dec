@@ -813,3 +813,6 @@
 
 #Number of scratch registers available per Frame
   gNVIDIATokenSpaceGuid.PcdPerFpLimit|0x0|UINT32|0x00000127
+
+#Expose RTC I2C to OS
+  gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs|FALSE|BOOLEAN|0x0000012E

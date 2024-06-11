@@ -953,6 +953,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs|TRUE
 !endif
 
+!ifdef CONFIG_RTC_I2C_OS_EXPOSURE
+  # Disable Runtime Time APIs
+  gNVIDIATokenSpaceGuid.PcdVariableRtProperties|0x27F0
+  gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs|TRUE
+!endif
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.

@@ -765,6 +765,27 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       }
     }
 
+#if FixedPcdGetBool(PcdExposeRtcI2cToOs)
+    Device (I2C2) {
+      Name (_HID, "NVDA0301")
+      Name (_UID, 2)
+
+      Name (_CRS, ResourceTemplate() {
+        Memory32Fixed (ReadWrite, 0xc240000, 0x10000)
+        Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x3d }
+      })
+
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) {"clock-frequency", 400000 },
+        },
+      })
+
+      Method (_RST) { }
+    }
+#endif
+
     //---------------------------------------------------------------------
     // MCF Devices
     //---------------------------------------------------------------------

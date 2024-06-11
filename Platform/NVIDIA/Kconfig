@@ -297,6 +297,11 @@ menu "Hardware support"
       Use Nuvoton based clock
   endchoice
 
+  config RTC_I2C_OS_EXPOSURE
+  bool "RTC I2C OS Exposure"
+  help
+    Expose RTC over I2C to OS, disables runtime clock support
+
   config RAS
   bool
   default y if SOC_DATACENTER
