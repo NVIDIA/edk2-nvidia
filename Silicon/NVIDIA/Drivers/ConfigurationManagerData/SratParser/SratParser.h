@@ -11,12 +11,6 @@
 
 #include <Library/NvCmObjectDescUtility.h>
 
-typedef struct {
-  UINT32    PxmDmn;
-  UINT64    HbmSize;
-  UINT64    HbmBase;
-} HBM_MEMORY_INFO;
-
 /** SRAT parser function.
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

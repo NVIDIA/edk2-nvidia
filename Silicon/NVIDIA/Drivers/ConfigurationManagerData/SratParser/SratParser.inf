@@ -27,7 +27,6 @@
 
 [LibraryClasses]
   ConfigurationManagerDataRepoLib
-  HbmParserLib
   PcdLib
 
 [Pcd]
@@ -38,5 +37,3 @@
 [Guids]
   gNVIDIAPlatformResourceDataGuid
 
-[Protocols]
-  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid

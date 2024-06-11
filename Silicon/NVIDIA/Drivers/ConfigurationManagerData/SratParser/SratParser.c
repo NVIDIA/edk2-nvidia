@@ -33,15 +33,11 @@ SratParser (
   EFI_STATUS                    Status;
   CM_STD_OBJ_ACPI_TABLE_INFO    AcpiTableHeader;
   CM_ARM_MEMORY_AFFINITY_INFO   *MemoryAffinityInfo;
-  HBM_MEMORY_INFO               *HbmMemInfo;
   UINTN                         MemoryAffinityInfoCount;
   UINTN                         MemoryAffinityInfoIndex;
   UINTN                         GpuMemoryAffinityId;
   UINT8                         NumEnabledSockets;
   UINT8                         NumGpuEnabledSockets;
-  EFI_HANDLE                    *Handles = NULL;
-  UINTN                         NumberOfHandles;
-  UINTN                         HandleIdx;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   CM_OBJ_DESCRIPTOR             Desc;
@@ -123,56 +119,6 @@ SratParser (
     }
   }
 
-  // Allocate space to save HBM info
-  HbmMemInfo = (HBM_MEMORY_INFO *)AllocateZeroPool (sizeof (HBM_MEMORY_INFO) * TH500_TOTAL_PROXIMITY_DOMAINS);
-  if (HbmMemInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate HBM memory info\r\n", __FUNCTION__));
-    return EFI_DEVICE_ERROR;
-  }
-
-  // Retrieve HBM memory info from PCI Root Bridge Protocol
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
-                  NULL,
-                  &NumberOfHandles,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to locate root bridge protocols, %r.\r\n", __FUNCTION__, NumberOfHandles));
-    Status = EFI_NOT_FOUND;
-    goto CleanupAndReturn;
-  }
-
-  for (HandleIdx = 0; HandleIdx < NumberOfHandles; HandleIdx++) {
-    NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *PciRbCfg = NULL;
-    Status = gBS->HandleProtocol (
-                    Handles[HandleIdx],
-                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
-                    (VOID **)&PciRbCfg
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to get protocol for handle %p, %r.\r\n",
-        __FUNCTION__,
-        Handles[HandleIdx],
-        Status
-        ));
-      goto CleanupAndReturn;
-    }
-
-    if (PciRbCfg->NumProximityDomains > 0) {
-      // found the GPU HBM info
-      for (UINTN Idx = 0; Idx < PciRbCfg->NumProximityDomains; Idx++ ) {
-        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].PxmDmn  = PciRbCfg->ProximityDomainStart + Idx;
-        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].HbmSize = PciRbCfg->HbmRangeSize / PciRbCfg->NumProximityDomains;
-        HbmMemInfo[PciRbCfg->ProximityDomainStart + Idx].HbmBase = PciRbCfg->HbmRangeStart +
-                                                                   (PciRbCfg->HbmRangeSize / PciRbCfg->NumProximityDomains * Idx);
-      }
-    }
-  }
-
   // Placeholder node for all domains, actual entries will be present in DSDT
   // Create structure entries for enabled GPUs
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
@@ -187,8 +133,6 @@ SratParser (
     }
   }
 
-  FreePool (HbmMemInfo);
-
   ASSERT (MemoryAffinityInfoIndex == MemoryAffinityInfoCount);
 
   Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjMemoryAffinityInfo);
@@ -202,10 +146,6 @@ SratParser (
   }
 
 CleanupAndReturn:
-  if (Handles != NULL) {
-    FreePool (Handles);
-  }
-
   return Status;
 }
 
