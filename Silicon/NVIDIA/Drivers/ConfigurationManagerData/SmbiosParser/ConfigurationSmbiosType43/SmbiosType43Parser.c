@@ -117,8 +117,9 @@ InstallSmbiosType43Cm (
   TpmInfo->FirmwareVersion1 = FirmwareVersion1;
   TpmInfo->FirmwareVersion2 = FirmwareVersion2;
   TpmInfo->Description      = AllocateCopyString (DescStr);
-  TpmInfo->Characteristics  = 0;
   TpmInfo->OemDefined       = 0;
+
+  ((TPM_CHARACTERISTICS *)(&TpmInfo->Characteristics))->Bits.NotConfigurable = 1ULL;
 
   // Allocate Token Map
   Status = NvAllocateCmTokens (ParserHandle, 1, &TokenMap);

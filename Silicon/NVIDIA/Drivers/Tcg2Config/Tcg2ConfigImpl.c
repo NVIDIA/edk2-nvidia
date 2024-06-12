@@ -4,6 +4,8 @@
 
 Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2018 Hewlett Packard Enterprise Development LP<BR>
+SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -366,64 +368,15 @@ GetTpm2HID (
   UINTN  Size
   )
 {
-  EFI_STATUS  Status;
-  UINT32      ManufacturerID;
-  UINT32      FirmwareVersion1;
-  UINT32      FirmwareVersion2;
-  BOOLEAN     PnpHID;
-
-  PnpHID = TRUE;
+  CHAR8  *Tpm2Hid = "PRP0001";
 
   ZeroMem (Hid, Size);
 
-  //
-  // Get Manufacturer ID
-  //
-  Status = Tpm2GetCapabilityManufactureID (&ManufacturerID);
-  if (!EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "TPM_PT_MANUFACTURER 0x%08x\n", ManufacturerID));
-    //
-    // ManufacturerID defined in TCG Vendor ID Registry
-    // may tailed with 0x00 or 0x20
-    //
-    if (((ManufacturerID >> 24) == 0x00) || ((ManufacturerID >> 24) == 0x20)) {
-      //
-      //  HID containing PNP ID "NNN####"
-      //   NNN is uppercase letter for Vendor ID specified by manufacturer
-      //
-      CopyMem (Hid, &ManufacturerID, 3);
-    } else {
-      //
-      //  HID containing ACP ID "NNNN####"
-      //   NNNN is uppercase letter for Vendor ID specified by manufacturer
-      //
-      CopyMem (Hid, &ManufacturerID, 4);
-      PnpHID = FALSE;
-    }
-  } else {
-    DEBUG ((DEBUG_ERROR, "Get TPM_PT_MANUFACTURER failed %x!\n", Status));
-    ASSERT (FALSE);
-    return Status;
-  }
-
-  Status = Tpm2GetCapabilityFirmwareVersion (&FirmwareVersion1, &FirmwareVersion2);
-  if (!EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "TPM_PT_FIRMWARE_VERSION_1 0x%x\n", FirmwareVersion1));
-    DEBUG ((DEBUG_INFO, "TPM_PT_FIRMWARE_VERSION_2 0x%x\n", FirmwareVersion2));
-    //
-    //   #### is Firmware Version 1
-    //
-    if (PnpHID) {
-      AsciiSPrint (Hid + 3, TPM_HID_PNP_SIZE - 3, "%02d%02d", ((FirmwareVersion1 & 0xFFFF0000) >> 16), (FirmwareVersion1 & 0x0000FFFF));
-    } else {
-      AsciiSPrint (Hid + 4, TPM_HID_ACPI_SIZE - 4, "%02d%02d", ((FirmwareVersion1 & 0xFFFF0000) >> 16), (FirmwareVersion1 & 0x0000FFFF));
-    }
-  } else {
-    DEBUG ((DEBUG_ERROR, "Get TPM_PT_FIRMWARE_VERSION_X failed %x!\n", Status));
-    ASSERT (FALSE);
-    return Status;
-  }
-
+  CopyMem (
+    (VOID *)Hid,
+    Tpm2Hid,
+    AsciiStrSize (Tpm2Hid)
+    );
   return EFI_SUCCESS;
 }
 
@@ -551,18 +504,16 @@ Tcg2Callback (
     //
     // Update TPM2 HID info
     //
-    if (QuestionId == KEY_TPM_DEVICE) {
-      Status = GetTpm2HID (HidStr, 16);
+    Status = GetTpm2HID (HidStr, 16);
 
-      if (EFI_ERROR (Status)) {
-        //
-        //  Fail to get TPM2 HID
-        //
-        HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_TPM2_ACPI_HID_CONTENT), L"Unknown", NULL);
-      } else {
-        AsciiStrToUnicodeStrS (HidStr, UnHidStr, 16);
-        HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_TPM2_ACPI_HID_CONTENT), UnHidStr, NULL);
-      }
+    if (EFI_ERROR (Status)) {
+      //
+      //  Fail to get TPM2 HID
+      //
+      HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_TPM2_ACPI_HID_CONTENT), L"Unknown", NULL);
+    } else {
+      AsciiStrToUnicodeStrS (HidStr, UnHidStr, 16);
+      HiiSetString (Private->HiiHandle, STRING_TOKEN (STR_TPM2_ACPI_HID_CONTENT), UnHidStr, NULL);
     }
 
     return EFI_SUCCESS;

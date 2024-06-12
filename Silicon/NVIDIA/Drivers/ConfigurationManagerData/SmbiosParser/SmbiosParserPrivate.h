@@ -126,4 +126,19 @@ typedef struct {
   CHAR8    *SlotDescription;
 } PCI_SLOT_ASSOCIATION;
 
+/**
+TPM Characteristics
+**/
+typedef union {
+  struct {
+    UINT64    Reserved0                     : 2;
+    UINT64    NotConfigurable               : 1;
+    UINT64    ConfigurableViaFirmwareUpdate : 1;
+    UINT64    ConfigurableViaSoftware       : 1;
+    UINT64    ConfigurableViaOemProprietary : 1;
+    UINT64    Reserved1                     : 58;
+  } Bits;
+  UINT64    Data; ///< The entire 64-bit value
+} TPM_CHARACTERISTICS;
+
 #endif
