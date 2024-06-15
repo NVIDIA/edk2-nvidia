@@ -1671,7 +1671,7 @@ CheckUefiShellLoadOption (
                         &VariableSize,
                         (VOID *)&UefiShell
                         );
-  if (EFI_ERROR (Status) || UefiShell.Enabled) {
+  if ((EFI_ERROR (Status) || UefiShell.Enabled) && (PcdGet8 (PcdUefiShellEnabled))) {
     *UefiShellEnabled = 1;
     return;
   }

@@ -93,6 +93,7 @@
   gNVIDIATokenSpaceGuid.PcdMemoryTest
   gNVIDIATokenSpaceGuid.PcdSingleBootSupport
   gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid
+  gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
 
 [Guids]
   gEfiFileInfoGuid
