@@ -622,6 +622,12 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_SOC_USB
   INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif
+  #
+  # Inject Assert
+  #
+!ifdef CONFIG_SOC_GRACE
+  INF Silicon/NVIDIA/Application/TestInjectAssert/TestInjectAssert.inf
+!endif
 !endif
 
 !ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT
@@ -917,4 +923,3 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_SERVER_POWER_CONTROLLERS
   INF Silicon/NVIDIA/Drivers/ServerPowerControlDxe/ServerPowerControlDxe.inf
 !endif
-

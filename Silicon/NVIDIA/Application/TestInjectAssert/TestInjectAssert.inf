@@ -1,0 +1,51 @@
+## @file
+#  Application to inject Error.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = TestInjectAssert
+  FILE_GUID                      = 2a1ff956-1497-4b78-ae92-25645542227d
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = TestInjectAssert
+  MODULE_UNI_FILE                = TestInjectAssert.uni
+
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  TestInjectAssert.c
+  TestInjectAssertStrings.uni
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  DebugLib
+  UefiLib
+  UefiRuntimeServicesTableLib
+  PlatformResourceLib
+  ResetSystemLib
+  ShellLib
+
+[Guids]
+
+[Protocols]
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  TestInjectAssertExtra.uni
+

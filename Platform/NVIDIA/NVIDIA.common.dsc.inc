@@ -2023,6 +2023,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_SOC_USB
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif
+  #
+  # Inject Assert
+  #
+!ifdef CONFIG_SOC_GRACE
+  Silicon/NVIDIA/Application/TestInjectAssert/TestInjectAssert.inf
+!endif
 !endif
 
 !ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT

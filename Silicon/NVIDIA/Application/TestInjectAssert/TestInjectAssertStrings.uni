@@ -1,0 +1,32 @@
+/** @file
+  String definitions for the Test Inject Error Application.
+
+  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_TEST_INJECT_ASSERT_UNKNOWN              #language en-US  "%s: Operation not specified.\n"
+
+#string STR_TEST_INJECT_ASSERT_EXCEPTION            #language en-US  "%s: Specify one of the options  --swassert OR --exception .\n"
+
+#string STR_TEST_INJECT_ASSERT_HELP                 #language en-US    ""
+".TH TestInjectAssert 0 "Inject SW Assert or Exception."\r\n"
+".SH NAME\r\n"
+"Inject SW Assert or Exception.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HTestInjectAssert  [--swassert] [--exception] \r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Inject a SW assert or an Exception.
+"  --swassert                 Inject SW Assert\r\n"
+"  --exception                Inject Exception\r\n"
+" \r\n"
+" \r\n"
+"  -?                          Displays this help.\r\n"
+" \r\n"
