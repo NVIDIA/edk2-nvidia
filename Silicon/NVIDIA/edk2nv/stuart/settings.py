@@ -91,7 +91,8 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
 
         packages_paths.extend([
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", self.GetEdk2NvidiaDir(),
-            "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/"
+            "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/",
+            "edk2-platforms/Features"
         ])
 
         if self.GetConfigFiles ():
@@ -453,6 +454,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The path must be relative to GetWorkspaceRoot().
         '''
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Kconfig"
+
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
                               CiSetupSettingsManager, CiBuildSettingsManager,
