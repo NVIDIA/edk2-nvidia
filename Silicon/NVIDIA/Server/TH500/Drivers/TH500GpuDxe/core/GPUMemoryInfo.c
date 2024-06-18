@@ -4,7 +4,7 @@
     Placeholder until PCD, post devinit scratch, fsp query
     or CXL information available
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -22,6 +22,8 @@
 #include <Library/DebugLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+
+#include <Server/TH500/TH500Definitions.h>
 
 ///
 /// Protocol(s)
@@ -315,6 +317,10 @@ GetGPUMemoryInfo (
       GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_BASE_PA].PropertyValue = PlatformResourceInfo->EgmMemoryInfo[Socket].Base;
       GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_SIZE].PropertyValue    = PlatformResourceInfo->EgmMemoryInfo[Socket].Size;
       GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyValue     = Socket;
+      if (PlatformResourceInfo->HypervisorMode) {
+        GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyValue += TH500_HV_EGM_PXM_DOMAIN_START;
+      }
+
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_BASE_PA].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_BASE_PA].PropertyValue));
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_SIZE].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_SIZE].PropertyValue));
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyValue));

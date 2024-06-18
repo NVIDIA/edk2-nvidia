@@ -112,9 +112,7 @@ SratParser (
       }
 
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_HV_EGM_PXM_DOMAIN_START + Socket;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = PlatformResourceInfo->EgmMemoryInfo[Socket].Base;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = PlatformResourceInfo->EgmMemoryInfo[Socket].Size;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED|EFI_ACPI_6_4_MEMORY_HOT_PLUGGABLE;
       MemoryAffinityInfoIndex++;
     }
   }
