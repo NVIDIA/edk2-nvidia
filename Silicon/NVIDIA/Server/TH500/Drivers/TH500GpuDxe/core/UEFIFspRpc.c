@@ -1,14 +1,12 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * SPDX-License-Identifier: BSD-2-Clause-Patent
- */
+/** @file
 
-/*
- * @file  [UEFI] UEFIFspRpc.c
- * @brief UEFI client code which implements simple transactions between FSP and
- *        UEFI client.
- */
+  UEFI client code which implements simple transactions between FSP and UEFI client.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
 
 ///
 /// Libraries
@@ -89,6 +87,7 @@ typedef UINT32 NvU32;
 #define FSP_RPC_ERROR_CODE_0250H  0x0250
 #define FSP_RPC_ERROR_CODE_0251H  0x0251
 #define FSP_RPC_ERROR_CODE_0261H  0x0261
+#define FSP_RPC_ERROR_CODE_0500H  0x0500
 
 /* UEFI FSP RPC configured for Single Packet mode */
 #define NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE \
@@ -1549,7 +1548,7 @@ FspConfigurationEgmBaseAndSize (
           DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
           if (nvdmResponsePayloadErrCode == FSP_OK) {
             DEBUG ((DEBUG_INFO, "%a: MCTP message returned 'SUCCESS'.\n", __FUNCTION__));
-          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0261H) {
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0251H) {
             /* Inline log since error level needs escalation */
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC EGM already set: \n", __FUNCTION__));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
@@ -1558,12 +1557,11 @@ FspConfigurationEgmBaseAndSize (
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.subMessageId));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Base '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Base));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM EGM Size '0x%016lx'\n", __FUNCTION__, Nvdm_Final_Message_Egm->Nvdm_Uefi_Egm_Fsp_S.Egm_Size));
-          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0246H) {
-            FspRpcStatus = EFI_DEVICE_ERROR;
-            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
-            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
-            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+          } else if ((nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0246H) ||
+                     (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_024BH))
+          {
             /* Inline log since error level needs escalation */
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC Set EGM Error: \n", __FUNCTION__));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Mctp_Header_S)));
             DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_Egm->Nvdm_Header_S)));
@@ -1639,6 +1637,441 @@ uefifspRpcResponseReceivePacket_exit:
 
 uefifspRpcCmdQueueBuffer_exit:
   if (cmdQueueBuffer) {
+    FreePool (cmdQueueBuffer);
+  }
+
+  if (!EFI_ERROR (Status) && EFI_ERROR (FspRpcStatus)) {
+    Status = FspRpcStatus;
+  }
+
+  return Status;
+}
+
+/*
+ * @brief Request the C2C Init Status
+ *
+ * @param[in]   PciIo         PciIo protocol handle
+ * @param[out]  C2CInitStatus C2C Init Status Response
+ *
+ * @return Status
+ *            EFI_SUCCESS
+ *            EFI_OUT_OF_RESOURCES  - allcoation failed
+ *            EFI_TIMEOUT           - Timeout on command response
+ *            EFI_INVALID_PARAMETER - NULL PciIo
+ *            EFI_UNSUPPORTED       - C2C Init Status not implemented
+ */
+EFI_STATUS
+EFIAPI
+FspRpcGetC2CInitStatus (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  UINT32                  *C2CInitStatus
+  )
+{
+  // Need to adjust response size for C2C Init payload and sub-message ID (aka Nvcd_Uefi_C2CInit_Fsp struct
+  // (removed)
+  #define NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE_GET_C2CINIT\
+       FSP_RPC_HEADER_SIZE_SINGLE_PACKET + sizeof(NVDM_PAYLOAD_COMMAND_RESPONSE) + \
+       sizeof(Nvdm_Uefi_C2CInit_Fsp_Response)
+
+  EFI_STATUS                 Status             = EFI_SUCCESS;
+  EFI_STATUS                 StatusDebugDump    = EFI_SUCCESS;
+  EFI_STATUS                 FspRpcStatus       = EFI_SUCCESS;
+  UINT8                      *cmdQueueBuffer    = NULL;
+  UINT32                     nvdmType           = 0;
+  UINT32                     packetSequence     = 0;  /* One packet */
+  BOOLEAN                    bLastPacket        = TRUE;
+  UINT32                     cmdQueueSize       = NV_ALIGN_UP (sizeof (FINAL_MESSAGE_C2CINIT_CMD), sizeof (UINT32));
+  UINT32                     cmdQueueSizeDwords = cmdQueueSize/sizeof (UINT32);
+  UINT32                     cmdQueueOffset     = 0;
+  UINT32                     channelId          = FSP_EMEM_CHANNEL_RM;
+  UINT32                     Index;
+  UINT32                     queueHead                   = 0;
+  UINT32                     queueTail                   = 0;
+  UINT32                     msgQueueHead                = 0;
+  UINT32                     msgQueueTail                = 0;
+  FINAL_MESSAGE_C2CINIT_CMD  *Nvdm_Final_Message_C2CInit = NULL;
+  UINT32                     RegVal;
+  UINT32                     OffsetDwords;
+  UINT32                     *msgQueueBuffer   = NULL;
+  UINT8                      msgQueueSizeBytes = NV_ALIGN_UP (sizeof (FINAL_MESSAGE_C2CINIT_RESPONSE), sizeof (UINT32));
+  UINT8                      msgQueueSizeDwords;
+  BOOLEAN                    bResponseAck = TRUE;
+
+  if (PciIo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  /* Allocations */
+  DEBUG ((DEBUG_ERROR, "%a: [%p] Params [C2C buffers: command:%u,message:%u]\n", __FUNCTION__, PciIo, cmdQueueSize, msgQueueSizeBytes));
+  DEBUG ((DEBUG_ERROR, "%a: [%p] Params [EGM buffer: command:%u, old C2C message:%u]\n", __FUNCTION__, PciIo, sizeof (FINAL_MESSAGE_EGM), NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE_GET_C2CINIT));
+
+  /* Allocate command queue buffer (DWORD aligned) */
+  cmdQueueBuffer = AllocateZeroPool (cmdQueueSize);
+
+  if (cmdQueueBuffer == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  msgQueueBuffer = (UINT32 *)AllocateZeroPool (msgQueueSizeBytes);
+
+  if (msgQueueBuffer == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    DEBUG ((DEBUG_ERROR, "%a: Buffer Allocation failed '%r'\n", __FUNCTION__, Status));
+    goto uefifspRpcCmdQueueBuffer_exit;
+  }
+
+  Nvdm_Final_Message_C2CInit = (FINAL_MESSAGE_C2CINIT_CMD *)cmdQueueBuffer;
+
+  /* State check */
+  DEBUG_CODE_BEGIN ();
+  /* Check command queue empty */
+  Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  Status = uefifspRpcMsgQueueHeadTailGet (PciIo, channelId, &msgQueueHead, &msgQueueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: [%p] ERROR: Message Queue status check returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Message Queue [Channel:%u, Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, channelId, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+  Status = uefifspDumpDebugState (PciIo);
+  if (EFI_ERROR (Status)) {
+    ASSERT (0);
+  }
+
+  DEBUG_CODE_END ();
+
+  /* Check command queue empty */
+  Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
+  while ((queueHead != queueTail) && (--Index)) {
+    Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: [%p] ERROR: Command Queue status check returned '%r'\n", __FUNCTION__, PciIo, Status));
+      ASSERT (0);
+    }
+
+    if (queueHead != queueTail) {
+      gBS->Stall (UEFI_STALL_DELAY_UNITS);
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  if (!Index) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue empty check timed out.\n", __FUNCTION__, PciIo));
+    Status = uefifspDumpDebugState (PciIo);
+    if (EFI_ERROR (Status)) {
+      ASSERT (0);
+    }
+
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  /* Build message Buffer - EGM_Message_Type */
+  *((UINT32 *)&Nvdm_Final_Message_C2CInit->Mctp_Header_S) = uefifspRpcCreateMctpTransportHeader (nvdmType, packetSequence, bLastPacket);
+
+  /* C2CInit Status Get Message Type */
+  *((UINT32 *)&Nvdm_Final_Message_C2CInit->Nvdm_Header_S)      = uefifspRpcCreateMctpPayloadHeader (NVDM_TYPE_UEFI_RM);
+  Nvdm_Final_Message_C2CInit->Nvdm_Uefi_C2CInit_S.subMessageId = NVDM_UEFI_C2CINIT_STATUS_CMD_SUBMESSAGE_ID;
+
+  PrintNvdmMessage ((UINT8 *)cmdQueueBuffer, sizeof (FINAL_MESSAGE_C2CINIT_CMD));
+
+  /*                                         PciIo, offset, writeAutoInc, readAutoInc */
+  Status = FspConfigurationSetAutoIncrement (PciIo, 0, TRUE, FALSE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMC configuration returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  // sync this block from ATS Range Info section
+  /* Check command queue empty */
+  Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  Index = UEFI_FSP_RPC_CMD_QUEUE_POLL_TIMEOUT_INDEX;
+  while ((queueHead != queueTail) && (Index--)) {
+    uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  Status = PciIo->Mem.Read (
+                        PciIo,
+                        EfiPciIoWidthUint32,
+                        PCI_BAR_IDX0,
+                        NV_PFSP_EMEMC (channelId),
+                        1,
+                        &RegVal
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMC read returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMC(channelId)", Status));
+  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMC(channelId)", NV_PFSP_EMEMC (channelId), RegVal));
+
+  for (Index = 0; Index < cmdQueueSizeDwords; Index++) {
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciIo write of '%a' = '0x%08x'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", ((((UINT32 *)(VOID *)cmdQueueBuffer)[Index]))));
+    Status = PciIo->Mem.Write (
+                          PciIo,
+                          EfiPciIoWidthUint32,
+                          PCI_BAR_IDX0,
+                          NV_PFSP_EMEMD (channelId),
+                          1,
+                          &(((UINT32 *)(VOID *)cmdQueueBuffer)[Index])
+                          );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD(%u) write returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+      ASSERT (0);
+      goto uefifspRpcResponseReceivePacket_exit;
+    }
+
+    DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a', Index '%u' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Index, Status));
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: [%p] PciIo write of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMD(channelId)", Status));
+
+  Status = PciIo->Mem.Read (
+                        PciIo,
+                        EfiPciIoWidthUint32,
+                        PCI_BAR_IDX0,
+                        NV_PFSP_EMEMC (channelId),
+                        1,
+                        &RegVal
+                        );
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMC read returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of '%a' returned '%r'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMC(channelId)", Status));
+  OffsetDwords = (DRF_VAL (_PFSP, _EMEMC, _BLK, RegVal) * FSP_RPC_DWORDS_PER_EMEM_BLOCK) + DRF_VAL (_PFSP, _EMEMC, _OFFS, RegVal);
+  DEBUG ((DEBUG_INFO, "%a: [%p] Sanity of '%a', '%a'\n", __FUNCTION__, PciIo, "NV_PFSP_EMEMC(channelId)", ((OffsetDwords == cmdQueueSize) ? "TRUE" : "FALSE")));
+
+  /* Compute queue head and tail from message size */
+  queueTail = cmdQueueOffset + cmdQueueSize - FSP_RPC_BYTES_PER_DWORD;
+  queueHead = cmdQueueOffset;
+  DEBUG ((DEBUG_INFO, "%a: [0x%04x:0x%04x] check message size against queueTail HD\n", __FUNCTION__, cmdQueueSize, queueTail));
+
+  /* Trigger */
+  Status = uefifspRpcQueueHeadTailRequestSet (PciIo, channelId, queueHead, queueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue Head/Tail configuration returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  /* Check command queue set */
+  Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+    ASSERT (0);
+    goto uefifspRpcResponseReceivePacket_exit;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue check returned '%r'\n", __FUNCTION__, PciIo, Status));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+  Status = uefifspPollForMsgQueueResponse (PciIo, channelId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: ERROR: message queue poll returned status '%r'\n", __FUNCTION__, Status));
+    /* Allow timeout to progress as follow on message queue check will gate additional code execution */
+    if (Status != EFI_TIMEOUT) {
+      goto uefifspRpcResponseReceivePacket_exit;
+    }
+  }
+
+  /* If there is no timeout, process the FSP Response Payload from the Message Queue */
+  Status = uefifspRpcMsgQueueHeadTailGet (PciIo, channelId, &msgQueueHead, &msgQueueTail);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: ERROR: message queue get returned status '%r'\n", __FUNCTION__, Status));
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Message Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+
+  /* Message Queue Response payload processing */
+  if (msgQueueHead != msgQueueTail) {
+    msgQueueSizeBytes  = MIN ((msgQueueTail-msgQueueHead+FSP_RPC_BYTES_PER_DWORD), FSP_RPC_RESPONSE_PACKET_SIZE) + sizeof (UINT32);
+    msgQueueSizeDwords = (NV_ALIGN_UP (msgQueueSizeBytes, sizeof (UINT32))/FSP_RPC_BYTES_PER_DWORD);
+    DEBUG ((DEBUG_INFO, "%a: MsgQueue [Max byte index:%u, Max dword index:%u]\n", __FUNCTION__, msgQueueSizeBytes, msgQueueSizeDwords));
+
+    /*                                         PciIo, offset, writeAutoInc, readAutoInc */
+    Status = FspConfigurationSetAutoIncrement (PciIo, 0, FALSE, TRUE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMC configuration returned '%r'\n", __FUNCTION__, PciIo, Status));
+      ASSERT (0);
+      goto uefifspRpcResponseReceivePacket_exit;
+    }
+
+    /* read message queue from head to tail and then clear message queue */
+    for (Index = msgQueueHead; CONVERT_DWORD_COUNT_TO_BYTE_SIZE (Index) <= msgQueueTail; Index++) {
+      Status = PciIo->Mem.Read (
+                            PciIo,
+                            EfiPciIoWidthUint32,
+                            PCI_BAR_IDX0,
+                            NV_PFSP_EMEMD (channelId),
+                            1,
+                            &RegVal
+                            );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: EMEMD Index=%u check returned '%r'\n", __FUNCTION__, PciIo, Index, Status));
+        ASSERT (0);
+        goto uefifspRpcResponseReceivePacket_exit;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: [%p][Index:%u] PciIo read of '%a' [0x%08x] = '0x%08x'\n", __FUNCTION__, PciIo, Index, "NV_PFSP_EMEMD (channelId)", NV_PFSP_EMEMD (channelId), RegVal));
+      msgQueueBuffer[Index] = RegVal;
+    }
+
+    /* Verify message queue size against response packet size before processing */
+    if (CONVERT_DWORD_COUNT_TO_BYTE_SIZE (msgQueueSizeDwords) >= FSP_RPC_RESPONSE_PACKET_SIZE) {
+      UINT32  nvdmMsgHeaderNvdmHeader    = msgQueueBuffer[1];
+      UINT32  nvdmMsgHeaderNvdmType      = REF_VAL (MCTP_MSG_HEADER_NVDM_TYPE, nvdmMsgHeaderNvdmHeader);
+      UINT32  nvdmResponsePayloadThread  = msgQueueBuffer[2];
+      UINT32  nvdmResponsePayloadCmdId   = msgQueueBuffer[3];
+      UINT32  nvdmResponsePayloadErrCode = msgQueueBuffer[4];
+      UINT32  nvdmResponsePayloadData0   = msgQueueBuffer[5];
+
+      /* Current UEFI implementation only supports single packet */
+      if ( MCTP_PACKET_STATE_SINGLE_PACKET != uefifspGetPacketInfo (msgQueueBuffer[0])) {
+        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Index=%d Packet Info '0x%08x'\n", __FUNCTION__, PciIo, 0, uefifspGetPacketInfo (msgQueueBuffer[0])));
+        goto uefifspRpcResponseReceivePacket_exit;
+      }
+
+      /* Process MctpPayload Message Heaader */
+      if (!uefifspRpcValidateMctpPayloadHeader (nvdmMsgHeaderNvdmHeader)) {
+        DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Index=%d MCTP Payload Header check failed '0x%08x\n", __FUNCTION__, PciIo, 1, nvdmMsgHeaderNvdmHeader));
+        goto uefifspRpcResponseReceivePacket_exit;
+      }
+
+      /* Process NVMT payload for FSP response payload type */
+      if ( NVDM_TYPE_FSP_RESPONSE == nvdmMsgHeaderNvdmType) {
+        if ( NVDM_TYPE_UEFI_RM == nvdmResponsePayloadCmdId) {
+          /* additional qualification for Sub-message ID (4) */
+          DEBUG ((DEBUG_INFO, "%a: MCTP message header NVDM Type - matched 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
+          if (nvdmResponsePayloadErrCode == FSP_OK) {
+            DEBUG ((DEBUG_INFO, "%a: MCTP message returned 'SUCCESS'.\n", __FUNCTION__));
+            *C2CInitStatus = nvdmResponsePayloadData0;
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0500H) {
+            /* Inline log since error level needs escalation */
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC Param Error: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_C2CInit->Mctp_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_C2CInit->Nvdm_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_C2CInit->Nvdm_Uefi_C2CInit_S.subMessageId));
+          } else if (nvdmResponsePayloadErrCode == FSP_RPC_ERROR_CODE_0249H) {
+            // This is 'unsupported' from microcode, Flag new microcode required 'EFI_UNSUPPORTED'.
+            FspRpcStatus = EFI_UNSUPPORTED;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC packet data: \n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC MCTP Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_C2CInit->Mctp_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM Header '0x%08x'\n", __FUNCTION__, *((UINT32 *)&Nvdm_Final_Message_C2CInit->Nvdm_Header_S)));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_C2CInit->Nvdm_Uefi_C2CInit_S.subMessageId));
+          } else {
+            FspRpcStatus = EFI_DEVICE_ERROR;
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Thread ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadThread));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Command ID '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadCmdId));
+            DEBUG ((DEBUG_ERROR, "%a: FSP Response Packet Error Code '0x%08x'\n", __FUNCTION__, nvdmResponsePayloadErrCode));
+            DEBUG ((DEBUG_ERROR, "%a: FSP RPC NVDM submessage ID '0x%02x'\n", __FUNCTION__, Nvdm_Final_Message_C2CInit->Nvdm_Uefi_C2CInit_S.subMessageId));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: ERROR; Expected MCTP message header NVDM Type - matching 'NVDM_TYPE_UEFI_RM'.\n", __FUNCTION__));
+        }
+      }
+    }
+  } else {
+    EFI_STATUS  DebugStatus;
+    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR Expected Message Queue Response [Head:0x%04x, Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+    DebugStatus = uefifspDumpDebugState (PciIo);
+    /* Only propagate error status with DebugDumpState status if no prior error */
+    if (!EFI_ERROR (Status)) {
+      Status = DebugStatus;
+    }
+  }
+
+  if (bResponseAck) {
+    /* ACK packet with update where tail equals head */
+    msgQueueTail = msgQueueHead;
+
+    Status = uefifspRpcMsgQueueHeadTailSet (PciIo, channelId, msgQueueHead, msgQueueTail);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: [%p] Message Queue Set (Head:0x%02x,Tail:0x%02x) returned '%r'\n", __FUNCTION__, PciIo, msgQueueHead, msgQueueTail, Status));
+      goto uefifspRpcResponseReceivePacket_exit;
+    }
+
+    DEBUG_CODE_BEGIN ();
+    Status = uefifspRpcMsgQueueHeadTailGet (PciIo, channelId, &msgQueueHead, &msgQueueTail);
+    if (EFI_ERROR (Status)) {
+      ASSERT (0);
+    }
+
+    DEBUG ((DEBUG_ERROR, "%a: Message Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, msgQueueHead, msgQueueTail, ((msgQueueHead == msgQueueTail) ? "TRUE" : "FALSE")));
+    Status = uefifspDumpDebugState (PciIo);
+    if (EFI_ERROR (Status)) {
+      ASSERT (0);
+    }
+
+    Status = uefifspRpcQueueHeadTailGet (PciIo, channelId, &queueHead, &queueTail);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue Head/Tail configuration returned '%r'\n", __FUNCTION__, PciIo, Status));
+      ASSERT (0);
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: [%p] [Head:0x%04x, Tail:0x%04x] check command queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
+
+    DEBUG_CODE_END ();
+  } /* Response ACK */
+
+uefifspRpcResponseReceivePacket_exit:
+  if (NULL != msgQueueBuffer) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] DEBUG: Free Message Queue\n", __FUNCTION__, PciIo));
+    FreePool (msgQueueBuffer);
+  }
+
+  DEBUG_CODE_BEGIN ();
+  StatusDebugDump = uefifspDumpDebugState (PciIo);
+  if (EFI_ERROR (StatusDebugDump)) {
+    ASSERT (0);
+  }
+
+  DEBUG_CODE_END ();
+
+uefifspRpcCmdQueueBuffer_exit:
+  if (cmdQueueBuffer) {
+    DEBUG ((DEBUG_ERROR, "%a: [%p] DEBUG: Free Command Queue\n", __FUNCTION__, PciIo));
     FreePool (cmdQueueBuffer);
   }
 

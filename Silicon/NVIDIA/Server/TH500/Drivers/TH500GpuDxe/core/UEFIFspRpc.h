@@ -1,12 +1,11 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * SPDX-License-Identifier: BSD-2-Clause-Patent
- */
+/** @file
 
-/*
- * [UEFI] UEFIFspRpc.h: UEFI FSP client functions
- */
+  UEFI client code which implements simple transactions between FSP and UEFI client.
+
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
 
 #ifndef __UEFI_FSP_RPC_H__
 #define __UEFI_FSP_RPC_H__
@@ -68,6 +67,24 @@ typedef struct _Nvdm_Uefi_Ats_Fsp {
   UINT64    Hbm_Base;
 } Nvdm_Uefi_Ats_Fsp;
 
+/* Structure for FSP RPC C2C Init Status Command 'Get' */
+typedef struct _Nvdm_Uefi_C2CInit_Fsp_Cmd {
+  UINT8    subMessageId;
+} Nvdm_Uefi_C2CInit_Fsp_Cmd;
+
+#define NVDM_UEFI_C2CINIT_STATUS_CMD_SUBMESSAGE_ID  0x04
+
+typedef struct _Nvdm_Fsp_Cmd_Response {
+  UINT32    taskId;
+  UINT32    commandNvdmType;
+  UINT32    errorCode;
+} Nvdm_Fsp_Cmd_Response;
+
+/* Structure for FSP RPC C2C Init Status Response */
+typedef struct _Nvdm_Uefi_C2CInit_Fsp_Response {
+  UINT32    Payload;
+} Nvdm_Uefi_C2CInit_Fsp_Response;
+
 typedef struct _Mctp_Header {
   UINT8    Hdr_Version; /* one nibble valid, other reserved */
   UINT8    Destination_Id;
@@ -92,6 +109,21 @@ typedef struct Final_Message_Ats {
   Nvdm_Header          Nvdm_Header_S;
   Nvdm_Uefi_Ats_Fsp    Nvdm_Uefi_Ats_Fsp_S;
 } FINAL_MESSAGE_ATS;
+
+typedef struct Final_Message_C2CInit_Status_Cmd {
+  Mctp_Header                  Mctp_Header_S;
+  Nvdm_Header                  Nvdm_Header_S;
+  Nvdm_Uefi_C2CInit_Fsp_Cmd    Nvdm_Uefi_C2CInit_S;
+} FINAL_MESSAGE_C2CINIT_CMD;
+
+typedef struct Final_Message_C2CInit_Status_Response {
+  Mctp_Header                       Mctp_Header_S;
+  Nvdm_Header                       Nvdm_Header_S;
+  /* Response Header */
+  Nvdm_Fsp_Cmd_Response             cmdResponse;
+  /* Response Payload */
+  Nvdm_Uefi_C2CInit_Fsp_Response    Nvdm_Uefi_C2CInit_Response_S;
+} FINAL_MESSAGE_C2CINIT_RESPONSE;
 
 #pragma pack()
 
@@ -190,6 +222,26 @@ FspConfigurationEgmBaseAndSize (
   IN EFI_PCI_IO_PROTOCOL  *PciIo,
   UINT64                  EgmBasePa,
   UINT64                  EgmSize
+  );
+
+/*
+ * @brief Request the C2C Init Status
+ *
+ * @param[in]   PciIo         PciIo protocol handle
+ * @param[out]  C2CInitStatus C2C Init Status Response
+ *
+ * @return Status
+ *            EFI_SUCCESS
+ *            EFI_OUT_OF_RESOURCES  - allocation failed
+ *            EFI_TIMEOUT           - Timeout on command response
+ *            EFI_INVALID_PARAMETER - NULL PciIo
+ *            EFI_UNSUPPORTED       - C2C Init Status not implemented
+ */
+EFI_STATUS
+EFIAPI
+FspRpcGetC2CInitStatus (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  UINT32                  *C2CInitStatus
   );
 
 #endif // __UEFI_FSP_RPC_H__

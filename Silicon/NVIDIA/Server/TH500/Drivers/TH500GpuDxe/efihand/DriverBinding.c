@@ -38,6 +38,7 @@
 
 #include "GpuDsdAmlGeneration.h"
 #include "GpuFirmwareBootComplete.h"
+#include "GpuFirmwareC2CInitComplete.h"
 /* Only required for 'GetControllerATSRangeInfo' testing being enabled*/
 #include "GPUMemoryInfo.h"
 #include "UEFIFspRpc.h"
@@ -50,9 +51,12 @@
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
-#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX              600000
-#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER  10000
-#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS          5
+#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX              600000
+#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER  10000
+#define UEFI_CHECK_GFW_C2CINIT_COMPLETE_POLL_DELAY_UNITS          5
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX                 600000
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER     10000
+#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS             5
 
 /** Diagnostic dump of GPU Driver Binding Private Data
     @param[in] This                         Private Data structure.
@@ -139,6 +143,58 @@ IsControllerSupported (
   /* EH and VDK(SHH) */
   if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2901) && (ui16DeviceId <= 0x293f)) {
     DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [EHH/VDK(SHH)]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* SH */
+  /* TH500+GB100 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2941) && (ui16DeviceId <= 0x297f)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* TH500+GB102 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x29C1) && (ui16DeviceId <= 0x29ff)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  return bResult;
+}
+
+/** Controller C2CInit support check based on PCI Vendor ID and Device ID.
+    @param[in] ui16VendorID         PCI Vendor ID of the controller.
+    @param[in] ui16DeviceID         PCI Device ID of the controller.
+    @retval BOOLEAN                 TRUE    Controller is supported.
+                                    FALSE   Controller is not supported.
+**/
+BOOLEAN
+EFIAPI
+IsControllerC2CInitCheckSupported (
+  IN UINT16  ui16VendorId,
+  IN UINT16  ui16DeviceId
+  )
+{
+  BOOLEAN  bResult = FALSE;
+
+  // Handle matching here for GPU Dxe. GOP driver calls GPUInfo for match.
+  CONST UINT16  ui16VendorIDMatch = 0x10DE;
+
+  /* GB180 */
+  /* EH */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId == 0x2900)) {
+    bResult = TRUE;
+  }
+
+  /* EH and VDK(SHH) */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x2901) && (ui16DeviceId <= 0x293f)) {
+    DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [EHH/VDK(SHH)]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
     bResult = TRUE;
@@ -160,19 +216,6 @@ IsControllerSupported (
     DEBUG_CODE_END ();
     bResult = TRUE;
   }
-
-  DEBUG_CODE_BEGIN ();
-  /* TESTING: Add QEMU code for one node to match on DEBUG (QEMU X64) */
-  if ((ui16VendorId == 0x8086) && (ui16DeviceId == 0x1237)) {
-    bResult = TRUE;
-  }
-
-  /* [AARCH64] -device virtio-gpu-pci */
-  if ((ui16VendorId == 0x1af4) && (ui16DeviceId == 0x1050)) {
-    bResult = TRUE;
-  }
-
-  DEBUG_CODE_END ();
 
   return bResult;
 }
@@ -459,19 +502,21 @@ NVIDIAGpuDriverStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                                  Status        = EFI_SUCCESS;
-  EFI_STATUS                                  ErrorStatus   = EFI_UNSUPPORTED;
-  NVIDIA_GPU_DRIVER_BINDING_PRIVATE_DATA      *mPrivateData = NULL;
-  EFI_PCI_IO_PROTOCOL                         *PciIo        = NULL;
-  NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL      *GpuDsdAmlGeneration;
-  NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL  *GpuFirmwareBootCompleteProtocol;
-  GPU_MODE                                    GpuMode     = GPU_MODE_EH;
-  BOOLEAN                                     bFSPEnabled = TRUE;
-  UINTN                                       Segment;
-  UINTN                                       Bus;
-  UINTN                                       Device;
-  UINTN                                       Function;
-  BOOLEAN                                     bMaskFspRpcTimeoutError = TRUE;
+  EFI_STATUS                                     Status                              = EFI_SUCCESS;
+  EFI_STATUS                                     ErrorStatus                         = EFI_UNSUPPORTED;
+  NVIDIA_GPU_DRIVER_BINDING_PRIVATE_DATA         *mPrivateData                       = NULL;
+  EFI_PCI_IO_PROTOCOL                            *PciIo                              = NULL;
+  NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL         *GpuDsdAmlGeneration                = NULL;
+  NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL     *GpuFirmwareBootCompleteProtocol    = NULL;
+  NVIDIA_GPU_FIRMWARE_C2CINIT_COMPLETE_PROTOCOL  *GpuFirmwareC2CInitCompleteProtocol = NULL;
+  GPU_MODE                                       GpuMode                             = GPU_MODE_EH;
+  BOOLEAN                                        bFSPEnabled                         = TRUE;
+  BOOLEAN                                        bC2CInitStatusSupported             = TRUE;
+  UINTN                                          Segment;
+  UINTN                                          Bus;
+  UINTN                                          Device;
+  UINTN                                          Function;
+  BOOLEAN                                        bMaskFspRpcTimeoutError = TRUE;
 
   DEBUG ((DEBUG_ERROR, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
@@ -564,6 +609,32 @@ NVIDIAGpuDriverStart (
   DEBUG ((DEBUG_INFO, "%a: [%p] GetGpuMode returned '%d'.\n", __FUNCTION__, PciIo, GpuMode));
 
   if ((GpuMode == GPU_MODE_SHH) || (GpuMode == GPU_MODE_EH)) {
+    PCI_TYPE00  Pci;
+
+    /* Read PciIo config space for Vendor ID and Device ID */
+    Status =
+      PciIo->Pci.Read (
+                   PciIo,
+                   EfiPciIoWidthUint8,
+                   0,
+                   sizeof (Pci),
+                   &Pci
+                   );
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciIo read of Pci TYPE00 returned '%r'\n", __FUNCTION__, This, Status));
+    if (!EFI_ERROR (Status)) {
+      UINT16  ui16VendorId = Pci.Hdr.VendorId;
+      UINT16  ui16DeviceId = Pci.Hdr.DeviceId;
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle 2-part Id.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+      /* Determine platform features. Enable C2C Init poll for appropriate targets, otherwise use Boot Compete */
+      /* PCI Device ID and Vendor ID for smatch to determine support status */
+      if ( !IsControllerC2CInitCheckSupported (ui16VendorId, ui16DeviceId)) {
+        DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle does not support C2C Init Status.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle supports C2C Init Status.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+        bC2CInitStatusSupported = TRUE;
+      }
+    }
+
     Status = InstallGpuFirmwareBootCompleteProtocolInstance (ControllerHandle);
 
     /* Validate protocol installation */
@@ -572,20 +643,79 @@ NVIDIAGpuDriverStart (
       goto ErrorHandler_RestorePCIAttributes;
     }
 
-    Status = gBS->OpenProtocol (
-                    ControllerHandle,
-                    &gEfiNVIDIAGpuFirmwareBootCompleteGuid,
-                    (VOID **)&GpuFirmwareBootCompleteProtocol,
-                    NULL,
-                    NULL,
-                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
-      goto ErrorHandler_RestorePCIAttributes;
+    if (bC2CInitStatusSupported) {
+      Status = InstallGpuFirmwareC2CInitCompleteProtocolInstance (ControllerHandle);
+
+      /* Validate protocol installation */
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: 'C2CInitComplete' Protocol Install error on Handle [%p]. Status '%r'.\n", ControllerHandle, Status));
+        goto ErrorHandler_RestorePCIAttributes;
+      }
+
+      Status = gBS->OpenProtocol (
+                      ControllerHandle,
+                      &gEfiNVIDIAGpuFirmwareBootCompleteGuid,
+                      (VOID **)&GpuFirmwareBootCompleteProtocol,
+                      NULL,
+                      NULL,
+                      EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+        goto ErrorHandler_RestorePCIAttributes;
+      }
+
+      Status = gBS->OpenProtocol (
+                      ControllerHandle,
+                      &gEfiNVIDIAGpuFirmwareC2CInitCompleteGuid,
+                      (VOID **)&GpuFirmwareC2CInitCompleteProtocol,
+                      NULL,
+                      NULL,
+                      EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+        goto ErrorHandler_RestorePCIAttributes;
+      }
+
+      /* Test new protocol */
+      if (GpuFirmwareC2CInitCompleteProtocol != NULL) {
+        DEBUG ((DEBUG_ERROR, "DEBUG: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p]: Instance[%p]\n", ControllerHandle, GpuFirmwareC2CInitCompleteProtocol));
+        BOOLEAN  bC2CInitComplete = FALSE;
+        UINT32   TimeoutIdx       = UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX;
+        bFSPEnabled = (TegraGetPlatform () != TEGRA_PLATFORM_VDK);
+
+        while (bFSPEnabled && (!bC2CInitComplete) && (--TimeoutIdx)) {
+          Status = GpuFirmwareC2CInitCompleteProtocol->GetC2CInitCompleteState (GpuFirmwareC2CInitCompleteProtocol, &bC2CInitComplete);
+          DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Result: %u Status '%r'.\n", ControllerHandle, bC2CInitComplete, Status));
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+            /* Unsupported is not fatal, flag C2CInitSupport as false and continue with Boot Complete */
+            if (EFI_UNSUPPORTED != Status) {
+              ErrorStatus = Status;
+              goto ErrorHandler_RestorePCIAttributes;
+            } else {
+              /* C2C Init Status not enabled in microcode, disable and fall back to Boot Complete Status check */
+              bC2CInitStatusSupported = FALSE;
+              break;
+            }
+          }
+
+          /* Timeout Progress */
+          DEBUG_CODE_BEGIN ();
+          if ((TimeoutIdx%(UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER)) == 0) {
+            DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareC2CInitCompleteProtocol' Poll status [%u/%u]\n", (UINT32)(UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX-TimeoutIdx), (UINT32)UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX));
+          }
+
+          DEBUG_CODE_END ();
+
+          gBS->Stall (UEFI_CHECK_GFW_C2CINIT_COMPLETE_POLL_DELAY_UNITS);
+        }
+      }
     }
 
-    if (GpuFirmwareBootCompleteProtocol != NULL) {
+    /* Boot complete check is only required on platforms not supporting C2C Init Status */
+    if ((!bC2CInitStatusSupported) && (GpuFirmwareBootCompleteProtocol != NULL)) {
       /* FSP is not active on TEGRA_PATFORM_VDK, skip polling and FSP RCP calls */
       bFSPEnabled = (TegraGetPlatform () != TEGRA_PLATFORM_VDK);
       if (bFSPEnabled) {
@@ -612,11 +742,10 @@ NVIDIAGpuDriverStart (
           gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
         }
 
-        DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareBootCompleteProtocol' Poll exit state {Idx:%u, Complete:%u}\n", TimeoutIdx, bFirmwareComplete));
-
         if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
           DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
           ErrorStatus = EFI_TIMEOUT;
+
           goto ErrorHandler_RestorePCIAttributes;
         }
 
@@ -734,6 +863,11 @@ BootCompleteErrorCheck:
   return Status;
 
 ErrorHandler_RestorePCIAttributes:
+  /* Check for non-FATAL FSP RPC transaction failure */
+  if ( bMaskFspRpcTimeoutError && (ErrorStatus == EFI_TIMEOUT)) {
+    ErrorStatus = EFI_SUCCESS;
+  }
+
   /* On Error, restore PCI Attributes */
   Status = PciIo->Attributes (
                     PciIo,

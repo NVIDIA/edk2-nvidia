@@ -13,6 +13,11 @@
 #include "Protocol/GpuFirmwareBootCompleteProtocol.h"
 #include "core/GPUSupport.h"
 
+/* Counter value to limit the output of Get Boot Status in polling loop */
+/* Sets the value to be used as reset value when decrement counter returns zero */
+#define GFBC_LOGGING_TRIGGER_COUNTER  50000
+static UINT32  gfbc_logging_trigger = 0;
+
 EFI_STATUS
 EFIAPI
 GpuFirmwareBootCompletGetBootStatus (
@@ -45,6 +50,16 @@ GpuFirmwareBootCompletGetBootStatus (
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PRIVATE_DATA  *Private;
   EFI_PCI_IO_PROTOCOL                             *PciIo;
   BOOLEAN                                         bFirmwareComplete = FALSE;
+  BOOLEAN                                         bVerboseLog       = (gfbc_logging_trigger == 0);
+
+  DEBUG_CODE_BEGIN ();
+  if (bVerboseLog) {
+    gfbc_logging_trigger = GFBC_LOGGING_TRIGGER_COUNTER;
+  } else {
+    gfbc_logging_trigger--;
+  }
+
+  DEBUG_CODE_END ();
 
   Private = NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PRIVATE_DATA_FROM_THIS (This);
 
@@ -64,15 +79,31 @@ GpuFirmwareBootCompletGetBootStatus (
                   );
   ASSERT_EFI_ERROR (Status);
 
+  DEBUG_CODE_BEGIN ();
+  if (bVerboseLog) {
+    DEBUG ((DEBUG_INFO, "%a: OpenProtocol on PciIo returned:'%r'\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_INFO, "%a: PciIo ProtocolInstance: '%p' on '%p'\n", __FUNCTION__, PciIo, Private->ControllerHandle));
+  }
+
+  DEBUG_CODE_END ();
+
   if (PciIo != NULL) {
     Status = CheckGfwInitComplete (PciIo, &bFirmwareComplete);
     if (EFI_ERROR (Status)) {
       DEBUG_CODE_BEGIN ();
-      DEBUG ((DEBUG_INFO, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
       DEBUG_CODE_END ();
 
       return Status;
     }
+
+    DEBUG_CODE_BEGIN ();
+    if (bVerboseLog) {
+      DEBUG ((DEBUG_INFO, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'CheckGfwInitComplete' for instance:'%p', complete '%u'\n", __FUNCTION__, PciIo, bFirmwareComplete));
+    }
+
+    DEBUG_CODE_END ();
 
     if (NULL != BootComplete) {
       *BootComplete = bFirmwareComplete;
