@@ -195,12 +195,14 @@ AndroidBootOnConnectCompleteHandler (
 
     if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
       Private->RecoveryMode = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: misc command %d, doing recovery\n", __FUNCTION__, MiscCmd));
     }
   } else {
     DataSize = sizeof (BootMode);
     Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
     if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
       Private->RecoveryMode = TRUE;
+      DEBUG ((DEBUG_ERROR, "%a: L4T recovery mode detected\n", __FUNCTION__));
     }
   }
 
@@ -222,10 +224,15 @@ AndroidBootOnConnectCompleteHandler (
   } else {
     Status = GetActivePartitionName (L"kernel", PartitionName);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: couldn't get active name: %r\n", __FUNCTION__, Status));
       return;
     }
 
+    DEBUG ((DEBUG_INFO, "%a: active=%s, partition=%s\n", __FUNCTION__, PartitionName, Private->PartitionName));
+
     if (StrCmp (Private->PartitionName, PartitionName) != 0) {
+      DEBUG ((DEBUG_INFO, "%a: uninstalling name=%s\n", __FUNCTION__, Private->PartitionName));
+
       AndroidBootUninstallProtocols (Private);
     }
   }
@@ -1558,7 +1565,7 @@ AndroidBootDriverBindingSupported (
   // Examine if the Android Boot image can be found
   Status = AndroidBootGetVerify (BlockIo, DiskIo, NULL, NULL);
   if (!EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "%a: AndroidBoot image found\n", __FUNCTION__));
+    DEBUG ((DEBUG_INFO, "%a: AndroidBoot image found in %s\n", __FUNCTION__, PartitionInfo->Info.Gpt.PartitionName));
   }
 
 ErrorExit:
