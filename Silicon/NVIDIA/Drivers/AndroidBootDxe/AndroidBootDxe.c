@@ -2256,17 +2256,7 @@ AndroidBootDxeDriverEntryPoint (
   UINT64      KernelDtbStart;
   UINTN       NewKernelDtbPages;
   VOID        *NewKernelDtb = NULL;
-
-  // Install UEFI Driver Model protocol(s).
-  Status = EfiLibInstallDriverBinding (
-             ImageHandle,
-             SystemTable,
-             &mAndroidBootDriverBinding,
-             ImageHandle
-             );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  BOOLEAN     IsMemoryBoot  = FALSE;
 
   // Look for a kernel address in the DTB.  If found, then a boot.img has
   // already been loaded for us.  We'll boot it.
@@ -2305,6 +2295,8 @@ AndroidBootDxeDriverEntryPoint (
 
     // Install the modified DTB
     gBS->InstallConfigurationTable (&gFdtTableGuid, NewKernelDtb);
+
+    IsMemoryBoot = TRUE;
   } else if ((PcdGet64 (PcdRcmKernelBase) != 0) &&
              (PcdGet64 (PcdRcmKernelSize) != 0))
   {
@@ -2316,8 +2308,20 @@ AndroidBootDxeDriverEntryPoint (
       ));
 
     AndroidBootPrepareBootFromMemory (ImageHandle);
+    IsMemoryBoot = TRUE;
   }
 
 Done:
-  return EFI_SUCCESS;
+  if (IsMemoryBoot) {
+    return EFI_SUCCESS;
+  }
+
+  // Install UEFI Driver Model protocol(s).
+  Status = EfiLibInstallDriverBinding (
+             ImageHandle,
+             SystemTable,
+             &mAndroidBootDriverBinding,
+             ImageHandle
+             );
+  return Status;
 }
