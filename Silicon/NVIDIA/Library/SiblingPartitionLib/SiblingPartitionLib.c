@@ -46,11 +46,11 @@ GetSiblingPartitionHandle (
     for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
       Status = gBS->HandleProtocol (ChildHandles[ChildIndex], &gEfiPartitionInfoProtocolGuid, (VOID **)&PartitionInfo);
       if (!EFI_ERROR (Status)) {
-        if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+        if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
           goto Exit;
         }
 
-        if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+        if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
           goto Exit;
         }
 

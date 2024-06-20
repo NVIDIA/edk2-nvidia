@@ -1527,12 +1527,12 @@ AndroidBootDriverBindingSupported (
     goto ErrorExit;
   }
 
-  if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
+  if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
 
-  if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+  if (PartitionInfo->Info.Gpt.StartingLBA > PartitionInfo->Info.Gpt.EndingLBA) {
     Status = EFI_UNSUPPORTED;
     goto ErrorExit;
   }
