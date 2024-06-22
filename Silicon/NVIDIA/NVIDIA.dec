@@ -758,6 +758,18 @@
 #Option to boot android image
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage|FALSE|BOOLEAN|0x00000114
 
+#Specify UFS refclk freq from EDKII_UFS_CARD_REF_CLK_FREQ_ATTRIBUTE enum
+  gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|0|UINT32|0x000000A6
+
+#Enable UFS HS mode
+  gNVIDIATokenSpaceGuid.PcdUfsEnableHighSpeed|TRUE|BOOLEAN|0x000000A8
+
+#Override UFS max gear if non-zero
+  gNVIDIATokenSpaceGuid.PcdUfsMaxGearOverride|0|UINT32|0x000000A9
+
+#Specify UFS HClkDiv value (reset value is 0xcc)
+  gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xcc|UINT32|0x000000AA
+
 #Option to configure SOC display hand-off
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|0x00|UINT8|0x00000115
 
@@ -769,9 +781,6 @@
 
 #Option to boot RCM mode using kernel cmdline from DTB instead of boot.img
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|FALSE|BOOLEAN|0x000000A7
-
-#Specify UFS refclk freq from EDKII_UFS_CARD_REF_CLK_FREQ_ATTRIBUTE enum
-  gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|0|UINT32|0x000000A6
 
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature

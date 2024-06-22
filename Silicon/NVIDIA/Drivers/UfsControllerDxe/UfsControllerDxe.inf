@@ -44,6 +44,9 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq
+  gNVIDIATokenSpaceGuid.PcdUfsEnableHighSpeed
+  gNVIDIATokenSpaceGuid.PcdUfsMaxGearOverride
+  gNVIDIATokenSpaceGuid.PcdUfsHclkDiv
 
 [Depex]
   TRUE

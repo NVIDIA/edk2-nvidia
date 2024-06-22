@@ -154,6 +154,13 @@ STATIC UINT32  TxBurstClosureDelay = 0;
 #define UFSHC_DEV_CLK_EN                       BIT0
 #define UFSHC_DEV_RESET                        BIT1
 
+/*
+ * HCLKFrequency in MHz.
+ * HCLKDIV is used to generate 1usec tick signal used by Unipro.
+ */
+#define UFS_VNDR_HCLKDIV_1US_TICK_OFFSET  0xFC
+#define REG_UFS_VNDR_HCLKDIV              PcdGet32 (PcdUfsHclkDiv)
+
 STATIC
 EFI_STATUS
 UfsDmeCmd (
@@ -215,7 +222,10 @@ UfsCallback (
   EFI_STATUS                     Status;
   EDKII_UFS_HC_DRIVER_INTERFACE  *DriverInterface;
   UINT32                         Value;
+  UINT32                         Mode;
+  UINT32                         MaxGearOverride;
 
+  Mode   = (PcdGetBool (PcdUfsEnableHighSpeed)) ?      PWRMODE_FAST_MODE : PWRMODE_SLOW_MODE;
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
@@ -243,6 +253,7 @@ UfsCallback (
       MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+      MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
       DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
       break;
 
@@ -253,6 +264,11 @@ UfsCallback (
       break;
 
     case EdkiiUfsHcPostLinkStartup:
+      MaxGearOverride = PcdGet32 (PcdUfsMaxGearOverride);
+      if (MaxGearOverride != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: using max gear override=%u\n", __FUNCTION__, MaxGearOverride));
+      }
+
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, T_CONNECTIONSTATE, 1, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_HS_G1_SYNC_LENGTH, 0x4f, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_HS_G2_SYNC_LENGTH, 0x4f, NULL);
@@ -270,11 +286,14 @@ UfsCallback (
 
       Status = UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_CONNECTED_TX_DATA_LANES, 0, &Value);
       if (!EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_INFO, "%a: set tx data lanes=%u", __FUNCTION__, Value));
+
         UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_ACTIVE_TX_DATA_LANES, Value, NULL);
       }
 
       Status = UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_CONNECTED_RX_DATA_LANES, 0, &Value);
       if (!EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_INFO, "%a: set rx data lanes=%u\n", __FUNCTION__, Value));
         UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_ACTIVE_RX_DATA_LANES, Value, NULL);
       }
 
@@ -287,27 +306,43 @@ UfsCallback (
 
       Status = UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_MAXRXHSGEAR, 0, &Value);
       if (!EFI_ERROR (Status)) {
+        if (MaxGearOverride != 0) {
+          Value = MaxGearOverride;
+        }
+
+        DEBUG ((DEBUG_INFO, "%a: set rx gear=%u\n", __FUNCTION__, Value));
         UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_RX_GEAR, Value, NULL);
       }
 
       Status = UfsDmeCmd (DriverInterface, UfsUicDmePeerGet, PA_MAXRXHSGEAR, 0, &Value);
       if (!EFI_ERROR (Status)) {
+        if (MaxGearOverride != 0) {
+          Value = MaxGearOverride;
+        }
+
+        DEBUG ((DEBUG_INFO, "%a: set tx gear to peer=%u\n", __FUNCTION__, Value));
         UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_GEAR, Value, NULL);
       } else {
         Status = UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_MAXRXHSGEAR, 0, &Value);
         if (!EFI_ERROR (Status)) {
+          if (MaxGearOverride != 0) {
+            Value = MaxGearOverride;
+          }
+
+          DEBUG ((DEBUG_ERROR, "%a: setting tx gear to rx=%u\n", __FUNCTION__, Value));
           UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_GEAR, Value, NULL);
         }
       }
 
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_RX_TERMINATION, 1, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_TERMINATION, 1, NULL);
-
       UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_HS_SERIES, 0, &Value);
       Value = UFS_HS_RATE_A;
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_HS_SERIES, Value, NULL);
 
-      UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_PWR_MODE, ((PWRMODE_FAST_MODE << 4) | PWRMODE_FAST_MODE), NULL);
+      DEBUG ((DEBUG_INFO, "%a: HS pcd=%u mode=%u\n", __FUNCTION__, PcdGetBool (PcdUfsEnableHighSpeed), Mode));
+
+      UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_PWR_MODE, ((Mode << 4) | Mode), NULL);
       break;
 
     default:
@@ -378,6 +413,7 @@ UfsDriverBindingStart (
   MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
   MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
   MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+  MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
 
   // create new device for edk2 with only 2 registers to meet PciIo limits
   EdkiiResources = NULL;
@@ -470,6 +506,8 @@ DeviceDiscoveryNotify (
   switch (Phase) {
     case DeviceDiscoveryDriverStart:
       gUfsOverride.RefClkFreq = PcdGet32 (PcdUfsCardRefClkFreq);
+      DEBUG ((DEBUG_INFO, "%a: refclk=%d\n", __FUNCTION__, gUfsOverride.RefClkFreq));
+
       return gBS->InstallMultipleProtocolInterfaces (
                     &DriverHandle,
                     &gEdkiiUfsHcPlatformProtocolGuid,
