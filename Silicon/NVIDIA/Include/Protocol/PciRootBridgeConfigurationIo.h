@@ -82,6 +82,8 @@ struct _NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL {
   UINT8                                                      SocketID;
   UINT8                                                      ControllerID;
 
+  UINT32                                                     OSCCtrl;
+
   ///
   /// External Facing Port information. Would be set if a controller is
   /// exposing an open slot.

@@ -38,6 +38,10 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     //
     Local1 = Zero // PCI _OSC Control Field value
 
+    // It gets overwritten runtime based on the approach selected
+    // Currently we have two approaches supported viz. Firmware-First and OS-First
+    Name (OSCC, 0x0)
+
     // Create DWord-addressable fields from the Capabilities Buffer
     CreateDWordField (Arg3, 0, CDW1)
     CreateDWordField (Arg3, 8, CDW3)
@@ -48,12 +52,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
       // Save Capabilities DWord3
       Store (CDW3, Local1)
 
-      /* Do not allow SHPC (No SHPC controller in this system) */
-      /* Do not allow Native PME (TODO: Confirm it) */
-      /* Do not allow Native AER (RAS-FW handles it) */
-      /* Allow Native PCIe capability */
-      /* Allow Native LTR control */
-      And(Local1,0x31,Local1)
+      And(Local1,OSCC,Local1)
 
       If (LNotEqual (Arg1, One)) {  // Unknown revision
         Or (CDW1, 0x08, CDW1)

@@ -799,6 +799,47 @@
 #define KEY_SOCKET3_PCIE8_ADVERTISE_ACS  0x2127
 #define KEY_SOCKET3_PCIE9_ADVERTISE_ACS  0x2128
 
+#define KEY_SOCKET0_PCIE0_OS_NATIVE_AER  0x2201
+#define KEY_SOCKET0_PCIE1_OS_NATIVE_AER  0x2202
+#define KEY_SOCKET0_PCIE2_OS_NATIVE_AER  0x2203
+#define KEY_SOCKET0_PCIE3_OS_NATIVE_AER  0x2204
+#define KEY_SOCKET0_PCIE4_OS_NATIVE_AER  0x2205
+#define KEY_SOCKET0_PCIE5_OS_NATIVE_AER  0x2206
+#define KEY_SOCKET0_PCIE6_OS_NATIVE_AER  0x2207
+#define KEY_SOCKET0_PCIE7_OS_NATIVE_AER  0x2208
+#define KEY_SOCKET0_PCIE8_OS_NATIVE_AER  0x2209
+#define KEY_SOCKET0_PCIE9_OS_NATIVE_AER  0x220A
+#define KEY_SOCKET1_PCIE0_OS_NATIVE_AER  0x220B
+#define KEY_SOCKET1_PCIE1_OS_NATIVE_AER  0x220C
+#define KEY_SOCKET1_PCIE2_OS_NATIVE_AER  0x220D
+#define KEY_SOCKET1_PCIE3_OS_NATIVE_AER  0x220E
+#define KEY_SOCKET1_PCIE4_OS_NATIVE_AER  0x220F
+#define KEY_SOCKET1_PCIE5_OS_NATIVE_AER  0x2210
+#define KEY_SOCKET1_PCIE6_OS_NATIVE_AER  0x2211
+#define KEY_SOCKET1_PCIE7_OS_NATIVE_AER  0x2212
+#define KEY_SOCKET1_PCIE8_OS_NATIVE_AER  0x2213
+#define KEY_SOCKET1_PCIE9_OS_NATIVE_AER  0x2214
+#define KEY_SOCKET2_PCIE0_OS_NATIVE_AER  0x2215
+#define KEY_SOCKET2_PCIE1_OS_NATIVE_AER  0x2216
+#define KEY_SOCKET2_PCIE2_OS_NATIVE_AER  0x2217
+#define KEY_SOCKET2_PCIE3_OS_NATIVE_AER  0x2218
+#define KEY_SOCKET2_PCIE4_OS_NATIVE_AER  0x2219
+#define KEY_SOCKET2_PCIE5_OS_NATIVE_AER  0x221A
+#define KEY_SOCKET2_PCIE6_OS_NATIVE_AER  0x221B
+#define KEY_SOCKET2_PCIE7_OS_NATIVE_AER  0x221C
+#define KEY_SOCKET2_PCIE8_OS_NATIVE_AER  0x221D
+#define KEY_SOCKET2_PCIE9_OS_NATIVE_AER  0x221E
+#define KEY_SOCKET3_PCIE0_OS_NATIVE_AER  0x221F
+#define KEY_SOCKET3_PCIE1_OS_NATIVE_AER  0x2220
+#define KEY_SOCKET3_PCIE2_OS_NATIVE_AER  0x2221
+#define KEY_SOCKET3_PCIE3_OS_NATIVE_AER  0x2222
+#define KEY_SOCKET3_PCIE4_OS_NATIVE_AER  0x2223
+#define KEY_SOCKET3_PCIE5_OS_NATIVE_AER  0x2224
+#define KEY_SOCKET3_PCIE6_OS_NATIVE_AER  0x2225
+#define KEY_SOCKET3_PCIE7_OS_NATIVE_AER  0x2226
+#define KEY_SOCKET3_PCIE8_OS_NATIVE_AER  0x2227
+#define KEY_SOCKET3_PCIE9_OS_NATIVE_AER  0x2228
+
 #define KEY_MPAM40_CPOR_WAYMASK  0x2300
 #define KEY_MPAM41_CPOR_WAYMASK  0x2301
 #define KEY_MPAM42_CPOR_WAYMASK  0x2302
@@ -893,6 +934,7 @@ typedef struct {
   BOOLEAN    PCIeURCAConfigSupported;
   BOOLEAN    PCIePRSNTConfigSupported;
   BOOLEAN    PCIeACSConfigSupported;
+  BOOLEAN    PCIeOSNativeAERSupported;
   BOOLEAN    MemoryTestsSupported;
   BOOLEAN    ActiveCoresSettingSupported;
   BOOLEAN    ServerPwrCtlSettingSupported;
@@ -990,6 +1032,10 @@ typedef struct {
   BOOLEAN    AdvertiseACS_1[MAX_PCIE];
   BOOLEAN    AdvertiseACS_2[MAX_PCIE];
   BOOLEAN    AdvertiseACS_3[MAX_PCIE];
+  BOOLEAN    OsNativeAER_0[MAX_PCIE];
+  BOOLEAN    OsNativeAER_1[MAX_PCIE];
+  BOOLEAN    OsNativeAER_2[MAX_PCIE];
+  BOOLEAN    OsNativeAER_3[MAX_PCIE];
   UINT16     CporWayMask[MAX_MPAM_PARTID];
   UINT8      MaxBw[MAX_MPAM_PARTID];
   UINT8      MinBw[MAX_MPAM_PARTID];
@@ -1260,6 +1306,14 @@ typedef struct {
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_ADVERTISE_ACS,                          \
            prompt = STRING_TOKEN(STR_PCIE_ADVERTISE_ACS_SOCKET##socket##_PCIE##pcie##_TITLE),     \
            help = STRING_TOKEN(STR_PCIE_ADVERTISE_ACS_HELP),                                      \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
+  endif;                                                                                          \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeOSNativeAERSupported == 0;                     \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.OsNativeAER_##socket[pcie],                          \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_OS_NATIVE_AER,                          \
+           prompt = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_SOCKET##socket##_PCIE##pcie##_TITLE),     \
+           help = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_HELP),                                      \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
   endif;                                                                                          \

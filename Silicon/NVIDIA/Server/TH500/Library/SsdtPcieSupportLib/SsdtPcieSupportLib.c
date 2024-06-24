@@ -674,6 +674,10 @@ AddOscMethod (
   EFI_ACPI_DESCRIPTION_HEADER  *SsdtPcieOscTemplate;
   AML_ROOT_NODE_HANDLE         OscTemplateRoot;
   AML_OBJECT_NODE_HANDLE       OscNode;
+  EFI_HANDLE                   *Handles = NULL;
+  UINTN                        NumberOfHandles;
+  UINTN                        CurrentHandle;
+  BOOLEAN                      OSCNodeIsDetached = FALSE;
 
   ASSERT (PciNode != NULL);
 
@@ -707,14 +711,67 @@ AddOscMethod (
     goto error_handler;
   }
 
-  Status = AmlAttachNode (PciNode, OscNode);
+  OSCNodeIsDetached = TRUE;
+  Status            = AmlAttachNode (PciNode, OscNode);
   if (EFI_ERROR (Status)) {
-    // Free the detached node.
-    AmlDeleteTree (OscNode);
     goto error_handler;
   }
 
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate host bridge protocols, %r.\r\n", __FUNCTION__, Status));
+    goto error_handler;
+  }
+
+  for (CurrentHandle = 0; CurrentHandle < NumberOfHandles; CurrentHandle++) {
+    NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo = NULL;
+    Status = gBS->HandleProtocol (
+                    Handles[CurrentHandle],
+                    &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                    (VOID **)&RootBridgeCfgIo
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get protocol for handle %p, %r.\r\n",
+        __FUNCTION__,
+        Handles[CurrentHandle],
+        Status
+        ));
+      goto error_handler;
+    }
+
+    if (PciInfo->PciSegmentGroupNumber == RootBridgeCfgIo->SegmentNumber) {
+      AML_OBJECT_NODE_HANDLE  OSCCNode;
+      Status = AmlFindNode (OscNode, "OSCC", &OSCCNode);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      Status = AmlNameOpUpdateInteger (OSCCNode, RootBridgeCfgIo->OSCCtrl);
+      if (EFI_ERROR (Status)) {
+        goto error_handler;
+      }
+
+      break;
+    }
+  }
+
+  goto cleanup;
+
 error_handler:
+  if (OSCNodeIsDetached) {
+    // Free the detached node.
+    AmlDeleteTree (OscNode);
+  }
+
+cleanup:
   // Cleanup
   Status1 = AmlDeleteTree (OscTemplateRoot);
   if (EFI_ERROR (Status1)) {

@@ -1655,10 +1655,21 @@ DeviceDiscoveryNotify (
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
   CM_OBJECT_TOKEN                              *TokenMap;
   TEGRA_PLATFORM_TYPE                          PlatformType;
+  VOID                                         *Hob;
+  TEGRABL_EARLY_BOOT_VARIABLES                 *Mb1Config = NULL;
 
   PlatformType = TegraGetPlatform ();
   Status       = EFI_SUCCESS;
   PcieFound    = FALSE;
+
+  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+  {
+    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  }
+
+  ASSERT (Mb1Config);
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
@@ -1783,6 +1794,21 @@ DeviceDiscoveryNotify (
         {
           Private->PcieRootBridgeConfigurationIo.IsExternalFacingPort = TRUE;
         }
+      }
+
+      Private->PcieRootBridgeConfigurationIo.OSCCtrl = (PCIE_FW_OSC_CTRL_PCIE_NATIVE_HP |
+                                                        PCIE_FW_OSC_CTRL_PCIE_CAP_STRUCTURE |
+                                                        PCIE_FW_OSC_CTRL_LTR);
+
+      if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].OsNativeAER) {
+        /* As per PCIe spec recommendation, both AER and DPC capabilities are
+         * expected to be owned by the same SW entity i.e. either Firmware
+         * or the Operation system. Hence, give the ownership of both AER and
+         * DPC to the OS.
+         */
+
+        Private->PcieRootBridgeConfigurationIo.OSCCtrl |= (PCIE_FW_OSC_CTRL_PCIE_AER |
+                                                           PCIE_FW_OSC_CTRL_PCIE_DPC);
       }
 
       RootBridge->Segment               = Private->PcieRootBridgeConfigurationIo.SegmentNumber;

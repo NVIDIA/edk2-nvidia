@@ -43,6 +43,17 @@
 #define PCIE_INTERRUPT_MAP_ENTRIES          8
 #define PCIE_INTERRUPT_MAP_ENTRY_SIZE       (PCIE_INTERRUPT_MAP_ENTRIES * sizeof (UINT32))
 
+#define PCIE_FW_OSC_CTRL_PCIE_NATIVE_HP      BIT(0)
+#define PCIE_FW_OSC_CTRL_SHPC_NATIVE_HP      BIT(1)
+#define PCIE_FW_OSC_CTRL_PCIE_NATIVE_PME     BIT(2)
+#define PCIE_FW_OSC_CTRL_PCIE_AER            BIT(3)
+#define PCIE_FW_OSC_CTRL_PCIE_CAP_STRUCTURE  BIT(4)
+#define PCIE_FW_OSC_CTRL_LTR                 BIT(5)
+#define PCIE_FW_OSC_CTRL_RSVD                BIT(6)
+#define PCIE_FW_OSC_CTRL_PCIE_DPC            BIT(7)
+#define PCIE_FW_OSC_CTRL_PCIE_CMPL_TO        BIT(8)
+#define PCIE_FW_OSC_CTRL_PCIE_SFI            BIT(9)
+
 #define PCIE_CONTROLLER_SIGNATURE  SIGNATURE_32('P','C','I','E')
 typedef struct {
   //
