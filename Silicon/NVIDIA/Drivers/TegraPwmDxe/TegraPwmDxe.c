@@ -22,8 +22,9 @@
 #include <Library/MemoryAllocationLib.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,*-pwm", &gNVIDIANonDiscoverablePwmDeviceGuid },
-  { NULL,           NULL                                 }
+  { "nvidia,tegra264-pwm", NULL                                 },
+  { "nvidia,*-pwm",        &gNVIDIANonDiscoverablePwmDeviceGuid },
+  { NULL,                  NULL                                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

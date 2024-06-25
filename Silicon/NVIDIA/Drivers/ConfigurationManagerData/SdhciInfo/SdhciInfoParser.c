@@ -31,6 +31,12 @@ CONST CHAR8  *T234Compatibility[] = {
 };
 
 STATIC
+CONST CHAR8  *T264Compatibility[] = {
+  "nvidia,tegra264-sdhci",
+  NULL
+};
+
+STATIC
 CONST CHAR8  *TH500Compatibility[] = {
   NULL
 };
@@ -101,6 +107,9 @@ SdhciInfoParser (
       break;
     case T234_CHIP_ID:
       CompatibleInfo = T234Compatibility;
+      break;
+    case T264_CHIP_ID:
+      CompatibleInfo = T264Compatibility;
       break;
     case TH500_CHIP_ID:
       CompatibleInfo = TH500Compatibility;

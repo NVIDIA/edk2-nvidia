@@ -1213,6 +1213,8 @@ SetupIortNodeForSmmuV3 (
   UINT32                             NumberOfInterrupts;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData[MAX_NUM_IRQS_OF_SMMU_V3];
   UINT32                             IntIndex;
+  UINT32                             ChipID;
+  TEGRA_PLATFORM_TYPE                PlatformType;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1229,11 +1231,25 @@ SetupIortNodeForSmmuV3 (
   IortNode->Identifier      = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
-  UpdateSmmuV3UidInfo (ParserHandle, IortNode);
+  // TODO: temporary WAR for missing t264 asl elements for SmmuV3
+  ChipID = TegraGetChipID ();
+  if (ChipID != T264_CHIP_ID) {
+    UpdateSmmuV3UidInfo (ParserHandle, IortNode);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: skipping UpdateSmmuV3UidInfo for T264\n", __FUNCTION__));
+  }
 
   Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "dma-coherent", NULL, NULL);
   if (!EFI_ERROR (Status)) {
     IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
+  }
+
+  PlatformType = TegraGetPlatform ();
+  if (PlatformType == TEGRA_PLATFORM_VDK) {
+    ChipID = TegraGetChipID ();
+    if (ChipID == T264_CHIP_ID) {
+      IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
+    }
   }
 
   Status = DeviceTreeGetNodePropertyValue32 (PropNode->NodeOffset, "numa-node-id", &IortNode->ProximityDomain);
@@ -1725,6 +1741,7 @@ STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjSmmuV3,         "arm,smmu-v3",           SetupIortNodeForSmmuV3,   NULL,            NULL,          0 },
   { EArmObjRootComplex,    "nvidia,tegra234-pcie",  SetupIortNodeForPciRc,    NULL,            NULL,          1 },
   { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL,          0 },
+  { EArmObjRootComplex,    "nvidia,tegra264-pcie",  SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjRootComplex,    "pci-host-ecam-generic", SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjNamedComponent, "nvidia,tegra234-nvdla", SetupIortNodeForNComp,    "nvdla0",        "\\_SB.DLA0",  1 },
   { EArmObjNamedComponent, "nvidia,tegra264-nvdla", SetupIortNodeForNComp,    NULL,            "\\_SB.DLA0",  0 },
@@ -1828,8 +1845,10 @@ IortInfoParser (
 
   ChipID = TegraGetChipID ();
 
-  // TH500 doesn't use the enable variable
-  if (ChipID != TH500_CHIP_ID) {
+  // T194 and T234 require enable variable
+  if ((ChipID == T194_CHIP_ID) ||
+      (ChipID == T234_CHIP_ID))
+  {
     DataSize = sizeof (EnableIortTableGen);
     Status   = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
     if (EFI_ERROR (Status)) {

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,6 +14,7 @@
 #define T194_CHIP_ID    0x19
 #define T234_CHIP_ID    0x23
 #define T234_MAJOR_REV  0x4
+#define T264_CHIP_ID    0x26
 #define TH500_CHIP_ID   0x24
 /* CS definitions for the platforms */
 #define NOR_FLASH_CHIP_SELECT_JETSON        0
@@ -25,6 +26,8 @@
 #define T234_SKU         2
 #define T234SLT_SKU      3
 #define T234_PRESIL_SKU  255
+#define T264_SKU         4
+#define T264_PRESIL_SKU  254
 
 // Server SKUs
 #define TH500_SKU         5

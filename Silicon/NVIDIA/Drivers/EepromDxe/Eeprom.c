@@ -2,7 +2,7 @@
 
   EEPROM Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -63,7 +63,7 @@ PopulateEepromData (
     } else {
       CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
     }
-  } else if (ChipID == T234_CHIP_ID) {
+  } else if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
     T234EepromData  = (T234_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
     BoardId         = TegraBoardIdFromPartNumber (&T234EepromData->PartNumber);
@@ -122,7 +122,7 @@ ValidateEepromData (
         return EFI_DEVICE_ERROR;
       }
     }
-  } else if (ChipID == T234_CHIP_ID) {
+  } else if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
     if (!IgnoreVersionCheck &&
         (T234EepromData->Version != T234_EEPROM_VERSION))

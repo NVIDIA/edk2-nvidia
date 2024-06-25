@@ -113,6 +113,15 @@ SerialPortInfoParser (
 
       break;
 
+    case T264_CHIP_ID:
+      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
+        Map = ArmSerialPortCompatibility;
+      } else {
+        return EFI_SUCCESS;
+      }
+
+      break;
+
     case TH500_CHIP_ID:
       if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
         Map = ArmSerialPortCompatibility;

@@ -25,6 +25,8 @@ STATIC CONST CHAR8  *UsbCompatibleIds[] = {
   "nvidia,tegra194-xusb",
   "nvidia,tegra234-xhci",
   "nvidia,tegra234-xusb",
+  "nvidia,tegra264-xhci",
+  "nvidia,tegra264-xusb",
   NULL
 };
 

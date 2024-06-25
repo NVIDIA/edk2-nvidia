@@ -12,6 +12,9 @@
 #include "Dsdt_T234.hex"
 #include "Dsdt_T234.offset.h"
 
+#include "Dsdt_T264.hex"
+#include "Dsdt_T264.offset.h"
+
 #include "Dsdt_TH500.hex"
 #include "Dsdt_TH500.offset.h"
 #include "SsdtSocket1_TH500.hex"

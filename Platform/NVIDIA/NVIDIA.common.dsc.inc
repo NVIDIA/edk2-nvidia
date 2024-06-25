@@ -56,6 +56,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   #
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194 = be3f5d68-7654-4ed2-838c-2a2faf901a78
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T264 = 3c834404-d2d7-4912-8c1c-6e850b5f2824
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500        = $(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
@@ -71,9 +72,15 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   2|T234
   3|T234SLT|T234
 !endif
+!ifdef CONFIG_SOC_T264
+  4|T264
+!endif
 !ifdef CONFIG_SOC_GRACE
   5|TH500
   253|TH500Presil|TH500
+!endif
+!ifdef CONFIG_SOC_T264
+  254|T264Presil|T264
 !endif
 !ifdef CONFIG_SOC_ORIN
   255|T234Presil|T234
@@ -1255,6 +1262,32 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|TRUE
+!endif
+
+!ifdef CONFIG_SOC_T264
+[PcdsDynamicDefault.common.T264]
+  gArmTokenSpaceGuid.PcdGicDistributorBase|0x8146000000
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x8146080000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA264'
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T264)")}
+  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
+  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE
+  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x1000
+  gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
+  gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
+  gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
+
+[PcdsDynamicDefault.common.T264Presil]
+  gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
+  gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
+  gNVIDIATokenSpaceGuid.PcdSdhciAdma2Disable|TRUE
+  gNVIDIATokenSpaceGuid.PcdSdhciClearHc2RegOnExit|TRUE
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
+  gNVIDIATokenSpaceGuid.PcdUfsEnableHighSpeed|FALSE
+  gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0x1a
+  gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|TRUE
+  gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|0
 !endif
 
 !ifdef CONFIG_SOC_GRACE

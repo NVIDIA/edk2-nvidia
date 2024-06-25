@@ -79,6 +79,7 @@ GetBootChainPartitionName (
   ChipID = TegraGetChipID ();
   switch (ChipID) {
     case T234_CHIP_ID:
+    case T264_CHIP_ID:
       Identifier = T234PartitionNameId[BootChain];
       UnicodeSPrint (
         BootChainPartitionName,

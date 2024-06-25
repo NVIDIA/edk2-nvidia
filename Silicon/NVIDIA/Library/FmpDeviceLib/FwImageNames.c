@@ -49,6 +49,17 @@ STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   NULL
 };
 
+STATIC CONST CHAR16  *SystemFwImageNamesT264[] = {
+  L"psc_bl1",
+  L"psc-fw",
+  L"fsi-fw",
+  NULL
+};
+
+STATIC CONST CHAR16  *EmptyList[] = {
+  NULL
+};
+
 /**
   Get count of entries in NULL-terminated list.
 
@@ -151,9 +162,16 @@ FwImageGetRequiredList (
                     ImageCount
                     );
       break;
+    case T264_CHIP_ID:
+      ImageList = CombineLists (
+                    SystemFwImageNamesT264,
+                    SystemFwImageNamesCommon,
+                    ImageCount
+                    );
+      break;
     default:
       DEBUG ((DEBUG_ERROR, "%a: Unknown ChipId=%u\n", __FUNCTION__, ChipId));
-      ImageList   = NULL;
+      ImageList   = EmptyList;
       *ImageCount = 0;
       break;
   }

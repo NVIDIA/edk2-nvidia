@@ -23,6 +23,12 @@ menu "SOC Support"
   help
     Support for Orin (T234)
 
+  config SOC_T264
+  bool "T264"
+  select SOC_JETSON
+  help
+    Support for T264
+
   config SOC_JETSON
   bool
 
@@ -164,7 +170,7 @@ menu "Hardware support"
 
     config NVIDIA_PCIE
     bool
-    default y if SOC_GRACE
+    default y if (SOC_GRACE || SOC_T264)
 
     config NVME
     bool "NVMe support"

@@ -102,6 +102,7 @@ InitializePlatformRepository (
   switch (ChipID) {
     case T194_CHIP_ID:
     case T234_CHIP_ID:
+    case T264_CHIP_ID:
     case TH500_CHIP_ID:
       break;
 

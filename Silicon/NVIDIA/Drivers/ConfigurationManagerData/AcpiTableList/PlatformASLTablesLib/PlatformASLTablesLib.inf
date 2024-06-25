@@ -25,6 +25,7 @@
 [Sources]
   Dsdt_T194.asl
   Dsdt_T234.asl
+  Dsdt_T264.asl
   SsdtAhci.asl
   SsdtHda.asl
   Dsdt_TH500.asl

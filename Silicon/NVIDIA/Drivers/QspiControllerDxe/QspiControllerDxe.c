@@ -30,6 +30,7 @@
 #define QSPI_NUM_CHIP_SELECTS_DEFAULT  1
 #define QSPI_NUM_CHIP_SELECTS_T194     1
 #define QSPI_NUM_CHIP_SELECTS_T234     1
+#define QSPI_NUM_CHIP_SELECTS_T264     1
 #define QSPI_NUM_CHIP_SELECTS_TH500    4
 
 typedef enum {
@@ -387,6 +388,9 @@ DetectNumChipSelects (
       break;
     case T234_CHIP_ID:
       NumChipSelects = QSPI_NUM_CHIP_SELECTS_T234;
+      break;
+    case T264_CHIP_ID:
+      NumChipSelects = QSPI_NUM_CHIP_SELECTS_T264;
       break;
     case TH500_CHIP_ID:
       NumChipSelects = QSPI_NUM_CHIP_SELECTS_TH500;

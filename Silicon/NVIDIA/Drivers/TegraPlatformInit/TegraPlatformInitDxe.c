@@ -696,6 +696,8 @@ TegraPlatformInitialize (
       }
     } else if (ChipID == TH500_CHIP_ID) {
       LibPcdSetSku (TH500_SKU);
+    } else if (ChipID == T264_CHIP_ID) {
+      LibPcdSetSku (T264_SKU);
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
@@ -712,6 +714,8 @@ TegraPlatformInitialize (
       LibPcdSetSku (T234_PRESIL_SKU);
     } else if (ChipID == TH500_CHIP_ID) {
       LibPcdSetSku (TH500_PRESIL_SKU);
+    } else if (ChipID == T264_CHIP_ID) {
+      LibPcdSetSku (T264_PRESIL_SKU);
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (

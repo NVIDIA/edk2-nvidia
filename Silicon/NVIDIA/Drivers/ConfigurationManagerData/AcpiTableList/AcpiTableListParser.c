@@ -28,6 +28,11 @@ extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA234_OffsetTable[];
 // #include "Dsdt_T234.offset.h"
 extern unsigned char  dsdt_t234_aml_code[];
 
+// #include "Dsdt_T264.hex"
+extern unsigned char  dsdt_t264_aml_code[];
+// #include "Dsdt_T264.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA264_OffsetTable[];
+
 // #include "Dsdt_TH500.hex"
 extern unsigned char  dsdt_th500_aml_code[];
 // #include "Dsdt_TH500.offset.h"
@@ -86,7 +91,7 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T194[] = {
   SSDT_I2CTEMP_OffsetTable
 };
 
-// CmAcpiTableList is shared between T194, T234, and TH500
+// CmAcpiTableList is shared by all platforms
 STATIC
 CM_STD_OBJ_ACPI_TABLE_INFO  CmAcpiTableList[] = {
   // FADT Table
@@ -160,6 +165,18 @@ STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray_T234[] = {
 
 STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T234[] = {
   DSDT_TEGRA234_OffsetTable,
+  SSDT_SDCTEMP_OffsetTable
+};
+
+/** The platform ACPI info for T264.
+*/
+STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray_T264[] = {
+  (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_t264_aml_code,
+  (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code
+};
+
+STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T264[] = {
+  DSDT_TEGRA264_OffsetTable,
   SSDT_SDCTEMP_OffsetTable
 };
 
@@ -250,6 +267,13 @@ AcpiTableListParser (
       AcpiTableArray   = AcpiTableArray_T234;
       OffsetTableArray = OffsetTableArray_T234;
       ArraySize        = ARRAY_SIZE (AcpiTableArray_T234);
+      break;
+
+    case T264_CHIP_ID:
+      DsdtTable        = dsdt_t264_aml_code;
+      AcpiTableArray   = AcpiTableArray_T264;
+      OffsetTableArray = OffsetTableArray_T264;
+      ArraySize        = ARRAY_SIZE (AcpiTableArray_T264);
       break;
 
     case TH500_CHIP_ID:

@@ -1,7 +1,7 @@
 /** @file
   NVIDIA EEPROM Protocol
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -217,6 +217,8 @@ typedef struct {
   UINT8                 Checksum;                            /* 255 */
 } T234_EEPROM_DATA;
 #pragma pack()
+
+typedef T234_EEPROM_DATA T264_EEPROM_DATA;
 
 typedef struct {
   CHAR8    BoardId[TEGRA_BOARD_ID_LEN + 1];

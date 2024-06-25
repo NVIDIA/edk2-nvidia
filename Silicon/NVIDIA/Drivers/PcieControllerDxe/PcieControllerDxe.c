@@ -54,8 +54,9 @@
 STATIC BOOLEAN  mPcieDisableOptionRom = FALSE;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,th500-pcie", &gNVIDIANonDiscoverableTH500PcieDeviceGuid },
-  { NULL,                NULL                                       }
+  { "nvidia,th500-pcie",    &gNVIDIANonDiscoverableTH500PcieDeviceGuid },
+  { "nvidia,tegra264-pcie", &gNVIDIANonDiscoverableTH500PcieDeviceGuid },
+  { NULL,                   NULL                                       }
 };
 
 STATIC ACPI_HID_DEVICE_PATH  mPciRootBridgeDevicePathNode = {
@@ -2011,6 +2012,14 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
+
+      // TODO: Remove once option ROM on T264 C0 is fixed
+      if ((ChipId == T264_CHIP_ID) &&
+          (PlatformType != TEGRA_PLATFORM_SILICON))
+      {
+        mPcieDisableOptionRom = TRUE;
+      }
+
       Status = gBS->LocateProtocol (&gNVIDIAConfigurationManagerTokenProtocolGuid, NULL, (VOID **)&CMTokenProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to fird ConfigurationManagerTokenProtocol\n", __FUNCTION__));
@@ -2132,6 +2141,9 @@ DeviceDiscoveryNotify (
           CopyMem (&Private->SocketId, SocketId, sizeof (UINT32));
           Private->SocketId = SwapBytes32 (Private->SocketId);
         }
+      } else if (ChipId == T264_CHIP_ID) {
+        Private->CtrlId   = PcieIdToInterface (T264_CHIP_ID, Private->PcieRootBridgeConfigurationIo.SegmentNumber);
+        Private->SocketId = PcieIdToSocket (T264_CHIP_ID, Private->PcieRootBridgeConfigurationIo.SegmentNumber);
       } else {
         DEBUG ((DEBUG_ERROR, "%a: unsupported chip=0x%x\n", __FUNCTION__, ChipId));
         ASSERT (FALSE);
