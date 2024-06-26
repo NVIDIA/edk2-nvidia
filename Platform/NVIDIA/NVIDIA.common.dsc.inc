@@ -367,10 +367,8 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   HiiUtilityLib|RedfishPkg/Library/HiiUtilityLib/HiiUtilityLib.inf
   RedfishPlatformConfigLib|RedfishPkg/Library/RedfishPlatformConfigLib/RedfishPlatformConfigLib.inf
   RedfishDebugLib|RedfishPkg/Library/RedfishDebugLib/RedfishDebugLib.inf
-  RedfishHttpLib|RedfishClientPkg/Library/RedfishHttpLib/RedfishHttpLib.inf
+  RedfishHttpLib|RedfishPkg/Library/RedfishHttpLib/RedfishHttpLib.inf
   RedfishAddendumLib|RedfishClientPkg/Library/RedfishAddendumLib/RedfishAddendumLib.inf
-
-  RedfishLib|RedfishClientPkg/PrivateLibrary/RedfishLib/RedfishLib.inf
   RedfishFeatureUtilityLib|RedfishClientPkg/Library/RedfishFeatureUtilityLib/RedfishFeatureUtilityLib.inf
   RedfishContentCodingLib|RedfishPkg/Library/RedfishContentCodingLibNull/RedfishContentCodingLibNull.inf
   ConverterCommonLib|RedfishClientPkg/ConverterLib/edk2library/ConverterCommonLib/ConverterCommonLib.inf
@@ -846,8 +844,8 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDiscoverAccessModeInBand|False
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishDisableBootstrapCredentialService|TRUE
   gEfiRedfishClientPkgTokenSpaceGuid.PcdDefaultRedfishVersion|L"/redfish/v1/"
-  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpGetRetry|0x05
-  gEfiRedfishClientPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
+  gEfiRedfishPkgTokenSpaceGuid.PcdHttpGetRetry|0x05
+  gEfiRedfishPkgTokenSpaceGuid.PcdHttpRetryWaitInSecond|2
   gEfiRedfishPkgTokenSpaceGuid.PcdRedfishPlatformConfigFeatureProperty|1
 !endif
 
@@ -2358,12 +2356,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
   RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
   RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  RedfishPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
 
   RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
   RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
   RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
-  RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
   RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf {
     <LibraryClasses>

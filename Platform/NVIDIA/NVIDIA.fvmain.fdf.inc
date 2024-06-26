@@ -854,11 +854,11 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
   INF RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
   INF RedfishPkg/RedfishPlatformConfigDxe/RedfishPlatformConfigDxe.inf
+  INF RedfishPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   INF MdeModulePkg/Universal/RegularExpressionDxe/RegularExpressionDxe.inf
   INF RedfishClientPkg/RedfishFeatureCoreDxe/RedfishFeatureCoreDxe.inf
   INF RedfishClientPkg/RedfishETagDxe/RedfishETagDxe.inf
   INF RedfishClientPkg/RedfishConfigLangMapDxe/RedfishConfigLangMapDxe.inf
-  INF RedfishClientPkg/RedfishHttpDxe/RedfishHttpDxe.inf
   INF RedfishClientPkg/Features/ComputerSystem/v1_17_0/Dxe/ComputerSystemDxe.inf
   INF RedfishClientPkg/Features/ComputerSystem/v1_22_0/Dxe/ComputerSystemDxe.inf
   INF RedfishClientPkg/Features/ComputerSystemCollectionDxe/ComputerSystemCollectionDxe.inf
