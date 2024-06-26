@@ -53,3 +53,5 @@
 
 [Depex]
   gNVIDIAConfigurationManagerTokenProtocolGuid
+  AND
+  gNVIDIABdsDeviceConnectCompleteGuid

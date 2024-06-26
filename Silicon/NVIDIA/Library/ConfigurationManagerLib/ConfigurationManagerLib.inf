@@ -57,8 +57,4 @@
   gNVIDIAConfigurationManagerTokenProtocolGuid
 
 [Depex]
-  gNVIDIAPcieControllerInitCompleteProtocolGuid
-  AND
-  gNVIDIATegraCpuFrequencyProtocolGuid
-  AND
   gNVIDIAConfigurationManagerTokenProtocolGuid

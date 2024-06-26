@@ -40,6 +40,3 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-
-[Depex]
-  gNVIDIABdsDeviceConnectCompleteGuid
