@@ -48,7 +48,8 @@ GetFirmwareComponentInfo (
   EFI_STRING                ImageIdName;
   BOOLEAN                   RfUpdatable;
 
-  Status = RedfishHttpGetResource (Private->RedfishService, Uri, &Response, TRUE);
+  ZeroMem (&Response, sizeof (Response));
+  Status = RedfishHttpGetResource (Private->RedfishService, Uri, NULL, &Response, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: get resource from: %s failed\n", __FUNCTION__, Uri));
     return Status;
@@ -114,9 +115,7 @@ GetFirmwareComponentInfo (
   //
   // Release resource
   //
-  if (Response.Payload != NULL) {
-    RedfishHttpFreeResource (&Response);
-  }
+  RedfishHttpFreeResponse (&Response);
 
   return Status;
 }

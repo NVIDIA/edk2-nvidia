@@ -75,11 +75,6 @@ RedfishResourceStop (
     Private->RedfishService = NULL;
   }
 
-  if (Private->Payload != NULL) {
-    RedfishCleanupPayload (Private->Payload);
-    Private->Payload = NULL;
-  }
-
   return EFI_SUCCESS;
 }
 

@@ -33,7 +33,6 @@
 [LibraryClasses]
   BaseMemoryLib
   DebugLib
-  RedfishLib
   RedfishFeatureUtilityLib
   RedfishVersionLib
   UefiLib

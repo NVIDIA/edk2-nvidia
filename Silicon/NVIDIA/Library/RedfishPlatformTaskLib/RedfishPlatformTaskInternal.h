@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,7 +16,7 @@
 #include <Library/JsonLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
-#include <Library/RedfishLib.h>
+#include <Library/RedfishHttpLib.h>
 #include <Library/RedfishDebugLib.h>
 #include <Library/RedfishFeatureUtilityLib.h>
 #include <Library/RedfishTaskLib.h>

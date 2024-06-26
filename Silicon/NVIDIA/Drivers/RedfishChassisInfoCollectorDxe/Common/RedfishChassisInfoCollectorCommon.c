@@ -94,7 +94,8 @@ GetRedfishChassisInfoProp (
   EDKII_JSON_VALUE  JsonValue;
   EFI_STRING        JsonUnicodeString;
 
-  Status = RedfishHttpGetResource (Private->RedfishService, Uri, &Response, TRUE);
+  ZeroMem (&Response, sizeof (Response));
+  Status = RedfishHttpGetResource (Private->RedfishService, Uri, NULL, &Response, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: get resource from: %s failed\n", __func__, Uri));
     return Status;
@@ -147,9 +148,7 @@ GetRedfishChassisInfoProp (
 
 ON_RELEASE:
 
-  if (Response.Payload != NULL) {
-    RedfishHttpFreeResource (&Response);
-  }
+  RedfishHttpFreeResponse (&Response);
 
   return Status;
 }

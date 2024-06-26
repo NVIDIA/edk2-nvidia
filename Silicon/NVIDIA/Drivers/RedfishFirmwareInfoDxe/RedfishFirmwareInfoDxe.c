@@ -2,7 +2,7 @@
   Redfish feature driver - translate firmware inventory to UEFI FMP protocol.
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -67,7 +67,8 @@ RedfishResourceConsumeResource (
     return EFI_NOT_READY;
   }
 
-  Status = RedfishHttpGetResource (Private->RedfishService, Uri, &Response, TRUE);
+  ZeroMem (&Response, sizeof (Response));
+  Status = RedfishHttpGetResource (Private->RedfishService, Uri, NULL, &Response, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: get resource from: %s failed\n", __FUNCTION__, Uri));
     return Status;
@@ -86,10 +87,7 @@ RedfishResourceConsumeResource (
   //
   // Release resource
   //
-  if (Private->Payload != NULL) {
-    RedfishHttpFreeResource (&Response);
-    Private->Payload = NULL;
-  }
+  RedfishHttpFreeResponse (&Response);
 
   if (Private->Json != NULL) {
     FreePool (Private->Json);
@@ -248,11 +246,6 @@ RedfishResourceStop (
   if (Private->RedfishService != NULL) {
     RedfishCleanupService (Private->RedfishService);
     Private->RedfishService = NULL;
-  }
-
-  if (Private->Payload != NULL) {
-    RedfishCleanupPayload (Private->Payload);
-    Private->Payload = NULL;
   }
 
   return EFI_SUCCESS;

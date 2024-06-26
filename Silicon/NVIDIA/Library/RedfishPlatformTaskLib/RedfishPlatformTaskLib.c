@@ -1,7 +1,7 @@
 /** @file
   Redfish task library platform implementation.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -145,7 +145,7 @@ RedfishTaskUpdate (
 {
   EFI_STATUS            Status;
   REDFISH_RESPONSE      Response;
-  CHAR8                 TaskUpdateUri[REDFISH_TASK_UPDATE_URI_MAX];
+  CHAR16                TaskUpdateUri[REDFISH_TASK_UPDATE_URI_MAX];
   EDKII_JSON_VALUE      TaskResultObj;
   EDKII_JSON_VALUE      TaskStateObj;
   EDKII_JSON_ARRAY      MessageArrayObj;
@@ -168,7 +168,7 @@ RedfishTaskUpdate (
   JsonText     = NULL;
   MessageArray = NULL;
   MessageCount = 0;
-  AsciiSPrint (TaskUpdateUri, REDFISH_TASK_UPDATE_URI_MAX, "%s/%a", TaskUri, REDFISH_TASK_UPDATE_URI);
+  UnicodeSPrint (TaskUpdateUri, REDFISH_TASK_UPDATE_URI_MAX, L"%s/%a", TaskUri, REDFISH_TASK_UPDATE_URI);
 
   //
   // Prepare task data
@@ -226,25 +226,20 @@ RedfishTaskUpdate (
     goto ON_RELEASE;
   }
 
-  Status = RedfishPatchToUri (
+  Status = RedfishHttpPatchResource (
              RedfishService,
              TaskUpdateUri,
              JsonText,
              &Response
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Patch resource: %a failed: %r\n", __func__, TaskUpdateUri, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Patch resource: %s failed: %r\n", __func__, TaskUpdateUri, Status));
     DumpJsonValue (DEBUG_ERROR, TaskResultObj);
   }
 
 ON_RELEASE:
 
-  RedfishFreeResponse (
-    Response.StatusCode,
-    Response.HeaderCount,
-    Response.Headers,
-    Response.Payload
-    );
+  RedfishHttpFreeResponse (&Response);
 
   if (TaskResultObj != NULL) {
     JsonValueFree (TaskResultObj);
