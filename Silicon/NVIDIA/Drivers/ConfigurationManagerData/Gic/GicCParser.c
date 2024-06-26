@@ -227,7 +227,7 @@ GicCParser (
   if (ChipID != T194_CHIP_ID) {
     Status = GetPmuBaseInterrupt (&PmuBaseInterrupt);
     if (EFI_ERROR (Status)) {
-      goto CleanupAndReturn;
+      DEBUG ((DEBUG_WARN, "%a: Got %r trying to get PmuBaseInterrupt - continuing with it set to 0\n", __FUNCTION__, Status));
     }
   }
 
