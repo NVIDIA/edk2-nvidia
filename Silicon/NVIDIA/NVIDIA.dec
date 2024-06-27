@@ -484,6 +484,9 @@
   ## The maximum number of boot options supported.
   gNVIDIATokenSpaceGuid.PcdMaximumBootOptions|0xFF|UINT16|0x0000012D
 
+  ## Mask used to limit debug output, used to filter out debug messages when enabled with menu.
+  gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFFFFFFF|UINT32|0x0000012F
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

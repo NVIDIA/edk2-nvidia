@@ -5,7 +5,7 @@
   support the setting of the global debug print error level mask for the platform.
 
   Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -43,6 +43,8 @@ GetDebugPrintErrorLevel (
     if ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * TH500_MAX_SOCKETS))) {
       TH500HobConfig = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
       mDebugLevel    = TH500HobConfig->Data.Mb1Data.UefiDebugLevel;
+      // Allow debug level to be masked by PCD
+      mDebugLevel &= (PcdGet32 (PcdDebugPrintErrorLevel) | PcdGet32 (PcdDebugOutputMask));
     } else {
       mDebugLevel =  PcdGet32 (PcdDebugPrintErrorLevel);
     }

@@ -3,7 +3,7 @@
 #  It retrieves the current error level from PcdDebugPrintErrorLevel.
 #
 #  Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
-#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -38,4 +38,5 @@
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel  ## CONSUMES
+  gNVIDIATokenSpaceGuid.PcdDebugOutputMask ## CONSUMES
 

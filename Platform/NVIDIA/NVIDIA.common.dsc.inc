@@ -725,6 +725,10 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   #
   #  If this is changed the boot watchdog value should be reevaluated.
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
+  #  Suppress setting POOL and PAGE as they take a very large time to print
+  #  and are not useful for general debugging.
+  #  If desired should be enabled on a driver by driver basis.
+  gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFFFFFCF
 
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
 
@@ -1673,7 +1677,11 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   Drivers/ASIX/Bus/Usb/UsbNetworking/Ax88772c/Ax88772c.inf
 !endif
 !ifdef CONFIG_NETWORKING_DEVICE_USB_RNDIS
-  Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
+  Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf {
+    <PcdsFixedAtBuild>
+      # Disable VERBOSE, PAGE and POOL
+      gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFBFFFCF
+  }
 !endif
 
   # Filesystems
@@ -1787,7 +1795,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 !ifdef CONFIG_XHCI
   MdeModulePkg/Bus/Pci/XhciDxe/XhciDxe.inf {
-      <LibraryClasses>
+    <PcdsFixedAtBuild>
+      # Disable VERBOSE, PAGE and POOL
+      gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFBFFFCF
+    <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
 !endif
