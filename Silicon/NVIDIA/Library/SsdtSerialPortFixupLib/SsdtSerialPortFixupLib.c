@@ -2,7 +2,7 @@
   SSDT Serial Port Fixup Library.
 
   Copyright (c) 2019 - 2021, Arm Limited. All rights reserved.<BR>
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -340,7 +340,7 @@ FixupName (
   }
 
   // Update the Device's name.
-  return AmlDeviceOpUpdateName (DeviceNode, (CHAR8 *)Name);
+  return AmlDeviceOpUpdateName (DeviceNode, Name);
 }
 
 /** Fixup the Serial Port Information in the AML tree.

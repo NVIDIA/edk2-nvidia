@@ -433,7 +433,7 @@ GeneratePciSlots (
     PCIeAslName[AML_NAME_SEG_SIZE - 2] = AsciiFromHex (SocketID & 0xF);
   }
 
-  Status = AmlDeviceOpUpdateName (PciNode, (CHAR8 *)PCIeAslName);
+  Status = AmlDeviceOpUpdateName (PciNode, PCIeAslName);
   if (EFI_ERROR (Status)) {
     goto error_handler;
   }
