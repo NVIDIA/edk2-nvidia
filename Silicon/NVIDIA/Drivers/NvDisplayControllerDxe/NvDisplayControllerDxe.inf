@@ -19,7 +19,9 @@
 
 [Sources.common]
   NvDisplayChildGop.c
+  NvDisplayController.c
   NvDisplayControllerDxe.c
+  NvDisplayControllerT234.c
   NvDisplayHw.c
   NvDisplayMmioRegions.c
 
