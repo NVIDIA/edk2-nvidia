@@ -2127,21 +2127,21 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !endif
 
 !ifdef CONFIG_SMBIOS_DYNAMICTABLESPKG
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType1Lib/SmbiosType1Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType0Lib/SmbiosType0Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType2Lib/SmbiosType2Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType3Lib/SmbiosType3Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType8Lib/SmbiosType8Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType9Lib/SmbiosType9Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType11Lib/SmbiosType11Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType13Lib/SmbiosType13Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType14Lib/SmbiosType14Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType32Lib/SmbiosType32Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType38Lib/SmbiosType38Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType39Lib/SmbiosType39Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType41Lib/SmbiosType41Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType43Lib/SmbiosType43Lib.inf
-      NULL|DynamicTablesPkg/Library/Smbios/Standard/SmbiosType45Lib/SmbiosType45Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType1Lib/SmbiosType1Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType0Lib/SmbiosType0Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType2Lib/SmbiosType2Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType3Lib/SmbiosType3Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType8Lib/SmbiosType8Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType9Lib/SmbiosType9Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType11Lib/SmbiosType11Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType13Lib/SmbiosType13Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType14Lib/SmbiosType14Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType32Lib/SmbiosType32Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType38Lib/SmbiosType38Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType39Lib/SmbiosType39Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType41Lib/SmbiosType41Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType43Lib/SmbiosType43Lib.inf
+      NULL|DynamicTablesPkg/Library/Smbios/SmbiosType45Lib/SmbiosType45Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType16Lib/SmbiosType16Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType17Lib/SmbiosType17Lib.inf
       NULL|DynamicTablesPkg/Library/Smbios/SmbiosType19Lib/SmbiosType19Lib.inf

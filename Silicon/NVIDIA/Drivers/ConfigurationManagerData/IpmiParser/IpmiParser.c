@@ -34,14 +34,14 @@ IpmiParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS               Status;
-  UINT32                   Count;
-  CM_STD_IPMI_DEVICE_INFO  *IpmiDeviceInfo;
-  CM_OBJECT_TOKEN          *TokenMap;
-  CM_OBJ_DESCRIPTOR        Desc;
-  UINT32                   Index;
-  INT32                    NodeOffset;
-  UINT32                   SlaveAddress;
+  EFI_STATUS                  Status;
+  UINT32                      Count;
+  CM_SMBIOS_IPMI_DEVICE_INFO  *IpmiDeviceInfo;
+  CM_OBJECT_TOKEN             *TokenMap;
+  CM_OBJ_DESCRIPTOR           Desc;
+  UINT32                      Index;
+  INT32                       NodeOffset;
+  UINT32                      SlaveAddress;
 
   if (mIpmiDevCmInstalled) {
     return EFI_SUCCESS;
@@ -55,7 +55,7 @@ IpmiParser (
     goto CleanupAndReturn;
   }
 
-  IpmiDeviceInfo = (CM_STD_IPMI_DEVICE_INFO *)AllocateZeroPool (sizeof (CM_STD_IPMI_DEVICE_INFO) * Count);
+  IpmiDeviceInfo = (CM_SMBIOS_IPMI_DEVICE_INFO *)AllocateZeroPool (sizeof (CM_SMBIOS_IPMI_DEVICE_INFO) * Count);
   if (IpmiDeviceInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Ipmi device info.\n", __FUNCTION__));
@@ -101,8 +101,8 @@ IpmiParser (
   }
 
   // Add the CmObj to the Configuration Manager.
-  Desc.ObjectId = CREATE_CM_STD_OBJECT_ID (EStdObjIpmiDeviceInfo);
-  Desc.Size     = sizeof (CM_STD_IPMI_DEVICE_INFO) * Index;
+  Desc.ObjectId = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjIpmiDeviceInfo);
+  Desc.Size     = sizeof (CM_SMBIOS_IPMI_DEVICE_INFO) * Index;
   Desc.Count    = Index;
   Desc.Data     = IpmiDeviceInfo;
   Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMap, CM_NULL_TOKEN);
