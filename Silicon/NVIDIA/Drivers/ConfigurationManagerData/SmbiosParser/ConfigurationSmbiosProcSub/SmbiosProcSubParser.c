@@ -993,11 +993,11 @@ GetL3CacheInfo (
     AsciiSPrint (CacheInfo->SocketDesignation, strlen (CacheL3Str) +1, CacheL3Str);
   }
 
-  CacheInfo->SupportedSRAMType.Unknown = 1;
-  CacheInfo->CurrentSRAMType.Unknown   = 1;
-  CacheInfo->CacheSpeed                = 0;
-  CacheInfo->ErrorCorrectionType       = CacheErrorUnknown;
-  CacheInfo->SystemCacheType           = CacheTypeUnified;
+  CacheInfo->SupportedSRAMType.Other = 1;
+  CacheInfo->CurrentSRAMType.Other   = 1;
+  CacheInfo->CacheSpeed              = 0;
+  CacheInfo->ErrorCorrectionType     = CacheErrorSingleBit;
+  CacheInfo->SystemCacheType         = CacheTypeUnified;
 
   return EFI_SUCCESS;
 }
@@ -1139,10 +1139,9 @@ InstallSmbiosType7Cm (
           CacheInfo[TableCount].SocketDesignation = NULL;
         }
 
-        CacheInfo[TableCount].SupportedSRAMType.Unknown = 1;
-        CacheInfo[TableCount].CurrentSRAMType.Unknown   = 1;
-        CacheInfo[TableCount].CacheSpeed                = 0;
-        CacheInfo[TableCount].ErrorCorrectionType       = CacheErrorUnknown;
+        CacheInfo[TableCount].SupportedSRAMType.Other = 1;
+        CacheInfo[TableCount].CurrentSRAMType.Other   = 1;
+        CacheInfo[TableCount].CacheSpeed              = 0;
 
         ConfigureCacheArchitectureInformation (
           CacheLevel,
@@ -1152,16 +1151,22 @@ InstallSmbiosType7Cm (
           &CacheInfo[TableCount]
           );
 
-        // Record Cache Table handles to populate in Type 4
+        // Record cache table handles to populate in Type 4 and set error correction type for each cache type
         CacheInfo[TableCount].CacheInfoToken = TokenMap[TableCount];
         if (CacheLevel == 1) {
+          if (DataCacheType == 0) {
+            CacheInfo[TableCount].ErrorCorrectionType = CacheErrorParity;
+          } else if (DataCacheType == 1) {
+            CacheInfo[TableCount].ErrorCorrectionType = CacheErrorSingleBit;
+          }
+
           CacheInfoTokenL1[Index] = CacheInfo[TableCount].CacheInfoToken;
         } else if (CacheLevel == 2) {
-          CacheInfoTokenL2[Index] = CacheInfo[TableCount].CacheInfoToken;
-        } else if (CacheLevel == 3) {
-          // Additional logic added below for L3 cache info
-          // CacheInfoTokenL3[Index] = CacheInfo[TableCount].CacheInfoToken;
+          CacheInfo[TableCount].ErrorCorrectionType = CacheErrorSingleBit;
+          CacheInfoTokenL2[Index]                   = CacheInfo[TableCount].CacheInfoToken;
         }
+
+        // Additional logic added below for L3 cache info
 
         TableCount++;
       }
