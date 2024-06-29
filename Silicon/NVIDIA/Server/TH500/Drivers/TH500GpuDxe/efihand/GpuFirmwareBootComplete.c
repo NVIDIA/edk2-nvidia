@@ -2,7 +2,7 @@
 
   NVIDIA GPU Firmware Boot Complete Protocol Handler.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,8 +11,7 @@
 #include "GpuFirmwareBootComplete.h"
 #include <Protocol/PciIo.h>
 #include "Protocol/GpuFirmwareBootCompleteProtocol.h"
-#include "core/GPUMemoryInfo.h" // check required
-#include "core/GPUSupport.h"    //
+#include "core/GPUSupport.h"
 
 EFI_STATUS
 EFIAPI
@@ -64,19 +63,16 @@ GpuFirmwareBootCompletGetBootStatus (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   ASSERT_EFI_ERROR (Status);
-  DEBUG ((DEBUG_INFO, "%a: OpenProtocol on PciIo returned:'%r'\n", __FUNCTION__, Status));
-  DEBUG ((DEBUG_INFO, "%a: PciIo ProtocolInstance: '%p' on '%p'\n", __FUNCTION__, PciIo, Private->ControllerHandle));
 
   if (PciIo != NULL) {
     Status = CheckGfwInitComplete (PciIo, &bFirmwareComplete);
     if (EFI_ERROR (Status)) {
+      DEBUG_CODE_BEGIN ();
+      DEBUG ((DEBUG_INFO, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
+      DEBUG_CODE_END ();
+
       return Status;
     }
-
-    DEBUG_CODE_BEGIN ();
-    DEBUG ((DEBUG_INFO, "%a: GPU Firmware Boot Complete Protocol status:'%r'\n", __FUNCTION__, Status));
-    DEBUG ((DEBUG_INFO, "%a: GpuFirmwareBootCompleteProtocol 'CheckGfwInitComplete' for instance:'%p', complete '%u'\n", __FUNCTION__, PciIo, bFirmwareComplete));
-    DEBUG_CODE_END ();
 
     if (NULL != BootComplete) {
       *BootComplete = bFirmwareComplete;

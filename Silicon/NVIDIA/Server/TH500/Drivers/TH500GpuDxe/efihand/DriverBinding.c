@@ -4,6 +4,7 @@
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
   SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
+
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -41,9 +42,6 @@
 #include "GPUMemoryInfo.h"
 #include "UEFIFspRpc.h"
 
-/* Required for diagnostics register reads at the end of DriverStart() */
-#include "dev_fb.h"
-
 ///
 /// Local Definitions
 ///
@@ -52,8 +50,9 @@
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
-#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX      600000
-#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS  5
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX              600000
+#define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER  10000
+#define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS          5
 
 /** Diagnostic dump of GPU Driver Binding Private Data
     @param[in] This                         Private Data structure.
@@ -472,6 +471,7 @@ NVIDIAGpuDriverStart (
   UINTN                                       Bus;
   UINTN                                       Device;
   UINTN                                       Function;
+  BOOLEAN                                     bMaskFspRpcTimeoutError = TRUE;
 
   DEBUG ((DEBUG_ERROR, "%a: DriverBindingProtocol*: '%p'\n", __FUNCTION__, This));
   DEBUG ((DEBUG_INFO, "%a: ControllerHandle: '%p'\n", __FUNCTION__, ControllerHandle));
@@ -592,17 +592,27 @@ NVIDIAGpuDriverStart (
         BOOLEAN  bFirmwareComplete = FALSE;
         UINT32   TimeoutIdx        = UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX;
 
-        while ((!bFirmwareComplete) && (TimeoutIdx--)) {
+        while ((!bFirmwareComplete) && (--TimeoutIdx)) {
           /* Note: PciIo protocol required. Obtained from Protocol PrivateData Controller lookup. */
           Status = GpuFirmwareBootCompleteProtocol->GetBootCompleteState (GpuFirmwareBootCompleteProtocol, &bFirmwareComplete);
           if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
             ErrorStatus = Status;
-            goto ErrorHandler_RestorePCIAttributes;
+            goto BootCompleteErrorCheck;
           }
+
+          /* Timeout Progress */
+          DEBUG_CODE_BEGIN ();
+          if ((TimeoutIdx%(UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER)) == 0) {
+            DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareBootCompleteProtocol' Poll status [%u/%u]\n", (UINT32)(UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX-TimeoutIdx), (UINT32)UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX));
+          }
+
+          DEBUG_CODE_END ();
 
           gBS->Stall (UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS);
         }
+
+        DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareBootCompleteProtocol' Poll exit state {Idx:%u, Complete:%u}\n", TimeoutIdx, bFirmwareComplete));
 
         if ((TimeoutIdx == 0) && (!bFirmwareComplete)) {
           DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware Boot Complete timed out.\n", TimeoutIdx));
@@ -710,6 +720,12 @@ NVIDIAGpuDriverStart (
           ASSERT_EFI_ERROR (Status);
         }
       }
+    }
+
+BootCompleteErrorCheck:
+    /* Check for FSP RPC transaction timeout, flag as non-FATAL */
+    if ( bMaskFspRpcTimeoutError && (ErrorStatus == EFI_TIMEOUT)) {
+      ErrorStatus = EFI_SUCCESS;
     }
 
     DEBUG ((DEBUG_INFO, "%a: Finished, Status '%r'\n", __FUNCTION__, Status));
