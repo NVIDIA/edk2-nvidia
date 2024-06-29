@@ -2,7 +2,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2016, Linaro, Ltd. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1893,7 +1893,9 @@ InitializePciIoProtocol (
     Dev->PciIo.Unmap          = NonCoherentPciIoUnmap;
   }
 
-  if (CompareGuid (Dev->Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
+  if (  CompareGuid (Dev->Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)
+     || CompareGuid (Dev->Device->Type, &gNVIDIANonDiscoverableT264DisplayDeviceGuid))
+  {
     Status = TegraDisplayInitializePciIoProtocol (Dev, ControllerHandle);
     if (EFI_ERROR (Status)) {
       return Status;

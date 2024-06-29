@@ -1,7 +1,7 @@
 /** @file
   Platform To Driver Configuration Protocol
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,6 +36,7 @@ OnExitBootServices (
 GUID_DEVICEFUNCPTR_MAPPING  GuidDeviceFuncPtrMap[] = {
   { &gEdkiiNonDiscoverableSdhciDeviceGuid,        QuerySdMmcParameters, ResponseSdMmcParameters },
   { &gNVIDIANonDiscoverableT234DisplayDeviceGuid, QueryGopParameters,   ResponseGopParameters   },
+  { &gNVIDIANonDiscoverableT264DisplayDeviceGuid, QueryGopParameters,   ResponseGopParameters   },
   { NULL,                                         NULL,                 NULL                    }
 };
 

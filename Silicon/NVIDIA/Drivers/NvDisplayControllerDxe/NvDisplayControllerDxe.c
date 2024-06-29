@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,8 +10,11 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 
 #include "NvDisplayController.h"
 
@@ -19,6 +22,7 @@
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra234-display", &gNVIDIANonDiscoverableT234DisplayDeviceGuid },
+  { "nvidia,tegra264-display", &gNVIDIANonDiscoverableT264DisplayDeviceGuid },
   { NULL,                      NULL                                         }
 };
 
@@ -52,7 +56,9 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  TEGRA_PLATFORM_TYPE  Platform;
+  EFI_STATUS               Status;
+  TEGRA_PLATFORM_TYPE      Platform;
+  NON_DISCOVERABLE_DEVICE  *Device;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -64,7 +70,31 @@ DeviceDiscoveryNotify (
       return EFI_SUCCESS;
 
     case DeviceDiscoveryDriverBindingStart:
-      return NvDisplayControllerStartT234 (DriverHandle, ControllerHandle);
+      Status = gBS->OpenProtocol (
+                      ControllerHandle,
+                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                      (VOID **)&Device,
+                      DriverHandle,
+                      ControllerHandle,
+                      EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to open NVIDIA non-discoverable device protocol: %r\r\n",
+          __FUNCTION__,
+          Status
+          ));
+        return Status;
+      }
+
+      if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
+        return NvDisplayControllerStartT234 (DriverHandle, ControllerHandle);
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT264DisplayDeviceGuid)) {
+        return NvDisplayControllerStartT264 (DriverHandle, ControllerHandle);
+      } else {
+        ASSERT_EFI_ERROR (EFI_UNSUPPORTED);
+      }
 
     case DeviceDiscoveryDriverBindingStop:
       return NvDisplayControllerStop (DriverHandle, ControllerHandle);

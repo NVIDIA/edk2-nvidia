@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -61,6 +61,23 @@ NvDisplayControllerStart (
 */
 EFI_STATUS
 NvDisplayControllerStartT234 (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
+  );
+
+/**
+  Starts the NV T264 display controller driver on the given
+  controller handle.
+
+  @param[in] DriverHandle      The driver handle.
+  @param[in] ControllerHandle  The controller handle.
+
+  @retval EFI_SUCCESS          Operation successful.
+  @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
+  @retval !=EFI_SUCCESS        Operation failed.
+*/
+EFI_STATUS
+NvDisplayControllerStartT264 (
   IN EFI_HANDLE  DriverHandle,
   IN EFI_HANDLE  ControllerHandle
   );

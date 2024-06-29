@@ -2,7 +2,7 @@
 #
 #  Platform To Driver Configuration Driver
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -43,6 +43,7 @@
   gEdkiiNonDiscoverableSdhciDeviceGuid
   gEfiEventExitBootServicesGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
+  gNVIDIANonDiscoverableT264DisplayDeviceGuid
 
 [Depex]
   TRUE

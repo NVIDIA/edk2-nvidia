@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (C) 2016, Linaro Ltd. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,8 @@ EFI_CPU_ARCH_PROTOCOL  *mCpu;
 STATIC
 CONST EFI_GUID *CONST
 SupportedNonDiscoverableDevices[] = {
-  &gNVIDIANonDiscoverableT234DisplayDeviceGuid
+  &gNVIDIANonDiscoverableT234DisplayDeviceGuid,
+  &gNVIDIANonDiscoverableT264DisplayDeviceGuid,
 };
 
 //
