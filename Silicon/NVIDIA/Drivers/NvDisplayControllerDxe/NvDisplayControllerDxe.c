@@ -76,6 +76,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
 /**
    Perform NvDisplay engine resets
 
+   @param[in] DriverHandle             Handle to the driver
    @param[in] ControllerHandle         Handle to the controller
    @param[in] Assert                   Assert/Deassert the reset signal
 
@@ -85,6 +86,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
 STATIC
 EFI_STATUS
 ResetRequiredDisplayEngines (
+  IN       EFI_HANDLE  DriverHandle,
   IN       EFI_HANDLE  ControllerHandle,
   IN CONST BOOLEAN     Assert
   )
@@ -92,31 +94,15 @@ ResetRequiredDisplayEngines (
   STATIC CONST CHAR8 *CONST  DisplayResets[] = {
     "nvdisplay_reset",
     "dpaux0_reset",
+    NULL
   };
 
-  EFI_STATUS   Status = EFI_SUCCESS;
-  UINTN        Index;
-  CONST CHAR8  *ResetName;
-
-  /* Reset all required display engines */
-  for (Index = 0; Index < ARRAY_SIZE (DisplayResets); Index++) {
-    ResetName = DisplayResets[Index];
-
-    Status = DeviceDiscoveryConfigReset (ControllerHandle, ResetName, Assert);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to %a reset %a: %r \r\n",
-        __FUNCTION__,
-        Assert ? "assert" : "deassert",
-        ResetName,
-        Status
-        ));
-      break;
-    }
-  }
-
-  return Status;
+  return NvDisplayAssertResets (
+           DriverHandle,
+           ControllerHandle,
+           DisplayResets,
+           Assert
+           );
 }
 
 /**
@@ -124,6 +110,7 @@ ResetRequiredDisplayEngines (
    dispTegraSocInitMaxFreqForDispHubClks_v04_02 in
    <gpu/drv/drivers/resman/src/physical/gpu/disp/arch/v04/disp_0402.c>.
 
+   @param[in] DriverHandle              Handle to the driver
    @param[in] ControllerHandle          Handle to the controller
    @param[in] Enable                    Enable/disable the clocks
 
@@ -133,6 +120,7 @@ ResetRequiredDisplayEngines (
 STATIC
 EFI_STATUS
 EnableRequiredDisplayClocks (
+  IN       EFI_HANDLE  DriverHandle,
   IN       EFI_HANDLE  ControllerHandle,
   IN CONST BOOLEAN     Enable
   )
@@ -145,83 +133,21 @@ EnableRequiredDisplayClocks (
     "maud_clk",
     "aza_2xbit_clk",
     "aza_bit_clk",
+    NULL
   };
   STATIC CONST CHAR8 *CONST  ClockParents[][2] = {
     { "nvdisplay_disp_clk", "disppll_clk"        },
     { "nvdisplayhub_clk",   "sppll0_clkoutb_clk" },
+    { NULL,                 NULL                 }
   };
 
-  EFI_STATUS                  Status;
-  UINTN                       Index;
-  CONST CHAR8                 *ClockName;
-  CONST CHAR8                 *ParentClockName;
-  NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNodeProtocol;
-
-  if (Enable) {
-    /* Set required clock parents */
-    for (Index = 0; Index < ARRAY_SIZE (ClockParents); ++Index) {
-      ClockName       = ClockParents[Index][0];
-      ParentClockName = ClockParents[Index][1];
-
-      Status = DeviceDiscoverySetClockParent (ControllerHandle, ClockName, ParentClockName);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to set parent of clock '%a' to '%a': %r\r\n",
-          __FUNCTION__,
-          ClockName,
-          ParentClockName,
-          Status
-          ));
-        return Status;
-      }
-    }
-
-    /* Enable all required clocks */
-    for (Index = 0; Index < ARRAY_SIZE (Clocks); ++Index) {
-      ClockName = Clocks[Index];
-
-      Status = DeviceDiscoveryEnableClock (ControllerHandle, ClockName, TRUE);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to enable clock '%a': %r\r\n",
-          __FUNCTION__,
-          ClockName,
-          Status
-          ));
-        return Status;
-      }
-    }
-  } else {
-    Status = gBS->HandleProtocol (
-                    ControllerHandle,
-                    &gNVIDIAClockNodeProtocolGuid,
-                    (VOID **)&ClockNodeProtocol
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to lookup clock node protocol: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-      return Status;
-    }
-
-    Status = ClockNodeProtocol->DisableAll (ClockNodeProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to disable clocks: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-      return Status;
-    }
-  }
-
-  return EFI_SUCCESS;
+  return NvDisplayEnableClocks (
+           DriverHandle,
+           ControllerHandle,
+           Clocks,
+           ClockParents,
+           Enable
+           );
 }
 
 /**
@@ -533,10 +459,12 @@ DisplayStopOnExitBootServices (
 {
   EFI_STATUS     Status = EFI_SUCCESS;
   EFI_STATUS     Status1;
+  EFI_HANDLE     DriverHandle;
   EFI_HANDLE     ControllerHandle;
   CONST BOOLEAN  UseDpOutput = FALSE;
 
   if (Context != NULL) {
+    DriverHandle     = Context->DriverHandle;
     ControllerHandle = Context->ControllerHandle;
 
     if (Context->OnFdtInstalledEvent != NULL) {
@@ -581,7 +509,7 @@ DisplayStopOnExitBootServices (
     }
 
     if (Context->ClocksEnabled) {
-      Status1 = EnableRequiredDisplayClocks (ControllerHandle, FALSE);
+      Status1 = EnableRequiredDisplayClocks (DriverHandle, ControllerHandle, FALSE);
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
@@ -590,7 +518,7 @@ DisplayStopOnExitBootServices (
     }
 
     if (Context->ResetsDeasserted) {
-      Status1 = ResetRequiredDisplayEngines (ControllerHandle, TRUE);
+      Status1 = ResetRequiredDisplayEngines (DriverHandle, ControllerHandle, TRUE);
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
@@ -1016,14 +944,14 @@ DisplayStart (
     goto Exit;
   }
 
-  Status = ResetRequiredDisplayEngines (ControllerHandle, FALSE);
+  Status = ResetRequiredDisplayEngines (DriverHandle, ControllerHandle, FALSE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
 
   Result->ResetsDeasserted = TRUE;
 
-  Status = EnableRequiredDisplayClocks (ControllerHandle, TRUE);
+  Status = EnableRequiredDisplayClocks (DriverHandle, ControllerHandle, TRUE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }

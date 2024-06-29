@@ -56,4 +56,50 @@ NvDisplayGetMmioRegions (
   OUT UINTN                              *Size
   );
 
+/**
+  Assert or deassert display resets.
+
+  The Resets array must be terminated by a NULL entry.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] Resets            Names of the resets.
+  @param[in] Assert            Assert/deassert the reset signal.
+
+  @retval EFI_SUCCESS  Operation successful.
+  @retval others       Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayAssertResets (
+  IN EFI_HANDLE          DriverHandle,
+  IN EFI_HANDLE          ControllerHandle,
+  IN CONST CHAR8 *CONST  Resets[],
+  IN BOOLEAN             Assert
+  );
+
+/**
+  Enable or disable display clocks. In addition, set given clock
+  parents before enable.
+
+  Both Clocks and ClockParents arrays must be terminated by NULL
+  entries.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] Clocks            Names of the clocks.
+  @param[in] ClockParents      Child-parent clock pairs to set.
+  @param[in] Enable            Enable/disable the clocks.
+
+  @return EFI_SUCCESS    Clocks successfully enabled/disabled.
+  @return !=EFI_SUCCESS  An error occurred.
+*/
+EFI_STATUS
+NvDisplayEnableClocks (
+  IN EFI_HANDLE          DriverHandle,
+  IN EFI_HANDLE          ControllerHandle,
+  IN CONST CHAR8 *CONST  Clocks[],
+  IN CONST CHAR8 *CONST  ClockParents[][2],
+  IN BOOLEAN             Enable
+  );
+
 #endif // __NV_DISPLAY_H__

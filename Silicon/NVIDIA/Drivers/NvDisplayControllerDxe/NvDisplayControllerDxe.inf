@@ -19,6 +19,7 @@
 
 [Sources.common]
   NvDisplayControllerDxe.c
+  NvDisplayHw.c
   NvDisplayMmioRegions.c
 
 [Packages]
