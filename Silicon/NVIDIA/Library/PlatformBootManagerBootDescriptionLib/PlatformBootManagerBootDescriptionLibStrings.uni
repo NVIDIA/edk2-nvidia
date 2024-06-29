@@ -13,9 +13,17 @@
 
 #string STR_LOAD_FILE_SD_KERNEL_BOOT_DESCRIPTION                 #language en-US  "UEFI NVIDIA SD Kernel Boot"
 
+#string STR_LOAD_FILE_UFS_KERNEL_BOOT_DESCRIPTION                #language en-US  "UEFI NVIDIA UFS Kernel Boot"
+
+#string STR_LOAD_FILE_USB_KERNEL_BOOT_DESCRIPTION                #language en-US  "UEFI NVIDIA USB Kernel Boot"
+
 #string STR_LOAD_FILE_EMMC_RECOVERY_BOOT_DESCRIPTION             #language en-US  "UEFI NVIDIA eMMC Recovery Boot"
 
 #string STR_LOAD_FILE_SD_RECOVERY_BOOT_DESCRIPTION               #language en-US  "UEFI NVIDIA SD Recovery Boot"
+
+#string STR_LOAD_FILE_UFS_RECOVERY_BOOT_DESCRIPTION              #language en-US  "UEFI NVIDIA UFS Recovery Boot"
+
+#string STR_LOAD_FILE_USB_RECOVERY_BOOT_DESCRIPTION              #language en-US  "UEFI NVIDIA USB Recovery Boot"
 
 #string STR_LOAD_FILE_RCM_BOOT_DESCRIPTION                       #language en-US  "UEFI NVIDIA Rcm Kernel Boot"
 

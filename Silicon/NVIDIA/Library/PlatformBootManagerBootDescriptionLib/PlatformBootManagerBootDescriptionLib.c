@@ -99,6 +99,18 @@ PlatformLoadFileBootDescriptionHandler (
       }
 
       break;
+    } else if (CurrentDevicePath->SubType == MSG_UFS_DP) {
+      if (RecoveryBoot) {
+        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_RECOVERY_BOOT_DESCRIPTION), NULL);
+      } else {
+        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_KERNEL_BOOT_DESCRIPTION), NULL);
+      }
+    } else if (CurrentDevicePath->SubType == MSG_USB_DP) {
+      if (RecoveryBoot) {
+        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_RECOVERY_BOOT_DESCRIPTION), NULL);
+      } else {
+        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_KERNEL_BOOT_DESCRIPTION), NULL);
+      }
     } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
       VENDOR_DEVICE_PATH  *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
       if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
