@@ -145,8 +145,7 @@ CheckPerformHandoff (
 }
 
 /**
-  Event notification function for updating the Device Tree with mode
-  and framebuffer info.
+  Event notification function for whenever the FDT table is updated.
 
   @param[in] Event    Event used for the notification.
   @param[in] Context  Context for the notification.
@@ -154,7 +153,7 @@ CheckPerformHandoff (
 STATIC
 VOID
 EFIAPI
-UpdateFdtTableNotifyFunction (
+FdtTableNotifyFunction (
   IN CONST EFI_EVENT  Event,
   IN VOID *CONST      Context
   )
@@ -162,10 +161,39 @@ UpdateFdtTableNotifyFunction (
   NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private =
     (NV_DISPLAY_CONTROLLER_PRIVATE *)Context;
 
+  /* Since the FDT was just reinstalled, we must always run the update
+     routine. */
   Private->FdtUpdated = NvDisplayUpdateFdtTableActiveChildGop (
                           Private->DriverHandle,
                           Private->ControllerHandle
                           );
+}
+
+/**
+  Event notification function for ReadyToBoot event.
+
+  @param[in] Event    Event used for the notification.
+  @param[in] Context  Context for the notification.
+*/
+STATIC
+VOID
+EFIAPI
+ReadyToBootNotifyFunction (
+  IN CONST EFI_EVENT  Event,
+  IN VOID *CONST      Context
+  )
+{
+  NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private =
+    (NV_DISPLAY_CONTROLLER_PRIVATE *)Context;
+
+  /* Only run the FDT update routine if the FDT has not been updated
+     yet. */
+  if (!Private->FdtUpdated) {
+    Private->FdtUpdated = NvDisplayUpdateFdtTableActiveChildGop (
+                            Private->DriverHandle,
+                            Private->ControllerHandle
+                            );
+  }
 }
 
 /**
@@ -372,7 +400,7 @@ CreateControllerPrivate (
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_CALLBACK,
-                      UpdateFdtTableNotifyFunction,
+                      FdtTableNotifyFunction,
                       Result,
                       &gFdtTableGuid,
                       &Result->OnFdtInstalledEvent
@@ -391,7 +419,7 @@ CreateControllerPrivate (
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_CALLBACK,
-                      UpdateFdtTableNotifyFunction,
+                      ReadyToBootNotifyFunction,
                       Result,
                       &gEfiEventReadyToBootGuid,
                       &Result->OnReadyToBootEvent
