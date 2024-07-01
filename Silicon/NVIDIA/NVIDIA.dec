@@ -787,6 +787,9 @@
 #Option to boot RCM mode using kernel cmdline from DTB instead of boot.img
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|FALSE|BOOLEAN|0x000000A7
 
+#Enumeration poll timeout in ms (0=disable)
+  gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|0|UINT32|0x000000AC
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

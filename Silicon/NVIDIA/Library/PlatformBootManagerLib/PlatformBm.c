@@ -58,8 +58,11 @@
 #include <IndustryStandard/Ipmi.h>
 #include <libfdt.h>
 #include "PlatformBm.h"
+#include "Library/DebugLib.h"
 #include "Library/UefiRuntimeLib.h"
 #include <NVIDIAConfiguration.h>
+
+#define WAIT_POLLED_PER_CYCLE_DELAY  1000      // 1 MS
 
 #define DP_NODE_LEN(Type)  { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
 
@@ -1784,6 +1787,87 @@ WaitForAsyncDrivers (
 }
 
 /**
+  Wait for polled enumeration to finish
+
+  This is used to wait for any enumeration that is polled, for example USB devices.
+**/
+STATIC
+VOID
+WaitForPolledEnumeration (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+  UINTN       HandleCount;
+  UINTN       PriorHandleCount;
+  UINTN       OriginalHandleCount;
+  UINTN       TotalTimeout;
+  UINTN       CurrentTimeout;
+  UINTN       EnumerationTimeout;
+
+  EnumerationTimeout = PcdGet32 (PcdEnumerationTimeoutMs) * 1000ULL;
+  if (EnumerationTimeout == 0) {
+    return;
+  }
+
+  PriorHandleCount = 0;
+  TotalTimeout     = 0;
+  CurrentTimeout   = 0;
+
+  BufferSize = 0;
+  Status     = gBS->LocateHandle (
+                      AllHandles,
+                      NULL,
+                      NULL,
+                      &BufferSize,
+                      NULL
+                      );
+  if (Status != EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((DEBUG_ERROR, "LocateHandle failed %r - expected BUFFER_TO_SMALL\r\n", Status));
+    return;
+  }
+
+  OriginalHandleCount = BufferSize / sizeof (EFI_HANDLE);
+  DEBUG ((DEBUG_ERROR, "Start new device enumeration polling\r\n"));
+  PriorHandleCount = OriginalHandleCount;
+  HandleCount      = OriginalHandleCount;
+
+  //
+  // Wait for any polled enumeration to finish
+  //
+  while (TRUE) {
+    BufferSize = 0;
+    Status     = gBS->LocateHandle (
+                        AllHandles,
+                        NULL,
+                        NULL,
+                        &BufferSize,
+                        NULL
+                        );
+    if (Status != EFI_BUFFER_TOO_SMALL) {
+      DEBUG ((DEBUG_ERROR, "LocateHandle failed %r - expected BUFFER_TO_SMALL\r\n", Status));
+      break;
+    }
+
+    HandleCount = BufferSize / sizeof (EFI_HANDLE);
+    if ((PriorHandleCount != 0) && (HandleCount != PriorHandleCount)) {
+      DEBUG ((DEBUG_ERROR, "New device found after %u ms\r\n", CurrentTimeout / 1000));
+      PriorHandleCount = HandleCount;
+      CurrentTimeout   = 0;
+    } else if (CurrentTimeout >= EnumerationTimeout) {
+      break;
+    }
+
+    gBS->Stall (WAIT_POLLED_PER_CYCLE_DELAY);
+    TotalTimeout   += WAIT_POLLED_PER_CYCLE_DELAY;
+    CurrentTimeout += WAIT_POLLED_PER_CYCLE_DELAY;
+  }
+
+  DEBUG ((DEBUG_ERROR, "Polled enumeration took %u ms, found %u devices\r\n", TotalTimeout / 1000, HandleCount - OriginalHandleCount));
+}
+
+/**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
   > Update console variable: 1. include hot-plug devices;
@@ -1885,6 +1969,11 @@ PlatformBootManagerBeforeConsole (
       // Connect the rest of the devices.
       //
       EfiBootManagerConnectAll ();
+
+      //
+      // Wait for any polled enumeration to finish
+      //
+      WaitForPolledEnumeration ();
 
       //
       // Signal ConnectComplete Event

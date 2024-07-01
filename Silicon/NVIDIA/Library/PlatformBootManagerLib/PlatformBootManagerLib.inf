@@ -94,6 +94,7 @@
   gNVIDIATokenSpaceGuid.PcdSingleBootSupport
   gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
+  gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs
 
 [Guids]
   gEfiFileInfoGuid
