@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -345,15 +345,20 @@ MatchFuseInfo (
   VOID         *Param
   )
 {
-  BOOLEAN  Matched = FALSE;
-  UINT32   Value;
-  UINT32   Index;
+  BOOLEAN                 Matched = FALSE;
+  UINT32                  Value;
+  UINT32                  Index;
+  UINT64                  FuseAddr;
+  STATIC TEGRA_FUSE_INFO  *FuseInfo;
 
   if (FuseStr) {
     for (Index = 0; Index < BoardInfo->FuseCount; Index++) {
-      if (!AsciiStrnCmp (FuseStr, BoardInfo->FuseList[Index].Name, AsciiStrLen (FuseStr))) {
-        Value = MmioRead32 (BoardInfo->FuseBaseAddr + BoardInfo->FuseList[Index].Offset);
-        if ( Value & BoardInfo->FuseList[Index].Value) {
+      FuseInfo = &BoardInfo->FuseList[Index];
+      if (!AsciiStrnCmp (FuseStr, FuseInfo->Name, AsciiStrLen (FuseStr))) {
+        FuseAddr = BoardInfo->FuseBaseAddr + FuseInfo->Offset;
+        Value    = MmioRead32 (FuseAddr);
+        DEBUG ((DEBUG_INFO, "%a: %a address 0x%llx is 0x%x, checking 0x%x\n", __FUNCTION__, FuseInfo->Name, FuseAddr, Value, FuseInfo->Value));
+        if (Value & FuseInfo->Value) {
           Matched = TRUE;
           break;
         }
