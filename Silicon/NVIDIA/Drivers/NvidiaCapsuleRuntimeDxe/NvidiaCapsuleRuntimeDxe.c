@@ -139,6 +139,7 @@ ReadyToBootNotify (
 {
   EFI_STATUS  Status;
   VOID        *CapsuleArchProtocol;
+  UINT32      Crc32 = 0;
 
   gBS->CloseEvent (Event);
 
@@ -150,6 +151,10 @@ ReadyToBootNotify (
 
   DEBUG ((DEBUG_ERROR, "%a: installing NVIDIA RT UpdateCapsule function\n", __FUNCTION__));
   gRT->UpdateCapsule = NvidiaUpdateCapsule;
+
+  gRT->Hdr.CRC32 = 0;
+  gBS->CalculateCrc32 ((UINT8 *)gRT, gRT->Hdr.HeaderSize, &Crc32);
+  gRT->Hdr.CRC32 = Crc32;
 }
 
 STATIC
