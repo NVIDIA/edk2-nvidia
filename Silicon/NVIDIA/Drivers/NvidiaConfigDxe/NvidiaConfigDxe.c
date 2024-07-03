@@ -1608,7 +1608,10 @@ SyncHiiSettings (
     mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
-    mHiiControlSettings.ActiveCores = PlatformResourceInfo->NumberOfEnabledCores;
+    mHiiControlSettings.ActiveCores = 0;
+    for (Index = 0; Index < MAX_SOCKETS; Index++) {
+      mHiiControlSettings.ActiveCores += mMb1Config.Data.Mb1Data.ActiveCores[Index];
+    }
 
     for (Index = 0; Index < TEGRABL_MAX_UPHY_PER_SOCKET; Index++) {
       mHiiControlSettings.UphySetting0[Index] = mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[0][Index];
