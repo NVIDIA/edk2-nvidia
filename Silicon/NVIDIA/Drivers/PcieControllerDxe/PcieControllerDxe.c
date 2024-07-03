@@ -942,6 +942,61 @@ PcieEnableErrorReporting (
     return EFI_UNSUPPORTED;
   }
 
+  AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
+  if (AerCapOffset) {
+    // Clear AER Correctable Errror Status
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorStatus);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    if (Status == EFI_SUCCESS) {
+      // Write the same values back as they are RW1C bits
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    }
+
+    // Clear AER Uncorrectable Errror Status
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, UncorrectableErrorStatus);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    if (Status == EFI_SUCCESS) {
+      // Write the same values back as they are RW1C bits
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    }
+
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, Capability);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint16, Offset, 1, &Capability);
+    if ((Status == EFI_SUCCESS) && ((Capability.Bits.DevicePortType == PCIE_DEVICE_PORT_TYPE_ROOT_PORT) || (Capability.Bits.DevicePortType == PCIE_DEVICE_PORT_TYPE_ROOT_COMPLEX_EVENT_COLLECTOR))) {
+      // Clear AER root Errror Status
+      Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, RootErrorStatus);
+      Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+      if (Status == EFI_SUCCESS) {
+        // Write the same values back as they are RW1C bits
+        PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+      }
+    }
+
+    // Enable ANF error
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorMask);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    if (Status == EFI_SUCCESS) {
+      Val_32 &= ~PCIE_AER_CORR_ERR_ADV_NONFATAL;
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    }
+
+    // Make sure set SEV with platform POR value such as PCIe spec default
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, UncorrectableErrorSeverity);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    if (Status == EFI_SUCCESS) {
+      // bit 4 - data link protocol error
+      // bit 5 - surprise down
+      // bit 13 - flow control protocol
+      // bit 17 - receiver overflow
+      // bit 18 - malformed tlp
+      // bit 22 - internal error
+      // bit 28 - IDE check fail
+      // Set PCIe spec default sev as the platform POR setting
+      Val_32 = ((1<<4) | (1<<5) | (1<<13) | (1<<17) | (1<<18) | (1<<22) | (1<<28));
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    }
+  }
+
   Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, Capability);
   Status = PciIo->Pci.Read (
                         PciIo,
@@ -992,35 +1047,6 @@ PcieEnableErrorReporting (
         Device,
         Function
         ));
-
-      /* unmask Advisory non-Fatal interrupt */
-      AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
-      if (AerCapOffset) {
-        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorMask);
-        Status = PciIo->Pci.Read (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
-
-        Val_32 &= ~PCIE_AER_CORR_ERR_ADV_NONFATAL;
-
-        Status = PciIo->Pci.Write (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
-      }
 
     /* fall through */
 
@@ -1236,60 +1262,6 @@ PcieEnableErrorReporting (
                             );
       if (EFI_ERROR (Status)) {
         return EFI_DEVICE_ERROR;
-      }
-
-      /* Clear stale error status in AER status registers */
-      AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
-      if (AerCapOffset) {
-        /* Clear AER Uncorrectable Errror Status */
-        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, UncorrectableErrorStatus);
-        Status = PciIo->Pci.Read (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
-
-        /* Write the same values back as they are RW1C bits */
-        Status = PciIo->Pci.Write (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
-
-        /* Clear AER Correctable Errror Status */
-        Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorStatus);
-        Status = PciIo->Pci.Read (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
-
-        /* Write the same values back as they are RW1C bits */
-        Status = PciIo->Pci.Write (
-                              PciIo,
-                              EfiPciIoWidthUint32,
-                              Offset,
-                              1,
-                              &Val_32
-                              );
-        if (EFI_ERROR (Status)) {
-          return EFI_DEVICE_ERROR;
-        }
       }
 
       /* Enable error reporting */
