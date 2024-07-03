@@ -2,7 +2,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2016, Linaro, Ltd. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1650,11 +1650,12 @@ PciIoSetBarAttributes (
 }
 
 /**
-  Retrieve a pointer to the T234 DCB image and its size.
+  Retrieve a pointer to the Tegra DCB image and its size.
 
-  @param [in]  ControllerHandle Handle of controller to bind driver to.
-  @param [out] DcbImage         On return, points to the DCB image.
-  @param [out] DcbImageSize     On return, contains size of the DCB image.
+  @param [in]  ControllerHandle  Handle of controller to bind driver to.
+  @param [in]  DeviceType        The device type GUID.
+  @param [out] DcbImage          On return, points to the DCB image.
+  @param [out] DcbImageSize      On return, contains size of the DCB image.
 
   @retval EFI_SUCCESS           DCB image successfully retrieved.
   @retval EFI_NOT_FOUND         DCB image not found.
@@ -1664,15 +1665,15 @@ PciIoSetBarAttributes (
 **/
 STATIC
 EFI_STATUS
-T234DisplayGetDcbImage (
-  IN  EFI_HANDLE          ControllerHandle,
-  OUT VOID       **CONST  DcbImage,
-  OUT UINT64      *CONST  DcbImageLen
+TegraDisplayGetDcbImage (
+  IN  CONST EFI_HANDLE       ControllerHandle,
+  IN  CONST EFI_GUID *CONST  DeviceType,
+  OUT VOID          **CONST  DcbImage,
+  OUT UINT64         *CONST  DcbImageLen
   )
 {
   UINTN                                          Instance;
-  EFI_STATUS                                     Status;
-  EFI_STATUS                                     RespStatus;
+  EFI_STATUS                                     Status, Status1;
   EFI_PLATFORM_TO_DRIVER_CONFIGURATION_PROTOCOL  *ConfigurationProtocol;
   EFI_HANDLE                                     ChildHandle;
   EFI_GUID                                       *ParameterGuid;
@@ -1705,7 +1706,7 @@ T234DisplayGetDcbImage (
       goto Exit;
     }
 
-    if (CompareGuid (ParameterGuid, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
+    if (CompareGuid (ParameterGuid, DeviceType)) {
       break;
     }
 
@@ -1757,18 +1758,24 @@ T234DisplayGetDcbImage (
   }
 
 Response:
-  RespStatus = ConfigurationProtocol->Response (
-                                        ConfigurationProtocol,
-                                        ControllerHandle,
-                                        ChildHandle,
-                                        &Instance,
-                                        ParameterGuid,
-                                        (VOID *)GopParameterInfo,
-                                        ParameterBlockSize,
-                                        EfiPlatformConfigurationActionNone
-                                        );
+  Status1 = ConfigurationProtocol->Response (
+                                     ConfigurationProtocol,
+                                     ControllerHandle,
+                                     ChildHandle,
+                                     &Instance,
+                                     ParameterGuid,
+                                     (VOID *)GopParameterInfo,
+                                     ParameterBlockSize,
+                                     EfiPlatformConfigurationActionNone
+                                     );
+
+  /* We must call Response since we called Query earlier, but if there
+     was an error during processing of the parameter block, we already
+     have an error status to return that should take priority. On the
+     other hand, if Response returned the first error we have seen, we
+     want to return that error rather than ignoring it. */
   if (!EFI_ERROR (Status)) {
-    Status = RespStatus;
+    Status = Status1;
   }
 
 Exit:
@@ -1785,7 +1792,7 @@ Exit:
 }
 
 /**
-  Initialize PciIo protocol for T234 display device.
+  Initialize PciIo protocol for Tegra display device.
 
   @param  Dev               Point to NON_DISCOVERABLE_PCI_DEVICE instance.
   @param  ControllerHandle  Handle of controller to bind driver to.
@@ -1795,7 +1802,7 @@ Exit:
 **/
 STATIC
 EFI_STATUS
-T234DisplayInitializePciIoProtocol (
+TegraDisplayInitializePciIoProtocol (
   NON_DISCOVERABLE_PCI_DEVICE  *Dev,
   EFI_HANDLE                   ControllerHandle
   )
@@ -1806,7 +1813,12 @@ T234DisplayInitializePciIoProtocol (
   PCI_EXPANSION_ROM_HEADER  *RomHdr;
   PCI_DATA_STRUCTURE        *Pcir;
 
-  Status = T234DisplayGetDcbImage (ControllerHandle, &RomImage, &RomSize);
+  Status = TegraDisplayGetDcbImage (
+             ControllerHandle,
+             Dev->Device->Type,
+             &RomImage,
+             &RomSize
+             );
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
@@ -1882,7 +1894,7 @@ InitializePciIoProtocol (
   }
 
   if (CompareGuid (Dev->Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
-    Status = T234DisplayInitializePciIoProtocol (Dev, ControllerHandle);
+    Status = TegraDisplayInitializePciIoProtocol (Dev, ControllerHandle);
     if (EFI_ERROR (Status)) {
       return Status;
     }
