@@ -51,6 +51,7 @@
   gEfiMdeModulePkgTokenSpaceGuid
 
 [Protocols]
+  gEfiAcpiTableProtocolGuid
   gNVIDIAConfigurationManagerDataObjectGuid
   gNVIDIAAmlPatchProtocolGuid
   gNVIDIAAmlGenerationProtocolGuid

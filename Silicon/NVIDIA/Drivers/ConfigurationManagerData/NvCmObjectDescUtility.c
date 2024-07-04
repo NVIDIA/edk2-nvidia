@@ -423,6 +423,10 @@ NvGetCmGenerationProtocol (
   Repo               = (EDKII_PLATFORM_REPOSITORY_INFO  *)(FdtParserHandle->Context);
   GenerationProtocol = Repo->GenerationProtocol;
   *ProtocolPtr       = GenerationProtocol;
+  if (GenerationProtocol == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
   return EFI_SUCCESS;
 }
 

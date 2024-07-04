@@ -771,6 +771,7 @@ ConfigurationManagerDataInit (
 {
   EFI_STATUS                      Status;
   EDKII_PLATFORM_REPOSITORY_INFO  *LocalRepo;
+  VOID                            *AcpiTableProtocol;
 
   LocalRepo = NULL;
 
@@ -800,25 +801,35 @@ ConfigurationManagerDataInit (
   LocalRepo->ExtendEntry     = ConfigManagerEntryExtend;
   LocalRepo->FindEntry       = ConfigManagerEntryFind;
 
-  // Add pointers to the Repo for patching and generating ACPI tables
-  Status = gBS->LocateProtocol (&gNVIDIAAmlPatchProtocolGuid, NULL, (VOID **)&LocalRepo->PatchProtocol);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
-  }
-
-  Status = gBS->LocateProtocol (&gNVIDIAAmlGenerationProtocolGuid, NULL, (VOID **)&LocalRepo->GenerationProtocol);
-  if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
-  }
-
   Status = gBS->LocateProtocol (&gNVIDIAConfigurationManagerTokenProtocolGuid, NULL, (VOID **)&LocalRepo->TokenProtocol);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to locate the Token Protocol\n", __FUNCTION__));
     goto CleanupAndReturn;
   }
 
-  Status = InitializeSsdtTableGenerator (LocalRepo->GenerationProtocol);
+  Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, &AcpiTableProtocol);
   if (EFI_ERROR (Status)) {
-    goto CleanupAndReturn;
+    // These protocols are not present when ACPI is not supported, ignore error.
+    DEBUG ((DEBUG_ERROR, "%a: Unable to locate the ACPI Table Protocol\n", __FUNCTION__));
+    LocalRepo->PatchProtocol      = NULL;
+    LocalRepo->GenerationProtocol = NULL;
+    Status                        = EFI_SUCCESS;
+  } else {
+    // Add pointers to the Repo for patching and generating ACPI tables
+    Status = gBS->LocateProtocol (&gNVIDIAAmlPatchProtocolGuid, NULL, (VOID **)&LocalRepo->PatchProtocol);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
+
+    Status = gBS->LocateProtocol (&gNVIDIAAmlGenerationProtocolGuid, NULL, (VOID **)&LocalRepo->GenerationProtocol);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
+
+    Status = InitializeSsdtTableGenerator (LocalRepo->GenerationProtocol);
+    if (EFI_ERROR (Status)) {
+      goto CleanupAndReturn;
+    }
   }
 
 CleanupAndReturn:
