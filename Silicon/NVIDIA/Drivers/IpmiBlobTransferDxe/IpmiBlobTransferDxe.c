@@ -2,11 +2,13 @@
 
   IPMI Blob Transfer driver
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+#include <Uefi/UefiBaseType.h>
+#include <Uefi/UefiSpec.h>
 #include <Protocol/IpmiBlobTransfer.h>
 
 #include "InternalIpmiBlobTransfer.h"

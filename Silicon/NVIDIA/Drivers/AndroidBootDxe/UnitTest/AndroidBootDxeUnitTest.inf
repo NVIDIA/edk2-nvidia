@@ -1,7 +1,7 @@
 ## @file
 # Unit tests of the AndroidBoot driver that are run from a host environment.
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -23,11 +23,14 @@
 [Sources]
   AndroidBootDxeUnitTests.c
   BootImgHeaderUnitTests.c
+  ../AndroidBootDxe.c
+  ../AndroidBootConfig.c
 
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
+  ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
 
@@ -40,7 +43,25 @@
   OrderedCollectionLib
   BlockIoStubProtocol
   DiskIoStubProtocol
+  HandleParsingLib
+  BootChainInfoLib
+  FdtLib
+  AndroidBcbLib
+  SiblingPartitionLib
+  DeviceTreeHelperLib
+
+[Guids]
+  gFdtTableGuid
+  gEfiAcpiTableGuid
+  gNVIDIARcmKernelGuid
+  gNVIDIALoadfileKernelArgsGuid
+  gEfiPartTypeSystemPartGuid
+  gEfiEventReadyToBootGuid
+  gNVIDIAConnectCompleteEventGuid
+  gNVIDIAPublicVariableGuid
 
 [Pcd]
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage

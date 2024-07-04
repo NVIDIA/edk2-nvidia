@@ -1,7 +1,7 @@
 ## @file
 # Unit tests of the Fvb driver that are run from a host environment.
 #
-# Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -22,6 +22,7 @@
 
 [Sources]
   FvbDxeUnitTests.c
+  ../FvbDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -36,10 +37,28 @@
   FlashStubLib
   UnitTestLib
   PcdLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiFirmwareVolumeBlockProtocolGuid
+  gEfiFaultTolerantWriteProtocolGuid
+  gEfiDevicePathProtocolGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
+  gNVIDIATokenSpaceGuid.PcdUEFIVariablesPartitionName
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
+  gNVIDIATokenSpaceGuid.PcdNoVariableRtProperties
 
 [Guids]
   gEfiSystemNvDataFvGuid
   gEfiAuthenticatedVariableGuid
+  gEdkiiNvVarStoreFormattedGuid
+  gEfiEventVirtualAddressChangeGuid
+  gEfiVariableGuid
+  gEfiRtPropertiesTableGuid

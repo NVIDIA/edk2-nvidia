@@ -2,7 +2,7 @@
 
   Redfish Platform Host Interface OEM Lib UnitTest driver
 
-  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -18,15 +18,17 @@
   RedfishHostInterfaceUnitTest.c
   ../RedfishPlatformHostInterfaceIpmi.c
   ../RedfishPlatformHostInterfaceIpmi.h
+  ../RedfishPlatformHostInterfaceOemLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
+  RedfishPkg/RedfishPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  NetworkPkg/NetworkPkg.dec
   UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
 
 [LibraryClasses]
-  UefiApplicationEntryPoint
   BaseLib
   DebugLib
   UnitTestLib
@@ -34,4 +36,14 @@
   CmockaLib
   PcdLib
   IpmiBaseLib
+  ReportStatusCodeLib
   MemoryAllocationLib
+  NetLib
+
+[Protocols]
+  gEfiSmbiosProtocolGuid
+  gNVIDIAUsbNicInfoProtocolGuid
+  gNVIDIAHostInterfaceReadyProtocolGuid
+
+[Guids]
+  gEfiSmbiosTableGuid

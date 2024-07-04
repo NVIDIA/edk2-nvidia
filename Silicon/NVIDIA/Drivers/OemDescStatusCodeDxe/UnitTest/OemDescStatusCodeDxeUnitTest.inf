@@ -2,7 +2,7 @@
 #
 #  OEM Status code handling unit test
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,6 +17,7 @@
 
 [Sources]
   OemDescStatusCodeDxeUnitTest.c
+  ../OemDescStatusCodeDxe.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -26,7 +27,6 @@
   UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
 
 [LibraryClasses]
-  UefiApplicationEntryPoint
   BaseLib
   DebugLib
   UnitTestLib
@@ -34,9 +34,13 @@
   CmockaLib
   BaseMemoryLib
   UefiLib
-  UefiDriverEntryPoint
   UefiBootServicesTableLib
   MemoryAllocationLib
 
 [Guids]
   gEfiStatusCodeSpecificDataGuid
+  gEfiEventExitBootServicesGuid
+
+[Protocols]
+  gIpmiTransportProtocolGuid
+  gEfiRscHandlerProtocolGuid

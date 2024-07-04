@@ -21,7 +21,6 @@
   #
   Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbDxeUnitTestsHost.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Drivers/FvbDxe/FvbDxe.inf
       PcdLib|Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbPcdStubLib/FvbPcdStubLib.inf
   }
 
@@ -51,7 +50,6 @@
   # IPMI Blob Transfer protocol unit tests
   Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/UnitTest/IpmiBlobTransferTestUnitTestsHost.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Drivers/IpmiBlobTransferDxe/IpmiBlobTransferDxe.inf
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
   }
 
@@ -60,7 +58,6 @@
   #
   Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/UnitTest/OemDescStatusCodeDxeUnitTest.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
       IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLibNull/IpmiBaseLibNull.inf
       DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
       DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
@@ -81,7 +78,6 @@
   # Redfish Host Interface unit tests
   Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/UnitTest/RedfishHostInterfaceUnitTest.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Library/RedfishPlatformHostInterfaceOemLib/RedfishPlatformHostInterfaceOemLib.inf
       NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
       IpmiBaseLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/IpmiStubLib/IpmiStubLib.inf
       UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
@@ -92,7 +88,6 @@
   #
   Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/UnitTest/ErrorSerializationDxeUnitTestsHost.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
       MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
       StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
       TimerLib|MdePkg/Library/BaseTimerLibNullTemplate/BaseTimerLibNullTemplate.inf
@@ -127,7 +122,6 @@
   #
   Silicon/NVIDIA/Drivers/AndroidBootDxe/UnitTest/AndroidBootDxeUnitTest.inf {
     <LibraryClasses>
-      NULL|Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
       PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
       HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
       ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf

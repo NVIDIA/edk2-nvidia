@@ -1,7 +1,7 @@
 ## @file
 # Unit tests of the Error Serialization driver that are run from a host environment.
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -22,6 +22,8 @@
 
 [Sources]
   ErrorSerializationDxeUnitTests.c
+  ../ErrorSerializationMm.c
+  ../ErrorSerializationMemory.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -41,3 +43,11 @@
   IoLib
   PlatformResourceLib
   HobLib
+  StandaloneMmOpteeLib
+
+[Protocols]
+  gNVIDIANorFlashProtocolGuid
+  gNVIDIAErrorSerializationProtocolGuid
+
+[Guids]
+  gNVIDIAStMMBuffersGuid

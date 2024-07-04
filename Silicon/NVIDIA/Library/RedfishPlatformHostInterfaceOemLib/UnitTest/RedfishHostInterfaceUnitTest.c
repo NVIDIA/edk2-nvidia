@@ -3,7 +3,7 @@
   This file defines unit tests to verify various return response scenearios
   of OEM IPMI commands for Redfish Interface.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -27,7 +27,7 @@ IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE   *ResponseResultsIpAddrFormat = 
 IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE   *ResponseResultsVlanId       = NULL;
 
 // Initialize it and use it only for unit testing purposes
-UINT8  Channel = 3;
+static UINT8  TestChannel = 3;
 
 IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA  ValidResponseUsbDesc = {
   0x00,           // CompletionCode - Normal
@@ -837,7 +837,7 @@ MacAddr_IpmiFailure (
   CopyMem (ResponseResultsMacAddr, &DeviceFailureMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIMACAddress (Channel, &MacAddr[0]);
+  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -874,7 +874,7 @@ MacAddr_BadCompletion (
   CopyMem (ResponseResultsMacAddr, &InvalidCompletionMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_SUCCESS);
 
-  Status = GetRFHIMACAddress (Channel, &MacAddr[0]);
+  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -911,7 +911,7 @@ MacAddr_ValidData (
   CopyMem (ResponseResultsMacAddr, &ValidResponseMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_SUCCESS);
 
-  Status = GetRFHIMACAddress (Channel, &MacAddr[0]);
+  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -948,7 +948,7 @@ IpDiscoveryType_IpmiFailure (
   CopyMem (ResponseResultsIpDiscType, &DeviceFailureIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpDiscoveryType (Channel, &IpDiscType);
+  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -985,7 +985,7 @@ IpDiscoveryType_BadCompletion (
   CopyMem (ResponseResultsIpDiscType, &InvalidCompletionIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = GetRFHIIpDiscoveryType (Channel, &IpDiscType);
+  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1022,7 +1022,7 @@ IpDiscoveryType_ValidData (
   CopyMem (ResponseResultsIpDiscType, &ValidResponseIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = GetRFHIIpDiscoveryType (Channel, &IpDiscType);
+  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1059,7 +1059,7 @@ IPAddress_IpmiFailure (
   CopyMem (ResponseResultsIpAddr, &DeviceFailureIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpAddress (Channel, &IpAddr[0]);
+  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1096,7 +1096,7 @@ IPAddress_BadCompletion (
   CopyMem (ResponseResultsIpAddr, &InvalidCompletionIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpAddress (Channel, &IpAddr[0]);
+  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1133,7 +1133,7 @@ IpAddress_ValidData (
   CopyMem (ResponseResultsIpAddr, &ValidResponseIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpAddress (Channel, &IpAddr[0]);
+  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1170,7 +1170,7 @@ IPMask_IpmiFailure (
   CopyMem (ResponseResultsIpMask, &DeviceFailureIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpMask (Channel, &IpMask[0]);
+  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1207,7 +1207,7 @@ IPMask_BadCompletion (
   CopyMem (ResponseResultsIpMask, &InvalidCompletionIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpMask (Channel, &IpMask[0]);
+  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1244,7 +1244,7 @@ IPMask_ValidData (
   CopyMem (ResponseResultsIpMask, &ValidResponseIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpMask (Channel, &IpMask[0]);
+  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1281,7 +1281,7 @@ VLanId_IpmiFailure (
   CopyMem (ResponseResultsVlanId, &DeviceFailureVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIVlanId (Channel, &VlanId);
+  Status = GetRFHIVlanId (TestChannel, &VlanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1318,7 +1318,7 @@ VLanId_BadCompletion (
   CopyMem (ResponseResultsVlanId, &InvalidCompletionVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_SUCCESS);
 
-  Status = GetRFHIVlanId (Channel, &VLanId);
+  Status = GetRFHIVlanId (TestChannel, &VLanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1355,7 +1355,7 @@ VLanId_ValidData (
   CopyMem (ResponseResultsVlanId, &ValidResponseVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_SUCCESS);
 
-  Status = GetRFHIVlanId (Channel, &VLanId);
+  Status = GetRFHIVlanId (TestChannel, &VLanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1392,7 +1392,7 @@ IpAddrFormat_IpmiFailure (
   CopyMem (ResponseResultsIpAddrFormat, &DeviceFailureIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_DEVICE_ERROR);
 
-  Status = RFHIGetIpAddFormat (Channel, &IpAddrFormat);
+  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1429,7 +1429,7 @@ IpAddrFormat_BadCompletion (
   CopyMem (ResponseResultsIpAddrFormat, &InvalidCompletionIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = RFHIGetIpAddFormat (Channel, &IpAddrFormat);
+  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1466,7 +1466,7 @@ IpAddrFormat_ValidData (
   CopyMem (ResponseResultsIpAddrFormat, &ValidResponseVLanId, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = RFHIGetIpAddFormat (Channel, &IpAddrFormat);
+  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 

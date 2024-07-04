@@ -8,6 +8,8 @@
 
 **/
 
+#include <Uefi/UefiBaseType.h>
+#include <Uefi/UefiSpec.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiLib.h>
