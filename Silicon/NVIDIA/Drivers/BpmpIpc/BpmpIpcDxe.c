@@ -2,7 +2,7 @@
 
   BPMP IPC Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -279,6 +279,8 @@ BpmpIpcInitialize (
                     &ImageHandle,
                     &gNVIDIABpmpIpcProtocolGuid,
                     &mBpmpDummyProtocol,
+                    &gNVIDIADummyBpmpIpcProtocolGuid,
+                    NULL,
                     NULL
                     );
     if (EFI_ERROR (Status)) {

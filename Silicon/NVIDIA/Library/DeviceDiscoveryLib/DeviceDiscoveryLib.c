@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -791,6 +791,7 @@ GetResetNodeProtocol (
   NVIDIA_RESET_NODE_PROTOCOL  *ResetNode = NULL;
   UINTN                       Index;
   UINTN                       ListEntry;
+  VOID                        *Protocol;
 
   if ((NULL == Node) ||
       (NULL == ResetNodeProtocol) ||
@@ -836,8 +837,16 @@ GetResetNodeProtocol (
   ResetNode->Deassert       = DeassertResetNodes;
   ResetNode->Assert         = AssertResetNodes;
   ResetNode->ModuleReset    = ModuleResetNodes;
-  ResetNode->Resets         = NumberOfResets;
-  ResetNames                = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
+  if (NumberOfResets > 0) {
+    if (gBS->LocateProtocol (&gNVIDIADummyBpmpIpcProtocolGuid, NULL, &Protocol) == EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a, Dummy BPMP-IPC protocol installed, ignoring all resets\r\n", __func__));
+      NumberOfResets = 0;
+    }
+  }
+
+  ResetNode->Resets = NumberOfResets;
+
+  ResetNames = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
   if (ResetNamesLength == 0) {
     ResetNames = NULL;
   }
@@ -994,6 +1003,7 @@ GetClockNodeProtocol (
   UINTN                       Index;
   UINTN                       ListEntry;
   UINT32                      BpmpPhandle;
+  VOID                        *Protocol;
 
   if ((NULL == Node) ||
       (NULL == ClockNodeProtocol) ||
@@ -1035,8 +1045,15 @@ GetClockNodeProtocol (
 
   ClockNode->EnableAll  = EnableAllClockNodes;
   ClockNode->DisableAll = DisableAllClockNodes;
-  ClockNode->Clocks     = NumberOfClocks;
-  ClockNames            = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
+  if (NumberOfClocks > 0) {
+    if (gBS->LocateProtocol (&gNVIDIADummyBpmpIpcProtocolGuid, NULL, &Protocol) == EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a, Dummy BPMP-IPC protocol installed, ignoring all clocks\r\n", __func__));
+      NumberOfClocks = 0;
+    }
+  }
+
+  ClockNode->Clocks = NumberOfClocks;
+  ClockNames        = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
   if (ClockNamesLength == 0) {
     ClockNames = NULL;
   }
@@ -1271,6 +1288,7 @@ GetC2cNodeProtocol (
   UINTN                     ListEntry;
   CONST UINT32              *Partitions = NULL;
   INT32                     PartitionsLength;
+  VOID                      *Protocol;
 
   if ((NULL == Node) ||
       (NULL == C2cNodeProtocol) ||
@@ -1309,6 +1327,12 @@ GetC2cNodeProtocol (
   C2c->Init        = InitC2cPartitions;
   C2c->BpmpPhandle = SwapBytes32 (Partitions[0]);
   C2c->Partitions  = SwapBytes32 (Partitions[1]);
+  if (C2c->Partitions != CmdC2cPartitionNone) {
+    if (gBS->LocateProtocol (&gNVIDIADummyBpmpIpcProtocolGuid, NULL, &Protocol) == EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a, Dummy BPMP-IPC protocol installed, ignoring all C2C Partitions\r\n", __func__));
+      C2c->Partitions = CmdC2cPartitionNone;
+    }
+  }
 
   C2cNodeInterface[ListEntry] = (VOID *)C2c;
   C2cNodeProtocol[ListEntry]  = &gNVIDIAC2cNodeProtocolGuid;
@@ -1341,6 +1365,7 @@ GetPowerGateNodeProtocol (
   NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgNode = NULL;
   UINTN                            ListEntry;
   UINT32                           Index;
+  VOID                             *Protocol;
 
   if ((NULL == Node) ||
       (NULL == PowerGateNodeProtocol) ||
@@ -1378,9 +1403,16 @@ GetPowerGateNodeProtocol (
     return;
   }
 
-  PgNode->Deassert           = DeassertPgNodes;
-  PgNode->Assert             = AssertPgNodes;
-  PgNode->GetState           = GetStatePgNodes;
+  PgNode->Deassert = DeassertPgNodes;
+  PgNode->Assert   = AssertPgNodes;
+  PgNode->GetState = GetStatePgNodes;
+  if (NumberOfPgs > 0) {
+    if (gBS->LocateProtocol (&gNVIDIADummyBpmpIpcProtocolGuid, NULL, &Protocol) == EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a, Dummy BPMP-IPC protocol installed, ignoring Power Gates\r\n", __func__));
+      NumberOfPgs = 0;
+    }
+  }
+
   PgNode->NumberOfPowerGates = NumberOfPgs;
   if (NumberOfPgs > 0) {
     PgNode->BpmpPhandle = SwapBytes32 (PgIds[0]);

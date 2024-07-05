@@ -2,7 +2,7 @@
 #
 #  Component description file for the Device Discovery Library.
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -54,6 +54,7 @@
   gNVIDIAPowerGateNodeProtocolGuid
   gNVIDIAC2cNodeProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
+  gNVIDIADummyBpmpIpcProtocolGuid
   gNVIDIAClockParentsProtocolGuid
 
 [FixedPcd]
