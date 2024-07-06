@@ -100,6 +100,11 @@ DT_MATCH_INFO  MatchInfoArray[] = {
     .MatchOp = MATCH_AND,
     .IsMatch = MatchFuseInfo,
   },
+  {
+    .Name    = "fuse-info-OR",
+    .MatchOp = MATCH_OR,
+    .IsMatch = MatchFuseInfo,
+  },
 };
 
 STATIC OVERLAY_BOARD_INFO  *BoardInfo = NULL;
@@ -350,15 +355,23 @@ MatchFuseInfo (
   UINT32                  Index;
   UINT64                  FuseAddr;
   STATIC TEGRA_FUSE_INFO  *FuseInfo;
+  BOOLEAN                 MatchIfNonZero = TRUE;
 
   if (FuseStr) {
+    if (FuseStr[0] == '!') {
+      MatchIfNonZero = FALSE;
+      FuseStr++;
+    }
+
     for (Index = 0; Index < BoardInfo->FuseCount; Index++) {
       FuseInfo = &BoardInfo->FuseList[Index];
-      if (!AsciiStrnCmp (FuseStr, FuseInfo->Name, AsciiStrLen (FuseStr))) {
+      if (!AsciiStrCmp (FuseStr, FuseInfo->Name)) {
         FuseAddr = BoardInfo->FuseBaseAddr + FuseInfo->Offset;
         Value    = MmioRead32 (FuseAddr);
-        DEBUG ((DEBUG_INFO, "%a: %a address 0x%llx is 0x%x, checking 0x%x\n", __FUNCTION__, FuseInfo->Name, FuseAddr, Value, FuseInfo->Value));
-        if (Value & FuseInfo->Value) {
+        DEBUG ((DEBUG_INFO, "%a: %a address 0x%llx is 0x%x, checking bits 0x%x to be 0x%x\n", __FUNCTION__, FuseInfo->Name, FuseAddr, Value, FuseInfo->Value, (MatchIfNonZero) ? FuseInfo->Value : 0));
+        if ((MatchIfNonZero && (Value & FuseInfo->Value)) ||
+            (!MatchIfNonZero && !(Value & FuseInfo->Value)))
+        {
           Matched = TRUE;
           break;
         }
