@@ -224,7 +224,7 @@ SmbiosParser (
   for (Index = 0; Index < ARRAY_SIZE (CmInstallSmbiosRecords); Index++) {
     Status = CmInstallSmbiosRecords[Index].Function (ParserHandle, Private);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Install CM object of SMBIOS Type %d, Status = %r.\n", __FUNCTION__, CmInstallSmbiosRecords[Index].Type, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Install CM object of SMBIOS Type %u, Status = %r.\n", __FUNCTION__, CmInstallSmbiosRecords[Index].Type, Status));
     }
   }
 
