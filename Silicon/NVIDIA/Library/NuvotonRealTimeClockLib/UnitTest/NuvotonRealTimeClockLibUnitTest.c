@@ -2,7 +2,7 @@
 
   Nuvoton RTC Unit Test
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -835,7 +835,7 @@ NRtcInitErrors (
   MockLibPcdGetBool (_PCD_TOKEN_PcdCpuHasRtcControl, FALSE);
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_NOT_READY);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_OUT_OF_RESOURCES);
+  UT_ASSERT_EQUAL (Status, EFI_OUT_OF_RESOURCES);
   //
   // Test case 2: fail to create notify ExitBootServices event
   //
@@ -844,7 +844,7 @@ NRtcInitErrors (
   will_return (__wrap_EfiCreateProtocolNotifyEvent, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_OUT_OF_RESOURCES);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_OUT_OF_RESOURCES);
+  UT_ASSERT_EQUAL (Status, EFI_OUT_OF_RESOURCES);
   //
   // Test case 3: fail to create notify VirtualAddressChange event
   //
@@ -854,7 +854,7 @@ NRtcInitErrors (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_OUT_OF_RESOURCES);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_OUT_OF_RESOURCES);
+  UT_ASSERT_EQUAL (Status, EFI_OUT_OF_RESOURCES);
 
   return UNIT_TEST_PASSED;
 }
@@ -887,22 +887,22 @@ NRtcNotFound (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   // Simulate polling until I2cIoProtocol becomes available
   will_return (MockedLocateHandle, EFI_NOT_FOUND);
   mI2cIoNotify (NULL, NULL);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
   will_return (MockedLocateHandle, EFI_NOT_FOUND);
   mI2cIoNotify (NULL, NULL);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   // Simulate failure when getting I2cEnumerateProtocol
   will_return (MockedLocateHandle, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_UNSUPPORTED);
   mI2cIoNotify (NULL, NULL);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   // Simulate multiple I2C handles found but none has Nuvoton RTC on
   will_return (MockedLocateHandle, EFI_SUCCESS);
@@ -915,13 +915,13 @@ NRtcNotFound (
   will_return (MockedI2cEnumerateProtocolEnumerate, &gNVIDIAI2cUnknown);
   will_return (MockedI2cEnumerateProtocolEnumerate, EFI_NOT_FOUND);  // exit the polling loop
   mI2cIoNotify (NULL, NULL);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   // Since there is no Nuvoton RTC, calling GetTime would fail
   will_return (__wrap_GetPerformanceCounter, 0x210001000ull);
   will_return (__wrap_EfiAtRuntime, FALSE);
   Status = LibGetTime (&Time, NULL);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   // Since there is no Nuvoton RTC, calling SetTime would fail
   Time.Month  = 9;
@@ -933,7 +933,7 @@ NRtcNotFound (
   will_return (__wrap_GetPerformanceCounter, 0x210001055ull);
   will_return (__wrap_EfiAtRuntime, FALSE);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -969,8 +969,8 @@ NRtcInitPrimary (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   will_return (MockedLocateHandle, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
@@ -984,7 +984,7 @@ NRtcInitPrimary (
   mI2cIoNotify (NULL, NULL);
 
   // The notify event should be closed after Nuvoton RTC found
-  UT_ASSERT_TRUE (mI2cIoNotify == NULL);
+  UT_ASSERT_EQUAL (mI2cIoNotify, NULL);
 
   // Initialization successful
   MockLibPcdGetBool (_PCD_TOKEN_PcdVirtualRTC, FALSE);
@@ -993,8 +993,8 @@ NRtcInitPrimary (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   will_return (MockedLocateHandle, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
@@ -1008,7 +1008,7 @@ NRtcInitPrimary (
   mI2cIoNotify (NULL, NULL);
 
   // The notify event should be closed after Nuvoton RTC found
-  UT_ASSERT_TRUE (mI2cIoNotify == NULL);
+  UT_ASSERT_EQUAL (mI2cIoNotify, NULL);
 
   return UNIT_TEST_PASSED;
 }
@@ -1040,8 +1040,8 @@ NRtcInitSuccess (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (mI2cIoNotify != NULL);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_NOT_EQUAL (mI2cIoNotify, NULL);
 
   will_return (MockedLocateHandle, EFI_SUCCESS);
   will_return (MockedHandleProtocol, EFI_SUCCESS);
@@ -1051,7 +1051,7 @@ NRtcInitSuccess (
   mI2cIoNotify (NULL, NULL);
 
   // The notify event should be closed after Nuvoton RTC found
-  UT_ASSERT_TRUE (mI2cIoNotify == NULL);
+  UT_ASSERT_EQUAL (mI2cIoNotify, NULL);
 
   // Call exit boot services
   will_return (__wrap_EfiGetSystemConfigurationTable, 0);
@@ -1080,11 +1080,11 @@ NRtcGetSetWakeup (
 
   // GetWakeupTime is defined but not supported
   Status = LibGetWakeupTime (&Enabled, &Pending, &Time);
-  UT_ASSERT_TRUE (Status == EFI_UNSUPPORTED);
+  UT_ASSERT_EQUAL (Status, EFI_UNSUPPORTED);
 
   // SetWakeupTime is defined but not supported
   Status = LibSetWakeupTime (TRUE, &Time);
-  UT_ASSERT_TRUE (Status == EFI_UNSUPPORTED);
+  UT_ASSERT_EQUAL (Status, EFI_UNSUPPORTED);
 
   return UNIT_TEST_PASSED;
 }
@@ -1108,7 +1108,7 @@ NRtcGetTimeErrors (
 
   // No Time pointer given
   Status = LibGetTime (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_INVALID_PARAMETER);
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // I2C read fails
   will_return (__wrap_GetPerformanceCounter, 0x210021888ull);
@@ -1116,7 +1116,7 @@ NRtcGetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestDateTimeCtlNoon);
   will_return (MockedI2cMasterStartRequest, EFI_DEVICE_ERROR);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   // I2C read succeeds, but RTC is stopped
   will_return (__wrap_GetPerformanceCounter, 0x210031777ull);
@@ -1124,7 +1124,7 @@ NRtcGetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestDateTimeCtlStop);
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -1152,15 +1152,15 @@ NRtcGetTimeBootFirst (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
-  UT_ASSERT_TRUE (Time.Month  == 9);
-  UT_ASSERT_TRUE (Time.Day    == 13);
-  UT_ASSERT_TRUE (Time.Year   == 2022);
-  UT_ASSERT_TRUE (Time.Hour   == 12);
-  UT_ASSERT_TRUE (Time.Minute == 0);
-  UT_ASSERT_TRUE (Time.Second == 0);
-  UT_ASSERT_TRUE (Time.Nanosecond == 858636373);
+  UT_ASSERT_EQUAL (Time.Month, 9);
+  UT_ASSERT_EQUAL (Time.Day, 13);
+  UT_ASSERT_EQUAL (Time.Year, 2022);
+  UT_ASSERT_EQUAL (Time.Hour, 12);
+  UT_ASSERT_EQUAL (Time.Minute, 0);
+  UT_ASSERT_EQUAL (Time.Second, 0);
+  UT_ASSERT_EQUAL (Time.Nanosecond, 858636373);
 
   return UNIT_TEST_PASSED;
 }
@@ -1193,15 +1193,15 @@ NRtcGetTimeBootSecond (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
-  UT_ASSERT_TRUE (Time.Month  == 9);
-  UT_ASSERT_TRUE (Time.Day    == 13);
-  UT_ASSERT_TRUE (Time.Year   == 2022);
-  UT_ASSERT_TRUE (Time.Hour   == 12);
-  UT_ASSERT_TRUE (Time.Minute == 0);
-  UT_ASSERT_TRUE (Time.Second == 0);
-  UT_ASSERT_TRUE (Time.Nanosecond == 858636373 + 321);
+  UT_ASSERT_EQUAL (Time.Month, 9);
+  UT_ASSERT_EQUAL (Time.Day, 13);
+  UT_ASSERT_EQUAL (Time.Year, 2022);
+  UT_ASSERT_EQUAL (Time.Hour, 12);
+  UT_ASSERT_EQUAL (Time.Minute, 0);
+  UT_ASSERT_EQUAL (Time.Second, 0);
+  UT_ASSERT_EQUAL (Time.Nanosecond, 858636373 + 321);
 
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT + 2000000000ull);
   will_return (__wrap_EfiAtRuntime, FALSE);
@@ -1209,15 +1209,15 @@ NRtcGetTimeBootSecond (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
-  UT_ASSERT_TRUE (Time.Month  == 9);
-  UT_ASSERT_TRUE (Time.Day    == 13);
-  UT_ASSERT_TRUE (Time.Year   == 2022);
-  UT_ASSERT_TRUE (Time.Hour   == 12);
-  UT_ASSERT_TRUE (Time.Minute == 0);
-  UT_ASSERT_TRUE (Time.Second == 0);
-  UT_ASSERT_TRUE (Time.Nanosecond == 858636373);
+  UT_ASSERT_EQUAL (Time.Month, 9);
+  UT_ASSERT_EQUAL (Time.Day, 13);
+  UT_ASSERT_EQUAL (Time.Year, 2022);
+  UT_ASSERT_EQUAL (Time.Hour, 12);
+  UT_ASSERT_EQUAL (Time.Minute, 0);
+  UT_ASSERT_EQUAL (Time.Second, 0);
+  UT_ASSERT_EQUAL (Time.Nanosecond, 858636373);
 
   return UNIT_TEST_PASSED;
 }
@@ -1240,11 +1240,11 @@ NRtcSetTimeErrors (
 
   // No Time pointer given
   Status = LibSetTime (NULL);
-  UT_ASSERT_TRUE (Status == EFI_INVALID_PARAMETER);
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   // Invalid Time
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_INVALID_PARAMETER);
+  UT_ASSERT_EQUAL (Status, EFI_INVALID_PARAMETER);
 
   Time.Month    = 9;
   Time.Day      = 15;
@@ -1260,7 +1260,7 @@ NRtcSetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestCtl12Hour);
   will_return (MockedI2cMasterStartRequest, EFI_NOT_READY);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   // I2C read succeeds, but RTC is stopped
   will_return (__wrap_GetPerformanceCounter, 0x210051776ull);
@@ -1268,7 +1268,7 @@ NRtcSetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestCtlStop);
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   // CPU does not have time write ownership
   will_return (__wrap_GetPerformanceCounter, 0x210051890ull);
@@ -1276,7 +1276,7 @@ NRtcSetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestCtlTwo1);
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   // I2C write fails
   will_return (__wrap_GetPerformanceCounter, 0x210051988ull);
@@ -1286,7 +1286,7 @@ NRtcSetTimeErrors (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestSetTimePdt);
   will_return (MockedI2cMasterStartRequest, EFI_OUT_OF_RESOURCES);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -1325,7 +1325,7 @@ NRtcSetTimeBoot (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
@@ -1360,15 +1360,15 @@ NRtcGetTimeAfterSet (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
-  UT_ASSERT_TRUE (Time.Month  == 9);
-  UT_ASSERT_TRUE (Time.Day    == 15);
-  UT_ASSERT_TRUE (Time.Year   == 2022);
-  UT_ASSERT_TRUE (Time.Hour   == 21);
-  UT_ASSERT_TRUE (Time.Minute == 50);
-  UT_ASSERT_TRUE (Time.Second == 23);
-  UT_ASSERT_TRUE (Time.Nanosecond == 858900212);
+  UT_ASSERT_EQUAL (Time.Month, 9);
+  UT_ASSERT_EQUAL (Time.Day, 15);
+  UT_ASSERT_EQUAL (Time.Year, 2022);
+  UT_ASSERT_EQUAL (Time.Hour, 21);
+  UT_ASSERT_EQUAL (Time.Minute, 50);
+  UT_ASSERT_EQUAL (Time.Second, 23);
+  UT_ASSERT_EQUAL (Time.Nanosecond, 858900212);
 
   return UNIT_TEST_PASSED;
 }
@@ -1404,7 +1404,7 @@ NRtcSetTimeOs (
   mExitBsNotify (NULL, NULL);
   will_return (__wrap_EfiAtRuntime, TRUE);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_UNSUPPORTED);
+  UT_ASSERT_EQUAL (Status, EFI_UNSUPPORTED);
 
   // Enable RT->SetTime and RT->SetVariable back
   will_return (
@@ -1421,7 +1421,7 @@ NRtcSetTimeOs (
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestSetTimePst);
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
@@ -1455,7 +1455,7 @@ NRtcGetTimeOs (
   mExitBsNotify (NULL, NULL);
   will_return (__wrap_EfiAtRuntime, TRUE);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_UNSUPPORTED);
+  UT_ASSERT_EQUAL (Status, EFI_UNSUPPORTED);
 
   // Enable RT->GetTime back
   will_return (
@@ -1471,15 +1471,15 @@ NRtcGetTimeOs (
   will_return (MockedI2cMasterStartRequest, EFI_SUCCESS);
 
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
-  UT_ASSERT_TRUE (Time.Month  == 2);
-  UT_ASSERT_TRUE (Time.Day    == 10);
-  UT_ASSERT_TRUE (Time.Year   == 2022);
-  UT_ASSERT_TRUE (Time.Hour   == 21);
-  UT_ASSERT_TRUE (Time.Minute == 50);
-  UT_ASSERT_TRUE (Time.Second == 23);
-  UT_ASSERT_TRUE (Time.Nanosecond == 153865728);
+  UT_ASSERT_EQUAL (Time.Month, 2);
+  UT_ASSERT_EQUAL (Time.Day, 10);
+  UT_ASSERT_EQUAL (Time.Year, 2022);
+  UT_ASSERT_EQUAL (Time.Hour, 21);
+  UT_ASSERT_EQUAL (Time.Minute, 50);
+  UT_ASSERT_EQUAL (Time.Second, 23);
+  UT_ASSERT_EQUAL (Time.Nanosecond, 153865728);
 
   return UNIT_TEST_PASSED;
 }
@@ -1510,40 +1510,43 @@ NRtcVirtualRtc (
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   will_return (MockedCreateEventEx, EFI_SUCCESS);
   Status = LibRtcInitialize (NULL, NULL);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
   // Since Virtual RTC uses build time as a reference and
   // NuvotonRealTimeClockLib are built separately from this unit test,
-  // so BUILD_EPOCH cannot be obtained from compliling this unit test.
+  // so BUILD_EPOCH cannot be obtained from compiling this unit test.
   // Hence this first GetTime is for obtaining BUILD_EPOCH only.
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT);
   will_return (__wrap_EfiAtRuntime, FALSE);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_TRUE (IsTimeValid (&Time));
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
   BuildEpoch = EfiTimeToEpoch (&Time);
 
   // Verify that the time changes after a 100 seconds
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT + (100 * 1000000000ull));
   will_return (__wrap_EfiAtRuntime, FALSE);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE ((BuildEpoch + 100) == EfiTimeToEpoch (&Time));
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL ((BuildEpoch + 100), EfiTimeToEpoch (&Time));
 
   // Verify that SetTime -10 minutes writes expected value to RTC_OFFSET variable
+  UT_ASSERT_TRUE (IsTimeValid (&Time));
   EpochToEfiTime (EfiTimeToEpoch (&Time) - (10 * SEC_PER_MIN), &Time);
+  UT_ASSERT_TRUE (IsTimeValid (&Time));
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT + (200 * 1000000000ull));
   will_return (__wrap_EfiAtRuntime, FALSE);
   will_return (__wrap_EfiSetVariable, EFI_SUCCESS);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (mRtcOffset == (BuildEpoch + 100 - (10 * SEC_PER_MIN)));
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (mRtcOffset, (BuildEpoch + 100 - (10 * SEC_PER_MIN)));
 
   // Verify that the time read back correctly
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT + (500 * 1000000000ull));
   will_return (__wrap_EfiAtRuntime, TRUE);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (EfiTimeToEpoch (&Time) == (BuildEpoch + 500 - 100 - (10 * SEC_PER_MIN)));
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (EfiTimeToEpoch (&Time), (BuildEpoch + 500 - 100 - (10 * SEC_PER_MIN)));
 
   // SetTime during OS runtime
   EpochToEfiTime (EfiTimeToEpoch (&Time) + (10 * SEC_PER_MIN), &Time);
@@ -1551,14 +1554,14 @@ NRtcVirtualRtc (
   will_return (__wrap_EfiAtRuntime, TRUE);
   will_return (__wrap_EfiSetVariable, EFI_SUCCESS);
   Status = LibSetTime (&Time);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
 
   // Verify that the time read back correctly
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT + (700 * 1000000000ull));
   will_return (__wrap_EfiAtRuntime, TRUE);
   Status = LibGetTime (&Time, &Capabilities);
-  UT_ASSERT_TRUE (Status == EFI_SUCCESS);
-  UT_ASSERT_TRUE (EfiTimeToEpoch (&Time) == (BuildEpoch + 500));
+  UT_ASSERT_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (EfiTimeToEpoch (&Time), (BuildEpoch + 500));
 
   return UNIT_TEST_PASSED;
 }
