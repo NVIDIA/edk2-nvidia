@@ -1244,6 +1244,7 @@ IsPlatformConfigurationNeeded (
   VOID                         *DTBBase;
   UINTN                        DTBSize;
   VOID                         *AcpiBase;
+  VOID                         *FdtBase;
   UINTN                        CharCount;
   NVIDIA_KERNEL_COMMAND_LINE   AddlCmdLine;
   UINTN                        AddlCmdLen;
@@ -1279,10 +1280,17 @@ IsPlatformConfigurationNeeded (
   //
   // Get OS Hardware Description
   //
-  CurrentPlatformConfigData.OsHardwareDescription = OS_USE_DT;
-  Status                                          = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
     CurrentPlatformConfigData.OsHardwareDescription = OS_USE_ACPI;
+  } else {
+    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get ACPI or FDT table\r\n", __FUNCTION__));
+      ASSERT_EFI_ERROR (Status);
+    }
+
+    CurrentPlatformConfigData.OsHardwareDescription = OS_USE_DT;
   }
 
   //

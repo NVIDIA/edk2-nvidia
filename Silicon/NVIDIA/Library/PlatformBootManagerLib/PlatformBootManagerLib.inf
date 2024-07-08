@@ -103,6 +103,7 @@
   gEfiEndOfDxeEventGroupGuid
   gEfiTtyTermGuid
   gEfiAcpiTableGuid
+  gFdtTableGuid
   gUefiShellFileGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
