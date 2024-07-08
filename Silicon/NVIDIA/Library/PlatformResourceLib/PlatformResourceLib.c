@@ -169,6 +169,7 @@ UpdateCoreInfoFromDtb (
     }
 
     MaxCoresPerCluster++;
+
     NV_ASSERT_RETURN (MaxCoresPerCluster < 100, return EFI_DEVICE_ERROR, "Too many cores seen\r\n");
   }
 
@@ -299,6 +300,11 @@ UpdatePlatformResourceInformation (
   UINTN                         CoreIndex;
   UINTN                         CoreInfoIndex;
   ARM_CORE_INFO                 *ArmCoreInfo;
+  UINTN                         Index;
+  UINTN                         EnabledCoresWordCount;
+  UINTN                         EnabledCoresWordIndex;
+  UINTN                         PrintedWords = 0;
+  UINTN                         WordsPerLine = 3;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   NV_ASSERT_RETURN (
@@ -337,6 +343,26 @@ UpdatePlatformResourceInformation (
   }
 
   DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, PlatformResourceInfo->NumberOfEnabledCores));
+
+  EnabledCoresWordCount = ALIGN_VALUE (PlatformResourceInfo->MaxPossibleCores, 64) / 64;
+  for (Index = 0; Index < EnabledCoresWordCount; Index++) {
+    EnabledCoresWordIndex = EnabledCoresWordCount - Index - 1;
+    if ((PrintedWords == 0) &&
+        (PlatformResourceInfo->EnabledCoresBitMap[EnabledCoresWordIndex] == 0))
+    {
+      continue;
+    }
+
+    if ((PrintedWords++ % WordsPerLine) == 0) {
+      DEBUG ((DEBUG_ERROR, "EnabledCores"));
+    }
+
+    DEBUG ((DEBUG_ERROR, "[%u]=0x%016llx ", EnabledCoresWordIndex, PlatformResourceInfo->EnabledCoresBitMap[EnabledCoresWordIndex]));
+
+    if (((PrintedWords % WordsPerLine) == 0) || (Index == (EnabledCoresWordCount - 1))) {
+      DEBUG ((DEBUG_ERROR, "\n"));
+    }
+  }
 
   Status = SocUpdatePlatformResourceInformation (PlatformResourceInfo);
   if (EFI_ERROR (Status)) {
