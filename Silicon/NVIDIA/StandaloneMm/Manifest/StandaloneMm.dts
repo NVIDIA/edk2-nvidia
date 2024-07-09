@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -108,6 +108,13 @@
 			pages-count = <1>;
 			base-address = <0x00000000 0x8B7FF000>;
 			attributes = <0x3>; /* read-write */
+		};
+		stmmprm-0-memory {
+			description = "stmmprm-0-memory";
+			pages-count = <17>;
+			base-address = <0x00000000 0x8B800000>;
+			attributes = <0x3>; /* read-write */
+			nv-non-secure-memory = <0x1>;
 		};
 		cpubl-params {
 			description  = "cpubl-params";

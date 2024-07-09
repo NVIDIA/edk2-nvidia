@@ -54,6 +54,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define STMM_GET_NS_BUFFER             0xC0270001
 #define STMM_GET_ERST_UNCACHED_BUFFER  0xC0270002
 #define STMM_GET_ERST_CACHED_BUFFER    0xC0270003
+#define STMM_GET_PRM0_BUFFER           0xC0270004
 #define STMM_SATMC_EVENT               0xC0270005
 
 #define TH500_ERST_SW_IO_6_GIC_ID_SOCKET0  230
@@ -82,7 +83,8 @@ UINT64
 FDTGetProperty32 (
   VOID        *DtbAddress,
   INT32       NodeOffset,
-  CONST VOID  *PropertyName
+  CONST VOID  *PropertyName,
+  BOOLEAN     Mandatory
   )
 {
   CONST VOID  *Property;
@@ -91,7 +93,14 @@ FDTGetProperty32 (
 
   Property = fdt_getprop (DtbAddress, NodeOffset, PropertyName, &Length);
 
-  ASSERT (Property != NULL);
+  if (Property == NULL) {
+    if (Mandatory == TRUE) {
+      ASSERT (Property != NULL);
+    } else {
+      return 0;
+    }
+  }
+
   ASSERT (Length == 4);
 
   CopyMem ((VOID *)&P32, (UINT32 *)Property, sizeof (UINT32));
@@ -108,7 +117,8 @@ UINT64
 FDTGetProperty64 (
   VOID        *DtbAddress,
   INT32       NodeOffset,
-  CONST VOID  *PropertyName
+  CONST VOID  *PropertyName,
+  BOOLEAN     Mandatory
   )
 {
   CONST VOID  *Property;
@@ -117,7 +127,14 @@ FDTGetProperty64 (
 
   Property = fdt_getprop (DtbAddress, NodeOffset, PropertyName, &Length);
 
-  ASSERT (Property != NULL);
+  if (Property == NULL) {
+    if (Mandatory == TRUE) {
+      ASSERT (Property != NULL);
+    } else {
+      return 0;
+    }
+  }
+
   ASSERT (Length == 8);
 
   CopyMem ((VOID *)&P64, (UINT64 *)Property, sizeof (UINT64));
@@ -175,8 +192,8 @@ GetSpImageBase (
 
   ParentOffset = fdt_path_offset (DtbAddress, "/");
 
-  SpImageBase = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address") +
-                FDTGetProperty32 (DtbAddress, ParentOffset, "entrypoint-offset");
+  SpImageBase = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address", TRUE) +
+                FDTGetProperty32 (DtbAddress, ParentOffset, "entrypoint-offset", TRUE);
 
   return SpImageBase;
 }
@@ -297,11 +314,12 @@ GetDeviceMemRegions (
     }
 
     DeviceRegions[Index].DeviceRegionStart =
-      FDTGetProperty64 (DtbAddress, NodeOffset, "base-address");
+      FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
     DeviceRegions[Index].DeviceRegionSize = FDTGetProperty32 (
                                               DtbAddress,
                                               NodeOffset,
-                                              "pages-count"
+                                              "pages-count",
+                                              TRUE
                                               )
                                             * DEFAULT_PAGE_SIZE;
 
@@ -359,11 +377,11 @@ GetAndPrintManifestinformation (
 
   ParentOffset = fdt_path_offset (DtbAddress, "/");
 
-  LoadAddress                = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address");
+  LoadAddress                = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address", TRUE);
   PayloadBootInfo.SpMemBase  = LoadAddress;
   PayloadBootInfo.SpMemLimit = PayloadBootInfo.SpImageBase + PayloadBootInfo.SpImageSize;
   SPMemoryLimit              = PayloadBootInfo.SpMemBase + TotalSPMemorySize;
-  ReservedPagesSize          = FDTGetProperty32 (DtbAddress, ParentOffset, "reserved-pages-count") * DEFAULT_PAGE_SIZE;
+  ReservedPagesSize          = FDTGetProperty32 (DtbAddress, ParentOffset, "reserved-pages-count", TRUE) * DEFAULT_PAGE_SIZE;
   LowestRegion               = SPMemoryLimit;
   HighestRegion              = PayloadBootInfo.SpMemBase;
 
@@ -379,8 +397,8 @@ GetAndPrintManifestinformation (
        NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
   {
     NodeName      = fdt_get_name (DtbAddress, NodeOffset, NULL);
-    RegionAddress = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address");
-    RegionSize    = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+    RegionAddress = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
+    RegionSize    = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
     if (ADDRESS_IN_RANGE (RegionAddress, LoadAddress, SPMemoryLimit)) {
       LowestRegion  = MIN (LowestRegion, RegionAddress);
       HighestRegion = MAX (HighestRegion, (RegionAddress+RegionSize));
@@ -390,8 +408,8 @@ GetAndPrintManifestinformation (
     if (fdt_getprop (DtbAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
       /* Publish the Ns Buffer Addr Size to what StMM needs.*/
 
-      ErstCachedSize   = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-cached-pages-count") * DEFAULT_PAGE_SIZE;
-      ErstUncachedSize = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-uncached-pages-count") * DEFAULT_PAGE_SIZE;
+      ErstCachedSize   = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-cached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
+      ErstUncachedSize = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-uncached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
 
       PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionStart = RegionAddress;
       PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionSize  = (RegionSize - ErstUncachedSize - ErstCachedSize);
@@ -437,6 +455,9 @@ GetAndPrintManifestinformation (
           StmmCommBuffers.NsErstUncachedBufAddr,
           StmmCommBuffers.NsErstUncachedBufSize
           ));
+      } else if (AsciiStrCmp (NodeName, "stmmprm-0-memory") == 0) {
+        StmmCommBuffers.NsPrm0BufferAddr = RegionAddress;
+        StmmCommBuffers.NsPrm0BufferSize = RegionSize;
       }
 
       NsRegionIndex++;
@@ -509,6 +530,8 @@ GetAndPrintManifestinformation (
   DEBUG ((DEBUG_ERROR, "RAS MM buf size   = 0x%llx \n", StmmCommBuffers.RasMmBufferSize));
   DEBUG ((DEBUG_ERROR, "SatMc MM buf base = 0x%llx \n", StmmCommBuffers.SatMcMmBufferAddr));
   DEBUG ((DEBUG_ERROR, "SatMc MM buf size = 0x%llx \n", StmmCommBuffers.SatMcMmBufferSize));
+  DEBUG ((DEBUG_ERROR, "StmmNsPRM0 buf base = 0x%llx \n", StmmCommBuffers.NsPrm0BufferAddr));
+  DEBUG ((DEBUG_ERROR, "StmmNsPRM0 buf size = 0x%llx \n", StmmCommBuffers.NsPrm0BufferSize));
 
   /* Core will take all the memory from SpMemBase to CoreHeapLimit and should not reach the first memory-region */
   ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= FfaRxBufferAddr);
@@ -812,6 +835,11 @@ DelegatedEventLoop (
           EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstUncachedBufSize;
           Status                     = EFI_SUCCESS;
           break;
+        case STMM_GET_PRM0_BUFFER:
+          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsPrm0BufferAddr;
+          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsPrm0BufferSize;
+          Status                     = EFI_SUCCESS;
+          break;
         case STMM_GET_ERST_CACHED_BUFFER:
           EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstCachedBufAddr;
           EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstCachedBufSize;
@@ -1063,8 +1091,8 @@ ConfigureStage1Translations (
   for (NodeOffset = fdt_first_subnode (DTBAddress, ParentOffset); NodeOffset > 0;
        NodeOffset = fdt_next_subnode (DTBAddress, PrevNodeOffset))
   {
-    RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-    RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+    RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
+    RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
 
     MemoryTable[NumRegions].PhysicalBase = RegionAddress;
     MemoryTable[NumRegions].VirtualBase  = RegionAddress;
@@ -1107,10 +1135,10 @@ ConfigureStage1Translations (
     }
 
     if (fdt_getprop (DTBAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
-      NsBufferAddress  = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-      NsBufferSize     = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
-      ErstCachedSize   = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-cached-pages-count") * DEFAULT_PAGE_SIZE;
-      ErstUnCachedSize = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-uncached-pages-count") * DEFAULT_PAGE_SIZE;
+      NsBufferAddress  = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
+      NsBufferSize     = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
+      ErstCachedSize   = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-cached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
+      ErstUnCachedSize = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-uncached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
       NsUncachedSize   = (NsBufferSize - ErstCachedSize);
 
       /* NS Uncached region (StMM Buffer + Part of ERST) */
@@ -1128,23 +1156,25 @@ ConfigureStage1Translations (
       NumRegions++;
 
       /* NS Cached region (erst)*/
-      MemoryTable[NumRegions].PhysicalBase = (NsBufferAddress + NsUncachedSize);
-      MemoryTable[NumRegions].VirtualBase  = (NsBufferAddress + NsUncachedSize);
-      MemoryTable[NumRegions].Length       = ErstCachedSize;
-      MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK;
-      DEBUG ((
-        DEBUG_ERROR,
-        "Cached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
-        MemoryTable[NumRegions].PhysicalBase,
-        MemoryTable[NumRegions].Length,
-        MemoryTable[NumRegions].Attributes
-        ));
-      NumRegions++;
+      if (ErstCachedSize != 0) {
+        MemoryTable[NumRegions].PhysicalBase = (NsBufferAddress + NsUncachedSize);
+        MemoryTable[NumRegions].VirtualBase  = (NsBufferAddress + NsUncachedSize);
+        MemoryTable[NumRegions].Length       = ErstCachedSize;
+        MemoryTable[NumRegions].Attributes   = STMM_ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK;
+        DEBUG ((
+          DEBUG_ERROR,
+          "Cached NS Address = 0x%llx Size 0x%lx Attr 0x%x \n",
+          MemoryTable[NumRegions].PhysicalBase,
+          MemoryTable[NumRegions].Length,
+          MemoryTable[NumRegions].Attributes
+          ));
+        NumRegions++;
+      }
     }
 
     if (fdt_getprop (DTBAddress, NodeOffset, "nv-sp-shared-buffer-id", &Length) != NULL) {
-      RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-      RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+      RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
+      RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
       /* Secure Buffer */
       MemoryTable[NumRegions].PhysicalBase = RegionAddress;
       MemoryTable[NumRegions].VirtualBase  = RegionAddress;
@@ -1154,8 +1184,8 @@ ConfigureStage1Translations (
     }
 
     if (AsciiStrStr (NodeName, "cpubl-params") != NULL) {
-      RegionAddress                        = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-      RegionSize                           = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count") * DEFAULT_PAGE_SIZE;
+      RegionAddress                        = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
+      RegionSize                           = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
       MemoryTable[NumRegions].PhysicalBase = RegionAddress;
       MemoryTable[NumRegions].VirtualBase  = RegionAddress;
       MemoryTable[NumRegions].Length       = RegionSize;
@@ -1166,8 +1196,8 @@ ConfigureStage1Translations (
     }
 
     if (AsciiStrStr (NodeName, "stage1-entries") != NULL) {
-      Stage1EntriesAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address"), DEFAULT_PAGE_SIZE);
-      Stage1EntriesPages   = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count");
+      Stage1EntriesAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
+      Stage1EntriesPages   = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE);
       DEBUG ((DEBUG_ERROR, "Stage-1 base      = 0x%llx \n", Stage1EntriesAddress));
       DEBUG ((DEBUG_ERROR, "Stage-1 size      = 0x%llx \n", Stage1EntriesPages*DEFAULT_PAGE_SIZE));
       SlabArmSetEntriesSlab (Stage1EntriesAddress, Stage1EntriesPages);

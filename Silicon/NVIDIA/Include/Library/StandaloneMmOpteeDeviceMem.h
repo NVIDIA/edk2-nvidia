@@ -54,6 +54,8 @@ typedef struct {
   UINTN               RasMmBufferSize;
   PHYSICAL_ADDRESS    SatMcMmBufferAddr;
   UINTN               SatMcMmBufferSize;
+  PHYSICAL_ADDRESS    NsPrm0BufferAddr;
+  UINTN               NsPrm0BufferSize;
   BOOLEAN             Fbc;
 } STMM_COMM_BUFFERS;
 
