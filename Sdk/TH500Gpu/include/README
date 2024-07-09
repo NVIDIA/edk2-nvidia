@@ -1,0 +1,6 @@
+This folder contains only the specific header files from Nvidia GitHub project
+at https://github.com/NVIDIA/open-gpu-kernel-modules as required for the UEFI
+GPU sdiver used in Grace products.
+
+The currently copied headers are from commit e45d91de0224e17a6bf7c971d8f165090b3c07a6
+mapping to 550.90.07 version
