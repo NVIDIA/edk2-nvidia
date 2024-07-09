@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2003-2022 NVIDIA CORPORATION & AFFILIATES
+ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,16 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __gh100_dev_fb_h_
-#define __gh100_dev_fb_h_
+#ifndef __gb100_dev_fb_h__
+#define __gb100_dev_fb_h__
 
-#define NV_PFB_NISO_FLUSH_SYSMEM_ADDR_SHIFT                       8 /*       */
-#define NV_PFB_FBHUB_PCIE_FLUSH_SYSMEM_ADDR_LO           0x00100A34 /* RW-4R */
-#define NV_PFB_FBHUB_PCIE_FLUSH_SYSMEM_ADDR_LO_ADR             31:0 /* RWIVF */
-#define NV_PFB_FBHUB_PCIE_FLUSH_SYSMEM_ADDR_HI           0x00100A38 /* RW-4R */
-#define NV_PFB_FBHUB_PCIE_FLUSH_SYSMEM_ADDR_HI_ADR             31:0 /* RWIVF */
-#define NV_PFB_FBHUB_PCIE_FLUSH_SYSMEM_ADDR_HI_ADR_MASK  0x000FFFFF /* ----V */
-#define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE                           0x00100CE0 /* RW-4R */
+#define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE                           0x001FA3E0 /* RW-4R */
 #define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_LOWER_SCALE                      3:0 /* RWEVF */
 #define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_LOWER_SCALE_INIT          0x00000000 /* RWE-V */
 #define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_LOWER_MAG                       27:4 /* RWEVF */
@@ -39,4 +33,4 @@
 #define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_ECC_MODE_DISABLED         0x00000000 /* RWE-V */
 #define NV_PFB_PRI_MMU_LOCAL_MEMORY_RANGE_ECC_MODE_ENABLED          0x00000001 /* RW--V */
 
-#endif // __gh100_dev_fb_h_
+#endif // __gb100_dev_fb_h__
