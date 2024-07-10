@@ -155,6 +155,8 @@
       Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
   }
 
+  Silicon/NVIDIA/Library/WildcardStringLib/UnitTest/WildcardStringLibGoogleTest.inf
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0

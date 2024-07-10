@@ -39,6 +39,7 @@
   MemoryAllocationLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/MemoryAllocationStubLib/MemoryAllocationStubLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/DeviceTreeHelperStubLib/DeviceTreeHelperStubLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StatusRegStubLib/StatusRegStubLib.inf
+  WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
 
 [BuildOptions.common.EDKII.HOST_APPLICATION]
 !ifdef $(HOSTAPP_STATIC_LINK)
