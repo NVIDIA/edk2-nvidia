@@ -286,27 +286,72 @@ TH500UARTInstanceInfo (
 }
 
 /**
-   Retrieve the TH500 memory information.
+   Retrieve the TH500 memory mode.
 
-   @param[in] CpuBootloaderParams  CPU BL params.
-   @param[in] Socket               CPU socket index.
-   @param[out] MemoryBase          The base address of the usable memory.
-   @param[out] MemorySize          The size of the usable memory.
+   @param[in]  CpuBootloaderParams  CPU BL params.
+   @param[out] MemoryMode           The memory mode of the system.
 */
 STATIC
-TH500_MEMORY_MODE
-TH500GetMemoryInfo (
-  IN CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
-  IN UINTN                            Socket,
-  OUT EFI_PHYSICAL_ADDRESS            *MemoryBase OPTIONAL,
-  OUT UINT64                          *MemorySize OPTIONAL
+EFI_STATUS
+TH500GetMemoryMode (
+  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  OUT TH500_MEMORY_MODE                *MemoryMode
   )
 {
   EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
   UINT64                EgmSize, HvSize;
-  EFI_PHYSICAL_ADDRESS  Base;
-  UINT64                Size;
-  TH500_MEMORY_MODE     MemoryMode;
+
+  if ((CpuBootloaderParams == NULL) ||
+      (MemoryMode == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  EgmBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base;
+  EgmSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size;
+
+  HvBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base;
+  HvSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size;
+
+  if ((EgmBase == 0) || (EgmSize == 0)) {
+    *MemoryMode = Th500MemoryModeNormal;
+  } else if ((HvBase == 0) || (HvSize == 0)) {
+    *MemoryMode = Th500MemoryModeEgmNoHv;
+  } else {
+    *MemoryMode = Th500MemoryModeEgmWithHv;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+   Retrieve the TH500 memory information.
+
+   @param[in] CpuBootloaderParams  CPU BL params.
+   @param[in] Socket               CPU socket index.
+   @param[in] MemoryMode           The memory mode of the system.
+   @param[out] MemoryBase          The base address of the usable memory.
+   @param[out] MemorySize          The size of the usable memory.
+*/
+STATIC
+EFI_STATUS
+TH500GetMemoryInfo (
+  IN CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  IN UINTN                            Socket,
+  IN TH500_MEMORY_MODE                MemoryMode,
+  OUT EFI_PHYSICAL_ADDRESS            *MemoryBase,
+  OUT UINT64                          *MemorySize
+  )
+{
+  EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
+  UINT64                EgmSize, HvSize;
+
+  if ((CpuBootloaderParams == NULL) ||
+      (MemoryBase == NULL) ||
+      (MemorySize == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
 
   EgmBase = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
   EgmSize = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
@@ -314,29 +359,20 @@ TH500GetMemoryInfo (
   HvBase = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_HV].Base;
   HvSize = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_HV].Size;
 
-  if ((EgmBase == 0) || (EgmSize == 0)) {
-    Base       = CpuBootloaderParams->SdramInfo[Socket].Base;
-    Size       = CpuBootloaderParams->SdramInfo[Socket].Size;
-    MemoryMode = Th500MemoryModeNormal;
-  } else if ((HvBase == 0) || (HvSize == 0)) {
-    Base       = EgmBase;
-    Size       = EgmSize;
-    MemoryMode = Th500MemoryModeEgmNoHv;
+  if (MemoryMode == Th500MemoryModeNormal) {
+    *MemoryBase = CpuBootloaderParams->SdramInfo[Socket].Base;
+    *MemorySize = CpuBootloaderParams->SdramInfo[Socket].Size;
+  } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
+    *MemoryBase = EgmBase;
+    *MemorySize = EgmSize;
+  } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
+    *MemoryBase = HvBase;
+    *MemorySize = HvSize;
   } else {
-    Base       = HvBase;
-    Size       = HvSize;
-    MemoryMode = Th500MemoryModeEgmWithHv;
+    return EFI_DEVICE_ERROR;
   }
 
-  if (MemoryBase != NULL) {
-    *MemoryBase = Base;
-  }
-
-  if (MemorySize != NULL) {
-    *MemorySize = Size;
-  }
-
-  return MemoryMode;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -357,6 +393,7 @@ TH500BuildDramRegions (
   OUT UINTN                    *CONST  DramRegionCount
   )
 {
+  EFI_STATUS            Status;
   NVDA_MEMORY_REGION    *Regions;
   UINTN                 RegionCount, RegionCountMax;
   UINTN                 Socket;
@@ -387,7 +424,21 @@ TH500BuildDramRegions (
       continue;
     }
 
-    MemoryMode = TH500GetMemoryInfo (CpuBootloaderParams, Socket, &MemoryBase, &MemorySize);
+    Status = TH500GetMemoryMode (CpuBootloaderParams, &MemoryMode);
+    NV_ASSERT_RETURN (
+      !EFI_ERROR (Status),
+      return Status,
+      "%a: Failed to get memory mode\r\n",
+      __FUNCTION__
+      );
+
+    Status = TH500GetMemoryInfo (CpuBootloaderParams, Socket, MemoryMode, &MemoryBase, &MemorySize);
+    NV_ASSERT_RETURN (
+      !EFI_ERROR (Status),
+      return Status,
+      "%a: Failed to get DRAM regions\r\n",
+      __FUNCTION__
+      );
 
     Base = MemoryBase;
     Size = MemorySize;
@@ -537,17 +588,26 @@ TH500BuildCarveoutRegions (
   OUT UINTN                    *CONST  UsableCarveoutRegionCount
   )
 {
-  NVDA_MEMORY_REGION       *Regions, *UsableRegions;
-  UINTN                    RegionCount, UsableRegionCount;
-  UINTN                    Socket;
-  EFI_PHYSICAL_ADDRESS     *RetiredDramPageList;
-  CONST UINT32             SocketMask            = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
-  CONST TH500_MEMORY_MODE  MemoryMode            = TH500GetMemoryInfo (CpuBootloaderParams, TH500_PRIMARY_SOCKET, NULL, NULL);
-  CONST UINT32             MaxSocket             = HighBitSet32 (SocketMask);
-  CONST UINTN              RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
-  CONST UINTN              RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
-  CONST UINTN              UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
-  CONST UINTN              UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
+  EFI_STATUS            Status;
+  TH500_MEMORY_MODE     MemoryMode;
+  NVDA_MEMORY_REGION    *Regions, *UsableRegions;
+  UINTN                 RegionCount, UsableRegionCount;
+  UINTN                 Socket;
+  EFI_PHYSICAL_ADDRESS  *RetiredDramPageList;
+  CONST UINT32          SocketMask            = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          MaxSocket             = HighBitSet32 (SocketMask);
+  CONST UINTN           RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
+  CONST UINTN           RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
+  CONST UINTN           UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
+  CONST UINTN           UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
+
+  Status = TH500GetMemoryMode (CpuBootloaderParams, &MemoryMode);
+  NV_ASSERT_RETURN (
+    !EFI_ERROR (Status),
+    return Status,
+    "%a: Failed to get memory mode\r\n",
+    __FUNCTION__
+    );
 
   Regions = (NVDA_MEMORY_REGION *)AllocatePages (RegionsPagesMax);
   NV_ASSERT_RETURN (
