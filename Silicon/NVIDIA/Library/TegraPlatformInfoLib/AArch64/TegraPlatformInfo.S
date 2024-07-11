@@ -1,5 +1,5 @@
 //
-//  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -12,11 +12,11 @@
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
-  MOV64 (x9, FixedPcdGet64(PcdMiscRegBaseAddress))
-  add x9, x9, #HIDREV_OFFSET
-  ldr w0, [x9]
-  lsr w0, w0, #HIDREV_CHIPID_SHIFT
-  and w0, w0, #HIDREV_CHIPID_MASK
+  MOV64 (x0, SMCCC_ARCH_SOC_ID)
+  MOV64 (x1, SMCCC_ARCH_SOC_ID_GET_SOC_VERSION)
+  smc #0
+  lsr w0, w0, #SOC_ID_VERSION_CHIPID_SHIFT
+  and w0, w0, #SOC_ID_VERSION_CHIPID_MASK
   ret
 
 ASM_FUNC(TegraGetSystemMemoryBaseAddress)

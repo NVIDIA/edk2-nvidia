@@ -32,6 +32,7 @@
   PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
   ResetSystemLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumResetLib/StandaloneMmHafniumResetLib.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLib/DebugLogScratchRegLib.inf
+  ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 

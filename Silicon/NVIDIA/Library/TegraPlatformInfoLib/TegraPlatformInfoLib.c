@@ -2,13 +2,14 @@
 
   Tegra Platform Info Library.
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Uefi.h>
+#include <Library/ArmSmcLib.h>
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
@@ -16,6 +17,7 @@
 #include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include "TegraPlatformInfoLibPrivate.h"
+#include "Uefi/UefiBaseType.h"
 
 #define MAX_REV_SIZE  (5)
 
@@ -40,19 +42,22 @@ STATIC ChipMinorRevTbl  MinorRevEncoding[] = {
 };
 
 STATIC
-UINT32
-TegraReadHidrevReg (
-  VOID
+EFI_STATUS
+TegraReadSocId (
+  UINTN  SocParam,
+  INT32  *SocId
   )
 {
-  UINT64  MiscRegBaseAddr = FixedPcdGet64 (PcdMiscRegBaseAddress);
-
-  if (MiscRegBaseAddr == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to read HIDREV register\n", __FUNCTION__));
-    return MAX_UINT32;
+  if (SocId == NULL) {
+    return EFI_INVALID_PARAMETER;
   }
 
-  return (MmioRead32 (MiscRegBaseAddr + HIDREV_OFFSET));
+  *SocId = ArmCallSmc1 (SMCCC_ARCH_SOC_ID, &SocParam, NULL, NULL);
+  if (*SocId < 0) {
+    return EFI_DEVICE_ERROR;
+  } else {
+    return EFI_SUCCESS;
+  }
 }
 
 TEGRA_PLATFORM_TYPE
@@ -60,9 +65,16 @@ TegraGetPlatform (
   VOID
   )
 {
-  UINT32  Hidrev = TegraReadHidrevReg ();
+  UINT32  Hidrev;
   UINT32  PlatType;
+  UINT64  MiscRegBaseAddr = FixedPcdGet64 (PcdMiscRegBaseAddress);
 
+  if (MiscRegBaseAddr == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read HIDREV register\n", __FUNCTION__));
+    return MAX_UINT32;
+  }
+
+  Hidrev   = MmioRead32 (MiscRegBaseAddr + HIDREV_OFFSET);
   PlatType = ((Hidrev >> HIDREV_PRE_SI_PLAT_SHIFT) & HIDREV_PRE_SI_PLAT_MASK);
   if (PlatType >= TEGRA_PLATFORM_UNKNOWN) {
     return TEGRA_PLATFORM_UNKNOWN;
@@ -76,9 +88,13 @@ TegraGetMajorVersion (
   VOID
   )
 {
-  UINT32  Hidrev = TegraReadHidrevReg ();
+  INT32  SocId;
 
-  return ((Hidrev >> HIDREV_MAJORVER_SHIFT) & HIDREV_MAJORVER_MASK);
+  if (EFI_ERROR (TegraReadSocId (SMCCC_ARCH_SOC_ID_GET_SOC_VERSION, &SocId))) {
+    return MAX_UINT32;
+  }
+
+  return ((SocId >> SOC_ID_VERSION_MAJORVER_SHIFT) & SOC_ID_VERSION_MAJORVER_MASK);
 }
 
 CHAR8 *
@@ -86,7 +102,7 @@ TegraGetMinorVersion (
   VOID
   )
 {
-  UINT32           HidRev = TegraReadHidrevReg ();
+  INT32            SocId;
   UINT8            MinorRev;
   UINTN            Index;
   UINT32           ChipId;
@@ -94,7 +110,11 @@ TegraGetMinorVersion (
   CHAR8            *MinorRevStr = " ";
   UINTN            NumEncodings = 0;
 
-  MinorRev = ((HidRev >> HIDREV_MINORREV_SHIFT) & HIDREV_MINORREV_MASK);
+  if (EFI_ERROR (TegraReadSocId (SMCCC_ARCH_SOC_ID_GET_SOC_REVISION, &SocId))) {
+    goto ExitTegraGetMinorVersion;
+  }
+
+  MinorRev = ((SocId >> SOC_ID_REVISION_MINORVER_SHIFT) & SOC_ID_REVISION_MINORVER_MASK);
 
   ChipId = TegraGetChipID ();
 

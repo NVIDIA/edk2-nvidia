@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,6 +19,7 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  ArmSmcLib
   DebugLib
   PcdLib
   IoLib

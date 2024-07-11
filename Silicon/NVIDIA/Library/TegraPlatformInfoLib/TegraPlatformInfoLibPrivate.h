@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library's Private Structures.
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,17 +11,21 @@
 #ifndef __EFI_TEGRA_PLATFORM_INFO_LIB_PRIVATE_H__
 #define __EFI_TEGRA_PLATFORM_INFO_LIB_PRIVATE_H__
 
-/* Assumption: HIDREV register address and fields are constant across tegra chips */
-#define HIDREV_OFFSET             0x4
-#define HIDREV_CHIPID_SHIFT       8
-#define HIDREV_CHIPID_MASK        0xff
-#define HIDREV_MINORREV_SHIFT     16
-#define HIDREV_MINORREV_MASK      0xf
-#define HIDREV_MAJORVER_SHIFT     4
-#define HIDREV_MAJORVER_MASK      0xf
-#define HIDREV_PRE_SI_PLAT_SHIFT  0x14
-#define HIDREV_PRE_SI_PLAT_MASK   0xf
-#define HIDREV_ADDRESS            (NV_ADDRESS_MAP_MISC_BASE + HIDREV_OFFSET)
+#include <IndustryStandard/ArmStdSmc.h>
+
+#define SMCCC_ARCH_SOC_ID_GET_SOC_VERSION   0
+#define SMCCC_ARCH_SOC_ID_GET_SOC_REVISION  1
+
+#define HIDREV_OFFSET                   0x4
+#define SOC_ID_VERSION_CHIPID_SHIFT     4
+#define SOC_ID_VERSION_CHIPID_MASK      0xff
+#define SOC_ID_VERSION_MAJORVER_SHIFT   0
+#define SOC_ID_VERSION_MAJORVER_MASK    0xf
+#define SOC_ID_REVISION_MINORVER_SHIFT  0
+#define SOC_ID_REVISION_MINORVER_MASK   0xf
+#define HIDREV_PRE_SI_PLAT_SHIFT        0x14
+#define HIDREV_PRE_SI_PLAT_MASK         0xf
+#define HIDREV_ADDRESS                  (NV_ADDRESS_MAP_MISC_BASE + HIDREV_OFFSET)
 
 #define T194_BLINFO_LOCATION_ADDRESS     0x0C3903F8
 #define DEFAULT_BLINFO_LOCATION_ADDRESS  0x0C390154
