@@ -17,6 +17,7 @@
 
 [Sources]
   BootArchInfoParser.c
+  BootArchInfoParser.h
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -17,6 +17,7 @@
 
 [Sources]
   SpmiParser.c
+  SpmiParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

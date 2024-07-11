@@ -17,6 +17,7 @@
 
 [Sources]
   SdhciInfoParser.c
+  SdhciInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

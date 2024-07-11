@@ -17,6 +17,7 @@
 
 [Sources]
   PowerManagementProfileParser.c
+  PowerManagementProfileParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

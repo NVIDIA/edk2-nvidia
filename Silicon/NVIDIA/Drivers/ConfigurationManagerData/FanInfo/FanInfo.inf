@@ -17,6 +17,7 @@
 
 [Sources]
   FanInfoParser.c
+  FanInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

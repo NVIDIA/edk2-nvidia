@@ -17,6 +17,7 @@
 
 [Sources]
   IpmiParser.c
+  IpmiParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

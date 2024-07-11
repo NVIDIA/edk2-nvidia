@@ -17,6 +17,7 @@
 
 [Sources]
   GenericWatchdogInfoParser.c
+  GenericWatchdogInfoParser.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

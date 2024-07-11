@@ -17,6 +17,7 @@
 
 [Sources]
   MpamParser.c
+  MpamParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

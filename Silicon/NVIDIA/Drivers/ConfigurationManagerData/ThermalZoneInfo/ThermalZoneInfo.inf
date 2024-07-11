@@ -17,6 +17,7 @@
 
 [Sources]
   ThermalZoneInfoParser.c
+  ThermalZoneInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

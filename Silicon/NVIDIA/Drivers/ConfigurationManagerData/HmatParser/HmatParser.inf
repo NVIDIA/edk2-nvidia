@@ -17,6 +17,7 @@
 
 [Sources]
   HmatParser.c
+  HmatParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

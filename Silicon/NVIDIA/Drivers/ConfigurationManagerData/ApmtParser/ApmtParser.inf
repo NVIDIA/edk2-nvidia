@@ -17,6 +17,7 @@
 
 [Sources]
   ApmtParser.c
+  ApmtParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

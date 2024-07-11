@@ -17,6 +17,7 @@
 
 [Sources]
   FixedFeatureFlagsParser.c
+  FixedFeatureFlagsParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

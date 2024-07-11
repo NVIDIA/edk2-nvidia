@@ -17,6 +17,7 @@
 
 [Sources]
   SsdtTableGeneratorParser.c
+  SsdtTableGeneratorParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

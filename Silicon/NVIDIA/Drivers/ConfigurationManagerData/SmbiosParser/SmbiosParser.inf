@@ -33,6 +33,24 @@
   ConfigurationSmbiosType41/SmbiosType41Parser.c
   ConfigurationSmbiosType43/SmbiosType43Parser.c
   ConfigurationSmbiosType45/SmbiosType45Parser.c
+  SmbiosParser.h
+  SmbiosParserPrivate.h
+  ConfigurationSmbiosType0/SmbiosType0Parser.h
+  ConfigurationSmbiosType1/SmbiosType1Parser.h
+  ConfigurationSmbiosType2/SmbiosType2Parser.h
+  ConfigurationSmbiosType3/SmbiosType3Parser.h
+  ConfigurationSmbiosProcSub/SmbiosProcSubParser.h
+  ConfigurationSmbiosType8/SmbiosType8Parser.h
+  ConfigurationSmbiosType9/SmbiosType9Parser.h
+  ConfigurationSmbiosType11/SmbiosType11Parser.h
+  ConfigurationSmbiosType13/SmbiosType13Parser.h
+  ConfigurationSmbiosMem/SmbiosMemParser.h
+  ConfigurationSmbiosType32/SmbiosType32Parser.h
+  ConfigurationSmbiosType38/SmbiosType38Parser.h
+  ConfigurationSmbiosType39/SmbiosType39Parser.h
+  ConfigurationSmbiosType41/SmbiosType41Parser.h
+  ConfigurationSmbiosType43/SmbiosType43Parser.h
+  ConfigurationSmbiosType45/SmbiosType45Parser.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

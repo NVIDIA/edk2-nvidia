@@ -22,6 +22,7 @@
   GicItsParser.c
   GicMsiFrameParser.c
   GicRedistributorParser.c
+  GicParser.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

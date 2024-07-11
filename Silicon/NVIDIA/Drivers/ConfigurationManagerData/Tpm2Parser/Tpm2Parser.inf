@@ -17,6 +17,7 @@
 
 [Sources]
   Tpm2Parser.c
+  Tpm2Parser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

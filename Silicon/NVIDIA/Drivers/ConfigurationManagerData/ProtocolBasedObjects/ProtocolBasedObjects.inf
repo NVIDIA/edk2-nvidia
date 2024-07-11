@@ -17,6 +17,7 @@
 
 [Sources]
   ProtocolBasedObjectsParser.c
+  ProtocolBasedObjectsParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

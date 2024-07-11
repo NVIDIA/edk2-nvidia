@@ -21,6 +21,7 @@
   ../CacheInfo/CacheInfoParserT194.c
   ../Gic/GicCParser.c
   ../Gic/LpiParser.c
+  ProcHierarchyInfoParser.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

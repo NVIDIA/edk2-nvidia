@@ -17,6 +17,7 @@
 
 [Sources]
   TelemetryInfoParser.c
+  TelemetryInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

@@ -17,6 +17,7 @@
 
 [Sources]
   AhciInfoParser.c
+  AhciInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

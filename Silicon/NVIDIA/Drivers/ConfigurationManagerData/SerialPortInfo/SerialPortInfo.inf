@@ -17,6 +17,7 @@
 
 [Sources]
   SerialPortInfoParser.c
+  SerialPortInfoParser.h
 
 [Packages]
   ArmPlatformPkg/ArmPlatformPkg.dec

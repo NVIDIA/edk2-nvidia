@@ -17,6 +17,7 @@
 
 [Sources]
   GenericTimerParser.c
+  GenericTimerParser.h
 
 [Packages]
   ArmPkg/ArmPkg.dec

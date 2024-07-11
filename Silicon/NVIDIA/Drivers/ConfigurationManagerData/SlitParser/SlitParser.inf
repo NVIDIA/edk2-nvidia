@@ -17,6 +17,7 @@
 
 [Sources]
   SlitParser.c
+  SlitParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

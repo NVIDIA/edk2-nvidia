@@ -17,6 +17,7 @@
 
 [Sources]
   HbmParserLib.c
+  HbmParserLib.h
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -17,6 +17,7 @@
 
 [Sources]
   WsmtParser.c
+  WsmtParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

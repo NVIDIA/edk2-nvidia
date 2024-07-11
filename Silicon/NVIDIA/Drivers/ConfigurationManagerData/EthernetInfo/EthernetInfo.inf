@@ -17,6 +17,7 @@
 
 [Sources]
   EthernetInfoParser.c
+  EthernetInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

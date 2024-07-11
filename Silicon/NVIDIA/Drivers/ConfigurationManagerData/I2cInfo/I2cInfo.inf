@@ -17,6 +17,7 @@
 
 [Sources]
   I2cInfoParser.c
+  I2cInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

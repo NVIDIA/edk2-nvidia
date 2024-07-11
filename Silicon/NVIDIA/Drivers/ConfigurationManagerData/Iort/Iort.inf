@@ -17,6 +17,8 @@
 
 [Sources]
   IortInfoParser.c
+  IortInfoParser.h
+  ConfigurationIortPrivate.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

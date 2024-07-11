@@ -17,6 +17,7 @@
 
 [Sources]
   Dbg2NetworkParser.c
+  Dbg2NetworkParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

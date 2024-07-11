@@ -17,6 +17,7 @@
 
 [Sources]
   AcpiTableListParser.c
+  AcpiTableListParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec

@@ -17,6 +17,7 @@
 
 [Sources]
   HdaInfoParser.c
+  HdaInfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec
