@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiLib.h>
@@ -686,7 +687,7 @@ BuildI2cDevices (
 
     Private->I2cDevices[Index].DeviceGuid = &gNVIDIAI2cUnknown;
     while (MapEntry->Compatibility != NULL) {
-      if (0 == fdt_node_check_compatible (Private->DeviceTreeBase, Node, MapEntry->Compatibility)) {
+      if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility (MapEntry->Compatibility, Node))) {
         Property = fdt_getprop (Private->DeviceTreeBase, Node, "status", NULL);
         if ((Property == NULL) || (AsciiStrCmp (Property, "okay") == 0)) {
           DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));

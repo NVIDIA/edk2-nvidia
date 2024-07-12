@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,23 +10,20 @@
 
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <libfdt.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #define HWPM_LA_CLOCK_NAME  "la"
 #define HWPM_LA_MAX_CLOCK   625000000
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra30-hda",     &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra194-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra23x-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra234-hda",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,th500-soc-hwpm",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra234-nvdla",  &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra234-host1x", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra194-rce",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL,                     NULL                                        }
+  { "nvidia,gv11b",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-hda",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,ga10b",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-soc-hwpm", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-nvdla",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-host1x",   &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-rce",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -69,7 +66,7 @@ DeviceDiscoveryNotify (
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
       if (DeviceTreeNode != NULL) {
-        if (0 == fdt_node_check_compatible (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,th500-soc-hwpm")) {
+        if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,*-soc-hwpm", DeviceTreeNode->NodeOffset))) {
           ClockName = HWPM_LA_CLOCK_NAME;
           Status    = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
           if (!EFI_ERROR (Status)) {

@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,10 +25,8 @@
 #include "EFuseDxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
-  { "nvidia,tegra234-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
-  { "nvidia,th500-efuse",    &gNVIDIANonDiscoverableEFuseDeviceGuid },
-  { NULL,                    NULL                                   }
+  { "nvidia,*-efuse", &gNVIDIANonDiscoverableEFuseDeviceGuid },
+  { NULL,             NULL                                   }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

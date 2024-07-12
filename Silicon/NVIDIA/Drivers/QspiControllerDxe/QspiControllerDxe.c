@@ -52,15 +52,9 @@ typedef struct {
 #define QSPI_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL(a)  CR(a, QSPI_CONTROLLER_PRIVATE_DATA, QspiControllerProtocol, QSPI_CONTROLLER_SIGNATURE)
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra186-spi",  &gNVIDIANonDiscoverableSpiDeviceGuid  },
-  { "nvidia,tegra194-spi",  &gNVIDIANonDiscoverableSpiDeviceGuid  },
-  { "nvidia,tegra234-spi",  &gNVIDIANonDiscoverableSpiDeviceGuid  },
-  { "nvidia,tegra23x-spi",  &gNVIDIANonDiscoverableSpiDeviceGuid  },
-  { "nvidia,tegra186-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
-  { "nvidia,tegra194-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
-  { "nvidia,tegra234-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
-  { "nvidia,tegra23x-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
-  { NULL,                   NULL                                  }
+  { "nvidia,*-spi",  &gNVIDIANonDiscoverableSpiDeviceGuid  },
+  { "nvidia,*-qspi", &gNVIDIANonDiscoverableQspiDeviceGuid },
+  { NULL,            NULL                                  }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

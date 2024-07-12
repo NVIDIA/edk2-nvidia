@@ -126,10 +126,8 @@ EDKII_SD_MMC_OVERRIDE  gSdMmcOverride = {
 };
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra186-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-  { "nvidia,tegra194-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-  { "nvidia,tegra234-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
-  { NULL,                    NULL                                  }
+  { "nvidia,*-sdhci", &gEdkiiNonDiscoverableSdhciDeviceGuid },
+  { NULL,             NULL                                  }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

@@ -91,8 +91,8 @@ XUSB_DEVICE_CONTEXT                s_xusb_device_context;
 static struct tegrabl_usbf_config  *g_usbconfig;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra234-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
-  { NULL,                   NULL                                  }
+  { "nvidia,*-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
+  { NULL,            NULL                                  }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

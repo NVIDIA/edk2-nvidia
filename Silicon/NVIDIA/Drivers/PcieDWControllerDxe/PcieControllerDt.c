@@ -2,7 +2,7 @@
 
   PCIe Controller Driver FDT manipulation
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #include <libfdt.h>
 
@@ -74,16 +75,7 @@ ParseGicMsiBase (
     return FALSE;
   }
 
-  PropertySize = fdt_node_check_compatible (Fdt, MsiParentOffset, "arm,gic-v2m-frame");
-  if (PropertySize < 0) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: failed to check GICv2m compatibility: %a\r\n",
-      __FUNCTION__,
-      fdt_strerror (PropertySize)
-      ));
-    return FALSE;
-  } else if (PropertySize != 0) {
+  if (EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("arm,gic-v2m-frame", NodeOffset))) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: GICv2m not compatible\r\n",

@@ -16,6 +16,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -35,9 +36,8 @@ STATIC UINTN                          mI2cMasterCount               = 0;
 STATIC EFI_EVENT                      mVirtualAddressChangeEvent    = NULL;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
-  { "nvidia,tegra234-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
-  { NULL,                  NULL                                 }
+  { "nvidia,*-i2c", &gNVIDIANonDiscoverableI2cDeviceGuid },
+  { NULL,           NULL                                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -1213,11 +1213,12 @@ TegraI2CDriverBindingStart (
   I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
   Count         = 0;
   fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
-    if (fdt_node_check_compatible (
-          DeviceTreeNode->DeviceTreeBase,
-          I2cNodeOffset,
-          "atmel,24c02"
-          ) == 0)
+    if (!EFI_ERROR (
+           DeviceTreeCheckNodeSingleCompatibility (
+             "atmel,24c02",
+             I2cNodeOffset
+             )
+           ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1238,11 +1239,12 @@ TegraI2CDriverBindingStart (
         Count++;
         DEBUG ((DEBUG_INFO, "%a: Eeprom Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "ti,tca9539"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "ti,tca9539",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1262,11 +1264,12 @@ TegraI2CDriverBindingStart (
 
         DEBUG ((DEBUG_INFO, "%a: TCA9539 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "nxp,pca9535"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "nxp,pca9535",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1286,11 +1289,12 @@ TegraI2CDriverBindingStart (
 
         DEBUG ((DEBUG_INFO, "%a: PCA9535 Slave Address: 0x%lx on I2c Bus 0x%lx.\n", __FUNCTION__, I2cAddress, Private->ControllerId));
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "nvidia,ncp81599"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "nvidia,ncp81599",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1308,11 +1312,12 @@ TegraI2CDriverBindingStart (
           goto ErrorExit;
         }
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "nuvoton,nct3018y"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "nuvoton,nct3018y",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1330,11 +1335,12 @@ TegraI2CDriverBindingStart (
           goto ErrorExit;
         }
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "ssif-bmc"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "ssif-bmc",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
@@ -1355,11 +1361,12 @@ TegraI2CDriverBindingStart (
         // Leave i2c for bmc activated on exit boot services
         Private->SkipOnExitDisabled = TRUE;
       }
-    } else if (fdt_node_check_compatible (
-                 DeviceTreeNode->DeviceTreeBase,
-                 I2cNodeOffset,
-                 "nvidia,fpga-cfr"
-                 ) == 0)
+    } else if (!EFI_ERROR (
+                  DeviceTreeCheckNodeSingleCompatibility (
+                    "nvidia,fpga-cfr",
+                    I2cNodeOffset
+                    )
+                  ))
     {
       Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {

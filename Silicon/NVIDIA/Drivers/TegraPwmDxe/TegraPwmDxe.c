@@ -2,7 +2,7 @@
 
   TegraPwmDxe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,8 +21,8 @@
 #include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-pwm", &gNVIDIANonDiscoverablePwmDeviceGuid },
-  { NULL,                  NULL                                 }
+  { "nvidia,*-pwm", &gNVIDIANonDiscoverablePwmDeviceGuid },
+  { NULL,           NULL                                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

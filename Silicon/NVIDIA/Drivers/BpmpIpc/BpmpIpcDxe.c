@@ -22,6 +22,7 @@
 #include <Protocol/BpmpIpc.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceDiscoveryLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include "BpmpIpcDxePrivate.h"
 
 /**
@@ -44,7 +45,7 @@ BpmpDeviceTreeIsSupported (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-bpmp")) {
+  if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,*-bpmp", DeviceInfo->NodeOffset))) {
     DeviceInfo->DeviceType = &gNVIDIANonDiscoverableBpmpDeviceGuid;
     return EFI_SUCCESS;
   } else {
@@ -72,10 +73,7 @@ HspDeviceTreeIsSupported (
     return EFI_INVALID_PARAMETER;
   }
 
-  if ((0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra186-hsp")) ||
-      (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra194-hsp")) ||
-      (0 == fdt_node_check_compatible (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "nvidia,tegra234-hsp")))
-  {
+  if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,*-hsp", DeviceInfo->NodeOffset))) {
     // Only support hsp with doorbell
     CONST CHAR8  *InterruptNames;
     INT32        NamesLength;

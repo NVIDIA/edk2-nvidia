@@ -17,19 +17,26 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <libfdt.h>
 #include <NVIDIAConfiguration.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra20-uart",    &gNVIDIANonDiscoverable16550UartDeviceGuid    },
-  { "nvidia,tegra186-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid    },
-  { "nvidia,tegra194-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid    },
-  { "nvidia,tegra194-tcu",    &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
-  { "arm,sbsa-uart",          &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
-  { "arm,pl011",              &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
-  { NULL,                     NULL                                          }
+  { "nvidia,*-uart",   &gNVIDIANonDiscoverable16550UartDeviceGuid    },
+  { "nvidia,*-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid    },
+  { "nvidia,*-tcu",    &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
+  { "arm,sbsa-uart",   &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { "arm,pl011",       &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { NULL,              NULL                                          }
+};
+
+CONST CHAR8  *g16550UartCompatible[] = {
+  "nvidia,*-uart", "nvidia,*-hsuart", NULL
+};
+CONST CHAR8  *gSbsaUartCompatible[] = {
+  "arm,sbsa-uart", "arm,pl011", NULL
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -79,38 +86,13 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
-      if (((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra20-uart"
-              )) == 0) ||
-          ((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra186-hsuart"
-              )) == 0) ||
-          ((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra194-hsuart"
-              )) == 0))
-      {
+      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (g16550UartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {
           return EFI_UNSUPPORTED;
         }
-      } else if (((fdt_node_check_compatible (
-                     DeviceTreeNode->DeviceTreeBase,
-                     DeviceTreeNode->NodeOffset,
-                     "arm,sbsa-uart"
-                     )) == 0) ||
-                 ((fdt_node_check_compatible (
-                     DeviceTreeNode->DeviceTreeBase,
-                     DeviceTreeNode->NodeOffset,
-                     "arm,pl011"
-                     )) == 0))
-      {
+      } else if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {
@@ -121,22 +103,7 @@ DeviceDiscoveryNotify (
       return EFI_SUCCESS;
 
     case DeviceDiscoveryDriverBindingStart:
-      if (((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra20-uart"
-              )) == 0) ||
-          ((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra186-hsuart"
-              )) == 0) ||
-          ((fdt_node_check_compatible (
-              DeviceTreeNode->DeviceTreeBase,
-              DeviceTreeNode->NodeOffset,
-              "nvidia,tegra194-hsuart"
-              )) == 0))
-      {
+      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (g16550UartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {
@@ -164,17 +131,7 @@ DeviceDiscoveryNotify (
         }
 
         InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550);
-      } else if (((fdt_node_check_compatible (
-                     DeviceTreeNode->DeviceTreeBase,
-                     DeviceTreeNode->NodeOffset,
-                     "arm,sbsa-uart"
-                     )) == 0) ||
-                 ((fdt_node_check_compatible (
-                     DeviceTreeNode->DeviceTreeBase,
-                     DeviceTreeNode->NodeOffset,
-                     "arm,pl011"
-                     )) == 0))
-      {
+      } else if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {

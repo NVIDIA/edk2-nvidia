@@ -13,6 +13,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/FdtLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/WildcardStringLib.h>
 #include "DeviceTreeHelperLibPrivate.h"
 
 #define DEVICE_TREE_MAX_NAME_LENGTH  32
@@ -985,7 +986,7 @@ DeviceTreeLocateStringIndex (
     Status       = EFI_NOT_FOUND;
     StringSearch = (CONST CHAR8 *)PropertyData;
     while ((CONST VOID *)(StringSearch + MatchSize) <= (PropertyData + PropertySize)) {
-      if (AsciiStrCmp (String, StringSearch) == 0) {
+      if (WildcardStringMatchAscii (String, StringSearch)) {
         Status = EFI_SUCCESS;
         break;
       }
@@ -1061,6 +1062,33 @@ DeviceTreeCheckNodeCompatibility (
   }
 
   return Status;
+}
+
+/**
+  Check if a node has a matching compatible property.
+
+  @param [in]  Compatible       Pointer to a compatible string.
+                                String support * as wildcard.
+  @param [in]  NodeOffset       Node to check
+
+  @retval EFI_SUCCESS            The node matches the compatible string.
+  @retval EFI_NOT_FOUND          Node doesn't match or is disabled.
+  @retval Others                 An error occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeCheckNodeSingleCompatibility (
+  IN      CONST CHAR8  *Compatible,
+  IN            INT32  NodeOffset
+  )
+{
+  CONST CHAR8  *CompatibleInfoArray[2];
+
+  CompatibleInfoArray[0] = Compatible;
+  CompatibleInfoArray[1] = NULL;
+
+  return DeviceTreeCheckNodeCompatibility (CompatibleInfoArray, NodeOffset);
 }
 
 /**

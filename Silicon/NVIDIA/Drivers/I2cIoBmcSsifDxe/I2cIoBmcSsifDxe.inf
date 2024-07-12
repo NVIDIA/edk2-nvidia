@@ -2,7 +2,7 @@
 #
 # I2C IO based BMC SSIF communication
 #
-# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -28,6 +28,7 @@
 
 [LibraryClasses]
   BaseLib
+  DeviceTreeHelperLib
   FdtLib
   UefiLib
   UefiDriverEntryPoint

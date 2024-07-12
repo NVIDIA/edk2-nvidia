@@ -2,7 +2,7 @@
 
   I2C IO IPMI driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright 1999 - 2021 Intel Corporation. <BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -18,6 +18,7 @@
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/TimerLib.h>
 #include <libfdt.h>
 
@@ -510,11 +511,12 @@ I2cIoBmcMasterNotify (
     DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree node, assuming no SMBALERT\r\n", __FUNCTION__));
   } else {
     fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
-      if (fdt_node_check_compatible (
-            DeviceTreeNode->DeviceTreeBase,
-            I2cNodeOffset,
-            "ssif-bmc"
-            ) == 0)
+      if (!EFI_ERROR (
+             DeviceTreeCheckNodeSingleCompatibility (
+               "ssif-bmc",
+               I2cNodeOffset
+               )
+             ))
       {
         Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nvidia,smbalert-gpio", &PropertyLen);
         if ((Property != NULL) && (PropertyLen == (3 * sizeof (UINT32)))) {

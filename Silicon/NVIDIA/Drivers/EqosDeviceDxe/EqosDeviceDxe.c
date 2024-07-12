@@ -31,11 +31,10 @@
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,eqos",                &gDwEqosNetNonDiscoverableDeviceGuid     },
-  { "nvidia,nveqos",              &gDwEqosNetNonDiscoverableDeviceGuid     },
   { "nvidia,nvmgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid     },
-  { "nvidia,tegra186-eqos",       &gDwEqosNetNonDiscoverableDeviceGuid     },
   { "nvidia,tegra194-eqos",       &gDwEqosNetT194NonDiscoverableDeviceGuid },
-  { "nvidia,tegra234-mgbe",       &gDwMgbeNetNonDiscoverableDeviceGuid     },
+  { "nvidia,*-eqos",              &gDwEqosNetNonDiscoverableDeviceGuid     },
+  { "nvidia,*-mgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid     },
   { "snps,dwc-qos-ethernet-4.10", &gDwEqosNetNonDiscoverableDeviceGuid     },
   { NULL,                         NULL                                     }
 };

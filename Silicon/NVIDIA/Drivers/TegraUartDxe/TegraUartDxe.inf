@@ -2,7 +2,7 @@
 #
 #  TegraUart Driver
 #
-#  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -38,6 +38,7 @@
   PrintLib
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
+  DeviceTreeHelperLib
   IoLib
   MemoryAllocationLib
   TegraSbsaSerialPortLib

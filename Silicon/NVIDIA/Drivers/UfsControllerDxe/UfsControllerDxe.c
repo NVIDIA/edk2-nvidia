@@ -25,9 +25,8 @@
 #include <Protocol/UfsHostControllerPlatform.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "tegra,ufs_variant",    &gEdkiiNonDiscoverableUfsDeviceGuid },
-  { "tegra234,ufs_variant", &gEdkiiNonDiscoverableUfsDeviceGuid },
-  { NULL,                   NULL                                }
+  { "tegra*,ufs_variant", &gEdkiiNonDiscoverableUfsDeviceGuid },
+  { NULL,                 NULL                                }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

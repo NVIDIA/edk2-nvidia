@@ -35,8 +35,8 @@
   PrintLib
   UefiDriverEntryPoint
   IoLib
-  FdtLib
   DeviceDiscoveryLib
+  DeviceTreeHelperLib
   SystemContextLib
 
 [Protocols]

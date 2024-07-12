@@ -39,3 +39,4 @@
   DtPlatformDtbLoaderLib
   FdtLib
   MemoryAllocationLib
+  WildcardStringLib

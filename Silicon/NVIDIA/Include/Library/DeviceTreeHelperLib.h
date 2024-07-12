@@ -511,7 +511,7 @@ DeviceTreeGetNodePropertyValue32 (
 
   @param[in]      NodeOffset    - Node offset
   @param[in]      Property      - Property name
-  @param[in]      String        - String to match
+  @param[in]      String        - String to match, supports * as wildcard
   @param[out]     Index         - Index of the string to match
 
   @retval EFI_SUCCESS           - Property returned
@@ -811,6 +811,7 @@ DeviceTreeGetCacheData (
 
   @param [in]  CompatibleInfo   Pointer to an array of compatible strings.
                                 Array is terminated with a NULL entry.
+                                Strings support * as wildcard.
   @param [in]  NodeOffset       Node to check
 
   @retval EFI_SUCCESS            The node matches one of the compatible strings.
@@ -822,6 +823,25 @@ EFI_STATUS
 EFIAPI
 DeviceTreeCheckNodeCompatibility (
   IN      CONST CHAR8  **CompatibleInfo,
+  IN            INT32  NodeOffset
+  );
+
+/**
+  Check if a node has a matching compatible property.
+
+  @param [in]  Compatible       Pointer to a compatible string.
+                                String support * as wildcard.
+  @param [in]  NodeOffset       Node to check
+
+  @retval EFI_SUCCESS            The node matches the compatible string.
+  @retval EFI_NOT_FOUND          Node doesn't match or is disabled.
+  @retval Others                 An error occurred.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeCheckNodeSingleCompatibility (
+  IN      CONST CHAR8  *Compatible,
   IN            INT32  NodeOffset
   );
 

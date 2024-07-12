@@ -33,13 +33,9 @@
 /* Discover driver */
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra186-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { "nvidia,tegra186-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { "nvidia,tegra194-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { "nvidia,tegra194-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { "nvidia,tegra234-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { "nvidia,tegra234-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
-  { NULL,                   NULL                                 }
+  { "nvidia,*-xhci", &gEdkiiNonDiscoverableXhciDeviceGuid },
+  { "nvidia,*-xusb", &gEdkiiNonDiscoverableXhciDeviceGuid },
+  { NULL,            NULL                                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

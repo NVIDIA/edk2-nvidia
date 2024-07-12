@@ -2,7 +2,7 @@
 
   Tegra Pin Control Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,8 +33,8 @@
 #define PAD_POWER             BIT0
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-dpaux3-padctl", &gNVIDIANonDiscoverableNVIDIADpAuxDeviceGuid },
-  { NULL,                            NULL                                         }
+  { "nvidia,*-dpaux3-padctl", &gNVIDIANonDiscoverableNVIDIADpAuxDeviceGuid },
+  { NULL,                     NULL                                         }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

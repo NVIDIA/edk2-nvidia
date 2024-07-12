@@ -2,7 +2,7 @@
 
   PINMUX Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,8 +24,8 @@
 #include "PinMuxDxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-pinmux", &gNVIDIANonDiscoverablePinMuxDeviceGuid },
-  { NULL,                     NULL                                    }
+  { "nvidia,*-pinmux", &gNVIDIANonDiscoverablePinMuxDeviceGuid },
+  { NULL,              NULL                                    }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {

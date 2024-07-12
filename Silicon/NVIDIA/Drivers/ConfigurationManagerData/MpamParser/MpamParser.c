@@ -328,7 +328,7 @@ UpdateMscNodeInfo (
          SubNodeOffset = fdt_next_subnode (DeviceTreeBase, PrevSubNodeOffset))
     {
       PrevSubNodeOffset = SubNodeOffset;
-      if (fdt_node_check_compatible (DeviceTreeBase, SubNodeOffset, "arm,mpam-cache") == 0) {
+      if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("arm,mpam-cache", SubNodeOffset))) {
         MscNodeInfo[Index].NumResourceNodes++;
       }
     }

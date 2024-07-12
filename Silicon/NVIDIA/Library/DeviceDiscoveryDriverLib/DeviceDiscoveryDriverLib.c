@@ -19,11 +19,11 @@
 #include <Library/HobLib.h>
 #include <Library/DeviceDiscoveryLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TimerLib.h>
 #include <Library/SystemContextLib.h>
-#include <libfdt.h>
 
 #include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/NonDiscoverableDevice.h>
@@ -34,6 +34,7 @@
 #include <Protocol/ArmScmiClock2Protocol.h>
 
 #include "DeviceDiscoveryDriverLibPrivate.h"
+#include "Uefi/UefiBaseType.h"
 
 // These globals are defined be driver not for the full system context
 SCMI_CLOCK2_PROTOCOL                           *gScmiClockProtocol    = NULL;
@@ -668,7 +669,7 @@ DeviceTreeIsSupported (
   }
 
   while (MappingNode->Compatibility != NULL) {
-    if (0 == fdt_node_check_compatible (Node->DeviceTreeBase, Node->NodeOffset, MappingNode->Compatibility)) {
+    if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility (MappingNode->Compatibility, Node->NodeOffset))) {
       break;
     }
 
@@ -676,6 +677,11 @@ DeviceTreeIsSupported (
   }
 
   if (MappingNode->Compatibility == NULL) {
+    return EFI_UNSUPPORTED;
+  }
+
+  // Allow for NULL device type to reject matches
+  if (MappingNode->DeviceType == NULL) {
     return EFI_UNSUPPORTED;
   }
 
