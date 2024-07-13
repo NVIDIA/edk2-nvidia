@@ -675,6 +675,11 @@ FmpFirmwareInventoryUpdate (
       //   b6. Associated component information
       //
 
+      if (ImageInfo->ImageIdName == NULL) {
+        DEBUG ((DEBUG_WARN, "%a: Skip FMP image that has no name\n", __FUNCTION__));
+        continue;
+      }
+
       //
       // There is no firmware component name in UEFI FMP image descriptor. Using ImageIdName
       // for firmware component name of firmware inventory reporting.
