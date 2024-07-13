@@ -1709,10 +1709,10 @@ CheckUefiShellLoadOption (
 }
 
 /**
-  Process TPM commands that need to be done before handing off to OS
+  Process TPM PPI commands
 **/
 VOID
-ProcessTpmBeforeBooting (
+ProcessTpmPhysicalPresence (
   VOID
   )
 {
@@ -1720,14 +1720,21 @@ ProcessTpmBeforeBooting (
     return;
   }
 
-  //
-  // Process TCG2 PPI
-  //
   Tcg2PhysicalPresenceLibProcessRequest (NULL);
+}
 
-  //
-  // Prevent OS from using commands that require platform hierarchy authorization
-  //
+/**
+  Lock TPM platform hierarchy to prevent OS from changing TPM platform settings
+**/
+VOID
+LockTpmPlatformHierarchy (
+  VOID
+  )
+{
+  if (!PcdGetBool (PcdTpmEnable)) {
+    return;
+  }
+
   ConfigureTpmPlatformHierarchy ();
 }
 
@@ -2063,9 +2070,9 @@ PlatformBootManagerBeforeConsole (
   EfiEventGroupSignal (&gNVIDIABeforeConsoleEventGuid);
 
   //
-  // Process TPM before booting to OS
+  // Process TPM PPI
   //
-  ProcessTpmBeforeBooting ();
+  ProcessTpmPhysicalPresence ();
 
   // Install protocol to indicate that devices are connected
   gBS->InstallMultipleProtocolInterfaces (
@@ -2474,6 +2481,11 @@ PlatformBootManagerAfterConsole (
   // feedback about what is going on.
   //
   HandleCapsules ();
+
+  //
+  // Lock TPM platform hierarchy
+  //
+  LockTpmPlatformHierarchy ();
 
   HandleBootChainUpdate ();
 
