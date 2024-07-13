@@ -931,3 +931,10 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF OvmfPkg/VirtioNetDxe/VirtioNet.inf
 !endif
 !endif
+
+  #
+  # Infineon TPM FW Update Driver
+  #
+!ifdef CONFIG_INFINEON_TPM_FW_UPDATE
+  INF IFXTPMUpdate_Driver/Src/TPMToolsUEFIPkg/IFXTPMUpdate.inf
+!endif

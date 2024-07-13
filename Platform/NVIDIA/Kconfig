@@ -72,6 +72,11 @@ menu "Security options"
       No TPM support.
   endchoice
 
+  config INFINEON_TPM_FW_UPDATE
+    bool "Infineon TPM FW Update"
+    help
+      Support Infineon TPM firmware update driver.
+
   config SECURITY_UEFI_MENU_USER_AUTH
    bool "UEFI Menu user authentication"
    help

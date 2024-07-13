@@ -2470,3 +2470,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_EBC
   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 !endif
+
+  #
+  # Infineon TPM FW Update Driver
+  #
+!ifdef CONFIG_INFINEON_TPM_FW_UPDATE
+  IFXTPMUpdate_Driver/Src/TPMToolsUEFIPkg/IFXTPMUpdate.inf
+!endif
