@@ -2,7 +2,7 @@
 #
 #  Component description file for TegraDeviceTreeKernelOverlayLib module
 #
-#  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -22,7 +22,6 @@
 
 [LibraryClasses]
   PcdLib
-  TegraPlatformInfoLib
   FdtLib
 
 [Protocols]
