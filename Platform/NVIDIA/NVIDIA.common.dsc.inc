@@ -2244,7 +2244,10 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   #
   # L4T launcher
   #
-  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf {
+    <LibraryClasses>
+      DebugLib|MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
+  }
 
   # WFI App
 !ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP

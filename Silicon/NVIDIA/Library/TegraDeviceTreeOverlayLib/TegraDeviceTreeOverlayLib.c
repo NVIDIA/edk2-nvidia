@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,6 @@
 #include <libfdt.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/Eeprom.h>
 #include "TegraDeviceTreeOverlayLibCommon.h"
 

@@ -41,7 +41,6 @@
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
 #include <Library/PlatformBootOrderLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <Library/ResetSystemLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
