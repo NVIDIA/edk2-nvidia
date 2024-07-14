@@ -18,8 +18,6 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
-#include <Library/TegraPlatformInfoLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <Protocol/Eeprom.h>
 #include "TegraDeviceTreeOverlayLibCommon.h"
 

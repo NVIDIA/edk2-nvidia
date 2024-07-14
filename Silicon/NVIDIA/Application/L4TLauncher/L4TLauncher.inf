@@ -44,11 +44,9 @@
   AndroidBootImgLib
   SecureBootVariableLib
   TegraDeviceTreeKernelOverlayLib
-  PlatformResourceLib
   ResetSystemLib
   TimerLib
   OpteeNvLib
-  TegraPlatformInfoLib
   PlatformBootOrderLib
 
 [Guids]
