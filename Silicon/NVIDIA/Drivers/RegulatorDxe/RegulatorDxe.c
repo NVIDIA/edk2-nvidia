@@ -2,7 +2,7 @@
 
   Regulator Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -965,43 +965,17 @@ AddFixedRegulators (
   IN REGULATOR_DXE_PRIVATE  *Private
   )
 {
-  INT32    NodeOffset = -1;
-  BOOLEAN  Pass       = 0; // Pass 0: fixed, always on, pass 1: Gpio
+  CONST CHAR8           *CompatArray[] = { "regulator-fixed", "regulator-fixed-sync", NULL };
+  INT32                 NodeOffset     = -1;
+  REGULATOR_LIST_ENTRY  *ListEntry     = NULL;
+  INT32                 PropertySize;
+  CONST VOID            *Property = NULL;
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
 
-  do {
-    REGULATOR_LIST_ENTRY  *ListEntry = NULL;
-    INT32                 PropertySize;
-    CONST VOID            *Property = NULL;
-    if (Pass == 0) {
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DeviceTreeBase,
-                     NodeOffset,
-                     "regulator-fixed"
-                     );
-    } else {
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DeviceTreeBase,
-                     NodeOffset,
-                     "regulator-fixed-sync"
-                     );
-    }
-
-    if (NodeOffset <= 0) {
-      Pass++;
-      continue;
-    }
-
-    Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "status", NULL);
-    if ((Property != NULL) &&
-        (AsciiStrCmp ((CONST CHAR8 *)Property, "okay") != 0))
-    {
-      continue;
-    }
-
+  while (!EFI_ERROR (DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset))) {
     ListEntry = AllocateZeroPool (sizeof (REGULATOR_LIST_ENTRY));
     if (NULL == ListEntry) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate list entry\r\n", __FUNCTION__));
@@ -1038,7 +1012,7 @@ AddFixedRegulators (
 
     ListEntry->MicrovoltStep = 0;
     ListEntry->Name          = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-name", NULL);
-  } while (Pass != 2);
+  }
 
   return EFI_SUCCESS;
 }

@@ -768,6 +768,7 @@ BpmpI2cStart (
   INT32                         AdapterLength;
   VOID                          *DeviceTreeBase = NULL;
   UINTN                         DeviceTreeSize;
+  CONST CHAR8                   *CompatArray[2] = { "nvidia,tegra186-bpmp-i2c", NULL };
 
   //
   // Attempt to open BpmpI2c Protocol
@@ -838,12 +839,10 @@ BpmpI2cStart (
   Private->DriverBindingHandle                            = This->DriverBindingHandle;
   Private->BpmpIpc                                        = BpmpIpc;
   Private->DeviceTreeBase                                 = DeviceTreeBase;
-  Private->DeviceTreeNodeOffset                           = fdt_node_offset_by_compatible (
-                                                              DeviceTreeBase,
-                                                              0,
-                                                              "nvidia,tegra186-bpmp-i2c"
-                                                              );
-  if (0 == Private->DeviceTreeNodeOffset) {
+  Private->DeviceTreeNodeOffset                           = -1;
+  Status                                                  = DeviceTreeGetNextCompatibleNode (CompatArray, &Private->DeviceTreeNodeOffset);
+
+  if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to locate bpmp-i2c device tree node\r\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
     goto ErrorExit;

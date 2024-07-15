@@ -2,7 +2,7 @@
 #
 #  Tegra P2U (PIPE to UPHY) Driver
 #
-#  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -30,6 +30,7 @@
   BaseLib
   UefiLib
   UefiBootServicesTableLib
+  DeviceTreeHelperLib
   DxeServicesTableLib
   DebugLib
   PrintLib

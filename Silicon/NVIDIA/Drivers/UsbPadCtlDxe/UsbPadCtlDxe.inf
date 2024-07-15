@@ -2,7 +2,7 @@
 #
 #  USB Pad Control Driver
 #
-#  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -37,7 +37,6 @@
   PrintLib
   UefiDriverEntryPoint
   IoLib
-  FdtLib
   DeviceDiscoveryDriverLib
   UsbFalconLib
   TegraPlatformInfoLib
@@ -49,10 +48,12 @@
   gNVIDIAPinMuxProtocolGuid
   gArmScmiClock2ProtocolGuid
   gNVIDIAUsbPadCtlProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194UsbPadDeviceGuid
   gNVIDIANonDiscoverableT234UsbPadDeviceGuid
+  gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid
 
 [Depex]
   gNVIDIARegulatorProtocolGuid

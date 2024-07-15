@@ -8,6 +8,7 @@
 
 **/
 
+#include "Uefi/UefiBaseType.h"
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
@@ -17,8 +18,8 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,*-pwm", &gNVIDIANonDiscoverablePwmDeviceGuid },
@@ -66,8 +67,9 @@ DeviceDiscoveryNotify (
   UINT32                NodeHandle;
   INT32                 FanOffset;
   CONST UINT32          *FanPwm;
-  INT32                 PwmLength;
+  UINT32                PwmLength;
   UINT32                FanPwmHandle;
+  CONST CHAR8           *CompatArray[2];
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
@@ -79,16 +81,23 @@ DeviceDiscoveryNotify (
         return EFI_UNSUPPORTED;
       }
 
-      NodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-
-      // Check that handle of PWM specified by pwm-fan node matches to only support fan pwm.
-      FanOffset = fdt_node_offset_by_compatible (DeviceTreeNode->DeviceTreeBase, 0, "pwm-fan");
-      if (FanOffset < 0) {
+      Status = DeviceTreeGetNodePHandle (DeviceTreeNode->NodeOffset, &NodeHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to get phandle for node\n", __FUNCTION__));
         return EFI_UNSUPPORTED;
       }
 
-      FanPwm = fdt_getprop (DeviceTreeNode->DeviceTreeBase, FanOffset, "pwms", &PwmLength);
-      if (FanPwm == NULL) {
+      FanOffset      = -1;
+      CompatArray[0] = "pwm-fan";
+      CompatArray[1] = NULL;
+      // Check that handle of PWM specified by pwm-fan node matches to only support fan pwm.
+      Status = DeviceTreeGetNextCompatibleNode (CompatArray, &FanOffset);
+      if (EFI_ERROR (Status)) {
+        return EFI_UNSUPPORTED;
+      }
+
+      Status = DeviceTreeGetNodeProperty (FanOffset, "pwms", (CONST VOID **)&FanPwm, &PwmLength);
+      if (EFI_ERROR (Status)) {
         return EFI_UNSUPPORTED;
       }
 

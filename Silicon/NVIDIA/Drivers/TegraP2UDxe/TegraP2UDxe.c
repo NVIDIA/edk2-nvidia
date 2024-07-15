@@ -2,7 +2,7 @@
 
   Tegra P2U (PIPE to UPHY) Driver
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Library/IoLib.h>
@@ -234,44 +235,31 @@ AddP2UEntries (
   IN TEGRAP2U_DXE_PRIVATE  *Private
   )
 {
-  INT32  NodeOffset = -1;
-  UINTN  ChipID;
+  EFI_STATUS   Status;
+  INT32        NodeOffset;
+  CONST CHAR8  *CompatArray[2];
 
   if (NULL == Private) {
     return EFI_INVALID_PARAMETER;
   }
 
-  ChipID = TegraGetChipID ();
+  NodeOffset     = -1;
+  CompatArray[0] = "nvidia,tegra*-p2u";
+  CompatArray[1] = NULL;
 
   do {
     TEGRAP2U_LIST_ENTRY  *ListEntry = NULL;
     INT32                AddressCells;
     INT32                PropertySize;
     CONST VOID           *RegProperty = NULL;
-    EFI_STATUS           Status;
 
     /*
      * Since all the P2U entries have the same compatibility string,
      * we attempt to find all of them and create a list.
      */
-    if (ChipID == T194_CHIP_ID) {
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DeviceTreeBase,
-                     NodeOffset,
-                     "nvidia,tegra194-p2u"
-                     );
-      if (NodeOffset <= 0) {
-        break;
-      }
-    } else if (ChipID == T234_CHIP_ID) {
-      NodeOffset = fdt_node_offset_by_compatible (
-                     Private->DeviceTreeBase,
-                     NodeOffset,
-                     "nvidia,tegra234-p2u"
-                     );
-      if (NodeOffset <= 0) {
-        break;
-      }
+    Status = DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      break;
     }
 
     ListEntry = AllocateZeroPool (sizeof (TEGRAP2U_LIST_ENTRY));

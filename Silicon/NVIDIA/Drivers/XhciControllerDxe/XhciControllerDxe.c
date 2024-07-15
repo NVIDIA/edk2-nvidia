@@ -17,6 +17,7 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -28,7 +29,6 @@
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/PowerGateNodeProtocol.h>
 #include "XhciControllerPrivate.h"
-#include <libfdt.h>
 
 /* Discover driver */
 
@@ -171,7 +171,6 @@ DeviceDiscoveryNotify (
   UINT8                            CapLength;
   UINT32                           StatusRegister;
   UINTN                            i;
-  INTN                             Offset;
   XHCICONTROLLER_DXE_PRIVATE       *Private;
   NON_DISCOVERABLE_DEVICE          *Device;
   BOOLEAN                          T234Platform;
@@ -213,41 +212,24 @@ DeviceDiscoveryNotify (
       Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
 
       /* Assign Platform Specific Parameters */
-      if (((Offset = fdt_node_offset_by_compatible (
-                       DeviceTreeNode->DeviceTreeBase,
-                       0,
-                       "nvidia,tegra186-xhci"
-                       )) > 0) ||
-          ((Offset = fdt_node_offset_by_compatible (
-                       DeviceTreeNode->DeviceTreeBase,
-                       0,
-                       "nvidia,tegra186-xusb"
-                       )) > 0))
+      if (!EFI_ERROR (
+             DeviceTreeCheckNodeSingleCompatibility (
+               "nvidia,tegra186-*",
+               DeviceTreeNode->NodeOffset
+               )
+             ))
       {
         Private->XusbSoc = &Tegra186Soc;
-      } else if (((Offset = fdt_node_offset_by_compatible (
-                              DeviceTreeNode->DeviceTreeBase,
-                              0,
-                              "nvidia,tegra194-xhci"
-                              )) > 0) ||
-                 ((Offset = fdt_node_offset_by_compatible (
-                              DeviceTreeNode->DeviceTreeBase,
-                              0,
-                              "nvidia,tegra194-xusb"
-                              )) > 0))
+      } else if (!EFI_ERROR (
+                    DeviceTreeCheckNodeSingleCompatibility (
+                      "nvidia,tegra194-*",
+                      DeviceTreeNode->NodeOffset
+                      )
+                    ))
       {
         Private->XusbSoc = &Tegra194Soc;
-      } else if (((Offset = fdt_node_offset_by_compatible (
-                              DeviceTreeNode->DeviceTreeBase,
-                              0,
-                              "nvidia,tegra234-xhci"
-                              )) > 0) ||
-                 ((Offset = fdt_node_offset_by_compatible (
-                              DeviceTreeNode->DeviceTreeBase,
-                              0,
-                              "nvidia,tegra234-xusb"
-                              )) > 0))
-      {
+      } else {
+        // Only other supported platform is Tegra234 other targets will use this by default
         Private->XusbSoc = &Tegra234Soc;
         T234Platform     = TRUE;
       }

@@ -22,13 +22,14 @@
 #include <Protocol/Regulator.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/PinMux.h>
+#include "Uefi/UefiBaseType.h"
 #include "UsbPadCtlPrivate.h"
-#include <libfdt.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid },
-  { "nvidia,tegra234-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid },
-  { NULL,                          NULL                                        }
+  { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid    },
+  { "nvidia,tegra234-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid    },
+  { "nvidia,tegra*-xusb-padctl",   &gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid },
+  { NULL,                          NULL                                           }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -73,6 +74,7 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS       BaseAddress;
   UINTN                      RegionSize;
   BOOLEAN                    T234Platform;
+  NON_DISCOVERABLE_DEVICE    *NonDiscoverableProtocol;
 
   Status         = EFI_SUCCESS;
   Private        = NULL;
@@ -142,12 +144,22 @@ DeviceDiscoveryNotify (
       }
 
       /* Assign Platform Specific Parameters */
-      if (fdt_node_offset_by_compatible (
-            DeviceTreeNode->DeviceTreeBase,
-            0,
-            "nvidia,tegra194-xusb-padctl"
-            ) > 0)
-      {
+      Status = gBS->HandleProtocol (
+                      ControllerHandle,
+                      &gNVIDIANonDiscoverableDeviceProtocolGuid,
+                      (VOID **)&NonDiscoverableProtocol
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Couldn't get gNVIDIANonDiscoverableDeviceProtocolGuid Handle: %r\n",
+          __FUNCTION__,
+          Status
+          ));
+        goto ErrorExit;
+      }
+
+      if (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT194UsbPadDeviceGuid)) {
         Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw194;
         Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw194;
         Private->mUsbPadCtlProtocol.InitDevHw   = NULL;
@@ -159,12 +171,12 @@ DeviceDiscoveryNotify (
         if (Status != EFI_SUCCESS) {
           return Status;
         }
-      } else if (fdt_node_offset_by_compatible (
-                   DeviceTreeNode->DeviceTreeBase,
-                   0,
-                   "nvidia,tegra234-xusb-padctl"
-                   ) > 0)
+      } else if ((CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) ||
+                 (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid)))
       {
+        // Both T234 and unknown USB Pad controllers are handled by this path.
+        // If new hardare strings are not compatible with the T234 path new logic
+        // will be needed.
         Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw234;
         Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw234;
         Private->mUsbPadCtlProtocol.InitDevHw   = InitUsbDevHw234;
@@ -177,6 +189,17 @@ DeviceDiscoveryNotify (
         if (Status != EFI_SUCCESS) {
           return Status;
         }
+      } else {
+        // This path is a catch all for updating the compatiblity mapping array
+        // Without updating the logic here. This should never be hit.
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Unexepected UsbPadCtl Device\n",
+          __FUNCTION__
+          ));
+        ASSERT (FALSE);
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
       }
 
       Status = gBS->LocateProtocol (
