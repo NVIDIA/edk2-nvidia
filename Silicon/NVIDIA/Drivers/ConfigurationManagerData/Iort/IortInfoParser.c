@@ -1492,6 +1492,10 @@ SetupIortNodeForPciRc (
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CPM;
   }
 
+  if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,canwbs-supported", NULL) != NULL) {
+    IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_CANWBS;
+  }
+
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "nvidia,dacs-supported", NULL) != NULL) {
     IortNode->MemoryAccessFlags |= EFI_ACPI_IORT_MEM_ACCESS_FLAGS_DACS;
   }
