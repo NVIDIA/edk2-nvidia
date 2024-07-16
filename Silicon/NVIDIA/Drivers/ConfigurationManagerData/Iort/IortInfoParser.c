@@ -1366,7 +1366,7 @@ SetupIortNodeForSmmuV3 (
   UpdateSmmuV3UidInfo (ParserHandle, IortNode);
 
   if (fdt_get_property (Private->DtbBase, PropNode->NodeOffset, "dma-coherent", NULL) != NULL) {
-    IortNode->Flags |= EFI_ACPI_IORT_MEM_ACCESS_PROP_CCA;
+    IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
   }
 
   Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "numa-node-id", &PropSize);
