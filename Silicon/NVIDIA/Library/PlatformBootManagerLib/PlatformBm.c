@@ -2202,7 +2202,7 @@ PrintBmcIpAddresses (
 
   // Get Static addresses
   for (Index = 0; Index < IpV6Status->StaticAddresses; Index++) {
-    GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+    GetLanConfigRequest.ChannelNumber.Uint8 = 1;
     GetLanConfigRequest.ParameterSelector   = IpmiIpv6StaticAddress;
     GetLanConfigRequest.SetSelector         = Index;
     GetLanConfigRequest.BlockSelector       = 0;
@@ -2235,7 +2235,7 @@ PrintBmcIpAddresses (
   }
 
   for (Index = 0; Index < IpV6Status->DynamicAddresses; Index++) {
-    GetLanConfigRequest.ChannelNumber.Uint8 = 0;
+    GetLanConfigRequest.ChannelNumber.Uint8 = 1;
     GetLanConfigRequest.ParameterSelector   = IpmiIpv6DhcpAddress;
     GetLanConfigRequest.SetSelector         = Index;
     GetLanConfigRequest.BlockSelector       = 0;
