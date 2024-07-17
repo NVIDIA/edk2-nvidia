@@ -1450,6 +1450,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/FanInfo/FanInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Gic/Gic.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Iort/Iort.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/PciInfoParser/PciInfoParser.inf
 
 !ifdef CONFIG_SOC_GRACE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ApmtParser/ApmtParser.inf

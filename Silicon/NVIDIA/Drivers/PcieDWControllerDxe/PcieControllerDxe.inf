@@ -67,6 +67,7 @@
   gNVIDIAConfigurationManagerDataObjectGuid
   gNVIDIAPowerGateNodeProtocolGuid
   gNVIDIAConfigurationManagerTokenProtocolGuid
+  gNVIDIAPciConfigurationDataProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableT194PcieDeviceGuid

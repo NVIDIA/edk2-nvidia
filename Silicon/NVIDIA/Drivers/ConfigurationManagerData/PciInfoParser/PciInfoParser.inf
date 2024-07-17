@@ -1,0 +1,42 @@
+## @file
+#  PciInfo
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = PciInfoParser
+  FILE_GUID      = 9c203b52-9e5a-479c-aa9f-362fe1a04cd2
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterPciInfoParser
+
+[Sources]
+  PciInfoParser.c
+  PciInfoParser.h
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AmlLib
+  ConfigurationManagerDataRepoLib
+  PlatformAslTablesLib
+  SortLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+
+[Guids]
+
+[Protocols]
+  gNVIDIAPciConfigurationDataProtocolGuid
