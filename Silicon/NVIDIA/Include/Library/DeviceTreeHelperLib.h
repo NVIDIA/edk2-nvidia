@@ -427,6 +427,24 @@ DeviceTreeGetNodePath (
   );
 
 /**
+  Returns the parent offset of the specified node
+
+  @param[in] NodeOffset
+  @param[out] ParentOffset
+
+  @retval EFI_SUCCESS           - Parent offset returned
+  @retval EFI_NOT_FOUND         - Node does not have a parent
+  @retval EFI_INVALID_PARAMETER - ParentOffset is NULL
+  @retval EFI_DEVICE_ERROR      - Other Errors
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetParentOffset (
+  IN  INT32  NodeOffset,
+  OUT INT32  *ParentOffset
+  );
+
+/**
   Returns the specified property data
 
   @param[in]      NodeOffset    - Node offset

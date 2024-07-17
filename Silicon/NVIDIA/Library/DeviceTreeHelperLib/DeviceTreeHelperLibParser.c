@@ -31,7 +31,6 @@
   @retval EFI_DEVICE_ERROR      - Other Errors
 
 **/
-STATIC
 EFI_STATUS
 EFIAPI
 DeviceTreeGetParent (

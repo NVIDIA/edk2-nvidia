@@ -17,7 +17,6 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
-#include <libfdt.h>
 
 #include <IndustryStandard/ArmPerformanceMonitoringUnitTable.h>
 
@@ -29,17 +28,13 @@ ApmtParser (
   )
 {
   EFI_STATUS                                             Status;
-  UINT32                                                 *DeviceTreeHandles;
-  UINT32                                                 NumberOfHandles;
-  UINT32                                                 Index;
   UINT32                                                 MaxNumberOfApmtEntries;
   UINT32                                                 NumberOfDeviceHandles;
-  VOID                                                   *DeviceTreeBase;
   INT32                                                  NodeOffset;
   UINT32                                                 DeviceIndex;
   UINT32                                                 DeviceHandle;
   INT32                                                  DeviceOffset;
-  INT32                                                  PropertyLength;
+  UINT32                                                 PropertyLength;
   CONST VOID                                             *Property;
   CONST UINT32                                           *DeviceHandleArray;
   EFI_ACPI_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_HEADER  *ApmtHeader;
@@ -53,35 +48,23 @@ ApmtParser (
   UINT32                                                 NumberOfInterrupts;
   CM_STD_OBJ_ACPI_TABLE_INFO                             AcpiTableHeader;
   UINT32                                                 pHandle;
+  CONST CHAR8                                            *CompatArray[2];
+  BOOLEAN                                                IsCacheDevice;
 
-  // Figure out how big to make the table, may return more then needed.
-  NumberOfHandles = 0;
-  Status          = GetMatchingEnabledDeviceTreeNodes (TH500_APMU_COMPAT, NULL, &NumberOfHandles);
-  if (Status != EFI_BUFFER_TOO_SMALL) {
-    return EFI_SUCCESS;
-  }
-
-  DeviceTreeHandles = AllocatePool (sizeof (UINT32) * NumberOfHandles);
-  if (DeviceTreeHandles == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate handles\r\n", __FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  Status = GetMatchingEnabledDeviceTreeNodes (TH500_APMU_COMPAT, DeviceTreeHandles, &NumberOfHandles);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get APMU handles\r\n", __FUNCTION__));
-    return Status;
-  }
+  CompatArray[0] = TH500_APMU_COMPAT;
+  CompatArray[1] = NULL;
 
   MaxNumberOfApmtEntries = 0;
-  for (Index = 0; Index < NumberOfHandles; Index++) {
-    Status = GetDeviceTreeNode (DeviceTreeHandles[Index], &DeviceTreeBase, &NodeOffset);
+  NodeOffset             = -1;
+
+  // Determine the number of apmu devices in the device tree
+  while (!EFI_ERROR (DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset))) {
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "devices", &Property, &PropertyLength);
     if (EFI_ERROR (Status)) {
-      ASSERT_EFI_ERROR (Status);
-      return Status;
+      // No devices under this node
+      continue;
     }
 
-    Property                = fdt_getprop (DeviceTreeBase, NodeOffset, "devices", &PropertyLength);
     MaxNumberOfApmtEntries += PropertyLength/sizeof (UINT32);
   }
 
@@ -108,50 +91,44 @@ ApmtParser (
   ApmtHeader->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
 
   // Populate entries
-  for (Index = 0; Index < NumberOfHandles; Index++) {
-    Status = GetDeviceTreeNode (DeviceTreeHandles[Index], &DeviceTreeBase, &NodeOffset);
+  NodeOffset = -1;
+  while (!EFI_ERROR (DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset))) {
+    Status = DeviceTreeGetParentOffset (NodeOffset, &ParentOffset);
     if (EFI_ERROR (Status)) {
-      ASSERT_EFI_ERROR (Status);
-      return Status;
-    }
-
-    ParentOffset = fdt_parent_offset (DeviceTreeBase, NodeOffset);
-    if (ParentOffset < 0) {
       DEBUG ((DEBUG_ERROR, "%a: No reg in parent of apmu node\r\n", __FUNCTION__));
       continue;
     }
 
-    Property = fdt_getprop (
-                 DeviceTreeBase,
-                 ParentOffset,
-                 "reg",
-                 NULL
-                 );
-    if (Property == NULL) {
+    // Get socket id
+    Status = DeviceTreeGetNodePropertyValue32 (ParentOffset, "reg", &Socket);
+
+    if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: No reg in parent of apmu node\r\n", __FUNCTION__));
       continue;
     }
 
-    Socket = SwapBytes32 (*(CONST UINT32 *)Property);
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "devices", &Property, &PropertyLength);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
 
-    Property              = fdt_getprop (DeviceTreeBase, NodeOffset, "devices", &PropertyLength);
     NumberOfDeviceHandles = PropertyLength/sizeof (UINT32);
     DeviceHandleArray     = (CONST UINT32 *)Property;
     for (DeviceIndex = 0; DeviceIndex < NumberOfDeviceHandles; DeviceIndex++) {
       DeviceHandle = SwapBytes32 (DeviceHandleArray[DeviceIndex]);
-      DeviceOffset = fdt_node_offset_by_phandle (DeviceTreeBase, DeviceHandle);
-      if (DeviceOffset < 0) {
+      Status       = DeviceTreeGetNodeByPHandle (DeviceHandle, &DeviceOffset);
+      if (EFI_ERROR (Status)) {
         continue;
       }
 
       NumberOfRegisters = 1;
-      Status            = GetDeviceTreeRegisters (DeviceTreeHandles[Index], &Register, &NumberOfRegisters);
+      Status            = DeviceTreeGetRegisters (NodeOffset, &Register, &NumberOfRegisters);
       if (EFI_ERROR (Status)) {
         continue;
       }
 
       NumberOfInterrupts = 1;
-      Status             = GetDeviceTreeInterrupts (DeviceTreeHandles[Index], &Interrupt, &NumberOfInterrupts);
+      Status             = DeviceTreeGetInterrupts (NodeOffset, &Interrupt, &NumberOfInterrupts);
       if (EFI_ERROR (Status)) {
         continue;
       }
@@ -166,48 +143,30 @@ ApmtParser (
       ApmtNodes[ApmtNodeIndex].OverflowInterruptFlags = EFI_ACPI_APMT_INTERRUPT_MODE_LEVEL_TRIGGERED;
       // ProcessorAffinity should be the UID of the Socket in the ProcHierarchyInfo
       ApmtNodes[ApmtNodeIndex].ProcessorAffinity = GEN_CONTAINER_UID (1, Socket, 0, 0);
-      ApmtNodes[ApmtNodeIndex].ImplementationId  = 0;
 
-      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "implementation_id", NULL);
-      if (Property != NULL) {
-        ApmtNodes[ApmtNodeIndex].ImplementationId = SwapBytes32 (*(CONST UINT32 *)Property);
+      Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "implementation_id", &ApmtNodes[ApmtNodeIndex].ImplementationId);
+      if (EFI_ERROR (Status)) {
+        ApmtNodes[ApmtNodeIndex].ImplementationId = 0;
       }
 
-      Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "device_type", NULL);
-      if (Property == NULL) {
-        // Correct DTB has "compatible" = "cache" for cache nodes
-        Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "compatible", NULL);
-        if ((Property != NULL) && (AsciiStrCmp (Property, "cache") == 0)) {
-          ApmtNodes[ApmtNodeIndex].NodeType            = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
-          ApmtNodes[ApmtNodeIndex].NodeInstancePrimary = 0;
-          Status                                       = DeviceTreeGetNodePHandle (DeviceOffset, &pHandle);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Cache pHandle for Socket %u Cache\n", __FUNCTION__, Status, Socket));
-            goto CleanupAndReturn;
-          }
-
-          Status = NvFindCacheIdByPhandle (ParserHandle, pHandle, FALSE, &ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CacheId for Socket %u Cache\n", __FUNCTION__, Status, Socket));
-            goto CleanupAndReturn;
-          }
-        } else {
-          continue;
-        }
-      }
-
-      if (AsciiStrCmp (Property, "pci") == 0) {
-        ApmtNodes[ApmtNodeIndex].NodeType = EFI_ACPI_APMT_NODE_TYPE_PCIE_ROOT_COMPLEX;
-
-        Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "linux,pci-domain", NULL);
-        if (Property == NULL) {
-          continue;
-        }
-
-        ApmtNodes[ApmtNodeIndex].NodeInstancePrimary   = SwapBytes32 (*(CONST UINT32 *)Property);
-        ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = 0;
-      } else if (AsciiStrCmp (Property, "cache") == 0) {
+      IsCacheDevice = FALSE;
+      Status        = DeviceTreeCheckNodeSingleCompatibility ("cache", DeviceOffset);
+      if (!EFI_ERROR (Status)) {
+        IsCacheDevice = TRUE;
+      } else {
         // Old DTB has "device_type" = "cache" for cache nodes
+        Status = DeviceTreeGetNodeProperty (DeviceOffset, "device_type", &Property, NULL);
+        if (EFI_ERROR (Status)) {
+          continue;
+        } else {
+          if (AsciiStrCmp (Property, "cache") == 0) {
+            IsCacheDevice = TRUE;
+          }
+        }
+      }
+
+      // Either IsCacheDevice is set or Property is the device_type string
+      if (IsCacheDevice) {
         ApmtNodes[ApmtNodeIndex].NodeType            = EFI_ACPI_APMT_NODE_TYPE_CPU_CACHE;
         ApmtNodes[ApmtNodeIndex].NodeInstancePrimary = 0;
         Status                                       = DeviceTreeGetNodePHandle (DeviceOffset, &pHandle);
@@ -221,21 +180,30 @@ ApmtParser (
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CacheId for Socket %u Cache\n", __FUNCTION__, Status, Socket));
           goto CleanupAndReturn;
         }
+      } else if (AsciiStrCmp (Property, "pci") == 0) {
+        ApmtNodes[ApmtNodeIndex].NodeType = EFI_ACPI_APMT_NODE_TYPE_PCIE_ROOT_COMPLEX;
+        Status                            = DeviceTreeGetNodePropertyValue64 (DeviceOffset, "linux,pci-domain", &ApmtNodes[ApmtNodeIndex].NodeInstancePrimary);
+        if (EFI_ERROR (Status)) {
+          continue;
+        }
+
+        ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = 0;
       } else if (AsciiStrCmp (Property, "acpi") == 0) {
         ApmtNodes[ApmtNodeIndex].NodeType = EFI_ACPI_APMT_NODE_TYPE_ACPI_DEVICE;
-        Property                          = fdt_getprop (DeviceTreeBase, DeviceOffset, "nvidia,hid", NULL);
-        if (Property == NULL) {
+        Status                            = DeviceTreeGetNodeProperty (DeviceOffset, "nvidia,hid", &Property, NULL);
+        if (EFI_ERROR (Status)) {
           continue;
         }
 
         CopyMem (&ApmtNodes[ApmtNodeIndex].NodeInstancePrimary, Property, sizeof (UINT64));
 
-        Property = fdt_getprop (DeviceTreeBase, DeviceOffset, "nvidia,uid", NULL);
-        if (Property == NULL) {
+        Status = DeviceTreeGetNodePropertyValue32 (DeviceOffset, "nvidia,uid", &ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary);
+        if (EFI_ERROR (Status)) {
           continue;
         }
-
-        ApmtNodes[ApmtNodeIndex].NodeInstanceSecondary = SwapBytes32 (*(CONST UINT32 *)Property);
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Unknown device type %a\n", __FUNCTION__, (CONST CHAR8 *)Property));
+        continue;
       }
 
       ApmtNodeIndex++;

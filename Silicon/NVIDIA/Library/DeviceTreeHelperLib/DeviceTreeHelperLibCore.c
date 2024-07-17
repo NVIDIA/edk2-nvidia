@@ -770,6 +770,39 @@ Exit:
 }
 
 /**
+  Returns the parent offset of the specified node
+
+  @param[in] NodeOffset
+  @param[out] ParentOffset
+
+  @retval EFI_SUCCESS           - Parent offset returned
+  @retval EFI_NOT_FOUND         - Node does not have a parent
+  @retval EFI_INVALID_PARAMETER - ParentOffset is NULL
+  @retval EFI_DEVICE_ERROR      - Other Errors
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetParentOffset (
+  IN  INT32  NodeOffset,
+  OUT INT32  *ParentOffset
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+
+  if (ParentOffset == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  return DeviceTreeGetParent (DeviceTree, NodeOffset, ParentOffset);
+}
+
+/**
   Returns the specified property data
 
   @param[in]      NodeOffset    - Node offset

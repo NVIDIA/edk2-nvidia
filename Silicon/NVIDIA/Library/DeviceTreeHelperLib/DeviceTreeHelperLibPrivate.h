@@ -69,4 +69,25 @@ DeviceTreeGetCacheBlockSizeBytesFromHW (
   VOID
   );
 
+/**
+  Returns parent node offset of the device
+
+  @param[in]  DeviceTree   - Devicetree pointer
+  @param[in]  NodeOffset   - Offset of the node
+  @param[out] ParentOffset - Node Offset of the parent.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - DeviceTree pointer is NULL
+  @retval EFI_INVALID_PARAMETER - ParentOffset pointer is NULL
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetParent (
+  CONST VOID  *DeviceTree,
+  INT32       NodeOffset,
+  INT32       *ParentOffset
+  );
+
 #endif //DEVICE_TREE_HELPER_LIB_PRIVATE_H__

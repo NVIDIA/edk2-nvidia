@@ -28,6 +28,7 @@
 
 [LibraryClasses]
   ConfigurationManagerDataRepoLib
+  DeviceTreeHelperLib
   PcdLib
 
 [Pcd]
