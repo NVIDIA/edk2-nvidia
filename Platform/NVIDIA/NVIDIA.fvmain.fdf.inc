@@ -339,6 +339,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
   INF MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
   INF ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  INF Silicon/NVIDIA/Drivers/PciGenericControllerDxe/PcieGenericControllerDxe.inf
 !endif
 !ifdef CONFIG_DESIGNWARE_PCIE
   INF Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf

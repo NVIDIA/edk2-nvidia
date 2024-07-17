@@ -50,4 +50,6 @@
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   AND
   gNVIDIAPcieControllerInitCompleteProtocolGuid
+  AND
+  gNVIDIAPcieGenericControllerInitCompleteProtocolGuid
 

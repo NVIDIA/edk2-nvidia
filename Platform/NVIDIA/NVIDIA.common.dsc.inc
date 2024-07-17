@@ -1732,6 +1732,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf
   MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
   ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf
+  Silicon/NVIDIA/Drivers/PciGenericControllerDxe/PcieGenericControllerDxe.inf
 !endif
 !ifdef CONFIG_DESIGNWARE_PCIE
   Silicon/NVIDIA/Drivers/TegraP2UDxe/TegraP2UDxe.inf

@@ -1,0 +1,67 @@
+#/** @file
+#
+#  PCIe Generic Controller Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PcieGenericControllerDxe
+  FILE_GUID                      = cfdfaf18-841b-46e1-8089-63092fa41b47
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  PcieGenericControllerDxe.c
+  PcieGenericControllerPrivate.h
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  DebugLib
+  DeviceTreeHelperLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  TegraPlatformInfoLib
+  SortLib
+  TimerLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  MemoryAllocationLib
+  DxeServicesTableLib
+  DevicePathLib
+
+[Pcd]
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIAPcieGenericControllerInitCompleteProtocolGuid
+  gNVIDIAConfigurationManagerDataObjectGuid
+  gEfiPciIoProtocolGuid
+  gNVIDIAConfigurationManagerTokenProtocolGuid
+  gNVIDIAPciConfigurationDataProtocolGuid
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gNVIDIANonDiscoverableGenericPcieDeviceGuid
+
+[Depex]
+  gNVIDIAConfigurationManagerTokenProtocolGuid
