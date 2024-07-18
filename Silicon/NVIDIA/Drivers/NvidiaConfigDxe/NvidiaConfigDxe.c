@@ -2536,6 +2536,12 @@ GetDefaultValue (
     case KEY_MPAM44_MIN_BW:
       Data = mMb1DefaultConfig.Data.Mb1Data.MpamConfig[4].MinBw;
       break;
+    case KEY_SERVER_POWER_CONTROL:
+      Data = POWER_CTL_INPUT_PWR_CAPPING_50MS;
+      break;
+    case KEY_ENABLE_ACPI_TIMER:
+      Data = 0;
+      break;
     default:
       //
       // UPHY
@@ -2712,6 +2718,30 @@ GetDefaultValue (
         }
 
         Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].SupportsPRSNT;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ADVERTISE_ACS) && (QuestionId <= KEY_SOCKET3_PCIE9_ADVERTISE_ACS)) {
+        //
+        // PCIE ADVERTISE_ACS
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_ADVERTISE_ACS) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_ADVERTISE_ACS) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].AdvertiseACS;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_OS_NATIVE_AER) && (QuestionId <= KEY_SOCKET3_PCIE9_OS_NATIVE_AER)) {
+        //
+        // PCIE OS_NATIVE_AER
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_OS_NATIVE_AER) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_OS_NATIVE_AER) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].OsNativeAER;
       } else {
         //
         // Unsupported question ID.
