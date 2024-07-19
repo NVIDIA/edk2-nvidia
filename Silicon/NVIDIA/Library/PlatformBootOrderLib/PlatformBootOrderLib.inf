@@ -1,6 +1,6 @@
 #/** @file
 #
-#    SPDX-FileCopyrightText: Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -36,6 +36,7 @@
   FwVariableLib
   PlatformResourceLib
   StatusRegLib
+  HobLib
 
 [Protocols]
   gEfiPciIoProtocolGuid          ## CONSUMES
@@ -48,3 +49,4 @@
   gNVIDIATokenSpaceGuid
   gNVIDIABmBootOptionGuid
   gEfiEventReadyToBootGuid
+  gNVIDIAPlatformResourceDataGuid

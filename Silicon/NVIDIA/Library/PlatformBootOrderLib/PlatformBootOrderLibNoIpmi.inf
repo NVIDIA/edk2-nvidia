@@ -34,6 +34,7 @@
   FwVariableLib
   PlatformResourceLib
   StatusRegLib
+  HobLib
 
 [Protocols]
   gEfiPciIoProtocolGuid          ## CONSUMES
@@ -43,3 +44,4 @@
   gNVIDIATokenSpaceGuid
   gNVIDIABmBootOptionGuid
   gEfiEventReadyToBootGuid
+  gNVIDIAPlatformResourceDataGuid

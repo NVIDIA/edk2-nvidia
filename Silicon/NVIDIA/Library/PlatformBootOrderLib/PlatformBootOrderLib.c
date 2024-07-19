@@ -7,9 +7,12 @@
 *
 **/
 
+#include <PiPei.h>
 #include <Uefi.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiLib.h>
@@ -302,16 +305,18 @@ GetBootClassOfOption (
   IN UINTN                         Count
   )
 {
-  UINTN                       OptionalDataSize;
-  UINTN                       BootPriorityIndex;
-  EFI_DEVICE_PATH_PROTOCOL    *DevicePathNode;
-  UINT8                       ExtraSpecifier;
-  EFI_PCI_IO_PROTOCOL         *PciIo;
-  UINTN                       Segment;
-  UINTN                       Bus;
-  UINTN                       Device;
-  UINTN                       Function;
-  NVIDIA_BOOT_ORDER_PRIORITY  *Result;
+  UINTN                         OptionalDataSize;
+  UINTN                         BootPriorityIndex;
+  EFI_DEVICE_PATH_PROTOCOL      *DevicePathNode;
+  UINT8                         ExtraSpecifier;
+  EFI_PCI_IO_PROTOCOL           *PciIo;
+  UINTN                         Segment;
+  UINTN                         Bus;
+  UINTN                         Device;
+  UINTN                         Function;
+  NVIDIA_BOOT_ORDER_PRIORITY    *Result;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Result   = NULL;
   PciIo    = NULL;
@@ -328,6 +333,8 @@ GetBootClassOfOption (
     }
   }
 
+  ExtraSpecifier = MAX_UINT8;
+
   OptionalDataSize = 0;
   if (Option->OptionalData != NULL) {
     OptionalDataSize = StrSize ((CONST CHAR16 *)Option->OptionalData);
@@ -340,31 +347,42 @@ GetBootClassOfOption (
         &gNVIDIABmBootOptionGuid
         ))
   {
-    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
-      if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-        Result = &Table[BootPriorityIndex];
-        goto ReturnResult;
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+    {
+      PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get PlatformResourceInfo\n", __FUNCTION__));
+      goto ReturnResult;
+    }
+
+    if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+      for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+        if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
+          Result = &Table[BootPriorityIndex];
+          goto ReturnResult;
+        }
       }
     }
-  }
+  } else {
+    DevicePathNode = Option->FilePath;
+    while (!IsDevicePathEndType (DevicePathNode)) {
+      if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+          (DevicePathSubType (DevicePathNode) == MSG_URI_DP))
+      {
+        ExtraSpecifier = NVIDIA_BOOT_TYPE_HTTP;
+        break;
+      } else if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
+                 (DevicePathSubType (DevicePathNode) == MSG_USB_DP) &&
+                 (StrStr (Option->Description, L"Virtual")))
+      {
+        ExtraSpecifier = NVIDIA_BOOT_TYPE_VIRTUAL;
+        break;
+      }
 
-  ExtraSpecifier = MAX_UINT8;
-  DevicePathNode = Option->FilePath;
-  while (!IsDevicePathEndType (DevicePathNode)) {
-    if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
-        (DevicePathSubType (DevicePathNode) == MSG_URI_DP))
-    {
-      ExtraSpecifier = NVIDIA_BOOT_TYPE_HTTP;
-      break;
-    } else if ((DevicePathType (DevicePathNode) == MESSAGING_DEVICE_PATH) &&
-               (DevicePathSubType (DevicePathNode) == MSG_USB_DP) &&
-               (StrStr (Option->Description, L"Virtual")))
-    {
-      ExtraSpecifier = NVIDIA_BOOT_TYPE_VIRTUAL;
-      break;
+      DevicePathNode = NextDevicePathNode (DevicePathNode);
     }
-
-    DevicePathNode = NextDevicePathNode (DevicePathNode);
   }
 
   PciIo = GetBootOptPciIoProtocol (Option);
