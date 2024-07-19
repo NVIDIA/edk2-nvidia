@@ -33,6 +33,7 @@
   BaseLib
   UefiLib
   UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   DebugLib
   DeviceTreeHelperLib
   PrintLib
@@ -73,6 +74,7 @@
   gNVIDIANonDiscoverableTH500PcieDeviceGuid
   gEfiEventExitBootServicesGuid
   gNVIDIATH500MB1DataGuid
+  gNVIDIAPublicVariableGuid
 
 [Depex]
   gNVIDIAAllRegulatorsPresentProtocolGuid

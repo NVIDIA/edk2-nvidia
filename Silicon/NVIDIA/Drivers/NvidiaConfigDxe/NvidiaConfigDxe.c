@@ -238,6 +238,12 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_X4),
   STRING_TOKEN (STR_PCIE_X2),
   STRING_TOKEN (STR_PCIE_X1),
+  STRING_TOKEN (STR_PCIE_128B),
+  STRING_TOKEN (STR_PCIE_256B),
+  STRING_TOKEN (STR_PCIE_512B),
+  STRING_TOKEN (STR_PCIE_1024B),
+  STRING_TOKEN (STR_PCIE_2048B),
+  STRING_TOKEN (STR_PCIE_4096B),
   STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_SOCKET0_PCIE0_TITLE),
   STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_SOCKET0_PCIE1_TITLE),
   STRING_TOKEN (STR_PCIE_ENABLE_ASPM_L1_SOCKET0_PCIE2_TITLE),
@@ -808,6 +814,47 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_ADVERTISE_ACS_HELP),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET0_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET1_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET2_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_HELP),
   STRING_TOKEN (STR_MPAM_CONFIG_FORM_TITLE),
   STRING_TOKEN (STR_MPAM_CONFIG_FORM_HELP),
   STRING_TOKEN (STR_MPAM40_CONFIG_FORM_TITLE),
@@ -929,13 +976,14 @@ EFI_HII_CONFIG_ACCESS_PROTOCOL         mConfigAccess;
 CHAR16                                 mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
 NVIDIA_CONFIG_HII_CONTROL              mHiiControlSettings      = { 0 };
 EFI_HANDLE                             mDriverHandle;
-TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config              = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mMb1DefaultConfig       = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config   = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config      = { 0 };
-STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2        = NULL;
-STATIC VOID                            *mMmCommunicationBuffer = NULL;
-UINT64                                 mOpRomDisMask           = 0;
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config                   = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1DefaultConfig            = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config        = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config           = { 0 };
+STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2             = NULL;
+STATIC VOID                            *mMmCommunicationBuffer      = NULL;
+UINT64                                 mOpRomDisMask                = 0;
+UINT32                                 mMaxPayloadSize[MAX_SOCKETS] = { 0 };
 EFI_HII_HANDLE                         mHiiHandle;
 UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_DISABLED;
 
@@ -1693,6 +1741,10 @@ SyncHiiSettings (
       mHiiControlSettings.MaskCompleterAbort_3[Index]     = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaskCompleterAbort;
       mHiiControlSettings.SupportsPRSNT_3[Index]          = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsPRSNT;
       mHiiControlSettings.AdvertiseACS_3[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].AdvertiseACS;
+      mHiiControlSettings.MaxPayloadSize0[Index]          = (mMaxPayloadSize[0] >> (Index * 3)) & (7ULL);
+      mHiiControlSettings.MaxPayloadSize1[Index]          = (mMaxPayloadSize[1] >> (Index * 3)) & (7ULL);
+      mHiiControlSettings.MaxPayloadSize2[Index]          = (mMaxPayloadSize[2] >> (Index * 3)) & (7ULL);
+      mHiiControlSettings.MaxPayloadSize3[Index]          = (mMaxPayloadSize[3] >> (Index * 3)) & (7ULL);
       mHiiControlSettings.OsNativeAER_3[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER;
     }
 
@@ -1745,6 +1797,7 @@ SyncHiiSettings (
     }
 
     mOpRomDisMask = 0ULL;
+    ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
     for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth               = mHiiControlSettings.MaxWidth0[Index];
@@ -1818,7 +1871,12 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaskCompleterAbort     = mHiiControlSettings.MaskCompleterAbort_3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].SupportsPRSNT          = mHiiControlSettings.SupportsPRSNT_3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].AdvertiseACS           = mHiiControlSettings.AdvertiseACS_3[Index];
-      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_3[Index];
+      mMaxPayloadSize[0]                                                 |= (mHiiControlSettings.MaxPayloadSize0[Index] & 7ULL) << (Index * 3);
+      mMaxPayloadSize[1]                                                 |= (mHiiControlSettings.MaxPayloadSize1[Index] & 7ULL) << (Index * 3);
+      mMaxPayloadSize[2]                                                 |= (mHiiControlSettings.MaxPayloadSize2[Index] & 7ULL) << (Index * 3);
+      mMaxPayloadSize[3]                                                 |= (mHiiControlSettings.MaxPayloadSize3[Index] & 7ULL) << (Index * 3);
+
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER = mHiiControlSettings.OsNativeAER_3[Index];
     }
 
     // MPAM non architected part ids 40-44 per socket
@@ -1989,6 +2047,19 @@ InitializeSettings (
                       );
   if (EFI_ERROR (Status)) {
     mOpRomDisMask = 0;
+  }
+
+  BufferSize = sizeof (mMaxPayloadSize);
+
+  Status = gRT->GetVariable (
+                  L"PcieMaxPayloadSize",
+                  &gNVIDIAPublicVariableGuid,
+                  NULL,
+                  &BufferSize,
+                  &mMaxPayloadSize
+                  );
+  if (EFI_ERROR (Status)) {
+    ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
   }
 
   mHiiControlSettings.L4TSupported         = PcdGetBool (PcdL4TConfigurationSupport);
@@ -2381,6 +2452,17 @@ ConfigRouteConfig (
     return Status;
   }
 
+  Status = gRT->SetVariable (
+                  L"PcieMaxPayloadSize",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  sizeof (mMaxPayloadSize),
+                  &mMaxPayloadSize
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   return Status;
 }
 
@@ -2718,6 +2800,11 @@ GetDefaultValue (
         }
 
         Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].SupportsPRSNT;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_MAX_PAYLOAD_SIZE) && (QuestionId <= KEY_SOCKET3_PCIE9_MAX_PAYLOAD_SIZE)) {
+        //
+        // PCIE MAX_PAYLOAD_SIZE
+        //
+        Data = 0x0;
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ADVERTISE_ACS) && (QuestionId <= KEY_SOCKET3_PCIE9_ADVERTISE_ACS)) {
         //
         // PCIE ADVERTISE_ACS

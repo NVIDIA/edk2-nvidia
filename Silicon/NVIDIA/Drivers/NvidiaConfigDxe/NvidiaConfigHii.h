@@ -799,6 +799,47 @@
 #define KEY_SOCKET3_PCIE8_ADVERTISE_ACS  0x2127
 #define KEY_SOCKET3_PCIE9_ADVERTISE_ACS  0x2128
 
+#define KEY_SOCKET0_PCIE0_MAX_PAYLOAD_SIZE  0x2129
+#define KEY_SOCKET0_PCIE1_MAX_PAYLOAD_SIZE  0x212A
+#define KEY_SOCKET0_PCIE2_MAX_PAYLOAD_SIZE  0x212B
+#define KEY_SOCKET0_PCIE3_MAX_PAYLOAD_SIZE  0x212C
+#define KEY_SOCKET0_PCIE4_MAX_PAYLOAD_SIZE  0x212D
+#define KEY_SOCKET0_PCIE5_MAX_PAYLOAD_SIZE  0x212E
+#define KEY_SOCKET0_PCIE6_MAX_PAYLOAD_SIZE  0x212F
+#define KEY_SOCKET0_PCIE7_MAX_PAYLOAD_SIZE  0x2130
+#define KEY_SOCKET0_PCIE8_MAX_PAYLOAD_SIZE  0x2131
+#define KEY_SOCKET0_PCIE9_MAX_PAYLOAD_SIZE  0x2132
+#define KEY_SOCKET1_PCIE0_MAX_PAYLOAD_SIZE  0x2133
+#define KEY_SOCKET1_PCIE1_MAX_PAYLOAD_SIZE  0x2134
+#define KEY_SOCKET1_PCIE2_MAX_PAYLOAD_SIZE  0x2135
+#define KEY_SOCKET1_PCIE3_MAX_PAYLOAD_SIZE  0x2136
+#define KEY_SOCKET1_PCIE4_MAX_PAYLOAD_SIZE  0x2137
+#define KEY_SOCKET1_PCIE5_MAX_PAYLOAD_SIZE  0x2138
+#define KEY_SOCKET1_PCIE6_MAX_PAYLOAD_SIZE  0x2139
+#define KEY_SOCKET1_PCIE7_MAX_PAYLOAD_SIZE  0x213A
+#define KEY_SOCKET1_PCIE8_MAX_PAYLOAD_SIZE  0x213B
+#define KEY_SOCKET1_PCIE9_MAX_PAYLOAD_SIZE  0x213C
+#define KEY_SOCKET2_PCIE0_MAX_PAYLOAD_SIZE  0x213D
+#define KEY_SOCKET2_PCIE1_MAX_PAYLOAD_SIZE  0x213E
+#define KEY_SOCKET2_PCIE2_MAX_PAYLOAD_SIZE  0x213F
+#define KEY_SOCKET2_PCIE3_MAX_PAYLOAD_SIZE  0x2140
+#define KEY_SOCKET2_PCIE4_MAX_PAYLOAD_SIZE  0x2141
+#define KEY_SOCKET2_PCIE5_MAX_PAYLOAD_SIZE  0x2142
+#define KEY_SOCKET2_PCIE6_MAX_PAYLOAD_SIZE  0x2143
+#define KEY_SOCKET2_PCIE7_MAX_PAYLOAD_SIZE  0x2144
+#define KEY_SOCKET2_PCIE8_MAX_PAYLOAD_SIZE  0x2145
+#define KEY_SOCKET2_PCIE9_MAX_PAYLOAD_SIZE  0x2146
+#define KEY_SOCKET3_PCIE0_MAX_PAYLOAD_SIZE  0x2147
+#define KEY_SOCKET3_PCIE1_MAX_PAYLOAD_SIZE  0x2148
+#define KEY_SOCKET3_PCIE2_MAX_PAYLOAD_SIZE  0x2149
+#define KEY_SOCKET3_PCIE3_MAX_PAYLOAD_SIZE  0x214A
+#define KEY_SOCKET3_PCIE4_MAX_PAYLOAD_SIZE  0x214B
+#define KEY_SOCKET3_PCIE5_MAX_PAYLOAD_SIZE  0x214C
+#define KEY_SOCKET3_PCIE6_MAX_PAYLOAD_SIZE  0x214D
+#define KEY_SOCKET3_PCIE7_MAX_PAYLOAD_SIZE  0x214E
+#define KEY_SOCKET3_PCIE8_MAX_PAYLOAD_SIZE  0x214F
+#define KEY_SOCKET3_PCIE9_MAX_PAYLOAD_SIZE  0x2150
+
 #define KEY_SOCKET0_PCIE0_OS_NATIVE_AER  0x2201
 #define KEY_SOCKET0_PCIE1_OS_NATIVE_AER  0x2202
 #define KEY_SOCKET0_PCIE2_OS_NATIVE_AER  0x2203
@@ -980,6 +1021,10 @@ typedef struct {
   UINT16     SlotNum1[MAX_PCIE];
   UINT16     SlotNum2[MAX_PCIE];
   UINT16     SlotNum3[MAX_PCIE];
+  UINT8      MaxPayloadSize0[MAX_PCIE];
+  UINT8      MaxPayloadSize1[MAX_PCIE];
+  UINT8      MaxPayloadSize2[MAX_PCIE];
+  UINT8      MaxPayloadSize3[MAX_PCIE];
   BOOLEAN    EnableAspmL1_0[MAX_PCIE];
   BOOLEAN    EnableAspmL1_1[MAX_PCIE];
   BOOLEAN    EnableAspmL1_2[MAX_PCIE];
@@ -1317,6 +1362,14 @@ typedef struct {
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
   endif;                                                                                          \
+  oneof varid = NVIDIA_CONFIG_HII_CONTROL.MaxPayloadSize##socket[pcie],                           \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_MAX_PAYLOAD_SIZE,                       \
+           prompt = STRING_TOKEN(STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET##socket##_PCIE##pcie##_TITLE),  \
+           help = STRING_TOKEN(STR_PCIE_MAX_PAYLOAD_SIZE_HELP),                                   \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           option text = STRING_TOKEN(STR_PCIE_128B), value = 0, flags = 0;                       \
+           option text = STRING_TOKEN(STR_PCIE_256B), value = 1, flags = 0;                       \
+           endoneof;                                                                              \
   endif;                                                                                          \
   endif;                                                                                          \
   endform;

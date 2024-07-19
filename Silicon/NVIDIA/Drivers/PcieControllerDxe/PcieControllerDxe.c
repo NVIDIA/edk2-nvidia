@@ -31,6 +31,7 @@
 #include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
@@ -1442,6 +1443,345 @@ PcieEnableECRC (
   return EFI_SUCCESS;
 }
 
+/**
+  Get next PCI IO protocol
+
+  @param  PciIo               The PCI IO protocol instance.
+  @param  HandleCount         Handle Count of PCI IO protocol
+  @param  HandleBuffer        Handle Buffer of PCI IO protocol
+
+  @retval                     Next PciIo protocol. If NULL, means the input
+                              pciio protocol is the last one within handle buffer
+
+**/
+STATIC
+EFI_PCI_IO_PROTOCOL *
+GetNextPciIoInstance (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINTN                HandleCount,
+  IN EFI_HANDLE           *HandleBuffer
+  )
+{
+  EFI_STATUS           Status;
+  UINTN                Index;
+  EFI_PCI_IO_PROTOCOL  *TempPciIo;
+
+  if ((HandleBuffer == NULL) || (HandleCount == 0)) {
+    return NULL;
+  }
+
+  TempPciIo = NULL;
+
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (
+                    HandleBuffer[Index],
+                    &gEfiPciIoProtocolGuid,
+                    (VOID **)&TempPciIo
+                    );
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    //
+    // Matching the instance.
+    //
+    if (TempPciIo == PciIo) {
+      //
+      // moving to the next instance.
+      //
+      Index++;
+      break;
+    }
+  }
+
+  //
+  // Get the next valid PciIo protocol.
+  //
+  if (TempPciIo != NULL) {
+    for (TempPciIo = NULL; Index < HandleCount; Index++) {
+      Status = gBS->HandleProtocol (
+                      HandleBuffer[Index],
+                      &gEfiPciIoProtocolGuid,
+                      (VOID **)&TempPciIo
+                      );
+      if (!EFI_ERROR (Status)) {
+        break;
+      }
+    }
+  }
+
+  return TempPciIo;
+}
+
+/**
+  Checks the max payload size supported for the Root Port and tree below
+  given root port supports
+
+  @param  PciIo               The PCI IO protocol instance.
+  @param  RpSegment           Root port segment
+  @param  HandleCount         Handle Count of PCI IO protocol
+  @param  HandleBuffer        Handle Buffer of PCI IO protocol
+
+  @retval UINT32              PCIE max payload size definition.
+
+**/
+UINT32
+RecursiveMaxPayloadCapabilityCheck (
+  EFI_PCI_IO_PROTOCOL  *PciIo,
+  UINTN                RpSegment,
+  UINTN                HandleCount,
+  EFI_HANDLE           *HandleBuffer
+  )
+{
+  UINT32                          MaxPayloadSizeSupport;
+  UINT32                          SubMaxPayloadSizeSupport;
+  EFI_PCI_IO_PROTOCOL             *NextPciIo;
+  EFI_STATUS                      Status;
+  UINTN                           Segment, Bus, Device, Function;
+  PCI_REG_PCIE_DEVICE_CAPABILITY  DeviceCapability;
+  UINT32                          PciExpCapOffset, Offset;
+
+  MaxPayloadSizeSupport    = 0xFF;
+  SubMaxPayloadSizeSupport = 0xFF;
+  NextPciIo                = NULL;
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (PciExpCapOffset != 0) {
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint32,
+                          Offset,
+                          1,
+                          &DeviceCapability.Uint32
+                          );
+    if (!EFI_ERROR (Status)) {
+      MaxPayloadSizeSupport = DeviceCapability.Bits.MaxPayloadSize;
+
+      NextPciIo = GetNextPciIoInstance (PciIo, HandleCount, HandleBuffer);
+      if (NextPciIo != NULL) {
+        Status = NextPciIo->GetLocation (NextPciIo, &Segment, &Bus, &Device, &Function);
+        if (!EFI_ERROR (Status) && (Segment == RpSegment)) {
+          SubMaxPayloadSizeSupport = RecursiveMaxPayloadCapabilityCheck (
+                                       NextPciIo,
+                                       RpSegment,
+                                       HandleCount,
+                                       HandleBuffer
+                                       );
+          if (MaxPayloadSizeSupport > SubMaxPayloadSizeSupport) {
+            MaxPayloadSizeSupport = SubMaxPayloadSizeSupport;
+          }
+        }
+      }
+    }
+  }
+
+  return MaxPayloadSizeSupport;
+}
+
+/**
+  Set max payload size for all the downstream devices.
+
+  @param  PciIo               The PCI IO protocol instance.
+  @param  RpSegment           Root port segment
+  @param  MaxPayloadSize      Max payload size
+  @param  HandleCount         Handle Count of PCI IO protocol
+  @param  HandleBuffer        Handle Buffer of PCI IO protocol
+
+  @retval EFI_STATUS          Returns EFI_SUCCESS if 10Bit tag requester
+                              enabled successfully.
+**/
+EFI_STATUS
+RecursiveMaxPayloadSet (
+  EFI_PCI_IO_PROTOCOL  *PciIo,
+  UINTN                RpSegment,
+  UINT32               MaxPayloadSize,
+  UINTN                HandleCount,
+  EFI_HANDLE           *HandleBuffer
+  )
+{
+  EFI_PCI_IO_PROTOCOL          *NextPciIo;
+  EFI_STATUS                   Status;
+  UINTN                        Segment, Bus, Device, Function;
+  PCI_REG_PCIE_DEVICE_CONTROL  DeviceControl;
+  UINT32                       PciExpCapOffset, Offset;
+
+  NextPciIo = NULL;
+  Status    = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (PciExpCapOffset != 0) {
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint16,
+                          Offset,
+                          1,
+                          &DeviceControl.Uint16
+                          );
+    if (!EFI_ERROR (Status)) {
+      DeviceControl.Bits.MaxPayloadSize = MaxPayloadSize;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceControl.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Device [%04x:%02x:%02x.%x] : failed to set max payload size.\n",
+          Segment,
+          Bus,
+          Device,
+          Function
+          ));
+        return Status;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : max payload size : %u.\n",
+        Segment,
+        Bus,
+        Device,
+        Function,
+        MaxPayloadSize
+        ));
+    }
+  }
+
+  NextPciIo = GetNextPciIoInstance (PciIo, HandleCount, HandleBuffer);
+  if (NextPciIo != NULL) {
+    Status = NextPciIo->GetLocation (NextPciIo, &Segment, &Bus, &Device, &Function);
+    if (!EFI_ERROR (Status) && (Segment == RpSegment)) {
+      RecursiveMaxPayloadSet (
+        NextPciIo,
+        RpSegment,
+        MaxPayloadSize,
+        HandleCount,
+        HandleBuffer
+        );
+    }
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+PcieSetMaxPayloadSize (
+  EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Segment, Bus, Device, Function;
+  UINT32      MaxPayloadSizeSupport;
+  UINTN       HandleCount;
+  EFI_HANDLE  *HandleBuffer;
+  UINT32      Socket, Ctrl;
+  UINT32      *MaxPayloadSize;
+  UINTN       BufferSize;
+
+  HandleCount    = 0;
+  HandleBuffer   = NULL;
+  MaxPayloadSize = NULL;
+  Status         = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+  //
+  // Run on root port only
+  //
+  if (Bus != 0) {
+    return EFI_SUCCESS;
+  }
+
+  BufferSize = 0;
+  Status     = gRT->GetVariable (
+                      L"PcieMaxPayloadSize",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      NULL
+                      );
+
+  MaxPayloadSize = (UINT32 *)AllocateZeroPool (BufferSize);
+  if (MaxPayloadSize == NULL) {
+    goto Done;
+  }
+
+  Status = gRT->GetVariable (
+                  L"PcieMaxPayloadSize",
+                  &gNVIDIAPublicVariableGuid,
+                  NULL,
+                  &BufferSize,
+                  MaxPayloadSize
+                  );
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Device [%04x:%02x:%02x.%x] : Skipping max payload size setting update\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    goto Done;
+  }
+
+  Socket = (Segment >> 4) & 0xF;
+  Ctrl   = (Segment) & 0xF;
+  if (Socket < PcdGet32 (PcdTegraMaxSockets)) {
+    Status = gBS->LocateHandleBuffer (
+                    ByProtocol,
+                    &gEfiPciIoProtocolGuid,
+                    NULL,
+                    &HandleCount,
+                    &HandleBuffer
+                    );
+    if (EFI_ERROR (Status)) {
+      goto Done;
+    }
+
+    //
+    // Check max payload size supported setting of the devices under the segment.
+    //
+    MaxPayloadSizeSupport = RecursiveMaxPayloadCapabilityCheck (
+                              PciIo,
+                              Segment,
+                              HandleCount,
+                              HandleBuffer
+                              );
+
+    if (((MaxPayloadSize[Socket] >> (Ctrl * 3)) & 7ULL) <= MaxPayloadSizeSupport) {
+      RecursiveMaxPayloadSet (
+        PciIo,
+        Segment,
+        ((MaxPayloadSize[Socket] >> (Ctrl * 3)) & 7ULL),
+        HandleCount,
+        HandleBuffer
+        );
+    }
+  }
+
+Done:
+
+  if (HandleBuffer != NULL) {
+    gBS->FreePool (HandleBuffer);
+  }
+
+  if (MaxPayloadSize != NULL) {
+    FreePool (MaxPayloadSize);
+  }
+
+  return EFI_SUCCESS;
+}
+
 STATIC
 EFI_STATUS
 EFIAPI
@@ -1455,6 +1795,7 @@ VisitEachPcieDevice (
 
   PciIo = Instance;
 
+  PcieSetMaxPayloadSize (PciIo);
   PcieConfigGPUDevice (PciIo);
   PcieEnableErrorReporting (PciIo);
   PcieEnableECRC (PciIo);
