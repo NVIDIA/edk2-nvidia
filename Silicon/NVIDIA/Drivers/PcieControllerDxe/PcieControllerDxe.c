@@ -1514,6 +1514,350 @@ GetNextPciIoInstance (
 }
 
 /**
+  Checks if Root Port and tree below given root port supports
+  10Bit Tag Completer supported
+
+  @param  PciIo               The PCI IO protocol instance.
+  @param  RpSegment           Root port segment
+  @param  HandleCount         Handle Count of PCI IO protocol
+  @param  HandleBuffer        Handle Buffer of PCI IO protocol
+
+  @retval  TRUE
+           FALSE  Otherwise
+**/
+STATIC
+BOOLEAN
+Recursive10BitTagCompleterCheck (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINTN                RpSegment,
+  IN UINTN                HandleCount,
+  IN EFI_HANDLE           *HandleBuffer
+  )
+{
+  EFI_STATUS                       Status;
+  UINT32                           ExtTag10BitCompleterSupport;
+  UINT32                           SubTree10BitTagSupport;
+  EFI_PCI_IO_PROTOCOL              *NextPciIo;
+  UINTN                            Segment, Bus, Device, Function;
+  PCI_REG_PCIE_DEVICE_CAPABILITY   DeviceCapability;
+  PCI_REG_PCIE_DEVICE_CAPABILITY2  DeviceCapability2;
+  UINT32                           PciExpCapOffset, Offset;
+
+  ExtTag10BitCompleterSupport = FALSE;
+  SubTree10BitTagSupport      = FALSE;
+  NextPciIo                   = NULL;
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  if (PciExpCapOffset == 0) {
+    DEBUG ((
+      DEBUG_INFO,
+      "Device [%04x:%02x:%02x.%x] doesn't support ExtendedTag. \
+         Hence skipping 10-bit tags configuration\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    goto Done;
+  }
+
+  Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
+  Status = PciIo->Pci.Read (
+                        PciIo,
+                        EfiPciIoWidthUint32,
+                        Offset,
+                        1,
+                        &DeviceCapability.Uint32
+                        );
+
+  if (EFI_ERROR (Status) || (DeviceCapability.Bits.ExtendedTagField == FALSE)) {
+    DEBUG ((
+      DEBUG_INFO,
+      "Device [%04x:%02x:%02x.%x] doesn't support ExtendedTag. \
+         Hence skipping 10-bit tags configuration\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    goto Done;
+  }
+
+  Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability2);
+  Status = PciIo->Pci.Read (
+                        PciIo,
+                        EfiPciIoWidthUint32,
+                        Offset,
+                        1,
+                        &DeviceCapability2.Uint32
+                        );
+
+  if (EFI_ERROR (Status) ||
+      (DeviceCapability2.Bits.TenBitTagCompleterSupported == FALSE))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Device [%04x:%02x:%02x.%x] doesn't support 10 bit tag completer. \
+         Hence skipping 10-bit tags configuration\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    goto Done;
+  }
+
+  ExtTag10BitCompleterSupport = TRUE;
+
+  if (ExtTag10BitCompleterSupport == TRUE) {
+    NextPciIo = GetNextPciIoInstance (PciIo, HandleCount, HandleBuffer);
+    if (NextPciIo != NULL) {
+      if (!EFI_ERROR (Status) && (Segment == RpSegment)) {
+        SubTree10BitTagSupport = Recursive10BitTagCompleterCheck (
+                                   NextPciIo,
+                                   RpSegment,
+                                   HandleCount,
+                                   HandleBuffer
+                                   );
+        ExtTag10BitCompleterSupport &= SubTree10BitTagSupport;
+      }
+    }
+  }
+
+Done:
+  return ExtTag10BitCompleterSupport;
+}
+
+/**
+  Enable 10Bit tag requester for all the downstream devices.
+
+  @param  PciIo               The PCI IO protocol instance.
+  @param  RpSegment           Root port segment
+  @param  HandleCount         Handle Count of PCI IO protocol
+  @param  HandleBuffer        Handle Buffer of PCI IO protocol
+
+  @retval EFI_STATUS          Returns EFI_SUCCESS if 10Bit tag requester
+                              enabled successfully.
+**/
+EFI_STATUS
+Recursive10BitTagRequestSet (
+  EFI_PCI_IO_PROTOCOL  *PciIo,
+  UINTN                RpSegment,
+  UINTN                HandleCount,
+  EFI_HANDLE           *HandleBuffer
+  )
+{
+  EFI_PCI_IO_PROTOCOL              *NextPciIo;
+  EFI_STATUS                       Status;
+  UINTN                            Segment, Bus, Device, Function;
+  PCI_REG_PCIE_DEVICE_CAPABILITY2  DeviceCapability2;
+  PCI_REG_PCIE_DEVICE_CONTROL      DeviceControl;
+  PCI_REG_PCIE_DEVICE_CONTROL2     DeviceControl2;
+  UINT32                           PciExpCapOffset, Offset;
+
+  NextPciIo = NULL;
+  Status    = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+
+  /* Enable Extended Tag */
+  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  Offset          = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl);
+  Status          = PciIo->Pci.Read (
+                                 PciIo,
+                                 EfiPciIoWidthUint16,
+                                 Offset,
+                                 1,
+                                 &DeviceControl.Uint16
+                                 );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+  }
+
+  DeviceControl.Bits.ExtendedTagField = 1;
+
+  Status = PciIo->Pci.Write (
+                        PciIo,
+                        EfiPciIoWidthUint16,
+                        Offset,
+                        1,
+                        &DeviceControl.Uint16
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+  }
+
+  Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability2);
+  Status = PciIo->Pci.Read (
+                        PciIo,
+                        EfiPciIoWidthUint32,
+                        Offset,
+                        1,
+                        &DeviceCapability2.Uint32
+                        );
+
+  if (!EFI_ERROR (Status) && (DeviceCapability2.Bits.TenBitTagRequesterSupported == TRUE)) {
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl2);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint16,
+                          Offset,
+                          1,
+                          &DeviceControl2.Uint16
+                          );
+    if (!EFI_ERROR (Status)) {
+      DeviceControl2.Bits.TenBitTagRequesterEnable = 1;
+
+      Status = PciIo->Pci.Write (
+                            PciIo,
+                            EfiPciIoWidthUint16,
+                            Offset,
+                            1,
+                            &DeviceControl2.Uint16
+                            );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "Device [%04x:%02x:%02x.%x] : Enabled 10Bit tag requester failed\n",
+          Segment,
+          Bus,
+          Device,
+          Function
+          ));
+      }
+    }
+  }
+
+  NextPciIo = GetNextPciIoInstance (PciIo, HandleCount, HandleBuffer);
+  if (NextPciIo != NULL) {
+    Status = NextPciIo->GetLocation (NextPciIo, &Segment, &Bus, &Device, &Function);
+    if (!EFI_ERROR (Status) && (Segment == RpSegment)) {
+      Recursive10BitTagRequestSet (
+        NextPciIo,
+        RpSegment,
+        HandleCount,
+        HandleBuffer
+        );
+    }
+  }
+
+  return Status;
+}
+
+/**
+  10Bit tag requester config.
+
+  @param  PciIo               The PCI IO protocol instance.
+
+  @retval EFI_STATUS          Returns EFI_SUCCESS if 10Bit tag requester
+                              configured successfully.
+**/
+STATIC
+EFI_STATUS
+PcieEnable10BitExtendedTag (
+  EFI_PCI_IO_PROTOCOL  *PciIo
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Segment, Bus, Device, Function;
+  BOOLEAN     ExtTag10BitCompleterSupport;
+  UINTN       HandleCount;
+  EFI_HANDLE  *HandleBuffer;
+  UINT64      Ext10bitTagReqEnable;
+  UINTN       BufferSize;
+
+  Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+  ASSERT_EFI_ERROR (Status);
+  //
+  // Run on root port only
+  //
+  if (Bus != 0) {
+    return EFI_SUCCESS;
+  }
+
+  BufferSize = sizeof (Ext10bitTagReqEnable);
+  Status     = gRT->GetVariable (
+                      L"Ext10bitTagReq",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &Ext10bitTagReqEnable
+                      );
+  if (EFI_ERROR (Status) ||
+      (BufferSize != sizeof (Ext10bitTagReqEnable)) ||
+      ((Ext10bitTagReqEnable & (1ULL << Segment)) == 0ULL))
+  {
+    DEBUG ((
+      DEBUG_ERROR,
+      "Device [%04x:%02x:%02x.%x] : Skipping 10Bit tag requester Enable\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+
+    return EFI_SUCCESS;
+  }
+
+  HandleCount  = 0;
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiPciIoProtocolGuid,
+                        NULL,
+                        &HandleCount,
+                        &HandleBuffer
+                        );
+  if (EFI_ERROR (Status)) {
+    return EFI_NOT_FOUND;
+  }
+
+  //
+  // Check 10-bit tag completer capability before setting 10-bit tag requester.
+  //
+  ExtTag10BitCompleterSupport = Recursive10BitTagCompleterCheck (
+                                  PciIo,
+                                  Segment,
+                                  HandleCount,
+                                  HandleBuffer
+                                  );
+  if (ExtTag10BitCompleterSupport == TRUE) {
+    Recursive10BitTagRequestSet (PciIo, Segment, HandleCount, HandleBuffer);
+  } else {
+    DEBUG ((
+      DEBUG_INFO,
+      "Device [%04x:%02x:%02x.%x] : 10Bit tag requester not supported\n",
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+  }
+
+  if (HandleBuffer != NULL) {
+    gBS->FreePool (HandleBuffer);
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Checks the max payload size supported for the Root Port and tree below
   given root port supports
 
@@ -1795,6 +2139,7 @@ VisitEachPcieDevice (
 
   PciIo = Instance;
 
+  PcieEnable10BitExtendedTag (PciIo);
   PcieSetMaxPayloadSize (PciIo);
   PcieConfigGPUDevice (PciIo);
   PcieEnableErrorReporting (PciIo);

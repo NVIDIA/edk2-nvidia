@@ -855,6 +855,49 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_MAX_PAYLOAD_SIZE_HELP),
+
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET0_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET1_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET2_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_SOCKET3_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_HELP),
+
   STRING_TOKEN (STR_MPAM_CONFIG_FORM_TITLE),
   STRING_TOKEN (STR_MPAM_CONFIG_FORM_HELP),
   STRING_TOKEN (STR_MPAM40_CONFIG_FORM_TITLE),
@@ -984,6 +1027,7 @@ STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2             = NULL;
 STATIC VOID                            *mMmCommunicationBuffer      = NULL;
 UINT64                                 mOpRomDisMask                = 0;
 UINT32                                 mMaxPayloadSize[MAX_SOCKETS] = { 0 };
+UINT64                                 mExt10bitTagReqEnable        = 0;
 EFI_HII_HANDLE                         mHiiHandle;
 UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_DISABLED;
 
@@ -1745,7 +1789,13 @@ SyncHiiSettings (
       mHiiControlSettings.MaxPayloadSize1[Index]          = (mMaxPayloadSize[1] >> (Index * 3)) & (7ULL);
       mHiiControlSettings.MaxPayloadSize2[Index]          = (mMaxPayloadSize[2] >> (Index * 3)) & (7ULL);
       mHiiControlSettings.MaxPayloadSize3[Index]          = (mMaxPayloadSize[3] >> (Index * 3)) & (7ULL);
-      mHiiControlSettings.OsNativeAER_3[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER;
+
+      mHiiControlSettings.Extended10bitTagEnable0[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (0, Index))) != 0ULL;
+      mHiiControlSettings.Extended10bitTagEnable1[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (1, Index))) != 0ULL;
+      mHiiControlSettings.Extended10bitTagEnable2[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (2, Index))) != 0ULL;
+      mHiiControlSettings.Extended10bitTagEnable3[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (3, Index))) != 0ULL;
+
+      mHiiControlSettings.OsNativeAER_3[Index] = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER;
     }
 
     // MPAM non architected part ids 40-44 per socket
@@ -1796,7 +1846,8 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.UphyConfig.UphyConfig[3][Index] = mHiiControlSettings.UphySetting3[Index];
     }
 
-    mOpRomDisMask = 0ULL;
+    mOpRomDisMask         = 0ULL;
+    mExt10bitTagReqEnable = 0ULL;
     ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
     for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed0[Index];
@@ -1875,8 +1926,11 @@ SyncHiiSettings (
       mMaxPayloadSize[1]                                                 |= (mHiiControlSettings.MaxPayloadSize1[Index] & 7ULL) << (Index * 3);
       mMaxPayloadSize[2]                                                 |= (mHiiControlSettings.MaxPayloadSize2[Index] & 7ULL) << (Index * 3);
       mMaxPayloadSize[3]                                                 |= (mHiiControlSettings.MaxPayloadSize3[Index] & 7ULL) << (Index * 3);
-
-      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER = mHiiControlSettings.OsNativeAER_3[Index];
+      mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
+      mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
+      mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
+      mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable3[Index] ? (1ULL << PCIE_SEG (3, Index)) : 0ULL;
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_3[Index];
     }
 
     // MPAM non architected part ids 40-44 per socket
@@ -2060,6 +2114,18 @@ InitializeSettings (
                   );
   if (EFI_ERROR (Status)) {
     ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
+  }
+
+  BufferSize = sizeof (mExt10bitTagReqEnable);
+  Status     = gRT->GetVariable (
+                      L"Ext10bitTagReq",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &mExt10bitTagReqEnable
+                      );
+  if (EFI_ERROR (Status)) {
+    mExt10bitTagReqEnable = 0;
   }
 
   mHiiControlSettings.L4TSupported         = PcdGetBool (PcdL4TConfigurationSupport);
@@ -2463,6 +2529,17 @@ ConfigRouteConfig (
     return Status;
   }
 
+  Status = gRT->SetVariable (
+                  L"Ext10bitTagReq",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  sizeof (mExt10bitTagReqEnable),
+                  &mExt10bitTagReqEnable
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   return Status;
 }
 
@@ -2803,6 +2880,11 @@ GetDefaultValue (
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_MAX_PAYLOAD_SIZE) && (QuestionId <= KEY_SOCKET3_PCIE9_MAX_PAYLOAD_SIZE)) {
         //
         // PCIE MAX_PAYLOAD_SIZE
+        //
+        Data = 0x0;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_EXTENDED_10BIT_TAG_ENABLE) && (QuestionId <= KEY_SOCKET3_PCIE9_EXTENDED_10BIT_TAG_ENABLE)) {
+        //
+        // PCIE EXTENDED_10BIT_TAG_ENABLE
         //
         Data = 0x0;
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_ADVERTISE_ACS) && (QuestionId <= KEY_SOCKET3_PCIE9_ADVERTISE_ACS)) {
