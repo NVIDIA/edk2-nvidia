@@ -771,6 +771,9 @@
 #Specify UFS HClkDiv value (reset value is 0xcc)
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xcc|UINT32|0x000000AA
 
+#Specify UFS HS Series (RATE_A=1 RATE_B=2)
+  gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x1|UINT32|0x000000AE
+
 #Option to configure SOC display hand-off
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|0x00|UINT8|0x00000115
 

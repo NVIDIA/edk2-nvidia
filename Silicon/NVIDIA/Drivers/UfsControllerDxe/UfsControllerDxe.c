@@ -335,7 +335,8 @@ UfsCallback (
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_RX_TERMINATION, 1, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_TERMINATION, 1, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_HS_SERIES, 0, &Value);
-      Value = UFS_HS_RATE_A;
+      DEBUG ((DEBUG_INFO, "%a: HS Series pcd=%u value=%u\n", __FUNCTION__, PcdGet32 (PcdUfsHsSeries), Value));
+      Value = PcdGet32 (PcdUfsHsSeries);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_HS_SERIES, Value, NULL);
 
       DEBUG ((DEBUG_INFO, "%a: HS pcd=%u mode=%u\n", __FUNCTION__, PcdGetBool (PcdUfsEnableHighSpeed), Mode));

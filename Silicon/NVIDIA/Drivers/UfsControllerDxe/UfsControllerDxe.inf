@@ -45,6 +45,7 @@
   gNVIDIATokenSpaceGuid.PcdUfsEnableHighSpeed
   gNVIDIATokenSpaceGuid.PcdUfsMaxGearOverride
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv
+  gNVIDIATokenSpaceGuid.PcdUfsHsSeries
 
 [Depex]
   TRUE
