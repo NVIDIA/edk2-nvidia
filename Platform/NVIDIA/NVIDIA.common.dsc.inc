@@ -1306,6 +1306,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x1000
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
+  gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
 
@@ -1317,6 +1318,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
   gNVIDIATokenSpaceGuid.PcdUfsEnableHighSpeed|FALSE
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0x1a
+  gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x1
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|TRUE
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|0
 !endif
