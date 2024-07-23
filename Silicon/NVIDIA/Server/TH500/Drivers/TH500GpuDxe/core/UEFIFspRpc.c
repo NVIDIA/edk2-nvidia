@@ -1702,8 +1702,8 @@ FspRpcGetC2CInitStatus (
   }
 
   /* Allocations */
-  DEBUG ((DEBUG_ERROR, "%a: [%p] Params [C2C buffers: command:%u,message:%u]\n", __FUNCTION__, PciIo, cmdQueueSize, msgQueueSizeBytes));
-  DEBUG ((DEBUG_ERROR, "%a: [%p] Params [EGM buffer: command:%u, old C2C message:%u]\n", __FUNCTION__, PciIo, sizeof (FINAL_MESSAGE_EGM), NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE_GET_C2CINIT));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Params [C2C buffers: command:%u,message:%u]\n", __FUNCTION__, PciIo, cmdQueueSize, msgQueueSizeBytes));
+  DEBUG ((DEBUG_INFO, "%a: [%p] Params [C2C buffer: command:%u, old C2C message:%u]\n", __FUNCTION__, PciIo, sizeof (FINAL_MESSAGE_EGM), NVDM_PAYLOAD_COMMAND_RESPONSE_SIZE_GET_C2CINIT));
 
   /* Allocate command queue buffer (DWORD aligned) */
   cmdQueueBuffer = AllocateZeroPool (cmdQueueSize);
@@ -1774,8 +1774,9 @@ FspRpcGetC2CInitStatus (
   DEBUG ((DEBUG_INFO, "%a: [%p] Command Queue [Head:0x%04x,Tail:0x%04x] check queue empty[%a] \n", __FUNCTION__, PciIo, queueHead, queueTail, ((queueHead == queueTail) ? "TRUE" : "FALSE")));
 
   if (!Index) {
-    DEBUG ((DEBUG_ERROR, "%a: [%p] ERROR: Command Queue empty check timed out.\n", __FUNCTION__, PciIo));
-    Status = uefifspDumpDebugState (PciIo);
+    DEBUG ((DEBUG_INFO, "%a: [%p] ERROR: Command Queue empty check timed out.\n", __FUNCTION__, PciIo));
+    *C2CInitStatus = 0;
+    Status         = uefifspDumpDebugState (PciIo);
     if (EFI_ERROR (Status)) {
       ASSERT (0);
     }
@@ -2057,7 +2058,7 @@ FspRpcGetC2CInitStatus (
 
 uefifspRpcResponseReceivePacket_exit:
   if (NULL != msgQueueBuffer) {
-    DEBUG ((DEBUG_ERROR, "%a: [%p] DEBUG: Free Message Queue\n", __FUNCTION__, PciIo));
+    DEBUG ((DEBUG_INFO, "%a: [%p] DEBUG: Free Message Queue\n", __FUNCTION__, PciIo));
     FreePool (msgQueueBuffer);
   }
 
@@ -2071,7 +2072,7 @@ uefifspRpcResponseReceivePacket_exit:
 
 uefifspRpcCmdQueueBuffer_exit:
   if (cmdQueueBuffer) {
-    DEBUG ((DEBUG_ERROR, "%a: [%p] DEBUG: Free Command Queue\n", __FUNCTION__, PciIo));
+    DEBUG ((DEBUG_INFO, "%a: [%p] DEBUG: Free Command Queue\n", __FUNCTION__, PciIo));
     FreePool (cmdQueueBuffer);
   }
 

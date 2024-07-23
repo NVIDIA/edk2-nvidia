@@ -51,9 +51,9 @@
 #define EGM_SOCKET_ADDRESS_MASK            ((UINT64)(~(BIT45|BIT44)))
 #define MaskEgmBaseSocketAddress(addr)  ((addr) & EGM_SOCKET_ADDRESS_MASK)
 
-#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX              600000
-#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER  10000
-#define UEFI_CHECK_GFW_C2CINIT_COMPLETE_POLL_DELAY_UNITS          5
+#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX              6
+#define UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER  1
+#define UEFI_CHECK_GFW_C2CINIT_COMPLETE_POLL_DELAY_UNITS          1
 #define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX                 600000
 #define UEFI_GFW_BOOT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER     10000
 #define UEFI_CHECK_GFW_BOOT_COMPLETE_POLL_DELAY_UNITS             5
@@ -687,7 +687,7 @@ NVIDIAGpuDriverStart (
 
         while (bFSPEnabled && (!bC2CInitComplete) && (--TimeoutIdx)) {
           Status = GpuFirmwareC2CInitCompleteProtocol->GetC2CInitCompleteState (GpuFirmwareC2CInitCompleteProtocol, &bC2CInitComplete);
-          DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Result: %u Status '%r'.\n", ControllerHandle, bC2CInitComplete, Status));
+          DEBUG ((DEBUG_INFO, "DEBUG: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Result: %u Status '%r'.\n", ControllerHandle, bC2CInitComplete, Status));
           if (EFI_ERROR (Status)) {
             DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareC2CInitCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
             /* Unsupported is not fatal, flag C2CInitSupport as false and continue with Boot Complete */
@@ -703,13 +703,17 @@ NVIDIAGpuDriverStart (
 
           /* Timeout Progress */
           DEBUG_CODE_BEGIN ();
-          if ((TimeoutIdx%(UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX_LOG_TRIGGER)) == 0) {
-            DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareC2CInitCompleteProtocol' Poll status [%u/%u]\n", (UINT32)(UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX-TimeoutIdx), (UINT32)UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX));
-          }
-
+          DEBUG ((DEBUG_INFO, "DEBUG: 'GpuFirmwareC2CInitCompleteProtocol' Poll status [%u/%u]\n", (UINT32)(UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX-TimeoutIdx), (UINT32)UEFI_GFW_C2CINIT_COMPLETE_POLL_TIMEOUT_INDEX));
           DEBUG_CODE_END ();
 
           gBS->Stall (UEFI_CHECK_GFW_C2CINIT_COMPLETE_POLL_DELAY_UNITS);
+        }
+
+        if (TimeoutIdx == 0) {
+          DEBUG ((DEBUG_ERROR, "ERROR: [TimeoutIdx:%u] Poll for Firmware C2C Init Complete timed out.\n", TimeoutIdx));
+          ErrorStatus = EFI_TIMEOUT;
+
+          goto ErrorHandler_RestorePCIAttributes;
         }
       }
     }
