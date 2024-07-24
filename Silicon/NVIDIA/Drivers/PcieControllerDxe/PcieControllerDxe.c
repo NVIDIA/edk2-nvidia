@@ -2555,13 +2555,27 @@ DeviceDiscoveryNotify (
             DEBUG ((DEBUG_INFO, "PREF64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
           } else {
             if (Translation) {
-              RootBridge->Mem.Base                                        = DeviceAddress;
-              RootBridge->Mem.Limit                                       = Limit;
-              RootBridge->Mem.Translation                                 = Translation;
-              Private->MemBase                                            = HostAddress;
-              Private->MemLimit                                           = HostAddress + Size - 1;
+              Private->MemBase  = HostAddress;
+              Private->MemLimit = HostAddress + Size - 1;
+              // Split translated region into prefetchable and non-prefetchable
+              Size                                                          = Size/2;
+              RootBridge->Mem.Base                                          = DeviceAddress;
+              RootBridge->Mem.Limit                                         = DeviceAddress + Size - 1;
+              RootBridge->Mem.Translation                                   = Translation;
+              Private->AddressMapInfo[Private->AddressMapCount].PciAddress  = DeviceAddress;
+              Private->AddressMapInfo[Private->AddressMapCount].CpuAddress  = HostAddress;
+              Private->AddressMapInfo[Private->AddressMapCount].AddressSize = Size;
+              Private->AddressMapInfo[Private->AddressMapCount].SpaceCode   = 3;
+              DEBUG ((DEBUG_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", RootBridge->Mem.Base, RootBridge->Mem.Limit, RootBridge->Mem.Translation));
+              Private->AddressMapCount++;
+              ASSERT (Private->AddressMapCount < PCIE_NUMBER_OF_MAPPING_SPACE);
+              DeviceAddress                                               = DeviceAddress + Size;
+              HostAddress                                                 = HostAddress + Size;
+              RootBridge->PMem.Base                                       = DeviceAddress;
+              RootBridge->PMem.Limit                                      = DeviceAddress + Size - 1;
+              RootBridge->PMem.Translation                                = DeviceAddress - HostAddress;
               Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-              DEBUG ((DEBUG_INFO, "MEM64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+              DEBUG ((DEBUG_INFO, "PREF32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", RootBridge->PMem.Base, RootBridge->PMem.Limit, RootBridge->PMem.Translation));
             } else {
               DEBUG ((DEBUG_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
@@ -2586,6 +2600,7 @@ DeviceDiscoveryNotify (
         Private->AddressMapInfo[Private->AddressMapCount].PciAddress  = DeviceAddress;
         Private->AddressMapInfo[Private->AddressMapCount].CpuAddress  = HostAddress;
         Private->AddressMapInfo[Private->AddressMapCount].AddressSize = Size;
+        ASSERT (Private->AddressMapCount < PCIE_NUMBER_OF_MAPPING_SPACE);
         Private->AddressMapCount++;
 
         RangesProperty += RangeSize;

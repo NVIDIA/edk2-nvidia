@@ -23,7 +23,7 @@
 #define upper_32_bits(n)  ((UINT32)((n) >> 32))
 #define lower_32_bits(n)  ((UINT32)(n))
 
-#define PCIE_NUMBER_OF_MAPPING_SPACE  3
+#define PCIE_NUMBER_OF_MAPPING_SPACE  4
 #define PCIE_NUMBER_OF_INTERRUPT_MAP  4
 #define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERRUPT_MAP) // 2 Reference Arrays, Mappings, End of list
 #define PCIE_COMMON_REPO_OBJECTS      (3)                                                               // Config Space, Acpi Tables, end of list
