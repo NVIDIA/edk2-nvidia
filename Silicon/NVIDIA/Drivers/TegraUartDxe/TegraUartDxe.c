@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -28,6 +28,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid    },
   { "nvidia,tegra194-tcu",    &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
   { "arm,sbsa-uart",          &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { "arm,pl011",              &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
   { NULL,                     NULL                                          }
 };
 
@@ -99,11 +100,16 @@ DeviceDiscoveryNotify (
         {
           return EFI_UNSUPPORTED;
         }
-      } else if ((fdt_node_check_compatible (
-                    DeviceTreeNode->DeviceTreeBase,
-                    DeviceTreeNode->NodeOffset,
-                    "arm,sbsa-uart"
-                    )) == 0)
+      } else if (((fdt_node_check_compatible (
+                     DeviceTreeNode->DeviceTreeBase,
+                     DeviceTreeNode->NodeOffset,
+                     "arm,sbsa-uart"
+                     )) == 0) ||
+                 ((fdt_node_check_compatible (
+                     DeviceTreeNode->DeviceTreeBase,
+                     DeviceTreeNode->NodeOffset,
+                     "arm,pl011"
+                     )) == 0))
       {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
@@ -158,11 +164,16 @@ DeviceDiscoveryNotify (
         }
 
         InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550);
-      } else if ((fdt_node_check_compatible (
-                    DeviceTreeNode->DeviceTreeBase,
-                    DeviceTreeNode->NodeOffset,
-                    "arm,sbsa-uart"
-                    )) == 0)
+      } else if (((fdt_node_check_compatible (
+                     DeviceTreeNode->DeviceTreeBase,
+                     DeviceTreeNode->NodeOffset,
+                     "arm,sbsa-uart"
+                     )) == 0) ||
+                 ((fdt_node_check_compatible (
+                     DeviceTreeNode->DeviceTreeBase,
+                     DeviceTreeNode->NodeOffset,
+                     "arm,pl011"
+                     )) == 0))
       {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))

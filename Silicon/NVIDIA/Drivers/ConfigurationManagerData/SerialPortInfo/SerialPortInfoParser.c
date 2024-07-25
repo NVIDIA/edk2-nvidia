@@ -29,6 +29,7 @@ CONST CHAR8  *TegraSerialPortCompatibility[] = {
 STATIC
 CONST CHAR8  *ArmSerialPortCompatibility[] = {
   "arm,sbsa-uart",
+  "arm,pl011",
   NULL
 };
 

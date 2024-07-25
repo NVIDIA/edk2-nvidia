@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,6 +22,7 @@ SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
   { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
   { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,sbsa-uart"       },
+  { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,pl011"           },
   { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject,    "nvidia,tegra20-uart" },
   { TEGRA_UART_TYPE_NONE,  NULL,                             NULL                  },
 };
@@ -29,6 +30,7 @@ SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
 STATIC
 SERIAL_MAPPING  gPresilSerialCompatibilityMap[] = {
   { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,pl011"     },
   { TEGRA_UART_TYPE_NONE, NULL,                         NULL            },
 };
 
