@@ -47,6 +47,7 @@
 
 #include "PcieControllerConfigGPU.h"
 #include "PcieControllerPrivate.h"
+#include <Protocol/PciPlatform.h>
 
 #define PCIE_CONTROLLER_MAX_REGISTERS  6
 
@@ -78,6 +79,9 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .ThreadedDeviceStart             = TRUE
 };
+
+BOOLEAN                           gPciPltProtInstalled = FALSE;
+extern EFI_PCI_PLATFORM_PROTOCOL  mPciPlatformProtocol;
 
 /**
   PCI configuration space access.
@@ -295,7 +299,6 @@ PCIeFindNextCap (
   return PCIeFindNextCap (CfgBase, next_cap_ptr, cap);
 }
 
-STATIC
 UINT8
 PCIeFindCap (
   UINT64  CfgBase,
@@ -2224,6 +2227,7 @@ DeviceDiscoveryNotify (
   NVIDIA_DEVICE_TREE_REGISTER_DATA             RegisterData[PCIE_CONTROLLER_MAX_REGISTERS];
   UINT32                                       RegisterCount;
   UINT32                                       RegisterIndex;
+  EFI_HANDLE                                   PciPlatformHandle;
 
   PlatformType = TegraGetPlatform ();
   Status       = EFI_SUCCESS;
@@ -2239,6 +2243,20 @@ DeviceDiscoveryNotify (
     }
 
     ASSERT (Mb1Config);
+  }
+
+  //
+  // Install on a new handle
+  //
+  PciPlatformHandle = NULL;
+  if (!gPciPltProtInstalled) {
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &PciPlatformHandle,
+                    &gEfiPciPlatformProtocolGuid,
+                    &mPciPlatformProtocol,
+                    NULL
+                    );
+    gPciPltProtInstalled = TRUE;
   }
 
   switch (Phase) {

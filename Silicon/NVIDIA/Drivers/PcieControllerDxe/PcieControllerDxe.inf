@@ -20,6 +20,8 @@
   PcieControllerConfigGPU.c
   PcieControllerDxe.c
   PcieControllerPrivate.h
+  PciPlatformDxe.c
+  PcieConfigDxe.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -69,6 +71,8 @@
   gEmbeddedGpioProtocolGuid
   gNVIDIAConfigurationManagerTokenProtocolGuid
   gNVIDIAPciConfigurationDataProtocolGuid
+  gEfiPciPlatformProtocolGuid
+  gEfiPciHostBridgeResourceAllocationProtocolGuid
 
 [Guids]
   gNVIDIANonDiscoverableTH500PcieDeviceGuid
