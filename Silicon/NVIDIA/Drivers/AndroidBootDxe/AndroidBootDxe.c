@@ -239,29 +239,6 @@ AndroidBootOnConnectCompleteHandler (
 }
 
 /**
-  CLeanup Kernel Dtb
-
-  @param[in]  KernelDtb     Pointer to kernel dtb being processed
-
-**/
-STATIC
-VOID
-EFIAPI
-AndroidBootDxeCleanKernelDtb (
-  IN VOID  *KernelDtb
-  )
-{
-  INT32  KernelDtbNodeOffset;
-
-  // Remove the /memory node.  We want to be sure the kernel gets its memory
-  // information from UEFI instead of the DTB.
-  KernelDtbNodeOffset = fdt_path_offset (KernelDtb, "/memory");
-  if (KernelDtbNodeOffset > 0) {
-    fdt_nop_node (KernelDtb, KernelDtbNodeOffset);
-  }
-}
-
-/**
   Locate and install associated device tree
 
   @param[in]   Private       Private driver data for android kernel instance
@@ -397,8 +374,6 @@ AndroidBootDxeLoadDtb (
           }
         }
       }
-
-      AndroidBootDxeCleanKernelDtb (DtbCopy);
 
       Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
       if (EFI_ERROR (Status)) {
@@ -2288,8 +2263,6 @@ AndroidBootDxeDriverEntryPoint (
       DEBUG ((DEBUG_ERROR, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
       goto Done;
     }
-
-    AndroidBootDxeCleanKernelDtb (NewKernelDtb);
 
     DEBUG ((DEBUG_INFO, "%a: Using DTB %p\r\n", __FUNCTION__, NewKernelDtb));
 
