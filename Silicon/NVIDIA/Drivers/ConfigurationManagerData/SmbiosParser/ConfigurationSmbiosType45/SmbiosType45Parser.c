@@ -505,7 +505,7 @@ IndividualFirmwareInventoryUpdate (
   //
   // Update Firmware Characteristics.
   //
-  FirmwareInventoryInfoElement->Characteristics.Updatable      = 0;
+  FirmwareInventoryInfoElement->Characteristics.Updatable      = 1;
   FirmwareInventoryInfoElement->Characteristics.WriteProtected = 1;
 
   //
