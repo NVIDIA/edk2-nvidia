@@ -186,7 +186,14 @@ GetCacheInfoFromCacheNode (
     Core = 0;
   }
 
-  CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, Core, Cluster, Socket);
+  // If cache is the highest level in the system, pass the cache type as 0 so that artificially
+  // we can limit cache id in lower numbers as required by MPAM.
+  if (CacheNode->CacheData.CacheLevel == 3) {
+    CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, 0, Core, Cluster, Socket);
+  } else {
+    CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, Core, Cluster, Socket);
+  }
+
   DEBUG ((
     DEBUG_INFO,
     "%a: Added CacheId 0x%x (Level %u Type %d Core %u Cluster %u Socket %u\n",
