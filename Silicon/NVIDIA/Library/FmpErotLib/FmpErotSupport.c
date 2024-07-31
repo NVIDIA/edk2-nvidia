@@ -2,7 +2,7 @@
 
   FMP erot support functions
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -566,7 +566,11 @@ FmpErotEndOfDxeNotify (
 
   Status = FmpErotGetVersionInfo ();
   if (EFI_ERROR (Status)) {
-    goto Done;
+    // Retry once if fails
+    Status = FmpErotGetVersionInfo ();
+    if (EFI_ERROR (Status)) {
+      goto Done;
+    }
   }
 
   if (mInstaller == NULL) {
