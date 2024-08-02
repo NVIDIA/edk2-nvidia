@@ -113,6 +113,9 @@ InstallSmbiosType1Cm (
   CHAR8                  *FruDesc;
   CHAR8                  *ManufacturerStr;
   CHAR8                  *ProductNameStr;
+  CHAR8                  *ProductVersionStr;
+  CHAR8                  *ProductSerialStr;
+  CHAR8                  *ProductPartNumStr;
   CM_OBJECT_TOKEN        *TokenMap;
   CM_OBJ_DESCRIPTOR      Desc;
 
@@ -150,8 +153,17 @@ InstallSmbiosType1Cm (
   SystemFru = FindFruByDescription (Private, FruDesc);
   if (SystemFru == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: FRU '%a' not found.\n", __FUNCTION__, FruDesc));
-    Status = RETURN_NOT_FOUND;
-    goto CleanupAndReturn;
+    ManufacturerStr   = NULL;
+    ProductNameStr    = NULL;
+    ProductVersionStr = NULL;
+    ProductSerialStr  = NULL;
+    ProductPartNumStr = NULL;
+  } else {
+    ManufacturerStr   = SystemFru->ProductManufacturer;
+    ProductNameStr    = SystemFru->ProductName;
+    ProductVersionStr = SystemFru->ProductVersion;
+    ProductSerialStr  = SystemFru->ProductSerial;
+    ProductPartNumStr = SystemFru->ProductPartNum;
   }
 
   //
@@ -160,15 +172,11 @@ InstallSmbiosType1Cm (
   Property = fdt_getprop (DtbBase, DtbOffset, "manufacturer", &Length);
   if ((Property != NULL) && (Length != 0)) {
     ManufacturerStr = (CHAR8 *)Property;
-  } else {
-    ManufacturerStr = SystemFru->ProductManufacturer;
   }
 
   Property = fdt_getprop (DtbBase, DtbOffset, "product-name", &Length);
   if ((Property != NULL) && (Length != 0)) {
     ProductNameStr = (CHAR8 *)Property;
-  } else {
-    ProductNameStr = SystemFru->ProductName;
   }
 
   Property = fdt_getprop (DtbBase, DtbOffset, "family", &Length);
@@ -181,9 +189,9 @@ InstallSmbiosType1Cm (
   //
   SystemInfo->Manufacturer = AllocateCopyString (ManufacturerStr);
   SystemInfo->ProductName  = AllocateCopyString (ProductNameStr);
-  SystemInfo->Version      = AllocateCopyString (SystemFru->ProductVersion);
-  SystemInfo->SerialNum    = AllocateCopyString (SystemFru->ProductSerial);
-  SystemInfo->SkuNum       = AllocateCopyString (SystemFru->ProductPartNum);
+  SystemInfo->Version      = AllocateCopyString (ProductVersionStr);
+  SystemInfo->SerialNum    = AllocateCopyString (ProductSerialStr);
+  SystemInfo->SkuNum       = AllocateCopyString (ProductPartNumStr);
 
   //
   // UUID is the same as BMC's System GUID
