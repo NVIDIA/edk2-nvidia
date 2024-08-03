@@ -27,6 +27,7 @@
 [Includes]
   Include
   Include/Server
+  Include/StandaloneMm
   Include/Tegra
   Test/Mock/Include
 

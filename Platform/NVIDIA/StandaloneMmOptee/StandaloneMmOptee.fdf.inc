@@ -39,7 +39,20 @@
   #
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
 
-  !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+  #
+  # MM Core
+  #
+  INF StandaloneMmPkg/Core/StandaloneMmCore.inf
+
+  #
+  # MM CPU Driver
+  #
+  INF StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+
+  #
+  # MM Variable Driver
+  #
+  INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
 
   #
   # MM User Authentication Driver

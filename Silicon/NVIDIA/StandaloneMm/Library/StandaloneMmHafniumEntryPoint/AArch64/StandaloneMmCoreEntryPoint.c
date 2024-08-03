@@ -10,7 +10,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <PiMm.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/NvMmStandaloneMmCoreEntryPoint.h>
 
 #include <PiPei.h>
 #include <Guid/MmramMemoryReserve.h>
@@ -354,6 +354,8 @@ GetAndPrintManifestinformation (
   UINT32      RegionSize;
   UINT32      ErstUncachedSize;
   UINT32      ErstCachedSize;
+  UINTN       NsRegionIndex;
+  INT32       Length;
 
   ParentOffset = fdt_path_offset (DtbAddress, "/");
 
@@ -371,6 +373,7 @@ GetAndPrintManifestinformation (
     return EFI_DEVICE_ERROR;
   }
 
+  NsRegionIndex = 0;
   for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
        NodeOffset > 0;
        NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
@@ -384,53 +387,59 @@ GetAndPrintManifestinformation (
     }
 
     /* For each known resource type, extract information */
-    if (AsciiStrCmp (NodeName, "stmmns-memory") == 0) {
+    if (fdt_getprop (DtbAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
+      /* Publish the Ns Buffer Addr Size to what StMM needs.*/
+
       ErstCachedSize   = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-cached-pages-count") * DEFAULT_PAGE_SIZE;
       ErstUncachedSize = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-uncached-pages-count") * DEFAULT_PAGE_SIZE;
 
-      /* Publish the Ns Buffer Addr Size to what StMM needs.*/
-      PayloadBootInfo.SpNsCommBufBase = RegionAddress;
-      PayloadBootInfo.SpNsCommBufSize = (RegionSize - ErstUncachedSize - ErstCachedSize);
+      PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionStart = RegionAddress;
+      PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionSize  = (RegionSize - ErstUncachedSize - ErstCachedSize);
 
       /**
        * STMM Buffer Base and Size.
       */
-      StmmCommBuffers.NsBufferAddr = PayloadBootInfo.SpNsCommBufBase;
-      StmmCommBuffers.NsBufferSize = PayloadBootInfo.SpNsCommBufSize;
+      if (AsciiStrCmp (NodeName, "stmmns-memory") == 0) {
+        StmmCommBuffers.NsBufferAddr = PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionStart;
+        StmmCommBuffers.NsBufferSize = PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionSize;
 
-      /**
-       * ERST Uncached Base and Size.
-      */
-      StmmCommBuffers.NsErstUncachedBufAddr = (PayloadBootInfo.SpNsCommBufBase + PayloadBootInfo.SpNsCommBufSize);
-      StmmCommBuffers.NsErstUncachedBufSize = ErstUncachedSize;
+        /**
+         *   ERST Uncached Base and Size.
+         */
+        StmmCommBuffers.NsErstUncachedBufAddr = (PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionStart
+                                                 + PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionSize);
+        StmmCommBuffers.NsErstUncachedBufSize = ErstUncachedSize;
 
-      /**
-       * ERST Cached Base and Size.
-      */
-      StmmCommBuffers.NsErstCachedBufAddr = StmmCommBuffers.NsErstUncachedBufAddr + StmmCommBuffers.NsErstUncachedBufSize;
-      StmmCommBuffers.NsErstCachedBufSize = ErstCachedSize;
+        /**
+         * ERST Cached Base and Size.
+         */
+        StmmCommBuffers.NsErstCachedBufAddr = StmmCommBuffers.NsErstUncachedBufAddr + StmmCommBuffers.NsErstUncachedBufSize;
+        StmmCommBuffers.NsErstCachedBufSize = ErstCachedSize;
 
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: StMM Base 0x%lx Size 0x%x\n",
-        __FUNCTION__,
-        PayloadBootInfo.SpNsCommBufBase,
-        PayloadBootInfo.SpNsCommBufSize
-        ));
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: ERST-Uncached Base 0x%lx Size 0x%x\n",
-        __FUNCTION__,
-        StmmCommBuffers.NsBufferAddr,
-        StmmCommBuffers.NsBufferSize
-        ));
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: ERST-Cached Base 0x%lx Size 0x%x\n",
-        __FUNCTION__,
-        StmmCommBuffers.NsErstUncachedBufAddr,
-        StmmCommBuffers.NsErstUncachedBufSize
-        ));
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: StMM Base 0x%lx Size 0x%x\n",
+          __FUNCTION__,
+          PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionStart,
+          PayloadBootInfo.SpNsRegions[NsRegionIndex].DeviceRegionSize
+          ));
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: ERST-Uncached Base 0x%lx Size 0x%x\n",
+          __FUNCTION__,
+          StmmCommBuffers.NsBufferAddr,
+          StmmCommBuffers.NsBufferSize
+          ));
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: ERST-Cached Base 0x%lx Size 0x%x\n",
+          __FUNCTION__,
+          StmmCommBuffers.NsErstUncachedBufAddr,
+          StmmCommBuffers.NsErstUncachedBufSize
+          ));
+      }
+
+      NsRegionIndex++;
     } else if (AsciiStrCmp (NodeName, "rx-buffer") == 0) {
       FfaRxBufferAddr = RegionAddress;
       FfaRxBufferSize = RegionSize;
@@ -471,7 +480,10 @@ GetAndPrintManifestinformation (
   PayloadBootInfo.SpPcpuStackSize = 0;
   PayloadBootInfo.NumCpus         = 0;
 
-  PayloadBootInfo.NumSpMemRegions = 6;
+  /* 1 for StMM Image + 1 SecureBuffer + 1 Stack + 1 Heap + 1 Free pool + NS_Regions
+   * */
+  PayloadBootInfo.NumSpMemRegions = 5 + NsRegionIndex;
+  DEBUG ((DEBUG_ERROR, "NumRegions %u\n", PayloadBootInfo.NumSpMemRegions));
 
   DEBUG ((DEBUG_ERROR, "SP mem base       = 0x%llx \n", PayloadBootInfo.SpMemBase));
   DEBUG ((DEBUG_ERROR, "  SP image base   = 0x%llx \n", PayloadBootInfo.SpImageBase));
@@ -501,10 +513,15 @@ GetAndPrintManifestinformation (
   /* Core will take all the memory from SpMemBase to CoreHeapLimit and should not reach the first memory-region */
   ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= FfaRxBufferAddr);
 
-  if (ADDRESS_IN_RANGE (PayloadBootInfo.SpNsCommBufBase, PayloadBootInfo.SpMemBase, SPMemoryLimit)) {
+  if (ADDRESS_IN_RANGE (
+        PayloadBootInfo.SpNsRegions[0].DeviceRegionStart,
+        PayloadBootInfo.SpMemBase,
+        SPMemoryLimit
+        ))
+  {
     DEBUG ((DEBUG_ERROR, "Not FBC\n"));
     StmmCommBuffers.Fbc = FALSE;
-    ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= PayloadBootInfo.SpNsCommBufBase);
+    ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= PayloadBootInfo.SpNsRegions[0].DeviceRegionStart);
   } else {
     StmmCommBuffers.Fbc = TRUE;
   }

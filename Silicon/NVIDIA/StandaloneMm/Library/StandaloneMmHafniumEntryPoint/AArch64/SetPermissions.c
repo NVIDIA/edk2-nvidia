@@ -2,7 +2,7 @@
   Locate, get and update PE/COFF permissions during Standalone MM
   Foundation Entry point on ARM platforms.
 
-Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -13,7 +13,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Guid/MmramMemoryReserve.h>
 #include <Guid/MpInformation.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/NvMmStandaloneMmCoreEntryPoint.h>
 #include <Library/ArmMmuLib.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/DebugLib.h>

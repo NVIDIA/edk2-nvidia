@@ -171,7 +171,3 @@
   }
 
 [Components.AARCH64]
-  #
-  # MM CPU Driver
-  #
-  StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf

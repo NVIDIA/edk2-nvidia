@@ -13,7 +13,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = StandaloneMmCpu
-  FILE_GUID                      = 58F7A62B-6280-42A7-BC38-10535A64A92C
+  FILE_GUID                      = 4023edbe-c5ec-48df-b2e6-2a7684e28e88
   MODULE_TYPE                    = MM_STANDALONE
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
@@ -27,6 +27,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   BaseMemoryLib

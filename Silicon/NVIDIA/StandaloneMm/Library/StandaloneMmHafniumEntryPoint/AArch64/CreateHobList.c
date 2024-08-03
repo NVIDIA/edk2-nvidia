@@ -13,7 +13,7 @@
 #include <Guid/MmramMemoryReserve.h>
 #include <Guid/MpInformation.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/NvMmStandaloneMmCoreEntryPoint.h>
 #include <Library/ArmMmuLib.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/DebugLib.h>
@@ -68,6 +68,7 @@ CreateHobListFromBootInfo (
   EFI_PROCESSOR_INFORMATION       *ProcInfoBuffer;
   EFI_SECURE_PARTITION_CPU_INFO   *CpuInfo;
   MM_CPU_DRIVER_EP_DESCRIPTOR     *CpuDriverEntryPointDesc;
+  UINTN                           MmRangeIndex;
 
   // Create a hoblist with a PHIT and EOH
   HobStart = HobConstructor (
@@ -135,12 +136,14 @@ CreateHobListFromBootInfo (
   // of the communication buffer shared with the Normal world.
   NsCommBufMmramRange = (EFI_MMRAM_DESCRIPTOR *)BuildGuidHob (
                                                   &gEfiStandaloneMmNonSecureBufferGuid,
-                                                  sizeof (EFI_MMRAM_DESCRIPTOR)
+                                                  (NS_MAX_REGIONS * sizeof (EFI_MM_DEVICE_REGION))
                                                   );
-  NsCommBufMmramRange->PhysicalStart = PayloadBootInfo->SpNsCommBufBase;
-  NsCommBufMmramRange->CpuStart      = PayloadBootInfo->SpNsCommBufBase;
-  NsCommBufMmramRange->PhysicalSize  = PayloadBootInfo->SpNsCommBufSize;
-  NsCommBufMmramRange->RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  for (Index = 0; Index < NS_MAX_REGIONS; Index++) {
+    NsCommBufMmramRange[Index].PhysicalStart = PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart;
+    NsCommBufMmramRange[Index].CpuStart      = PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart;
+    NsCommBufMmramRange[Index].PhysicalSize  = PayloadBootInfo->SpNsRegions[Index].DeviceRegionSize;
+    NsCommBufMmramRange[Index].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  }
 
   // Create a Guided HOB to enable the ARM TF CPU driver to share its entry
   // point and populate it with the address of the shared buffer
@@ -164,42 +167,53 @@ CreateHobListFromBootInfo (
   // Fill up the MMRAM ranges
   MmramRanges = &MmramRangesHob->Descriptor[0];
 
+  MmRangeIndex = 0;
   // Base and size of memory occupied by the Standalone MM image
-  MmramRanges[0].PhysicalStart = PayloadBootInfo->SpImageBase;
-  MmramRanges[0].CpuStart      = PayloadBootInfo->SpImageBase;
-  MmramRanges[0].PhysicalSize  = PayloadBootInfo->SpImageSize;
-  MmramRanges[0].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmramRanges[MmRangeIndex].PhysicalStart = PayloadBootInfo->SpImageBase;
+  MmramRanges[MmRangeIndex].CpuStart      = PayloadBootInfo->SpImageBase;
+  MmramRanges[MmRangeIndex].PhysicalSize  = PayloadBootInfo->SpImageSize;
+  MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmRangeIndex++;
 
   // Base and size of buffer shared with privileged Secure world software
-  MmramRanges[1].PhysicalStart = PayloadBootInfo->SpSharedBufBase;
-  MmramRanges[1].CpuStart      = PayloadBootInfo->SpSharedBufBase;
-  MmramRanges[1].PhysicalSize  = PayloadBootInfo->SpSharedBufSize;
-  MmramRanges[1].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmramRanges[MmRangeIndex].PhysicalStart = PayloadBootInfo->SpSharedBufBase;
+  MmramRanges[MmRangeIndex].CpuStart      = PayloadBootInfo->SpSharedBufBase;
+  MmramRanges[MmRangeIndex].PhysicalSize  = PayloadBootInfo->SpSharedBufSize;
+  MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmRangeIndex++;
 
   // Base and size of buffer used for synchronous communication with Normal
   // world software
-  MmramRanges[2].PhysicalStart = PayloadBootInfo->SpNsCommBufBase;
-  MmramRanges[2].CpuStart      = PayloadBootInfo->SpNsCommBufBase;
-  MmramRanges[2].PhysicalSize  = PayloadBootInfo->SpNsCommBufSize;
-  MmramRanges[2].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  for (Index = 0; Index < NS_MAX_REGIONS; Index++) {
+    if (PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart) {
+      MmramRanges[MmRangeIndex].PhysicalStart = PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart;
+      MmramRanges[MmRangeIndex].CpuStart      = PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart;
+      MmramRanges[MmRangeIndex].PhysicalSize  = PayloadBootInfo->SpNsRegions[Index].DeviceRegionSize;
+      MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+      MmRangeIndex++;
+    }
+  }
 
   // Base and size of memory allocated for stacks for all cpus
-  MmramRanges[3].PhysicalStart = PayloadBootInfo->SpStackBase;
-  MmramRanges[3].CpuStart      = PayloadBootInfo->SpStackBase;
-  MmramRanges[3].PhysicalSize  = PayloadBootInfo->SpPcpuStackSize * PayloadBootInfo->NumCpus;
-  MmramRanges[3].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmramRanges[MmRangeIndex].PhysicalStart = PayloadBootInfo->SpStackBase;
+  MmramRanges[MmRangeIndex].CpuStart      = PayloadBootInfo->SpStackBase;
+  MmramRanges[MmRangeIndex].PhysicalSize  = PayloadBootInfo->SpPcpuStackSize * PayloadBootInfo->NumCpus;
+  MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmRangeIndex++;
 
   // Base and size of heap memory shared by all cpus
-  MmramRanges[4].PhysicalStart = (EFI_PHYSICAL_ADDRESS)HobStart;
-  MmramRanges[4].CpuStart      = (EFI_PHYSICAL_ADDRESS)HobStart;
-  MmramRanges[4].PhysicalSize  = HobStart->EfiFreeMemoryBottom - (EFI_PHYSICAL_ADDRESS)HobStart;
-  MmramRanges[4].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmramRanges[MmRangeIndex].PhysicalStart = (EFI_PHYSICAL_ADDRESS)HobStart;
+  MmramRanges[MmRangeIndex].CpuStart      = (EFI_PHYSICAL_ADDRESS)HobStart;
+  MmramRanges[MmRangeIndex].PhysicalSize  = HobStart->EfiFreeMemoryBottom - (EFI_PHYSICAL_ADDRESS)HobStart;
+  MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE | EFI_ALLOCATED;
+  MmRangeIndex++;
 
   // Base and size of heap memory shared by all cpus
-  MmramRanges[5].PhysicalStart = HobStart->EfiFreeMemoryBottom;
-  MmramRanges[5].CpuStart      = HobStart->EfiFreeMemoryBottom;
-  MmramRanges[5].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
-  MmramRanges[5].RegionState   = EFI_CACHEABLE;
+  MmramRanges[MmRangeIndex].PhysicalStart = HobStart->EfiFreeMemoryBottom;
+  MmramRanges[MmRangeIndex].CpuStart      = HobStart->EfiFreeMemoryBottom;
+  MmramRanges[MmRangeIndex].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
+  MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE;
+  MmRangeIndex++;
 
   return HobStart;
 }

@@ -217,6 +217,10 @@
 
 
 [Components.AARCH64]
+  #
+  # MM CPU Driver
+  #
+  Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
 
 ###################################################################################################
 #

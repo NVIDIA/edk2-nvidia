@@ -12,6 +12,7 @@
 
 #include <Base.h>
 #include <Pi/PiMmCis.h>
+#include <Library/NvMmStandaloneMmCoreEntryPoint.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/HobLib.h>
@@ -21,7 +22,7 @@
 #include <Guid/ZeroGuid.h>
 #include <Guid/MmramMemoryReserve.h>
 
-#include <StandaloneMmCpu.h>
+#include <NvStandaloneMmCpu.h>
 
 // GUID to identify HOB with whereabouts of communication buffer with Normal
 // World
@@ -185,8 +186,10 @@ StandaloneMmCpuInitialize (
   DEBUG ((DEBUG_INFO, "mNsCommBuffer.PhysicalStart - 0x%lx\n", (UINTN)NsCommBufMmramRange->PhysicalStart));
   DEBUG ((DEBUG_INFO, "mNsCommBuffer.PhysicalSize - 0x%lx\n", (UINTN)NsCommBufMmramRange->PhysicalSize));
 
-  CopyMem (&mNsCommBuffer, NsCommBufMmramRange, sizeof (EFI_MMRAM_DESCRIPTOR));
-  DEBUG ((DEBUG_INFO, "mNsCommBuffer: 0x%016lx - 0x%lx\n", mNsCommBuffer.CpuStart, mNsCommBuffer.PhysicalSize));
+  CopyMem (&mNsCommBuffer, NsCommBufMmramRange, (NS_MAX_REGIONS)*sizeof (EFI_MMRAM_DESCRIPTOR));
+  for (Index = 0; Index < NS_MAX_REGIONS; Index++) {
+    DEBUG ((DEBUG_ERROR, "mNsCommBuffer: 0x%016lx - 0x%lx\n", mNsCommBuffer[Index].CpuStart, mNsCommBuffer[Index].PhysicalSize));
+  }
 
   Status = GetGuidedHobData (
              HobStart,

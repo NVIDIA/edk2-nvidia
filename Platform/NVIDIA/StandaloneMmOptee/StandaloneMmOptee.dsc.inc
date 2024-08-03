@@ -147,6 +147,10 @@
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 [Components.AARCH64]
+  #
+  # MM CPU Driver
+  #
+  StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
 
 ###################################################################################################
 #

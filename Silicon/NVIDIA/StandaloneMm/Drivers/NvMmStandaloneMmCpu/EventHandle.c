@@ -22,7 +22,7 @@
 #include <Guid/ZeroGuid.h>
 #include <Guid/MmramMemoryReserve.h>
 
-#include <StandaloneMmCpu.h>
+#include <NvStandaloneMmCpu.h>
 
 EFI_STATUS
 EFIAPI
@@ -45,7 +45,7 @@ MmFoundationEntryRegister (
 EFI_MM_COMMUNICATE_HEADER  **PerCpuGuidedEventContext = NULL;
 
 // Descriptor with whereabouts of memory used for communication with the normal world
-EFI_MMRAM_DESCRIPTOR  mNsCommBuffer;
+EFI_MMRAM_DESCRIPTOR  mNsCommBuffer[NS_MAX_REGIONS];
 EFI_MMRAM_DESCRIPTOR  mSCommBuffer;
 
 MP_INFORMATION_HOB_DATA  *mMpInformationHobData;
@@ -71,37 +71,51 @@ CheckBufferAddr (
   IN UINTN  BufferAddr
   )
 {
-  UINT64  NsCommBufferEnd;
-  UINT64  SCommBufferEnd;
-  UINT64  CommBufferEnd;
+  UINT64      NsCommBufferEnd;
+  UINT64      SCommBufferEnd;
+  UINT64      CommBufferEnd;
+  UINTN       Index;
+  BOOLEAN     BufferValidated;
+  EFI_STATUS  Ret;
 
-  NsCommBufferEnd = mNsCommBuffer.PhysicalStart + mNsCommBuffer.PhysicalSize;
-  SCommBufferEnd  = mSCommBuffer.PhysicalStart + mSCommBuffer.PhysicalSize;
+  BufferValidated = FALSE;
+  for (Index = 0; ((Index < NS_MAX_REGIONS) && (BufferValidated != TRUE)); Index++) {
+    NsCommBufferEnd = mNsCommBuffer[Index].PhysicalStart + mNsCommBuffer[Index].PhysicalSize;
+    SCommBufferEnd  = mSCommBuffer.PhysicalStart + mSCommBuffer.PhysicalSize;
 
-  if ((BufferAddr >= mNsCommBuffer.PhysicalStart) &&
-      (BufferAddr < NsCommBufferEnd))
-  {
-    CommBufferEnd = NsCommBufferEnd;
-  } else if ((BufferAddr >= mSCommBuffer.PhysicalStart) &&
-             (BufferAddr < SCommBufferEnd))
-  {
-    CommBufferEnd = SCommBufferEnd;
+    if ((BufferAddr >= mNsCommBuffer[Index].PhysicalStart) &&
+        (BufferAddr < NsCommBufferEnd))
+    {
+      CommBufferEnd = NsCommBufferEnd;
+    } else if ((BufferAddr >= mSCommBuffer.PhysicalStart) &&
+               (BufferAddr < SCommBufferEnd))
+    {
+      CommBufferEnd = SCommBufferEnd;
+    } else {
+      continue;
+    }
+
+    if ((CommBufferEnd - BufferAddr) < sizeof (EFI_MM_COMMUNICATE_HEADER)) {
+      continue;
+    }
+
+    // perform bounds check.
+    if ((CommBufferEnd - BufferAddr - sizeof (EFI_MM_COMMUNICATE_HEADER)) <
+        ((EFI_MM_COMMUNICATE_HEADER *)BufferAddr)->MessageLength)
+    {
+      continue;
+    }
+
+    BufferValidated = TRUE;
+  }
+
+  if (BufferValidated == TRUE) {
+    Ret = EFI_SUCCESS;
   } else {
-    return EFI_ACCESS_DENIED;
+    Ret = EFI_ACCESS_DENIED;
   }
 
-  if ((CommBufferEnd - BufferAddr) < sizeof (EFI_MM_COMMUNICATE_HEADER)) {
-    return EFI_ACCESS_DENIED;
-  }
-
-  // perform bounds check.
-  if ((CommBufferEnd - BufferAddr - sizeof (EFI_MM_COMMUNICATE_HEADER)) <
-      ((EFI_MM_COMMUNICATE_HEADER *)BufferAddr)->MessageLength)
-  {
-    return EFI_ACCESS_DENIED;
-  }
-
-  return EFI_SUCCESS;
+  return Ret;
 }
 
 /**
@@ -129,7 +143,7 @@ PiMmStandaloneMmCpuDriverEntry (
   EFI_STATUS                 Status;
   UINTN                      NsCommBufferSize;
 
-  DEBUG ((DEBUG_INFO, "Received event - 0x%x on cpu %d\n", EventId, CpuNumber));
+  DEBUG ((DEBUG_INFO, "Received event - 0x%x on cpu %u\n", EventId, CpuNumber));
 
   Status = EFI_SUCCESS;
 
@@ -261,7 +275,7 @@ PiMmCpuTpFwRootMmiHandler (
   DEBUG ((
     DEBUG_INFO,
     "CommBuffer - 0x%x, CommBufferSize - 0x%x\n",
-    PerCpuGuidedEventContext[CpuNumber],
+    (UINTN)PerCpuGuidedEventContext[CpuNumber],
     PerCpuGuidedEventContext[CpuNumber]->MessageLength
     ));
 
@@ -273,7 +287,7 @@ PiMmCpuTpFwRootMmiHandler (
                     );
 
   if (Status != EFI_SUCCESS) {
-    DEBUG ((DEBUG_WARN, "Unable to manage Guided Event - %d\n", Status));
+    DEBUG ((DEBUG_WARN, "Unable to manage Guided Event - %r\n", Status));
   }
 
   return Status;

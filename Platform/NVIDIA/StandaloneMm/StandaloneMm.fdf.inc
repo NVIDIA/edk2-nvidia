@@ -40,14 +40,27 @@
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
   INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpStandaloneMm.inf
 
-  !include Platform/NVIDIA/StandaloneMm.common.fdf.inc
+  #
+  # MM Core
+  #
+  INF StandaloneMmPkg/Core/StandaloneMmCore.inf
+
+  #
+  # MM CPU Driver
+  #
+  INF Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
+
+  #
+  # MM Variable Driver
+  #
+  INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
 
   #
   # Sequential Record Flash Driver
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordStorage.inf
 
- #
+  #
   # CMET Record Storage Driver
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/CmetRecordStorage.inf
