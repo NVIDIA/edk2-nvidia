@@ -639,10 +639,7 @@ DeviceTreeGetCacheData (
   CONST CHAR8                                   *PropertyString;
   CHAR8                                         *NodePath;
 
-  if ((CacheData == NULL) ||
-      (CacheData->Type <= CACHE_TYPE_UNKNOWN) ||
-      (CacheData->Type >= CACHE_TYPE_MAX))
-  {
+  if (CacheData == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -674,6 +671,7 @@ DeviceTreeGetCacheData (
       break;
 
     default:
+      DEBUG ((DEBUG_ERROR, "%a: Trying to look up data for unknown CacheType %d\n", __FUNCTION__, CacheData->Type));
       return EFI_UNSUPPORTED;
   }
 

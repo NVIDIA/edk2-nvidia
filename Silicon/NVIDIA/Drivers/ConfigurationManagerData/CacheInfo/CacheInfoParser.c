@@ -32,8 +32,7 @@
 #include <Library/NvCmObjectDescUtility.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
-
-#define GET_CACHE_ID(Level, Type, Core, Cluster, Socket)  ((((3 - (Level)) << 24)) | (((Type) << 16)) | (((Core) << 12)) |(((Cluster) << 8)) | ((Socket) + 1))
+#include <Library/TegraPlatformInfoLib.h>
 
 /** A helper macro for populating the Cache Type Structure's attributes
 */
@@ -55,6 +54,48 @@
 #define UNUSED_SOCKET   (UNDEFINED_SOCKET - 1)
 #define UNUSED_CLUSTER  (UNDEFINED_CLUSTER - 1)
 #define UNUSED_CORE     (UNDEFINED_CORE - 1)
+
+#define CLUSTER_SHIFT  4
+#define CORE_SHIFT     12
+#define TYPE_SHIFT     20
+#define LEVEL_SHIFT    24
+#define MAX_LEVEL      3
+
+STATIC
+UINT32
+GetCacheId (
+  IN UINT32                         Level,
+  IN NVIDIA_DEVICE_TREE_CACHE_TYPE  Type,
+  IN UINT32                         Core,
+  IN UINT32                         Cluster,
+  IN UINT32                         Socket
+  )
+{
+  UINT32  CacheId;
+  UINT32  ChipId;
+
+  ASSERT ((Socket+1) < (1 << CLUSTER_SHIFT));
+  ASSERT (Cluster < (1 << (CORE_SHIFT - CLUSTER_SHIFT)));
+  ASSERT (Core < (1 << (TYPE_SHIFT - CORE_SHIFT)));
+  ASSERT (Type < (1 << (LEVEL_SHIFT - TYPE_SHIFT)));
+  ASSERT ((Level <= MAX_LEVEL) && (Level < (1 << (32 - LEVEL_SHIFT))));
+
+  CacheId = ((((MAX_LEVEL - (Level)) << LEVEL_SHIFT)) | (((Type) << TYPE_SHIFT)) | (((Core) << CORE_SHIFT)) | (((Cluster) << CLUSTER_SHIFT)) | ((Socket) + 1));
+
+  // MPAM requires the L3 cache's ID to fit into 8 bits, so check that here
+  if (Level == MAX_LEVEL) {
+    ASSERT (CacheId <= MAX_UINT8);
+
+    // Server SW team also requests that L3 CacheId be Socket+1, so sanity check it here
+    // TODO: Figure out how to handle Chips that don't have a single unified socket-level cache
+    ChipId = TegraGetChipID ();
+    if (ChipId == TH500_CHIP_ID) {
+      ASSERT (CacheId == (Socket+1));
+    }
+  }
+
+  return CacheId;
+}
 
 typedef struct {
   // Cache Nodes
@@ -163,7 +204,7 @@ GetCacheInfoFromCacheNode (
       return EFI_INVALID_PARAMETER;
   }
 
-  // Clean up Socket/Cluster/Core for GET_CACHE_ID
+  // Clean up Socket/Cluster/Core for GetCacheId
   // Note: Don't modify the CacheNode's actual values, since we still need them for generating CacheHierarchyInfo
   Socket = CacheNode->Socket;
   if ((Socket == UNDEFINED_SOCKET) ||
@@ -186,13 +227,7 @@ GetCacheInfoFromCacheNode (
     Core = 0;
   }
 
-  // If cache is the highest level in the system, pass the cache type as 0 so that artificially
-  // we can limit cache id in lower numbers as required by MPAM.
-  if (CacheNode->CacheData.CacheLevel == 3) {
-    CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, 0, Core, Cluster, Socket);
-  } else {
-    CacheInfo->CacheId = GET_CACHE_ID (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, Core, Cluster, Socket);
-  }
+  CacheInfo->CacheId = GetCacheId (CacheNode->CacheData.CacheLevel, CacheNode->CacheData.Type, Core, Cluster, Socket);
 
   DEBUG ((
     DEBUG_INFO,
