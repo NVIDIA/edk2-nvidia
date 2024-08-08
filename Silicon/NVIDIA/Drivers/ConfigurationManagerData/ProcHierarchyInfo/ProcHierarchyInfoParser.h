@@ -11,6 +11,12 @@
 
 #include <Library/NvCmObjectDescUtility.h>
 
+#define GEN_CONTAINER_UID(LEVEL, LVL1, LVL2, LVL3)  ((LEVEL << 28) | (LVL1 << 24) | (LVL2 << 16) | (LVL3))
+// Example usage:
+// Top = GEN_CONTAINER_UID (0, 0, 0, 0)
+// Socket = GEN_CONTAINER_UID (1, SocketId, 0, 0)
+// Cluster = GEN_CONTAINER_UID (2, SocketId, ClusterId, 0)
+
 /** A helper macro for populating the Processor Hierarchy Node flags
 */
 #define PROC_NODE_FLAGS(                                                \

@@ -9,6 +9,8 @@
 #include "ApmtParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
+#include "../ProcHierarchyInfo/ProcHierarchyInfoParser.h"
+
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/NVIDIADebugLib.h>
@@ -162,8 +164,9 @@ ApmtParser (
       ApmtNodes[ApmtNodeIndex].OverflowInterrupt      = DEVICETREE_TO_ACPI_INTERRUPT_NUM (Interrupt);
       ApmtNodes[ApmtNodeIndex].Reserved1              = 0;
       ApmtNodes[ApmtNodeIndex].OverflowInterruptFlags = EFI_ACPI_APMT_INTERRUPT_MODE_LEVEL_TRIGGERED;
-      ApmtNodes[ApmtNodeIndex].ProcessorAffinity      = Socket;
-      ApmtNodes[ApmtNodeIndex].ImplementationId       = 0;
+      // ProcessorAffinity should be the UID of the Socket in the ProcHierarchyInfo
+      ApmtNodes[ApmtNodeIndex].ProcessorAffinity = GEN_CONTAINER_UID (1, Socket, 0, 0);
+      ApmtNodes[ApmtNodeIndex].ImplementationId  = 0;
 
       Property = fdt_getprop (DeviceTreeBase, NodeOffset, "implementation_id", NULL);
       if (Property != NULL) {
