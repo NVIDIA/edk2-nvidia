@@ -74,11 +74,9 @@ GicCpcParser (
   UINT32                          CoreIndex;
   CM_OBJ_DESCRIPTOR               Desc;
   UINT32                          CpcInfoSize;
-  UINTN                           ChipID;
 
   CpcInfo = NULL;
 
-  ChipID = TegraGetChipID ();
   Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
@@ -129,12 +127,71 @@ CleanupAndReturn:
   return Status;
 }
 
+EFI_STATUS
+EFIAPI
+GicPsdParser (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN        INT32                  FdtBranch,
+  OUT CM_OBJECT_TOKEN              **TokenMapPtr OPTIONAL
+  )
+{
+  EFI_STATUS         Status;
+  CM_ARM_PSD_INFO    *PsdInfo;
+  UINT32             NumCores;
+  UINT32             CoreIndex;
+  CM_OBJ_DESCRIPTOR  Desc;
+  UINT32             PsdInfoSize;
+
+  PsdInfo = NULL;
+
+  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
+    goto CleanupAndReturn;
+  }
+
+  PsdInfoSize = NumCores * sizeof (CM_ARM_PSD_INFO);
+  PsdInfo     = AllocatePool (PsdInfoSize);
+  if (PsdInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate PsdInfo structure array\r\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto CleanupAndReturn;
+  }
+
+  // Populate Psd structures for all enabled cores and return the list of tokens
+  for (CoreIndex = 0; CoreIndex < NumCores; CoreIndex++) {
+    PsdInfo[CoreIndex].Revision  = EFI_ACPI_6_5_AML_PSD_REVISION;
+    PsdInfo[CoreIndex].Domain    = CoreIndex;
+    PsdInfo[CoreIndex].CoordType = ACPI_AML_COORD_TYPE_SW_ALL;
+    PsdInfo[CoreIndex].NumProc   = 1;
+  }
+
+  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPsdInfo);
+  Desc.Size     = PsdInfoSize;
+  Desc.Count    = NumCores;
+  Desc.Data     = PsdInfo;
+
+  Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, TokenMapPtr, NULL);
+  if (EFI_ERROR (Status)) {
+    goto CleanupAndReturn;
+  }
+
+CleanupAndReturn:
+  if ((TokenMapPtr != NULL) && (EFI_ERROR (Status))) {
+    *TokenMapPtr = NULL;
+  }
+
+  FREE_NON_NULL (PsdInfo);
+  return Status;
+}
+
 /** GicC parser function.
 
   The following structures are populated:
   - EArmObjGicCInfo
   - EArmObjEtInfo (if supported)
   - EArmCpcInfo (via GicCpcParser)
+  - EArmObjPsdInfo (via GicPsdParser)
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -183,6 +240,7 @@ GicCParser (
   UINT32                             SpeOverflowInterruptNum;
   UINTN                              ChipID;
   CM_OBJECT_TOKEN                    *CpcTokens;
+  CM_OBJECT_TOKEN                    *PsdTokens;
   UINT32                             SocketId;
   UINT32                             ClusterId;
   UINT32                             CoreId;
@@ -193,6 +251,7 @@ GicCParser (
   GicInfo        = NULL;
   GicCInfo       = NULL;
   CpcTokens      = NULL;
+  PsdTokens      = NULL;
   GicCInfoTokens = NULL;
 
   if (ParserHandle == NULL) {
@@ -285,6 +344,14 @@ GicCParser (
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CpcTokens\n", __FUNCTION__, Status));
   }
 
+  // Generate _PSD info if CPC is present
+  if (CpcTokens != NULL) {
+    Status = GicPsdParser (ParserHandle, FdtBranch, &PsdTokens);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PsdTokens\n", __FUNCTION__, Status));
+    }
+  }
+
   // Space for the GicC tokens
   if (TokenMapPtr != NULL) {
     GicCInfoTokens = AllocateZeroPool (sizeof (CM_OBJECT_TOKEN) * NumCores);
@@ -342,6 +409,7 @@ GicCParser (
     GicCInfo[CoreIndex].AffinityFlags                 = EFI_ACPI_6_4_GICC_ENABLED;
 
     GicCInfo[CoreIndex].CpcToken      = CpcTokens ? CpcTokens[CoreIndex] : CM_NULL_TOKEN;
+    GicCInfo[CoreIndex].PsdToken      = PsdTokens ? PsdTokens[CoreIndex] : CM_NULL_TOKEN;
     GicCInfo[CoreIndex].TrbeInterrupt = TrbeInterrupt;
     GicCInfo[CoreIndex].EtToken       = EtToken;
   }
