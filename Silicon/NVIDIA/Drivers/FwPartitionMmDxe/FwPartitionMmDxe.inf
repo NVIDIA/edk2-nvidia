@@ -45,6 +45,7 @@
   gNVIDIABrBctUpdateProtocolGuid            ## PRODUCES
   gEfiDevicePathProtocolGuid                ## CONSUMES
   gEfiMmCommunication2ProtocolGuid          ## CONSUMES
+  gNVIDIAMmPrmCommunication2ProtocolGuid    ## CONSUMES
 
 [Guids]
   gEfiEventVirtualAddressChangeGuid

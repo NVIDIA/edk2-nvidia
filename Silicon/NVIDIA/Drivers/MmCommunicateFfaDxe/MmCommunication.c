@@ -38,6 +38,7 @@
 #define ARM_SVC_ID_FFA_SUCCESS_AARCH32     0x84000060
 #define STMM_GET_NS_BUFFER                 0xC0270001
 #define STMM_GET_ERST_UNCACHED_BUFFER      0xC0270002
+#define STMM_GET_PRM0_BUFFER               0xC0270004
 #define ARM_SVC_ID_FFA_RX_RELEASE          0x84000065
 
 STATIC UINT16  StmmVmId = 0xFFFF;
@@ -57,11 +58,17 @@ GetErstBufferAddr (
   VOID
   );
 
+STATIC EFI_STATUS
+GetPrmBufferAddr (
+  VOID
+  );
+
 //
 // Address, Length of the pre-allocated buffer for communication with the secure
 // world.
 //
 STATIC ARM_MEMORY_REGION_DESCRIPTOR  mNsCommBuffMemRegion;
+STATIC ARM_MEMORY_REGION_DESCRIPTOR  mPrmCommBuffMemRegion;
 
 // Notification event when virtual address map is set.
 STATIC EFI_EVENT  mSetVirtualAddressMapEvent;
@@ -70,6 +77,7 @@ STATIC EFI_EVENT  mSetVirtualAddressMapEvent;
 // Handle to install the MM Communication Protocol
 //
 STATIC EFI_HANDLE  mMmCommunicateHandle;
+STATIC EFI_HANDLE  mMmPrmCommunicateHandle;
 
 /**
  * Wrapper function to send an FF-A Direct Message, this
@@ -155,6 +163,7 @@ SendFfaDirectReqStMm (
   This function provides a service to send and receive messages from a registered UEFI service.
 
   @param[in] This                     The EFI_MM_COMMUNICATION_PROTOCOL instance.
+  @param[in] CommBuffMemRegion        The ARM_MEMORY_REGION_DESCRIPTOR of the MM communication buffer.
   @param[in, out] CommBufferPhysical  Physical address of the MM communication buffer
   @param[in, out] CommBufferVirtual   Virtual address of the MM communication buffer
   @param[in, out] CommSize            The size of the data buffer being passed in. On input,
@@ -179,10 +188,12 @@ SendFfaDirectReqStMm (
                                  accessed by the MM environment.
 
 **/
+STATIC
 EFI_STATUS
 EFIAPI
 MmCommunication2Communicate (
   IN CONST EFI_MM_COMMUNICATION2_PROTOCOL  *This,
+  IN ARM_MEMORY_REGION_DESCRIPTOR          *CommBuffMemRegion,
   IN OUT VOID                              *CommBufferPhysical,
   IN OUT VOID                              *CommBufferVirtual,
   IN OUT UINTN                             *CommSize OPTIONAL
@@ -221,9 +232,9 @@ MmCommunication2Communicate (
     // This case can be used by the consumer of this driver to find out the
     // max size that can be used for allocating CommBuffer.
     if ((*CommSize == 0) ||
-        (*CommSize > mNsCommBuffMemRegion.Length))
+        (*CommSize > CommBuffMemRegion->Length))
     {
-      *CommSize = mNsCommBuffMemRegion.Length;
+      *CommSize = CommBuffMemRegion->Length;
       Status    = EFI_BAD_BUFFER_SIZE;
     }
 
@@ -240,9 +251,9 @@ MmCommunication2Communicate (
   // environment then return the expected size.
   //
   if ((CommunicateHeader->MessageLength == 0) ||
-      (BufferSize > mNsCommBuffMemRegion.Length))
+      (BufferSize > CommBuffMemRegion->Length))
   {
-    CommunicateHeader->MessageLength = mNsCommBuffMemRegion.Length -
+    CommunicateHeader->MessageLength = CommBuffMemRegion->Length -
                                        sizeof (CommunicateHeader->HeaderGuid) -
                                        sizeof (CommunicateHeader->MessageLength);
     Status = EFI_BAD_BUFFER_SIZE;
@@ -254,7 +265,7 @@ MmCommunication2Communicate (
   }
 
   // Copy Communication Payload
-  CopyMem ((VOID *)mNsCommBuffMemRegion.VirtualBase, CommBufferVirtual, BufferSize);
+  CopyMem ((VOID *)CommBuffMemRegion->VirtualBase, CommBufferVirtual, BufferSize);
 
   // Use the FF-A interface if enabled.
   if (FeaturePcdGet (PcdFfaEnable)) {
@@ -275,7 +286,7 @@ MmCommunication2Communicate (
     CommunicateSmcArgs.Arg4 = 0x0;
 
     // comm_buffer_address (64-bit physical address)
-    CommunicateSmcArgs.Arg5 = (UINTN)mNsCommBuffMemRegion.PhysicalBase;
+    CommunicateSmcArgs.Arg5 = (UINTN)CommBuffMemRegion->PhysicalBase;
 
     // comm_size_address (not used, indicated by setting to zero)
     CommunicateSmcArgs.Arg6 = 0;
@@ -287,7 +298,7 @@ MmCommunication2Communicate (
     CommunicateSmcArgs.Arg1 = 0;
 
     // comm_buffer_address (64-bit physical address)
-    CommunicateSmcArgs.Arg2 = (UINTN)mNsCommBuffMemRegion.PhysicalBase;
+    CommunicateSmcArgs.Arg2 = (UINTN)CommBuffMemRegion->PhysicalBase;
 
     // comm_size_address (not used, indicated by setting to zero)
     CommunicateSmcArgs.Arg3 = 0;
@@ -310,14 +321,14 @@ MmCommunication2Communicate (
       ZeroMem (CommBufferVirtual, BufferSize);
       // On successful return, the size of data being returned is inferred from
       // MessageLength + Header.
-      CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)mNsCommBuffMemRegion.VirtualBase;
+      CommunicateHeader = (EFI_MM_COMMUNICATE_HEADER *)CommBuffMemRegion->VirtualBase;
       BufferSize        = CommunicateHeader->MessageLength +
                           sizeof (CommunicateHeader->HeaderGuid) +
                           sizeof (CommunicateHeader->MessageLength);
 
       CopyMem (
         CommBufferVirtual,
-        (VOID *)mNsCommBuffMemRegion.VirtualBase,
+        (VOID *)CommBuffMemRegion->VirtualBase,
         BufferSize
         );
       Status = EFI_SUCCESS;
@@ -347,11 +358,83 @@ ExitMmCommunication2Communicate:
   return Status;
 }
 
+/**
+  Communicates via MM NS memory buffer.
+
+  This function provides a service to send and receive messages from a registered UEFI service.
+
+  @param[in] This                     The EFI_MM_COMMUNICATION_PROTOCOL instance.
+  @param[in, out] CommBufferPhysical  Physical address of the MM communication buffer
+  @param[in, out] CommBufferVirtual   Virtual address of the MM communication buffer
+  @param[in, out] CommSize            The size of the data buffer being passed in. On input,
+                                      when not omitted, the buffer should cover EFI_MM_COMMUNICATE_HEADER
+                                      and the value of MessageLength field. On exit, the size
+                                      of data being returned. Zero if the handler does not
+                                      wish to reply with any data. This parameter is optional
+                                      and may be NULL.
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+NsMmCommunicate (
+  IN CONST EFI_MM_COMMUNICATION2_PROTOCOL  *This,
+  IN OUT VOID                              *CommBufferPhysical,
+  IN OUT VOID                              *CommBufferVirtual,
+  IN OUT UINTN                             *CommSize OPTIONAL
+  )
+{
+  return MmCommunication2Communicate (
+           This,
+           &mNsCommBuffMemRegion,
+           CommBufferPhysical,
+           CommBufferVirtual,
+           CommSize
+           );
+}
+
+/**
+  Communicates via MM PRM memory buffer.
+
+  This function provides a service to send and receive messages from a registered UEFI service.
+
+  @param[in] This                     The EFI_MM_COMMUNICATION_PROTOCOL instance.
+  @param[in, out] CommBufferPhysical  Physical address of the MM communication buffer
+  @param[in, out] CommBufferVirtual   Virtual address of the MM communication buffer
+  @param[in, out] CommSize            The size of the data buffer being passed in. On input,
+                                      when not omitted, the buffer should cover EFI_MM_COMMUNICATE_HEADER
+                                      and the value of MessageLength field. On exit, the size
+                                      of data being returned. Zero if the handler does not
+                                      wish to reply with any data. This parameter is optional
+                                      and may be NULL.
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+PrmMmCommunicate (
+  IN CONST EFI_MM_COMMUNICATION2_PROTOCOL  *This,
+  IN OUT VOID                              *CommBufferPhysical,
+  IN OUT VOID                              *CommBufferVirtual,
+  IN OUT UINTN                             *CommSize OPTIONAL
+  )
+{
+  return MmCommunication2Communicate (
+           This,
+           &mPrmCommBuffMemRegion,
+           CommBufferPhysical,
+           CommBufferVirtual,
+           CommSize
+           );
+}
+
 //
 // MM Communication Protocol instance
 //
 STATIC EFI_MM_COMMUNICATION2_PROTOCOL  mMmCommunication2 = {
-  MmCommunication2Communicate
+  NsMmCommunicate
+};
+
+STATIC EFI_MM_COMMUNICATION2_PROTOCOL  mMmPrmCommunication2 = {
+  PrmMmCommunicate
 };
 
 /**
@@ -389,6 +472,21 @@ NotifySetVirtualAddressMap (
       " Unable to convert MM runtime pointer. Status:0x%r\n",
       Status
       ));
+  }
+
+  if (mPrmCommBuffMemRegion.VirtualBase != 0) {
+    Status = gRT->ConvertPointer (
+                    EFI_OPTIONAL_PTR,
+                    (VOID **)&mPrmCommBuffMemRegion.VirtualBase
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "NotifySetVirtualAddressMap():"
+        " Unable to convert PRM runtime pointer. Status:0x%r\n",
+        Status
+        ));
+    }
   }
 }
 
@@ -458,6 +556,18 @@ GetMmCompatibility (
         Status
         ));
     }
+
+    Status = GetPrmBufferAddr ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get PRM Buffer Details. %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      // Do not stop boot because of the absence of PRM service
+      Status = EFI_SUCCESS;
+    }
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -507,7 +617,7 @@ MmGuidedEventNotify (
   Header.Data[0]       = 0;
 
   Size = sizeof (Header);
-  MmCommunication2Communicate (&mMmCommunication2, &Header, &Header, &Size);
+  NsMmCommunicate (&mMmCommunication2, &Header, &Header, &Size);
 }
 
 /**
@@ -580,6 +690,36 @@ MmCommunication2Initialize (
     goto ReturnErrorStatus;
   }
 
+  // Only install the protocol when the region length is valid
+  if (mPrmCommBuffMemRegion.Length != 0) {
+    Status = gDS->SetMemorySpaceAttributes (
+                    mPrmCommBuffMemRegion.PhysicalBase,
+                    mPrmCommBuffMemRegion.Length,
+                    EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "MmCommunicateInitialize: "
+        "Failed to set MM-PRM Buffer Memory attributes\n"
+        ));
+    } else {
+      Status = gBS->InstallProtocolInterface (
+                      &mMmPrmCommunicateHandle,
+                      &gNVIDIAMmPrmCommunication2ProtocolGuid,
+                      EFI_NATIVE_INTERFACE,
+                      &mMmPrmCommunication2
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "MmCommunicationInitialize: "
+          "Failed to install MM-PRM communication protocol\n"
+          ));
+      }
+    }
+  }
+
   // Register notification callback when virtual address is associated
   // with the physical address.
   // Create a Set Virtual Address Map event.
@@ -635,6 +775,12 @@ UninstallProtocol:
          mMmCommunicateHandle,
          &gEfiMmCommunication2ProtocolGuid,
          &mMmCommunication2
+         );
+
+  gBS->UninstallProtocolInterface (
+         mMmPrmCommunicateHandle,
+         &gNVIDIAMmPrmCommunication2ProtocolGuid,
+         &mMmPrmCommunication2
          );
 
 ReturnErrorStatus:
@@ -856,6 +1002,47 @@ GetErstBufferAddr (
     __FUNCTION__,
     ErstBufferBase,
     ErstBufferSize
+    ));
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+GetPrmBufferAddr (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      PrmBufferBase;
+  UINT64      PrmBufferSize;
+
+  Status = GetBufferAddr (STMM_GET_PRM0_BUFFER, &PrmBufferBase, &PrmBufferSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get PRM Buffer Details. %r\n",
+      __FUNCTION__,
+      Status
+      ));
+
+    mPrmCommBuffMemRegion.PhysicalBase = 0;
+    mPrmCommBuffMemRegion.VirtualBase  = 0;
+    mPrmCommBuffMemRegion.Length       = 0;
+    return Status;
+  }
+
+  mPrmCommBuffMemRegion.PhysicalBase =  PrmBufferBase;
+  // During boot , Virtual and Physical are same
+  mPrmCommBuffMemRegion.VirtualBase = mPrmCommBuffMemRegion.PhysicalBase;
+  mPrmCommBuffMemRegion.Length      = PrmBufferSize;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Set PrmBufferBase to 0x%lx Size %lu\n",
+    __FUNCTION__,
+    PrmBufferBase,
+    PrmBufferSize
     ));
 
   return Status;

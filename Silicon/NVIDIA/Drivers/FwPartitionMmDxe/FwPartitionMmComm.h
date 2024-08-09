@@ -2,7 +2,7 @@
 
   MM FW partition protocol communication
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -109,7 +109,8 @@ MmSendReadData (
   IN  CONST CHAR16  *Name,
   IN  UINT64        Offset,
   IN  UINTN         Bytes,
-  IN VOID           *Buffer
+  IN  VOID          *Buffer,
+  IN  BOOLEAN       IsMmPrm
   );
 
 EFI_STATUS
@@ -122,6 +123,7 @@ MmSendWriteData (
   );
 
 extern EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommProtocol;
+extern EFI_MM_COMMUNICATION2_PROTOCOL  *mMmPrmCommProtocol;
 extern VOID                            *mMmCommBuffer;
 extern VOID                            *mMmCommBufferPhysical;
 

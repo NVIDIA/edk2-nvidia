@@ -80,6 +80,45 @@ MmSendCommBuffer (
 
 EFI_STATUS
 EFIAPI
+MmPrmSendCommBuffer (
+  IN      UINTN  DataSize
+  )
+{
+  EFI_STATUS                 Status;
+  UINTN                      CommSize;
+  EFI_MM_COMMUNICATE_HEADER  *CommHeader;
+  FW_PARTITION_COMM_HEADER   *FwImageCommHeader;
+
+  CommSize = DataSize + OFFSET_OF (EFI_MM_COMMUNICATE_HEADER, Data) +
+             FW_PARTITION_COMM_HEADER_SIZE;
+
+  if (mMmPrmCommProtocol == NULL) {
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = mMmPrmCommProtocol->Communicate (
+                                 mMmCommProtocol,
+                                 mMmCommBufferPhysical,
+                                 mMmCommBuffer,
+                                 &CommSize
+                                 );
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: communicate returned: %r\n",
+    __FUNCTION__,
+    Status
+    ));
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  CommHeader        = (EFI_MM_COMMUNICATE_HEADER *)mMmCommBuffer;
+  FwImageCommHeader = (FW_PARTITION_COMM_HEADER *)CommHeader->Data;
+  return FwImageCommHeader->ReturnStatus;
+}
+
+EFI_STATUS
+EFIAPI
 MmSendInitialize  (
   UINTN    ActiveBootChain,
   BOOLEAN  OverwriteActiveFwPartition,
@@ -182,7 +221,8 @@ MmSendReadData (
   IN  CONST CHAR16  *Name,
   IN  UINT64        Offset,
   IN  UINTN         Bytes,
-  IN  VOID          *Buffer
+  IN  VOID          *Buffer,
+  IN  BOOLEAN       IsMmPrm
   )
 {
   EFI_STATUS                   Status;
@@ -215,7 +255,12 @@ MmSendReadData (
   ReadDataPayload->Offset = Offset;
   ReadDataPayload->Bytes  = Bytes;
 
-  Status = MmSendCommBuffer (PayloadSize);
+  if (IsMmPrm) {
+    Status = MmPrmSendCommBuffer (PayloadSize);
+  } else {
+    Status = MmSendCommBuffer (PayloadSize);
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,

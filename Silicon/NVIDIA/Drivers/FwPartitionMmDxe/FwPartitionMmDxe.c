@@ -41,6 +41,7 @@ STATIC UINTN                 mNumPartitions      = 0;
 STATIC EFI_EVENT             mAddressChangeEvent = NULL;
 
 EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommProtocol       = NULL;
+EFI_MM_COMMUNICATION2_PROTOCOL  *mMmPrmCommProtocol    = NULL;
 VOID                            *mMmCommBuffer         = NULL;
 VOID                            *mMmCommBufferPhysical = NULL;
 
@@ -92,7 +93,8 @@ FPMmRead (
   IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
   IN  UINT64                    Offset,
   IN  UINTN                     Bytes,
-  OUT VOID                      *Buffer
+  OUT VOID                      *Buffer,
+  IN  BOOLEAN                   IsMmPrm
   )
 {
   EFI_STATUS  Status;
@@ -102,7 +104,7 @@ FPMmRead (
   while (Bytes > 0) {
     ReadBytes = MIN (FW_PARTITION_MM_TRANSFER_SIZE, Bytes);
 
-    Status = MmSendReadData (PartitionName, Offset, ReadBytes, Buffer);
+    Status = MmSendReadData (PartitionName, Offset, ReadBytes, Buffer, IsMmPrm);
     DEBUG ((
       DEBUG_VERBOSE,
       "%a: read %s Offset=%lu, Bytes=%u\n",
@@ -121,6 +123,48 @@ FPMmRead (
   }
 
   return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FPDeviceRead (
+  IN  CONST CHAR16              *PartitionName,
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes,
+  OUT VOID                      *Buffer
+  )
+{
+  return FPMmRead (
+           PartitionName,
+           DeviceInfo,
+           Offset,
+           Bytes,
+           Buffer,
+           FALSE
+           );
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FPDevicePrmRead (
+  IN  CONST CHAR16              *PartitionName,
+  IN  FW_PARTITION_DEVICE_INFO  *DeviceInfo,
+  IN  UINT64                    Offset,
+  IN  UINTN                     Bytes,
+  OUT VOID                      *Buffer
+  )
+{
+  return FPMmRead (
+           PartitionName,
+           DeviceInfo,
+           Offset,
+           Bytes,
+           Buffer,
+           TRUE
+           );
 }
 
 STATIC
@@ -223,6 +267,10 @@ FPMmAddPartitions (
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: error adding %s\n", __FUNCTION__, PartitionInfo->Name));
+      if (Status == EFI_ALREADY_STARTED) {
+        Status = EFI_SUCCESS;
+        continue;
+      }
     }
 
     mNumPartitions++;
@@ -287,6 +335,10 @@ FPMmAddressChangeNotify (
   EfiConvertPointer (0x0, (VOID **)&mMmInfo);
   EfiConvertPointer (0x0, (VOID **)&mMmCommProtocol);
   EfiConvertPointer (0x0, (VOID **)&mMmCommBuffer);
+
+  if (mMmPrmCommProtocol != NULL) {
+    EfiConvertPointer (0x0, (VOID **)&mMmPrmCommProtocol);
+  }
 
   BrBctUpdateAddressChangeHandler (FPMmAddressConvert);
   FwPartitionAddressChangeHandler (FPMmAddressConvert);
@@ -353,6 +405,21 @@ FwPartitionMmDxeInitialize (
     return Status;
   }
 
+  Status = gBS->LocateProtocol (
+                  &gNVIDIAMmPrmCommunication2ProtocolGuid,
+                  NULL,
+                  (VOID **)&mMmPrmCommProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a - Failed to locate MmCommunication protocol! %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    mMmPrmCommProtocol = NULL;
+  }
+
   mMmCommBuffer = AllocateRuntimePool (FW_PARTITION_COMM_BUFFER_SIZE);
   if (mMmCommBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "mMmCommBuffer allocation failed\n"));
@@ -388,9 +455,10 @@ FwPartitionMmDxeInitialize (
       MmInfo->DeviceInfo.DeviceName = L"MMDevice";
     }
 
-    MmInfo->DeviceInfo.DeviceRead  = FPMmRead;
-    MmInfo->DeviceInfo.DeviceWrite = FPMmWrite;
-    MmInfo->DeviceInfo.BlockSize   = 1;
+    MmInfo->DeviceInfo.DeviceRead    = FPDeviceRead;
+    MmInfo->DeviceInfo.DevicePrmRead = FPDevicePrmRead;
+    MmInfo->DeviceInfo.DeviceWrite   = FPMmWrite;
+    MmInfo->DeviceInfo.BlockSize     = 1;
   }
 
   Status = MmSendInitialize (

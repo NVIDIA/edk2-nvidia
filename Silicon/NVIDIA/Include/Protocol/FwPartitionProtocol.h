@@ -96,6 +96,7 @@ struct _NVIDIA_FW_PARTITION_PROTOCOL {
   CONST CHAR16                   *PartitionName;
   FW_PARTITION_GET_ATTRIBUTES    GetAttributes;
   FW_PARTITION_READ              Read;
+  FW_PARTITION_READ              PrmRead;
   FW_PARTITION_WRITE             Write;
 };
 

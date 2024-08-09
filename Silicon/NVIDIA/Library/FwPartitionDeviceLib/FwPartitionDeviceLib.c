@@ -19,6 +19,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Uefi/UefiBaseType.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 
 #define FW_PARTITION_PSEUDO_DEVICE_SIGNATURE  SIGNATURE_32 ('F','W','P','P')
 
@@ -191,6 +192,80 @@ FwPartitionRead (
     ));
 
   Status = DeviceInfo->DeviceRead (
+                         PartitionInfo->Name,
+                         DeviceInfo,
+                         Offset + PartitionInfo->Offset,
+                         Bytes,
+                         Buffer
+                         );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: read of %s, Offset=%llu, Bytes=%u failed: %r\n",
+      __FUNCTION__,
+      PartitionInfo->Name,
+      Offset,
+      Bytes,
+      Status
+      ));
+  }
+
+  return Status;
+}
+
+// NVIDIA_FW_PARTITION_PROTOCOL.PrmRead()
+EFI_STATUS
+EFIAPI
+FwPartitionPrmRead (
+  IN  NVIDIA_FW_PARTITION_PROTOCOL  *This,
+  IN  UINT64                        Offset,
+  IN  UINTN                         Bytes,
+  OUT VOID                          *Buffer
+  )
+{
+  FW_PARTITION_PRIVATE_DATA  *Private;
+  FW_PARTITION_INFO          *PartitionInfo;
+  FW_PARTITION_DEVICE_INFO   *DeviceInfo;
+  EFI_STATUS                 Status;
+
+  if ((This == NULL) || (Buffer == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = CR (
+              This,
+              FW_PARTITION_PRIVATE_DATA,
+              Protocol,
+              FW_PARTITION_PRIVATE_DATA_SIGNATURE
+              );
+  PartitionInfo = &Private->PartitionInfo;
+  DeviceInfo    = Private->DeviceInfo;
+
+  Status = FwPartitionCheckOffsetAndBytes (PartitionInfo->Bytes, Offset, Bytes);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s read offset=%llu, bytes=%u error: %r\n",
+      __FUNCTION__,
+      PartitionInfo->Name,
+      Offset,
+      Bytes,
+      Status
+      ));
+    return Status;
+  }
+
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: Starting %s read: Offset=%llu, Bytes=%u, Buffer=0x%p\n",
+    __FUNCTION__,
+    PartitionInfo->Name,
+    Offset,
+    Bytes,
+    Buffer
+    ));
+
+  Status = DeviceInfo->DevicePrmRead (
                          PartitionInfo->Name,
                          DeviceInfo,
                          Offset + PartitionInfo->Offset,
@@ -464,6 +539,7 @@ FwDeviceAddAsPartition (
   UINT16                     DeviceInstance;
   UINT64                     PartitionOffset;
   UINT64                     PartitionSize;
+  EFI_PHYSICAL_ADDRESS       CpuBlParamsAddr;
 
   if (mNumFwPartitions >= mMaxFwPartitions) {
     DEBUG ((
@@ -477,29 +553,46 @@ FwDeviceAddAsPartition (
   }
 
   if ((StrCmp (Name, L"MM-NorFlash") == 0)) {
-    Status = GetPartitionInfo (TEGRABL_RAS_ERROR_LOGS, &DeviceInstance, &PartitionOffset, &PartitionSize);
+    Status = GetCpuBlParamsAddrStMm (&CpuBlParamsAddr);
     if (!EFI_ERROR (Status)) {
-      Status = FwPartitionAdd (
-                 L"MM-RAS",
-                 DeviceInfo,
-                 PartitionOffset,
-                 PartitionSize
+      Status = GetPartitionInfoStMm (
+                 (UINTN)CpuBlParamsAddr,
+                 TEGRABL_RAS_ERROR_LOGS,
+                 &DeviceInstance,
+                 &PartitionOffset,
+                 &PartitionSize
                  );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-RAS\n", __FUNCTION__));
+      if (!EFI_ERROR (Status)) {
+        Status = FwPartitionAdd (
+                   L"MM-RAS",
+                   DeviceInfo,
+                   PartitionOffset,
+                   PartitionSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-RAS\n", __FUNCTION__));
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Can't find partition MM-RAS: %r\n", __FUNCTION__, Status));
       }
-    }
 
-    Status = GetPartitionInfo (TEGRAUEFI_CAPSULE, &DeviceInstance, &PartitionOffset, &PartitionSize);
-    if (!EFI_ERROR (Status)) {
-      Status = FwPartitionAdd (
-                 L"MM-Capsule",
-                 DeviceInfo,
-                 PartitionOffset,
-                 PartitionSize
+      Status = GetPartitionInfoStMm (
+                 (UINTN)CpuBlParamsAddr,
+                 TEGRAUEFI_CAPSULE,
+                 &DeviceInstance,
+                 &PartitionOffset,
+                 &PartitionSize
                  );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-Capsule\n", __FUNCTION__));
+      if (!EFI_ERROR (Status)) {
+        Status = FwPartitionAdd (
+                   L"MM-Capsule",
+                   DeviceInfo,
+                   PartitionOffset,
+                   PartitionSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-Capsule\n", __FUNCTION__));
+        }
       }
     }
   }
@@ -518,6 +611,7 @@ FwDeviceAddAsPartition (
 
   Private->Protocol.PartitionName = Private->PartitionInfo.Name;
   Private->Protocol.Read          = FwPartitionRead;
+  Private->Protocol.PrmRead       = FwPartitionPrmRead;
   Private->Protocol.Write         = FwPartitionWrite;
   Private->Protocol.GetAttributes = FwPartitionGetAttributes;
 
@@ -564,7 +658,7 @@ FwPartitionAdd (
       __FUNCTION__,
       Name
       ));
-    return EFI_UNSUPPORTED;
+    return EFI_ALREADY_STARTED;
   }
 
   Private       = &mPrivate[mNumFwPartitions];
@@ -581,6 +675,7 @@ FwPartitionAdd (
 
   Private->Protocol.PartitionName = Private->PartitionInfo.Name;
   Private->Protocol.Read          = FwPartitionRead;
+  Private->Protocol.PrmRead       = FwPartitionPrmRead;
   Private->Protocol.Write         = FwPartitionWrite;
   Private->Protocol.GetAttributes = FwPartitionGetAttributes;
 
