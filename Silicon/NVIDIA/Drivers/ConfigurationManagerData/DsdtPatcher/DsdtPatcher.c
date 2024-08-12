@@ -37,7 +37,7 @@ UpdatePlatInfo (
   Status = PatchProtocol->FindNode (PatchProtocol, ACPI_PLAT_INFO, &AcpiNodeInfo);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: PLAT node is not found for patching %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
-    return EFI_NOT_FOUND;
+    goto ErrorExit;
   }
 
   Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PlatformType, AcpiNodeInfo.Size);
@@ -45,7 +45,8 @@ UpdatePlatInfo (
     DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
   }
 
-  return Status;
+ErrorExit:
+  return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
 /** patch GED data in DSDT.
@@ -86,7 +87,7 @@ UpdateGedInfo (
   Status = PatchProtocol->FindNode (PatchProtocol, ACPI_GED1_SMR1, &AcpiNodeInfo);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: GED node is not found for patching %a - %r\r\n", __FUNCTION__, ACPI_GED1_SMR1, Status));
-    return EFI_SUCCESS;
+    goto ErrorExit;
   }
 
   Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &DpcCommBuf->PcieBase, 8);
@@ -94,7 +95,8 @@ UpdateGedInfo (
     DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\r\n", __FUNCTION__, ACPI_GED1_SMR1, Status));
   }
 
-  return Status;
+ErrorExit:
+  return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
 STATIC CONST CHAR8  *QspiCompatibleInfo[] = {
@@ -144,12 +146,8 @@ UpdateQspiInfo (
     Status = DeviceTreeGetNextCompatibleNode (QspiCompatibleInfo, &NodeOffset);
   }
 
-  if (Status == EFI_NOT_FOUND) {
-    return EFI_SUCCESS;
-  }
-
 ErrorExit:
-  return Status;
+  return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
 STATIC CONST CHAR8  *I2CCompatibleInfo[] = {
@@ -220,12 +218,8 @@ UpdateSSIFInfo (
     Status = DeviceTreeGetNextCompatibleNode (I2CCompatibleInfo, &NodeOffset);
   }
 
-  if (Status == EFI_NOT_FOUND) {
-    return EFI_SUCCESS;
-  }
-
 ErrorExit:
-  return Status;
+  return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
 /** DSDT patcher function.

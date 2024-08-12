@@ -1435,9 +1435,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/PowerManagementProfile/PowerManagementProfile.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SerialPortInfo/SerialPortInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProcHierarchyInfo/ProcHierarchyInfo.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/DsdtPatcher/DsdtPatcher.inf
 !ifdef CONFIG_SOC_GRACE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/EthernetInfo/EthernetInfo.inf
-      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/DsdtPatcher/DsdtPatcher.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TelemetryInfo/TelemetryInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TpmInfo/TpmInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ThermalZoneInfo/ThermalZoneInfo.inf
