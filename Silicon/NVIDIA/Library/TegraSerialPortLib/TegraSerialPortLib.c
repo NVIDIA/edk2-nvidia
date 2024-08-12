@@ -17,25 +17,42 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
+typedef struct {
+  UINT32         Type;
+  CONST CHAR8    **CompatibilityStrings;
+  UINT8          CompatibleMapOffset;
+} SERIAL_COMPATIBILITY_INFO;
+
+// This structure must end with Type == TEGRA_UART_TYPE_NONE
 STATIC
-SERIAL_MAPPING  gSiliconSerialCompatibilityMap[] = {
-  { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra194-tcu" },
-  { TEGRA_UART_TYPE_TCU,   TegraCombinedSerialPortGetObject, "nvidia,tegra186-tcu" },
-  { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,sbsa-uart"       },
-  { TEGRA_UART_TYPE_SBSA,  TegraSbsaSerialPortGetObject,     "arm,pl011"           },
-  { TEGRA_UART_TYPE_16550, Tegra16550SerialPortGetObject,    "nvidia,tegra20-uart" },
-  { TEGRA_UART_TYPE_NONE,  NULL,                             NULL                  },
+SERIAL_MAPPING  gSerialCompatibilityMap[] = {
+  { TEGRA_UART_TYPE_TCU,  TegraCombinedSerialPortGetObject, FALSE, 0 },
+  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject,     FALSE, 0 },
+  { TEGRA_UART_TYPE_NONE, NULL,                             FALSE, 0 }
 };
 
 STATIC
-SERIAL_MAPPING  gPresilSerialCompatibilityMap[] = {
-  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,sbsa-uart" },
-  { TEGRA_UART_TYPE_SBSA, TegraSbsaSerialPortGetObject, "arm,pl011"     },
-  { TEGRA_UART_TYPE_NONE, NULL,                         NULL            },
+CONST CHAR8  *gSerialSbsaCompatibilityStrings[] = {
+  "arm,sbsa-uart",
+  "arm,pl011",
+  NULL
 };
 
 STATIC
-SERIAL_MAPPING  *gSerialCompatibilityMap = NULL;
+CONST CHAR8  *gSerialTcuCompatibilityStrings[] = {
+  "nvidia,tegra194-tcu",
+  "nvidia,tegra186-tcu",
+  NULL
+};
+
+#define MAX_COMPATIBLE_STRINGS  (ARRAY_SIZE (gSerialSbsaCompatibilityStrings) + \
+                                 ARRAY_SIZE (gSerialTcuCompatibilityStrings))
+
+STATIC
+SERIAL_COMPATIBILITY_INFO  gSerialCompatibilityInfo[] = {
+  { TEGRA_UART_TYPE_SBSA, gSerialSbsaCompatibilityStrings },
+  { TEGRA_UART_TYPE_TCU,  gSerialTcuCompatibilityStrings  }
+};
 
 /** Identify the serial device hardware
 
@@ -73,26 +90,57 @@ SerialPortIdentify (
   )
 {
   EFI_STATUS                        Status;
-  UINT32                            Handles;
-  UINT32                            NumberOfUart;
-  SERIAL_MAPPING                    *Mapping;
-  BOOLEAN                           UartFound;
-  TEGRA_PLATFORM_TYPE               Platform;
   UINT32                            Size;
   VOID                              *DeviceTree;
   UINTN                             DeviceTreeSize;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  RegData;
+  INT32                             NodeOffset;
+  UINTN                             Index;
+  UINTN                             Index2;
+  UINTN                             MappingIndex;
+  UINTN                             MaxMappingIndex;
+  CONST CHAR8                       *FullCompatibilityList[MAX_COMPATIBLE_STRINGS];
+  BOOLEAN                           UartFound;
 
-  Platform = TegraGetPlatform ();
-  if (Platform == TEGRA_PLATFORM_SILICON) {
-    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
-  } else {
-    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
-  }
+  MaxMappingIndex = ARRAY_SIZE (gSerialCompatibilityMap) - 1;
 
   if (SerialMapping != NULL) {
     *SerialMapping = gSerialCompatibilityMap;
   }
+
+  for (MappingIndex = 0; MappingIndex < MaxMappingIndex; MappingIndex++) {
+    if (gSerialCompatibilityMap[MappingIndex].IsFound) {
+      // If already found, don't rescan dtb
+      return;
+    }
+  }
+
+  // Initialize the compatibility list and map the offset in the two tables
+  MappingIndex = 0;
+  for (Index = 0; Index < ARRAY_SIZE (gSerialCompatibilityInfo); Index++) {
+    Index2 = 0;
+    while (gSerialCompatibilityInfo[Index].CompatibilityStrings[Index2] != NULL) {
+      FullCompatibilityList[MappingIndex] = gSerialCompatibilityInfo[Index].CompatibilityStrings[Index2];
+      MappingIndex++;
+      Index2++;
+    }
+
+    gSerialCompatibilityInfo[Index].CompatibleMapOffset = MAX_UINT8;
+    for (Index2 = 0; Index2 < MaxMappingIndex; Index2++) {
+      if (gSerialCompatibilityMap[Index2].Type == gSerialCompatibilityInfo[Index].Type) {
+        gSerialCompatibilityInfo[Index].CompatibleMapOffset = Index2;
+        break;
+      }
+    }
+
+    // Ensure the compatibility list is not too long
+    // Need to reserve one for NULL terminator
+    if (MappingIndex >= (MAX_COMPATIBLE_STRINGS - 1)) {
+      break;
+    }
+  }
+
+  FullCompatibilityList[MappingIndex] = NULL;
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
@@ -101,48 +149,48 @@ SerialPortIdentify (
   GetRawDeviceTreePointer (&DeviceTree, &DeviceTreeSize);
   SetDeviceTreePointer (DeviceTree, DeviceTreeSize);
 
-  UartFound = FALSE;
-  Platform  = TegraGetPlatform ();
-
-  if (Platform == TEGRA_PLATFORM_SILICON) {
-    gSerialCompatibilityMap = gSiliconSerialCompatibilityMap;
-  } else {
-    gSerialCompatibilityMap = gPresilSerialCompatibilityMap;
-  }
-
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
-    if ((Platform == TEGRA_PLATFORM_SILICON) &&
-        (Mapping->Type == TEGRA_UART_TYPE_16550))
-    {
-      continue;
-    }
-
-    // Only one UART controller is expected
-    NumberOfUart = 1;
-    Status       = GetMatchingEnabledDeviceTreeNodes (Mapping->Compatibility, &Handles, &NumberOfUart);
-    if ((Status == EFI_SUCCESS) || (Status == EFI_BUFFER_TOO_SMALL)) {
-      UartFound = TRUE;
-      if (Mapping->Type != TEGRA_UART_TYPE_TCU) {
-        // Retreive UART register space
-        Size   = 1;
-        Status = GetDeviceTreeRegisters (Handles, &RegData, &Size);
-        if (EFI_ERROR (Status)) {
-          return;
-        }
-
-        Mapping->BaseAddress = RegData.BaseAddress;
-        // Update UART base address
-        SetTegraUARTBaseAddress (Mapping->BaseAddress);
-      } else {
-        Mapping->BaseAddress = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
+  NodeOffset = -1;
+  while (!EFI_ERROR (DeviceTreeGetNextCompatibleNode (FullCompatibilityList, &NodeOffset))) {
+    UartFound = FALSE;
+    for (Index = 0; Index < ARRAY_SIZE (gSerialCompatibilityInfo); Index++) {
+      // Don't check if the uart type if already found or if the mapping is not set
+      MappingIndex = gSerialCompatibilityInfo[Index].CompatibleMapOffset;
+      if ((MappingIndex == MAX_UINT8) ||
+          (gSerialCompatibilityMap[MappingIndex].IsFound))
+      {
+        continue;
       }
 
-      Mapping->IsFound = TRUE;
-    }
-  }
+      Status = DeviceTreeCheckNodeCompatibility (gSerialCompatibilityInfo[Index].CompatibilityStrings, NodeOffset);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
 
-  if (UartFound == FALSE) {
-    return;
+      Size   = 1;
+      Status = DeviceTreeGetRegisters (NodeOffset, &RegData, &Size);
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+
+      gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData.BaseAddress;
+      gSerialCompatibilityMap[MappingIndex].IsFound     = TRUE;
+      UartFound                                         = TRUE;
+      break;
+    }
+
+    if (UartFound) {
+      // Check if all UARTs are found
+      for (MappingIndex = 0; MappingIndex < MaxMappingIndex; MappingIndex++) {
+        if (!gSerialCompatibilityMap[MappingIndex].IsFound) {
+          break;
+        }
+      }
+
+      // Didn't find non-found in list, don't need to look for more
+      if (MappingIndex == MaxMappingIndex) {
+        break;
+      }
+    }
   }
 
   // Zero initialize to help the DTB helper get them from the HOB list
@@ -168,7 +216,7 @@ SerialPortInitialize (
 
   SerialPortIdentify (NULL);
 
-  for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+  for (Mapping = gSerialCompatibilityMap; Mapping->Type != TEGRA_UART_TYPE_NONE; Mapping++) {
     if (Mapping->IsFound == TRUE) {
       Status = Mapping->GetObject ()->SerialPortInitialize (Mapping->BaseAddress);
       if (RETURN_ERROR (Status)) {
@@ -198,14 +246,14 @@ GetActiveMapping (
   Mapping = NULL;
 
   if (gSerialCompatibilityMap != NULL) {
-    for (Mapping = gSerialCompatibilityMap; Mapping->Compatibility != NULL; Mapping++) {
+    for (Mapping = gSerialCompatibilityMap; Mapping->Type != TEGRA_UART_TYPE_NONE; Mapping++) {
       if (Mapping->IsFound == TRUE) {
         break;
       }
     }
   }
 
-  if ((Mapping == NULL) || (Mapping->Compatibility == NULL)) {
+  if ((Mapping == NULL) || (Mapping->Type == TEGRA_UART_TYPE_NONE)) {
     return NULL;
   }
 

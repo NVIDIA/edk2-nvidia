@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -426,7 +426,7 @@ CEntryPoint (
   StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
 
   SerialPortIdentify (&Mapping);
-  while (Mapping->Compatibility != NULL) {
+  while (Mapping->Type != TEGRA_UART_TYPE_NONE) {
     if (Mapping->IsFound) {
       ArmSetMemoryAttributes (Mapping->BaseAddress, SIZE_4KB, EFI_MEMORY_UC, 0);
     }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -269,7 +269,6 @@ TEGRA_UART_OBJ *
 typedef struct {
   UINT32                    Type;
   SERIAL_PORT_GET_OBJECT    GetObject;
-  CONST CHAR8               *Compatibility;
   BOOLEAN                   IsFound;
   EFI_PHYSICAL_ADDRESS      BaseAddress;
 } SERIAL_MAPPING;
