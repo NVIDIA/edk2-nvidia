@@ -21,7 +21,7 @@ class ServerSettingsManager(NVIDIASettingsManager):
 
     def GetPackagesPath(self):
         return super().GetPackagesPath() + [
-            "edk2-nvidia-server-gpu-sdk/", "edk2-redfish-client/"
+            "edk2-redfish-client/"
         ]
 
     def GetFirmwareVolume(self):
