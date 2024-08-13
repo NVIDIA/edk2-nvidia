@@ -182,6 +182,10 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     // address of the LIC region of this particular instance.
     Name (LICA, 0xFFFFFFFFFFFFFFFF)
 
+    // The "GFBP" named object would be patched by UEFI to indicate whether
+    // gfw boot complete polling is required or not.
+    Name (GFBP, 0x1)
+
     OperationRegion (LIC1, SystemMemory, LICA, TH500_SW_IO1_SIZE)
         Field (LIC1, DWordAcc, NoLock, Preserve)
     {
@@ -204,7 +208,7 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
     OperationRegion (FSPB, SystemMemory, FSPA, 4)
     Field (FSPB, DWordAcc, NoLock, Preserve)
     {
-      TI2S, 32, // < Nv_Therm_I2Cs_Scratch
+      GFBC, 32, // < GFW Boot Completed
     }
 
     Method(_RST, 0) {
@@ -229,12 +233,14 @@ DefinitionBlock ("SsdtPciOsc.aml", "SSDT", 2, "NVIDIA", "PCI-OSC", 1) {
         Sleep(2)
       }
 
-      /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
-      For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
-        If (TI2S == 0xFF) {
-          Break
+      If (GFBP == 0x1) {
+        /* Wait for reset to complete, poll for TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT sec */
+        For (Local0 = 0, Local0 < (TH500_ACPI_GPU_RST_MAX_LOOP_TIMEOUT * 1000), Local0 +=2) {
+          If (GFBC == 0xFF) {
+            Break
+          }
+          Sleep(2)
         }
-        Sleep(2)
       }
     }
   }

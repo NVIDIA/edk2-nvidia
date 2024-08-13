@@ -2,7 +2,7 @@
 
   NVIDIA GPU DSD AML Generation Protocol Handler.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -61,6 +61,7 @@ NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL_PRIVATE_DATA  mPrivateDataTemplate = {
   /* .Signature */ NVIDIA_GPU_DSD_AML_GENERATION_PRIVATE_DATA_SIGNATURE,
   /* .Handle */ NULL,
   /* .GpuDsdAmlGenerationProtocol */ {
+    NVIDIA_GPU_UNKNOWN,
     GpuDsdAmlGenerationGetDsdNode,
     GpuDsdAmlGenerationGetMemorySize,
     GpuDsdAmlGenerationGetEgmBasePa,
@@ -477,6 +478,7 @@ GpuDsdAmlGenerationGetEgmSize (
 
 /** Install the GPU DSD AML Generation Protocol on the Controller Handle
     @param[in] Handle       Controller Handle to install the protocol on
+    @param[in] GpuFamily    Gpu family detected
     @retval EFI_STATUS      EFI_SUCCESS          - Successfully installed protocol on Handle
                             EFI_OUT_OF_RESOURCES - Protocol memory allocation failed.
                             (pass through OpenProtocol)
@@ -485,7 +487,8 @@ GpuDsdAmlGenerationGetEgmSize (
 EFI_STATUS
 EFIAPI
 InstallGpuDsdAmlGenerationProtocolInstance (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE         Handle,
+  IN NVIDIA_GPU_FAMILY  GpuFamily
   )
 {
   EFI_STATUS                                           Status = EFI_SUCCESS;
@@ -529,7 +532,8 @@ InstallGpuDsdAmlGenerationProtocolInstance (
     goto cleanup;
   }
 
-  Private->Handle = Handle;
+  Private->Handle                                = Handle;
+  Private->GpuDsdAmlGenerationProtocol.GpuFamily = GpuFamily;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Private->Handle,

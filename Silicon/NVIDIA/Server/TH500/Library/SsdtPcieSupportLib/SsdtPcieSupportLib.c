@@ -231,6 +231,30 @@ UpdateLICAddr (
 STATIC
 EFI_STATUS
 EFIAPI
+DisableGFWBootCompletePoll (
+  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  )
+{
+  EFI_STATUS              Status;
+  AML_OBJECT_NODE_HANDLE  GfbpNode;
+
+  Status = AmlFindNode (Node, "GFBP", &GfbpNode);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AmlNameOpUpdateInteger (GfbpNode, 0);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
 UpdateFSPBootAddr (
   IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
   IN  OUT        AML_OBJECT_NODE_HANDLE        Node
@@ -610,9 +634,17 @@ GeneratePciSlots (
       }
 
       GpuNodeIsDetached = FALSE;
-      Status            = UpdateLICAddr (PciInfo, GpuNode, SocketID, TH500_SW_IO1_BASE_SOCKET_0);
+
+      Status = UpdateLICAddr (PciInfo, GpuNode, SocketID, TH500_SW_IO1_BASE_SOCKET_0);
       if (EFI_ERROR (Status)) {
         goto error_handler;
+      }
+
+      if (GpuDsdGeneration->GpuFamily != NVIDIA_GPU_HOPPER) {
+        Status = DisableGFWBootCompletePoll (PciInfo, GpuNode);
+        if (EFI_ERROR (Status)) {
+          goto error_handler;
+        }
       }
 
       Status = UpdateFSPBootAddr (PciInfo, GpuNode);

@@ -3,7 +3,7 @@
   NVIDIA GPU DSD AML Generation Protocol Handler private data,
     containing record macro and install/uninstall prototypes.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -43,6 +43,7 @@ typedef struct {
 
 /** Install the GPU DSD AML Generation Protocol on the Controller Handle
     @param[in] Handle       Controller Handle to install the protocol on
+    @param[in] GpuFamily    Gpu family detected
     @retval EFI_STATUS      EFI_SUCCESS          - Successfully installed protocol on Handle
                             EFI_OUT_OF_RESOURCES - Protocol memory allocation failed.
                             (pass through OpenProtocol)
@@ -51,7 +52,8 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 InstallGpuDsdAmlGenerationProtocolInstance (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE         Handle,
+  IN NVIDIA_GPU_FAMILY  GpuFamily
   );
 
 /** Uninstall the GPU DSD AML Generation Protocol from the Controller Handle

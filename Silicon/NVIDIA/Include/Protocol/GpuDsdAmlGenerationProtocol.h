@@ -2,7 +2,7 @@
 
   NVIDIA GPU DSD AML Generation Protocol interface declaration.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,12 @@
 #include <Library/AmlLib/AmlLib.h>
 
 typedef struct _NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL;
+
+typedef enum {
+  NVIDIA_GPU_HOPPER,
+  NVIDIA_GPU_BLACKWELL,
+  NVIDIA_GPU_UNKNOWN
+} NVIDIA_GPU_FAMILY;
 
 /**
   Return a pointer to the DSD AML node being generated for the Gpu node
@@ -84,6 +90,7 @@ EFI_STATUS
 
 // NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL protocol structure.
 struct _NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL {
+  NVIDIA_GPU_FAMILY                                GpuFamily;
   NVIDIA_GPU_DSD_AML_GENERATION_GET_DSD_NODE       GetDsdNode;
   NVIDIA_GPU_DSD_AML_GENERATION_GET_MEMORY_SIZE    GetMemorySize;
   NVIDIA_GPU_DSD_AML_GENERATION_GET_EGM_BASE_PA    GetEgmBasePa;

@@ -2,7 +2,7 @@
 
   NVIDIA GPU Firmware Boot Complete Protocol interface declaration.
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,7 +31,7 @@ EFI_STATUS
   OUT BOOLEAN *BootComplete
   );
 
-// NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL protocol structure.
+// NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL protocol structure.
 struct _NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL {
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL_GET_BOOT_STATE    GetBootCompleteState;
 };

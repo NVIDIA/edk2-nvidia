@@ -89,20 +89,19 @@ NVIDIADriverDumpPrivateData (
   return EFI_SUCCESS;
 }
 
-/** Controller support check based on PCI Vendor ID and Device ID.
+/** Controller family check based on PCI Vendor ID and Device ID.
     @param[in] ui16VendorID         PCI Vendor ID of the controller.
     @param[in] ui16DeviceID         PCI Device ID of the controller.
-    @retval BOOLEAN                 TRUE    Controller is supported.
-                                    FALSE   Controller is not supported.
+    @retval NVIDIA_GPU_FAMILY       GPU family of attached controller
 **/
-BOOLEAN
+NVIDIA_GPU_FAMILY
 EFIAPI
-IsControllerSupported (
+IdentifyControllerFamily (
   IN UINT16  ui16VendorId,
   IN UINT16  ui16DeviceId
   )
 {
-  BOOLEAN  bResult = FALSE;
+  NVIDIA_GPU_FAMILY  GpuFamily = NVIDIA_GPU_UNKNOWN;
 
   // Handle matching here for GPU Dxe. GOP driver calls GPUInfo for match.
   CONST UINT16  ui16VendorIDMatch = 0x10DE;
@@ -115,7 +114,7 @@ IsControllerSupported (
 
   /* EHH */
   if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId == 0x2300)) {
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_HOPPER;
   }
 
   /* EH */
@@ -123,7 +122,7 @@ IsControllerSupported (
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [EH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_HOPPER;
   }
 
   /* SHH */
@@ -131,13 +130,13 @@ IsControllerSupported (
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_HOPPER;
   }
 
   /* GB180 */
   /* EH */
   if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId == 0x2900)) {
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
   }
 
   /* EH and VDK(SHH) */
@@ -145,7 +144,7 @@ IsControllerSupported (
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [EHH/VDK(SHH)]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
   }
 
   /* SH */
@@ -154,7 +153,7 @@ IsControllerSupported (
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
   }
 
   /* TH500+GB102 ranges */
@@ -162,10 +161,10 @@ IsControllerSupported (
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
-    bResult = TRUE;
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
   }
 
-  return bResult;
+  return GpuFamily;
 }
 
 /** Controller C2CInit support check based on PCI Vendor ID and Device ID.
@@ -297,7 +296,7 @@ NVIDIAGpuDriverSupported (
     UINT16  ui16DeviceId = Pci.Hdr.DeviceId;
     DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle 2-part Id.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     /* PCI Device ID and Vendor ID for smatch to determine support status */
-    if ( !IsControllerSupported (ui16VendorId, ui16DeviceId)) {
+    if ( IdentifyControllerFamily (ui16VendorId, ui16DeviceId) == NVIDIA_GPU_UNKNOWN) {
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle did not match.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
       Status = EFI_UNSUPPORTED;
     } else {
@@ -510,6 +509,7 @@ NVIDIAGpuDriverStart (
   NVIDIA_GPU_FIRMWARE_BOOT_COMPLETE_PROTOCOL     *GpuFirmwareBootCompleteProtocol    = NULL;
   NVIDIA_GPU_FIRMWARE_C2CINIT_COMPLETE_PROTOCOL  *GpuFirmwareC2CInitCompleteProtocol = NULL;
   GPU_MODE                                       GpuMode                             = GPU_MODE_EH;
+  NVIDIA_GPU_FAMILY                              GpuFamily                           = NVIDIA_GPU_UNKNOWN;
   BOOLEAN                                        bFSPEnabled                         = TRUE;
   BOOLEAN                                        bC2CInitStatusSupported             = TRUE;
   UINTN                                          Segment;
@@ -627,6 +627,7 @@ NVIDIAGpuDriverStart (
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle 2-part Id.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
       /* Determine platform features. Enable C2C Init poll for appropriate targets, otherwise use Boot Compete */
       /* PCI Device ID and Vendor ID for smatch to determine support status */
+      GpuFamily = IdentifyControllerFamily (ui16VendorId, ui16DeviceId);
       if ( !IsControllerC2CInitCheckSupported (ui16VendorId, ui16DeviceId)) {
         DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Controller Handle does not support C2C Init Status.\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
       } else {
@@ -763,7 +764,7 @@ NVIDIAGpuDriverStart (
     }
 
     // Install the GPU DSD AML Generation Protocol instance on the supported ControllerHandle
-    Status = InstallGpuDsdAmlGenerationProtocolInstance (ControllerHandle);
+    Status = InstallGpuDsdAmlGenerationProtocolInstance (ControllerHandle, GpuFamily);
 
     /* Validate protocol installation */
     if (EFI_ERROR (Status)) {
