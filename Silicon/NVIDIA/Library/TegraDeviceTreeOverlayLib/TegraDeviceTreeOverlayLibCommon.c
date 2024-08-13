@@ -7,12 +7,14 @@
 
 **/
 
+#include <PiPei.h>
 #include <Base.h>
 #include <Uefi.h>
 #include <libfdt.h>
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -795,12 +797,14 @@ ApplyTegraDeviceTreeOverlayCommon (
   OVERLAY_BOARD_INFO  *OverlayBoardInfo
   )
 {
-  EFI_STATUS  Status;
-  INTN        Err;
-  VOID        *FdtNext;
-  VOID        *FdtBuf;
-  UINTN       BufPageCount;
-  UINTN       FdtSize;
+  EFI_STATUS                    Status;
+  INTN                          Err;
+  VOID                          *FdtNext;
+  VOID                          *FdtBuf;
+  UINTN                         BufPageCount;
+  UINTN                         FdtSize;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Err = fdt_check_header (FdtBase);
   if (Err != 0) {
@@ -816,6 +820,19 @@ ApplyTegraDeviceTreeOverlayCommon (
     return EFI_DEVICE_ERROR;
   }
 
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get PlatformResourceInfo\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  CpublDtb = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
+  ASSERT (CpublDtb != NULL);
+
   BoardInfo = OverlayBoardInfo;
   Status    = EFI_SUCCESS;
   FdtNext   = FdtOverlay;
@@ -830,9 +847,7 @@ ApplyTegraDeviceTreeOverlayCommon (
     }
 
     SWModule = ModuleStr;
-    CpublDtb = (VOID *)GetDTBBaseAddress ();
-    ASSERT (CpublDtb != NULL);
-    Status = ProcessOverlayDeviceTree (FdtBase, FdtNext, FdtBuf);
+    Status   = ProcessOverlayDeviceTree (FdtBase, FdtNext, FdtBuf);
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply (FdtBase, FdtBuf);
       if (Err != 0) {

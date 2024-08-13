@@ -23,6 +23,7 @@
 [LibraryClasses]
   PcdLib
   FdtLib
+  HobLib
 
 [Protocols]
   gNVIDIACvmEepromProtocolGuid
