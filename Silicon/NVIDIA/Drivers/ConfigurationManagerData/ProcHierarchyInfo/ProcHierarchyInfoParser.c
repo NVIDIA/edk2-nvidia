@@ -165,7 +165,7 @@ ProcHierarchyInfoParser (
     ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
     ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
                                                     EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_INVALID,
+                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
                                                     EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
                                                     EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
                                                     EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
@@ -192,7 +192,7 @@ ProcHierarchyInfoParser (
       SocketTokenMap[SocketId]                    = ProcHierarchyInfo[ProcHierarchyIndex].Token;
       ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
                                                       EFI_ACPI_6_4_PPTT_PACKAGE_PHYSICAL,
-                                                      EFI_ACPI_6_4_PPTT_PROCESSOR_ID_INVALID,
+                                                      EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
                                                       EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
                                                       EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
                                                       EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
@@ -213,7 +213,7 @@ ProcHierarchyInfoParser (
           ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
           ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
                                                           EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_ID_INVALID,
+                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
                                                           EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
                                                           EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
                                                           EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
