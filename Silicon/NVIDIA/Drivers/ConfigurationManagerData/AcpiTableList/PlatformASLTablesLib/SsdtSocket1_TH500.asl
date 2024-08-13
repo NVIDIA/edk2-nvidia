@@ -13,6 +13,69 @@
 DefinitionBlock("SsdtSocket1_th500.aml", "SSDT", 2, "NVIDIA", "TH500_S1", 0x00000001) {
   Scope(_SB) {
     //---------------------------------------------------------------------
+    // I2C Device
+    //---------------------------------------------------------------------
+    Device (I2CB) {
+      Name (_HID, "NVDA0301")
+      Name (_UID, 0x12)
+      Name (_STA, 0)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (
+          ResourceConsumer, // ResourceUsage
+          PosDecode, // Decode
+          MinFixed, // Min range is fixed
+          MaxFixed, // Max range is fixed
+          Cacheable, // Cacheable
+          ReadWrite, // Read And Write
+          0x0000000000000000, // Address Granularity - GRA
+          0x000010000c240000, // Address Minimum - MIN
+          0x000010000c24FFFF, // Address Maximum - MAX
+          0x0000000000000000, // Address Translation - TRA
+          0x0000000000010000, // Range Length - LEN
+          , // Resource Source Index
+          , // Resource Source
+          // Descriptor Name
+        )
+        Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive) { 0x17d }
+      })
+
+      Name (_DSD, Package () {
+        ToUUID("daffd814-6eba-4d8c-8a91-bc9bbf4aa301"),
+        Package () {
+          Package (2) {"clock-frequency", 400000 },
+        },
+      })
+
+      Method (_RST) { }
+
+      Device (EEP2) {
+        Name (_HID, "EEPM0002")
+        Name (_UID, 0)
+        Name (_STA, 0)
+
+        Name (_STR, Unicode("EEPROM_2"))
+
+        // Return the SSIF slave address
+        Method (_ADR) {
+          Return(0x50)
+        }
+
+        Name (_CRS, ResourceTemplate () {
+                 I2cSerialBusV2 (
+                   0x50,
+                   ControllerInitiated,
+                   400000,
+                   AddressingMode7Bit,
+                   "\\_SB.I2CB",
+                   0,
+                   ResourceConsumer
+                 )
+        })
+      }
+    }
+
+    //---------------------------------------------------------------------
     // MCF Devices
     //---------------------------------------------------------------------
     //MCF NVLINK Chiplet

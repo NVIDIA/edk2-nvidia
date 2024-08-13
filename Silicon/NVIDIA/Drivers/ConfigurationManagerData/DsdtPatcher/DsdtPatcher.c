@@ -222,6 +222,116 @@ ErrorExit:
   return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
+/** patch EEPROMs data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateEepromInfo (
+  IN NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol
+  )
+{
+  EFI_STATUS            Status;
+  INT32                 NodeOffset;
+  INT32                 SubNodeOffset;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 I2CStatus;
+  UINT8                 EepromStatus;
+  CONST CHAR8           *StatusString;
+
+  NodeOffset = -1;
+  Status     = DeviceTreeGetNextCompatibleNode (I2CCompatibleInfo, &NodeOffset);
+  while (EFI_SUCCESS == Status) {
+    Status = DeviceTreeGetNamedSubnode (
+               "eeprom1",
+               NodeOffset,
+               &SubNodeOffset
+               );
+    if (!EFI_ERROR (Status)) {
+      Status = DeviceTreeGetNodeProperty (
+                 NodeOffset,
+                 "status",
+                 (CONST VOID **)&StatusString,
+                 NULL
+                 );
+      if (!EFI_ERROR (Status) && (AsciiStrCmp (StatusString, "okay") == 0)) {
+        // Find EEP1 node
+        Status = PatchProtocol->FindNode (PatchProtocol, ACPI_EEP1_STA, &AcpiNodeInfo);
+        if (!EFI_ERROR (Status) && (AcpiNodeInfo.Size == sizeof (EepromStatus))) {
+          // Set EEP1 Status
+          EepromStatus = 0xF;
+          Status       = PatchProtocol->SetNodeData (
+                                          PatchProtocol,
+                                          &AcpiNodeInfo,
+                                          &EepromStatus,
+                                          sizeof (EepromStatus
+                                                  )
+                                          );
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\n", __FUNCTION__, ACPI_EEP1_STA, Status));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Cannot find %a\n", __FUNCTION__, ACPI_EEP1_STA));
+        }
+      }
+    }
+
+    Status = DeviceTreeGetNamedSubnode (
+               "eeprom2",
+               NodeOffset,
+               &SubNodeOffset
+               );
+    if (!EFI_ERROR (Status)) {
+      Status = DeviceTreeGetNodeProperty (
+                 NodeOffset,
+                 "status",
+                 (CONST VOID **)&StatusString,
+                 NULL
+                 );
+      if (!EFI_ERROR (Status) && (AsciiStrCmp (StatusString, "okay") == 0)) {
+        // Find I2CB node
+        Status = PatchProtocol->FindNode (PatchProtocol, ACPI_I2CB_STA, &AcpiNodeInfo);
+        if (!EFI_ERROR (Status) && (AcpiNodeInfo.Size == sizeof (I2CStatus))) {
+          // Set I2CB Status
+          I2CStatus = 0xF;
+          Status    = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &I2CStatus, sizeof (I2CStatus));
+          if (!EFI_ERROR (Status)) {
+            // Find EEP2 node
+            Status = PatchProtocol->FindNode (PatchProtocol, ACPI_EEP2_STA, &AcpiNodeInfo);
+            if (!EFI_ERROR (Status) && (AcpiNodeInfo.Size == sizeof (EepromStatus))) {
+              // Set EEP2 Status
+              EepromStatus = 0xF;
+              Status       = PatchProtocol->SetNodeData (
+                                              PatchProtocol,
+                                              &AcpiNodeInfo,
+                                              &EepromStatus,
+                                              sizeof (EepromStatus
+                                                      )
+                                              );
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\n", __FUNCTION__, ACPI_EEP2_STA, Status));
+              }
+            } else {
+              DEBUG ((DEBUG_ERROR, "%a: Cannot find %a\n", __FUNCTION__, ACPI_EEP2_STA));
+            }
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\n", __FUNCTION__, ACPI_I2CB_STA, Status));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Cannot find %a\n", __FUNCTION__, ACPI_I2CB_STA));
+        }
+      }
+    }
+
+    Status = DeviceTreeGetNextCompatibleNode (I2CCompatibleInfo, &NodeOffset);
+  }
+
+  return EFI_SUCCESS;
+}
+
 /** DSDT patcher function.
 
   The DSDT table is potentially patched with the following information:
@@ -230,6 +340,9 @@ ErrorExit:
     "_SB_.QSP1._STA"
     "_SB_.I2C3._STA"
     "_SB_.I2C3.SSIF._STA"
+    "_SB_.I2CB._STA"
+    "_SB_.I2C2.EEP1._STA"
+    "_SB_.I2CB.EEP2._STA"
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -286,6 +399,11 @@ DsdtPatcher (
   }
 
   Status = UpdateSSIFInfo (PatchProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateEepromInfo (PatchProtocol);
   if (EFI_ERROR (Status)) {
     return Status;
   }

@@ -783,6 +783,31 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       })
 
       Method (_RST) { }
+
+      Device (EEP1) {
+        Name (_HID, "EEPM0001")
+        Name (_UID, 0)
+        Name (_STA, 0)
+
+        Name (_STR, Unicode("EEPROM_1"))
+
+        // Return the SSIF slave address
+        Method (_ADR) {
+          Return(0x50)
+        }
+
+        Name (_CRS, ResourceTemplate () {
+                 I2cSerialBusV2 (
+                   0x50,
+                   ControllerInitiated,
+                   400000,
+                   AddressingMode7Bit,
+                   "\\_SB.I2C2",
+                   0,
+                   ResourceConsumer
+                 )
+        })
+      }
     }
 #endif
 

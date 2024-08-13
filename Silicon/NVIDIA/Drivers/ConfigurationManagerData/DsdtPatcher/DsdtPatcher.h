@@ -17,6 +17,9 @@
 #define ACPI_QSPI1_STA  "_SB_.QSP1._STA"
 #define ACPI_I2C3_STA   "_SB_.I2C3._STA"
 #define ACPI_SSIF_STA   "_SB_.I2C3.SSIF._STA"
+#define ACPI_I2CB_STA   "_SB_.I2CB._STA"
+#define ACPI_EEP1_STA   "_SB_.I2C2.EEP1._STA"
+#define ACPI_EEP2_STA   "_SB_.I2CB.EEP2._STA"
 
 /** DSDT patcher function.
 
@@ -26,6 +29,9 @@
     "_SB_.QSP1._STA"
     "_SB_.I2C3._STA"
     "_SB_.I2C3.SSIF._STA"
+    "_SB_.I2CB._STA"
+    "_SB_.I2C2.EEP1._STA"
+    "_SB_.I2CB.EEP2._STA"
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
