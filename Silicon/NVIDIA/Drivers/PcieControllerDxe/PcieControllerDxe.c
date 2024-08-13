@@ -1093,8 +1093,7 @@ PcieEnableErrorReporting (
         }
 
         if (!SkipDPCEnable) {
-          Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
-                     PCIE_DPC_CTL_DPC_ERR_COR_EN);
+          Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
         }
 
         DevCapOffset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
