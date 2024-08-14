@@ -22,7 +22,6 @@
 #include <IndustryStandard/Ipmi.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/PciIo.h>
 #include <IndustryStandard/Pci22.h>
 

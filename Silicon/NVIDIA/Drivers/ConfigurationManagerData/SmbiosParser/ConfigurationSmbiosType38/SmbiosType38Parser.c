@@ -10,7 +10,6 @@
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType38Parser.h"

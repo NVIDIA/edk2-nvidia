@@ -15,7 +15,6 @@
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <NVIDIAConfiguration.h>
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType3Parser.h"

@@ -14,7 +14,6 @@
 #include <Library/UefiLib.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType32Parser.h"
 

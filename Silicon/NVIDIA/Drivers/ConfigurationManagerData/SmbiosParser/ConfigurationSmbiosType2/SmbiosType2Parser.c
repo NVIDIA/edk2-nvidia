@@ -15,7 +15,6 @@
 #include <Library/PrintLib.h>
 #include <libfdt.h>
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType2Parser.h"

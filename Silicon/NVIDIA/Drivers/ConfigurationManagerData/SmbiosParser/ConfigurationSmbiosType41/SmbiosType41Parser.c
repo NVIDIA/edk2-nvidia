@@ -13,7 +13,6 @@
 #include <libfdt.h>
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciIo.h>
 #include "SmbiosParserPrivate.h"

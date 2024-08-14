@@ -17,7 +17,6 @@
 #include <libfdt.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosMemParser.h"

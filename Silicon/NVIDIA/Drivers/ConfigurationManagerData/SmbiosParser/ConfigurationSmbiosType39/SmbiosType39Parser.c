@@ -18,7 +18,6 @@
 #include <IndustryStandard/Ipmi.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType39Parser.h"

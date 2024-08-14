@@ -15,7 +15,6 @@
 #include <Protocol/PciIo.h>
 #include <Library/PrintLib.h>
 #include <Protocol/FirmwareManagement.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Protocol/Tcg2Protocol.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiLib.h>

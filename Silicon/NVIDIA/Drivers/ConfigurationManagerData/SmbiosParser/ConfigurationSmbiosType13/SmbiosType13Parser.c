@@ -16,7 +16,6 @@
 #include <Library/UefiLib.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include "SmbiosParserPrivate.h"
 
 #define ABBREVIATED_FORMAT     1

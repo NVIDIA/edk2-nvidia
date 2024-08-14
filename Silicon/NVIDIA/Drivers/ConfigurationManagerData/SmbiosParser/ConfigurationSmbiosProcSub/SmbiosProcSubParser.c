@@ -13,7 +13,6 @@
 #include <Library/PrintLib.h>
 #include <libfdt.h>
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/ArmLib.h>
 #include <IndustryStandard/ArmStdSmc.h>

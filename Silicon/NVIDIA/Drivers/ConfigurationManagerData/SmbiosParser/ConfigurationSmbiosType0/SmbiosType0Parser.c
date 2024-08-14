@@ -22,7 +22,6 @@
 #include <IndustryStandard/IpmiNetFnApp.h>
 
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType0Parser.h"
 

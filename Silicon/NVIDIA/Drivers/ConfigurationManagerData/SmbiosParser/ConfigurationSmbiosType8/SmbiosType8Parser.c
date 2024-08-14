@@ -13,7 +13,6 @@
 #include <libfdt.h>
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosType8Parser.h"

@@ -8,7 +8,6 @@
 **/
 
 #include <Uefi.h>
-#include <ConfigurationManagerObject.h>
 #include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
@@ -27,8 +26,6 @@
 #include <Library/HobLib.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/EFuse.h>
-#include <Protocol/ConfigurationManagerDataProtocol.h>
-#include <Protocol/ConfigurationManagerProtocol.h>
 #include <Protocol/TegraCpuFreq.h>
 #include <libfdt.h>
 
