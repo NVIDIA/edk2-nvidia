@@ -59,6 +59,12 @@ STATIC CHAR16  *pKernelPartitionDtbMapping[][2] = {
   },
   {
     L"kernel", L"kernel-dtb"
+  },
+  {
+    L"kernel_a", L"kernel-dtb_a"
+  },
+  {
+    L"kernel_b", L"kernel-dtb_b"
   }
 };
 

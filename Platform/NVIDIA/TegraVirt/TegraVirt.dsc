@@ -102,7 +102,7 @@
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
-  BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLibNull/BootChainInfoLibNull.inf
+  BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoVirtLib/BootChainInfoVirtLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
