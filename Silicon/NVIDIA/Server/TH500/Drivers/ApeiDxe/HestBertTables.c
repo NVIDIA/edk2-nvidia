@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -158,7 +158,7 @@ HESTCreateAcpiTable (
 
       .NumberOfRecordsToPreAllocate = ErrorSource[i].NumberRecordstoPreAllocate,
       .MaxSectionsPerRecord         = ErrorSource[i].MaxSectionsPerRecord,
-      .MaxRawDataLength             = 0,
+      .MaxRawDataLength             = ErrorSource[i].MaxRawDataLength,
       .ErrorStatusBlockLength       = ErrorSource[i].MaxRawDataLength + sizeof (EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE),
 
       /* Error entry address info */
