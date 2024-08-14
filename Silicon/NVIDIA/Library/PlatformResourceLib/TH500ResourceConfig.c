@@ -343,8 +343,8 @@ TH500GetMemoryInfo (
   OUT UINT64                          *MemorySize
   )
 {
-  EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
-  UINT64                EgmSize, HvSize;
+  EFI_PHYSICAL_ADDRESS  EgmBase;
+  UINT64                EgmSize;
 
   if ((CpuBootloaderParams == NULL) ||
       (MemoryBase == NULL) ||
@@ -356,9 +356,6 @@ TH500GetMemoryInfo (
   EgmBase = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
   EgmSize = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
 
-  HvBase = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_HV].Base;
-  HvSize = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_HV].Size;
-
   if (MemoryMode == Th500MemoryModeNormal) {
     *MemoryBase = CpuBootloaderParams->SdramInfo[Socket].Base;
     *MemorySize = CpuBootloaderParams->SdramInfo[Socket].Size;
@@ -366,8 +363,8 @@ TH500GetMemoryInfo (
     *MemoryBase = EgmBase;
     *MemorySize = EgmSize;
   } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
-    *MemoryBase = HvBase;
-    *MemorySize = HvSize;
+    *MemoryBase = CpuBootloaderParams->SdramInfo[Socket].Base + EgmSize;
+    *MemorySize = CpuBootloaderParams->SdramInfo[Socket].Size - EgmSize;
   } else {
     return EFI_DEVICE_ERROR;
   }
@@ -455,7 +452,7 @@ TH500BuildDramRegions (
         DEBUG ((DEBUG_ERROR, "Memory Mode: Unknown\n"));
       }
 
-      if ((MemoryMode == Th500MemoryModeEgmNoHv) || (MemoryMode == Th500MemoryModeEgmWithHv)) {
+      if (MemoryMode == Th500MemoryModeEgmNoHv) {
         Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
         Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
         PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
