@@ -36,6 +36,7 @@
   BpmpSsdtSocket2_TH500.asl
   BpmpSsdtSocket3_TH500.asl
   SsdtTpm_TH500.asl
+  Dsdt_T410.asl
 
 [Packages]
   ArmPkg/ArmPkg.dec

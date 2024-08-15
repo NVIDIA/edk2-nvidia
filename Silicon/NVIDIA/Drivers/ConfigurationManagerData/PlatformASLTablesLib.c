@@ -30,5 +30,8 @@
 #include "BpmpSsdtSocket3_TH500.hex"
 #include "BpmpSsdtSocket3_TH500.offset.h"
 
+#include "Dsdt_T410.hex"
+#include "Dsdt_T410.offset.h"
+
 #include "SdcTemplate.offset.h"
 #include "I2cTemplate.offset.h"

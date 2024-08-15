@@ -43,9 +43,11 @@ InitializePlatformRepository (
   UINT32                                Index;
 
   ChipID = TegraGetChipID ();
+
   switch (ChipID) {
     case T234_CHIP_ID:
     case TH500_CHIP_ID:
+    case T410_CHIP_ID:
     case T264_CHIP_ID:
       break;
 
@@ -92,6 +94,7 @@ InitializePlatformRepository (
       break;
 
     case TH500_CHIP_ID:
+    case T410_CHIP_ID:
       Status = Repo->FindEntry (Repo, CREATE_CM_STD_OBJECT_ID (EStdObjAcpiTableList), CM_NULL_TOKEN, &Entry);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get the AcpiTableList\n", __FUNCTION__, Status));

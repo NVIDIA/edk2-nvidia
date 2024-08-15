@@ -452,7 +452,13 @@ ProcessDsuPmu (
   OemProduction = FALSE;
 
   Status = gBS->LocateProtocol (&gNVIDIAEFuseProtocolGuid, NULL, (VOID **)&EFuse);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) || (EFuse == NULL)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Couldn't get gNVIDIAEFuseProtocolGuid Handle: %r\n",
+      __FUNCTION__,
+      Status
+      ));
     return;
   }
 

@@ -130,6 +130,7 @@ GenericTimerParser (
 
     case T264_CHIP_ID:
     case TH500_CHIP_ID:
+    case T410_CHIP_ID:
       GenericTimerInfo = &GenericTimerInfo_Server;
       break;
 

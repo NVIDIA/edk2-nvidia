@@ -38,6 +38,8 @@
 [Guids]
   gArmMpCoreInfoGuid
   gNVIDIAPlatformResourceDataGuid
+  gNVIDIAT410MB1DataGuid
+  gNVIDIAT410MB1DefaultDataGuid
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox

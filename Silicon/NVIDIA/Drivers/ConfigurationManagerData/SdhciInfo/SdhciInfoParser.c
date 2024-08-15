@@ -103,6 +103,7 @@ SdhciInfoParser (
       CompatibleInfo = T264Compatibility;
       break;
     case TH500_CHIP_ID:
+    case T410_CHIP_ID:
       CompatibleInfo = TH500Compatibility;
       break;
     default:

@@ -62,6 +62,11 @@ extern unsigned char  bpmpssdtsocket3_th500_aml_code[];
 // #include "BpmpSsdtSocket3_TH500.offset.h"
 extern AML_OFFSET_TABLE_ENTRY  SSDT_BPMP_S3_OffsetTable[];
 
+// #include "Dsdt_T410.hex"
+extern unsigned char  dsdt_t410_aml_code[];
+// #include "Dsdt_T410.offset.h"
+extern AML_OFFSET_TABLE_ENTRY  DSDT_T410_OffsetTable[];
+
 // #include "SdcTemplate.hex"
 extern unsigned char  sdctemplate_aml_code[];
 // #include "SdcTemplate.offset.h"
@@ -185,6 +190,17 @@ STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_TH500[] = {
   SSDT_BPMP_S3_OffsetTable
 };
 
+/** The platform ACPI info for T410.
+*/
+
+STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray_T410[] = {
+  (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_t410_aml_code
+};
+
+STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T410[] = {
+  DSDT_T410_OffsetTable
+};
+
 /** Acpi table list parser function.
 
   The following structures are populated:
@@ -256,6 +272,13 @@ AcpiTableListParser (
       AcpiTableArray   = AcpiTableArray_TH500;
       OffsetTableArray = OffsetTableArray_TH500;
       ArraySize        = ARRAY_SIZE (AcpiTableArray_TH500);
+      break;
+
+    case T410_CHIP_ID:
+      DsdtTable        = dsdt_t410_aml_code;
+      AcpiTableArray   = AcpiTableArray_T410;
+      OffsetTableArray = OffsetTableArray_T410;
+      ArraySize        = ARRAY_SIZE (AcpiTableArray_T410);
       break;
 
     default:

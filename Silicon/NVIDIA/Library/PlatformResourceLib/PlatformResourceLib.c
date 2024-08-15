@@ -19,6 +19,7 @@
 #include <Guid/ArmMpCoreInfo.h>
 #include <Library/FdtLib.h>
 #include "SocResourceConfig.h"
+#include "T410ResourceConfig.h"
 
 #define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
   (((UINT64)(Aff3) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))

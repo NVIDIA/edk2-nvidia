@@ -8,6 +8,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <T234/T234Definitions.h>
 #include <TH500/TH500Definitions.h>
+#include <T410/T410Definitions.h>
 #include "TegraPlatformInfoLibPrivate.h"
 
 ASM_FUNC(TegraGetChipID)
@@ -57,8 +58,14 @@ _TH500Carveout:
 
 _T264Carveout:
   cmp w1, #T264_CHIP_ID
-  bne _DefaultCarveout
+  bne _T410Carveout
   bl ASM_PFX (GetT264BlCarveoutOffset)
+  b _ReturnCarveout
+
+_T410Carveout:
+  cmp w1, #T410_CHIP_ID
+  bne _DefaultCarveout
+  MOV64 (x0, T410_BL_CARVEOUT_OFFSET)
   b _ReturnCarveout
 
 _DefaultCarveout:
@@ -70,8 +77,14 @@ _ReturnCarveout:
 
 ASM_FUNC(TegraGetBLInfoLocationAddress)
   cmp w0, #T264_CHIP_ID
-  bne _DefaultBLInfoAddr
+  bne _T410BLInfoAddr
   MOV64 (x0, T264_BLINFO_LOCATION_ADDRESS)
+  ret
+
+_T410BLInfoAddr:
+  cmp w0, #T410_CHIP_ID
+  bne _DefaultBLInfoAddr
+  MOV64 (x0, T410_BLINFO_LOCATION_ADDRESS)
   ret
 
 _DefaultBLInfoAddr:
