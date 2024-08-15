@@ -117,6 +117,7 @@ CmetMsgHandler (
   EFI_STATUS                  Status;
   RAS_MM_COMMUNICATE_PAYLOAD  *CmetHeader;
   UINT8                       *CmetPayload;
+  UINTN                       CmetPayloadSize;
 
   if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
@@ -130,6 +131,8 @@ CmetMsgHandler (
 
   CmetHeader  = (RAS_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
   CmetPayload = CmetHeader->Data;
+
+  CmetPayloadSize = *CommBufferSize - sizeof (RAS_MM_COMMUNICATE_PAYLOAD);
 
   if (CmetSeqProto == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: No Storage support for Cmet Vars\n", __FUNCTION__));
@@ -154,7 +157,7 @@ CmetMsgHandler (
                                CmetSeqProto,
                                CmetHeader->Socket,
                                (VOID *)CmetPayload,
-                               *CommBufferSize,
+                               CmetPayloadSize,
                                CmetHeader->Flag
                                );
       break;
@@ -163,7 +166,7 @@ CmetMsgHandler (
                                CmetSeqProto,
                                CmetHeader->Socket,
                                (VOID *)CmetPayload,
-                               *CommBufferSize,
+                               CmetPayloadSize,
                                CmetHeader->Flag
                                );
       break;
@@ -253,6 +256,7 @@ RasLogMsgHandler (
   EFI_STATUS                  Status;
   RAS_MM_COMMUNICATE_PAYLOAD  *RasHeader;
   UINT8                       *RasPayload;
+  UINTN                       RasPayloadSize;
 
   if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: Communication buffer : %r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
@@ -266,6 +270,8 @@ RasLogMsgHandler (
 
   RasHeader  = (RAS_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
   RasPayload = RasHeader->Data;
+
+  RasPayloadSize = *CommBufferSize - sizeof (RasHeader);
 
   if (RasSeqProto == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: No Storage support for RASLog\n", __FUNCTION__));
@@ -290,7 +296,7 @@ RasLogMsgHandler (
                               RasSeqProto,
                               RasHeader->Socket,
                               (VOID *)RasPayload,
-                              *CommBufferSize
+                              RasPayloadSize
                               );
       break;
     case WRITE_NEXT_RECORD:
@@ -298,7 +304,7 @@ RasLogMsgHandler (
                               RasSeqProto,
                               RasHeader->Socket,
                               (VOID *)RasPayload,
-                              *CommBufferSize
+                              RasPayloadSize
                               );
       RasHeader->Flag = RasLogOverrideTargets (RasPayload, RasHeader->Flag);
       break;
