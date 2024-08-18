@@ -1701,7 +1701,7 @@ SyncHiiSettings (
 {
   UINTN                         Index;
   VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo = NULL;
   UINTN                         AvailableSockets;
   UINTN                         SymmetricalActiveCoresPerSocket;
   UINTN                         OverflowActiveCoresPerSocket;
@@ -2995,6 +2995,97 @@ GetDefaultValue (
 }
 
 /**
+  Get total enabled cores count of all sockets
+
+  @return UINT32         Total number of enabled cores
+**/
+UINT32
+GetTotalEnabledCores (
+  )
+{
+  UINT32  TotalEnabledCores = 0;
+
+  for (UINT8 Index = 0; Index < MAX_SOCKETS; Index++) {
+    DEBUG ((DEBUG_INFO, "MB1 Core socket 0x%x cores 0x%x\r\n", Index, mMb1DefaultConfig.Data.Mb1Data.ActiveCores[Index]));
+    TotalEnabledCores += mMb1DefaultConfig.Data.Mb1Data.ActiveCores[Index];
+  }
+
+  return TotalEnabledCores;
+}
+
+/**
+  Return whether an user input active core count is valid or not
+
+  @param ActiveCores   User input core count
+
+  @return BOOLEAN      Is the input valid or not
+**/
+BOOLEAN
+IsActiveCoresValid (
+  UINT32  ActiveCores
+  )
+{
+  UINT32  TotalEnabledCores = 0;
+
+  TotalEnabledCores = GetTotalEnabledCores ();
+  return TotalEnabledCores ? (ActiveCores <= TotalEnabledCores) : TRUE;
+}
+
+/**
+  Construct Request String (L"&OFFSET=%x&WIDTH=%x") base on the input Offset and Width.
+  If the input RequestString is not NULL, new request will be cat at the end of it. The full
+  request string will be constructed and return. Caller is responsible to free it.
+
+  @param RequestString   Current request string.
+  @param Offset          Offset of data in Storage.
+  @param Width           Width of data.
+
+  @return String         Request string with input Offset and Width.
+**/
+EFI_STRING
+EFIAPI
+HiiConstructRequestString (
+  IN EFI_STRING RequestString, OPTIONAL
+  IN UINTN           Offset,
+  IN UINTN           Width
+  )
+{
+  CHAR16      RequestElement[30];
+  UINTN       StringLength = 0;
+  EFI_STRING  NewString;
+
+  StringLength = UnicodeSPrint (
+                   RequestElement,
+                   sizeof (RequestElement),
+                   L"&OFFSET=%x&WIDTH=%x",
+                   Offset,
+                   Width
+                   );
+
+  if (RequestString != NULL) {
+    StringLength = StringLength + StrLen (RequestString);
+  }
+
+  NewString = AllocateZeroPool ((StringLength + 1) * sizeof (CHAR16));
+
+  if (NewString == NULL) {
+    if (RequestString != NULL) {
+      FreePool (RequestString);
+    }
+
+    return NULL;
+  }
+
+  if (RequestString != NULL) {
+    StrCatS (NewString, StringLength + 1, RequestString);
+    FreePool (RequestString);
+  }
+
+  StrCatS (NewString, StringLength + 1, RequestElement);
+  return NewString;
+}
+
+/**
   This function processes the results of changes in configuration.
 
   @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
@@ -3027,13 +3118,19 @@ ConfigCallback (
   OUT EFI_BROWSER_ACTION_REQUEST           *ActionRequest
   )
 {
-  EFI_STATUS     Status;
-  EFI_INPUT_KEY  InputKey;
-  EFI_STRING     TpmPopupTitle;
-  EFI_STRING     TpmPopupBody1;
-  EFI_STRING     TpmPopupBody2;
-  EFI_STRING     TpmPopupBody3;
-  EFI_STRING     TpmPopupConfirm;
+  EFI_STATUS                 Status;
+  EFI_INPUT_KEY              InputKey;
+  EFI_STRING                 TpmPopupTitle;
+  EFI_STRING                 TpmPopupBody1;
+  EFI_STRING                 TpmPopupBody2;
+  EFI_STRING                 TpmPopupBody3;
+  EFI_STRING                 TpmPopupConfirm;
+  UINT32                     TotalEnabledCores = 0;
+  EFI_INPUT_KEY              Key;
+  CHAR16                     StringBuffer[50]        = { L'\0' };
+  EFI_STRING                 RequestString           = NULL;
+  NVIDIA_CONFIG_HII_CONTROL  *NvidiaConfigHiiControl = NULL;
+  UINTN                      VarSize                 = sizeof (*NvidiaConfigHiiControl);
 
   Status = EFI_UNSUPPORTED;
   if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
@@ -3070,7 +3167,42 @@ ConfigCallback (
         StatusRegReset ();
         gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
         break;
+      case KEY_MAX_CORES:
+        TotalEnabledCores = GetTotalEnabledCores ();
+        if (!IsActiveCoresValid (Value->u32)) {
+          UnicodeSPrint (StringBuffer, sizeof (StringBuffer), L"Max ActiveCores can't exceed %d", TotalEnabledCores);
+          CreatePopUp (EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE, &Key, StringBuffer, NULL);
+          NvidiaConfigHiiControl = AllocatePool (VarSize);
+          if (NvidiaConfigHiiControl == NULL) {
+            return EFI_NOT_FOUND;
+          }
 
+          Status = HiiGetBrowserData (&gNVIDIAResourceConfigFormsetGuid, mHiiControlStorageName, VarSize, (UINT8 *)NvidiaConfigHiiControl);
+          if (Status != TRUE) {
+            FreePool (NvidiaConfigHiiControl);
+            return EFI_NOT_FOUND;
+          }
+
+          // Restore to previous activecores
+          NvidiaConfigHiiControl->ActiveCores = 0;
+          for (UINT8 Index = 0; Index < MAX_SOCKETS; Index++) {
+            NvidiaConfigHiiControl->ActiveCores += mMb1Config.Data.Mb1Data.ActiveCores[Index];
+          }
+
+          RequestString = HiiConstructRequestString (RequestString, OFFSET_OF (NVIDIA_CONFIG_HII_CONTROL, ActiveCores), sizeof (UINT32));
+          Status        = HiiSetBrowserData (&gNVIDIAResourceConfigFormsetGuid, mHiiControlStorageName, VarSize, (UINT8 *)NvidiaConfigHiiControl, RequestString);
+          if (Status != TRUE) {
+            FreePool (NvidiaConfigHiiControl);
+            return EFI_NOT_FOUND;
+          }
+
+          FreePool (NvidiaConfigHiiControl);
+          if (RequestString) {
+            FreePool (RequestString);
+          }
+        }
+
+        break;
       default:
         break;
     }
