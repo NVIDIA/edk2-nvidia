@@ -151,7 +151,11 @@ DeviceTreeGetRegisters (
   }
 
   EntrySize = sizeof (UINT32) * (AddressCells + SizeCells);
-  ASSERT ((PropertySize % EntrySize) == 0);
+  if ((PropertySize % EntrySize) != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Bad DTB \"reg\" property found at NodeOffset 0x%x (#address-cells = %lu, #size-cells = %lu, entry size = 0x%lx, total size = 0x%x)\n", __FUNCTION__, NodeOffset, AddressCells, SizeCells, EntrySize, PropertySize));
+    return EFI_DEVICE_ERROR;
+  }
+
   NumberOfRegRegions = PropertySize / EntrySize;
 
   if (NumberOfRegRegions > *NumberOfRegisters) {
