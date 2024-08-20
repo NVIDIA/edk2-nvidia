@@ -718,17 +718,14 @@ GetRootfsStatusReg (
   )
 {
   UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
 
   ChipID = TegraGetChipID ();
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
   switch (ChipID) {
     case T234_CHIP_ID:
-      return T234GetRootfsStatusReg (CpuBootloaderAddress, RegisterValue);
+      return T234GetRootfsStatusReg (RegisterValue);
     case T194_CHIP_ID:
-      return T194GetRootfsStatusReg (CpuBootloaderAddress, RegisterValue);
+      return T194GetRootfsStatusReg (RegisterValue);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -741,17 +738,14 @@ SetRootfsStatusReg (
   )
 {
   UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
 
   ChipID = TegraGetChipID ();
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
   switch (ChipID) {
     case T234_CHIP_ID:
-      return T234SetRootfsStatusReg (CpuBootloaderAddress, RegisterValue);
+      return T234SetRootfsStatusReg (RegisterValue);
     case T194_CHIP_ID:
-      return T194SetRootfsStatusReg (CpuBootloaderAddress, RegisterValue);
+      return T194SetRootfsStatusReg (RegisterValue);
     default:
       return EFI_UNSUPPORTED;
   }

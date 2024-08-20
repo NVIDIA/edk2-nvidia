@@ -771,7 +771,6 @@ T234GetPlatformResourceInformation (
 EFI_STATUS
 EFIAPI
 T234GetRootfsStatusReg (
-  IN  UINTN   CpuBootloaderAddress,
   OUT UINT32  *RegisterValue
   )
 {
@@ -787,7 +786,6 @@ T234GetRootfsStatusReg (
 EFI_STATUS
 EFIAPI
 T234SetRootfsStatusReg (
-  IN  UINTN   CpuBootloaderAddress,
   IN  UINT32  RegisterValue
   )
 {
