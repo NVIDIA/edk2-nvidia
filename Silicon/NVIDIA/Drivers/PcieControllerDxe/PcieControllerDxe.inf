@@ -38,6 +38,7 @@
   PrintLib
   UefiDriverEntryPoint
   IoLib
+  TegraPlatformInfoLib
   SortLib
   TimerLib
   FdtLib

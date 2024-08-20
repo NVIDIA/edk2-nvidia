@@ -27,6 +27,7 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -46,7 +47,9 @@
 #include "PcieControllerConfigGPU.h"
 #include "PcieControllerPrivate.h"
 
-#define PCIE_CONTROLLER_MAX_REGISTERS  5
+#define PCIE_CONTROLLER_MAX_REGISTERS  6
+
+STATIC BOOLEAN  mPcieDisableOptionRom = FALSE;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,th500-pcie", &gNVIDIANonDiscoverableTH500PcieDeviceGuid },
@@ -149,6 +152,16 @@ PcieConfigurationAccess (
   {
     Status = EFI_INVALID_PARAMETER;
   } else {
+    // Disable option ROM address for non-root bridge
+    if (mPcieDisableOptionRom &&
+        (PciAddress.Bus != This->MinBusNumber) &&
+        (Register == PCI_EXPANSION_ROM_BASE) &&
+        Read)
+    {
+      SetMem (Buffer, Length, 0x00);
+      return EFI_SUCCESS;
+    }
+
     if (((PciAddress.Bus == This->MinBusNumber) ||
          (PciAddress.Bus == This->MinBusNumber + 1)) &&
         (PciAddress.Device != 0))
@@ -511,21 +524,27 @@ InitializeController (
   IN  EFI_HANDLE           ControllerHandle
   )
 {
-  UINT64                        val;
-  EFI_STATUS                    Status;
-  PCI_CAPABILITY_PCIEXP         *PciExpCap = NULL;
-  UINT8                         C2cStatus;
-  VOID                          *Hob;
+  UINT64                 val;
+  EFI_STATUS             Status;
+  PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
+  UINT8                  C2cStatus;
+  VOID                   *Hob;
+
   TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+  UINTN                         ChipId;
 
-  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
-  {
-    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  ChipId = TegraGetChipID ();
+
+  if (ChipId == TH500_CHIP_ID) {
+    Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+    {
+      Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+    }
+
+    NV_ASSERT_RETURN (Mb1Config != NULL, return EFI_DEVICE_ERROR, "%a: no HOB list\n", __FUNCTION__);
   }
-
-  ASSERT (Mb1Config);
 
   /* Program XAL */
   MmioWrite32 (Private->XalBase + XAL_RC_MEM_32BIT_BASE_HI, upper_32_bits (Private->MemBase));
@@ -590,11 +609,13 @@ InitializeController (
       PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
       ));
 
-    /**
-     * Re-train link if disable_ltssm_auto_train set in BCT.
-     */
-    if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].DisableLTSSMAutoTrain) {
-      RetrainLink (Private);
+    if (ChipId == TH500_CHIP_ID) {
+      /**
+       * Re-train link if disable_ltssm_auto_train set in BCT.
+       */
+      if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].DisableLTSSMAutoTrain) {
+        RetrainLink (Private);
+      }
     }
 
     if (Private->C2cInitRequired) {
@@ -886,17 +907,22 @@ PcieEnableErrorReporting (
   UINT16                        Val_16;
   UINT32                        Socket, Ctrl;
   VOID                          *Hob;
-  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config    = NULL;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+  UINTN                         ChipId;
   BOOLEAN                       SkipDPCEnable = FALSE;
 
-  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
-  {
-    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
-  }
+  ChipId = TegraGetChipID ();
 
-  ASSERT (Mb1Config);
+  if (ChipId == TH500_CHIP_ID) {
+    Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+    {
+      Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+    }
+
+    ASSERT (Mb1Config);
+  }
 
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
@@ -1035,10 +1061,12 @@ PcieEnableErrorReporting (
        * any malfunctioning device is contained at switch downstream port
        * level and RP is saved from going into containment
        */
-      if ((Bus == 0) &&
-          Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP)
-      {
-        SkipDPCEnable = TRUE;
+      if (ChipId == TH500_CHIP_ID) {
+        if ((Bus == 0) &&
+            Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP)
+        {
+          SkipDPCEnable = TRUE;
+        }
       }
 
       Offset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
@@ -1331,33 +1359,37 @@ PcieEnableECRC (
   UINT32                        Socket, Ctrl;
   VOID                          *Hob;
   TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+  UINTN                         ChipId;
 
-  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
-  {
-    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
-  }
-
-  ASSERT (Mb1Config);
-
+  ChipId = TegraGetChipID ();
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
   Socket = (Segment >> 4) & 0xF;
   Ctrl   = (Segment) & 0xF;
 
-  if (!Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].EnableECRC) {
-    DEBUG ((
-      DEBUG_INFO,
-      "Device [%04x:%02x:%02x.%x] : Skipping ECRC Enable\n",
-      Segment,
-      Bus,
-      Device,
-      Function
-      ));
+  if (ChipId == TH500_CHIP_ID) {
+    Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+    {
+      Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+    }
 
-    return EFI_SUCCESS;
+    ASSERT (Mb1Config);
+
+    if (!Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].EnableECRC) {
+      DEBUG ((
+        DEBUG_INFO,
+        "Device [%04x:%02x:%02x.%x] : Skipping ECRC Enable\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+
+      return EFI_SUCCESS;
+    }
   }
 
   AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
@@ -1493,6 +1525,7 @@ DeviceDiscoveryNotify (
   BOOLEAN                                      PcieFound;
   NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA        *InterruptMap;
   INT32                                        RPNodeOffset;
+  UINTN                                        ChipId;
   VOID                                         *Registration;
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
   CM_OBJECT_TOKEN                              *TokenMap;
@@ -1506,15 +1539,18 @@ DeviceDiscoveryNotify (
   PlatformType = TegraGetPlatform ();
   Status       = EFI_SUCCESS;
   PcieFound    = FALSE;
+  ChipId       = TegraGetChipID ();
 
-  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-  if ((Hob != NULL) &&
-      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
-  {
-    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  if (ChipId == TH500_CHIP_ID) {
+    Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+    {
+      Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+    }
+
+    ASSERT (Mb1Config);
   }
-
-  ASSERT (Mb1Config);
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
@@ -1544,7 +1580,8 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      Status = DeviceTreeGetRegisters (DeviceTreeNode->NodeOffset, RegisterData, &RegisterCount);
+      RegisterCount = ARRAY_SIZE (RegisterData);
+      Status        = DeviceTreeGetRegisters (DeviceTreeNode->NodeOffset, RegisterData, &RegisterCount);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: GetRegisters failed: %r\n", __FUNCTION__, Status));
         Status = EFI_UNSUPPORTED;
@@ -1611,34 +1648,39 @@ DeviceDiscoveryNotify (
 
       DEBUG ((DEBUG_INFO, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
-      CtrlId = fdt_getprop (
-                 DeviceTreeNode->DeviceTreeBase,
-                 DeviceTreeNode->NodeOffset,
-                 "nvidia,controller-id",
-                 &PropertySize
-                 );
-      if ((CtrlId == NULL) || (PropertySize != sizeof (UINT32))) {
-        DEBUG ((DEBUG_ERROR, "Failed to read Controller ID\n"));
+      if (ChipId == TH500_CHIP_ID) {
+        CtrlId = fdt_getprop (
+                   DeviceTreeNode->DeviceTreeBase,
+                   DeviceTreeNode->NodeOffset,
+                   "nvidia,controller-id",
+                   &PropertySize
+                   );
+        if ((CtrlId == NULL) || (PropertySize != sizeof (UINT32))) {
+          DEBUG ((DEBUG_ERROR, "Failed to read Controller ID\n"));
+        } else {
+          CopyMem (&Private->CtrlId, CtrlId, sizeof (UINT32));
+          Private->CtrlId = SwapBytes32 (Private->CtrlId);
+        }
+
+        SocketId = fdt_getprop (
+                     DeviceTreeNode->DeviceTreeBase,
+                     DeviceTreeNode->NodeOffset,
+                     "nvidia,socket-id",
+                     &PropertySize
+                     );
+        if ((SocketId == NULL) || (PropertySize != sizeof (UINT32))) {
+          DEBUG ((DEBUG_ERROR, "Failed to read Socket ID\n"));
+        } else {
+          CopyMem (&Private->SocketId, SocketId, sizeof (UINT32));
+          Private->SocketId = SwapBytes32 (Private->SocketId);
+        }
       } else {
-        CopyMem (&Private->CtrlId, CtrlId, sizeof (UINT32));
-        Private->CtrlId = SwapBytes32 (Private->CtrlId);
+        DEBUG ((DEBUG_ERROR, "%a: unsupported chip=0x%x\n", __FUNCTION__, ChipId));
+        ASSERT (FALSE);
       }
 
       Private->PcieRootBridgeConfigurationIo.ControllerID = Private->CtrlId;
       DEBUG ((DEBUG_INFO, "Controller-ID = 0x%x\n", Private->CtrlId));
-
-      SocketId = fdt_getprop (
-                   DeviceTreeNode->DeviceTreeBase,
-                   DeviceTreeNode->NodeOffset,
-                   "nvidia,socket-id",
-                   &PropertySize
-                   );
-      if ((SocketId == NULL) || (PropertySize != sizeof (UINT32))) {
-        DEBUG ((DEBUG_ERROR, "Failed to read Socket ID\n"));
-      } else {
-        CopyMem (&Private->SocketId, SocketId, sizeof (UINT32));
-        Private->SocketId = SwapBytes32 (Private->SocketId);
-      }
 
       Private->PcieRootBridgeConfigurationIo.SocketID = Private->SocketId;
       DEBUG ((DEBUG_INFO, "Socket-ID = 0x%x\n", Private->SocketId));
@@ -1663,15 +1705,17 @@ DeviceDiscoveryNotify (
                                                         PCIE_FW_OSC_CTRL_PCIE_CAP_STRUCTURE |
                                                         PCIE_FW_OSC_CTRL_LTR);
 
-      if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].OsNativeAER) {
-        /* As per PCIe spec recommendation, both AER and DPC capabilities are
-         * expected to be owned by the same SW entity i.e. either Firmware
-         * or the Operation system. Hence, give the ownership of both AER and
-         * DPC to the OS.
-         */
+      if (ChipId == TH500_CHIP_ID) {
+        if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].OsNativeAER) {
+          /* As per PCIe spec recommendation, both AER and DPC capabilities are
+           * expected to be owned by the same SW entity i.e. either Firmware
+           * or the Operation system. Hence, give the ownership of both AER and
+           * DPC to the OS.
+           */
 
-        Private->PcieRootBridgeConfigurationIo.OSCCtrl |= (PCIE_FW_OSC_CTRL_PCIE_AER |
-                                                           PCIE_FW_OSC_CTRL_PCIE_DPC);
+          Private->PcieRootBridgeConfigurationIo.OSCCtrl |= (PCIE_FW_OSC_CTRL_PCIE_AER |
+                                                             PCIE_FW_OSC_CTRL_PCIE_DPC);
+        }
       }
 
       RootBridge->Segment               = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
@@ -1810,7 +1854,7 @@ DeviceDiscoveryNotify (
               Private->MemBase                                            = HostAddress;
               Private->MemLimit                                           = HostAddress + Size - 1;
               Private->AddressMapInfo[Private->AddressMapCount].SpaceCode = 3;
-              DEBUG ((DEBUG_INFO, "MEM32: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
+              DEBUG ((DEBUG_INFO, "MEM64: DevAddr = 0x%lX Limit = 0x%lX Trans = 0x%lX\n", DeviceAddress, Limit, Translation));
             } else {
               DEBUG ((DEBUG_ERROR, "1:1 mapping is NOT supported for Non-Prefetchable aperture\n"));
               Status = EFI_DEVICE_ERROR;
@@ -1880,8 +1924,8 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      if ((Private->C2cInitSuccessful) ||
-          (PlatformType == TEGRA_PLATFORM_VDK))
+      if ((Private->C2cInitRequired && Private->C2cInitSuccessful) ||
+          ((ChipId == TH500_CHIP_ID) && (PlatformType == TEGRA_PLATFORM_VDK)))
       {
         RangeSize         = (AddressCells + SizeCells) * sizeof (UINT32);
         HbmRangesProperty = fdt_getprop (
@@ -1923,7 +1967,7 @@ DeviceDiscoveryNotify (
                                   );
           if (PxmDmnStartProperty != NULL) {
             Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = SwapBytes32 (PxmDmnStartProperty[0]);
-          } else {
+          } else if (ChipId == TH500_CHIP_ID) {
             Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Private->PcieRootBridgeConfigurationIo.SocketID);
           }
 
@@ -1935,7 +1979,7 @@ DeviceDiscoveryNotify (
                                 );
           if (NumPxmDmnProperty != NULL) {
             Private->PcieRootBridgeConfigurationIo.NumProximityDomains = SwapBytes32 (NumPxmDmnProperty[0]);
-          } else {
+          } else if (ChipId == TH500_CHIP_ID) {
             Private->PcieRootBridgeConfigurationIo.NumProximityDomains = TH500_GPU_MAX_NR_MEM_PARTITIONS;
           }
         }
