@@ -20,7 +20,6 @@
 #define FMP_WRITE_LOOP_SIZE  (64 * 1024)
 
 STATIC   NVIDIA_FW_PARTITION_PROTOCOL  *mFwPartitionProtocol = NULL;
-STATIC   UINT64                        mPartitionOffset      = MAX_UINT64;
 STATIC   UINT64                        mPartitionSize        = 0;
 STATIC   BOOLEAN                       mInitialized          = FALSE;
 STATIC   EFI_EVENT                     mAddressChangeEvent   = NULL;
@@ -73,7 +72,7 @@ CapsuleStore (
   // Store capsule image to SPI
   //
   BytesPerLoop = FMP_WRITE_LOOP_SIZE;
-  WriteOffset  = mPartitionOffset;
+  WriteOffset  = 0x00;
   WriteBytes   = Size;
   Data         = (UINT8 *)CapsuleData;
   while (WriteBytes > 0) {
@@ -134,7 +133,7 @@ CapsuleLoad (
   // Load capsule image to buffer
   //
   Data       = (UINT8 *)Buffer;
-  ReadOffset = mPartitionOffset;
+  ReadOffset = 0x00;
   ReadBytes  = Size;
 
   while (ReadBytes > 0) {
@@ -168,22 +167,11 @@ SavedCapsuleLibInitialize (
   )
 {
   EFI_STATUS                    Status;
-  UINT16                        DeviceInstance;
   EFI_HANDLE                    *Handles;
   UINTN                         HandleCount;
   NVIDIA_FW_PARTITION_PROTOCOL  *FwPartitionProtocol;
   BOOLEAN                       IsProtocolFound;
-
-  //
-  // Get the partition information of capsule image
-  //
-  Status = GetPartitionInfo (TEGRAUEFI_CAPSULE, &DeviceInstance, &mPartitionOffset, &mPartitionSize);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Get Capsule partition information %r\n", __FUNCTION__, Status));
-    return EFI_NOT_FOUND;
-  }
-
-  DEBUG ((DEBUG_ERROR, "%a: PartitionOffset = 0x%llx, PartitionSize = 0x%llx\n", __func__, mPartitionOffset, mPartitionSize));
+  FW_PARTITION_ATTRIBUTES       Attributes;
 
   //
   // Get MM-NorFlash FwPartitionProtocol
@@ -209,8 +197,13 @@ SavedCapsuleLibInitialize (
                     );
     if (!EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "%a: PartitionName = %s\n", __FUNCTION__, FwPartitionProtocol->PartitionName));
-      if (StrCmp (FwPartitionProtocol->PartitionName, L"MM-NorFlash") == 0) {
-        IsProtocolFound = TRUE;
+      if (StrCmp (FwPartitionProtocol->PartitionName, L"MM-Capsule") == 0) {
+        Status = FwPartitionProtocol->GetAttributes (FwPartitionProtocol, &Attributes);
+        if (!EFI_ERROR (Status) && (Attributes.Bytes != 0)) {
+          mPartitionSize  = Attributes.Bytes;
+          IsProtocolFound = TRUE;
+        }
+
         break;
       }
     }

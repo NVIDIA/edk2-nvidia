@@ -593,8 +593,12 @@ FwDeviceAddAsPartition (
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-Capsule\n", __FUNCTION__));
         }
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Can't find partition MM-Capsule: %r\n", __FUNCTION__, Status));
       }
     }
+
+    return EFI_SUCCESS;
   }
 
   Private       = &mPrivate[mNumFwPartitions];
