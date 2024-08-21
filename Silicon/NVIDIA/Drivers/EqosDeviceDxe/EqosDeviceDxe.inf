@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -74,7 +74,6 @@
   BaseLib
   UefiLib
   UefiBootServicesTableLib
-  UefiRuntimeServicesTableLib
   DebugLib
   PrintLib
   UefiDriverEntryPoint
@@ -86,6 +85,7 @@
   NetLib
   DmaLib
   TimerLib
+  DtbUpdateLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
@@ -95,7 +95,6 @@
   gNVIDIAClockNodeProtocolGuid
   gArmScmiClock2ProtocolGuid
   gEmbeddedGpioProtocolGuid
-  gNVIDIACvmEepromProtocolGuid
   gEfiAcpiTableProtocolGuid                     # PROTOCOL ALWAYS_CONSUMED
   gEfiAcpiSdtProtocolGuid                       # PROTOCOL ALWAYS_CONSUMED
   gEfiAdapterInformationProtocolGuid
@@ -112,10 +111,6 @@
 
 [Depex]
   gEmbeddedGpioProtocolGuid
-  AND
-  gNVIDIACvmEepromProtocolGuid
-  AND
-  gEfiVariableWriteArchProtocolGuid
 
 [BuildOptions]
   *_*_*_PP_FLAGS = -DUPDATED_PAD_CAL -DMACSEC_SUPPORT

@@ -1,7 +1,7 @@
 /** @file
   DW EMAC SNP DXE driver
 
-  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -661,7 +661,6 @@ SnpStationAddress (
 
   Status = SnpCommitFilters (Snp, TRUE, FALSE);
 
-  UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
   return Status;
 }
 

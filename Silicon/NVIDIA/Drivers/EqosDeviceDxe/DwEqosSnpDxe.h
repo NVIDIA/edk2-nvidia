@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2020 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012-2014, ARM Limited. All rights reserved.
 
@@ -48,7 +48,6 @@ typedef struct {
   EFI_LOCK                            Lock;
 
   UINTN                               MacBase;
-  UINT32                              NumMacs;
 
   UINTN                               XpcsBase;
 

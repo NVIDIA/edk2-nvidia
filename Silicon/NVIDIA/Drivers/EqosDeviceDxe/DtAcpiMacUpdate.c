@@ -5,7 +5,7 @@
 
   The original software modules are licensed as follows:
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2014, Applied Micro Curcuit Corporation. All rights reserved.<BR>
@@ -540,83 +540,26 @@ EthMacInit (
 }
 
 /**
-  Callback that gets invoked to update mac address in OS handoff (DT/ACPI)
+  Callback that gets invoked to update mac address in OS handoff (ACPI)
 
   This function should be called each time the mac address is changed and
-  if the acpi/dt tables are updated.
+  if the acpi tables are updated.
 
   @param[in] Context                    Context (SIMPLE_NETWORK_DRIVER *)
 
 **/
 VOID
-UpdateDTACPIMacAddress (
+UpdateACPIMacAddress (
   IN EFI_EVENT  Event,
   IN  VOID      *Context
   )
 {
   EFI_STATUS             Status;
   SIMPLE_NETWORK_DRIVER  *Snp = (SIMPLE_NETWORK_DRIVER *)Context;
-  VOID                   *DtBase;
   VOID                   *AcpiBase;
-  UINTN                  ChipID;
-  UINT32                 Count;
-  UINTN                  CharCount;
-  CHAR8                  Buffer[32];
-  CHAR8                  MacBuffer[NET_ETHER_ADDR_LEN_DS];
-  UINT64                 MacData;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
-  if (EFI_ERROR (Status)) {
-    INT32  NodeOffset;
-
-    Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DtBase);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "Failed to get device tree\r\n"));
-      return;
-    }
-
-    NodeOffset = fdt_path_offset (DtBase, Snp->DeviceTreePath);
-    if (NodeOffset >= 0) {
-      fdt_setprop (DtBase, NodeOffset, "mac-address", Snp->SnpMode.CurrentAddress.Addr, NET_ETHER_ADDR_LEN);
-    }
-
-    NodeOffset = fdt_path_offset (DtBase, "/chosen");
-    if (NodeOffset >= 0) {
-      MacData   = SwapBytes64 (*(UINT64 *)Snp->SnpMode.CurrentAddress.Addr);
-      MacData >>= 16;
-      CharCount = AsciiSPrint (
-                    MacBuffer,
-                    sizeof (MacBuffer),
-                    "%02x:%02x:%02x:%02x:%02x:%02x",
-                    BYTE (MacData, 5),
-                    BYTE (MacData, 4),
-                    BYTE (MacData, 3),
-                    BYTE (MacData, 2),
-                    BYTE (MacData, 1),
-                    BYTE (MacData, 0)
-                    );
-      fdt_setprop (DtBase, NodeOffset, "nvidia,ether-mac", MacBuffer, sizeof (MacBuffer));
-      ChipID = TegraGetChipID ();
-      if (ChipID == T234_CHIP_ID) {
-        for (Count = 0; Count < Snp->NumMacs; Count++) {
-          CharCount = AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
-          CharCount = AsciiSPrint (
-                        MacBuffer,
-                        sizeof (MacBuffer),
-                        "%02x:%02x:%02x:%02x:%02x:%02x",
-                        BYTE (MacData, 5),
-                        BYTE (MacData, 4),
-                        BYTE (MacData, 3),
-                        BYTE (MacData, 2),
-                        BYTE (MacData, 1),
-                        BYTE (MacData, 0)
-                        );
-          fdt_setprop (DtBase, NodeOffset, Buffer, MacBuffer, sizeof (MacBuffer));
-          MacData++;
-        }
-      }
-    }
-  } else {
+  if (!EFI_ERROR (Status)) {
     // Try ACPI update
     EthMacInit (Snp->SnpMode.CurrentAddress.Addr, 0);
   }

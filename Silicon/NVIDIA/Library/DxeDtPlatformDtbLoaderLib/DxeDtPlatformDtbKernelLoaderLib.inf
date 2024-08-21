@@ -39,6 +39,7 @@
   TegraDeviceTreeKernelOverlayLib
   OpteeNvLib
   BootChainInfoLib
+  DtbUpdateLib
   AndroidBcbLib
 
 [Protocols]

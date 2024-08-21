@@ -1,0 +1,48 @@
+## @file
+#
+#  DTB update library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.25
+  BASE_NAME                      = DtbUpdateLib
+  FILE_GUID                      = 1640cfcf-e589-4ff1-bf00-f29671c78bae
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DtbUpdateLib
+
+[Sources.common]
+  DtbUpdateLib.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  DeviceTreeHelperLib
+  FdtLib
+  PrintLib
+  MemoryAllocationLib
+  PlatformResourceLib
+  TegraPlatformInfoLib
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+
+[Protocols]
+  gNVIDIACvmEepromProtocolGuid
+
+[Depex]
+  gNVIDIACvmEepromProtocolGuid

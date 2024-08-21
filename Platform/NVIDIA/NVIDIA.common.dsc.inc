@@ -394,6 +394,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 !endif
 
   FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
+  DtbUpdateLib|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateLib.inf
 
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
 

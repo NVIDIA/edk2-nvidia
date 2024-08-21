@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,12 +14,12 @@
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DmaLib.h>
+#include <Library/DtbUpdateLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -185,11 +185,6 @@ DeviceDiscoveryNotify (
   EFI_DEVICE_PATH_PROTOCOL     *DevicePathOrig;
   CONST UINT32                 *ResetGpioProp;
   NON_DISCOVERABLE_DEVICE      *Device;
-  CONST CHAR8                  *NodeName;
-  CHAR16                       VariableName[MAX_ETH_NAME];
-  UINTN                        VariableSize;
-  UINT32                       VariableAttributes;
-  TEGRA_EEPROM_BOARD_INFO      *CvmEeprom;
   TEGRA_PLATFORM_TYPE          PlatformType;
   BOOLEAN                      FlipResetMode;
   UINT32                       PhyNodeHandle;
@@ -198,11 +193,13 @@ DeviceDiscoveryNotify (
   struct osi_hw_features       hw_feat;
   INT32                        MacRegionIndex;
   INT32                        XpcsRegionIndex;
+  CONST VOID                   *Property;
+  INT32                        PropertySize;
+  CONST UINT8                  *MacAddress;
 
   PlatformType = TegraGetPlatform ();
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
-
       if ((DeviceTreeNode == NULL) ||
           (DeviceTreeNode->NodeOffset < 0))
       {
@@ -332,44 +329,24 @@ DeviceDiscoveryNotify (
       Snp->BroadcastEnabled        = FALSE;
       Snp->MulticastFiltersEnabled = 0;
 
-      // Set current address
-      /// TODO: Read from EEPROM
-      NodeName = fdt_get_name (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, NULL);
-      if (NodeName == NULL) {
-        DEBUG ((DEBUG_ERROR, "Failed to get node name\r\n"));
-        return EFI_DEVICE_ERROR;
-      }
+      // Update MAC address in UEFI DTB
+      DtbUpdateNodeMacAddress (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
 
-      Status = AsciiStrToUnicodeStrS (NodeName, VariableName, MAX_ETH_NAME);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to convert name to unicode %a: %r\r\n", NodeName, Status));
-        return EFI_DEVICE_ERROR;
-      }
-
-      Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&CvmEeprom);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to get eeprom protocol\r\n"));
-        return EFI_DEVICE_ERROR;
-      }
-
+      // Set MAC addresses
       ZeroMem (&SnpMode->PermanentAddress, sizeof (SnpMode->PermanentAddress));
       ZeroMem (&SnpMode->CurrentAddress, sizeof (SnpMode->CurrentAddress));
 
-      SnpMode->PermanentAddress.Addr[0] = CvmEeprom->MacAddr[5];
-      SnpMode->PermanentAddress.Addr[1] = CvmEeprom->MacAddr[4];
-      SnpMode->PermanentAddress.Addr[2] = CvmEeprom->MacAddr[3];
-      SnpMode->PermanentAddress.Addr[3] = CvmEeprom->MacAddr[2];
-      SnpMode->PermanentAddress.Addr[4] = CvmEeprom->MacAddr[1];
-      SnpMode->PermanentAddress.Addr[5] = CvmEeprom->MacAddr[0];
-      Snp->NumMacs                      = CvmEeprom->NumMacs;
-
-      VariableSize = sizeof (EFI_MAC_ADDRESS);
-      Status       = gRT->GetVariable (VariableName, &gNVIDIATokenSpaceGuid, &VariableAttributes, &VariableSize, (VOID *)SnpMode->CurrentAddress.Addr);
-      if (EFI_ERROR (Status) || (VariableSize < NET_ETHER_ADDR_LEN)) {
-        CopyMem (&SnpMode->CurrentAddress, &SnpMode->PermanentAddress, sizeof (EFI_MAC_ADDRESS));
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "mac-address", &PropertySize);
+      if (Property == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: no mac-address for %a\n", __FUNCTION__, fdt_get_name (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, NULL)));
+        return EFI_DEVICE_ERROR;
       }
 
-      UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
+      MacAddress = (UINT8 *)Property;
+      DEBUG ((DEBUG_INFO, "%a: mac=%02x:%02x:%02x:%02x:%02x:%02x\n", __FUNCTION__, MacAddress[0], MacAddress[1], MacAddress[2], MacAddress[3], MacAddress[4], MacAddress[5]));
+
+      CopyMem (&SnpMode->PermanentAddress, Property, PropertySize);
+      CopyMem (&SnpMode->CurrentAddress, &SnpMode->PermanentAddress, sizeof (EFI_MAC_ADDRESS));
 
       // Assign fields for device path
       CopyMem (&DevicePath->MacAddrDP.MacAddress, &Snp->Snp.Mode->CurrentAddress, NET_ETHER_ADDR_LEN);
@@ -474,20 +451,7 @@ DeviceDiscoveryNotify (
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_CALLBACK,
-                      UpdateDTACPIMacAddress,
-                      Snp,
-                      &gFdtTableGuid,
-                      &Snp->DeviceTreeNotifyEvent
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to register for DT installation\r\n"));
-        return Status;
-      }
-
-      Status = gBS->CreateEventEx (
-                      EVT_NOTIFY_SIGNAL,
-                      TPL_CALLBACK,
-                      UpdateDTACPIMacAddress,
+                      UpdateACPIMacAddress,
                       Snp,
                       &gEfiAcpiTableGuid,
                       &Snp->AcpiNotifyEvent
@@ -583,10 +547,7 @@ DeviceDiscoveryNotify (
         }
       }
 
-      // Set MAC Address
-      CopyMem (&Snp->SnpMode.CurrentAddress, &Snp->SnpMode.PermanentAddress, sizeof (Snp->SnpMode.CurrentAddress));
       SnpCommitFilters (Snp, TRUE, FALSE);
-      UpdateDTACPIMacAddress (NULL, (VOID *)Snp);
 
       // Check for Auto Negotiation completion and rest of Phy setup
       // happens at the exit boot services stage. Creating event for the same.
