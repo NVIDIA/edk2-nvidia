@@ -280,15 +280,8 @@ DeviceDiscoveryNotify (
   PCIE_CONTROLLER_PRIVATE                      *Private = NULL;
   UINT32                                       Index;
   UINT32                                       Index2;
-  CONST UINT32                                 *InterruptMap;
-  UINT32                                       ChildAddressCells;
-  UINT32                                       ChildInterruptCells;
-  UINT32                                       ParentHandle;
-  INT32                                        ParentOffset;
-  UINT32                                       ParentAddressCells;
-  UINT32                                       ParentInterruptCells;
-  BOOLEAN                                      IgnoreParentCellSize;
-  UINT32                                       InterruptMapLocation;
+  NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA        *InterruptMap;
+  UINT32                                       NumberOfInterruptMaps;
   NVIDIA_DEVICE_TREE_REGISTER_DATA             RegisterData[PCIE_CONTROLLER_MAX_REGISTERS];
   UINT32                                       RegisterCount;
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
@@ -559,105 +552,41 @@ DeviceDiscoveryNotify (
       FreePool (TokenMap);
       TokenMap = NULL;
 
-      Status = DeviceTreeGetNodePropertyValue32 (
-                 DeviceTreeNode->NodeOffset,
-                 "#address-cells",
-                 &ChildAddressCells
-                 );
-
-      if (EFI_ERROR (Status)) {
-        ChildAddressCells = INTERRUPT_MAP_CHILD_ADDRESS_CELLS_DEFAULT;
+      InterruptMap = AllocateZeroPool (PCIE_NUMBER_OF_INTERRUPT_MAP * sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA));
+      if (InterruptMap == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate space for %d interrupt maps\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
+        return EFI_OUT_OF_RESOURCES;
       }
 
-      Status = DeviceTreeGetNodePropertyValue32 (
-                 DeviceTreeNode->NodeOffset,
-                 "#interrupt-cells",
-                 &ChildInterruptCells
-                 );
+      NumberOfInterruptMaps = PCIE_NUMBER_OF_INTERRUPT_MAP;
+      Status                = DeviceTreeGetInterruptMap (DeviceTreeNode->NodeOffset, InterruptMap, &NumberOfInterruptMaps);
       if (EFI_ERROR (Status)) {
-        ChildInterruptCells = INTERRUPT_MAP_CHILD_INTERRUPT_CELLS_DEFAULT;
-      }
-
-      Status = DeviceTreeGetNodeProperty (
-                 DeviceTreeNode->NodeOffset,
-                 "interrupt-map",
-                 (CONST VOID **)&InterruptMap,
-                 &PropertySize
-                 );
-      if ((EFI_ERROR (Status)) || ((PropertySize % sizeof (UINT32)) != 0)) {
-        Status = EFI_DEVICE_ERROR;
-        DEBUG ((DEBUG_ERROR, "%a: Failed to get pcie interrupts\r\n", __FUNCTION__));
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PCIE interrupt map\n", __FUNCTION__, Status));
+        FreePool (InterruptMap);
         break;
       }
 
-      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERUPT_MAP, &TokenMap);
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERRUPT_MAP, &TokenMap);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERUPT_MAP));
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
+        FreePool (InterruptMap);
         break;
       }
 
-      // TH500 DTB does not have parent address size correctly, detect and handle this case
-      if (PropertySize == (PCIE_NUMBER_OF_INTERUPT_MAP * (sizeof (UINT32) * (ChildAddressCells + ChildInterruptCells + 1 + INTERRUPT_MAP_PARENT_INTERRUPT_CELLS_DEFAULT)))) {
-        IgnoreParentCellSize = TRUE;
-      } else {
-        IgnoreParentCellSize = FALSE;
-      }
-
-      InterruptMapLocation = 0;
-      for (Index = 0; Index < PCIE_NUMBER_OF_INTERUPT_MAP; Index++) {
-        Private->InterruptRefInfo[Index].ReferenceToken      = TokenMap[Index];
-        Private->InterruptMapInfo[Index].IntcInterrupt.Flags = BIT2;
-        if (IgnoreParentCellSize) {
-          ParentAddressCells   = 0;
-          ParentInterruptCells = INTERRUPT_MAP_PARENT_INTERRUPT_CELLS_DEFAULT;
-        } else {
-          ParentHandle = SwapBytes32 (InterruptMap[InterruptMapLocation + ChildAddressCells + ChildInterruptCells]);
-          Status       = DeviceTreeGetNodeByPHandle (ParentHandle, &ParentOffset);
-          if (EFI_ERROR (Status)) {
-            Status = EFI_DEVICE_ERROR;
-            DEBUG ((DEBUG_ERROR, "%a: Unable to get ParentOffset %d\r\n", __FUNCTION__, ParentOffset));
-            break;
-          }
-
-          Status = DeviceTreeGetNodePropertyValue32 (
-                     ParentOffset,
-                     "#address-cells",
-                     &ParentAddressCells
-                     );
-          if (EFI_ERROR (Status)) {
-            ParentAddressCells = INTERRUPT_MAP_PARENT_ADDRESS_CELLS_DEFAULT;
-          }
-
-          Status = DeviceTreeGetNodePropertyValue32 (
-                     ParentOffset,
-                     "#interrupt-cells",
-                     &ParentInterruptCells
-                     );
-          if (EFI_ERROR (Status)) {
-            ParentInterruptCells = INTERRUPT_MAP_PARENT_INTERRUPT_CELLS_DEFAULT;
-          }
-        }
-
-        Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = SwapBytes32 (InterruptMap[InterruptMapLocation + ChildAddressCells + ChildInterruptCells + 1 + ParentAddressCells + INTERRUPT_MAP_PARENT_INTERRUPT_OFFSET]) + SPI_OFFSET;
-        if (PropertySize == (sizeof (UINT32) * (ChildAddressCells + ChildInterruptCells + 1 + ParentAddressCells + ParentInterruptCells))) {
+      DEBUG ((DEBUG_VERBOSE, "%a: NumberOfInterruptMaps = %u\n", __FUNCTION__, NumberOfInterruptMaps));
+      for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
+        Private->InterruptRefInfo[Index].ReferenceToken = TokenMap[Index];
+        if (NumberOfInterruptMaps == 1) {
           Private->InterruptMapInfo[Index].PciInterrupt = Index;
         } else {
-          Private->InterruptMapInfo[Index].PciInterrupt = SwapBytes32 (InterruptMap[InterruptMapLocation + ChildAddressCells])-1;
-          InterruptMapLocation                         += ChildAddressCells + ChildInterruptCells + 1 + ParentAddressCells + ParentInterruptCells;
+          Private->InterruptMapInfo[Index].PciInterrupt = InterruptMap[Index].ChildInterrupt.Interrupt - 1;
         }
+
+        Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptMap[Index].ParentInterrupt);
+        Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = InterruptMap[Index].ParentInterrupt.Flag;
       }
 
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      if ((InterruptMapLocation != 0) && (PropertySize != (InterruptMapLocation * sizeof (UINT32)))) {
-        DEBUG ((DEBUG_ERROR, "%a: Unexpected PropertySize %u, expected %u\r\n", __FUNCTION__, PropertySize, InterruptMapLocation * sizeof (UINT32)));
-        Status = EFI_DEVICE_ERROR;
-        ASSERT (FALSE);
-        break;
-      }
-
+      FreePool (InterruptMap);
       FreePool (TokenMap);
       TokenMap = NULL;
 
@@ -677,8 +606,8 @@ DeviceDiscoveryNotify (
       Index                                  = 0;
       Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
       Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.InterruptMapToken;
-      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERUPT_MAP;
-      Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERUPT_MAP;
+      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERRUPT_MAP;
+      Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERRUPT_MAP;
       Private->RepoInfo[Index].CmObjectPtr   = Private->InterruptRefInfo;
       Index++;
 
@@ -698,7 +627,7 @@ DeviceDiscoveryNotify (
         Index++;
       }
 
-      for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERUPT_MAP; Index2++) {
+      for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERRUPT_MAP; Index2++) {
         Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciInterruptMapInfo);
         Private->RepoInfo[Index].CmObjectToken = Private->InterruptRefInfo[Index2].ReferenceToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->InterruptMapInfo[Index2]);
