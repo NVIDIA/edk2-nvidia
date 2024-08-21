@@ -30,12 +30,13 @@ typedef enum {
 } MATCH_OPERATOR;
 
 typedef struct {
-  CHAR8             Name[16];
-  UINT32            Count;
+  CHAR8             Name[2][16];
+  UINT32            Count[2];
   MATCH_OPERATOR    MatchOp;
   BOOLEAN (*IsMatch)(
     VOID         *Fdt,
     CONST CHAR8  *Item,
+    CONST CHAR8  *DTPath,
     VOID         *Param
     );
 } DT_MATCH_INFO;
@@ -53,12 +54,14 @@ STATIC BOOLEAN
 MatchId (
   VOID *,
   CONST CHAR8 *,
+  CONST CHAR8 *,
   VOID *
   );
 
 STATIC BOOLEAN
 MatchOdmData (
   VOID *,
+  CONST CHAR8 *,
   CONST CHAR8 *,
   VOID *
   );
@@ -67,6 +70,7 @@ STATIC BOOLEAN
 MatchSWModule (
   VOID *,
   CONST CHAR8 *,
+  CONST CHAR8 *,
   VOID *
   );
 
@@ -74,27 +78,28 @@ STATIC BOOLEAN
 MatchFuseInfo (
   VOID *,
   CONST CHAR8 *,
+  CONST CHAR8 *,
   VOID *
   );
 
 DT_MATCH_INFO  MatchInfoArray[] = {
   {
-    .Name    = "ids",
+    .Name    = {"ids", "eeprom-dt-paths"},
     .MatchOp = MATCH_OR,
     .IsMatch = MatchId,
   },
   {
-    .Name    = "odm-data",
+    .Name    = {"odm-data"},
     .MatchOp = MATCH_AND,
     .IsMatch = MatchOdmData,
   },
   {
-    .Name    = "sw-modules",
+    .Name    = {"sw-modules"},
     .MatchOp = MATCH_OR,
     .IsMatch = MatchSWModule,
   },
   {
-    .Name    = "fuse-info",
+    .Name    = {"fuse-info"},
     .MatchOp = MATCH_AND,
     .IsMatch = MatchFuseInfo,
   },
@@ -155,6 +160,7 @@ STATIC BOOLEAN
 MatchId (
   VOID         *Fdt,
   CONST CHAR8  *Id,
+  CONST CHAR8  *TargetDTPath,
   VOID         *Param
   )
 {
@@ -165,6 +171,7 @@ MatchId (
   INTN                 BoardIdLen;
   UINTN                FabIdPrefixLen;
   CONST CHAR8          *BoardId = NULL;
+  CHAR8                *EeepromDeviceTreePath = NULL;
 
   BOOLEAN  Matched = FALSE;
 
@@ -225,15 +232,19 @@ match_type_done:
   }
 
   for (i = 0; i < BoardInfo->IdCount; i++) {
+    Matched = FALSE;
     BoardId    = TegraBoardIdFromPartNumber (&BoardInfo->ProductIds[i]);
+    EeepromDeviceTreePath = BoardInfo->EepromDeviceTreePaths[i];
     BoardIdLen = strlen (BoardId);
     BoardFabId = GetFabId (BoardId, NULL);
     DEBUG ((
       DEBUG_INFO,
-      "%a: check if overlay node id %a match with %a\n",
+      "%a: check if overlay node id %a match with %a (DT path %a, target DT path %a)\n",
       __FUNCTION__,
       Id,
-      BoardId
+      BoardId,
+      EeepromDeviceTreePath,
+      TargetDTPath
       ));
 
     switch (MatchType) {
@@ -293,7 +304,20 @@ match_type_done:
     }
 
     if (Matched == TRUE) {
-      break;
+      if (TargetDTPath != NULL) {
+	if (EeepromDeviceTreePath == NULL) {
+	  Matched = FALSE;
+	} else {
+	  EeepromDeviceTreePath = BoardInfo->EepromDeviceTreePaths[i];
+	  INT32 TargetDTPathLen = strlen(TargetDTPath);
+	  INT32 EepromPathLen = strlen(EeepromDeviceTreePath);
+	  if (!(EepromPathLen == TargetDTPathLen && !CompareMem (TargetDTPath, EeepromDeviceTreePath, EepromPathLen))) {
+	    Matched = FALSE;
+	  } else {
+	    break;
+	  }
+	}
+      }
     }
   }
 
@@ -306,6 +330,7 @@ STATIC BOOLEAN
 MatchOdmData (
   VOID         *Fdt,
   CONST CHAR8  *OdmData,
+  CONST CHAR8  *DTPath,
   VOID         *Param
   )
 {
@@ -331,6 +356,7 @@ STATIC BOOLEAN
 MatchSWModule (
   VOID         *Fdt,
   CONST CHAR8  *ModuleStr,
+  CONST CHAR8  *DTPath,
   VOID         *Param
   )
 {
@@ -345,6 +371,7 @@ STATIC BOOLEAN
 MatchFuseInfo (
   VOID         *Fdt,
   CONST CHAR8  *FuseStr,
+  CONST CHAR8  *DTPath,
   VOID         *Param
   )
 {
@@ -391,18 +418,28 @@ PMGetPropertyCount (
   UINTN          AllCount   = 0;
   UINTN          Index;
   INTN           PropCount;
+  INTN           PropCount2;
 
   for (Index = 0; Index < ARRAY_SIZE (MatchInfoArray); MatchIter++, Index++) {
-    PropCount = fdt_stringlist_count (Fdt, Node, MatchIter->Name);
+    PropCount = fdt_stringlist_count (Fdt, Node, MatchIter->Name[0]);
     if (PropCount < 0) {
       DEBUG ((DEBUG_INFO, "%a: Node: %d, Property: %a: Not Found.\n", __FUNCTION__, Node, MatchIter->Name));
-      MatchIter->Count = 0;
+      MatchIter->Count[0] = 0;
     } else {
-      MatchIter->Count = PropCount;
+      MatchIter->Count[0] = PropCount;
       DEBUG ((DEBUG_INFO, "%a: Node: %d, Property: %a: Count: %d.\n", __FUNCTION__, Node, MatchIter->Name, PropCount));
     }
-
-    AllCount += MatchIter->Count;
+    if (MatchIter->Name[1][0] != 0) {
+      PropCount2 = fdt_stringlist_count (Fdt, Node, MatchIter->Name[1]);
+      if (PropCount2 < 0) {
+	DEBUG ((DEBUG_INFO, "%a: Node: %d, Property: %a: Not Found.\n", __FUNCTION__, Node, MatchIter->Name[1]));
+	MatchIter->Count[1] = 0;
+      } else {
+	MatchIter->Count[1] = PropCount2;
+	DEBUG ((DEBUG_INFO, "%a: Node: %d, Property: %a: Count: %d.\n", __FUNCTION__, Node, MatchIter->Name[1], PropCount2));
+      }
+    }
+    AllCount += MatchIter->Count[0] + MatchIter->Count[1];
   }
 
   if (!AllCount) {
@@ -632,6 +669,7 @@ ProcessOverlayDeviceTree (
   CONST CHAR8    *NodeName;
   INTN           ConfigNode;
   CONST CHAR8    *PropStr;
+  CONST CHAR8    *PropStr2;
   INTN           PropCount;
   INT32          FdtErr;
   EFI_STATUS     Status = EFI_SUCCESS;
@@ -639,6 +677,7 @@ ProcessOverlayDeviceTree (
   DT_MATCH_INFO  *MatchIter;
   UINT32         Index;
   UINT32         Count;
+  UINT32         Count2;
   UINT32         NumberSubnodes;
   UINT32         FixupNodes = 0;
 
@@ -676,27 +715,53 @@ ProcessOverlayDeviceTree (
 
     MatchIter = MatchInfoArray;
     for (Index = 0; Index < ARRAY_SIZE (MatchInfoArray); Index++, MatchIter++) {
-      if ((MatchIter->Count > 0) && MatchIter->IsMatch) {
+      if ((MatchIter->Count[0] > 0) && MatchIter->IsMatch) {
         UINT32  Data = 0;
 
-        for (Count = 0, Found = FALSE; Count < MatchIter->Count; Count++) {
-          PropStr = fdt_stringlist_get (FdtOverlay, ConfigNode, MatchIter->Name, Count, NULL);
-          DEBUG ((
-            DEBUG_INFO,
-            "Check if property %a[%a] on /%a match\n",
-            MatchIter->Name,
-            PropStr,
-            FrName
-            ));
+        for (Count = 0, Found = FALSE; Count < MatchIter->Count[0]; Count++) {
+          PropStr = fdt_stringlist_get (FdtOverlay, ConfigNode, MatchIter->Name[0], Count, NULL);
 
-          Found = MatchIter->IsMatch (FdtBase, PropStr, &Data);
-          if (!Found && (MatchIter->MatchOp == MATCH_AND)) {
-            break;
-          }
+	  if (MatchIter->Count[1] > 0) {
+	    // This case should only be for "ids" and "eeprom-dt-paths"
+	    for (Count2 = 0; Count2 < MatchIter->Count[1]; Count2++) {
+	      PropStr2 = fdt_stringlist_get (FdtOverlay, ConfigNode, MatchIter->Name[1], Count2, NULL);
 
-          if (Found && (MatchIter->MatchOp == MATCH_OR)) {
-            break;
-          }
+              DEBUG ((
+                DEBUG_INFO,
+                "Check if property %a[%a] with %a on /%a match \n",
+                MatchIter->Name,
+                PropStr,
+                PropStr2,
+                FrName
+                ));
+
+              Found = MatchIter->IsMatch (FdtBase, PropStr, PropStr2, &Data);
+              if (Found && (MatchIter->MatchOp == MATCH_OR)) {
+                break;
+              }
+
+	    }
+	    if (Found && (MatchIter->MatchOp == MATCH_OR)) {
+	      break;
+	    }
+	  } else {
+            DEBUG ((
+              DEBUG_INFO,
+              "Check if property %a[%a] on /%a match\n",
+              MatchIter->Name,
+              PropStr,
+              FrName
+              ));
+
+            Found = MatchIter->IsMatch (FdtBase, PropStr, NULL, &Data);
+            if (!Found && (MatchIter->MatchOp == MATCH_AND)) {
+              break;
+            }
+
+            if (Found && (MatchIter->MatchOp == MATCH_OR)) {
+              break;
+            }
+	  }
         }
 
         if (!Found) {

@@ -24,6 +24,7 @@
 #define NVIDIA_EEPROM_BOARD_ID_PREFIX   "699"
 #define CUSTOMER_EEPROM_BOARD_ID_MAGIC  0xcc
 
+#define MAX_I2C_DEVICE_DT_PATH 64
 /**
  * @brief The Product Part Number structure that is embedded into
  * EEPROM layout structure
@@ -224,6 +225,7 @@ typedef struct {
   CHAR8    SerialNumber[TEGRA_SERIAL_NUM_LEN];
   UINT8    MacAddr[NET_ETHER_ADDR_LEN];
   UINT8    NumMacs;
+  CHAR8    EepromDeviceTreePath[MAX_I2C_DEVICE_DT_PATH];
 } TEGRA_EEPROM_BOARD_INFO;
 
 static inline

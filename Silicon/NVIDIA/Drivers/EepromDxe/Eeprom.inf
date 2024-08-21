@@ -38,6 +38,7 @@
   PlatformResourceLib
   Crc8Lib
   PrintLib
+  FdtLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
@@ -53,6 +54,7 @@
   gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_PRODUCES
   gNVIDIACvbEepromProtocolGuid                ## SOMETIMES_PRODUCES
   gNVIDIAEepromProtocolGuid                   ## SOMETIMES_PRODUCES
+  gNVIDIAI2cSlaveDeviceTreeNodeProtocolGuid   ## CONSUMES
 
 [Depex]
   TRUE

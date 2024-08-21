@@ -23,6 +23,27 @@
 #define MAX_I2C_DEVICES        16
 #define MAX_SLAVES_PER_DEVICE  1
 
+enum MuxType {
+    MUX = 0,
+    SWITCH = 1,
+    GPIO_CONTROLLED = 2, // Not supported yet, but will leave it here as bait
+};
+
+typedef struct {
+    enum MuxType MuxType         :8;
+    UINT8        MuxAddress      :8; // Only 7 bit addressing supported for now
+    UINT8        EnableBitNumber :8; // either 0, 2 or 3
+    UINT8        Channel         :8; // 0-7
+} BUS_CONFIGURATION_FIELDS;
+
+// This approach of encoding all mux configuration into a UINT32 isn't strictly compliant with the UEFI spec,
+// which suggests that configurations should be sequential indices rather than packed data
+typedef union {
+    BUS_CONFIGURATION_FIELDS Fields;
+    UINT32                   Value;
+} NVIDIA_TEGRA_I2C_BUS_CONFIGURATION;
+
+
 typedef struct {
   //
   // Standard signature used to identify TegraI2c private data
@@ -36,6 +57,8 @@ typedef struct {
   EFI_I2C_CONTROLLER_CAPABILITIES                  I2cControllerCapabilities;
   EFI_I2C_ENUMERATE_PROTOCOL                       I2cEnumerate;
   EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL    I2CConfiguration;
+
+  NVIDIA_TEGRA_I2C_SLAVE_DEVICE_TREE_NODE_PROTOCOL I2cSlaveDeviceTreeNode;
 
   //
   // Indicates if the protocols are installed
@@ -55,7 +78,6 @@ typedef struct {
   UINT32                                           ControllerId;
   UINTN                                            BusClockHertz;
 
-  UINT32                                           BusId;
   VOID                                             *DeviceTreeBase;
   INT32                                            DeviceTreeNodeOffset;
 
@@ -64,6 +86,7 @@ typedef struct {
   //
   EFI_I2C_DEVICE                                   I2cDevices[MAX_I2C_DEVICES];
   UINT32                                           SlaveAddressArray[MAX_I2C_DEVICES*MAX_SLAVES_PER_DEVICE];
+  UINT32                                           SlaveDeviceTreeNodeOffsets[MAX_I2C_DEVICES];
   UINTN                                            NumberOfI2cDevices;
 
   UINT32                                           PinControlId;
@@ -71,8 +94,10 @@ typedef struct {
   BOOLEAN                                          SkipOnExitDisabled;
 } NVIDIA_TEGRA_I2C_PRIVATE_DATA;
 
-#define TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(a)     CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cMaster, TEGRA_I2C_SIGNATURE)
-#define TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE(a)  CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cEnumerate, TEGRA_I2C_SIGNATURE)
+#define TEGRA_I2C_PRIVATE_DATA_FROM_MASTER(a)                   CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cMaster, TEGRA_I2C_SIGNATURE)
+#define TEGRA_I2C_PRIVATE_DATA_FROM_ENUMERATE(a)                CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cEnumerate, TEGRA_I2C_SIGNATURE)
+#define TEGRA_I2C_PRIVATE_DATA_FROM_BUS_CONFIGURATION(a)        CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2CConfiguration, TEGRA_I2C_SIGNATURE)
+#define TEGRA_I2C_PRIVATE_DATA_FROM_SLAVE_DEVICE_TREE_NODE(a)   CR(a, NVIDIA_TEGRA_I2C_PRIVATE_DATA, I2cSlaveDeviceTreeNode, TEGRA_I2C_SIGNATURE)
 
 /**
  * @addtogroup SPEED_MODES I2C Mode frequencies
