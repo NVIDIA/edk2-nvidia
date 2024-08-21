@@ -217,9 +217,10 @@ NVDA_MEMORY_REGION  TH500DramPageBlacklistInfoAddress[] = {
   }
 };
 
-TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]  = { };
-TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS] = { };
-UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]        = { };
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]   = { };
+TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS]  = { };
+UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]         = { };
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmRetiredPages[TH500_MAX_SOCKETS] = { };
 
 /**
   Get Socket Mask
@@ -1008,11 +1009,13 @@ TH500GetPlatformResourceInformation (
   IN BOOLEAN                       InMm
   )
 {
-  EFI_STATUS          Status;
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  UINT32              SocketMask;
-  UINTN               Index;
-  UINTN               Count;
+  EFI_STATUS               Status;
+  TEGRA_CPUBL_PARAMS       *CpuBootloaderParams;
+  UINT32                   SocketMask;
+  UINTN                    Index;
+  UINTN                    Count;
+  EFI_PHYSICAL_ADDRESS     *RetiredDramPageList;
+  TH500_EGM_RETIRED_PAGES  *EgmRetiredPages;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -1093,6 +1096,37 @@ TH500GetPlatformResourceInformation (
 
     for (Count = 0; Count < UID_NUM_DWORDS; Count++) {
       PlatformResourceInfo->UniqueId[Index][Count] += CpuBootloaderParams->UniqueId[Index][Count];
+    }
+  }
+
+  PlatformResourceInfo->EgmRetiredPages = TH500EgmRetiredPages;
+  if (PlatformResourceInfo->HypervisorMode == TRUE) {
+    for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
+      if (!(SocketMask & (1UL << Index))) {
+        continue;
+      }
+
+      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->RetiredDramPageListAddr[Index];
+      if (RetiredDramPageList == NULL) {
+        continue;
+      }
+
+      PlatformResourceInfo->EgmRetiredPages[Index].Base = (EFI_PHYSICAL_ADDRESS)AllocateZeroPool (sizeof (TH500_EGM_RETIRED_PAGES));
+      PlatformResourceInfo->EgmRetiredPages[Index].Size = sizeof (TH500_EGM_RETIRED_PAGES);
+      EgmRetiredPages                                   = (TH500_EGM_RETIRED_PAGES *)PlatformResourceInfo->EgmRetiredPages[Index].Base;
+
+      for (Count = 0; Count < MAX_RETIRED_DRAM_PAGES; Count++) {
+        if (RetiredDramPageList[Count] == 0) {
+          break;
+        } else {
+          if ((RetiredDramPageList[Count] >= PlatformResourceInfo->EgmMemoryInfo[Index].Base) &&
+              (RetiredDramPageList[Count] < PlatformResourceInfo->EgmMemoryInfo[Index].Base + PlatformResourceInfo->EgmMemoryInfo[Index].Size))
+          {
+            EgmRetiredPages->EgmRetiredPageAddress[EgmRetiredPages->EgmNumRetiredPages] = RetiredDramPageList[Count];
+            EgmRetiredPages->EgmNumRetiredPages++;
+          }
+        }
+      }
     }
   }
 

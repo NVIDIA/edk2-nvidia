@@ -247,6 +247,16 @@ GenerateGpuAmlDsdNode (
                PackageNode
                );
     ASSERT_EFI_ERROR (Status);
+
+    Name  = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyName;
+    Value = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyValue;
+
+    Status = AmlAddNameIntegerPackage (
+               Name,
+               Value,
+               PackageNode
+               );
+    ASSERT_EFI_ERROR (Status);
   } else {
     // SKIP EGM properties
   }

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -84,6 +84,11 @@
 #define CARVEOUT_RSVD9              49
 #define CARVEOUT_RSVD10             50
 #define CARVEOUT_OEM_COUNT          51
+
+typedef struct {
+  UINT64                  EgmNumRetiredPages;
+  EFI_PHYSICAL_ADDRESS    EgmRetiredPageAddress[MAX_RETIRED_DRAM_PAGES];
+} TH500_EGM_RETIRED_PAGES;
 
 typedef enum {
   Th500MemoryModeNormal,

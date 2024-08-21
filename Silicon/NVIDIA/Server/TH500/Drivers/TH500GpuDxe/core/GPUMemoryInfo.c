@@ -51,7 +51,8 @@ STATIC CM_ARM_NVDA_GPU_MEMORY_INFO  mGpuMemInfoTemplate =
     { "nvidia,gpu-mem-size",                                     0x10000000        },
     { "nvidia,egm-base-pa",                                      0                 },
     { "nvidia,egm-size",                                         0                 },
-    { "nvidia,egm-pxm",                                          0                 }
+    { "nvidia,egm-pxm",                                          0                 },
+    { "nvidia,egm-retired-pages-data-base",                      0                 }
   }
 };
 
@@ -229,6 +230,7 @@ GetGPUMemoryInfo (
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   UINT32                        Socket;
+  EFI_PHYSICAL_ADDRESS          EgmRetiredPageList;
 
   if (NULL == MemInfo) {
     ASSERT (0);
@@ -321,9 +323,20 @@ GetGPUMemoryInfo (
         GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyValue += TH500_HV_EGM_PXM_DOMAIN_START;
       }
 
+      EgmRetiredPageList = 0;
+      if ((PlatformResourceInfo->EgmRetiredPages[Socket].Base != 0) &&
+          (PlatformResourceInfo->EgmRetiredPages[Socket].Size != 0))
+      {
+        EgmRetiredPageList = (EFI_PHYSICAL_ADDRESS)AllocateReservedPages (EFI_SIZE_TO_PAGES (PlatformResourceInfo->EgmRetiredPages[Socket].Size));
+        CopyMem ((VOID *)EgmRetiredPageList, (CONST VOID *)PlatformResourceInfo->EgmRetiredPages[Socket].Base, PlatformResourceInfo->EgmRetiredPages[Socket].Size);
+      }
+
+      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyValue = EgmRetiredPageList;
+
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_BASE_PA].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_BASE_PA].PropertyValue));
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_SIZE].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_SIZE].PropertyValue));
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_PXM].PropertyValue));
+      DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyValue));
     }
   } else {
     // Testing Dummy values values [WIP]

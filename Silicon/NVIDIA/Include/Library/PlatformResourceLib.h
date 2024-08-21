@@ -143,6 +143,7 @@ typedef struct {
   TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
   UINT8                       *C2cMode;
   UINT32                      UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
+  TEGRA_BASE_AND_SIZE_INFO    *EgmRetiredPages;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
