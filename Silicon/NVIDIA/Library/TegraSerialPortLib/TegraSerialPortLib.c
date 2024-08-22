@@ -199,35 +199,6 @@ SerialPortIdentify (
   return;
 }
 
-/** Initialize the serial device hardware with default settings.
-
-  @retval RETURN_SUCCESS            The serial device was initialised.
-  @retval RETURN_INVALID_PARAMETER  One or more of the default settings
-                                    has an unsupported value.
- **/
-RETURN_STATUS
-EFIAPI
-SerialPortInitialize (
-  VOID
-  )
-{
-  RETURN_STATUS   Status;
-  SERIAL_MAPPING  *Mapping;
-
-  SerialPortIdentify (NULL);
-
-  for (Mapping = gSerialCompatibilityMap; Mapping->Type != TEGRA_UART_TYPE_NONE; Mapping++) {
-    if (Mapping->IsFound == TRUE) {
-      Status = Mapping->GetObject ()->SerialPortInitialize (Mapping->BaseAddress);
-      if (RETURN_ERROR (Status)) {
-        return RETURN_DEVICE_ERROR;
-      }
-    }
-  }
-
-  return RETURN_SUCCESS;
-}
-
 /**
   Return the active SERIAL_MAPPING or NULL.
 
@@ -258,6 +229,37 @@ GetActiveMapping (
   }
 
   return Mapping;
+}
+
+/** Initialize the serial device hardware with default settings.
+
+  @retval RETURN_SUCCESS            The serial device was initialised.
+  @retval RETURN_INVALID_PARAMETER  One or more of the default settings
+                                    has an unsupported value.
+ **/
+RETURN_STATUS
+EFIAPI
+SerialPortInitialize (
+  VOID
+  )
+{
+  RETURN_STATUS   Status;
+  SERIAL_MAPPING  *Mapping;
+
+  SerialPortIdentify (NULL);
+
+  Mapping = GetActiveMapping ();
+
+  if (Mapping == NULL) {
+    return RETURN_NOT_FOUND;
+  }
+
+  Status = Mapping->GetObject ()->SerialPortInitialize (Mapping->BaseAddress);
+  if (RETURN_ERROR (Status)) {
+    return RETURN_DEVICE_ERROR;
+  }
+
+  return RETURN_SUCCESS;
 }
 
 /**
