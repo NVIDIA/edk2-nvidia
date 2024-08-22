@@ -159,7 +159,7 @@ HESTCreateAcpiTable (
       .NumberOfRecordsToPreAllocate = ErrorSource[i].NumberRecordstoPreAllocate,
       .MaxSectionsPerRecord         = ErrorSource[i].MaxSectionsPerRecord,
       .MaxRawDataLength             = ErrorSource[i].MaxRawDataLength,
-      .ErrorStatusBlockLength       = ErrorSource[i].MaxRawDataLength + sizeof (EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE),
+      .ErrorStatusBlockLength       = ErrorSource[i].ErrorStatusBlockLength,
 
       /* Error entry address info */
       .ErrorStatusAddress = {
