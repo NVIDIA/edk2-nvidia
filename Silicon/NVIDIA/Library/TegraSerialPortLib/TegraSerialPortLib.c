@@ -166,15 +166,21 @@ SerialPortIdentify (
         continue;
       }
 
-      Size   = 1;
-      Status = DeviceTreeGetRegisters (NodeOffset, &RegData, &Size);
-      if (EFI_ERROR (Status)) {
-        break;
+      if (gSerialCompatibilityInfo[Index].Type == TEGRA_UART_TYPE_TCU) {
+        // TCU is a special case, it doesn't have a base address in node
+        gSerialCompatibilityMap[MappingIndex].BaseAddress = (UINTN)FixedPcdGet64 (PcdTegraCombinedUartTxMailbox);
+      } else {
+        Size   = 1;
+        Status = DeviceTreeGetRegisters (NodeOffset, &RegData, &Size);
+        if (EFI_ERROR (Status)) {
+          break;
+        }
+
+        gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData.BaseAddress;
       }
 
-      gSerialCompatibilityMap[MappingIndex].BaseAddress = RegData.BaseAddress;
-      gSerialCompatibilityMap[MappingIndex].IsFound     = TRUE;
-      UartFound                                         = TRUE;
+      gSerialCompatibilityMap[MappingIndex].IsFound = TRUE;
+      UartFound                                     = TRUE;
       break;
     }
 
