@@ -1100,7 +1100,11 @@ TH500GetPlatformResourceInformation (
   }
 
   PlatformResourceInfo->EgmRetiredPages = TH500EgmRetiredPages;
-  if (PlatformResourceInfo->HypervisorMode == TRUE) {
+
+  /* Avoid this in MM as the Memory library isn't ready at this stage */
+  if ((PlatformResourceInfo->HypervisorMode == TRUE) &&
+      (InMm == FALSE))
+  {
     for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
       if (!(SocketMask & (1UL << Index))) {
         continue;
