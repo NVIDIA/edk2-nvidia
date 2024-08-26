@@ -1067,13 +1067,13 @@ TegraI2CDriverBindingStart (
   DtControllerId = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
   if (NULL != DtControllerId) {
     Private->ControllerId = SwapBytes32 (*DtControllerId);
-    if (Private->ControllerId > 0xf) {
-      DEBUG ((DEBUG_ERROR, "%a: Controller Id out of range (%x) setting to 0xf\r\n", __FUNCTION__, Private->ControllerId));
-      Private->ControllerId = 0xf;
+    if (Private->ControllerId > 0x3f) {
+      DEBUG ((DEBUG_ERROR, "%a: Controller Id out of range (%x) setting to 0x3f\r\n", __FUNCTION__, Private->ControllerId));
+      Private->ControllerId = 0x3f;
     }
   } else {
     CHAR8  I2cName[] = "i2cx";
-    Private->ControllerId = 0xf;
+    Private->ControllerId = 0x3f;
 
     for (Index = 0; Index <= 9; Index++) {
       INT32        AliasOffset;
@@ -1091,7 +1091,7 @@ TegraI2CDriverBindingStart (
       }
     }
 
-    if (Private->ControllerId == 0xf) {
+    if (Private->ControllerId == 0x3f) {
       DEBUG ((DEBUG_WARN, "%a: no nvidia,hw-instance-id in dt or alias, defaulting to %d\r\n", __FUNCTION__, Private->ControllerId));
     }
   }
