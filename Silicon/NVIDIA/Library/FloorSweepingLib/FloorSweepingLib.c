@@ -509,15 +509,27 @@ UpdateCpuFloorsweepingConfig (
         L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
       }
 
-      FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to disable /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+      if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
+        TmpOffset  = NodeOffset;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
 
-        return EFI_DEVICE_ERROR;
+        FdtErr = fdt_nop_node (Dtb, TmpOffset);
+        if (FdtErr < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+          return EFI_DEVICE_ERROR;
+        }
+      } else {
+        FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
+        if (FdtErr < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to disable /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+
+          return EFI_DEVICE_ERROR;
+        }
+
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       }
 
       DEBUG ((DEBUG_INFO, "Disabled cpu-%u node in FDT\r\n", Cpu));
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
 
       if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
         TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);

@@ -793,6 +793,9 @@
 #Enumeration poll timeout in ms (0=disable)
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|0|UINT32|0x000000AC
 
+#Option to floorsweep CPUs by DTB NOP
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|FALSE|BOOLEAN|0x000000AF
+
 [PcdsFixedAtBuild,PcdsPatchableInModule,PcdsDynamic,PcdsDynamicEx]
   # User Authentication for BIOS Setup Menu feature
   # Indicate whether the password is cleared.

@@ -1197,6 +1197,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
 
 [PcdsDynamicHii.common.T194]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
@@ -1216,6 +1217,7 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
+  gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
 
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
