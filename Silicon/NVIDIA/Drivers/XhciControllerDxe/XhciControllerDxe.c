@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -116,6 +116,9 @@ OnExitBootServices (
   if (!EFI_ERROR (Status)) {
     return;
   }
+
+  /* Do UsbPadCtlDxe DeInit */
+  Private->mUsbPadCtlProtocol->DeInitHw (Private->mUsbPadCtlProtocol);
 
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
   if (EFI_ERROR (Status)) {

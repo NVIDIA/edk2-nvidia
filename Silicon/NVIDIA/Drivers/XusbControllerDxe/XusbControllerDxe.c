@@ -2,7 +2,7 @@
 
   XUDC Driver
 
-  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,7 +31,6 @@ typedef struct {
 } XUDC_CONTROLLER_PRIVATE_DATA;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
   { "nvidia,tegra234-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
   { NULL,                   NULL                                  }
 };
