@@ -88,10 +88,12 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gNVIDIATokenSpaceGuid.PcdTpmEnable
+  gNVIDIATokenSpaceGuid.PcdProcessorThreadsPerCore
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gNVIDIAPlatformResourceDataGuid
+  gNVIDIATH500MB1DefaultDataGuid
 
 [Protocols]
   gEfiPciIoProtocolGuid

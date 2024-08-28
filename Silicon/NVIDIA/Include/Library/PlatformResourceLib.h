@@ -432,4 +432,16 @@ GetActiveBootChainStMm (
   OUT UINT32  *BootChain
   );
 
+/**
+ * Retrieves the Core Count of Socket
+ *
+ * @param[in]  Socket        Socket Index
+ *
+ * @retval  Returns max core count.
+**/
+UINTN
+TegraGetMaxCoreCount (
+  IN UINTN  Socket
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

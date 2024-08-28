@@ -24,6 +24,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosProcSubParser.h"
@@ -491,24 +492,16 @@ InstallSmbiosType4Cm (
       ProcessorInfo[Index].MaxSpeed = ProcessorData.MaxSpeed;
     }
 
-    if (ProcessorData.CoreCount > 255) {
-      ProcessorInfo[Index].CoreCount = 0xFF;
-    } else {
-      ProcessorInfo[Index].CoreCount = ProcessorData.CoreCount;
-    }
+    ProcessorInfo[Index].CoreCount  = MIN (TegraGetMaxCoreCount (Index), MAX_UINT8);
+    ProcessorInfo[Index].CoreCount2 = TegraGetMaxCoreCount (Index);
 
-    ProcessorInfo[Index].CoreCount2 = ProcessorData.CoreCount;
-
-    if (ProcessorData.CoresEnabled > 255) {
-      ProcessorInfo[Index].EnabledCoreCount = 0xFF;
-    } else {
-      ProcessorInfo[Index].EnabledCoreCount = ProcessorData.CoresEnabled;
-    }
-
+    ProcessorInfo[Index].EnabledCoreCount  = MIN (ProcessorData.CoresEnabled, MAX_UINT8);
     ProcessorInfo[Index].EnabledCoreCount2 = ProcessorData.CoresEnabled;
 
-    ProcessorInfo[Index].ThreadCount  = ProcessorData.ThreadCount;
-    ProcessorInfo[Index].ThreadCount2 = ProcessorData.ThreadCount;
+    ProcessorInfo[Index].ThreadCount  = MIN (TegraGetMaxCoreCount (Index) * PcdGet8 (PcdProcessorThreadsPerCore), MAX_UINT8);
+    ProcessorInfo[Index].ThreadCount2 = TegraGetMaxCoreCount (Index) * PcdGet8 (PcdProcessorThreadsPerCore);
+
+    ProcessorInfo[Index].ThreadEnabled = ProcessorData.CoresEnabled * PcdGet8 (PcdProcessorThreadsPerCore);
 
     ProcessorInfo[Index].ExternalClock =
       (UINT16)(SmbiosGetExternalClockFrequency () / 1000 / 1000);

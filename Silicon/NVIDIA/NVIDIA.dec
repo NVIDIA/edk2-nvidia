@@ -677,6 +677,9 @@
   <Packages>
     MdePkg/MdePkg.dec
   }
+  #Type04 Table Data
+  # Set thread count for processor core
+  gNVIDIATokenSpaceGuid.PcdProcessorThreadsPerCore|0x01|UINT8|0x000000AB
 
 #FwPartition and FwImage
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|FALSE|BOOLEAN|0x00000053

@@ -1228,3 +1228,18 @@ TH500UpdatePlatformResourceInformation (
 
   return Th500CpuC2cMode (PlatformResourceInfo);
 }
+
+UINTN
+TH500TegraGetMaxCoreCount (
+  IN UINTN  Socket
+  )
+{
+  UINTN               CpuBootloaderAddress;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  return CpuBootloaderParams->EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket];
+}

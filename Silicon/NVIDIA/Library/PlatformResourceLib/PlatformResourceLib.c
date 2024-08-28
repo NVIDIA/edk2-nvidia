@@ -21,6 +21,7 @@
 #include "T194ResourceConfig.h"
 #include "T234ResourceConfig.h"
 #include "TH500ResourceConfig.h"
+#include <Library/FloorSweepingLib.h>
 
 #define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
   (((UINT64)(Aff3) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
@@ -963,4 +964,38 @@ GetActiveBootChainStMm (
   }
 
   return Status;
+}
+
+UINTN
+TegraGetMaxCoreCount (
+  IN UINTN  Socket
+  )
+{
+  UINTN       ChipID;
+  UINTN       CoreCount;
+  EFI_STATUS  Status;
+
+  CoreCount = 0;
+  ChipID    = TegraGetChipID ();
+
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      CoreCount = TH500TegraGetMaxCoreCount (Socket);
+      break;
+    default:
+      Status = GetNumEnabledCoresOnSocket (Socket, &CoreCount);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a:Failed to get Enabled Core Count for Socket %u %r\n",
+          __FUNCTION__,
+          Socket,
+          Status
+          ));
+      }
+
+      break;
+  }
+
+  return CoreCount;
 }

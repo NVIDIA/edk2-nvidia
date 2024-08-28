@@ -130,4 +130,13 @@ TH500UpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   );
 
+/**
+  Retrieves the Core Count of Socket
+
+**/
+UINTN
+TH500TegraGetMaxCoreCount (
+  IN UINTN  Socket
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__
