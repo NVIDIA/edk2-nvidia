@@ -117,6 +117,9 @@ OnExitBootServices (
     return;
   }
 
+  /* Do UsbPadCtlDxe DeInit */
+  Private->mUsbPadCtlProtocol->DeInitHw (Private->mUsbPadCtlProtocol);
+
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
   if (EFI_ERROR (Status)) {
     return;

@@ -1130,6 +1130,7 @@ DeInitUsbHw234 (
   UINT32                 i, RegData;
   PADCTL_PLAT_CONFIG     *PlatConfig;
   PORT_INFO              *Usb2Ports;
+  PORT_INFO              *Usb3Ports;
 
   if (NULL == This) {
     return;
@@ -1138,6 +1139,7 @@ DeInitUsbHw234 (
   Private    = PADCTL_PRIVATE_DATA_FROM_THIS (This);
   PlatConfig = &(Private->PlatConfig);
   Usb2Ports  = PlatConfig->Usb2Ports;
+  Usb3Ports  = PlatConfig->Usb3Ports;
 
   /* Disable Over Current Handling and VBUS */
   DisableVbus (Private);
@@ -1151,6 +1153,7 @@ DeInitUsbHw234 (
     /* Clear Each PAD's PD and PD_DR Bits */
     RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_0 (i));
     RegData |= USB2_OTG_PD;
+    RegData |= USB2_OTG_PD_ZI;
     PadCtlWrite (Private, USB2_OTG_PADX_CTL_0 (i), RegData);
 
     RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_1 (i));
@@ -1166,6 +1169,29 @@ DeInitUsbHw234 (
   RegData  = PadCtlRead (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
   RegData |= USB2_PD_TRK;
   PadCtlWrite (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1, RegData);
+
+  /* Power down usb3 part */
+  for (i = 0; i < PlatConfig->NumSsPhys; i++) {
+    if (Usb3Ports[i].PortEnabled == FALSE) {
+      continue;
+    }
+
+    RegData  = PadCtlRead (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0);
+    RegData |= SSPX_ELPG_CLAMP_EN_EARLY (i);
+    PadCtlWrite (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0, RegData);
+
+    gBS->Stall (200);
+
+    RegData  = PadCtlRead (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0);
+    RegData |= SSPX_ELPG_CLAMP_EN (i);
+    PadCtlWrite (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0, RegData);
+
+    gBS->Stall (350);
+
+    RegData  = PadCtlRead (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0);
+    RegData |= SSPX_ELPG_VCORE_DOWN (i);
+    PadCtlWrite (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0, RegData);
+  }
 
   return;
 }
