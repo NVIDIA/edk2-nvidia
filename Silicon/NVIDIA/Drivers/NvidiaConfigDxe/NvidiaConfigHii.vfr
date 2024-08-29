@@ -657,6 +657,15 @@ formset
     endcheckbox;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DisableChannelSparingSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableChannelSparing,
+        questionid = KEY_DISABLE_CHANNEL_SPARING,
+        prompt = STRING_TOKEN(STR_DISABLE_CHANNEL_SPARING_PROMPT),
+        help   = STRING_TOKEN(STR_DISABLE_CHANNEL_SPARING_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
         questionid = KEY_MAX_CORES,

@@ -63,6 +63,7 @@
 #string STR_PERF_VERSION_DEFAULT                #language x-UEFI-redfish-Bios.v1_2_0 "Default"
 #string STR_PERF_VERSION_C1_NCM                 #language x-UEFI-redfish-Bios.v1_2_0 "C1-NCM"
 #string STR_EINJ_ENABLE_PROMPT                  #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/EInj"
+#string STR_DISABLE_CHANNEL_SPARING_PROMPT      #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/DisableChannelSparing"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT             #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
 #string STR_HOST_INTERFACE_ENABLED_PROMPT       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
 #string STR_PRODUCT_ASSET_TAG_PROTECTION        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/AssetTagProtection"

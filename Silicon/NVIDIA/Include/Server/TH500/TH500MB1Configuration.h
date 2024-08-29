@@ -43,15 +43,15 @@ typedef struct {
   union {
     UINT64    FeatureFields;
     struct {
-      UINT64    EgmEnable           : 1;
-      UINT64    SpreadSpecEnable    : 1;
-      UINT64    ModsSpEnable        : 1;
-      UINT64    TpmEnable           : 1;
-      UINT64    GpuSmmuBypassEnable : 1;
-      UINT64    UartBaudRate        : 4;
-      UINT64    EInjEnable          : 1;
-      UINT64    NvIntFeatureFlag0   : 1;
-      UINT64    FeatureFieldsUnused : 53;
+      UINT64    EgmEnable             : 1;
+      UINT64    SpreadSpecEnable      : 1;
+      UINT64    ModsSpEnable          : 1;
+      UINT64    TpmEnable             : 1;
+      UINT64    GpuSmmuBypassEnable   : 1;
+      UINT64    UartBaudRate          : 4;
+      UINT64    EInjEnable            : 1;
+      UINT64    DisableChannelSparing : 1;
+      UINT64    FeatureFieldsUnused   : 53;
     };
   };
 } TEGRABL_FEATURE_DATA;

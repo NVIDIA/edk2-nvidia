@@ -84,6 +84,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PERF_VERSION_HELP),
   STRING_TOKEN (STR_EINJ_ENABLE_PROMPT),
   STRING_TOKEN (STR_EINJ_ENABLE_HELP),
+  STRING_TOKEN (STR_DISABLE_CHANNEL_SPARING_PROMPT),
+  STRING_TOKEN (STR_DISABLE_CHANNEL_SPARING_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
@@ -1696,9 +1698,10 @@ SyncHiiSettings (
       mHiiControlSettings.UartBaudRate = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
     }
 
-    mHiiControlSettings.EInjEnable     = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
-    mHiiControlSettings.PerfVersion    = mMb1Config.Data.Mb1Data.PerfVersion;
-    mHiiControlSettings.UefiDebugLevel = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+    mHiiControlSettings.EInjEnable            = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
+    mHiiControlSettings.DisableChannelSparing = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
+    mHiiControlSettings.PerfVersion           = mMb1Config.Data.Mb1Data.PerfVersion;
+    mHiiControlSettings.UefiDebugLevel        = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
     mHiiControlSettings.ActiveCores = 0;
     for (Index = 0; Index < MAX_SOCKETS; Index++) {
@@ -1805,16 +1808,17 @@ SyncHiiSettings (
       mHiiControlSettings.MinBw[Index]       = mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MinBw;
     }
   } else {
-    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable           = mHiiControlSettings.EgmEnabled;
-    mMb1Config.Data.Mb1Data.HvRsvdMemSize                   = mHiiControlSettings.EgmHvSizeMb;
-    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable    = mHiiControlSettings.SpreadSpectrumEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable        = mHiiControlSettings.ModsSpEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable           = mHiiControlSettings.TpmEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable = mHiiControlSettings.GpuSmmuBypassEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate        = mHiiControlSettings.UartBaudRate;
-    mMb1Config.Data.Mb1Data.FeatureData.EInjEnable          = mHiiControlSettings.EInjEnable;
-    mMb1Config.Data.Mb1Data.PerfVersion                     = mHiiControlSettings.PerfVersion;
-    mMb1Config.Data.Mb1Data.UefiDebugLevel                  = mHiiControlSettings.UefiDebugLevel;
+    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable             = mHiiControlSettings.EgmEnabled;
+    mMb1Config.Data.Mb1Data.HvRsvdMemSize                     = mHiiControlSettings.EgmHvSizeMb;
+    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable      = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable          = mHiiControlSettings.ModsSpEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable             = mHiiControlSettings.TpmEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable   = mHiiControlSettings.GpuSmmuBypassEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate          = mHiiControlSettings.UartBaudRate;
+    mMb1Config.Data.Mb1Data.FeatureData.EInjEnable            = mHiiControlSettings.EInjEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing = mHiiControlSettings.DisableChannelSparing;
+    mMb1Config.Data.Mb1Data.PerfVersion                       = mHiiControlSettings.PerfVersion;
+    mMb1Config.Data.Mb1Data.UefiDebugLevel                    = mHiiControlSettings.UefiDebugLevel;
 
     if (mHiiControlSettings.ActiveCores < AvailableSockets) {
       mHiiControlSettings.ActiveCores = 0;
@@ -2222,6 +2226,10 @@ InitializeSettings (
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 16) {
       mHiiControlSettings.PCIeOSNativeAERSupported = TRUE;
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 14) {
+      mHiiControlSettings.DisableChannelSparingSupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 11) {
@@ -2637,6 +2645,9 @@ GetDefaultValue (
       break;
     case KEY_EINJ_ENABLE:
       Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.EInjEnable;
+      break;
+    case KEY_DISABLE_CHANNEL_SPARING:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.DisableChannelSparing;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

@@ -117,6 +117,7 @@
 #define KEY_MAX_CORES                  0x1023
 #define KEY_SERVER_POWER_CONTROL       0x1024
 #define KEY_DBG2_NETWORK_DEVICE        0x1025
+#define KEY_DISABLE_CHANNEL_SPARING    0x1026
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -1011,6 +1012,7 @@ typedef struct {
   BOOLEAN    UartBaudRateSettingSupported;
   BOOLEAN    PerfVersionSettingSupported;
   BOOLEAN    EInjEnableSupported;
+  BOOLEAN    DisableChannelSparingSupported;
   BOOLEAN    PCIeASPML1SSConfigSupported;
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
@@ -1041,6 +1043,7 @@ typedef struct {
   UINT8      UartBaudRate;
   UINT8      PerfVersion;
   BOOLEAN    EInjEnable;
+  BOOLEAN    DisableChannelSparing;
   UINT32     ActiveCores;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];
