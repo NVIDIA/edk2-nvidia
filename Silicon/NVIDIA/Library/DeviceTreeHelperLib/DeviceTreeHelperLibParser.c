@@ -781,7 +781,6 @@ DeviceTreeGetInterruptMap (
   INT32         ParentPhandleOffset;
   INT32         ParentAddressOffset;
   INT32         ParentInterruptOffset;
-  BOOLEAN       TryZeroAddressCells;
 
   NV_ASSERT_RETURN (NumberOfMaps != NULL, return EFI_INVALID_PARAMETER, "%a: NumberOfMaps is not allowed to be NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN ((InterruptMapArray != NULL) || (*NumberOfMaps == 0), return EFI_INVALID_PARAMETER, "%a: InterruptMapArray can only be NULL if NumberOfMaps is zero\n", __FUNCTION__);
@@ -822,14 +821,8 @@ DeviceTreeGetInterruptMap (
   DEBUG ((DEBUG_VERBOSE, "%a: ChildAddressCells = %u, ChildInterruptCells = %u, ChildInterruptOffset = %d, ParentPhandleOffset = %d\n", __FUNCTION__, ChildAddressCells, ChildInterruptCells, ChildInterruptOffset, ParentPhandleOffset));
 
   // Loop through each entry, parsing it
-  TryZeroAddressCells = FALSE;
-ParseInterruptMapEntries:
-  if (TryZeroAddressCells) {
-    DEBUG ((DEBUG_ERROR, "%a: DTB might have missing required #address-cells field. Trying to work around it by using zero for the value\n", __FUNCTION__));
-  }
-
   for (MapIndex = 0, CellIndex = 0; CellIndex < NumCells; MapIndex++, CellIndex += EntryCells) {
-    DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, CellIndex = %u, NumCells = %u, TryZeroAddressCells = %a\n", __FUNCTION__, MapIndex, CellIndex, NumCells, TryZeroAddressCells ? "true" : "false"));
+    DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, CellIndex = %u, NumCells = %u\n", __FUNCTION__, MapIndex, CellIndex, NumCells));
     NV_ASSERT_RETURN (CellIndex + ParentPhandleOffset < NumCells, return EFI_DEVICE_ERROR, "%a: Cell parsing bug - parent phandle offset exceeds map property size for Node Offset 0x%x, MapIndex %u\n", __FUNCTION__, NodeOffset, MapIndex);
     ParentPhandle = Fdt32ToCpu (MapProperty[CellIndex + ParentPhandleOffset]);
     Status        = DeviceTreeGetNodeByPHandle (ParentPhandle, &ParentNodeOffset);
@@ -844,10 +837,6 @@ ParseInterruptMapEntries:
       break;
     }
 
-    if ((ParentAddressCells == DEFAULT_ADDRESS_CELLS_VALUE) && TryZeroAddressCells) {
-      ParentAddressCells = 0;
-    }
-
     Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &ParentInterruptCells);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get #interrupt-cells for (Interrupt Parent) NodeOffset 0x%x\n", __FUNCTION__, Status, ParentNodeOffset));
@@ -858,14 +847,6 @@ ParseInterruptMapEntries:
     ParentInterruptOffset = ParentAddressOffset + ParentAddressCells;
     EntryCells            = ParentInterruptOffset + ParentInterruptCells;
     DEBUG ((DEBUG_VERBOSE, "%a: ParentAddressOffset = %d, ParentInterruptOffset = %d, EntryCells = %u\n", __FUNCTION__, ParentAddressOffset, ParentInterruptOffset, EntryCells));
-
-    // Sanity check the number of cells
-    if ((CellIndex + EntryCells > NumCells) &&
-        (!TryZeroAddressCells))
-    {
-      TryZeroAddressCells = TRUE;
-      goto ParseInterruptMapEntries;
-    }
 
     NV_ASSERT_RETURN (CellIndex + EntryCells <= NumCells, return EFI_DEVICE_ERROR, "%a: Cell size bug in parsing interrupt-map of node offset 0x%x\n", __FUNCTION__, NodeOffset);
 
@@ -899,12 +880,6 @@ ParseInterruptMapEntries:
         break;
       }
     }
-  }
-
-  // Older DTB had a bug where if parent address cells was missing it was treated as zero rather than the default value, so try that to see if it fixes the error
-  if (EFI_ERROR (Status) && !TryZeroAddressCells) {
-    TryZeroAddressCells = TRUE;
-    goto ParseInterruptMapEntries;
   }
 
   if (*NumberOfMaps < MapIndex) {
