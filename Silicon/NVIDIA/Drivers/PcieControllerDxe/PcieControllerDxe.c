@@ -591,6 +591,9 @@ InitializeController (
     return EFI_NOT_FOUND;
   }
 
+  /* Wait for 100ms before releasing PERST# */
+  MicroSecondDelay (100 * 1000);
+
   val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
   val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
   MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, val);
