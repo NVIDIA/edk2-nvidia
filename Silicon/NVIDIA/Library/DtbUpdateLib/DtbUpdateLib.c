@@ -104,7 +104,7 @@ DtbUpdateGetMacAddressInfo (
 
   DEBUG ((DEBUG_INFO, "%a: mac=%02x:%02x:%02x:%02x:%02x:%02x, num=%u\n", __FUNCTION__, mMacAddress[5], mMacAddress[4], mMacAddress[3], mMacAddress[2], mMacAddress[1], mMacAddress[0], mNumMacAddresses));
 
-  if ((mNumMacAddresses == 0) || (mMacValue == 0)) {
+  if ((mMacValue == 0) || (mMacValue == 0xffffffffffff)) {
     DEBUG ((DEBUG_ERROR, "%a: invalid MAC info num=%u addr=0x%llx\n", __FUNCTION__, mNumMacAddresses, mMacValue));
     return EFI_DEVICE_ERROR;
   }
@@ -213,7 +213,11 @@ DtbUpdateMacAddresses (
   }
 
   ChipID = TegraGetChipID ();
-  if (ChipID == T234_CHIP_ID) {
+  if (ChipID != T194_CHIP_ID) {
+    if (mNumMacAddresses == 0) {
+      DEBUG ((DEBUG_ERROR, "%a: mNumMacAddresses is 0\n", __FUNCTION__));
+    }
+
     MacValue = mMacValue;
     for (Count = 0; Count < mNumMacAddresses; Count++, MacValue++) {
       AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
