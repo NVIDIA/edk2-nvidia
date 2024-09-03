@@ -194,6 +194,10 @@ FindPropNodeByPhandleInstance (
   UINT32          Instance;
 
   ASSERT (NodeInstance != 0);
+  if (Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+    DEBUG ((DEBUG_ERROR, "%a: Trying to look up node via invalid phandle!\n", __FUNCTION__));
+    return NULL;
+  }
 
   Instance = 1;
   for_each_list_entry (ListEntry, &Private->PropNodeList) {
@@ -491,7 +495,15 @@ AllocatePropNode:
           return EFI_OUT_OF_RESOURCES;
         }
 
-        PropNode->Phandle         = fdt_get_phandle (Private->DtbBase, NodeOffset);
+        Status = DeviceTreeGetNodePHandle (NodeOffset, &PropNode->Phandle);
+        if (EFI_ERROR (Status)) {
+          if (Status != EFI_NOT_FOUND) {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Phandle for %a NodeOffset 0x%x\n", __FUNCTION__, Status, DevMap->Compatibility, NodeOffset));
+          }
+
+          PropNode->Phandle = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
+        }
+
         PropNode->RegCount        = NumberOfRegisters;
         PropNode->RegArray        = &RegisterArray[Indx];
         PropNode->MsiProp         = MsiProp;
