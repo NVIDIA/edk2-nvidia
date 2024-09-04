@@ -495,6 +495,35 @@ ParseInterruptCells (
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+GetPhandleCells (
+  IN INT32        Phandle,
+  IN CONST CHAR8  *CellsName,
+  OUT UINT32      *Cells
+  )
+{
+  EFI_STATUS  Status;
+  INT32       NodeOffset;
+
+  NV_ASSERT_RETURN (CellsName != NULL, return EFI_INVALID_PARAMETER, "%a: CellsName pointer can't be NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN (Cells != NULL, return EFI_INVALID_PARAMETER, "%a: Cells pointer can't be NULL\n", __FUNCTION__);
+
+  Status = DeviceTreeGetNodeByPHandle (Phandle, &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, CellsName, Cells);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting %a for NodeOffset 0x%x (rc=%r)\n", __FUNCTION__, CellsName, NodeOffset, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
 /**
   Returns information about the interrupts of a given device tree node
 
@@ -552,20 +581,15 @@ DeviceTreeGetInterrupts (
     CellIndex          = 0;
     IntPropertyEntries = 0;
     while (CellIndex < NumCells) {
-      Status = DeviceTreeGetNodeByPHandle (Fdt32ToCpu (IntProperty[CellIndex++]), &ParentNodeOffset);
+      Status = GetPhandleCells (Fdt32ToCpu (IntProperty[CellIndex++]), "#interrupt-cells", &InterruptCells);
       if (EFI_ERROR (Status)) {
-        return Status;
-      }
-
-      Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller (rc=%r)\n", __FUNCTION__, Status));
         return Status;
       }
 
       ASSERT (InterruptCells > 0);
       if (InterruptCells == 0) {
-        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller (rc=%r)\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
 
@@ -622,20 +646,15 @@ DeviceTreeGetInterrupts (
   for (IntIndex = 0; IntIndex < IntPropertyEntries; IntIndex++) {
     ASSERT (CellIndex < NumCells);
     if (ExtendedInterrupts) {
-      Status = DeviceTreeGetNodeByPHandle (Fdt32ToCpu (IntProperty[CellIndex++]), &ParentNodeOffset);
+      Status = GetPhandleCells (Fdt32ToCpu (IntProperty[CellIndex++]), "#interrupt-cells", &InterruptCells);
       if (EFI_ERROR (Status)) {
-        return Status;
-      }
-
-      Status = DeviceTreeGetNodePropertyValue32 (ParentNodeOffset, "#interrupt-cells", &InterruptCells);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Error getting #interrupt-cells count for interrupt controller (rc=%r)\n", __FUNCTION__, Status));
         return Status;
       }
 
       ASSERT (InterruptCells > 0);
       if (InterruptCells == 0) {
-        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller 0x%x (rc=%r)\n", __FUNCTION__, ParentNodeOffset, Status));
+        DEBUG ((DEBUG_ERROR, "%a: Didn't get a valid #interrupt-cells count for interrupt controller (rc=%r)\n", __FUNCTION__, Status));
         return EFI_DEVICE_ERROR;
       }
     }
@@ -886,6 +905,162 @@ ParseInterruptMapEntries:
   if (EFI_ERROR (Status) && !TryZeroAddressCells) {
     TryZeroAddressCells = TRUE;
     goto ParseInterruptMapEntries;
+  }
+
+  if (*NumberOfMaps < MapIndex) {
+    Status = EFI_BUFFER_TOO_SMALL;
+  } else {
+    Status = EFI_SUCCESS;
+  }
+
+  *NumberOfMaps = MapIndex;
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+ParseControllerCells (
+  IN CONST UINT32                         *Property,
+  IN UINT32                               NumCells,
+  OUT NVIDIA_DEVICE_TREE_CONTROLLER_DATA  *Controller
+  )
+{
+  DEBUG ((DEBUG_VERBOSE, "%a: Property = 0x%p, NumCells = %u, Controller = 0x%p\n", __FUNCTION__, Property, NumCells, Controller));
+  NV_ASSERT_RETURN ((Property != NULL) || (NumCells == 0), return EFI_INVALID_PARAMETER, "%a: Property is NULL when NumCells is %u\n", __FUNCTION__, NumCells);
+  NV_ASSERT_RETURN ((Controller != NULL) || (NumCells == 0), return EFI_INVALID_PARAMETER, "%a: NumCells is %u but Controller is NULL\n", __FUNCTION__, NumCells);
+
+  switch (NumCells) {
+    default:
+      NV_ASSERT_RETURN (NumCells <= 1, return EFI_UNSUPPORTED, "%a: NumCells more than 1 aren't currently supported, but found %u\n", __FUNCTION__, NumCells);
+      break;
+
+    case 1:
+      Controller->Base = Fdt32ToCpu (Property[0]);
+      break;
+
+    case 0:
+      Controller->Base = DEVICE_ID_INVALID;
+      break;
+  }
+
+  return EFI_SUCCESS;
+}
+
+#define MAP_RID_BASE_CELLS  1
+#define MAP_LENGTH_CELLS    1
+
+/**
+  Returns information about the msi or iommu map of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [in]      MapName            - "msi-map" or "iommu-map"
+  @param  [out]     MapArray           - Buffer of size NumberOfMaps that will contain the list of map information
+  @param  [in, out] NumberOfMaps       - On input contains size of the MapArray, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfMaps is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfMaps pointer is NULL
+  @retval EFI_INVALID_PARAMETER - MapArray is NULL when *NumberOfMaps is not 0
+  @retval EFI_NOT_FOUND         - No maps found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetMsiIommuMap (
+  IN INT32                                   NodeOffset,
+  IN CONST CHAR8                             *MapName,
+  OUT NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *MapArray OPTIONAL,
+  IN OUT UINT32                              *NumberOfMaps
+  )
+{
+  EFI_STATUS    Status;
+  VOID          *DeviceTree;
+  CONST UINT32  *MapProperty;
+  UINT32        PropertySize;
+  UINT32        MapIndex;
+  UINT32        CellIndex;
+  UINT32        NumCells;
+  UINT32        RidBaseOffset;
+  UINT32        ControllerPhandleOffset;
+  UINT32        BaseOffset;
+  UINT32        LengthOffset;
+  UINT32        EntryCells;
+  INT32         ControllerPhandle;
+  UINT32        ControllerCells;
+  CONST CHAR8   *CellsName;
+
+  NV_ASSERT_RETURN (NumberOfMaps != NULL, return EFI_INVALID_PARAMETER, "%a: NumberOfMaps is not allowed to be NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN ((MapArray != NULL) || (*NumberOfMaps == 0), return EFI_INVALID_PARAMETER, "%a: MapArray can only be NULL if NumberOfMaps is zero\n", __FUNCTION__);
+  NV_ASSERT_RETURN (MapName != NULL, return EFI_INVALID_PARAMETER, "%a: MapName is not allowed to be NULL\n", __FUNCTION__);
+
+  if (AsciiStrCmp (MapName, "msi-map") == 0) {
+    CellsName = "#msi-cells";
+  } else if (AsciiStrCmp (MapName, "iommu-map") == 0) {
+    CellsName = "#iommu-cells";
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: MapName must be \"msi-map\" or \"iommu-map\", but found \"%a\"\n", __FUNCTION__, MapName));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DeviceTreePointer\n", __FUNCTION__, Status));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, MapName, (CONST VOID **)&MapProperty, &PropertySize);
+  if (EFI_ERROR (Status)) {
+    if (Status != EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get %a property of NodeOffset 0x%x\n", __FUNCTION__, Status, MapName, NodeOffset));
+    }
+
+    return Status;
+  }
+
+  NumCells = PropertySize/sizeof (UINT32);
+
+  RidBaseOffset           = 0;
+  ControllerPhandleOffset = RidBaseOffset + MAP_RID_BASE_CELLS;
+  BaseOffset              = ControllerPhandleOffset + PARENT_PHANDLE_CELLS;
+
+  for (MapIndex = 0, CellIndex = 0; (CellIndex + ControllerPhandleOffset) < NumCells; MapIndex++, CellIndex += EntryCells) {
+    DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, CellIndex = %u, NumCells = %u\n", __FUNCTION__, MapIndex, CellIndex, NumCells));
+    NV_ASSERT_RETURN (CellIndex + ControllerPhandleOffset < NumCells, return EFI_DEVICE_ERROR, "%a: Cell parsing bug - controller phandle offset exceeds map property size for Node Offset 0x%x, MapIndex %u\n", __FUNCTION__, NodeOffset, MapIndex);
+    ControllerPhandle = Fdt32ToCpu (MapProperty[CellIndex + ControllerPhandleOffset]);
+    if (ControllerPhandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+      DEBUG ((DEBUG_ERROR, "%a: Found invalid controller phandle 0x%x\n", __FUNCTION__, ControllerPhandle));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = GetPhandleCells (ControllerPhandle, CellsName, &ControllerCells);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get %a\n", __FUNCTION__, Status, CellsName));
+      return Status;
+    }
+
+    LengthOffset = BaseOffset + ControllerCells;
+    EntryCells   = LengthOffset + MAP_LENGTH_CELLS;
+    DEBUG ((DEBUG_VERBOSE, "%a: LengthOffset = %u, EntryCells = %u\n", __FUNCTION__, LengthOffset, EntryCells));
+
+    // Sanity check the number of cells
+    NV_ASSERT_RETURN (CellIndex + EntryCells <= NumCells, return EFI_DEVICE_ERROR, "%a: Cell size bug in parsing msi-map of node offset 0x%x\n", __FUNCTION__, NodeOffset);
+
+    if (MapIndex < *NumberOfMaps) {
+      NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *Map = &MapArray[MapIndex];
+      DEBUG ((DEBUG_VERBOSE, "%a: MapIndex = %u, *NumberOfMaps = %u\n", __FUNCTION__, MapIndex, *NumberOfMaps));
+
+      Map->RidBase            = Fdt32ToCpu (MapProperty[CellIndex + RidBaseOffset]);
+      Map->Controller.Phandle = ControllerPhandle;
+      Status                  = ParseControllerCells (&MapProperty[CellIndex + BaseOffset], ControllerCells, &Map->Controller);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ControllerCells\n", __FUNCTION__, ControllerCells));
+        return Status;
+      }
+
+      Map->Length = Fdt32ToCpu (MapProperty[CellIndex + LengthOffset]);
+    }
   }
 
   if (*NumberOfMaps < MapIndex) {

@@ -15,6 +15,7 @@
 // DTB v0.4 spec says to use the defaults if the parameter is missing
 #define DEFAULT_ADDRESS_CELLS_VALUE  2
 #define DEFAULT_SIZE_CELLS_VALUE     1
+#define DEFAULT_MSI_CELLS_VALUE      0
 
 /**
   Gets the node hierarchy for a given node

@@ -905,6 +905,10 @@ DeviceTreeGetNodePropertyValue64 (
       *PropertyValue = DEFAULT_SIZE_CELLS_VALUE;
       DEBUG ((DEBUG_ERROR, "%a: NodeOffset 0x%x doesn't have #size-cells, so defaulting to %lu\n", __FUNCTION__, NodeOffset, *PropertyValue));
       Status = EFI_SUCCESS;
+    } else if (AsciiStrCmp (Property, "#msi-cells") == 0) {
+      *PropertyValue = DEFAULT_MSI_CELLS_VALUE;
+      DEBUG ((DEBUG_ERROR, "%a: NodeOffset 0x%x doesn't have #msi-cells, so defaulting to %lu\n", __FUNCTION__, NodeOffset, *PropertyValue));
+      Status = EFI_SUCCESS;
     }
 
     return Status;

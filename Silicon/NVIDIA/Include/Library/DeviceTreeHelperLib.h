@@ -21,6 +21,7 @@
 #define NVIDIA_DEVICE_TREE_COMPATIBLE_MAX_STRING_LEN  32
 
 #define NVIDIA_DEVICE_TREE_PHANDLE_INVALID  MAX_UINT32
+#define DEVICE_ID_INVALID                   MAX_UINT32
 
 typedef enum {
   INTERRUPT_SPI_TYPE,
@@ -66,6 +67,17 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS                 ParentAddressHigh;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA    ParentInterrupt;
 } NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA;
+
+typedef struct {
+  UINT32    Phandle;
+  UINT32    Base;
+} NVIDIA_DEVICE_TREE_CONTROLLER_DATA;
+
+typedef struct {
+  UINT32                                RidBase;
+  NVIDIA_DEVICE_TREE_CONTROLLER_DATA    Controller;
+  UINT32                                Length;
+} NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA;
 
 typedef enum {
   CACHE_TYPE_UNIFIED = 0, // MPAM wants Type to be 0 for L3 caches
@@ -751,6 +763,32 @@ EFIAPI
 DeviceTreeGetInterruptMap (
   IN INT32                                   NodeOffset,
   OUT NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA  *InterruptMapArray OPTIONAL,
+  IN OUT UINT32                              *NumberOfMaps
+  );
+
+/**
+  Returns information about the msi or iommu map of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [in]      MapName            - "msi-map" or "iommu-map"
+  @param  [out]     MapArray           - Buffer of size NumberOfMaps that will contain the list of map information
+  @param  [in, out] NumberOfMaps       - On input contains size of the MapArray, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfMaps is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfMaps pointer is NULL
+  @retval EFI_INVALID_PARAMETER - MapArray is NULL when *NumberOfMaps is not 0
+  @retval EFI_NOT_FOUND         - No maps found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetMsiIommuMap (
+  IN INT32                                   NodeOffset,
+  IN CONST CHAR8                             *MapName,
+  OUT NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *MapArray OPTIONAL,
   IN OUT UINT32                              *NumberOfMaps
   );
 
