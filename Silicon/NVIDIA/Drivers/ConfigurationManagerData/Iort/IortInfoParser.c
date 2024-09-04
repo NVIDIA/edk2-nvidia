@@ -290,22 +290,23 @@ AddIortPropNodes (
   IN CONST IORT_DEVICE_NODE_MAP   *DevMap
   )
 {
-  EFI_STATUS                        Status;
-  INT32                             NodeOffset;
-  IORT_PROP_NODE                    *PropNode;
-  CONST UINT32                      *MsiProp;
-  CONST UINT32                      *IommusProp;
-  CONST UINT32                      *IommuMapProp;
-  CONST UINT32                      *DevicesProp;
-  INT32                             PropSize;
-  UINT32                            ItsNodePresent;
-  UINT32                            DualSmmuPresent;
-  UINT32                            Indx;
-  UINT32                            NumberOfRegisters;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
-  CONST CHAR8                       *CompatibleInfo[2];
+  EFI_STATUS                             Status;
+  INT32                                  NodeOffset;
+  IORT_PROP_NODE                         *PropNode;
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  MsiProp;
+  CONST UINT32                           *IommusProp;
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  IommuMapProp;
+  CONST UINT32                           *DevicesProp;
+  INT32                                  PropSize;
+  BOOLEAN                                ItsNodePresent;
+  UINT32                                 DualSmmuPresent;
+  UINT32                                 Indx;
+  UINT32                                 NumberOfRegisters;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA       *RegisterArray;
+  CONST CHAR8                            *CompatibleInfo[2];
+  UINT32                                 ArraySize;
 
-  ItsNodePresent    = 0;
+  ItsNodePresent    = FALSE;
   CompatibleInfo[1] = NULL;
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
@@ -385,28 +386,24 @@ AddIortPropNodes (
       }
 
       for (Indx = 0; Indx <= DualSmmuPresent; Indx++) {
-        MsiProp      = NULL;
-        IommusProp   = NULL;
-        IommuMapProp = NULL;
-        DevicesProp  = NULL;
+        MsiProp.Controller.Phandle      = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
+        IommusProp                      = NULL;
+        IommuMapProp.Controller.Phandle = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
+        DevicesProp                     = NULL;
 
         if (DevMap->ObjectId == EArmObjItsGroup) {
-          ItsNodePresent = 1;
+          ItsNodePresent = TRUE;
           Private->IoNodes[ITSIDENT_TYPE_INDEX].NumberOfNodes++;
           goto AllocatePropNode;
         }
 
         // Check "msi-map" property for all DTB nodes
-        MsiProp = fdt_getprop (Private->DtbBase, NodeOffset, "msi-map", &PropSize);
-        if ((MsiProp == NULL) || (PropSize != MSIMAP_PROP_LENGTH) || (ItsNodePresent != 1)) {
-          MsiProp = NULL;
-        } else {
-          // Skip if the target DTB node is not valid
-          if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (MsiProp[1]), 1) == NULL) {
-            continue;
+        if (ItsNodePresent) {
+          ArraySize = 1;
+          Status    = DeviceTreeGetMsiIommuMap (NodeOffset, "msi-map", &MsiProp, &ArraySize);
+          if (!EFI_ERROR (Status)) {
+            Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
           }
-
-          Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
         }
 
         // Check "iommu-map" property only for non-SMMUv1v2, non-SMMUv3, and non-PMCG nodes
@@ -423,16 +420,16 @@ AddIortPropNodes (
               Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes++;
             }
           } else {
-            IommuMapProp = fdt_getprop (Private->DtbBase, NodeOffset, "iommu-map", &PropSize);
-            if ((IommuMapProp == NULL) || (PropSize != IOMMUMAP_PROP_LENGTH)) {
-              IommuMapProp = NULL;
+            ArraySize = 1;
+            Status    = DeviceTreeGetMsiIommuMap (NodeOffset, "iommu-map", &IommuMapProp, &ArraySize);
+            if (EFI_ERROR (Status) || (IommuMapProp.Controller.Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID)) {
               // Skip this node if both 'iommu-map' and 'msi-map' are not defined
-              if (MsiProp == NULL) {
+              if (MsiProp.Controller.Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
                 continue;
               }
             } else {
               // Check DTB status and skip if it's not enabled
-              if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (IommuMapProp[1]), 1) == NULL) {
+              if (FindPropNodeByPhandleInstance (Private, IommuMapProp.Controller.Phandle, 1) == NULL) {
                 continue;
               }
 
@@ -475,11 +472,11 @@ AllocatePropNode:
           PropNode->Phandle = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
         }
 
-        PropNode->RegCount        = NumberOfRegisters;
-        PropNode->RegArray        = &RegisterArray[Indx];
-        PropNode->MsiProp         = MsiProp;
-        PropNode->IommusProp      = IommusProp;
-        PropNode->IommuMapProp    = IommuMapProp;
+        PropNode->RegCount = NumberOfRegisters;
+        PropNode->RegArray = &RegisterArray[Indx];
+        CopyMem (&PropNode->MsiProp, &MsiProp, sizeof (MsiProp));
+        PropNode->IommusProp = IommusProp;
+        CopyMem (&PropNode->IommuMapProp, &IommuMapProp, sizeof (IommuMapProp));
         PropNode->DualSmmuPresent = DevMap->DualSmmuPresent;
         PropNode->NodeOffset      = NodeOffset;
         PropNode->ObjectId        = DevMap->ObjectId;
@@ -650,14 +647,14 @@ SetupIortIdMappingForSmmuV1V2 (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS                 Status;
-  CM_ARM_SMMUV1_SMMUV2_NODE  *IortNode;
-  CM_ARM_ID_MAPPING          *IdMapping;
-  LIST_ENTRY                 *ListEntry;
-  IORT_PROP_NODE             *TmpPropNode;
-  IORT_PROP_NODE             *IortPropNode;
-  CONST UINT32               *MsiProp;
-  CM_OBJ_DESCRIPTOR          Desc;
+  EFI_STATUS                                   Status;
+  CM_ARM_SMMUV1_SMMUV2_NODE                    *IortNode;
+  CM_ARM_ID_MAPPING                            *IdMapping;
+  LIST_ENTRY                                   *ListEntry;
+  IORT_PROP_NODE                               *TmpPropNode;
+  IORT_PROP_NODE                               *IortPropNode;
+  CONST NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *MsiProp;
+  CM_OBJ_DESCRIPTOR                            Desc;
 
   IortNode = PropNode->IortNode;
   if (IortNode->IdMappingToken != 0) {
@@ -676,8 +673,8 @@ SetupIortIdMappingForSmmuV1V2 (
         if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
           continue;
         }
-      } else if (TmpPropNode->IommuMapProp != NULL) {
-        IortPropNode = FindPropNodeByPhandleInstance (Private, SwapBytes32 (TmpPropNode->IommuMapProp[1]), 1);
+      } else if (TmpPropNode->IommuMapProp.Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+        IortPropNode = FindPropNodeByPhandleInstance (Private, TmpPropNode->IommuMapProp.Controller.Phandle, 1);
         if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
           continue;
         }
@@ -686,17 +683,17 @@ SetupIortIdMappingForSmmuV1V2 (
       }
     }
 
-    MsiProp = TmpPropNode->MsiProp;
-    if (MsiProp == NULL) {
+    MsiProp = &TmpPropNode->MsiProp;
+    if (MsiProp->Controller.Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
       continue;
     }
 
     ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
-    IdMapping->InputBase            = SwapBytes32 (MsiProp[0]);
-    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (MsiProp[1]), 1);
+    IdMapping->InputBase            = MsiProp->RidBase;
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, MsiProp->Controller.Phandle, 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    IdMapping->OutputBase           = SwapBytes32 (MsiProp[2]);
-    IdMapping->NumIds               = SwapBytes32 (MsiProp[3]) - 1;
+    IdMapping->OutputBase           = MsiProp->Controller.Base;
+    IdMapping->NumIds               = MsiProp->Length - 1;
     IdMapping->Flags                = 0;
 
     IdMapping++;
@@ -742,14 +739,14 @@ SetupIortIdMappingForSmmuV3 (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS          Status;
-  CM_ARM_SMMUV3_NODE  *IortNode;
-  CM_ARM_ID_MAPPING   *IdMapping;
-  LIST_ENTRY          *ListEntry;
-  IORT_PROP_NODE      *TmpPropNode;
-  IORT_PROP_NODE      *IortPropNode;
-  CONST UINT32        *MsiProp;
-  CM_OBJ_DESCRIPTOR   Desc;
+  EFI_STATUS                                   Status;
+  CM_ARM_SMMUV3_NODE                           *IortNode;
+  CM_ARM_ID_MAPPING                            *IdMapping;
+  LIST_ENTRY                                   *ListEntry;
+  IORT_PROP_NODE                               *TmpPropNode;
+  IORT_PROP_NODE                               *IortPropNode;
+  CONST NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *MsiProp;
+  CM_OBJ_DESCRIPTOR                            Desc;
 
   IortNode = PropNode->IortNode;
   if (IortNode->IdMappingToken != 0) {
@@ -768,8 +765,8 @@ SetupIortIdMappingForSmmuV3 (
         if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
           continue;
         }
-      } else if (TmpPropNode->IommuMapProp != NULL) {
-        IortPropNode = FindPropNodeByPhandleInstance (Private, SwapBytes32 (TmpPropNode->IommuMapProp[1]), 1);
+      } else if (TmpPropNode->IommuMapProp.Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+        IortPropNode = FindPropNodeByPhandleInstance (Private, TmpPropNode->IommuMapProp.Controller.Phandle, 1);
         if (!IortPropNode || (IortPropNode->IortNode != IortNode)) {
           continue;
         }
@@ -778,20 +775,20 @@ SetupIortIdMappingForSmmuV3 (
       }
     }
 
-    MsiProp = TmpPropNode->MsiProp;
-    if (MsiProp == NULL) {
+    MsiProp = &TmpPropNode->MsiProp;
+    if (MsiProp->Controller.Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
       continue;
     }
 
     ASSERT (Private->IdMapIndex < Private->IoNodes[IDMAP_TYPE_INDEX].NumberOfNodes);
-    IdMapping->InputBase            = SwapBytes32 (MsiProp[0]);
-    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (MsiProp[1]), 1);
+    IdMapping->InputBase            = MsiProp->RidBase;
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, MsiProp->Controller.Phandle, 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
-    IdMapping->OutputBase           = SwapBytes32 (MsiProp[2]);
-    IdMapping->NumIds               = SwapBytes32 (MsiProp[3]) - 1;
+    IdMapping->OutputBase           = MsiProp->Controller.Base;
+    IdMapping->NumIds               = MsiProp->Length - 1;
     IdMapping->Flags                = 0;
 
-    if (MsiProp == PropNode->MsiProp) {
+    if (MsiProp == &PropNode->MsiProp) {
       IortNode->DeviceIdMappingIndex = PropNode->IdMapCount;
       IdMapping->Flags               = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
     }
@@ -804,7 +801,7 @@ SetupIortIdMappingForSmmuV3 (
   // Validation check for DeviceIdMappingIndex
   if (((IortNode->PriInterrupt == 0) || (IortNode->GerrInterrupt == 0) || \
        (IortNode->SyncInterrupt == 0) || (IortNode->EventInterrupt == 0)) && \
-      (PropNode->MsiProp == NULL) && (PropNode->IdMapCount != 0))
+      (PropNode->MsiProp.Controller.Phandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) && (PropNode->IdMapCount != 0))
   {
     // As per the IORT specification, DeviceIdMappingIndex must contain a valid
     // index if any one of wired interrupt is zero and msi-map is not defined
@@ -1325,14 +1322,15 @@ SetupIortNodeForPciRc (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS                Status;
-  CM_ARM_ROOT_COMPLEX_NODE  *IortNode;
-  CM_ARM_ID_MAPPING         *IdMapping;
-  CONST UINT32              *Prop;
-  UINT32                    IdMapFlags;
-  IORT_PROP_NODE            *IortPropNode;
-  CM_OBJ_DESCRIPTOR         Desc;
-  UINT32                    IommuMapMask;
+  EFI_STATUS                             Status;
+  CM_ARM_ROOT_COMPLEX_NODE               *IortNode;
+  CM_ARM_ID_MAPPING                      *IdMapping;
+  CONST UINT32                           *Prop;
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *Map;
+  UINT32                                 IdMapFlags;
+  IORT_PROP_NODE                         *IortPropNode;
+  CM_OBJ_DESCRIPTOR                      Desc;
+  UINT32                                 IommuMapMask;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1420,39 +1418,39 @@ SetupIortNodeForPciRc (
       ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   } else {
-    Prop = (PropNode->IommuMapProp != NULL) ? PropNode->IommuMapProp : PropNode->MsiProp;
-    ASSERT (Prop != NULL);
+    Map = (PropNode->IommuMapProp.Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID) ? &PropNode->IommuMapProp : &PropNode->MsiProp;
+    ASSERT (Map->Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID);
 
     // Create Id Mapping Node for iommu-map and bind it to the PCI IORT node
-    IdMapping->InputBase  = SwapBytes32 (Prop[0]);
-    IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+    IdMapping->InputBase  = Map->RidBase;
+    IdMapping->OutputBase = Map->Controller.Base;
 
     if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
       IdMapping->NumIds = 0;
     } else {
-      IdMapping->NumIds = SwapBytes32 (Prop[3]) - 1;
+      IdMapping->NumIds = Map->Length - 1;
     }
 
     IdMapping->Flags                = IdMapFlags;
-    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 1);
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, Map->Controller.Phandle, 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
     ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
-      IdMapping->InputBase  = SwapBytes32 (Prop[0]);
-      IdMapping->OutputBase = SwapBytes32 (Prop[2]);
+      IdMapping->InputBase  = Map->RidBase;
+      IdMapping->OutputBase = Map->Controller.Base;
 
       if (IdMapFlags == EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE) {
-        IdMapping->InputBase = SwapBytes32 (Prop[0]) + 1;
+        IdMapping->InputBase = Map->RidBase + 1;
         IdMapping->NumIds    = 0;
       } else {
-        IdMapping->InputBase = SwapBytes32 (Prop[0]);
-        IdMapping->NumIds    = SwapBytes32 (Prop[3]) - 1;
+        IdMapping->InputBase = Map->RidBase;
+        IdMapping->NumIds    = Map->Length - 1;
       }
 
       IdMapping->Flags                = IdMapFlags;
-      IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 2);
+      IortPropNode                    = FindPropNodeByPhandleInstance (Private, Map->Controller.Phandle, 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
       ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
@@ -1498,12 +1496,13 @@ SetupIortNodeForNComp (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS                   Status;
-  CM_ARM_NAMED_COMPONENT_NODE  *IortNode;
-  CM_ARM_ID_MAPPING            *IdMapping;
-  CONST UINT32                 *Prop;
-  IORT_PROP_NODE               *IortPropNode;
-  CM_OBJ_DESCRIPTOR            Desc;
+  EFI_STATUS                             Status;
+  CM_ARM_NAMED_COMPONENT_NODE            *IortNode;
+  CM_ARM_ID_MAPPING                      *IdMapping;
+  CONST UINT32                           *Prop;
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  *Map;
+  IORT_PROP_NODE                         *IortPropNode;
+  CM_OBJ_DESCRIPTOR                      Desc;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1567,25 +1566,25 @@ SetupIortNodeForNComp (
       ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }
   } else {
-    Prop = (PropNode->IommuMapProp != NULL) ? PropNode->IommuMapProp : PropNode->MsiProp;
-    ASSERT (Prop != NULL);
+    Map = (PropNode->IommuMapProp.Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID) ? &PropNode->IommuMapProp : &PropNode->MsiProp;
+    ASSERT (Map->Controller.Phandle != NVIDIA_DEVICE_TREE_PHANDLE_INVALID);
 
     // Create Id Mapping Node for iommu-map and bind it to the Named Component node
-    IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-    IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-    IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+    IdMapping->InputBase            = Map->RidBase;
+    IdMapping->OutputBase           = Map->Controller.Base;
+    IdMapping->NumIds               = Map->Length - 1;
     IdMapping->Flags                = 0;
-    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 1);
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, Map->Controller.Phandle, 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
     ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
 
     if (PropNode->DualSmmuPresent == 1) {
       IdMapping++;
-      IdMapping->InputBase            = SwapBytes32 (Prop[0]);
-      IdMapping->OutputBase           = SwapBytes32 (Prop[2]);
-      IdMapping->NumIds               = SwapBytes32 (Prop[3]) - 1;
+      IdMapping->InputBase            = Map->RidBase;
+      IdMapping->OutputBase           = Map->Controller.Base;
+      IdMapping->NumIds               = Map->Length - 1;
       IdMapping->Flags                = 0;
-      IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[1]), 2);
+      IortPropNode                    = FindPropNodeByPhandleInstance (Private, Map->Controller.Phandle, 2);
       IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
       ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     }

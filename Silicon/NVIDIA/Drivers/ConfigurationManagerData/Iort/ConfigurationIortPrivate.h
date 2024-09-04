@@ -59,18 +59,18 @@ typedef struct {
   EARM_OBJECT_ID                            ObjectId;
   CM_OBJECT_TOKEN                           Token;
   UINT32                                    DualSmmuPresent;
-  CONST UINT32                              *IommusProp;   // Pointer to DTB, or NULL
-  CONST UINT32                              *IommuMapProp; // Pointer to DTB, or NULL
-  CONST UINT32                              *MsiProp;      // Pointer to DTB, or NULL
+  CONST UINT32                              *IommusProp;         // Pointer to DTB, or NULL
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     IommuMapProp;
+  NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     MsiProp;
   UINT32                                    RegCount;
-  CONST NVIDIA_DEVICE_TREE_REGISTER_DATA    *RegArray; // Allocated Array
-  VOID                                      *IortNode; // Pointer to a spot within Private->IoNodes[Type].NodeArray
+  CONST NVIDIA_DEVICE_TREE_REGISTER_DATA    *RegArray;       // Allocated Array
+  VOID                                      *IortNode;       // Pointer to a spot within Private->IoNodes[Type].NodeArray
   UINT32                                    ContextInterruptCnt;
   VOID                                      *ContextInterruptArray;
   UINT32                                    PmuInterruptCnt;
   VOID                                      *PmuInterruptArray;
   UINT32                                    IdMapCount;
-  VOID                                      *IdMapArray; // Pointer to a spot within Private->IoNodes[IdMap].NodeArray
+  VOID                                      *IdMapArray;       // Pointer to a spot within Private->IoNodes[IdMap].NodeArray
   LIST_ENTRY                                Link;
   CHAR8                                     *ObjectName;
 } IORT_PROP_NODE;
