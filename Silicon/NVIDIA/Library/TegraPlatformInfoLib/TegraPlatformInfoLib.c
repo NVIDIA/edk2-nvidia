@@ -19,26 +19,27 @@
 #include "TegraPlatformInfoLibPrivate.h"
 #include "Uefi/UefiBaseType.h"
 
-#define MAX_REV_SIZE  (5)
+#define MAX_REV_SIZE    (5)
+#define MAX_OPT_SUBREV  (4)
+#define MAX_MINORREV    (16)
 
-typedef struct {
-  UINT8    Val;
-  CHAR8    Rev[MAX_REV_SIZE];
-} ChipMinorRevTbl;
-
-STATIC ChipMinorRevTbl  MinorRevEncoding[] = {
-  { 1,  "A01" },
-  { 2,  "A02" },
-  { 3,  "A03" },
-  { 5,  "B01" },
-  { 6,  "B02" },
-  { 7,  "B03" },
-  { 9,  "C01" },
-  { 10, "C02" },
-  { 11, "C03" },
-  { 13, "D01" },
-  { 14, "D02" },
-  { 15, "D03" }
+STATIC CHAR8  MinorRevEncoding[MAX_MINORREV][MAX_OPT_SUBREV][MAX_REV_SIZE] = {
+  { " ",   " ",    " ",    " "    },
+  { "A01", "A01P", "A01Q", "A01R" },
+  { "A02", "A02P", "A02Q", "A02R" },
+  { "A03", "A03P", "A03Q", "A03R" },
+  { "B01", "B01P", "B01Q", "B01R" },
+  { "B02", "B02P", "B02Q", "B02R" },
+  { "B03", "B03P", "B03Q", "B03R" },
+  { "C01", "C01P", "C01Q", "C01R" },
+  { "C02", "C02P", "C02Q", "C02R" },
+  { "C03", "C03P", "C03Q", "C03R" },
+  { "D01", "D01P", "D01Q", "D01R" },
+  { "D02", "D02P", "D02Q", "D02R" },
+  { "D03", "D03P", "D03Q", "D03R" },
+  { " ",   " ",    " ",    " "    },
+  { " ",   " ",    " ",    " "    },
+  { " ",   " ",    " ",    " "    }
 };
 
 STATIC
@@ -113,43 +114,42 @@ TegraGetMinorVersion (
   VOID
   )
 {
-  INT32            SocId;
-  UINT8            MinorRev;
-  UINTN            Index;
-  UINT32           ChipId;
-  ChipMinorRevTbl  *MinorRevTbl = NULL;
-  CHAR8            *MinorRevStr = " ";
-  UINTN            NumEncodings = 0;
+  INT32   SocId;
+  UINT8   MinorRev;
+  UINT8   OptSubRev;
+  UINT32  ChipId;
+
+  MinorRev  = 0;
+  OptSubRev = 0;
 
   if (EFI_ERROR (TegraReadSocId (SMCCC_ARCH_SOC_ID_GET_SOC_REVISION, &SocId))) {
     goto ExitTegraGetMinorVersion;
   }
 
-  MinorRev = ((SocId >> SOC_ID_REVISION_MINORVER_SHIFT) & SOC_ID_REVISION_MINORVER_MASK);
-
   ChipId = TegraGetChipID ();
 
   switch (ChipId) {
     case T194_CHIP_ID:
-      MinorRevTbl = NULL;
       break;
+    case TH500_CHIP_ID:
+      // Minor Rev and Opt Subrev are swapped for TH500
+      MinorRev  = ((SocId >> SOC_ID_REVISION_OPT_SUBREV_SHIFT) & SOC_ID_REVISION_OPT_SUBREV_MASK);
+      OptSubRev = ((SocId >> SOC_ID_REVISION_MINORVER_SHIFT) & SOC_ID_REVISION_MINORVER_MASK);
+      break;
+
     default:
-      MinorRevTbl  = MinorRevEncoding;
-      NumEncodings = ARRAY_SIZE (MinorRevEncoding);
+      MinorRev  = ((SocId >> SOC_ID_REVISION_MINORVER_SHIFT) & SOC_ID_REVISION_MINORVER_MASK);
+      OptSubRev = ((SocId >> SOC_ID_REVISION_OPT_SUBREV_SHIFT) & SOC_ID_REVISION_OPT_SUBREV_MASK);
       break;
   }
 
-  if (MinorRevTbl == NULL) {
-    goto ExitTegraGetMinorVersion;
-  }
-
-  for (Index = 0; Index <= NumEncodings; Index++) {
-    if (MinorRev == MinorRevTbl[Index].Val) {
-      MinorRevStr = MinorRevTbl[Index].Rev;
-      break;
-    }
+  if ((MinorRev >= MAX_MINORREV) ||
+      (OptSubRev >= MAX_OPT_SUBREV))
+  {
+    MinorRev  = 0;
+    OptSubRev = 0;
   }
 
 ExitTegraGetMinorVersion:
-  return MinorRevStr;
+  return MinorRevEncoding[MinorRev][OptSubRev];
 }
