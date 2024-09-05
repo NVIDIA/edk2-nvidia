@@ -21,6 +21,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/DtbUpdateLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <libfdt.h>
@@ -824,6 +825,8 @@ TegraPlatformInitialize (
     ASSERT (FALSE);
     return Status;
   }
+
+  DtbUpdateForUefi (DtbBase);
 
   SetCpuGpuDistanceInfoPcdsFromDtb (DtbBase);
   SetBandwidthLatencyInfoPcdsFromdtb (DtbBase);

@@ -19,7 +19,6 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DmaLib.h>
-#include <Library/DtbUpdateLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -328,9 +327,6 @@ DeviceDiscoveryNotify (
 
       Snp->BroadcastEnabled        = FALSE;
       Snp->MulticastFiltersEnabled = 0;
-
-      // Update MAC address in UEFI DTB
-      DtbUpdateNodeMacAddress (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
 
       // Set MAC addresses
       ZeroMem (&SnpMode->PermanentAddress, sizeof (SnpMode->PermanentAddress));

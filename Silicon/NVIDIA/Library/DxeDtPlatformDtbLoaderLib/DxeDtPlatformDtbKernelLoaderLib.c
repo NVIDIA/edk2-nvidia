@@ -619,7 +619,7 @@ UpdateFdt (
   }
 
   EnableFtpmNode (Dtb);
-  DtbUpdateMacAddresses (Dtb);
+  DtbUpdateForKernel (Dtb);
 }
 
 VOID

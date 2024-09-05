@@ -13,16 +13,17 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NetLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Protocol/Eeprom.h>
 #include <libfdt.h>
 
-STATIC UINT8   mMacAddress[NET_ETHER_ADDR_LEN] = { 0 };
-STATIC UINT8   mNumMacAddresses                = 0;
-STATIC UINT64  mMacValue                       = 0;
+STATIC UINT8    mMacAddress[NET_ETHER_ADDR_LEN] = { 0 };
+STATIC UINT8    mNumMacAddresses                = 0;
+STATIC UINT64   mMacValue                       = 0;
+STATIC BOOLEAN  mMacInfoInitialized             = FALSE;
 
 STATIC CONST CHAR8  *mMacAddressCompatibility[] = {
   "nvidia,eqos",
@@ -70,48 +71,49 @@ DtbUpdateGetMacString (
 }
 
 /**
-  Get MAC address info from EEPROM data
+  Get MAC address info from board info
 
-  @retval EFI_SUCCESS               Operation succeeded
-  @retval Others                    Operation failed
+  @retval none
 
 **/
 STATIC
-EFI_STATUS
+VOID
 EFIAPI
 DtbUpdateGetMacAddressInfo (
   VOID
   )
 {
-  STATIC BOOLEAN           Initialized = FALSE;
-  TEGRA_EEPROM_BOARD_INFO  *CvmEeprom;
-  EFI_STATUS               Status;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *ResourceInfo = NULL;
+  TEGRA_BOARD_INFO              *BoardInfo;
 
-  if (Initialized) {
-    return EFI_SUCCESS;
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    ResourceInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob));
   }
 
-  Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&CvmEeprom);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get eeprom protocol\n", __FUNCTION__));
-    return EFI_DEVICE_ERROR;
+  if (ResourceInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: no resource info, hob=0x%p\n", __FUNCTION__, Hob));
+    return;
   }
+
+  BoardInfo = ResourceInfo->BoardInfo;
 
   mMacValue        = 0;
-  mNumMacAddresses = CvmEeprom->NumMacs;
-  CopyMem (mMacAddress, CvmEeprom->MacAddr, sizeof (mMacAddress));
+  mNumMacAddresses = BoardInfo->NumMacs;
+  CopyMem (mMacAddress, BoardInfo->MacAddr, sizeof (mMacAddress));
   CopyMem (&mMacValue, mMacAddress, NET_ETHER_ADDR_LEN);
 
   DEBUG ((DEBUG_INFO, "%a: mac=%02x:%02x:%02x:%02x:%02x:%02x, num=%u\n", __FUNCTION__, mMacAddress[5], mMacAddress[4], mMacAddress[3], mMacAddress[2], mMacAddress[1], mMacAddress[0], mNumMacAddresses));
 
   if ((mMacValue == 0) || (mMacValue == 0xffffffffffff)) {
     DEBUG ((DEBUG_ERROR, "%a: invalid MAC info num=%u addr=0x%llx\n", __FUNCTION__, mNumMacAddresses, mMacValue));
-    return EFI_DEVICE_ERROR;
+    return;
   }
 
-  Initialized = TRUE;
-
-  return EFI_SUCCESS;
+  mMacInfoInitialized = TRUE;
 }
 
 /**
@@ -131,10 +133,17 @@ DtbUpdateMacToBEValue (
   return cpu_to_fdt64 (Mac) >> 16;
 }
 
-EFI_STATUS
+/**
+  Update MAC address in ethernet node
+
+  @param[in] NodeOffset            Offset of node to update
+
+  @retval None
+**/
+STATIC
+VOID
 EFIAPI
 DtbUpdateNodeMacAddress (
-  VOID   *Dtb,
   INT32  NodeOffset
   )
 {
@@ -142,17 +151,9 @@ DtbUpdateNodeMacAddress (
   EFI_STATUS  Status;
   UINT32      MacIndex;
 
-  Status = DtbUpdateGetMacAddressInfo ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: invalid mac address info (%a)\n", __FUNCTION__, fdt_get_name (Dtb, NodeOffset, NULL)));
-    return Status;
-  }
-
-  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
-
   Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "nvidia,mac-addr-idx", &MacIndex);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: getting mac-addr-idx (%a) failed, using base: %r\n", __FUNCTION__, fdt_get_name (Dtb, NodeOffset, NULL), Status));
+    DEBUG ((DEBUG_ERROR, "%a: getting mac-addr-idx (%a) failed, using base: %r\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), Status));
     MacIndex = 0;
   }
 
@@ -162,16 +163,48 @@ DtbUpdateNodeMacAddress (
   Status = DeviceTreeSetNodeProperty (NodeOffset, "mac-address", &MacFdt, NET_ETHER_ADDR_LEN);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: error setting mac-address=0x%llx\n", __FUNCTION__, MacFdt));
-    return Status;
   }
-
-  return EFI_SUCCESS;
 }
 
-EFI_STATUS
+/**
+  Update all ethernet node MAC addresses
+
+  @retval None
+
+**/
+STATIC
+VOID
 EFIAPI
-DtbUpdateMacAddresses (
-  VOID  *Dtb
+DtbUpdateAllNodeMacAddresses (
+  VOID
+  )
+{
+  INT32  NodeOffset;
+
+  if (!mMacInfoInitialized) {
+    DEBUG ((DEBUG_ERROR, "%a: no MAC info\n", __FUNCTION__));
+    return;
+  }
+
+  NodeOffset = -1;
+  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (mMacAddressCompatibility, &NodeOffset)) {
+    DEBUG ((DEBUG_INFO, "%a: updating %a\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset)));
+
+    DtbUpdateNodeMacAddress (NodeOffset);
+  }
+}
+
+/**
+  Update chosen node with MAC addresses
+
+  @retval None
+
+**/
+STATIC
+VOID
+EFIAPI
+DtbUpdateChosenNodeMacAddresses (
+  VOID
   )
 {
   CHAR8       Buffer[32];
@@ -182,34 +215,21 @@ DtbUpdateMacAddresses (
   INT32       NodeOffset;
   UINT64      MacValue;
 
-  Status = DtbUpdateGetMacAddressInfo ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: invalid mac address info\n", __FUNCTION__));
-    return Status;
+  if (!mMacInfoInitialized) {
+    DEBUG ((DEBUG_ERROR, "%a: no MAC info\n", __FUNCTION__));
+    return;
   }
 
-  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
-
-  // add mac address to all ethernet nodes
-  NodeOffset = -1;
-  while (EFI_SUCCESS == DeviceTreeGetNextCompatibleNode (mMacAddressCompatibility, &NodeOffset)) {
-    DEBUG ((DEBUG_INFO, "%a: updating %a\n", __FUNCTION__, fdt_get_name (Dtb, NodeOffset, NULL)));
-
-    DtbUpdateNodeMacAddress (Dtb, NodeOffset);
-  }
-
-  // add mac addresses to chosen node
   Status = DeviceTreeGetNodeByPath ("/chosen", &NodeOffset);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: No chosen node, unable to add MACs: %r\n", __FUNCTION__, Status));
-    return Status;
+    return;
   }
 
   MacString = DtbUpdateGetMacString (mMacValue);
   Status    = DeviceTreeSetNodeProperty (NodeOffset, "nvidia,ether-mac", MacString, AsciiStrSize (MacString));
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: failed to set chosen MAC address to %a: %r\n", __FUNCTION__, MacString, Status));
-    return Status;
   }
 
   ChipID = TegraGetChipID ();
@@ -229,10 +249,32 @@ DtbUpdateMacAddresses (
       Status = DeviceTreeSetNodeProperty (NodeOffset, Buffer, MacString, AsciiStrSize (MacString));
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: error setting %a to %a (%llx)\n", __FUNCTION__, Buffer, MacString, MacValue));
-        return Status;
       }
     }
   }
+}
 
-  return EFI_SUCCESS;
+VOID
+EFIAPI
+DtbUpdateForUefi (
+  VOID  *Dtb
+  )
+{
+  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+
+  DtbUpdateGetMacAddressInfo ();
+  DtbUpdateAllNodeMacAddresses ();
+}
+
+VOID
+EFIAPI
+DtbUpdateForKernel (
+  VOID  *Dtb
+  )
+{
+  // perform same updates as UEFI
+  DtbUpdateForUefi (Dtb);
+
+  // perform kernel-specific updates
+  DtbUpdateChosenNodeMacAddresses ();
 }

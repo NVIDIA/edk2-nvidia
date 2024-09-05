@@ -12,31 +12,31 @@
 #define __DTB_UPDATE_LIB_H__
 
 /**
-  Update all MAC addresses in DTB
+  Update DTB for UEFI
 
   @param[in] Dtb                   Pointer to DTB
 
   @retval None
+
 **/
 VOID
 EFIAPI
-DtbUpdateMacAddresses (
+DtbUpdateForUefi (
   VOID  *Dtb
   );
 
 /**
-  Update MAC address in DTB node
+  Update DTB for Kernel
 
   @param[in] Dtb                   Pointer to DTB
-  @param[in] NodeOffset            Offset of node to update
 
   @retval None
+
 **/
 VOID
 EFIAPI
-DtbUpdateNodeMacAddress (
-  VOID   *Dtb,
-  INT32  NodeOffset
+DtbUpdateForKernel (
+  VOID  *Dtb
   );
 
 #endif
