@@ -15,8 +15,14 @@ ASM_FUNC(TegraGetChipID)
   MOV64 (x0, SMCCC_ARCH_SOC_ID)
   MOV64 (x1, SMCCC_ARCH_SOC_ID_GET_SOC_VERSION)
   smc #0
+  MOV64 (x1, T194_SOC_ID_VERSION_ALT)
+  cmp w0, w1
+  b.eq _T194ChipID
   lsr w0, w0, #SOC_ID_VERSION_CHIPID_SHIFT
   and w0, w0, #SOC_ID_VERSION_CHIPID_MASK
+  ret
+_T194ChipID:
+  MOV64 (x0, T194_CHIP_ID)
   ret
 
 ASM_FUNC(TegraGetSystemMemoryBaseAddress)

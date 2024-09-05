@@ -48,6 +48,8 @@ TegraReadSocId (
   INT32  *SocId
   )
 {
+  UINT32  ChipId;
+
   if (SocId == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -56,6 +58,15 @@ TegraReadSocId (
   if (*SocId < 0) {
     return EFI_DEVICE_ERROR;
   } else {
+    if (SocParam == SMCCC_ARCH_SOC_ID_GET_SOC_VERSION) {
+      ChipId = TegraGetChipID ();
+      if (ChipId == T194_CHIP_ID) {
+        if (*SocId == T194_SOC_ID_VERSION_ALT) {
+          *SocId = T194_SOC_ID_VERSION_FIX;
+        }
+      }
+    }
+
     return EFI_SUCCESS;
   }
 }
