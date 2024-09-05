@@ -35,6 +35,7 @@
 #include <Protocol/DiskIo.h>
 #include <Protocol/LoadFile.h>
 #include <Protocol/LoadFile2.h>
+#include <Protocol/KernelArgsProtocol.h>
 
 #define FDT_ADDITIONAL_ENTRIES_SIZE               0x400
 #define ANDROID_BOOT_SIGNATURE                    SIGNATURE_64 ('A','N','D','R','O','I','D','!')
@@ -122,7 +123,7 @@ typedef struct {
   EFI_DEVICE_PATH_PROTOCOL       *ParentDevicePath;
   EFI_DEVICE_PATH_PROTOCOL       *AndroidBootDevicePath;
   EFI_EVENT                      ConnectCompleteEvent;
-  CHAR16                         *KernelArgs;
+  NVIDIA_KERNEL_ARGS_PROTOCOL    KernelArgsProtocol;
 
   UINT32                         Id;
   BOOLEAN                        ProtocolsInstalled;

@@ -78,6 +78,63 @@ STATIC CHAR16  *pRecoveryKernelPartitionDtbMapping[][2] = {
 };
 
 /**
+  Copy the new KernelArgs into the KernelArgsProtocol, freeing up the old string if necessary
+
+  @param[in]  This       The KernelArgsProtocol
+  @param[in]  NewArgs    The new KernelArgs string (may be NULL)
+
+  @retval EFI_SUCCESS            The operation completed successfully.
+  @retval EFI_INVALID_PARAMETER  "This" is NULL.
+  @retval EFI_OUT_OF_RESOURCES   Failed to allocate space for the new args.
+
+**/
+STATIC
+EFI_STATUS
+UpdateKernelArgs (
+  IN NVIDIA_KERNEL_ARGS_PROTOCOL  *This,
+  IN CONST CHAR16                 *NewArgs
+  )
+{
+  UINT32  NewArgsSize;
+  UINT32  OldArgsSize;
+  CHAR16  *CopiedArgs;
+
+  if (This == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Called with a NULL This pointer\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (NewArgs == NULL) {
+    if (This->KernelArgs != NULL) {
+      FreePool (This->KernelArgs);
+    }
+
+    This->KernelArgs = NULL;
+  } else {
+    NewArgsSize = StrSize (NewArgs);
+    OldArgsSize = (This->KernelArgs) ? StrSize (This->KernelArgs) : 0;
+
+    if (NewArgsSize > OldArgsSize) {
+      CopiedArgs = AllocateCopyPool (NewArgsSize, NewArgs);
+      if (CopiedArgs == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u bytes for NewKernelArgs\n", __FUNCTION__, NewArgsSize));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      if (This->KernelArgs != NULL) {
+        FreePool (This->KernelArgs);
+      }
+
+      This->KernelArgs = CopiedArgs;
+    } else {
+      CopyMem (This->KernelArgs, NewArgs, NewArgsSize);
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Check if loadfile2 protocol is already installed. If yes,
   uninstall it.
 
@@ -151,7 +208,7 @@ AndroidBootUninstallProtocols (
          &gEfiLoadFileProtocolGuid,
          &Private->LoadFile,
          &gNVIDIALoadfileKernelArgsGuid,
-         Private->KernelArgs,
+         &Private->KernelArgsProtocol,
          &gEfiDevicePathProtocolGuid,
          Private->AndroidBootDevicePath,
          NULL
@@ -1376,6 +1433,8 @@ AndroidBootDxeLoadFile (
     return Status;
   }
 
+  DEBUG ((DEBUG_ERROR, "%a: KernelArgs: %s\n", __FUNCTION__, Private->KernelArgsProtocol.KernelArgs));
+
   return EFI_SUCCESS;
 }
 
@@ -1739,14 +1798,15 @@ AndroidBootDriverBindingStart (
     goto Exit;
   }
 
-  Private->Signature             = ANDROID_BOOT_SIGNATURE;
-  Private->BlockIo               = BlockIo;
-  Private->DiskIo                = DiskIo;
-  Private->ParentDevicePath      = ParentDevicePath;
-  Private->AndroidBootDevicePath = AndroidBootDevicePath;
-  Private->ControllerHandle      = ControllerHandle;
-  Private->ProtocolsInstalled    = FALSE;
-  Private->KernelArgs            = KernelArgs;
+  Private->Signature                           = ANDROID_BOOT_SIGNATURE;
+  Private->BlockIo                             = BlockIo;
+  Private->DiskIo                              = DiskIo;
+  Private->ParentDevicePath                    = ParentDevicePath;
+  Private->AndroidBootDevicePath               = AndroidBootDevicePath;
+  Private->ControllerHandle                    = ControllerHandle;
+  Private->ProtocolsInstalled                  = FALSE;
+  Private->KernelArgsProtocol.KernelArgs       = KernelArgs;
+  Private->KernelArgsProtocol.UpdateKernelArgs = UpdateKernelArgs;
   StrCpyS (Private->PartitionName, MAX_PARTITION_NAME_LEN, PartitionInfo->Info.Gpt.PartitionName);
   CopyMem (&Private->LoadFile, &mAndroidBootDxeLoadFile, sizeof (Private->LoadFile));
 
@@ -1756,7 +1816,7 @@ AndroidBootDriverBindingStart (
                   &gEfiLoadFileProtocolGuid,
                   &Private->LoadFile,
                   &gNVIDIALoadfileKernelArgsGuid,
-                  Private->KernelArgs,
+                  &Private->KernelArgsProtocol,
                   &gEfiDevicePathProtocolGuid,
                   Private->AndroidBootDevicePath,
                   NULL
@@ -1841,7 +1901,7 @@ Exit:
                &gEfiLoadFileProtocolGuid,
                &Private->LoadFile,
                &gNVIDIALoadfileKernelArgsGuid,
-               Private->KernelArgs,
+               &Private->KernelArgsProtocol,
                &gEfiDevicePathProtocolGuid,
                Private->AndroidBootDevicePath,
                NULL
@@ -1971,13 +2031,13 @@ AndroidBootDriverBindingStop (
          &gEfiLoadFileProtocolGuid,
          &Private->LoadFile,
          &gNVIDIALoadfileKernelArgsGuid,
-         Private->KernelArgs,
+         &Private->KernelArgsProtocol,
          &gEfiDevicePathProtocolGuid,
          Private->AndroidBootDevicePath,
          NULL
          );
-  if (Private->KernelArgs != NULL) {
-    FreePool (Private->KernelArgs);
+  if (Private->KernelArgsProtocol.KernelArgs != NULL) {
+    FreePool (Private->KernelArgsProtocol.KernelArgs);
   }
 
   FreePool (Private->AndroidBootDevicePath);
@@ -2149,6 +2209,12 @@ EFI_LOAD_FILE_PROTOCOL  mRcmLoadFile = {
   RcmLoadFile
 };
 
+GLOBAL_REMOVE_IF_UNREFERENCED
+NVIDIA_KERNEL_ARGS_PROTOCOL  mRcmKernelArgsProtocol = {
+  NULL,
+  UpdateKernelArgs
+};
+
 ///
 /// Driver Binding Protocol instance
 ///
@@ -2192,6 +2258,8 @@ AndroidBootPrepareBootFromMemory (
     return Status;
   }
 
+  mRcmKernelArgsProtocol.KernelArgs = KernelArgs;
+
   // Copy NVIDIA RCM Kernel GUID to device path
   CopyMem (&mRcmLoadFileDevicePath.VenHwNode.Guid, &gNVIDIARcmKernelGuid, sizeof (EFI_GUID));
 
@@ -2201,7 +2269,7 @@ AndroidBootPrepareBootFromMemory (
                   &gEfiLoadFileProtocolGuid,
                   &mRcmLoadFile,
                   &gNVIDIALoadfileKernelArgsGuid,
-                  KernelArgs,
+                  &mRcmKernelArgsProtocol,
                   &gEfiDevicePathProtocolGuid,
                   &mRcmLoadFileDevicePath,
                   NULL

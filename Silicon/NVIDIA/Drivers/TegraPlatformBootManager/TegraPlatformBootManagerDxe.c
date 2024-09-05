@@ -21,6 +21,7 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/KernelCmdLineUpdate.h>
 #include <Protocol/AndroidBootImg.h>
+#include <Protocol/KernelArgsProtocol.h>
 
 #include <NVIDIAConfiguration.h>
 
@@ -683,6 +684,7 @@ RefreshAutoEnumeratedBootOptions (
 {
   EFI_STATUS                    Status;
   CHAR16                        *ImgKernelArgs;
+  NVIDIA_KERNEL_ARGS_PROTOCOL   *KernelArgsProtocol;
   CHAR16                        *DtbKernelArgs;
   CHAR16                        *InputKernelArgs;
   CHAR16                        *CmdLine;
@@ -693,11 +695,17 @@ RefreshAutoEnumeratedBootOptions (
   EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
   UINTN                         Count;
 
+  DEBUG ((DEBUG_VERBOSE, "%a: entered\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "%a: BootOptions is %a\n", __FUNCTION__, BootOptions ? "not NULL" : "NULL"));
+  DEBUG ((DEBUG_VERBOSE, "%a: BootOptionsCount is %lu\n", __FUNCTION__, BootOptionsCount));
+  DEBUG ((DEBUG_VERBOSE, "%a: UpdatedBootOptions is %a\n", __FUNCTION__, UpdatedBootOptions ? "not NULL" : "NULL"));
+  DEBUG ((DEBUG_VERBOSE, "%a: UpdatedBootOptionsCount is %a\n", __FUNCTION__, UpdatedBootOptionsCount ? "not NULL" : "NULL"));
   if ((BootOptions == NULL) ||
       (BootOptionsCount == 0) ||
       (UpdatedBootOptions == NULL) ||
       (UpdatedBootOptionsCount == NULL))
   {
+    DEBUG ((DEBUG_ERROR, "%a: found invalid parameter\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -712,6 +720,7 @@ RefreshAutoEnumeratedBootOptions (
                   (VOID **)UpdatedBootOptions
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to allocate space for UpdatedBootOptions\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -724,6 +733,7 @@ RefreshAutoEnumeratedBootOptions (
     if (IsValidLoadOption (&LoadOption[Count])) {
       Status = DuplicateLoadOption (&UpdatedLoadOption[*UpdatedBootOptionsCount], &LoadOption[Count]);
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to DuplicateLoadOption\n", __FUNCTION__, Status));
         return Status;
       }
 
@@ -731,11 +741,14 @@ RefreshAutoEnumeratedBootOptions (
     }
   }
 
+  DEBUG ((DEBUG_VERBOSE, "%a: *UpdatedBootOptionsCount = %lu\n", __FUNCTION__, *UpdatedBootOptionsCount));
+
   for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
     if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
       DevicePath = UpdatedLoadOption[Count].FilePath;
       Status     = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsGuid, &DevicePath, &Handle);
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_VERBOSE, "%a: Got %r for option, so it doesn't have a LoadfileKernelArgsGuid\n", __FUNCTION__, Status));
         Status = EFI_SUCCESS;
         continue;
       }
@@ -743,9 +756,14 @@ RefreshAutoEnumeratedBootOptions (
       Status = gBS->HandleProtocol (
                       Handle,
                       &gNVIDIALoadfileKernelArgsGuid,
-                      (VOID **)&ImgKernelArgs
+                      (VOID **)&KernelArgsProtocol
                       );
-      ASSERT_EFI_ERROR (Status);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: HandleProtocol got %r\n", __FUNCTION__, Status));
+        ASSERT_EFI_ERROR (Status);
+      }
+
+      ImgKernelArgs = KernelArgsProtocol->KernelArgs;
 
       // Always use DTB arguments on pre-silicon targets
       if ((ImgKernelArgs != NULL) &&
@@ -769,8 +787,13 @@ RefreshAutoEnumeratedBootOptions (
         goto Error;
       }
 
+      DEBUG ((DEBUG_VERBOSE, "%a: ImgKernelArgs: %s\n", __FUNCTION__, ImgKernelArgs));
+      DEBUG ((DEBUG_VERBOSE, "%a: DtbKernelArgs: %s\n", __FUNCTION__, DtbKernelArgs));
+      DEBUG ((DEBUG_VERBOSE, "%a: InputKernelArgs: %s\n", __FUNCTION__, InputKernelArgs));
+      DEBUG ((DEBUG_VERBOSE, "%a: Cmdline: %s\n", __FUNCTION__, CmdLine));
+
       DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
-      DEBUG ((DEBUG_ERROR, "%s", CmdLine));
+      DEBUG ((DEBUG_ERROR, "%s\n", CmdLine));
 
       UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
       gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
@@ -784,6 +807,16 @@ RefreshAutoEnumeratedBootOptions (
       }
 
       gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
+
+      Status = KernelArgsProtocol->UpdateKernelArgs (KernelArgsProtocol, CmdLine);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to UpdateKernelArgs\n", __FUNCTION__, Status));
+        goto Error;
+      }
+
+      DEBUG ((DEBUG_VERBOSE, "%a: Protocol->KernelArgs: %s\n", __FUNCTION__, KernelArgsProtocol->KernelArgs));
+    } else {
+      DEBUG ((DEBUG_VERBOSE, "%a: Skipping option because it doesn't have the GUID\n", __FUNCTION__));
     }
   }
 
