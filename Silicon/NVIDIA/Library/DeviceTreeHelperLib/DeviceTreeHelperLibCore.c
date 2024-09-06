@@ -1104,3 +1104,20 @@ DeviceTreeSetNodeProperty (
 
   return EFI_SUCCESS;
 }
+
+CONST CHAR8 *
+EFIAPI
+DeviceTreeGetNodeName (
+  IN  INT32  NodeOffset
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  return FdtGetName (DeviceTree, NodeOffset, NULL);
+}

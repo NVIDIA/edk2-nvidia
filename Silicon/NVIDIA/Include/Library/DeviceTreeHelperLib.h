@@ -871,4 +871,19 @@ DeviceTreeFindRegisterByName (
   OUT UINT32                                 *RegisterIndex
   );
 
+/**
+  Returns pointer to name string for node in DTB.  This pointer may become
+  invalid if any DTB changes are made.
+
+  @param[in]      NodeOffset      Node offset
+
+  @retval CONST CHAR8*            Pointer to node name in DTB or NULL if error
+
+**/
+CONST CHAR8 *
+EFIAPI
+DeviceTreeGetNodeName (
+  IN  INT32  NodeOffset
+  );
+
 #endif //__DEVICE_TREE_HELPER_LIB_H__
