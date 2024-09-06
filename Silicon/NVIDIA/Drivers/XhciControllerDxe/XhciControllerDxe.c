@@ -185,6 +185,8 @@ DeviceDiscoveryNotify (
   UINT32                           Index;
   VOID                             *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+  EFI_STATUS                       ErrorStatus;
+  VOID                             *ErrorProtocol;
 
   T234Platform = FALSE;
   LoadIfrRom   = FALSE;
@@ -194,7 +196,7 @@ DeviceDiscoveryNotify (
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
 
-      Private = AllocatePool (sizeof (XHCICONTROLLER_DXE_PRIVATE));
+      Private = AllocateZeroPool (sizeof (XHCICONTROLLER_DXE_PRIVATE));
       if (NULL == Private) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory\r\n", __FUNCTION__));
         return EFI_OUT_OF_RESOURCES;
@@ -550,7 +552,28 @@ skipXusbFwLoad:
   }
 
   return EFI_SUCCESS;
+
 ErrorExit:
+  ErrorStatus = gBS->HandleProtocol (
+                       DriverHandle,
+                       &gNVIDIAXhciControllerProtocolGuid,
+                       &ErrorProtocol
+                       );
+  if (!EFI_ERROR (ErrorStatus)) {
+    ErrorStatus = gBS->UninstallMultipleProtocolInterfaces (
+                         DriverHandle,
+                         &gNVIDIAXhciControllerProtocolGuid,
+                         ErrorProtocol,
+                         NULL
+                         );
+    DEBUG ((DEBUG_ERROR, "%a: uninstalled xhci: %r\n", __FUNCTION__, ErrorStatus));
+  }
+
+  if (Private->ExitBootServicesEvent != NULL) {
+    ErrorStatus = gBS->CloseEvent (Private->ExitBootServicesEvent);
+    DEBUG ((DEBUG_ERROR, "%a: closed event:%r\n", __FUNCTION__, ErrorStatus));
+  }
+
   FreePool (Private);
   return Status;
 }
