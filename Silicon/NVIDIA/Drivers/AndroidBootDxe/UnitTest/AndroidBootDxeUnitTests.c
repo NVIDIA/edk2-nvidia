@@ -1,7 +1,7 @@
 /** @file
   Unit tests of AndroidBootDxe Driver.
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,7 +10,7 @@
 #include <AndroidBootDxeUnitTestPrivate.h>
 
 #define UNIT_TEST_APP_NAME     "AndroidBootDxe Unit Test Application"
-#define UNIT_TEST_APP_VERSION  "0.1"
+#define UNIT_TEST_APP_VERSION  "0.2"
 
 STATIC EFI_BOOT_SERVICES  mBS = { 0 };
 
@@ -30,6 +30,7 @@ UnitTestingEntry (
   EFI_STATUS                  Status;
   UNIT_TEST_FRAMEWORK_HANDLE  Fw;
   UNIT_TEST_SUITE_HANDLE      BootImgHeaderTestSuite;
+  UNIT_TEST_SUITE_HANDLE      UpdateKernelArgsTestSuite;
 
   Fw = NULL;
 
@@ -74,6 +75,26 @@ UnitTestingEntry (
   }
 
   BootImgHeader_PopulateSuite (BootImgHeaderTestSuite);
+
+  // Populate the UpdateKernelArgs Test Suite.
+  Status = CreateUnitTestSuite (
+             &UpdateKernelArgsTestSuite,
+             Fw,
+             "Update Kernel Args Tests",
+             "AndroidBootDxe.UpdateKernelArgsTestSuite",
+             Suite_UpdateKernelArgs_Setup,
+             NULL
+             );
+  if (Status != EFI_SUCCESS) {
+    DEBUG (
+      (DEBUG_ERROR,
+       "Failed in CreateUnitTestSuite for UpdateKernelArgsTestSuite\n")
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto EXIT;
+  }
+
+  UpdateKernelArgs_PopulateSuite (UpdateKernelArgsTestSuite);
 
   // Execute the tests.
   Status = RunAllTestSuites (Fw);

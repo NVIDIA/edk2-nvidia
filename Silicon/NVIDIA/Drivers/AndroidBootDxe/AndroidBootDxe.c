@@ -88,7 +88,9 @@ STATIC CHAR16  *pRecoveryKernelPartitionDtbMapping[][2] = {
   @retval EFI_OUT_OF_RESOURCES   Failed to allocate space for the new args.
 
 **/
+#ifndef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
 STATIC
+#endif
 EFI_STATUS
 UpdateKernelArgs (
   IN NVIDIA_KERNEL_ARGS_PROTOCOL  *This,

@@ -23,6 +23,7 @@
 [Sources]
   AndroidBootDxeUnitTests.c
   BootImgHeaderUnitTests.c
+  UpdateKernelArgsUnitTests.c
   ../AndroidBootDxe.c
   ../AndroidBootConfig.c
 

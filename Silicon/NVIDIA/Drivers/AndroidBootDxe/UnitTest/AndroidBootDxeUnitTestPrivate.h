@@ -1,7 +1,7 @@
 /** @file
   Unit test definitions for the AndroidBoot driver.
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -50,10 +50,38 @@ typedef struct {
 } TEST_PLAN_ANDROID_BOOT_GET_VERIFY;
 
 /**
+  Test plan structure for UpdateKernelArgs
+ */
+typedef struct {
+  BOOLEAN         FailAllocation;
+  BOOLEAN         InvalidProtocol;
+  CONST CHAR16    *InitialKernelArgs;
+  CONST CHAR16    *NewKernelArgs;
+  EFI_STATUS      ExpectedReturn;
+} TEST_PLAN_UPDATE_KERNEL_ARGS;
+
+/**
   Populate the BootImgHeader test suite.
  */
 VOID
 BootImgHeader_PopulateSuite (
+  UNIT_TEST_SUITE_HANDLE  Suite
+  );
+
+/**
+  Set up the UpdateKernelArgs test suite.
+ */
+VOID
+EFIAPI
+Suite_UpdateKernelArgs_Setup (
+  VOID
+  );
+
+/**
+  Populate the UpdateKernelArgs test suite.
+ */
+VOID
+UpdateKernelArgs_PopulateSuite (
   UNIT_TEST_SUITE_HANDLE  Suite
   );
 
