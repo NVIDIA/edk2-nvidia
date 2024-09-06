@@ -440,6 +440,14 @@ T194GetBoardInfo (
   CopyMem ((VOID *)&BoardInfo->CvmProductId, (VOID *)&T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
   CopyMem ((VOID *)BoardInfo->SerialNumber, (VOID *)&T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
 
+  if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
+      (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0))
+  {
+    CopyMem ((VOID *)BoardInfo->MacAddr, (VOID *)T194EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
+  } else {
+    CopyMem ((VOID *)BoardInfo->MacAddr, (VOID *)T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
+  }
+
   T194EepromData = (T194_EEPROM_DATA *)EepromData->CvbEepromData;
   CopyMem ((VOID *)&BoardInfo->CvbProductId, (VOID *)&T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
 

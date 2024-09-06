@@ -90,6 +90,8 @@ typedef struct {
   CHAR8              CvmProductId[TEGRA_PRODUCT_ID_LEN + 1];
   CHAR8              CvbProductId[TEGRA_PRODUCT_ID_LEN + 1];
   CHAR8              SerialNumber[TEGRA_SERIAL_NUM_LEN];
+  UINT8              MacAddr[6];
+  UINT8              NumMacs;
 } TEGRA_BOARD_INFO;
 
 #pragma pack(1)

@@ -578,6 +578,16 @@ T234GetBoardInfo (
   CopyMem ((VOID *)&BoardInfo->CvmProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
   CopyMem ((VOID *)BoardInfo->SerialNumber, (VOID *)&T234EepromData->SerialNumber, sizeof (T234EepromData->SerialNumber));
 
+  if ((CompareMem (T234EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T234EepromData->CustomerBlockSignature)) == 0) &&
+      (CompareMem (T234EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T234EepromData->CustomerTypeSignature)) == 0))
+  {
+    CopyMem ((VOID *)BoardInfo->MacAddr, (VOID *)T234EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
+    BoardInfo->NumMacs = T234EepromData->CustomerNumEthernetMacs;
+  } else {
+    CopyMem ((VOID *)BoardInfo->MacAddr, (VOID *)T234EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
+    BoardInfo->NumMacs = T234EepromData->NumEthernetMacs;
+  }
+
   T234EepromData = (T234_EEPROM_DATA *)EepromData->CvbEepromData;
   CopyMem ((VOID *)&BoardInfo->CvbProductId, (VOID *)&T234EepromData->PartNumber, sizeof (T234EepromData->PartNumber));
 
