@@ -91,18 +91,17 @@ typedef struct {
 
 #define PADCTL_SIGNATURE  SIGNATURE_32('P','D','C','L')
 typedef struct {
-  UINT32                                    Signature;
-  NVIDIA_USBPADCTL_PROTOCOL                 mUsbPadCtlProtocol;
-  PADCTL_PLAT_CONFIG                        PlatConfig; /* Platform specific Config information */
-  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL    *DeviceTreeNode;
-  EFI_HANDLE                                ImageHandle;
-  NVIDIA_REGULATOR_PROTOCOL                 *mRegulator;
-  NVIDIA_EFUSE_PROTOCOL                     *mEfuse;
-  NVIDIA_PINMUX_PROTOCOL                    *mPmux;
-  SCMI_CLOCK2_PROTOCOL                      *mClockProtocol;
-  EFI_EVENT                                 TimerEvent; /* Used for Over Current Handling */
-  EFI_PHYSICAL_ADDRESS                      BaseAddress;
-  BOOLEAN                                   HandleOverCurrent;
+  UINT32                       Signature;
+  NVIDIA_USBPADCTL_PROTOCOL    mUsbPadCtlProtocol;
+  PADCTL_PLAT_CONFIG           PlatConfig;              /* Platform specific Config information */
+  EFI_HANDLE                   ImageHandle;
+  NVIDIA_REGULATOR_PROTOCOL    *mRegulator;
+  NVIDIA_EFUSE_PROTOCOL        *mEfuse;
+  NVIDIA_PINMUX_PROTOCOL       *mPmux;
+  SCMI_CLOCK2_PROTOCOL         *mClockProtocol;
+  EFI_EVENT                    TimerEvent;              /* Used for Over Current Handling */
+  EFI_PHYSICAL_ADDRESS         BaseAddress;
+  BOOLEAN                      HandleOverCurrent;
 } USBPADCTL_DXE_PRIVATE;
 #define PADCTL_PRIVATE_DATA_FROM_THIS(a)      CR(a, USBPADCTL_DXE_PRIVATE, mUsbPadCtlProtocol, PADCTL_SIGNATURE)
 #define PADCTL_PRIVATE_DATA_FROM_PROTOCOL(a)  PADCTL_PRIVATE_DATA_FROM_THIS(a)
@@ -115,6 +114,12 @@ InitUsbHw194 (
 VOID
 DeInitUsbHw194 (
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
+EFI_STATUS
+InitPlatInfo194 (
+  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  PADCTL_PLAT_CONFIG                      *PlatConfig
   );
 
 extern PADCTL_PLAT_CONFIG  Tegra194UsbConfig;
@@ -137,6 +142,12 @@ InitUsbDevHw234 (
 VOID
 DeInitUsbDevHw234 (
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
+EFI_STATUS
+InitPlatInfo234 (
+  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  PADCTL_PLAT_CONFIG                      *PlatConfig
   );
 
 extern PADCTL_PLAT_CONFIG  Tegra234UsbConfig;

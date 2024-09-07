@@ -724,22 +724,20 @@ FindUsb2PadClocks (
   return EFI_SUCCESS;
 }
 
-STATIC
 EFI_STATUS
-InitPlatInfo (
-  USBPADCTL_DXE_PRIVATE  *Private
+InitPlatInfo234 (
+  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
+  PADCTL_PLAT_CONFIG                      *PlatConfig
   )
 {
-  PORT_INFO                               *Ports = NULL, *Usb2Ports, *Usb3Ports;
-  UINT32                                  i;
-  INT32                                   NodeOffset = -1;
-  INT32                                   PortsOffset, PropertySize;
-  CONST VOID                              *Property  = NULL;
-  BOOLEAN                                 PortsFound = FALSE;
-  CHAR8                                   Name[7];
-  UINTN                                   CharCount;
-  PADCTL_PLAT_CONFIG                      *PlatConfig     = &(Private->PlatConfig);
-  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode = Private->DeviceTreeNode;
+  PORT_INFO   *Ports = NULL, *Usb2Ports, *Usb3Ports;
+  UINT32      i;
+  INT32       NodeOffset = -1;
+  INT32       PortsOffset, PropertySize;
+  CONST VOID  *Property  = NULL;
+  BOOLEAN     PortsFound = FALSE;
+  CHAR8       Name[7];
+  UINTN       CharCount;
 
   Ports = AllocateZeroPool ((PlatConfig->NumHsPhys + PlatConfig->NumSsPhys) * sizeof (PORT_INFO));
   if (NULL == Ports) {
@@ -1065,12 +1063,6 @@ InitUsbHw234 (
   /* XUSB PADCTL Block's clocks are enabled and corresponding RESETs are
    * deasserted by the DeviceDiscovery Lib Driver when PadctlDriver is loaded
    */
-
-  /* Initialize Platform specific USB Ports information from DT */
-  Status = InitPlatInfo (Private);
-  if (Status != EFI_SUCCESS) {
-    return Status;
-  }
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
     /* Store the USB Calibration Values read from Fuse Registers */

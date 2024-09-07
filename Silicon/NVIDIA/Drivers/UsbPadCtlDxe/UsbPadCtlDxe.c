@@ -153,6 +153,12 @@ DeviceDiscoveryNotify (
         Private->mUsbPadCtlProtocol.InitDevHw   = NULL;
         Private->mUsbPadCtlProtocol.DeInitDevHw = NULL;
         Private->PlatConfig                     = Tegra194UsbConfig;
+
+        /* Initialize Platform specific USB Ports information from DT */
+        Status = InitPlatInfo194 (DeviceTreeNode, &Private->PlatConfig);
+        if (Status != EFI_SUCCESS) {
+          return Status;
+        }
       } else if (fdt_node_offset_by_compatible (
                    DeviceTreeNode->DeviceTreeBase,
                    0,
@@ -165,6 +171,12 @@ DeviceDiscoveryNotify (
         Private->mUsbPadCtlProtocol.DeInitDevHw = DeInitUsbDevHw234;
         Private->PlatConfig                     = Tegra234UsbConfig;
         T234Platform                            = TRUE;
+
+        /* Initialize Platform specific USB Ports information from DT */
+        Status = InitPlatInfo234 (DeviceTreeNode, &Private->PlatConfig);
+        if (Status != EFI_SUCCESS) {
+          return Status;
+        }
       }
 
       Status = gBS->LocateProtocol (
@@ -221,7 +233,6 @@ DeviceDiscoveryNotify (
       Private->Signature      = PADCTL_SIGNATURE;
       Private->BaseAddress    = BaseAddress;
       Private->ImageHandle    = DriverHandle;
-      Private->DeviceTreeNode = DeviceTreeNode;
       Private->mRegulator     = mRegulator;
       Private->mEfuse         = mEfuse;
       Private->mPmux          = mPmux;
