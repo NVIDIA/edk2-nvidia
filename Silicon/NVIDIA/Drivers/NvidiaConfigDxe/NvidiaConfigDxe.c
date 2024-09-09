@@ -2657,6 +2657,10 @@ GetDefaultValue (
       break;
     case KEY_MAX_CORES:
       Data = 0;
+      for (SocketIndex = 0; SocketIndex < TEGRABL_SOC_MAX_SOCKETS; SocketIndex++) {
+        Data += mMb1DefaultConfig.Data.Mb1Data.ActiveCores[SocketIndex];
+      }
+
       break;
     case KEY_DBG2_NETWORK_DEVICE:
       Data = MAX_UINT32;
@@ -2716,6 +2720,7 @@ GetDefaultValue (
       //
       // UPHY
       //
+      SocketIndex = 0;
       if ((QuestionId >= KEY_UPHY0_SOCKET0_CONFIG) && (QuestionId <= KEY_UPHY5_SOCKET3_CONFIG)) {
         SocketIndex = (QuestionId - KEY_UPHY0_SOCKET0_CONFIG) / TEGRABL_MAX_UPHY_PER_SOCKET;
         UphyIndex   = (QuestionId - KEY_UPHY0_SOCKET0_CONFIG) % TEGRABL_MAX_UPHY_PER_SOCKET;
