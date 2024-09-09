@@ -598,6 +598,26 @@ formset
         maximum = 4294967295,
         step = 64,
     endnumeric;
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.HvEgmSizeSupported == 0;
+    numeric varid = NVIDIA_CONFIG_HII_CONTROL.HvMinEgmSize,
+        questionid = KEY_EGM_HV_MIN_EGM_SIZE_MB,
+        prompt = STRING_TOKEN(STR_EGM_HV_MIN_EGM_SIZE_PROMPT),
+        help   = STRING_TOKEN(STR_EGM_HV_MIN_EGM_SIZE_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 4294967295,
+        step = 65536,
+    endnumeric;
+    numeric varid = NVIDIA_CONFIG_HII_CONTROL.HvVirtUefiSize,
+        questionid = KEY_EGM_HV_VIRT_UEFI_SIZE_MB,
+        prompt = STRING_TOKEN(STR_EGM_HV_VIRT_UEFI_SIZE_PROMPT),
+        help   = STRING_TOKEN(STR_EGM_HV_VIRT_UEFI_SIZE_HELP),
+        flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,
+        minimum = 0,
+        maximum = 4294967295,
+        step = 65536,
+    endnumeric;
+    endif;
     endif;
 
     checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SpreadSpectrumEnable,

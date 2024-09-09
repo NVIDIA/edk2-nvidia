@@ -1743,6 +1743,8 @@ SyncHiiSettings (
   if (Read) {
     mHiiControlSettings.EgmEnabled           = mMb1Config.Data.Mb1Data.FeatureData.EgmEnable;
     mHiiControlSettings.EgmHvSizeMb          = mMb1Config.Data.Mb1Data.HvRsvdMemSize;
+    mHiiControlSettings.HvMinEgmSize         = mMb1Config.Data.Mb1Data.HvMinEgmSize;
+    mHiiControlSettings.HvVirtUefiSize       = mMb1Config.Data.Mb1Data.HvVirtUefiSize;
     mHiiControlSettings.SpreadSpectrumEnable = mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable;
     mHiiControlSettings.ModsSpEnable         = mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable;
     mHiiControlSettings.TpmEnable            = mMb1Config.Data.Mb1Data.FeatureData.TpmEnable;
@@ -1870,6 +1872,8 @@ SyncHiiSettings (
   } else {
     mMb1Config.Data.Mb1Data.FeatureData.EgmEnable             = mHiiControlSettings.EgmEnabled;
     mMb1Config.Data.Mb1Data.HvRsvdMemSize                     = mHiiControlSettings.EgmHvSizeMb;
+    mMb1Config.Data.Mb1Data.HvMinEgmSize                      = mHiiControlSettings.HvMinEgmSize;
+    mMb1Config.Data.Mb1Data.HvVirtUefiSize                    = mHiiControlSettings.HvVirtUefiSize;
     mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable      = mHiiControlSettings.SpreadSpectrumEnable;
     mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable          = mHiiControlSettings.ModsSpEnable;
     mMb1Config.Data.Mb1Data.FeatureData.TpmEnable             = mHiiControlSettings.TpmEnable;
@@ -2297,6 +2301,10 @@ InitializeSettings (
           }
         }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 18) {
+      mHiiControlSettings.HvEgmSizeSupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 17) {
@@ -2794,6 +2802,12 @@ GetDefaultValue (
       break;
     case KEY_ENABLE_ACPI_TIMER:
       Data = 0;
+      break;
+    case KEY_EGM_HV_MIN_EGM_SIZE_MB:
+      Data = mMb1DefaultConfig.Data.Mb1Data.HvMinEgmSize;
+      break;
+    case KEY_EGM_HV_VIRT_UEFI_SIZE_MB:
+      Data = mMb1DefaultConfig.Data.Mb1Data.HvVirtUefiSize;
       break;
     default:
       //

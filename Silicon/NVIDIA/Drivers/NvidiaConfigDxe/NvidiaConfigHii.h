@@ -118,6 +118,8 @@
 #define KEY_SERVER_POWER_CONTROL       0x1024
 #define KEY_DBG2_NETWORK_DEVICE        0x1025
 #define KEY_DISABLE_CHANNEL_SPARING    0x1026
+#define KEY_EGM_HV_MIN_EGM_SIZE_MB     0x1027
+#define KEY_EGM_HV_VIRT_UEFI_SIZE_MB   0x1028
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -1065,6 +1067,7 @@ typedef struct {
   BOOLEAN    ActiveCoresSettingSupported;
   BOOLEAN    ServerPwrCtlSettingSupported;
   BOOLEAN    MpamPartidConfigSupported;
+  BOOLEAN    HvEgmSizeSupported;
   UINT32     RootfsRedundancyLevel;
   UINT32     Dbg2NetworkDevice;
   BOOLEAN    TH500Config;
@@ -1076,6 +1079,8 @@ typedef struct {
   // MB1 DATA
   BOOLEAN    EgmEnabled;
   UINT32     EgmHvSizeMb;
+  UINT32     HvMinEgmSize;
+  UINT32     HvVirtUefiSize;
   UINT32     UefiDebugLevel;
   BOOLEAN    SpreadSpectrumEnable;
   BOOLEAN    ModsSpEnable;
