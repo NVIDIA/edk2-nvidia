@@ -535,6 +535,8 @@ GetMmCompatibility (
         __FUNCTION__,
         Status
         ));
+      Status = EFI_UNSUPPORTED;
+      goto ExitGetMmCompatibility;
     }
 
     Status = GetNsBufferAddr ();
@@ -545,6 +547,8 @@ GetMmCompatibility (
         __FUNCTION__,
         Status
         ));
+      Status = EFI_UNSUPPORTED;
+      goto ExitGetMmCompatibility;
     }
 
     Status = GetErstBufferAddr ();
@@ -580,6 +584,7 @@ GetMmCompatibility (
     Status = EFI_UNSUPPORTED;
   }
 
+ExitGetMmCompatibility:
   return Status;
 }
 
