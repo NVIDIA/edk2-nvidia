@@ -1629,16 +1629,18 @@ SetupIortNodeForPmcg (
   IN OUT  IORT_PROP_NODE          *PropNode
   )
 {
-  EFI_STATUS                         Status;
-  CM_ARM_PMCG_NODE                   *IortNode;
-  CM_ARM_ID_MAPPING                  *IdMapping;
-  CONST UINT32                       *Prop;
-  INT32                              PropSize;
-  TEGRA_PLATFORM_TYPE                PlatformType;
-  IORT_PROP_NODE                     *IortPropNode;
-  CM_OBJ_DESCRIPTOR                  Desc;
-  NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
-  UINT32                             NumberOfInterrupts;
+  EFI_STATUS                          Status;
+  CM_ARM_PMCG_NODE                    *IortNode;
+  CM_ARM_ID_MAPPING                   *IdMapping;
+  CONST UINT32                        *Prop;
+  INT32                               PropSize;
+  TEGRA_PLATFORM_TYPE                 PlatformType;
+  IORT_PROP_NODE                      *IortPropNode;
+  CM_OBJ_DESCRIPTOR                   Desc;
+  NVIDIA_DEVICE_TREE_INTERRUPT_DATA   InterruptData;
+  UINT32                              NumberOfInterrupts;
+  NVIDIA_DEVICE_TREE_CONTROLLER_DATA  MsiParent;
+  UINT32                              ArraySize;
 
   PlatformType = TegraGetPlatform ();
   if (PlatformType != TEGRA_PLATFORM_SILICON) {
@@ -1693,14 +1695,18 @@ SetupIortNodeForPmcg (
     Private->IdMapIndex += PropNode->IdMapCount;
     PropNode->IdMapArray = IdMapping;
 
-    Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "msi-parent", &PropSize);
-    ASSERT (Prop != NULL);
+    ArraySize = 1;
+    Status    = DeviceTreeGetMsiParent (PropNode->NodeOffset, &MsiParent, &ArraySize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get msi-parent\n", __FUNCTION__, Status));
+      return Status;
+    }
 
     IdMapping->InputBase            = 0;
-    IdMapping->OutputBase           = SwapBytes32 (Prop[1]);
+    IdMapping->OutputBase           = MsiParent.Base;
     IdMapping->NumIds               = 0;
     IdMapping->Flags                = EFI_ACPI_IORT_ID_MAPPING_FLAGS_SINGLE;
-    IortPropNode                    = FindPropNodeByPhandleInstance (Private, SwapBytes32 (Prop[0]), 1);
+    IortPropNode                    = FindPropNodeByPhandleInstance (Private, MsiParent.Phandle, 1);
     IdMapping->OutputReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
     ASSERT (IdMapping->OutputReferenceToken != CM_NULL_TOKEN);
     IortNode->IdMappingCount = PropNode->IdMapCount;
