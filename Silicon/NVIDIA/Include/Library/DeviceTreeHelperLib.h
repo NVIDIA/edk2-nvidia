@@ -103,6 +103,13 @@ typedef struct {
   UINT32                           NextLevelCache; // Next level's phandle
 } NVIDIA_DEVICE_TREE_CACHE_DATA;
 
+typedef struct {
+  UINT32    IommuPhandle;
+  UINT32    MasterDeviceId;                         // Can be DEVICE_ID_INVALID
+  UINT32    DmaWindowStart;
+  UINT64    DmaWindowLength;                        // Zero means no DMA window info
+} NVIDIA_DEVICE_TREE_IOMMUS_DATA;
+
 /**
   Set the base address and size of the device tree
 
@@ -844,6 +851,30 @@ GetDeviceTreeInterrupts (
   );
 
 #endif //DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
+
+/**
+  Returns information about the iommus of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     Array              - Buffer of size NumberOfIommus that will contain the list of iommu information
+  @param  [in, out] NumberOfIommus     - On input contains size of the Array, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfIommus is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfIommus pointer is NULL
+  @retval EFI_INVALID_PARAMETER - Array is NULL when *NumberOfIommus is not 0
+  @retval EFI_NOT_FOUND         - No iommus found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetIommus (
+  IN INT32                            NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_IOMMUS_DATA  *Array OPTIONAL,
+  IN OUT UINT32                       *NumberOfIommus
+  );
 
 /**
   Returns information about the cache of a given device tree node

@@ -1073,6 +1073,146 @@ DeviceTreeGetMsiIommuMap (
   return Status;
 }
 
+STATIC
+EFI_STATUS
+ParseIommuCells (
+  IN CONST UINT32                     *Property,
+  IN UINT32                           Cells,
+  OUT NVIDIA_DEVICE_TREE_IOMMUS_DATA  *Data
+  )
+{
+  UINT64  Length;
+
+  DEBUG ((DEBUG_VERBOSE, "%a: Property = 0x%p, Cells = %u, Data = 0x%p\n", __FUNCTION__, Property, Cells, Data));
+  NV_ASSERT_RETURN (Property != NULL, return EFI_INVALID_PARAMETER, "%a: Property was NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN (Data != NULL, return EFI_INVALID_PARAMETER, "%a: Data was NULL\n", __FUNCTION__);
+
+  Data->MasterDeviceId  = DEVICE_ID_INVALID;
+  Data->DmaWindowStart  = 0;
+  Data->DmaWindowLength = 0;
+
+  switch (Cells) {
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Don't know how to parse iommus that have %u cells\n", __FUNCTION__, Cells));
+      return EFI_UNSUPPORTED;
+
+    case 4:
+      Data->DmaWindowStart = Fdt32ToCpu (Property[1]);
+      CopyMem (&Length, &Property[2], sizeof (UINT64));
+      Data->DmaWindowLength = Fdt64ToCpu (Length);
+
+    case 1:
+      Data->MasterDeviceId = Fdt32ToCpu (Property[0]);
+
+    case 0:
+      break;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: MasterDeviceId = 0x%x\n", __FUNCTION__, Data->MasterDeviceId));
+  DEBUG ((DEBUG_INFO, "%a: DmaWindowStart = 0x%x\n", __FUNCTION__, Data->DmaWindowStart));
+  DEBUG ((DEBUG_INFO, "%a: DmaWindowLength = 0x%lx\n", __FUNCTION__, Data->DmaWindowLength));
+  return EFI_SUCCESS;
+}
+
+/**
+  Returns information about the iommus of a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     Array              - Buffer of size NumberOfIommus that will contain the list of iommu information
+  @param  [in, out] NumberOfIommus     - On input contains size of the Array, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfIommus is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfIommus pointer is NULL
+  @retval EFI_INVALID_PARAMETER - Array is NULL when *NumberOfIommus is not 0
+  @retval EFI_NOT_FOUND         - No iommus found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetIommus (
+  IN INT32                            NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_IOMMUS_DATA  *Array OPTIONAL,
+  IN OUT UINT32                       *NumberOfIommus
+  )
+{
+  EFI_STATUS    Status;
+  VOID          *DeviceTree;
+  CONST UINT32  *Property;
+  UINT32        PropertySize;
+  UINT32        IommusIndex;
+  UINT32        CellIndex;
+  UINT32        NumCells;
+  UINT32        EntryCells;
+  INT32         IommuPhandle;
+  UINT32        IommuCells;
+
+  NV_ASSERT_RETURN (NumberOfIommus != NULL, return EFI_INVALID_PARAMETER, "%a: NumberOfIommus is not allowed to be NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN ((Array != NULL) || (*NumberOfIommus == 0), return EFI_INVALID_PARAMETER, "%a: Array can only be NULL if NumberOfIommus is zero\n", __FUNCTION__);
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DeviceTreePointer\n", __FUNCTION__, Status));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "iommus", (CONST VOID **)&Property, &PropertySize);
+  if (EFI_ERROR (Status)) {
+    if (Status != EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get \"iommus\" property of NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    }
+
+    return Status;
+  }
+
+  NumCells = PropertySize/sizeof (UINT32);
+
+  for (IommusIndex = 0, CellIndex = 0; CellIndex < NumCells; IommusIndex++, CellIndex += EntryCells) {
+    DEBUG ((DEBUG_VERBOSE, "%a: IommusIndex = %u, CellIndex = %u, NumCells = %u\n", __FUNCTION__, IommusIndex, CellIndex, NumCells));
+    NV_ASSERT_RETURN (CellIndex < NumCells, return EFI_DEVICE_ERROR, "%a: Cell parsing bug - iommu phandle offset exceeds iommus property size for Node Offset 0x%x, IommusIndex %u\n", __FUNCTION__, NodeOffset, IommusIndex);
+    IommuPhandle = Fdt32ToCpu (Property[CellIndex]);
+    if (IommuPhandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+      DEBUG ((DEBUG_ERROR, "%a: Found invalid iommu phandle 0x%x\n", __FUNCTION__, IommuPhandle));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = GetPhandleCells (IommuPhandle, "#iommu-cells", &IommuCells);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get \"#iommu-cells\"\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    EntryCells = PARENT_PHANDLE_CELLS + IommuCells;
+    DEBUG ((DEBUG_VERBOSE, "%a: EntryCells = %u\n", __FUNCTION__, EntryCells));
+
+    // Sanity check the number of cells
+    NV_ASSERT_RETURN (CellIndex + EntryCells <= NumCells, return EFI_DEVICE_ERROR, "%a: Cell size bug in parsing iommu of node offset 0x%x\n", __FUNCTION__, NodeOffset);
+
+    if (IommusIndex < *NumberOfIommus) {
+      NVIDIA_DEVICE_TREE_IOMMUS_DATA  *Iommu = &Array[IommusIndex];
+      DEBUG ((DEBUG_VERBOSE, "%a: IommusIndex = %u, *NumberOfIommus = %u\n", __FUNCTION__, IommusIndex, *NumberOfIommus));
+
+      Iommu->IommuPhandle = IommuPhandle;
+      Status              = ParseIommuCells (&Property[CellIndex + PARENT_PHANDLE_CELLS], IommuCells, Iommu);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u IommuCells\n", __FUNCTION__, IommuCells));
+        return Status;
+      }
+    }
+  }
+
+  if (*NumberOfIommus < IommusIndex) {
+    Status = EFI_BUFFER_TOO_SMALL;
+  } else {
+    Status = EFI_SUCCESS;
+  }
+
+  *NumberOfIommus = IommusIndex;
+  return Status;
+}
+
 STATIC CONST NVIDIA_DEVICE_TREE_CACHE_FIELD_STRINGS  ICacheFieldStrings = {
   "i-cache-size",
   "i-cache-sets",
