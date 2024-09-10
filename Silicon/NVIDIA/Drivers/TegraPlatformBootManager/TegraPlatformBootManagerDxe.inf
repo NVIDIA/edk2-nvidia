@@ -39,13 +39,13 @@
   gEfiFirmwareVolume2ProtocolGuid
   gEdkiiPlatformBootManagerProtocolGuid
   gAndroidBootImgProtocolGuid
+  gNVIDIALoadfileKernelArgsProtocol
 
 [Guids]
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARcmKernelGuid
   gNVIDIABmBootOptionGuid
-  gNVIDIALoadfileKernelArgsGuid
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid

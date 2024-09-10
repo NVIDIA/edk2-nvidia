@@ -746,7 +746,7 @@ RefreshAutoEnumeratedBootOptions (
   for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
     if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
       DevicePath = UpdatedLoadOption[Count].FilePath;
-      Status     = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsGuid, &DevicePath, &Handle);
+      Status     = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsProtocol, &DevicePath, &Handle);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_VERBOSE, "%a: Got %r for option, so it doesn't have a LoadfileKernelArgsGuid\n", __FUNCTION__, Status));
         Status = EFI_SUCCESS;
@@ -755,7 +755,7 @@ RefreshAutoEnumeratedBootOptions (
 
       Status = gBS->HandleProtocol (
                       Handle,
-                      &gNVIDIALoadfileKernelArgsGuid,
+                      &gNVIDIALoadfileKernelArgsProtocol,
                       (VOID **)&KernelArgsProtocol
                       );
       if (EFI_ERROR (Status)) {

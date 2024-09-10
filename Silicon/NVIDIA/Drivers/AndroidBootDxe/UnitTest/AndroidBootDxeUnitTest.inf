@@ -51,11 +51,13 @@
   SiblingPartitionLib
   DeviceTreeHelperLib
 
+[Protocols]
+  gNVIDIALoadfileKernelArgsProtocol
+
 [Guids]
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARcmKernelGuid
-  gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
   gNVIDIAConnectCompleteEventGuid

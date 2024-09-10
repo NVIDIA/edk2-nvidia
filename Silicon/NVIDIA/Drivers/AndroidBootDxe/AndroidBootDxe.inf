@@ -54,12 +54,12 @@
   gEfiLoadFileProtocolGuid
   gEfiLoadFile2ProtocolGuid
   gEfiLoadedImageProtocolGuid
+  gNVIDIALoadfileKernelArgsProtocol
 
 [Guids]
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARcmKernelGuid
-  gNVIDIALoadfileKernelArgsGuid
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
   gNVIDIAConnectCompleteEventGuid
