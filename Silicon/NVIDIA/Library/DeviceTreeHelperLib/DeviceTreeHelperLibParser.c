@@ -1073,6 +1073,102 @@ DeviceTreeGetMsiIommuMap (
   return Status;
 }
 
+/**
+  Returns information about the msi parent a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     Array              - Buffer of size NumberOfParents that will contain the list of msi parent information
+  @param  [in, out] NumberOfParents    - On input contains size of the Array, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfParents is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfParents pointer is NULL
+  @retval EFI_INVALID_PARAMETER - Array is NULL when *NumberOfParents is not 0
+  @retval EFI_NOT_FOUND         - No parents found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetMsiParent (
+  IN INT32                                NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_CONTROLLER_DATA  *Array OPTIONAL,
+  IN OUT UINT32                           *NumberOfParents
+  )
+{
+  EFI_STATUS    Status;
+  VOID          *DeviceTree;
+  CONST UINT32  *Property;
+  UINT32        PropertySize;
+  UINT32        ParentIndex;
+  UINT32        CellIndex;
+  UINT32        NumCells;
+  UINT32        EntryCells;
+  INT32         ControllerPhandle;
+  UINT32        ControllerCells;
+
+  NV_ASSERT_RETURN (NumberOfParents != NULL, return EFI_INVALID_PARAMETER, "%a: NumberOfParents is not allowed to be NULL\n", __FUNCTION__);
+  NV_ASSERT_RETURN ((Array != NULL) || (*NumberOfParents == 0), return EFI_INVALID_PARAMETER, "%a: Array can only be NULL if NumberOfParents is zero\n", __FUNCTION__);
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DeviceTreePointer\n", __FUNCTION__, Status));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "msi-parent", (CONST VOID **)&Property, &PropertySize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get \"msi-parent\" property of NodeOffset 0x%x\n", __FUNCTION__, Status, NodeOffset));
+    return Status;
+  }
+
+  NumCells = PropertySize/sizeof (UINT32);
+
+  for (ParentIndex = 0, CellIndex = 0; CellIndex < NumCells; ParentIndex++, CellIndex += EntryCells) {
+    DEBUG ((DEBUG_VERBOSE, "%a: ParentIndex = %u, CellIndex = %u, NumCells = %u\n", __FUNCTION__, ParentIndex, CellIndex, NumCells));
+    NV_ASSERT_RETURN (CellIndex < NumCells, return EFI_DEVICE_ERROR, "%a: Cell parsing bug - controller phandle offset exceeds msi-parent property size for Node Offset 0x%x, ParentIndex %u\n", __FUNCTION__, NodeOffset, ParentIndex);
+    ControllerPhandle = Fdt32ToCpu (Property[CellIndex]);
+    if (ControllerPhandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
+      DEBUG ((DEBUG_ERROR, "%a: Found invalid controller phandle 0x%x\n", __FUNCTION__, ControllerPhandle));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Status = GetPhandleCells (ControllerPhandle, "#msi-cells", &ControllerCells);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get \"#msi-cells\"\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    EntryCells = PARENT_PHANDLE_CELLS + ControllerCells;
+    DEBUG ((DEBUG_VERBOSE, "%a: EntryCells = %u\n", __FUNCTION__, EntryCells));
+
+    // Sanity check the number of cells
+    NV_ASSERT_RETURN (CellIndex + EntryCells <= NumCells, return EFI_DEVICE_ERROR, "%a: Cell size bug in parsing msi-parent of node offset 0x%x\n", __FUNCTION__, NodeOffset);
+
+    if (ParentIndex < *NumberOfParents) {
+      NVIDIA_DEVICE_TREE_CONTROLLER_DATA  *Parent = &Array[ParentIndex];
+      DEBUG ((DEBUG_VERBOSE, "%a: ParentIndex = %u, *NumberOfParents = %u\n", __FUNCTION__, ParentIndex, *NumberOfParents));
+
+      Parent->Phandle = ControllerPhandle;
+      Status          = ParseControllerCells (&Property[CellIndex + PARENT_PHANDLE_CELLS], ControllerCells, Parent);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to parse %u ControllerCells\n", __FUNCTION__, ControllerCells));
+        return Status;
+      }
+    }
+  }
+
+  if (*NumberOfParents < ParentIndex) {
+    Status = EFI_BUFFER_TOO_SMALL;
+  } else {
+    Status = EFI_SUCCESS;
+  }
+
+  *NumberOfParents = ParentIndex;
+  return Status;
+}
+
 STATIC
 EFI_STATUS
 ParseIommuCells (

@@ -853,6 +853,30 @@ GetDeviceTreeInterrupts (
 #endif //DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
 
 /**
+  Returns information about the msi parent a given device tree node
+
+  @param  [in]      NodeOffset         - Node offset of the device
+  @param  [out]     Array              - Buffer of size NumberOfParents that will contain the list of msi parent information
+  @param  [in, out] NumberOfParents    - On input contains size of the Array, on output number of required entries.
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_BUFFER_TOO_SMALL  - NumberOfParents is less than required entries
+  @retval EFI_INVALID_PARAMETER - NumberOfParents pointer is NULL
+  @retval EFI_INVALID_PARAMETER - Array is NULL when *NumberOfParents is not 0
+  @retval EFI_NOT_FOUND         - No parents found
+  @retval EFI_UNSUPPORTED       - Found unsupported number of cells
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetMsiParent (
+  IN INT32                                NodeOffset,
+  OUT NVIDIA_DEVICE_TREE_CONTROLLER_DATA  *Array OPTIONAL,
+  IN OUT UINT32                           *NumberOfParents
+  );
+
+/**
   Returns information about the iommus of a given device tree node
 
   @param  [in]      NodeOffset         - Node offset of the device
