@@ -59,7 +59,7 @@ typedef struct {
   EARM_OBJECT_ID                            ObjectId;
   CM_OBJECT_TOKEN                           Token;
   UINT32                                    DualSmmuPresent;
-  CONST UINT32                              *IommusProp;         // Pointer to DTB, or NULL
+  NVIDIA_DEVICE_TREE_IOMMUS_DATA            IommusProp;
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     IommuMapProp;
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     MsiProp;
   UINT32                                    RegCount;
