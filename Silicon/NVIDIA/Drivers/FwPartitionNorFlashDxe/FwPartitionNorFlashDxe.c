@@ -379,12 +379,12 @@ FPNorFlashInitDevices (
       break;
     }
 
-    NorFlashInfo                     = &mNorFlashInfo[mNumDevices];
-    NorFlashInfo->Signature          = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    mNorFlashInfo->Bytes             = Attributes.MemoryDensity;
-    mNorFlashInfo->Attributes        = Attributes;
-    mNorFlashInfo->NorFlash          = NorFlash;
-    mNorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
+    NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
+    NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
+    NorFlashInfo->Bytes             = Attributes.MemoryDensity;
+    NorFlashInfo->Attributes        = Attributes;
+    NorFlashInfo->NorFlash          = NorFlash;
+    NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = DeviceName;
