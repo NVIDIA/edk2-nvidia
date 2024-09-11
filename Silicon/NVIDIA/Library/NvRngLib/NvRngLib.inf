@@ -1,0 +1,50 @@
+## @file
+#  Rng Lib that gets the RNG from a secure RNG driver in StMM or from a Non-Safe
+#  Rng Source if MM isn't present.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010029
+  BASE_NAME                      = NvRngLib
+  MODULE_UNI_FILE                = NvRngLib.uni
+  FILE_GUID                      = 979ff860-9401-4757-b990-1f2a43b8aaab
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  CONSTRUCTOR                    = NvRngLibConstructor
+  LIBRARY_CLASS                  = RngLib
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64 EBC
+#
+
+[Sources]
+  NvRngLib.c
+  NvRngLibHw.c
+  NvRngLibNonHw.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  MemoryAllocationLib
+  BaseLib
+  UefiBootServicesTableLib
+  DebugLib
+  ArmTrngLib
+
+[Protocols]
+
+[Guids]
+  gEdkiiRngAlgorithmUnSafe
+  gEfiRngAlgorithmRaw
+
+[Depex]
+  TRUE

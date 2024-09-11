@@ -237,7 +237,14 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
 !endif
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/BaseCryptLib.inf
+
+!ifdef CONFIG_SECURITY_HW_RNG
+  RngLib|Silicon/NVIDIA/Library/NvRngLib/NvRngLib.inf
+!endif
+
+!ifdef CONFIG_SECURITY_NON_HW_RNG
   RngLib|MdeModulePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
+!endif
 
   PlatformSecureLib|SecurityPkg/Library/PlatformSecureLibNull/PlatformSecureLibNull.inf
   VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf

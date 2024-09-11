@@ -125,6 +125,22 @@ menu "Security options"
   default y
   help
     Support for UEFI Secure Boot verification of third party components.
+
+  choice SECURITY_RNG_TYPE
+    prompt "UEFI RNG Type"
+    help
+      RNG Type.
+
+    config SECURITY_NON_HW_RNG
+    bool "Unsafe RNG driver not based on HW RNG."
+    help
+      RngLib that will use an unsafe upstream Library (BaseRngLibTimerLib).
+
+    config SECURITY_HW_RNG
+    bool "RNG using ARM TRNG."
+    help
+      RngLib that will use ARM TRNG based RNG or fallback to Timer based.
+  endchoice
 endmenu
 
 menu "Variable options"
