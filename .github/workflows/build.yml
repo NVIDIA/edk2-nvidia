@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'stable*'
       - 'r*updates'
     tags:
       - 'r*'
