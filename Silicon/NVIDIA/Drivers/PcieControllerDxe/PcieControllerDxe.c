@@ -2338,6 +2338,7 @@ DeviceDiscoveryNotify (
       Private->Signature                                   = PCIE_CONTROLLER_SIGNATURE;
       Private->PcieRootBridgeConfigurationIo.Read          = PcieConfigurationRead;
       Private->PcieRootBridgeConfigurationIo.Write         = PcieConfigurationWrite;
+      Private->PcieRootBridgeConfigurationIo.EcamBase      = Private->EcamBase;
       Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
 
       SegmentNumber = fdt_getprop (

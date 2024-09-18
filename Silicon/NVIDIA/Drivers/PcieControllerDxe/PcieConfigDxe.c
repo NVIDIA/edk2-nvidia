@@ -22,8 +22,6 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PciIo.h>
-#include <Protocol/C2CNodeProtocol.h>
-#include "PcieControllerPrivate.h"
 
 UINT8
 PCIeFindCap (
@@ -370,9 +368,8 @@ RootPortConfigPcieCapability (
   EFI_HANDLE  RootBridgeHandle
   )
 {
-  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo       = NULL;
-  PCIE_CONTROLLER_PRIVATE                           *PcieControllerPrivate = NULL;
-  EFI_STATUS                                        Status                 = EFI_SUCCESS;
+  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo = NULL;
+  EFI_STATUS                                        Status           = EFI_SUCCESS;
   UINT64                                            CfgBase;
   UINT8                                             MaxPayload = 5;
   UINT8                                             NextBus    = 0;
@@ -383,9 +380,8 @@ RootPortConfigPcieCapability (
     return EFI_UNSUPPORTED;
   }
 
-  PcieControllerPrivate = PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS (RootBridgeCfgIo);
   // root port config base
-  CfgBase = PcieControllerPrivate->EcamBase + ((0 << 20) | (0 << 15) | (0 << 12));
+  CfgBase = RootBridgeCfgIo->EcamBase + ((0 << 20) | (0 << 15) | (0 << 12));
   PciTreeTraverseDumpBus (CfgBase, 0, 0, 0);
   PciTreeTraverseResetBus (CfgBase, 0, 0, 0);
   PciTreeTraverseDumpBus (CfgBase, 0, 0, 0);

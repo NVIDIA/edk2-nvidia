@@ -26,7 +26,7 @@
 #define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERRUPT_MAP) // 2 Reference Arrays, Mappings, End of list
 #define PCIE_COMMON_REPO_OBJECTS      (3)                                                               // Config Space, Acpi Tables, end of list
 
-#define PCIE_CONTROLLER_SIGNATURE  SIGNATURE_32('P','C','I','E')
+#define PCIE_CONTROLLER_SIGNATURE  SIGNATURE_32('P','C','I','G')
 typedef struct {
   //
   // Standard signature used to identify PCIe private data
