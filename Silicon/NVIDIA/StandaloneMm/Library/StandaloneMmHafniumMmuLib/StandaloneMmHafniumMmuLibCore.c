@@ -11,6 +11,7 @@
 *
 **/
 
+#include "Uefi/UefiBaseType.h"
 #include <Uefi.h>
 #include <Chipset/AArch64.h>
 #include <Library/BaseMemoryLib.h>
@@ -20,8 +21,7 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/StandaloneMmHafniumSlabMemAllocLib.h>
-
-#include "../StandaloneMmArmLib.h"
+#include <Library/StandaloneMmArmLib.h>
 
 STATIC
 UINT64
@@ -131,7 +131,8 @@ FreePageTablesRecursive (
     }
   }
 
-  FreePages (TranslationTable, 1);
+  FreePagesSlabMmst (TranslationTable, 1);
+  DEBUG ((DEBUG_ERROR, "%a:%d\n", __FUNCTION__, __LINE__));
 }
 
 STATIC
@@ -259,7 +260,8 @@ UpdateRegionMappingRecursive (
             // aligned, so it is guaranteed that no further pages were allocated
             // by it, and so we only have to free the page we allocated here.
             //
-            FreePages (TranslationTable, 1);
+            // FreePages (TranslationTable, 1);
+            ASSERT (FALSE);
             return Status;
           }
         }
@@ -352,6 +354,142 @@ UpdateRegionMapping (
            AttributeClearMask,
            ArmGetTTBR0BaseAddress (),
            GetRootTableLevel (T0SZ)
+           );
+}
+
+STATIC
+UINT64
+GcdAttributeToPageAttribute (
+  IN UINT64  GcdAttributes
+  )
+{
+  UINT64  PageAttributes;
+
+  switch (GcdAttributes & EFI_MEMORY_CACHETYPE_MASK) {
+    case EFI_MEMORY_UC:
+      PageAttributes = TT_ATTR_INDX_DEVICE_MEMORY;
+      break;
+    case EFI_MEMORY_WC:
+      PageAttributes = TT_ATTR_INDX_MEMORY_NON_CACHEABLE;
+      break;
+    case EFI_MEMORY_WT:
+      PageAttributes = TT_ATTR_INDX_MEMORY_WRITE_THROUGH | TT_SH_INNER_SHAREABLE;
+      break;
+    case EFI_MEMORY_WB:
+      PageAttributes = TT_ATTR_INDX_MEMORY_WRITE_BACK | TT_SH_INNER_SHAREABLE;
+      break;
+    default:
+      PageAttributes = TT_ATTR_INDX_MASK;
+      break;
+  }
+
+  if (((GcdAttributes & EFI_MEMORY_XP) != 0) ||
+      ((GcdAttributes & EFI_MEMORY_CACHETYPE_MASK) == EFI_MEMORY_UC))
+  {
+    if (ArmReadCurrentEL () == AARCH64_EL2) {
+      PageAttributes |= TT_XN_MASK;
+    } else {
+      PageAttributes |= TT_UXN_MASK | TT_PXN_MASK;
+    }
+  }
+
+  if ((GcdAttributes & EFI_MEMORY_RO) != 0) {
+    PageAttributes |= TT_AP_NO_RO;
+  }
+
+  if ((GcdAttributes & EFI_MEMORY_RP) == 0) {
+    PageAttributes |= TT_AF;
+  }
+
+  return PageAttributes;
+}
+
+/**
+  Set the requested memory permission attributes on a region of memory.
+
+  BaseAddress and Length must be aligned to EFI_PAGE_SIZE.
+
+  If Attributes contains a memory type attribute (EFI_MEMORY_UC/WC/WT/WB), the
+  region is mapped according to this memory type, and additional memory
+  permission attributes (EFI_MEMORY_RP/RO/XP) are taken into account as well,
+  discarding any permission attributes that are currently set for the region.
+  AttributeMask is ignored in this case, and must be set to 0x0.
+
+  If Attributes contains only a combination of memory permission attributes
+  (EFI_MEMORY_RP/RO/XP), each page in the region will retain its existing
+  memory type, even if it is not uniformly set across the region. In this case,
+  AttributesMask may be set to a mask of permission attributes, and memory
+  permissions omitted from this mask will not be updated for any page in the
+  region. All attributes appearing in Attributes must appear in AttributeMask
+  as well. (Attributes & ~AttributeMask must produce 0x0)
+
+  @param[in]  BaseAddress     The physical address that is the start address of
+                              a memory region.
+  @param[in]  Length          The size in bytes of the memory region.
+  @param[in]  Attributes      Mask of memory attributes to set.
+  @param[in]  AttributeMask   Mask of memory attributes to take into account.
+
+  @retval EFI_SUCCESS           The attributes were set for the memory region.
+  @retval EFI_INVALID_PARAMETER BaseAddress or Length is not suitably aligned.
+                                Invalid combination of Attributes and
+                                AttributeMask.
+  @retval EFI_OUT_OF_RESOURCES  Requested attributes cannot be applied due to
+                                lack of system resources.
+
+**/
+EFI_STATUS
+StMmSetMemoryAttributes (
+  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN UINT64                Length,
+  IN UINT64                Attributes,
+  IN UINT64                AttributeMask
+  )
+{
+  UINT64  PageAttributes;
+  UINT64  PageAttributeMask;
+
+  PageAttributes    = GcdAttributeToPageAttribute (Attributes);
+  PageAttributeMask = 0;
+
+  if ((Attributes & EFI_MEMORY_CACHETYPE_MASK) == 0) {
+    //
+    // No memory type was set in Attributes, so we are going to update the
+    // permissions only.
+    //
+    PageAttributes   &= TT_AP_MASK | TT_UXN_MASK | TT_PXN_MASK | TT_AF;
+    PageAttributeMask = ~(TT_ADDRESS_MASK_BLOCK_ENTRY | TT_AP_MASK |
+                          TT_PXN_MASK | TT_XN_MASK | TT_AF);
+    if (AttributeMask != 0) {
+      if (((AttributeMask & ~(UINT64)(EFI_MEMORY_RP|EFI_MEMORY_RO|EFI_MEMORY_XP)) != 0) ||
+          ((Attributes & ~AttributeMask) != 0))
+      {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a Invalid Mask Attribute 0x%lx Mask 0x%lx",
+          __FUNCTION__,
+          Attributes,
+          AttributeMask
+          ));
+        ASSERT_EFI_ERROR (EFI_INVALID_PARAMETER);
+        return EFI_INVALID_PARAMETER;
+      }
+
+      // Add attributes omitted from AttributeMask to the set of attributes to preserve
+      PageAttributeMask |= GcdAttributeToPageAttribute (~AttributeMask) &
+                           (TT_AP_MASK | TT_UXN_MASK | TT_PXN_MASK | TT_AF);
+    }
+  } else {
+    ASSERT (AttributeMask == 0);
+    if (AttributeMask != 0) {
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+
+  return UpdateRegionMapping (
+           BaseAddress,
+           Length,
+           PageAttributes,
+           PageAttributeMask
            );
 }
 
@@ -542,9 +680,11 @@ SlabArmConfigureMmu (
   ArmEnableDataCache ();
 
   ArmEnableMmu ();
+  DEBUG ((DEBUG_ERROR, "Done Configuring MMU.\n"));
   return EFI_SUCCESS;
 
 FreeTranslationTable:
-  FreePages (TranslationTable, 1);
+  // FreePages (TranslationTable, 1);
+  ASSERT (FALSE);
   return Status;
 }

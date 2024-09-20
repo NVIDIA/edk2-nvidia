@@ -25,8 +25,6 @@
   AArch64/SetPermissions.c
   AArch64/CreateHobList.c
   AArch64/ModuleEntryPoint.S
-  SlabMmuOps/ArmMmuLibCore.c
-  SlabMmuOps/ArmMmuLibReplaceEntry.S
 
 [Packages]
   MdePkg/MdePkg.dec

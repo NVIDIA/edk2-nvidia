@@ -1,15 +1,15 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#ifndef _SLAB_MMU_OPS_H_
-#define _SLAB_MMU_OPS_H_
+#ifndef __SMM_HAFNIUM_MMU_LIB_H__
+#define __SMM_HAFNIUM_MMU_LIB_H__
 
-#include "../StandaloneMmArmLib.h"
+#include <Library/StandaloneMmArmLib.h>
 
 #define PAGE_ALIGN(Address, PageSize)  ((UINT64) (Address) & ~(PageSize - 1))
 
@@ -30,4 +30,12 @@ SlabArmConfigureMmu (
   OUT UINTN                              *TranslationTableSize OPTIONAL
   );
 
-#endif /* _SLAB_MMU_OPS_H_ */
+EFI_STATUS
+StMmSetMemoryAttributes (
+  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN UINT64                Length,
+  IN UINT64                Attributes,
+  IN UINT64                AttributeMask
+  );
+
+#endif //__SMM_HAFNIUM_MMU_LIB_H__

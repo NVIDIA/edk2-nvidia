@@ -1,0 +1,37 @@
+#/** @file
+#   StandaloneMmuLib to be used when StMM is in S-EL1.
+#
+#   SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#   SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmHafniumMmuLib
+  FILE_GUID                      = ee42415a-3190-4e38-977d-53f92c0a92a2
+  MODULE_TYPE                    = MM_CORE_STANDALONE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = StandaloneMmMmuLib
+  PI_SPECIFICATION_VERSION       = 0x00010032
+
+[Sources]
+  StandaloneMmHafniumMmuLib.c
+  StandaloneMmHafniumMmuLibCore.c
+
+[Sources.AARCH64]
+  AARCH64/StandaloneMmHafniumMmuLibReplaceEntry.S
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmLib
+  CacheMaintenanceLib
+  SlabMemoryAllocationLib
+
+

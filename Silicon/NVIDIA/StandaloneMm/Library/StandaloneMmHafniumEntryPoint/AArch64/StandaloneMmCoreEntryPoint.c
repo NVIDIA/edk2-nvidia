@@ -37,8 +37,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Include/libfdt.h>
 
-#include "../SlabMmuOps/SlabMmuOps.h"
 #include <Library/StandaloneMmHafniumSlabMemAllocLib.h>
+#include <Library/StandaloneMmHafniumMmuLib.h>
 
 #define SPM_MAJOR_VER_MASK    0xFFFF0000
 #define SPM_MINOR_VER_MASK    0x0000FFFF

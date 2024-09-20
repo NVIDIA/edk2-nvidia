@@ -1,6 +1,6 @@
 #------------------------------------------------------------------------------
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2016, Linaro Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
