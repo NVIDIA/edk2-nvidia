@@ -321,13 +321,5 @@ FmpSetPackageInfo (
   IN  CONST CHAR16                      *PackageVersionName
   )
 {
-  REDFISH_FMP_PRIVATE_DATA  *RedfishFmpPrivate;
-
-  RedfishFmpPrivate = REDFISH_FMP_PRIVATE_DATA_FROM_FMP (This);
-
-  if ((RedfishFmpPrivate->ImageDescriptor->AttributesSupported & IMAGE_ATTRIBUTE_IMAGE_UPDATABLE) == IMAGE_ATTRIBUTE_IMAGE_UPDATABLE) {
-    return EFI_WRITE_PROTECTED;
-  } else {
-    return EFI_UNSUPPORTED;
-  }
+  return EFI_UNSUPPORTED;
 }
