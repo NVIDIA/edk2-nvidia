@@ -46,6 +46,7 @@
   TegraPlatformInfoLib
   PlatformResourceLib
   StandaloneMmOpteeLib
+  SlabMemoryAllocationLib
 
 [LibraryClasses.AARCH64]
   StandaloneMmMmuLib

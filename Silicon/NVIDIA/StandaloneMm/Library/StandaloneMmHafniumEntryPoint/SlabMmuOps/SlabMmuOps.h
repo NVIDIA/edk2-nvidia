@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -12,19 +12,6 @@
 #include "../StandaloneMmArmLib.h"
 
 #define PAGE_ALIGN(Address, PageSize)  ((UINT64) (Address) & ~(PageSize - 1))
-
-/**
- * Initialize the slab allocator for stage-1 page table entries.
- *
- * @param EntriesBase   Base address of the location to store entries
- * @param EntriesPages  Number of pages available
- */
-VOID
-EFIAPI
-SlabArmSetEntriesSlab (
-  IN  UINT64  EntriesBase,
-  IN  UINT64  EntriesPages
-  );
 
 /**
  * Configure stage-1 page table entries using the provided table of memory entries.

@@ -5,7 +5,7 @@
 *  - dynamic memory allocations replaced by a slab-based allocator since dynamic allocations are not yet possible this
 *    early in the boot
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -19,47 +19,9 @@
 #include <Library/ArmMmuLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/StandaloneMmHafniumSlabMemAllocLib.h>
 
 #include "../StandaloneMmArmLib.h"
-
-/*
- * Dynamic Memory is not enabled at this early point, so implement a simple slab-based allocator to replace
- * calls to "AllocatePages"
- */
-#define AllocatePages  AllocatePagesFromSlab
-UINT8  *AllocationSlab = NULL;
-UINT8  AllocatedPages  = 0;
-UINT8  MaxPages        = 0;
-
-VOID
-EFIAPI
-SlabArmSetEntriesSlab (
-  IN  UINT64  EntriesBase,
-  IN  UINT64  EntriesPages
-  )
-{
-  MaxPages       = EntriesPages;
-  AllocationSlab = (UINT8 *)EntriesBase;
-}
-
-STATIC
-VOID *
-AllocatePagesFromSlab (
-  IN UINTN  RequestedPages
-  )
-{
-  VOID  *SlabPointer;
-
-  if ((AllocatedPages >= MaxPages) || ((AllocatedPages+RequestedPages) >= MaxPages)) {
-    DEBUG ((DEBUG_ERROR, "%a: Exhausted stage-1 entries memory Allocated %u Max %u\r\n", __FUNCTION__, AllocatedPages, MaxPages));
-    ASSERT (0);
-  }
-
-  SlabPointer     = ALIGN_POINTER ((VOID *)&AllocationSlab[AllocatedPages*SIZE_4KB], SIZE_4KB);
-  AllocatedPages += RequestedPages;
-
-  return SlabPointer;
-}
 
 STATIC
 UINT64
@@ -263,7 +225,7 @@ UpdateRegionMappingRecursive (
         // No table entry exists yet, so we need to allocate a page table
         // for the next level.
         //
-        TranslationTable = AllocatePages (1);
+        TranslationTable = AllocatePagesSlabMmSt (1);
         if (TranslationTable == NULL) {
           return EFI_OUT_OF_RESOURCES;
         }
@@ -521,7 +483,7 @@ SlabArmConfigureMmu (
   ArmSetTCR (TCR);
 
   // Allocate pages for translation table
-  TranslationTable = AllocatePages (1);
+  TranslationTable = AllocatePagesSlabMmSt (1);
   if (TranslationTable == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }

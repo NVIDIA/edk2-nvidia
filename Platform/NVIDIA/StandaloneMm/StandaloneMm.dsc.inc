@@ -33,6 +33,7 @@
   ResetSystemLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumResetLib/StandaloneMmHafniumResetLib.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLib/DebugLogScratchRegLib.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
+  SlabMemoryAllocationLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumSlabMemAllocLib/StandaloneMmHafniumSlabMemAllocationLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
