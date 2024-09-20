@@ -62,6 +62,7 @@ typedef struct {
   NVIDIA_DEVICE_TREE_IOMMUS_DATA            IommusProp;
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     IommuMapProp;
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA     MsiProp;
+  UINT32                                    DevicesPhandle;
   UINT32                                    RegCount;
   CONST NVIDIA_DEVICE_TREE_REGISTER_DATA    *RegArray;       // Allocated Array
   VOID                                      *IortNode;       // Pointer to a spot within Private->IoNodes[Type].NodeArray

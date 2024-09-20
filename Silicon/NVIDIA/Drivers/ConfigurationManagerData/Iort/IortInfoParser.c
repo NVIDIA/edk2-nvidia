@@ -19,7 +19,6 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <libfdt.h>
 
 #include <T234/T234Definitions.h>
 #include <TH500/TH500Definitions.h>
@@ -296,8 +295,7 @@ AddIortPropNodes (
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  MsiProp;
   NVIDIA_DEVICE_TREE_IOMMUS_DATA         IommusProp;
   NVIDIA_DEVICE_TREE_MSI_IOMMU_MAP_DATA  IommuMapProp;
-  CONST UINT32                           *DevicesProp;
-  INT32                                  PropSize;
+  UINT32                                 DevicesPhandle;
   BOOLEAN                                ItsNodePresent;
   UINT32                                 DualSmmuPresent;
   UINT32                                 Indx;
@@ -389,7 +387,7 @@ AddIortPropNodes (
         MsiProp.Controller.Phandle      = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
         IommusProp.IommuPhandle         = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
         IommuMapProp.Controller.Phandle = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
-        DevicesProp                     = NULL;
+        DevicesPhandle                  = NVIDIA_DEVICE_TREE_PHANDLE_INVALID;
 
         if (DevMap->ObjectId == EArmObjItsGroup) {
           ItsNodePresent = TRUE;
@@ -443,12 +441,10 @@ AddIortPropNodes (
         } else {
           // Check "devices" property for all PMCG nodes
           if (DevMap->ObjectId == EArmObjPmcg) {
-            DevicesProp = fdt_getprop (Private->DtbBase, NodeOffset, "devices", &PropSize);
-            if ((DevicesProp == NULL) || (PropSize != sizeof (UINT32))) {
-              DevicesProp = NULL;
-            } else {
+            Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "devices", &DevicesPhandle);
+            if (!EFI_ERROR (Status)) {
               // Skip if the target DTB node is not valid
-              if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (*DevicesProp), 1) == NULL) {
+              if (FindPropNodeByPhandleInstance (Private, DevicesPhandle, 1) == NULL) {
                 continue;
               }
             }
@@ -478,6 +474,7 @@ AllocatePropNode:
         CopyMem (&PropNode->MsiProp, &MsiProp, sizeof (MsiProp));
         CopyMem (&PropNode->IommusProp, &IommusProp, sizeof (IommusProp));
         CopyMem (&PropNode->IommuMapProp, &IommuMapProp, sizeof (IommuMapProp));
+        PropNode->DevicesPhandle  = DevicesPhandle;
         PropNode->DualSmmuPresent = DevMap->DualSmmuPresent;
         PropNode->NodeOffset      = NodeOffset;
         PropNode->ObjectId        = DevMap->ObjectId;
@@ -1632,8 +1629,6 @@ SetupIortNodeForPmcg (
   EFI_STATUS                          Status;
   CM_ARM_PMCG_NODE                    *IortNode;
   CM_ARM_ID_MAPPING                   *IdMapping;
-  CONST UINT32                        *Prop;
-  INT32                               PropSize;
   TEGRA_PLATFORM_TYPE                 PlatformType;
   IORT_PROP_NODE                      *IortPropNode;
   CM_OBJ_DESCRIPTOR                   Desc;
@@ -1675,13 +1670,12 @@ SetupIortNodeForPmcg (
     IortNode->OverflowInterrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
   }
 
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "devices", &PropSize);
-  if (Prop == NULL) {
+  if (PropNode->DevicesPhandle == NVIDIA_DEVICE_TREE_PHANDLE_INVALID) {
     DEBUG ((DEBUG_VERBOSE, "%a: Failed to find \"devices\"\r\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
-  IortPropNode             = FindPropNodeByPhandleInstance (Private, SwapBytes32 (*Prop), 1);
+  IortPropNode             = FindPropNodeByPhandleInstance (Private, PropNode->DevicesPhandle, 1);
   IortNode->ReferenceToken = IortPropNode ? IortPropNode->Token : CM_NULL_TOKEN;
 
   IortNode->Identifier = UniqueIdentifier++;
