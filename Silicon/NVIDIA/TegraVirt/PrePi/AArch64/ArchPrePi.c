@@ -1,6 +1,7 @@
 /** @file
 *
 *  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -8,7 +9,7 @@
 
 #include "PrePi.h"
 
-#include <Chipset/AArch64.h>
+#include <AArch64/AArch64.h>
 
 VOID
 ArchInitialize (

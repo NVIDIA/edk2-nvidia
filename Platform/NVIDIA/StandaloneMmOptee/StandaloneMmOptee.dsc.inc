@@ -33,6 +33,7 @@
   VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
   PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
+  HobPrintLib|MdeModulePkg/Library/HobPrintLib/HobPrintLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 

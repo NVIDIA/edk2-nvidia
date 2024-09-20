@@ -78,7 +78,7 @@ UpdateResourceNodeInfo (
   for (Index = 0; Index < ResourceNodeCount; Index++) {
     ResourceNodeInfo[Index].Token       = TokenMap[Index];
     ResourceNodeInfo[Index].RisIndex    = 0;
-    ResourceNodeInfo[Index].LocatorType = EFI_ACPI_MPAM_LOCATION_TYPE_PROCESSOR_CACHE;
+    ResourceNodeInfo[Index].LocatorType = EFI_ACPI_MPAM_LOCATION_PROCESSOR_CACHE;
 
     // Gather Locator info
     Status = GetDeviceTreeNode (ResourceNodeHandles[Index], &DeviceTreeBase, &NodeOffset);
@@ -102,8 +102,7 @@ UpdateResourceNodeInfo (
       goto Exit;
     }
 
-    ResourceNodeInfo[Index].Locator1 = CacheId;
-    ResourceNodeInfo[Index].Locator2 = 0;
+    ResourceNodeInfo[Index].Locator.Descriptor1 = CacheId;
 
     // TODO: Func Dependency List
     ResourceNodeInfo[Index].NumFuncDep = 0;
@@ -273,9 +272,9 @@ UpdateMscNodeInfo (
           if ((InterruptData[InterruptIndex].Flag == INTERRUPT_HI_LEVEL) ||
               (InterruptData[InterruptIndex].Flag == INTERRUPT_LO_LEVEL))
           {
-            MscNodeInfo[Index].ErrorInterruptFlags = EFI_ACPI_MPAM_LEVEL_TRIG_INTERRUPT_MODE;
+            MscNodeInfo[Index].ErrorInterruptFlags = EFI_ACPI_MPAM_INTERRUPT_LEVEL_TRIGGERED;
           } else {
-            MscNodeInfo[Index].ErrorInterruptFlags = EFI_ACPI_MPAM_EDGE_TRIG_INTERRUPT_MODE;
+            MscNodeInfo[Index].ErrorInterruptFlags = EFI_ACPI_MPAM_INTERRUPT_EDGE_TRIGGERED;
           }
         } else if ((InterruptData[InterruptIndex].Name != NULL) &&
                    (AsciiStrCmp (InterruptData[InterruptIndex].Name, "overflow") == 0))
@@ -288,9 +287,9 @@ UpdateMscNodeInfo (
           if ((InterruptData[InterruptIndex].Flag == INTERRUPT_HI_LEVEL) ||
               (InterruptData[InterruptIndex].Flag == INTERRUPT_LO_LEVEL))
           {
-            MscNodeInfo[Index].OverflowInterruptFlags = EFI_ACPI_MPAM_LEVEL_TRIG_INTERRUPT_MODE;
+            MscNodeInfo[Index].OverflowInterruptFlags = EFI_ACPI_MPAM_INTERRUPT_LEVEL_TRIGGERED;
           } else {
-            MscNodeInfo[Index].OverflowInterruptFlags = EFI_ACPI_MPAM_EDGE_TRIG_INTERRUPT_MODE;
+            MscNodeInfo[Index].OverflowInterruptFlags = EFI_ACPI_MPAM_INTERRUPT_EDGE_TRIGGERED;
           }
         }
       }
@@ -404,8 +403,8 @@ MpamParser (
   }
 
   // Create a ACPI Table Entry
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_MEMORY_SYSTEM_RESOURCE_PARTITIONING_MONITORING_TABLE_STRUCTURE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_4_MEMORY_SYSTEM_RESOURCE_PARTITIONING_MONITORING_TABLE_REVISION;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_MEMORY_SYSTEM_RESOURCE_PARTITIONING_AND_MONITORING_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_MEMORY_SYSTEM_RESOURCE_PARTITIONING_AND_MONITORING_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdMpam);
   AcpiTableHeader.AcpiTableData      = NULL;
   AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

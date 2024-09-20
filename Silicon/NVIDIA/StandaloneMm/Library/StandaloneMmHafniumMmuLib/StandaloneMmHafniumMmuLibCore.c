@@ -13,7 +13,7 @@
 
 #include "Uefi/UefiBaseType.h"
 #include <Uefi.h>
-#include <Chipset/AArch64.h>
+#include <AArch64/AArch64.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/MemoryAllocationLib.h>

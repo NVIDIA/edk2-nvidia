@@ -35,6 +35,7 @@
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
   SlabMemoryAllocationLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumSlabMemAllocLib/StandaloneMmHafniumSlabMemAllocLib.inf
   StandaloneMmMmuLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumMmuLib/StandaloneMmHafniumMmuLib.inf
+  HobPrintLib|MdeModulePkg/Library/HobPrintLib/HobPrintLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
