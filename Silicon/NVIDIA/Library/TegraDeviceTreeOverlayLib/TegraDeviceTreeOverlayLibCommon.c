@@ -642,7 +642,7 @@ ProcessOverlayDeviceTree (
   UINT32         Index;
   UINT32         Count;
   UINT32         NumberSubnodes;
-  UINT32         FixupNodes = 0;
+  UINT32         MiscNodes = 0;
 
   TargetName = fdt_getprop (FdtOverlay, 0, "overlay-name", &TargetLen);
   if ((TargetName != NULL) && (TargetLen != 0)) {
@@ -651,10 +651,8 @@ ProcessOverlayDeviceTree (
 
   fdt_for_each_subnode (FrNode, FdtOverlay, 0) {
     FrName = fdt_get_name (FdtOverlay, FrNode, NULL);
-    if ((AsciiStrCmp (FrName, "__fixups__") == 0) || (AsciiStrCmp (FrName, "__local_fixups__") == 0)) {
-      FixupNodes++;
-      continue;
-    } else if (AsciiStrCmp (FrName, "__symbols__") == 0) {
+    if ((AsciiStrCmp (FrName, "__fixups__") == 0) || (AsciiStrCmp (FrName, "__local_fixups__") == 0) || (AsciiStrCmp (FrName, "__symbols__") == 0)) {
+      MiscNodes++;
       continue;
     }
 
@@ -781,7 +779,7 @@ delete_fragment:
     NumberSubnodes++;
   }
 
-  if (NumberSubnodes <= FixupNodes) {
+  if (NumberSubnodes <= MiscNodes) {
     DEBUG ((DEBUG_INFO, "No matching fragments in the overlay.\n"));
     return EFI_NOT_FOUND;
   }
