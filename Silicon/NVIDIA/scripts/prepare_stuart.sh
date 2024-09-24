@@ -40,8 +40,8 @@ if [[ -z "${UEFI_SKIP_VENV}" ]]; then
     find_venv_activate
     . ${VENV_ACTIVATE}
     _msg "Installing required Python packages..."
-    pip install --upgrade -r edk2/pip-requirements.txt
-    pip install --upgrade kconfiglib
+    pip install ${UEFI_PIP_INSTALL_ARGS} --upgrade -r edk2/pip-requirements.txt
+    pip install ${UEFI_PIP_INSTALL_ARGS} --upgrade kconfiglib
   else
     _msg "Activating Python virtual environment."
     find_venv_activate
