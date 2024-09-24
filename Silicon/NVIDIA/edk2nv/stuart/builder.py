@@ -464,7 +464,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             boot_out = ws_dir / self.settings.GetBootAppFile()
             logging.info("Copying boot app %s", boot_out)
             boot_out.parent.mkdir(parents=True, exist_ok=True)
-            FormatUefiBinary(str(fw_vol), str(fw_img))
             shutil.copyfile(boot_path, boot_out)
 
         # Copy DTBs, if appropriate for this platform

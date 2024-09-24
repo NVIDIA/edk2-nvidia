@@ -98,6 +98,7 @@ jobs:
           edk2-nvidia/Platform/NVIDIA/StandaloneMm/build.sh
           edk2-nvidia/Platform/NVIDIA/DeviceTree/build.sh
           edk2-nvidia/Platform/NVIDIA/Android/build.sh
+          edk2-nvidia/Platform/NVIDIA/L4TLauncher/build.sh
           ([ -d edk2-redfish-client ] && edk2-nvidia/Platform/NVIDIA/Server/build.sh) || true
       - name: Package
         id: package

@@ -2347,8 +2347,10 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   #
   # L4T launcher
   #
-!ifdef CONFIG_L4T
+!ifdef CONFIG_L4T_LAUNCHER_IN_FV
   Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+!endif
+!ifdef CONFIG_L4T
   Silicon/NVIDIA/Drivers/L4TLauncherSupportDxe/L4TLauncherSupportDxe.inf
 !endif
 

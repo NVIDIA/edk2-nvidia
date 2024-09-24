@@ -22,9 +22,6 @@ class ServerIgxSettingsManager(NVIDIASettingsManager):
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
 
-    def GetBootAppName(self):
-        return "AARCH64/L4TLauncher.efi"
-
     def GetDscName(self):
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
