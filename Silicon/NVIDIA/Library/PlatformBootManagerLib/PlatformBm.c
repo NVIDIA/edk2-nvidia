@@ -824,16 +824,18 @@ GetPlatformOptions (
 }
 
 /**
-  Check if it's a Device Path pointing to BootManagerMenuApp.
+  Check if it's a Device Path pointing to a specific static app.
 
   @param  DevicePath     Input device path.
+  @param  Guid           The GUID of the app to check.
 
-  @retval TRUE   The device path is BootManagerMenuApp File Device Path.
-  @retval FALSE  The device path is NOT BootManagerMenuApp File Device Path.
+  @retval TRUE   The device path is the specific static app File Device Path.
+  @retval FALSE  The device path is NOT the specific static app File Device Path.
 **/
 BOOLEAN
-IsBootManagerMenuAppFilePath (
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+IsStaticAppFilePath (
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  EFI_GUID                  *Guid
   )
 {
   EFI_HANDLE  FvHandle;
@@ -844,7 +846,7 @@ IsBootManagerMenuAppFilePath (
   if (!EFI_ERROR (Status)) {
     NameGuid = EfiGetNameGuidFromFwVolDevicePathNode ((CONST MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)DevicePath);
     if (NameGuid != NULL) {
-      return CompareGuid (NameGuid, PcdGetPtr (PcdBootMenuAppFile));
+      return CompareGuid (NameGuid, Guid);
     }
   }
 
@@ -895,7 +897,7 @@ BmRegisterBootMenuApp (
                   );
   if (!EFI_ERROR (Status)) {
     for (Index = 0; Index < HandleCount; Index++) {
-      if (IsBootManagerMenuAppFilePath (DevicePathFromHandle (Handles[Index]))) {
+      if (IsStaticAppFilePath (DevicePathFromHandle (Handles[Index]), PcdGetPtr (PcdBootMenuAppFile))) {
         DevicePath  = DuplicateDevicePath (DevicePathFromHandle (Handles[Index]));
         Description = BmGetBootDescription (Handles[Index]);
         break;
@@ -981,18 +983,20 @@ BmRegisterBootMenuApp (
 }
 
 /**
-  Return the boot option number to the boot menu app. If not found it in the
-  current boot option, create a new one.
+  Return the boot option number to the specified static app.
 
   @param[out] BootOption  Pointer to boot menu app boot option.
+  @param[in]  Guid        The GUID of the app to check.
 
-  @retval EFI_SUCCESS   Boot option of boot menu app is found and returned.
+  @retval EFI_SUCCESS   Boot option of is found and returned.
+  @retval EFI_NOT_FOUND Boot option of the specified app is not found.
   @retval Others        Error occurs.
 
 **/
 EFI_STATUS
-EfiBootManagerGetBootMenuApp (
-  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+EfiBootManagerGetStaticApp (
+  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption,
+  IN EFI_GUID                       *Guid
   )
 {
   EFI_STATUS                    Status;
@@ -1003,7 +1007,7 @@ EfiBootManagerGetBootMenuApp (
   BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
 
   for (Index = 0; Index < BootOptionCount; Index++) {
-    if (IsBootManagerMenuAppFilePath (BootOptions[Index].FilePath)) {
+    if (IsStaticAppFilePath (BootOptions[Index].FilePath, Guid)) {
       Status = EfiBootManagerInitializeLoadOption (
                  BootOption,
                  BootOptions[Index].OptionNumber,
@@ -1025,10 +1029,39 @@ EfiBootManagerGetBootMenuApp (
   // Automatically create the Boot#### for Boot Menu App when not found.
   //
   if (Index >= BootOptionCount) {
-    return BmRegisterBootMenuApp (BootOption);
+    return EFI_NOT_FOUND;
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+  Return the boot option number to the boot menu app. If not found it in the
+  current boot option, create a new one.
+
+  @param[out] BootOption  Pointer to boot menu app boot option.
+
+  @retval EFI_SUCCESS   Boot option of boot menu app is found and returned.
+  @retval Others        Error occurs.
+
+**/
+EFI_STATUS
+EfiBootManagerGetBootMenuApp (
+  OUT EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = EfiBootManagerGetStaticApp (BootOption, PcdGetPtr (PcdBootMenuAppFile));
+
+  //
+  // Automatically create the Boot#### for Boot Menu App when not found.
+  //
+  if (Status == EFI_NOT_FOUND) {
+    return BmRegisterBootMenuApp (BootOption);
+  }
+
+  return Status;
 }
 
 /**
@@ -1117,6 +1150,13 @@ DisplaySystemAndHotkeyInformation (
   UINTN                          PosY;
   UINTN                          StartLineX = EFI_GLYPH_WIDTH+2;
   UINTN                          LineDeltaY = EFI_GLYPH_HEIGHT+1;
+  UINTN                          LineCount  = 0;
+  BOOLEAN                        ShellHotkeySupported;
+
+  CheckUefiShellLoadOption (&ShellHotkeySupported);
+  if (ShellHotkeySupported && (PcdGet16 (PcdShellHotkey) == CHAR_NULL)) {
+    ShellHotkeySupported = FALSE;
+  }
 
   //
   // Display hotkey information at upper left corner.
@@ -1216,9 +1256,18 @@ DisplaySystemAndHotkeyInformation (
     PrintXY (PosX, PosY, NULL, NULL, Buffer);
 
     PosY += LineDeltaY;
-    PrintXY (StartLineX, PosY+LineDeltaY*0, &White, &Black, L"ESC   to enter Setup.");
-    PrintXY (StartLineX, PosY+LineDeltaY*1, &White, &Black, L"F11   to enter Boot Manager Menu.");
-    PrintXY (StartLineX, PosY+LineDeltaY*2, &White, &Black, L"Enter to continue boot.");
+
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"ESC   to enter Setup.");
+    LineCount++;
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"F11   to enter Boot Manager Menu.");
+    LineCount++;
+    if (ShellHotkeySupported) {
+      PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"%c     to enter Shell.", PcdGet16 (PcdShellHotkey));
+      LineCount++;
+    }
+
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"Enter to continue boot.");
+    LineCount++;
   }
 
   //
@@ -1231,6 +1280,10 @@ DisplaySystemAndHotkeyInformation (
 
   Print (L"ESC   to enter Setup.\n");
   Print (L"F11   to enter Boot Manager Menu.\n");
+  if (ShellHotkeySupported) {
+    Print (L"%c     to enter Shell.\n", PcdGet16 (PcdShellHotkey));
+  }
+
   Print (L"Enter to continue boot.\n");
 }
 
@@ -1667,9 +1720,7 @@ CheckUefiShellLoadOption (
   EFI_STATUS                    Status;
   NVIDIA_UEFI_SHELL_ENABLED     UefiShell;
   UINTN                         VariableSize;
-  EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
-  UINTN                         NvBootOptionCount;
-  UINTN                         Index;
+  EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
 
   //
   // Get Embedded UEFI Shell Setup Option
@@ -1683,29 +1734,21 @@ CheckUefiShellLoadOption (
                         (VOID *)&UefiShell
                         );
   if ((EFI_ERROR (Status) || UefiShell.Enabled) && (PcdGet8 (PcdUefiShellEnabled))) {
-    *UefiShellEnabled = 1;
+    *UefiShellEnabled = TRUE;
     return;
   }
 
   //
   // Remove Embedded UEFI Shell Setup Option
   //
-  *UefiShellEnabled = 0;
-  NvBootOptions     = EfiBootManagerGetLoadOptions (
-                        &NvBootOptionCount,
-                        LoadOptionTypeBoot
-                        );
-
-  for (Index = 0; Index < NvBootOptionCount; Index++) {
-    if (StrCmp (NvBootOptions[Index].Description, L"UEFI Shell") == 0) {
-      EfiBootManagerDeleteLoadOptionVariable (
-        NvBootOptions[Index].OptionNumber,
-        LoadOptionTypeBoot
-        );
-    }
+  *UefiShellEnabled = FALSE;
+  Status            = EfiBootManagerGetStaticApp (&BootOption, &gUefiShellFileGuid);
+  if (!EFI_ERROR (Status)) {
+    EfiBootManagerDeleteLoadOptionVariable (
+      BootOption.OptionNumber,
+      LoadOptionTypeBoot
+      );
   }
-
-  EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionCount);
 }
 
 /**
@@ -1891,10 +1934,12 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  EFI_HANDLE  BdsHandle = NULL;
-  BOOLEAN     UefiShellEnabled;
-  BOOLEAN     PlatformReconfigured = FALSE;
+  EFI_STATUS                    Status;
+  EFI_HANDLE                    BdsHandle = NULL;
+  BOOLEAN                       UefiShellEnabled;
+  BOOLEAN                       PlatformReconfigured = FALSE;
+  EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
+  EFI_INPUT_KEY                 ShellKey;
 
   if (FeaturePcdGet (PcdMemoryTestsSupported)) {
     // Attempt to delete variable to prevent forced allocation at targeted address.
@@ -2007,6 +2052,20 @@ PlatformBootManagerBeforeConsole (
           LOAD_OPTION_ACTIVE,
           LoadOptionTypeBoot
           );
+        Status = EfiBootManagerGetStaticApp (&BootOption, &gUefiShellFileGuid);
+        if (!EFI_ERROR (Status)) {
+          ShellKey.ScanCode    = SCAN_NULL;
+          ShellKey.UnicodeChar = PcdGet16 (PcdShellHotkey);
+          if (ShellKey.UnicodeChar != CHAR_NULL) {
+            EfiBootManagerAddKeyOptionVariable (
+              NULL,
+              (UINT16)BootOption.OptionNumber,
+              0,
+              &ShellKey,
+              NULL
+              );
+          }
+        }
       }
 
       //

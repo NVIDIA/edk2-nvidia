@@ -77,4 +77,13 @@ BmGetBootDescription (
   IN EFI_HANDLE  Handle
   );
 
+/**
+  Checks if the UEFI shell should be enabled or not based on the platform.
+ */
+VOID
+EFIAPI
+CheckUefiShellLoadOption (
+  OUT BOOLEAN  *UefiShellEnabled
+  );
+
 #endif // _PLATFORM_BM_H_

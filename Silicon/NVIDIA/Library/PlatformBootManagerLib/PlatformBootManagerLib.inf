@@ -79,6 +79,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultStopBits
   gEfiMdePkgTokenSpaceGuid.PcdDefaultTerminalType
   gNVIDIATokenSpaceGuid.PcdTegraPrintInternalBanner
+  gNVIDIATokenSpaceGuid.PcdShellHotkey
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString

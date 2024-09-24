@@ -848,3 +848,6 @@
 
 #Expose RTC I2C to OS
   gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs|FALSE|BOOLEAN|0x0000012E
+
+#Key to enter shell via hotkey, this is case sensitive. Disable by setting to 0.
+  gNVIDIATokenSpaceGuid.PcdShellHotkey|'s'|UINT16|0x00000130
