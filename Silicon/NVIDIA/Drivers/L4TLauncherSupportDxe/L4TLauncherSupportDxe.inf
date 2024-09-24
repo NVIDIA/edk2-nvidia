@@ -1,0 +1,39 @@
+#/** @file
+#
+# L4T Launcher Support DXE driver
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = L4TLauncherSupportDxe
+  FILE_GUID                 = 0aca65fb-0b32-47aa-b991-e75d53e81576
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = L4TLauncherSupportDxeEntryPoint
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Sources]
+  L4TLauncherSupportDxe.c
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  TegraDeviceTreeKernelOverlayLib
+  PlatformBootOrderLib
+  PlatformResourceLib
+
+[Protocols]
+  gNVIDIAL4TLauncherSupportProtocol  ## PRODUCES
+
+[Depex]
+  TRUE

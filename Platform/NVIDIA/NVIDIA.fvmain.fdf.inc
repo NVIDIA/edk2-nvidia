@@ -780,6 +780,9 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_SINGLE_BOOT_L4T_LAUNCHER
   INF Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
 !endif
+!ifdef CONFIG_L4T
+  INF Silicon/NVIDIA/Drivers/L4TLauncherSupportDxe/L4TLauncherSupportDxe.inf
+!endif
 
   # WFI App
 !ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
