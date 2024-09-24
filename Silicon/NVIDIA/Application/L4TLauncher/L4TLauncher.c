@@ -40,11 +40,37 @@
 
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
-#include <Library/PlatformBootOrderLib.h>
-#include <Library/ResetSystemLib.h>
-#include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
+
+L4T_LAUNCHER_SUPPORT_PROTOCOL  *gL4TSupportProtocol;
+
+STATIC ImageEncryptionInfo  EncryptionInfo;
+
+STATIC VOID   *mRamdiskData = NULL;
+STATIC UINTN  mRamdiskSize  = 0;
+
+typedef struct {
+  VENDOR_DEVICE_PATH          VendorMediaNode;
+  EFI_DEVICE_PATH_PROTOCOL    EndNode;
+} RAMDISK_DEVICE_PATH;
+
+STATIC CONST RAMDISK_DEVICE_PATH  mRamdiskDevicePath =
+{
+  {
+    {
+      MEDIA_DEVICE_PATH,
+      MEDIA_VENDOR_DP,
+      { sizeof (VENDOR_DEVICE_PATH),       0 }
+    },
+    LINUX_EFI_INITRD_MEDIA_GUID
+  },
+  {
+    END_DEVICE_PATH_TYPE,
+    END_ENTIRE_DEVICE_PATH_SUBTYPE,
+    { sizeof (EFI_DEVICE_PATH_PROTOCOL), 0 }
+  }
+};
 
 /**
   Causes the driver to load a specified file.
@@ -1540,7 +1566,7 @@ ExtLinuxBoot (
           goto Exit;
         }
 
-        Status = ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
+        Status = gL4TSupportProtocol->ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
         if (EFI_ERROR (Status)) {
           goto Exit;
         }
@@ -2371,7 +2397,7 @@ GetDeviceHandleForFvBoot (
       continue;
     }
 
-    Status = GetBootDeviceClass (DevicePath, &DeviceClass);
+    Status = gL4TSupportProtocol->GetBootDeviceClass (DevicePath, &DeviceClass);
     if (EFI_ERROR (Status)) {
       continue;
     }
@@ -2437,6 +2463,12 @@ L4TLauncher (
   Status = gBS->HandleProtocol (ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID **)&LoadedImage);
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"%a: Unable to locate loaded image: %r\r\n", __FUNCTION__, Status);
+    return Status;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Unable to locate L4T Support protocol: %r\r\n", __FUNCTION__, Status);
     return Status;
   }
 
@@ -2563,7 +2595,7 @@ L4TLauncher (
       ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
       // Warm reset if there is valid rootfs
       if (IsValidRootfs ()) {
-        ResetCold ();
+        gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
       }
     }
   } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {

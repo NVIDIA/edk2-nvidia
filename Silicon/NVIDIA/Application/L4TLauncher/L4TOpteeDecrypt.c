@@ -1,7 +1,7 @@
 /** @file
   UEFI payloads decryption Library
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,14 +12,12 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/HandleParsingLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Library/PrintLib.h>
 #include <Library/OpteeNvLib.h>
 #include <Library/FileHandleLib.h>
 #include <libfdt_env.h>
-#include <Protocol/BlockIo.h>
-#include <Protocol/DiskIo.h>
 #include "L4TOpteeDecrypt.h"
+#include "L4TLauncher.h"
 
 /*
  *
@@ -115,7 +113,7 @@ GetImageEncryptionInfo (
   OPTEE_OPEN_SESSION_ARG  OpenSessionArg;
   EFI_GUID                CPD_TA_UUID   = TA_CPUBL_PAYLOAD_DECRYPTION_UUID;
   OPTEE_SESSION           *OpteeSession = NULL;
-  UINTN                   ChipID;
+  UINTN                   HeaderSize;
 
   if (!IsOpteePresent ()) {
     ErrorPrint (L"%a: optee is not present\r\n", __FUNCTION__);
@@ -191,13 +189,22 @@ GetImageEncryptionInfo (
   if (MessageArg->Params[1].Union.Value.A == 1) {
     Info->ImageEncrypted = TRUE;
 
-    ChipID = TegraGetChipID ();
-    if (ChipID == T194_CHIP_ID) {
+    Status = gL4TSupportProtocol->GetBootComponentHeaderSize (&HeaderSize);
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"%a: Failed to get boot component header size %r\r\n", __FUNCTION__, Status);
+      goto CloseSession;
+    }
+
+    if (HeaderSize == SIZE_4KB) {
       Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_4K;
       Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_4K_BCH;
-    } else {
+    } else if (HeaderSize == SIZE_8KB) {
       Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_8K;
       Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_8K_BCH;
+    } else {
+      ErrorPrint (L"%a: Unsupported boot component header size %u\r\n", __FUNCTION__, HeaderSize);
+      Status = EFI_UNSUPPORTED;
+      goto CloseSession;
     }
   }
 

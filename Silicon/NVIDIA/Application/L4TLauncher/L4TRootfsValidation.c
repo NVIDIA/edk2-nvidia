@@ -2,7 +2,7 @@
 
   Rootfs Validation Library
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,6 +20,7 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <NVIDIAConfiguration.h>
 #include "L4TRootfsValidation.h"
+#include "L4TLauncher.h"
 
 L4T_RF_AB_PARAM  mRootfsInfo = { 0 };
 
@@ -241,7 +242,7 @@ InitializeRootfsStatusReg (
   UINT32      MaxRetryCount;
   UINT32      RootfsStatus;
 
-  Status = GetRootfsStatusReg (&RegisterValue);
+  Status = gL4TSupportProtocol->GetRootfsStatusReg (&RegisterValue);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -286,7 +287,7 @@ InitializeRootfsStatusReg (
   RegisterValue = SR_RF_RETRY_COUNT_B_SET (RetryCount, RegisterValue);
 
   // Write Rootfs Status register
-  Status = SetRootfsStatusReg (RegisterValue);
+  Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValue);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -691,7 +692,7 @@ ValidateRootfsStatus (
     // Clear the SR_RF when boot to recovery kernel.
     // Slot status can be set to normal via UEFI menu in next boot
     // or via OTA.
-    Status = SetRootfsStatusReg (0x0);
+    Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -845,7 +846,7 @@ Exit:
       return Status;
     }
 
-    Status = SetRootfsStatusReg (RegisterValueRf);
+    Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValueRf);
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -874,7 +875,7 @@ Exit:
     // Trigger a reset to switch the BootChain if the UpdateFlag of BootChainFwNext is 1
     if (mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag) {
       // Clear the rootfs status register before issuing a reset
-      Status = SetRootfsStatusReg (0x0);
+      Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
       if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,
@@ -891,7 +892,7 @@ Exit:
       Print (L"Switching the bootchain. Resetting the system in 2 seconds.\r\n");
       MicroSecondDelay (2 * DELAY_SECOND);
 
-      ResetCold ();
+      gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
     }
   }
 

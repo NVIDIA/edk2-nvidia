@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,6 +9,8 @@
 #ifndef __L4T_LAUNCHER_H_
 #define __L4T_LAUNCHER_H_
 #include "L4TOpteeDecrypt.h"
+
+#include <Protocol/L4TLauncherSupportProtocol.h>
 
 #define GRUB_PATH                       L"EFI\\BOOT\\grubaa64.efi"
 #define GRUB_BOOTCONFIG_FILE            L"EFI\\BOOT\\boot.cfg"
@@ -70,31 +72,6 @@ typedef struct {
   UINT32                  Timeout;
 } EXTLINUX_BOOT_CONFIG;
 
-STATIC ImageEncryptionInfo  EncryptionInfo;
-
-STATIC VOID   *mRamdiskData = NULL;
-STATIC UINTN  mRamdiskSize  = 0;
-
-typedef struct {
-  VENDOR_DEVICE_PATH          VendorMediaNode;
-  EFI_DEVICE_PATH_PROTOCOL    EndNode;
-} RAMDISK_DEVICE_PATH;
-
-STATIC CONST RAMDISK_DEVICE_PATH  mRamdiskDevicePath =
-{
-  {
-    {
-      MEDIA_DEVICE_PATH,
-      MEDIA_VENDOR_DP,
-      { sizeof (VENDOR_DEVICE_PATH),       0 }
-    },
-    LINUX_EFI_INITRD_MEDIA_GUID
-  },
-  {
-    END_DEVICE_PATH_TYPE,
-    END_ENTIRE_DEVICE_PATH_SUBTYPE,
-    { sizeof (EFI_DEVICE_PATH_PROTOCOL), 0 }
-  }
-};
+extern L4T_LAUNCHER_SUPPORT_PROTOCOL  *gL4TSupportProtocol;
 
 #endif /* __L4T_LAUNCHER_H_ */

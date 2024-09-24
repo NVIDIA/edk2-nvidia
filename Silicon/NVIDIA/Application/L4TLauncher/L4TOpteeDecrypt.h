@@ -1,7 +1,7 @@
 /** @file
   The API and structures for UEFI payloads decryption.
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,6 +9,9 @@
 
 #ifndef L4T_OPTEE_DECRYPT_H_
 #define L4T_OPTEE_DECRYPT_H_
+
+#include <Protocol/BlockIo.h>
+#include <Protocol/DiskIo.h>
 
 #include <Library/OpteeNvLib.h>
 
