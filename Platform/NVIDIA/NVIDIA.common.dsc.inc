@@ -537,6 +537,8 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   # UiApp dependencies
   FileExplorerLib|MdeModulePkg/Library/FileExplorerLib/FileExplorerLib.inf
   DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
+  DebugLib|MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
+
 
 !if $(TARGET) != RELEASE
   UnitTestResultReportLib|UnitTestFrameworkPkg/Library/UnitTestResultReportLib/UnitTestResultReportLibConOut.inf
@@ -2314,10 +2316,10 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   #
   # L4T launcher
   #
-  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf {
-    <LibraryClasses>
-      DebugLib|MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
-  }
+!ifdef CONFIG_L4T
+  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
+  Silicon/NVIDIA/Drivers/L4TLauncherSupportDxe/L4TLauncherSupportDxe.inf
+!endif
 
   # WFI App
 !ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP

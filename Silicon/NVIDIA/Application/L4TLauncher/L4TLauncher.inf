@@ -43,16 +43,13 @@
   UefiRuntimeServicesTableLib
   AndroidBootImgLib
   SecureBootVariableLib
-  TegraDeviceTreeKernelOverlayLib
-  ResetSystemLib
-  TimerLib
   OpteeNvLib
-  PlatformBootOrderLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gFdtTableGuid
   gEfiSecureBootEnableDisableGuid
+  gNVIDIATokenSpaceGuid
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
@@ -63,6 +60,7 @@
   gEfiDiskIoProtocolGuid
   gEfiLoadFile2ProtocolGuid
   gEfiPkcs7VerifyProtocolGuid
+  gNVIDIAL4TLauncherSupportProtocol
 
 [UserExtensions.TianoCore."ExtraFiles"]
   L4TLauncherExtra.uni
