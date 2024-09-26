@@ -939,6 +939,47 @@
 #define KEY_MPAM43_MIN_BW        0x230D
 #define KEY_MPAM44_MIN_BW        0x230E
 
+#define KEY_SOCKET0_PCIE0_DISABLE_L23_AT_WARM_RESET  0x2401
+#define KEY_SOCKET0_PCIE1_DISABLE_L23_AT_WARM_RESET  0x2402
+#define KEY_SOCKET0_PCIE2_DISABLE_L23_AT_WARM_RESET  0x2403
+#define KEY_SOCKET0_PCIE3_DISABLE_L23_AT_WARM_RESET  0x2404
+#define KEY_SOCKET0_PCIE4_DISABLE_L23_AT_WARM_RESET  0x2405
+#define KEY_SOCKET0_PCIE5_DISABLE_L23_AT_WARM_RESET  0x2406
+#define KEY_SOCKET0_PCIE6_DISABLE_L23_AT_WARM_RESET  0x2407
+#define KEY_SOCKET0_PCIE7_DISABLE_L23_AT_WARM_RESET  0x2408
+#define KEY_SOCKET0_PCIE8_DISABLE_L23_AT_WARM_RESET  0x2409
+#define KEY_SOCKET0_PCIE9_DISABLE_L23_AT_WARM_RESET  0x240A
+#define KEY_SOCKET1_PCIE0_DISABLE_L23_AT_WARM_RESET  0x240B
+#define KEY_SOCKET1_PCIE1_DISABLE_L23_AT_WARM_RESET  0x240C
+#define KEY_SOCKET1_PCIE2_DISABLE_L23_AT_WARM_RESET  0x240D
+#define KEY_SOCKET1_PCIE3_DISABLE_L23_AT_WARM_RESET  0x240E
+#define KEY_SOCKET1_PCIE4_DISABLE_L23_AT_WARM_RESET  0x240F
+#define KEY_SOCKET1_PCIE5_DISABLE_L23_AT_WARM_RESET  0x2410
+#define KEY_SOCKET1_PCIE6_DISABLE_L23_AT_WARM_RESET  0x2411
+#define KEY_SOCKET1_PCIE7_DISABLE_L23_AT_WARM_RESET  0x2412
+#define KEY_SOCKET1_PCIE8_DISABLE_L23_AT_WARM_RESET  0x2413
+#define KEY_SOCKET1_PCIE9_DISABLE_L23_AT_WARM_RESET  0x2414
+#define KEY_SOCKET2_PCIE0_DISABLE_L23_AT_WARM_RESET  0x2415
+#define KEY_SOCKET2_PCIE1_DISABLE_L23_AT_WARM_RESET  0x2416
+#define KEY_SOCKET2_PCIE2_DISABLE_L23_AT_WARM_RESET  0x2417
+#define KEY_SOCKET2_PCIE3_DISABLE_L23_AT_WARM_RESET  0x2418
+#define KEY_SOCKET2_PCIE4_DISABLE_L23_AT_WARM_RESET  0x2419
+#define KEY_SOCKET2_PCIE5_DISABLE_L23_AT_WARM_RESET  0x241A
+#define KEY_SOCKET2_PCIE6_DISABLE_L23_AT_WARM_RESET  0x241B
+#define KEY_SOCKET2_PCIE7_DISABLE_L23_AT_WARM_RESET  0x241C
+#define KEY_SOCKET2_PCIE8_DISABLE_L23_AT_WARM_RESET  0x241D
+#define KEY_SOCKET2_PCIE9_DISABLE_L23_AT_WARM_RESET  0x241E
+#define KEY_SOCKET3_PCIE0_DISABLE_L23_AT_WARM_RESET  0x241F
+#define KEY_SOCKET3_PCIE1_DISABLE_L23_AT_WARM_RESET  0x2420
+#define KEY_SOCKET3_PCIE2_DISABLE_L23_AT_WARM_RESET  0x2421
+#define KEY_SOCKET3_PCIE3_DISABLE_L23_AT_WARM_RESET  0x2422
+#define KEY_SOCKET3_PCIE4_DISABLE_L23_AT_WARM_RESET  0x2423
+#define KEY_SOCKET3_PCIE5_DISABLE_L23_AT_WARM_RESET  0x2424
+#define KEY_SOCKET3_PCIE6_DISABLE_L23_AT_WARM_RESET  0x2425
+#define KEY_SOCKET3_PCIE7_DISABLE_L23_AT_WARM_RESET  0x2426
+#define KEY_SOCKET3_PCIE8_DISABLE_L23_AT_WARM_RESET  0x2427
+#define KEY_SOCKET3_PCIE9_DISABLE_L23_AT_WARM_RESET  0x2428
+
 #define LABEL_DBG2_PCIE_DEVICE_START  0x3000
 #define LABEL_DBG2_PCIE_DEVICE_END    0x3001
 #define MAX_DBG2_STRING_LENGTH        128
@@ -1019,6 +1060,7 @@ typedef struct {
   BOOLEAN    PCIePRSNTConfigSupported;
   BOOLEAN    PCIeACSConfigSupported;
   BOOLEAN    PCIeOSNativeAERSupported;
+  BOOLEAN    PCIeDisableL23AtWarmResetSupported;
   BOOLEAN    MemoryTestsSupported;
   BOOLEAN    ActiveCoresSettingSupported;
   BOOLEAN    ServerPwrCtlSettingSupported;
@@ -1132,6 +1174,10 @@ typedef struct {
   UINT16     CporWayMask[MAX_MPAM_PARTID];
   UINT8      MaxBw[MAX_MPAM_PARTID];
   UINT8      MinBw[MAX_MPAM_PARTID];
+  BOOLEAN    DisableL23AtWarmReset_0[MAX_PCIE];
+  BOOLEAN    DisableL23AtWarmReset_1[MAX_PCIE];
+  BOOLEAN    DisableL23AtWarmReset_2[MAX_PCIE];
+  BOOLEAN    DisableL23AtWarmReset_3[MAX_PCIE];
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
@@ -1407,6 +1453,14 @@ typedef struct {
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_OS_NATIVE_AER,                          \
            prompt = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_SOCKET##socket##_PCIE##pcie##_TITLE),     \
            help = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_HELP),                                      \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
+  endif;                                                                                          \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeDisableL23AtWarmResetSupported == 0;           \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableL23AtWarmReset_##socket[pcie],                \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_DISABLE_L23_AT_WARM_RESET,              \
+           prompt = STRING_TOKEN(STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET##socket##_PCIE##pcie##_TITLE), \
+           help = STRING_TOKEN(STR_PCIE_DISABLE_L23_AT_WARM_RESET_HELP),                          \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
   endif;                                                                                          \
