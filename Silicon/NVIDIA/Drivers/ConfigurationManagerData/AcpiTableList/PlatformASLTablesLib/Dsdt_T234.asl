@@ -42,6 +42,7 @@ DefinitionBlock ("dsdt_t234.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       Name (_HID, "NVDA200A")
       Name (_UID, 0)
       Name (_CCA, ONE)
+      Name (_HRV, 0x2340)
 
       Name (_CRS, ResourceTemplate() {
               Memory32Fixed(ReadWrite, 0x15880000, 0x40000)
@@ -56,6 +57,7 @@ DefinitionBlock ("dsdt_t234.aml", "DSDT", 2, "NVIDIA", "TEGRA234", 0x00000001)
       Name (_HID, "NVDA200A")
       Name (_UID, 1)
       Name (_CCA, ONE)
+      Name (_HRV, 0x2340)
 
       Name (_CRS, ResourceTemplate() {
               Memory32Fixed(ReadWrite, 0x158c0000, 0x40000)
