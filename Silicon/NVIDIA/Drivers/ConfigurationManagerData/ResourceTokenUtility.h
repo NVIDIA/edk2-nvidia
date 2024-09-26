@@ -9,6 +9,7 @@
 #ifndef RESOURCE_TOKEN_UTILITY_H_
 #define RESOURCE_TOKEN_UTILITY_H_
 
+#include <ArchCommonNameSpaceObjects.h>
 #include <ArmNameSpaceObjects.h>
 #include <Library/HwInfoParserLib.h>
 

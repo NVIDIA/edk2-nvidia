@@ -115,10 +115,10 @@ NvAddSingleCmObj (
   NV_ASSERT_RETURN ((Data != NULL) || (Size == 0), return EFI_INVALID_PARAMETER, "%a: Data is NULL while Size is not\n", __FUNCTION__);
 
   CmObjDesc.ObjectId = ObjectId;
-  // Special case EArmObjCmRef, since it is a list of CM references
+  // Special case EArchCommonObjCmRef, since it is a list of CM references
   // that has multi-count, but should only have a single Token
-  if (ObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef)) {
-    CmObjDesc.Count = Size/sizeof (CM_ARM_OBJ_REF);
+  if (ObjectId == CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef)) {
+    CmObjDesc.Count = Size/sizeof (CM_ARCH_COMMON_OBJ_REF);
   } else {
     CmObjDesc.Count = 1;
   }
@@ -221,12 +221,12 @@ NvAddMultipleCmObjWithTokens (
 
 /** Add multiple CmObj to the Configuration Manager.
 
-  Get one token referencing a EArmObjCmRef CmObj itself referencing
+  Get one token referencing a EArchCommonObjCmRef CmObj itself referencing
   the input CmObj. In the table below, RefToken is returned. Use the
   provided ElementTokenMap as the tokens for the objects, if not NULL.
 
   Token referencing an      Array of tokens             Array of CmObj
-  array of EArmObjCmRef     referencing each            from the input:
+  array of EArchCommonObjCmRef     referencing each            from the input:
   CmObj:                    CmObj from the input:
 
   RefToken         --->     CmObjToken[0]        --->   CmObj[0]
@@ -238,7 +238,7 @@ NvAddMultipleCmObjWithTokens (
                                   to add.
   @param  [in]  ElementTokenMap   The ElementTokenMap for the objects, or NULL
   @param  [out] Token             If success, token referencing an array
-                                  of EArmObjCmRef CmObj, themselves
+                                  of EArchCommonObjCmRef CmObj, themselves
                                   referencing the input CmObjs.
 
   @retval EFI_SUCCESS             The function completed successfully.
@@ -283,7 +283,7 @@ NvAddMultipleCmObjWithCmObjRef (
 
   NV_ASSERT_EFI_ERROR_RETURN (Status, return Status);
 
-  CmObjRef.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+  CmObjRef.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef);
   CmObjRef.Data     = LocalElementTokenMap;
   CmObjRef.Count    = CmObjDesc->Count;
   CmObjRef.Size     = CmObjDesc->Count * sizeof (CM_OBJECT_TOKEN);
@@ -710,11 +710,11 @@ NvFindCacheIdByPhandle (
   OUT       UINT32                 *CacheId
   )
 {
-  EFI_STATUS               Status;
-  CONST CACHE_NODE         *Node;
-  CM_OBJ_DESCRIPTOR        *Desc;
-  CONST CM_ARM_CACHE_INFO  *CacheInfo;
-  UINT32                   Index;
+  EFI_STATUS                       Status;
+  CONST CACHE_NODE                 *Node;
+  CM_OBJ_DESCRIPTOR                *Desc;
+  CONST CM_ARCH_COMMON_CACHE_INFO  *CacheInfo;
+  UINT32                           Index;
 
   NV_ASSERT_RETURN (ParserHandle != NULL, return EFI_INVALID_PARAMETER, "%a: ParserHandle pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (CacheId != NULL, return EFI_INVALID_PARAMETER, "%a: CacheId pointer is NULL\n", __FUNCTION__);
@@ -725,7 +725,7 @@ NvFindCacheIdByPhandle (
     return Status;
   }
 
-  Status = NvFindEntry (ParserHandle, CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo), Node->Token, &Desc);
+  Status = NvFindEntry (ParserHandle, CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCacheInfo), Node->Token, &Desc);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the CacheInfo for pHandle 0x%x (Token 0x%x)\n", __FUNCTION__, Status, pHandle, Node->Token));
     return Status;
@@ -733,7 +733,7 @@ NvFindCacheIdByPhandle (
 
   // Locate the Element that matches the Node->Token
   for (Index = 0; Index < Desc->Count; Index++) {
-    CacheInfo = &((CONST CM_ARM_CACHE_INFO *)(Desc->Data))[Index];
+    CacheInfo = &((CONST CM_ARCH_COMMON_CACHE_INFO *)(Desc->Data))[Index];
 
     if (CacheInfo->Token == Node->Token) {
       *CacheId = CacheInfo->CacheId;

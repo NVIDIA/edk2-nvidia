@@ -18,7 +18,7 @@
     // This is the Preferred_PM_Profile field of the FADT Table
     // described in the ACPI Specification
     UINT8    PowerManagementProfile;      // {Populated}
-  } CM_ARM_POWER_MANAGEMENT_PROFILE_INFO;
+  } CM_ARCH_COMMON_POWER_MANAGEMENT_PROFILE_INFO;
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

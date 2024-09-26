@@ -23,7 +23,6 @@
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/TegraCpuFreq.h>
-#include <ArmNameSpaceObjects.h>
 #include <libfdt.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
@@ -535,7 +534,7 @@ EFI_STATUS
 TegraCpuFreqGetCpcInfo (
   IN NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *This,
   IN UINT64                          Mpidr,
-  IN CM_ARM_CPC_INFO                 *CpcInfo
+  IN CM_ARCH_COMMON_CPC_INFO         *CpcInfo
   )
 {
   EFI_STATUS                     Status;

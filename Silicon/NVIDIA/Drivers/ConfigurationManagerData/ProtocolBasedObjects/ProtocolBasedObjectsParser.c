@@ -89,9 +89,9 @@ ProtocolBasedObjectsParser (
       if (InputToken != CM_NULL_TOKEN) {
         // Add the object to the Repo using the provided token/token map
         if (Desc.Count > 1) {
-          if (Desc.ObjectId != CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef)) {
+          if (Desc.ObjectId != CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef)) {
             // Token is the token for the TokenMap, so need to retrieve it
-            Status = NvFindEntry (ParserHandle, CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef), InputToken, &TokenMapDesc);
+            Status = NvFindEntry (ParserHandle, CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef), InputToken, &TokenMapDesc);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find token 0x%x, used to map the items for ObjectId 0x%x\n", __FUNCTION__, Status, InputToken, Desc.ObjectId));
               goto CleanupAndReturn;

@@ -26,12 +26,12 @@ Tpm2Parser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                  Status;
-  CM_STD_OBJ_ACPI_TABLE_INFO  AcpiTableHeader;
-  EFI_TCG2_PROTOCOL           *Tcg2Protocol;
-  CM_ARM_TPM2_INTERFACE_INFO  *TpmInfo;
-  UINT8                       Tpm2TableRev;
-  UINT8                       TpmInterfaceType;
+  EFI_STATUS                          Status;
+  CM_STD_OBJ_ACPI_TABLE_INFO          AcpiTableHeader;
+  EFI_TCG2_PROTOCOL                   *Tcg2Protocol;
+  CM_ARCH_COMMON_TPM2_INTERFACE_INFO  *TpmInfo;
+  UINT8                               Tpm2TableRev;
+  UINT8                               TpmInterfaceType;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -54,7 +54,7 @@ Tpm2Parser (
   //
   // Allocate and zero out TPM2 Interface Info
   //
-  TpmInfo = AllocateZeroPool (sizeof (CM_ARM_TPM2_INTERFACE_INFO));
+  TpmInfo = AllocateZeroPool (sizeof (CM_ARCH_COMMON_TPM2_INTERFACE_INFO));
   if (TpmInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate TPM2 interface info.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
@@ -86,9 +86,9 @@ Tpm2Parser (
   //
   Status = NvAddSingleCmObj (
              ParserHandle,
-             CREATE_CM_ARM_OBJECT_ID (EArmObjTpm2InterfaceInfo),
+             CREATE_CM_ARM_OBJECT_ID (EArchCommonObjTpm2InterfaceInfo),
              TpmInfo,
-             sizeof (CM_ARM_TPM2_INTERFACE_INFO),
+             sizeof (CM_ARCH_COMMON_TPM2_INTERFACE_INFO),
              NULL
              );
   ASSERT_EFI_ERROR (Status);

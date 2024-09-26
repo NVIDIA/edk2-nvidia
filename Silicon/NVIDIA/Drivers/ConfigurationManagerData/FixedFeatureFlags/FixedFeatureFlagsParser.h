@@ -17,7 +17,7 @@
   typedef struct CmArmFixedFeatureFlags {
     /// The Fixed feature flags
     UINT32    Flags;                    // {Populated}
-  } CM_ARM_FIXED_FEATURE_FLAGS;
+  } CM_ARCH_COMMON_FIXED_FEATURE_FLAGS;
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

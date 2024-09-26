@@ -605,22 +605,22 @@ DeviceDiscoveryNotify (
       TokenMap = NULL;
 
       Index                                  = 0;
-      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef);
       Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.InterruptMapToken;
-      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * PCIE_NUMBER_OF_INTERRUPT_MAP;
+      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARCH_COMMON_OBJ_REF) * PCIE_NUMBER_OF_INTERRUPT_MAP;
       Private->RepoInfo[Index].CmObjectCount = PCIE_NUMBER_OF_INTERRUPT_MAP;
       Private->RepoInfo[Index].CmObjectPtr   = Private->InterruptRefInfo;
       Index++;
 
-      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef);
+      Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef);
       Private->RepoInfo[Index].CmObjectToken = Private->ConfigSpaceInfo.AddressMapToken;
-      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARM_OBJ_REF) * Private->AddressMapCount;
+      Private->RepoInfo[Index].CmObjectSize  = sizeof (CM_ARCH_COMMON_OBJ_REF) * Private->AddressMapCount;
       Private->RepoInfo[Index].CmObjectCount = Private->AddressMapCount;
       Private->RepoInfo[Index].CmObjectPtr   = Private->AddressMapRefInfo;
       Index++;
 
       for (Index2 = 0; Index2 < PCIE_NUMBER_OF_MAPPING_SPACE; Index2++) {
-        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciAddressMapInfo);
+        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPciAddressMapInfo);
         Private->RepoInfo[Index].CmObjectToken = Private->AddressMapRefInfo[Index2].ReferenceToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->AddressMapInfo[Index2]);
         Private->RepoInfo[Index].CmObjectCount = 1;
@@ -629,7 +629,7 @@ DeviceDiscoveryNotify (
       }
 
       for (Index2 = 0; Index2 < PCIE_NUMBER_OF_INTERRUPT_MAP; Index2++) {
-        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARM_OBJECT_ID (EArmObjPciInterruptMapInfo);
+        Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPciInterruptMapInfo);
         Private->RepoInfo[Index].CmObjectToken = Private->InterruptRefInfo[Index2].ReferenceToken;
         Private->RepoInfo[Index].CmObjectSize  = sizeof (Private->InterruptMapInfo[Index2]);
         Private->RepoInfo[Index].CmObjectCount = 1;

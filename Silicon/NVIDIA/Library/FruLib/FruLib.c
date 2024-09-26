@@ -1,13 +1,14 @@
 /** @file
   This file defines the various areas in the FRU and their common format.
 
-  Copyright (c) 2022 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2003 - 2022 Sun Microsystems, Inc.  All Rights Reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Uefi.h>
+#include <ArchCommonNameSpaceObjects.h>
 #include <ArmNameSpaceObjects.h>
 #include <Guid/GlobalVariable.h>
 #include <Library/BaseLib.h>

@@ -68,7 +68,7 @@ GicCpcParser (
 {
   EFI_STATUS                      Status;
   NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *CpuFreq;
-  CM_ARM_CPC_INFO                 *CpcInfo;
+  CM_ARCH_COMMON_CPC_INFO         *CpcInfo;
   UINT64                          MpIdr;
   UINT32                          NumCores;
   UINT32                          CoreIndex;
@@ -83,7 +83,7 @@ GicCpcParser (
     goto CleanupAndReturn;
   }
 
-  CpcInfoSize = NumCores * sizeof (CM_ARM_CPC_INFO);
+  CpcInfoSize = NumCores * sizeof (CM_ARCH_COMMON_CPC_INFO);
   CpcInfo     = AllocatePool (CpcInfoSize);
   if (CpcInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CpcInfo structure array\r\n", __FUNCTION__));
@@ -107,7 +107,7 @@ GicCpcParser (
       }
     }
 
-    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCpcInfo);
+    Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCpcInfo);
     Desc.Size     = CpcInfoSize;
     Desc.Count    = NumCores;
     Desc.Data     = CpcInfo;
@@ -135,12 +135,12 @@ GicPsdParser (
   OUT CM_OBJECT_TOKEN              **TokenMapPtr OPTIONAL
   )
 {
-  EFI_STATUS         Status;
-  CM_ARM_PSD_INFO    *PsdInfo;
-  UINT32             NumCores;
-  UINT32             CoreIndex;
-  CM_OBJ_DESCRIPTOR  Desc;
-  UINT32             PsdInfoSize;
+  EFI_STATUS               Status;
+  CM_ARCH_COMMON_PSD_INFO  *PsdInfo;
+  UINT32                   NumCores;
+  UINT32                   CoreIndex;
+  CM_OBJ_DESCRIPTOR        Desc;
+  UINT32                   PsdInfoSize;
 
   PsdInfo = NULL;
 
@@ -150,7 +150,7 @@ GicPsdParser (
     goto CleanupAndReturn;
   }
 
-  PsdInfoSize = NumCores * sizeof (CM_ARM_PSD_INFO);
+  PsdInfoSize = NumCores * sizeof (CM_ARCH_COMMON_PSD_INFO);
   PsdInfo     = AllocatePool (PsdInfoSize);
   if (PsdInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate PsdInfo structure array\r\n", __FUNCTION__));
@@ -166,7 +166,7 @@ GicPsdParser (
     PsdInfo[CoreIndex].NumProc   = 1;
   }
 
-  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPsdInfo);
+  Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPsdInfo);
   Desc.Size     = PsdInfoSize;
   Desc.Count    = NumCores;
   Desc.Data     = PsdInfo;

@@ -36,9 +36,9 @@ CONST CHAR8  *ArmSerialPortCompatibility[] = {
 /** Serial port info parser function.
 
   The following structures are populated:
-  - EArmObjSerialDebugPortInfo
+  - EArchCommonObjSerialDebugPortInfo
   OR
-  - EArmObjSerialConsolePortInfo
+  - EArchCommonObjConsolePortInfo
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -66,7 +66,7 @@ SerialPortInfoParser (
 {
   EFI_STATUS                         Status;
   UINT32                             NumberOfSerialPorts;
-  CM_ARM_SERIAL_PORT_INFO            *SpcrSerialPort;
+  CM_ARCH_COMMON_SERIAL_PORT_INFO    *SpcrSerialPort;
   NVIDIA_DEVICE_TREE_REGISTER_DATA   RegisterData;
   NVIDIA_DEVICE_TREE_INTERRUPT_DATA  InterruptData;
   UINT32                             Index;
@@ -142,7 +142,7 @@ SerialPortInfoParser (
     goto CleanupAndReturn;
   }
 
-  SpcrSerialPort = (CM_ARM_SERIAL_PORT_INFO *)AllocateZeroPool (sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts);
+  SpcrSerialPort = (CM_ARCH_COMMON_SERIAL_PORT_INFO *)AllocateZeroPool (sizeof (CM_ARCH_COMMON_SERIAL_PORT_INFO) * NumberOfSerialPorts);
   if (SpcrSerialPort == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
@@ -213,12 +213,12 @@ SerialPortInfoParser (
   if ((SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) ||
       (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550))
   {
-    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialDebugPortInfo);
+    Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjSerialDebugPortInfo);
   } else {
-    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjSerialConsolePortInfo);
+    Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjConsolePortInfo);
   }
 
-  Desc.Size  = sizeof (CM_ARM_SERIAL_PORT_INFO) * NumberOfSerialPorts;
+  Desc.Size  = sizeof (CM_ARCH_COMMON_SERIAL_PORT_INFO) * NumberOfSerialPorts;
   Desc.Count = NumberOfSerialPorts;
   Desc.Data  = SpcrSerialPort;
 

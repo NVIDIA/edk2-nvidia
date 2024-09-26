@@ -18,7 +18,7 @@
     // This is the Preferred_PM_Profile field of the FADT Table
     // described in the ACPI Specification
     UINT8    PowerManagementProfile;      // {Populated}
-  } CM_ARM_POWER_MANAGEMENT_PROFILE_INFO;
+  } CM_ARCH_COMMON_POWER_MANAGEMENT_PROFILE_INFO;
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -44,8 +44,8 @@ PowerManagementProfileParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                            Status;
-  CM_ARM_POWER_MANAGEMENT_PROFILE_INFO  PmProfileInfo = {
+  EFI_STATUS                                    Status;
+  CM_ARCH_COMMON_POWER_MANAGEMENT_PROFILE_INFO  PmProfileInfo = {
     EFI_ACPI_6_4_PM_PROFILE_ENTERPRISE_SERVER
   };
 
@@ -57,7 +57,7 @@ PowerManagementProfileParser (
   // Add the CmObj to the Configuration Manager.
   Status = NvAddSingleCmObj (
              ParserHandle,
-             CREATE_CM_ARM_OBJECT_ID (EArmObjPowerManagementProfileInfo),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPowerManagementProfileInfo),
              &PmProfileInfo,
              sizeof (PmProfileInfo),
              NULL

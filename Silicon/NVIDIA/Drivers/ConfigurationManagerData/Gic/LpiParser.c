@@ -16,7 +16,7 @@
 
   The following structures are populated:
   - EArmObjLpiInfo
-  - EArmObjCmRef (LpiTokens)
+  - EArchCommonObjCmRef (LpiTokens)
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -48,18 +48,18 @@ LpiParser (
   CM_OBJ_DESCRIPTOR  LpiInfoDesc;
   UINTN              LpiInfoSize;
 
-  UINT32           Index;
-  UINT32           *CpuIdleHandles;
-  UINT32           NumberOfCpuIdles;
-  UINT32           NumberOfLpiStates;
-  CM_ARM_LPI_INFO  *LpiInfo;
-  VOID             *DeviceTreeBase;
-  INT32            NodeOffset;
-  CONST VOID       *Property;
-  UINT32           PropertyLen;
-  UINT32           WakeupLatencyUs;
-  UINT32           ExitLatencyUs;
-  UINT32           SuspendAddr;
+  UINT32                   Index;
+  UINT32                   *CpuIdleHandles;
+  UINT32                   NumberOfCpuIdles;
+  UINT32                   NumberOfLpiStates;
+  CM_ARCH_COMMON_LPI_INFO  *LpiInfo;
+  VOID                     *DeviceTreeBase;
+  INT32                    NodeOffset;
+  CONST VOID               *Property;
+  UINT32                   PropertyLen;
+  UINT32                   WakeupLatencyUs;
+  UINT32                   ExitLatencyUs;
+  UINT32                   SuspendAddr;
 
   CpuIdleHandles = NULL;
   LpiInfo        = NULL;
@@ -112,7 +112,7 @@ LpiParser (
     }
   }
 
-  LpiInfoSize = sizeof (CM_ARM_LPI_INFO) * (NumberOfCpuIdles + 1);       // 1 extra for WFI state
+  LpiInfoSize = sizeof (CM_ARCH_COMMON_LPI_INFO) * (NumberOfCpuIdles + 1);       // 1 extra for WFI state
   LpiInfo     = AllocateZeroPool (LpiInfoSize);
   if (LpiInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate array for lpi info\r\n", __FUNCTION__));
@@ -191,8 +191,8 @@ LpiParser (
     NumberOfLpiStates++;
   }
 
-  LpiInfoDesc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjLpiInfo);
-  LpiInfoDesc.Size     = sizeof (CM_ARM_LPI_INFO) * NumberOfLpiStates;
+  LpiInfoDesc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjLpiInfo);
+  LpiInfoDesc.Size     = sizeof (CM_ARCH_COMMON_LPI_INFO) * NumberOfLpiStates;
   LpiInfoDesc.Count    = NumberOfLpiStates;
   LpiInfoDesc.Data     = LpiInfo;
 

@@ -29,18 +29,18 @@ SratParser (
   IN        INT32                  FdtBranch
   )
 {
-  UINTN                         Socket;
-  EFI_STATUS                    Status;
-  CM_STD_OBJ_ACPI_TABLE_INFO    AcpiTableHeader;
-  CM_ARM_MEMORY_AFFINITY_INFO   *MemoryAffinityInfo;
-  UINTN                         MemoryAffinityInfoCount;
-  UINTN                         MemoryAffinityInfoIndex;
-  UINTN                         GpuMemoryAffinityId;
-  UINT8                         NumEnabledSockets;
-  UINT8                         NumGpuEnabledSockets;
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  CM_OBJ_DESCRIPTOR             Desc;
+  UINTN                                Socket;
+  EFI_STATUS                           Status;
+  CM_STD_OBJ_ACPI_TABLE_INFO           AcpiTableHeader;
+  CM_ARCH_COMMON_MEMORY_AFFINITY_INFO  *MemoryAffinityInfo;
+  UINTN                                MemoryAffinityInfoCount;
+  UINTN                                MemoryAffinityInfoIndex;
+  UINTN                                GpuMemoryAffinityId;
+  UINT8                                NumEnabledSockets;
+  UINT8                                NumGpuEnabledSockets;
+  VOID                                 *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO         *PlatformResourceInfo;
+  CM_OBJ_DESCRIPTOR                    Desc;
 
   // Get platform resource info
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -91,7 +91,7 @@ SratParser (
   // Increment to hold entries for GPU memory
   MemoryAffinityInfoCount += TH500_GPU_MAX_NR_MEM_PARTITIONS * NumGpuEnabledSockets;
 
-  MemoryAffinityInfo = (CM_ARM_MEMORY_AFFINITY_INFO *)AllocateZeroPool (sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
+  MemoryAffinityInfo = (CM_ARCH_COMMON_MEMORY_AFFINITY_INFO *)AllocateZeroPool (sizeof (CM_ARCH_COMMON_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount);
   if (MemoryAffinityInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory affinity info\r\n", __FUNCTION__));
     return EFI_DEVICE_ERROR;
@@ -133,8 +133,8 @@ SratParser (
 
   ASSERT (MemoryAffinityInfoIndex == MemoryAffinityInfoCount);
 
-  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjMemoryAffinityInfo);
-  Desc.Size     = sizeof (CM_ARM_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount;
+  Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjMemoryAffinityInfo);
+  Desc.Size     = sizeof (CM_ARCH_COMMON_MEMORY_AFFINITY_INFO) * MemoryAffinityInfoCount;
   Desc.Count    = MemoryAffinityInfoCount;
   Desc.Data     = MemoryAffinityInfo;
 

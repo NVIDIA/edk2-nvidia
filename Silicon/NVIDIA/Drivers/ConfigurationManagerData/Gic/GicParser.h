@@ -164,7 +164,7 @@ GicCParser (
 
   The following structures are populated:
   - EArmObjLpiInfo
-  - EArmObjCmRef (LpiTokens)
+  - EArchCommonObjCmRef (LpiTokens)
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

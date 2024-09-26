@@ -134,9 +134,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetCacheInfoFromCacheNode (
-  IN CACHE_TRACKER       *CacheTracker,
-  IN CACHE_NODE          *CacheNode,
-  OUT CM_ARM_CACHE_INFO  *CacheInfo
+  IN CACHE_TRACKER               *CacheTracker,
+  IN CACHE_NODE                  *CacheNode,
+  OUT CM_ARCH_COMMON_CACHE_INFO  *CacheInfo
   )
 {
   UINT32      Socket;
@@ -414,7 +414,7 @@ GeneratePrivateDataForPosition (
   // Add the PrivateData to the CM and fill in the return pointers
   Status = NvAddSingleCmObj (
              ParserHandle,
-             CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef),
              PrivateData,
              sizeof (CM_OBJECT_TOKEN) * PrivateCount,
              Token
@@ -517,10 +517,10 @@ STATIC
 EFI_STATUS
 EFIAPI
 BuildCacheInfoStruct (
-  IN CACHE_TRACKER      *CacheTracker,
-  IN CM_ARM_CACHE_INFO  *CacheInfoStruct,
-  IN UINT32             CacheInfoCount,
-  OUT CM_OBJECT_TOKEN   **CacheInfoTokens
+  IN CACHE_TRACKER              *CacheTracker,
+  IN CM_ARCH_COMMON_CACHE_INFO  *CacheInfoStruct,
+  IN UINT32                     CacheInfoCount,
+  OUT CM_OBJECT_TOKEN           **CacheInfoTokens
   )
 {
   EFI_STATUS       Status;
@@ -838,10 +838,10 @@ GenerateCacheInfo (
   OUT CM_OBJECT_TOKEN              **Tokens
   )
 {
-  EFI_STATUS         Status;
-  CM_OBJ_DESCRIPTOR  Desc;
-  CM_ARM_CACHE_INFO  *CacheInfoStruct;
-  CM_OBJECT_TOKEN    *CacheInfoTokens;
+  EFI_STATUS                 Status;
+  CM_OBJ_DESCRIPTOR          Desc;
+  CM_ARCH_COMMON_CACHE_INFO  *CacheInfoStruct;
+  CM_OBJECT_TOKEN            *CacheInfoTokens;
 
   CacheInfoStruct = NULL;
   CacheInfoTokens = NULL;
@@ -851,7 +851,7 @@ GenerateCacheInfo (
   }
 
   if (CacheTracker->CacheNodeCount > 0) {
-    CacheInfoStruct = (CM_ARM_CACHE_INFO *)AllocatePool (sizeof (CM_ARM_CACHE_INFO) * CacheTracker->CacheNodeCount);
+    CacheInfoStruct = (CM_ARCH_COMMON_CACHE_INFO *)AllocatePool (sizeof (CM_ARCH_COMMON_CACHE_INFO) * CacheTracker->CacheNodeCount);
     if (CacheInfoStruct == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheInfoStruct\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
@@ -864,8 +864,8 @@ GenerateCacheInfo (
       goto CleanupAndReturn;
     }
 
-    Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
-    Desc.Size     = sizeof (CM_ARM_CACHE_INFO) * CacheTracker->CacheNodeCount;
+    Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCacheInfo);
+    Desc.Size     = sizeof (CM_ARCH_COMMON_CACHE_INFO) * CacheTracker->CacheNodeCount;
     Desc.Count    = CacheTracker->CacheNodeCount;
     Desc.Data     = CacheInfoStruct;
     Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, CacheInfoTokens, CM_NULL_TOKEN);
@@ -970,8 +970,8 @@ FixupSocketClusterCoreFields (
 /** Cache info parser function.
 
   The following structures are populated:
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

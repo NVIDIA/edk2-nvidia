@@ -34,11 +34,11 @@ ConfigSpaceCompare (
   IN CONST VOID  *Buffer2
   )
 {
-  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo1;
-  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo2;
+  CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo1;
+  CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo2;
 
-  ConfigSpaceInfo1 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer1;
-  ConfigSpaceInfo2 = (CM_ARM_PCI_CONFIG_SPACE_INFO *)Buffer2;
+  ConfigSpaceInfo1 = (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO *)Buffer1;
+  ConfigSpaceInfo2 = (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO *)Buffer2;
 
   return (INTN)ConfigSpaceInfo1->PciSegmentGroupNumber - (INTN)ConfigSpaceInfo2->PciSegmentGroupNumber;
 }
@@ -71,15 +71,15 @@ PciInfoParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                    Status;
-  CM_STD_OBJ_ACPI_TABLE_INFO    AcpiTableHeader;
-  CM_OBJ_DESCRIPTOR             Desc;
-  UINTN                         Index;
-  UINTN                         NumberOfHandles;
-  EFI_HANDLE                    *HandleBuffer;
-  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo;
-  CM_ARM_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfoArray;
-  UINTN                         ConfigSpaceInfoSize;
+  EFI_STATUS                            Status;
+  CM_STD_OBJ_ACPI_TABLE_INFO            AcpiTableHeader;
+  CM_OBJ_DESCRIPTOR                     Desc;
+  UINTN                                 Index;
+  UINTN                                 NumberOfHandles;
+  EFI_HANDLE                            *HandleBuffer;
+  CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo;
+  CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfoArray;
+  UINTN                                 ConfigSpaceInfoSize;
 
   ConfigSpaceInfoArray = NULL;
   Status               = gBS->LocateHandleBuffer (
@@ -95,8 +95,8 @@ PciInfoParser (
     goto CleanupAndReturn;
   }
 
-  ConfigSpaceInfoSize  = sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO) * NumberOfHandles;
-  ConfigSpaceInfoArray = (CM_ARM_PCI_CONFIG_SPACE_INFO *)AllocatePool (ConfigSpaceInfoSize);
+  ConfigSpaceInfoSize  = sizeof (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO) * NumberOfHandles;
+  ConfigSpaceInfoArray = (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO *)AllocatePool (ConfigSpaceInfoSize);
   if (ConfigSpaceInfoArray == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate ConfigSpaceInfoArray\r\n", __func__));
@@ -114,12 +114,12 @@ PciInfoParser (
       goto CleanupAndReturn;
     }
 
-    CopyMem (&ConfigSpaceInfoArray[Index], ConfigSpaceInfo, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO));
+    CopyMem (&ConfigSpaceInfoArray[Index], ConfigSpaceInfo, sizeof (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO));
   }
 
-  PerformQuickSort (ConfigSpaceInfoArray, NumberOfHandles, sizeof (CM_ARM_PCI_CONFIG_SPACE_INFO), ConfigSpaceCompare);
+  PerformQuickSort (ConfigSpaceInfoArray, NumberOfHandles, sizeof (CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO), ConfigSpaceCompare);
 
-  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjPciConfigSpaceInfo);
+  Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPciConfigSpaceInfo);
   Desc.Size     = ConfigSpaceInfoSize;
   Desc.Count    = NumberOfHandles;
   Desc.Data     = ConfigSpaceInfoArray;

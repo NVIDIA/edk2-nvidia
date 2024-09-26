@@ -1,7 +1,7 @@
 /** @file
   Tegra CPU Frequency Protocol
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 #define TEGRA_CPU_FREQ_PROTOCOL_H
 
 #include <Uefi/UefiSpec.h>
+#include <ArchCommonNameSpaceObjects.h>
 #include <ArmNameSpaceObjects.h>
 
 #define NVIDIA_TEGRA_CPU_FREQ_PROTOCOL_GUID \
@@ -84,7 +85,7 @@ EFI_STATUS
 (EFIAPI *TEGRA_CPU_FREQ_GET_CPC_INFO)(
   IN NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *This,
   IN UINT64                          Mpidr,
-  IN CM_ARM_CPC_INFO                 *CpcInfo
+  IN CM_ARCH_COMMON_CPC_INFO                 *CpcInfo
   );
 
 /// NVIDIA_REGULATOR_PROTOCOL protocol structure.

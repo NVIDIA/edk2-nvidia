@@ -40,9 +40,9 @@
   - EArmObjProcHierarchyInfo
   It requires tokens from the following structures, whose parsers are called as a result:
   - EArmObjLpiInfo
-  - EArmObjCmRef (LpiTokens)
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCmRef (LpiTokens)
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
   - EArmObjGicCInfo
 
   A parser parses a Device Tree to populate a specific CmObj type. None,

@@ -193,7 +193,7 @@ ConfigManagerEntryAddWithTokenMap (
   Desc->Data     = Data;
   Desc->Count    = CmObjectCount;
   // ArmObjCmRef objects have a >1 count, but shouldn't have an ElementTokenMap
-  if ((CmObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef)) || (ElementTokenMap == NULL)) {
+  if ((CmObjectId == CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef)) || (ElementTokenMap == NULL)) {
     Entry->ElementTokenMap = NULL;
   } else {
     TokenCount             = Desc->Count;
@@ -325,7 +325,7 @@ ConfigManagerEntryExtend (
 
   NV_ASSERT_RETURN (This != NULL, return EFI_INVALID_PARAMETER, "%a: This pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (CmObjectCount != 0, return EFI_INVALID_PARAMETER, "%a: CmObjectCount can't be 0\n", __FUNCTION__);
-  NV_ASSERT_RETURN (CmObjectId != CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef), return EFI_INVALID_PARAMETER, "%a: Can't extend EArmObjCmRef objects\n", __FUNCTION__);
+  NV_ASSERT_RETURN (CmObjectId != CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef), return EFI_INVALID_PARAMETER, "%a: Can't extend EArchCommonObjCmRef objects\n", __FUNCTION__);
 
   Status = This->FindEntry (This, CmObjectId, Token, &Entry);
   if (EFI_ERROR (Status)) {

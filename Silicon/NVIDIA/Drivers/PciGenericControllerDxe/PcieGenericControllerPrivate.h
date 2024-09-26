@@ -50,12 +50,12 @@ typedef struct {
   UINT32                                              BusMask;
 
   // Configuration data
-  CM_ARM_PCI_CONFIG_SPACE_INFO                        ConfigSpaceInfo;
+  CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO                ConfigSpaceInfo;
   UINT32                                              AddressMapCount;
-  CM_ARM_PCI_ADDRESS_MAP_INFO                         AddressMapInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
-  CM_ARM_OBJ_REF                                      AddressMapRefInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
-  CM_ARM_PCI_INTERRUPT_MAP_INFO                       InterruptMapInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
-  CM_ARM_OBJ_REF                                      InterruptRefInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
+  CM_ARCH_COMMON_PCI_ADDRESS_MAP_INFO                 AddressMapInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
+  CM_ARCH_COMMON_OBJ_REF                              AddressMapRefInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
+  CM_ARCH_COMMON_PCI_INTERRUPT_MAP_INFO               InterruptMapInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
+  CM_ARCH_COMMON_OBJ_REF                              InterruptRefInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
   LEGACY_CM_PROTOCOL_OBJECT                           RepoInfo[PCIE_REPO_OBJECTS];
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a)  CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)

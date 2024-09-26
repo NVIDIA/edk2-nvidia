@@ -52,9 +52,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 GeneratePciDSDForExtPort (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        RpNode,
-  IN             UINT32                        Uid
+  IN       CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE                RpNode,
+  IN             UINT32                                Uid
   )
 {
   EFI_STATUS              Status;
@@ -153,10 +153,10 @@ STATIC
 EFI_STATUS
 EFIAPI
 UpdateSharedNSMemAddr (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        RpNode,
-  IN             UINT32                        Socket,
-  IN             UINT32                        Instance
+  IN       CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE                RpNode,
+  IN             UINT32                                Socket,
+  IN             UINT32                                Instance
   )
 {
   EFI_STATUS                   Status;
@@ -203,10 +203,10 @@ STATIC
 EFI_STATUS
 EFIAPI
 UpdateLICAddr (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        Node,
-  IN             UINT64                        Socket,
-  IN             EFI_PHYSICAL_ADDRESS          Base
+  IN       CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE                Node,
+  IN             UINT64                                Socket,
+  IN             EFI_PHYSICAL_ADDRESS                  Base
   )
 {
   EFI_STATUS              Status;
@@ -232,8 +232,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 DisableGFWBootCompletePoll (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  IN       CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE                Node
   )
 {
   EFI_STATUS              Status;
@@ -256,8 +256,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 UpdateFSPBootAddr (
-  IN       CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT        AML_OBJECT_NODE_HANDLE        Node
+  IN       CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT        AML_OBJECT_NODE_HANDLE                Node
   )
 {
   EFI_STATUS              Status;
@@ -323,10 +323,10 @@ UpdateLOC (
 EFI_STATUS
 EFIAPI
 GeneratePciSlots (
-  IN      CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN      CONST MAPPING_TABLE                 *MappingTable,
-  IN            UINT32                        Uid,
-  IN  OUT       AML_OBJECT_NODE_HANDLE        PciNode
+  IN      CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN      CONST MAPPING_TABLE                         *MappingTable,
+  IN            UINT32                                Uid,
+  IN  OUT       AML_OBJECT_NODE_HANDLE                PciNode
   )
 {
   EFI_STATUS                              Status;
@@ -697,8 +697,8 @@ error_handler:
 EFI_STATUS
 EFIAPI
 AddOscMethod (
-  IN      CONST CM_ARM_PCI_CONFIG_SPACE_INFO  *PciInfo,
-  IN  OUT   AML_OBJECT_NODE_HANDLE            PciNode
+  IN      CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT   AML_OBJECT_NODE_HANDLE                    PciNode
   )
 {
   EFI_STATUS                   Status;

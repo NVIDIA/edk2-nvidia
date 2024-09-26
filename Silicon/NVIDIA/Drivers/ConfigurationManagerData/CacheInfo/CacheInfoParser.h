@@ -45,8 +45,8 @@ FreeCacheHierarchyInfo (
 /** Cache info parser function.
 
   The following structures are populated:
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -81,8 +81,8 @@ CacheInfoParser (
 /** Cache info parser function for T194.
 
   The following structures are populated:
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.

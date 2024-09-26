@@ -28,7 +28,7 @@
 /** Cache Info
  */
 STATIC
-CM_ARM_CACHE_INFO  CacheInfo_T194[] = {
+CM_ARCH_COMMON_CACHE_INFO  CacheInfo_T194[] = {
   // L3 Cache Info
   {
     .Token                 = 0, // Will be populated later
@@ -90,8 +90,8 @@ CM_ARM_CACHE_INFO  CacheInfo_T194[] = {
 /** Cache info parser function for T194.
 
   The following structures are populated:
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
   one or many CmObj can be created by the parser.
@@ -124,9 +124,9 @@ CacheInfoParserT194 (
 {
   EFI_STATUS                   Status;
   CM_OBJ_DESCRIPTOR            Desc;
-  CM_ARM_OBJ_REF               CcplexResources[1];
-  CM_ARM_OBJ_REF               CarmelCoreClusterResources[1];
-  CM_ARM_OBJ_REF               CarmelCoreResources[2];
+  CM_ARCH_COMMON_OBJ_REF       CcplexResources[1];
+  CM_ARCH_COMMON_OBJ_REF       CarmelCoreClusterResources[1];
+  CM_ARCH_COMMON_OBJ_REF       CarmelCoreResources[2];
   CACHE_HIERARCHY_INFO_SOCKET  *CacheHierarchyInfo;
   CM_OBJECT_TOKEN              *CacheInfoTokens;
   UINT32                       SocketIndex;
@@ -145,7 +145,7 @@ CacheInfoParserT194 (
   }
 
   // Add the caches
-  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjCacheInfo);
+  Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCacheInfo);
   Desc.Size     = sizeof (CacheInfo_T194);
   Desc.Count    = ARRAY_SIZE (CacheInfo_T194);
   Desc.Data     = &CacheInfo_T194;
@@ -165,7 +165,7 @@ CacheInfoParserT194 (
   CacheHierarchyInfo[0].Data.Count  = ARRAY_SIZE (CcplexResources);
   Status                            = NvAddSingleCmObj (
                                         ParserHandle,
-                                        CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef),
+                                        CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef),
                                         CcplexResources,
                                         sizeof (CcplexResources),
                                         &CacheHierarchyInfo[0].Data.Token
@@ -179,7 +179,7 @@ CacheInfoParserT194 (
   CacheHierarchyInfo->Cluster[0].Data.Count    = ARRAY_SIZE (CarmelCoreClusterResources);
   Status                                       = NvAddSingleCmObj (
                                                    ParserHandle,
-                                                   CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef),
+                                                   CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef),
                                                    CarmelCoreClusterResources,
                                                    sizeof (CarmelCoreClusterResources),
                                                    &CacheHierarchyInfo->Cluster[0].Data.Token
@@ -194,7 +194,7 @@ CacheInfoParserT194 (
   CacheHierarchyInfo->Cluster[0].Cpu[0].Data.Count = ARRAY_SIZE (CarmelCoreResources);
   Status                                           = NvAddSingleCmObj (
                                                        ParserHandle,
-                                                       CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef),
+                                                       CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef),
                                                        CarmelCoreResources,
                                                        sizeof (CarmelCoreResources),
                                                        &CacheHierarchyInfo->Cluster[0].Cpu[0].Data.Token

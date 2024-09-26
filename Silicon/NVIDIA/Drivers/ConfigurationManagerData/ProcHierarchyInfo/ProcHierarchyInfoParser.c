@@ -23,9 +23,9 @@
   - EArmObjProcHierarchyInfo
   It requires tokens from the following structures, whose parsers are called as a result:
   - EArmObjLpiInfo
-  - EArmObjCmRef (LpiTokens)
-  - EArmObjCacheInfo
-  - EArmObjCmRef [for each level of cache hierarchy]
+  - EArchCommonObjCmRef (LpiTokens)
+  - EArchCommonObjCacheInfo
+  - EArchCommonObjCmRef [for each level of cache hierarchy]
   - EArmObjGicCInfo
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
@@ -52,36 +52,36 @@ ProcHierarchyInfoParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                   Status;
-  UINT32                       NumCpus;
-  UINT32                       CoreIndex;
-  UINT32                       ProcHierarchyIndex;
-  CM_ARM_PROC_HIERARCHY_INFO   *ProcHierarchyInfo;
-  UINTN                        ProcHierarchyInfoSize;
-  CM_OBJECT_TOKEN              *SocketTokenMap;
-  UINTN                        SocketTokenMapSize;
-  CM_OBJECT_TOKEN              *ClusterTokenMap;
-  UINTN                        ClusterTokenMapSize;
-  CM_OBJECT_TOKEN              LpiToken;
-  CM_OBJ_DESCRIPTOR            Desc;
-  CACHE_HIERARCHY_INFO_SOCKET  *CacheHierarchyInfo;
-  CM_OBJECT_TOKEN              *GicCInfoTokens;
-  CM_OBJECT_TOKEN              *ProcHierarchyInfoTokens;
-  UINTN                        MaxProcHierarchyInfoEntries;
-  UINT32                       SocketId;
-  UINT32                       ClusterId;
-  UINT32                       CoreId;
-  UINTN                        ChipID;
-  UINT32                       MaxSocket;
-  UINT32                       NumSockets;
-  UINT32                       MaxClustersPerSocket;
-  UINT32                       MaxCoresPerSocket;
-  UINT32                       MaxCoresPerCluster;
-  CM_OBJECT_TOKEN              RootToken;
-  UINT32                       CoresStartIndex;
-  BOOLEAN                      CollapseClusters;
-  UINT32                       SearchIndex;
-  UINT32                       ClusterIndex;
+  EFI_STATUS                          Status;
+  UINT32                              NumCpus;
+  UINT32                              CoreIndex;
+  UINT32                              ProcHierarchyIndex;
+  CM_ARCH_COMMON_PROC_HIERARCHY_INFO  *ProcHierarchyInfo;
+  UINTN                               ProcHierarchyInfoSize;
+  CM_OBJECT_TOKEN                     *SocketTokenMap;
+  UINTN                               SocketTokenMapSize;
+  CM_OBJECT_TOKEN                     *ClusterTokenMap;
+  UINTN                               ClusterTokenMapSize;
+  CM_OBJECT_TOKEN                     LpiToken;
+  CM_OBJ_DESCRIPTOR                   Desc;
+  CACHE_HIERARCHY_INFO_SOCKET         *CacheHierarchyInfo;
+  CM_OBJECT_TOKEN                     *GicCInfoTokens;
+  CM_OBJECT_TOKEN                     *ProcHierarchyInfoTokens;
+  UINTN                               MaxProcHierarchyInfoEntries;
+  UINT32                              SocketId;
+  UINT32                              ClusterId;
+  UINT32                              CoreId;
+  UINTN                               ChipID;
+  UINT32                              MaxSocket;
+  UINT32                              NumSockets;
+  UINT32                              MaxClustersPerSocket;
+  UINT32                              MaxCoresPerSocket;
+  UINT32                              MaxCoresPerCluster;
+  CM_OBJECT_TOKEN                     RootToken;
+  UINT32                              CoresStartIndex;
+  BOOLEAN                             CollapseClusters;
+  UINT32                              SearchIndex;
+  UINT32                              ClusterIndex;
 
   ProcHierarchyInfo       = NULL;
   SocketTokenMap          = NULL;
@@ -146,7 +146,7 @@ ProcHierarchyInfoParser (
   }
 
   MaxProcHierarchyInfoEntries = (NumCpus + (MaxClustersPerSocket * NumSockets) + NumSockets + (NumSockets > 1 ? 1 : 0));
-  ProcHierarchyInfoSize       = sizeof (CM_ARM_PROC_HIERARCHY_INFO) * MaxProcHierarchyInfoEntries;
+  ProcHierarchyInfoSize       = sizeof (CM_ARCH_COMMON_PROC_HIERARCHY_INFO) * MaxProcHierarchyInfoEntries;
   ProcHierarchyInfo           = AllocateZeroPool (ProcHierarchyInfoSize);
   if (ProcHierarchyInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -171,7 +171,7 @@ ProcHierarchyInfoParser (
                                                     EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
     ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = CM_NULL_TOKEN;
-    ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
+    ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = 0;
     ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
@@ -198,7 +198,7 @@ ProcHierarchyInfoParser (
                                                       EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
                                                       );
       ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = RootToken;
-      ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
+      ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = CM_NULL_TOKEN;
       ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Data.Count;
       ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Data.Token;
       ProcHierarchyInfo[ProcHierarchyIndex].OverrideNameUidEnabled     = TRUE;
@@ -219,7 +219,7 @@ ProcHierarchyInfoParser (
                                                           EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
                                                           );
           ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = SocketTokenMap[SocketId];
-          ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = CM_NULL_TOKEN;
+          ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = CM_NULL_TOKEN;
           ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Count;
           ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Token;
           if (CollapseClusters && (CacheHierarchyInfo[SocketId].Cluster[ClusterId].Data.Count != 0)) {
@@ -267,7 +267,7 @@ ProcHierarchyInfoParser (
                                                     EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                                                     );
     ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = ClusterTokenMap[ClusterId + (MaxClustersPerSocket*SocketId)];
-    ProcHierarchyInfo[ProcHierarchyIndex].GicCToken                  = GicCInfoTokens[CoreIndex];
+    ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = GicCInfoTokens[CoreIndex];
     ProcHierarchyInfo[ProcHierarchyIndex].NoOfPrivateResources       = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Cpu[CoreId].Data.Count;
     ProcHierarchyInfo[ProcHierarchyIndex].PrivateResourcesArrayToken = CacheHierarchyInfo[SocketId].Cluster[ClusterId].Cpu[CoreId].Data.Token;
     ProcHierarchyInfo[ProcHierarchyIndex].LpiToken                   = LpiToken;
@@ -321,8 +321,8 @@ ProcHierarchyInfoParser (
     }
   }
 
-  Desc.ObjectId = CREATE_CM_ARM_OBJECT_ID (EArmObjProcHierarchyInfo);
-  Desc.Size     = sizeof (CM_ARM_PROC_HIERARCHY_INFO) * (ProcHierarchyIndex);
+  Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjProcHierarchyInfo);
+  Desc.Size     = sizeof (CM_ARCH_COMMON_PROC_HIERARCHY_INFO) * (ProcHierarchyIndex);
   Desc.Count    = ProcHierarchyIndex;
   Desc.Data     = ProcHierarchyInfo;
   Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, ProcHierarchyInfoTokens, CM_NULL_TOKEN);
