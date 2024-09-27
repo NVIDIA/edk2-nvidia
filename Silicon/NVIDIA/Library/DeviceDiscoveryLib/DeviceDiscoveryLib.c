@@ -11,13 +11,16 @@
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
@@ -1162,10 +1165,45 @@ DeassertPgNodes (
   IN  UINT32                           PgId
   )
 {
-  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol = NULL;
-  EFI_STATUS                Status;
-  MRQ_PG_COMMAND_PACKET     Request;
-  UINT32                    PowerGateState;
+  NVIDIA_BPMP_IPC_PROTOCOL      *BpmpIpcProtocol = NULL;
+  EFI_STATUS                    Status;
+  MRQ_PG_COMMAND_PACKET         Request;
+  UINT32                        PowerGateState;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINT32                        Count;
+
+  // Increase the PG active vote count for the resource.
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    (Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+    return EFI_DEVICE_ERROR,
+    "Failed to get PlatformResourceInfo\r\n"
+    );
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  for (Count = 0; Count < PlatformResourceInfo->BpmpPgVotesTracker.NumEntries; Count++) {
+    if ((PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].BpmpPhandle == This->BpmpPhandle) &&
+        (PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].PgId == PgId))
+    {
+      break;
+    }
+  }
+
+  if (Count == PlatformResourceInfo->BpmpPgVotesTracker.NumEntries) {
+    NV_ASSERT_RETURN (
+      Count < MAX_SUPPORTED_PG,
+      return EFI_DEVICE_ERROR,
+      "Exceeding number of supported PG\r\n"
+      );
+
+    PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].BpmpPhandle = This->BpmpPhandle;
+    PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].PgId        = PgId;
+    PlatformResourceInfo->BpmpPgVotesTracker.NumEntries++;
+  }
+
+  PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].Votes++;
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
@@ -1204,10 +1242,13 @@ AssertPgNodes (
   IN  UINT32                           PgId
   )
 {
-  NVIDIA_BPMP_IPC_PROTOCOL  *BpmpIpcProtocol = NULL;
-  EFI_STATUS                Status;
-  MRQ_PG_COMMAND_PACKET     Request;
-  UINT32                    PowerGateState;
+  NVIDIA_BPMP_IPC_PROTOCOL      *BpmpIpcProtocol = NULL;
+  EFI_STATUS                    Status;
+  MRQ_PG_COMMAND_PACKET         Request;
+  UINT32                        PowerGateState;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINT32                        Count;
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {
@@ -1220,11 +1261,46 @@ AssertPgNodes (
   }
 
   if (PowerGateState == CmdPgStateOn) {
-    Request.Command  = CmdPgSetState;
-    Request.PgId     = PgId;
-    Request.Argument = CmdPgStateOff;
+    // Assert PG only if there is only 1 active vote for the resource.
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    NV_ASSERT_RETURN (
+      (Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+      return EFI_DEVICE_ERROR,
+      "Failed to get PlatformResourceInfo\r\n"
+      );
 
-    return BpmpProcessPgCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, NULL, 0);
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+    for (Count = 0; Count < PlatformResourceInfo->BpmpPgVotesTracker.NumEntries; Count++) {
+      if ((PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].BpmpPhandle == This->BpmpPhandle) &&
+          (PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].PgId == PgId))
+      {
+        NV_ASSERT_RETURN (
+          PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].Votes != 0,
+          return EFI_DEVICE_ERROR,
+          "Bpmp Phandle: 0x%x PG: 0x%x already asserted\r\n",
+          This->BpmpPhandle,
+          PgId
+          );
+        PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].Votes--;
+        if (PlatformResourceInfo->BpmpPgVotesTracker.BpmpPgVotes[Count].Votes == 0) {
+          Request.Command  = CmdPgSetState;
+          Request.PgId     = PgId;
+          Request.Argument = CmdPgStateOff;
+          return BpmpProcessPgCommand (BpmpIpcProtocol, This->BpmpPhandle, &Request, NULL, 0);
+        }
+
+        break;
+      }
+    }
+
+    NV_ASSERT_RETURN (
+      Count < PlatformResourceInfo->BpmpPgVotesTracker.NumEntries,
+      return EFI_DEVICE_ERROR,
+      "Bpmp Phandle: 0x%x PG: 0x%x not in bpmp PG votes tracker.\r\n",
+      This->BpmpPhandle,
+      PgId
+      );
   }
 
   return EFI_SUCCESS;

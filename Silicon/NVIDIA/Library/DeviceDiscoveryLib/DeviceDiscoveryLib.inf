@@ -42,6 +42,7 @@
 
 [Guids]
   gNVIDIAVendorDeviceDiscoveryGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gNVIDIADeviceTreeNodeProtocolGuid

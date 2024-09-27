@@ -38,6 +38,8 @@
 #define DEVICE_CS_SHIFT               (8)
 #define MAX_SUPPORTED_CORES           1024U
 #define MAX_SUPPORTED_SOCKETS         4
+#define MAX_SUPPORTED_PG_PER_SOCKET   25
+#define MAX_SUPPORTED_PG              (MAX_SUPPORTED_SOCKETS * MAX_SUPPORTED_PG_PER_SOCKET)
 
 #define UID_NUM_DWORDS  4
 
@@ -115,37 +117,49 @@ typedef struct {
 } TEGRA_BASE_AND_SIZE_INFO;
 
 typedef struct {
-  UINT32                      SocketMask;
-  UINT32                      MaxPossibleSockets;
-  UINT32                      MaxPossibleClusters;
-  UINT32                      MaxPossibleCoresPerCluster;
-  UINT32                      MaxPossibleCores;
-  UINT64                      EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
-  BOOLEAN                     AffinityMpIdrSupported;
-  UINT32                      NumberOfEnabledCores;
-  UINT32                      ActiveBootChain;
-  BOOLEAN                     BrBctUpdateFlag;
-  TEGRA_RESOURCE_INFO         *ResourceInfo;
-  TEGRA_MMIO_INFO             *MmioInfo;
-  TEGRABL_EEPROM_DATA         *EepromData;
-  TEGRA_BOARD_INFO            *BoardInfo;
-  TEGRA_BASE_AND_SIZE_INFO    GrOutputInfo;
-  TEGRA_BASE_AND_SIZE_INFO    FsiNsInfo;
-  TEGRA_BASE_AND_SIZE_INFO    RamdiskOSInfo;
-  TEGRA_BASE_AND_SIZE_INFO    RcmBlobInfo;
-  TEGRA_BASE_AND_SIZE_INFO    PvaFwInfo;
-  TEGRA_BASE_AND_SIZE_INFO    FrameBufferInfo;
-  TEGRA_BASE_AND_SIZE_INFO    ProfilerInfo;
-  TEGRA_BASE_AND_SIZE_INFO    CpublCoInfo;
-  TEGRA_BASE_AND_SIZE_INFO    *VprInfo;
-  TEGRA_BOOT_TYPE             BootType;
-  BOOLEAN                     HypervisorMode;
-  TEGRA_BASE_AND_SIZE_INFO    *EgmMemoryInfo;
-  UINT64                      PhysicalDramSize;
-  TEGRA_DRAM_DEVICE_INFO      *DramDeviceInfo;
-  UINT8                       *C2cMode;
-  UINT32                      UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
-  TEGRA_BASE_AND_SIZE_INFO    *EgmRetiredPages;
+  UINT32    BpmpPhandle;
+  UINT32    PgId;
+  UINT32    Votes;
+} TEGRA_BPMP_PG_VOTES;
+
+typedef struct {
+  TEGRA_BPMP_PG_VOTES    BpmpPgVotes[MAX_SUPPORTED_PG];
+  UINT32                 NumEntries;
+} TEGRA_BPMP_PG_VOTES_TACKER;
+
+typedef struct {
+  UINT32                        SocketMask;
+  UINT32                        MaxPossibleSockets;
+  UINT32                        MaxPossibleClusters;
+  UINT32                        MaxPossibleCoresPerCluster;
+  UINT32                        MaxPossibleCores;
+  UINT64                        EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
+  BOOLEAN                       AffinityMpIdrSupported;
+  UINT32                        NumberOfEnabledCores;
+  UINT32                        ActiveBootChain;
+  BOOLEAN                       BrBctUpdateFlag;
+  TEGRA_RESOURCE_INFO           *ResourceInfo;
+  TEGRA_MMIO_INFO               *MmioInfo;
+  TEGRABL_EEPROM_DATA           *EepromData;
+  TEGRA_BOARD_INFO              *BoardInfo;
+  TEGRA_BASE_AND_SIZE_INFO      GrOutputInfo;
+  TEGRA_BASE_AND_SIZE_INFO      FsiNsInfo;
+  TEGRA_BASE_AND_SIZE_INFO      RamdiskOSInfo;
+  TEGRA_BASE_AND_SIZE_INFO      RcmBlobInfo;
+  TEGRA_BASE_AND_SIZE_INFO      PvaFwInfo;
+  TEGRA_BASE_AND_SIZE_INFO      FrameBufferInfo;
+  TEGRA_BASE_AND_SIZE_INFO      ProfilerInfo;
+  TEGRA_BASE_AND_SIZE_INFO      CpublCoInfo;
+  TEGRA_BASE_AND_SIZE_INFO      *VprInfo;
+  TEGRA_BOOT_TYPE               BootType;
+  BOOLEAN                       HypervisorMode;
+  TEGRA_BASE_AND_SIZE_INFO      *EgmMemoryInfo;
+  UINT64                        PhysicalDramSize;
+  TEGRA_DRAM_DEVICE_INFO        *DramDeviceInfo;
+  UINT8                         *C2cMode;
+  UINT32                        UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
+  TEGRA_BASE_AND_SIZE_INFO      *EgmRetiredPages;
+  TEGRA_BPMP_PG_VOTES_TACKER    BpmpPgVotesTracker;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
