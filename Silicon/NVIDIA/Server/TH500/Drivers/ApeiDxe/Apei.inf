@@ -62,3 +62,5 @@
   gEfiAcpiTableProtocolGuid
   AND
   gNVIDIAPcieControllerInitCompleteProtocolGuid
+  AND
+  gNVIDIABdsDeviceConnectCompleteGuid
