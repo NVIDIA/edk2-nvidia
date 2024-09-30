@@ -19,11 +19,6 @@ class ServerIgxSettingsManager(NVIDIASettingsManager):
     def GetGuid(self):
         return "0927650c-5959-4dfb-a40f-0f05a3cefbd6"
 
-    def GetPackagesPath(self):
-        return super().GetPackagesPath() + [
-            "edk2-redfish-client/"
-        ]
-
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
 
