@@ -1013,6 +1013,15 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
 !endif
 
+!ifdef CONFIG_SECURITY_DISABLE_PHYSICAL_PRESENCE_POST_SECUREBOOT
+  #
+  # Disable physical presence post secureboot enablement
+  #
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|TRUE
+!else
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE
+!endif
+
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)

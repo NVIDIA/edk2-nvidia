@@ -741,3 +741,6 @@
   # a platform-specific method (e.g. Board Jumper set) in a actual platform in early boot phase.<BR><BR>
   # @Prompt The password clear status
   gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE|BOOLEAN|0x00000104
+
+#Control whether Physical Presence PCD is left enabled/disabled.
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE|BOOLEAN|0x00000131
