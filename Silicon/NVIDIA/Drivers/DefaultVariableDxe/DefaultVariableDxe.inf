@@ -51,6 +51,7 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize                  ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence
 
 [Guids]
   gNVIDIAPublicVariableGuid

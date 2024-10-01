@@ -851,3 +851,6 @@
 
 #Key to enter shell via hotkey, this is case sensitive. Disable by setting to 0.
   gNVIDIATokenSpaceGuid.PcdShellHotkey|'s'|UINT16|0x00000130
+
+#Control whether Physical Presence PCD is left enabled/disabled.
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE|BOOLEAN|0x00000131

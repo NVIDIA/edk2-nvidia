@@ -1085,7 +1085,16 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !else
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
 !endif
-  gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
+
+!ifdef CONFIG_SECURITY_DISABLE_PHYSICAL_PRESENCE_POST_SECUREBOOT
+  #
+  # Disable physical presence post secureboot enablement
+  #
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|TRUE
+!else
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE
+!endif
+gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables

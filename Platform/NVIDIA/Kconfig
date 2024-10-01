@@ -114,6 +114,12 @@ menu "Security options"
     Allows for default phyical presence operations.
     This allows for setting UEFI Secure Boot settings from UEFI menu.
 
+  config SECURITY_DISABLE_PHYSICAL_PRESENCE_POST_SECUREBOOT
+  bool "Disable Physical Presence after secure boot enablement"
+  help
+    Disable the Physical Presence PCD after secureboot has been enabled to prevent
+    altering secure boot state/keys from the UEFI menu.
+
   config SECURITY_UEFI_SECURE_BOOT
   bool "UEFI Secure Boot support"
   default y
