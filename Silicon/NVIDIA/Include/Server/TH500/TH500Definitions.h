@@ -122,8 +122,8 @@
 #define TH500_PCIE_FPGA_FLOORSWEEPING_INFO     0x0FF
 #define TH500_PCIE_FLOORSWEEPING_DISABLE_MASK  0xFFFFFC00
 
-#define PCIE_ID_TO_SOCKET(PcieId)     ((PcieId) >> 4)
-#define PCIE_ID_TO_INTERFACE(PcieId)  ((PcieId) & 0xfUL)
+#define TH500_PCIE_ID_TO_SOCKET(PcieId)     ((PcieId) >> 4)
+#define TH500_PCIE_ID_TO_INTERFACE(PcieId)  ((PcieId) & 0xfUL)
 
 // NVLW floorsweeping
 #define NVLM_DISABLE_OFFSET  0x74

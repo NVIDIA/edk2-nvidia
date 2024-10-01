@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,10 +11,11 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/PrintLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
 #include "CommonFloorSweepingLib.h"
@@ -26,9 +27,9 @@
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
-  IN UINTN  Socket,
-  IN INT32  CpusOffset,
-  IN VOID   *Dtb
+  IN UINT32  SocketMask,
+  IN INT32   CpusOffset,
+  IN VOID    *Dtb
   );
 
 STATIC UINT64  *SocketScratchBaseAddr;
@@ -69,6 +70,66 @@ STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
 };
 
+STATIC CONST CHAR8  *PcieEpCompatibility;
+
+/**
+  Return PCIe interface number from ID
+
+**/
+STATIC
+UINT32
+EFIAPI
+PcieIdToInterface (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  )
+{
+  UINT32  Interface;
+
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      Interface = TH500_PCIE_ID_TO_INTERFACE (PcieId);
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
+      ASSERT (0);
+      Interface = PcieId;
+      break;
+  }
+
+  return Interface;
+}
+
+/**
+  Return socket from PCIe ID
+
+**/
+STATIC
+UINT32
+EFIAPI
+PcieIdToSocket (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  )
+{
+  UINT32  Socket;
+
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      Socket = TH500_PCIE_ID_TO_SOCKET (PcieId);
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
+      ASSERT (0);
+      Socket = PcieId;
+      break;
+  }
+
+  return Socket;
+}
+
 /**
   Initialize global structures
 
@@ -92,6 +153,7 @@ CommonInitializeGlobalStructures (
       ScfCacheDisableScratchMask   = TH500ScfCacheDisableScratchMask;
       SocketMssBaseAddr            = TH500SocketMssBaseAddr;
       SocketCbbFabricBaseAddr      = TH500SocketCbbFabricBaseAddr;
+      PcieEpCompatibility          = NULL;
       Status                       = EFI_SUCCESS;
 
       break;
@@ -102,6 +164,283 @@ CommonInitializeGlobalStructures (
   }
 
   return Status;
+}
+
+EFI_STATUS
+EFIAPI
+TH500UpdatePcieNode (
+  IN UINT32  Socket,
+  IN UINT32  PcieId,
+  IN  VOID   *Dtb,
+  IN INT32   NodeOffset
+  )
+{
+  CONST VOID                    *Property;
+  INT32                         Length, Ret;
+  UINT32                        Tmp32;
+  UINT32                        CtrlId;
+  UINT64                        Aperture64Base;
+  UINT64                        Aperture64Size;
+  UINT32                        Aperture32Base;
+  UINT32                        Aperture32Size;
+  UINT64                        CbbFabricBase;
+  UINT64                        CbbCtlOffset;
+  UINT64                        EcamBase;
+  UINT64                        EcamSize;
+  UINT64                        NonPrefBase;
+  UINT64                        NonPrefSize;
+  UINT64                        PrefBase;
+  UINT64                        PrefSize;
+  UINT64                        IoBase;
+  UINT64                        IoSize;
+  UINT64                        MSSBase;
+  UINT32                        C2CMode;
+  INT32                         RPNodeOffset;
+  VOID                          *Hob;
+  TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+
+  CbbFabricBase = SocketCbbFabricBaseAddr[Socket];
+  if (CbbFabricBase == 0) {
+    return EFI_SUCCESS;
+  }
+
+  CtrlId         = TH500_PCIE_ID_TO_INTERFACE (PcieId);
+  CbbCtlOffset   = CbbFabricBase + 0x20 * TH500_PCIE_ID_TO_INTERFACE (PcieId);
+  Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
+                   MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
+
+  Aperture64Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_SIZE);
+  Aperture64Size = Aperture64Size << 16;
+
+  Aperture32Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_HIGH)) << 32) |
+                   MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_LOW);
+
+  Aperture32Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_SIZE);
+  Aperture32Size = Aperture32Size << 16;
+
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Base = 0x%llX\n", PcieId, Aperture64Base));
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Size = 0x%llX\n", PcieId, Aperture64Size));
+
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Base = 0x%llX\n", PcieId, Aperture32Base));
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Size = 0x%llX\n", PcieId, Aperture32Size));
+
+  /*
+   * +-----------------------------------------------------+
+   * | 64-bit Aperture Usage                               |
+   * +----------+------------------------------------------+
+   * | 256 MB   | Reserved for VDM                         |
+   * +----------+------------------------------------------+
+   * | 256 MB   | ECAM                                     |
+   * +----------+------------------------------------------+
+   * | 512 MB   | RSVD (64K of this is used for I/O)       |
+   * +----------+------------------------------------------+
+   * | 2 GB     | Non-Prefetchable Region                  |
+   * |          | (if 32-bit space is not used)            |
+   * +----------+------------------------------------------+
+   * | Rest all | Prefetchable Region                      |
+   * +----------+------------------------------------------+
+  */
+
+  /* Patch ECAM Address in 'reg' property */
+  Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
+  if ((Property == NULL) || (Length != sizeof (Tmp32) * 20)) {
+    DEBUG ((DEBUG_ERROR, "Unexpected \"reg\" property. Length = %d\n", Length));
+    return EFI_UNSUPPORTED;
+  }
+
+  PrefSize  = Aperture64Size;
+  PrefSize -= TH500_VDM_SIZE;
+
+  EcamBase  = Aperture64Base + TH500_VDM_SIZE;
+  EcamSize  = TH500_ECAM_SIZE;
+  PrefSize -= EcamSize;
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: ECAM Base = 0x%llX\n", PcieId, EcamBase));
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: ECAM Size = 0x%llX\n", PcieId, EcamSize));
+
+  ((UINT32 *)Property)[16] = cpu_to_fdt32 (EcamBase >> 32);
+  ((UINT32 *)Property)[17] = cpu_to_fdt32 (EcamBase);
+  ((UINT32 *)Property)[18] = cpu_to_fdt32 (EcamSize >> 32);
+  ((UINT32 *)Property)[19] = cpu_to_fdt32 (EcamSize);
+
+  /* Patch 'ranges' property */
+  Property = fdt_getprop (Dtb, NodeOffset, "ranges", &Length);
+  if ((Property == NULL) ||
+      ((Length != sizeof (Tmp32) * 21) &&
+       (Length != sizeof (Tmp32) * 14)))
+  {
+    DEBUG ((DEBUG_ERROR, "Unexpected \"ranges\" property. Length = %d\n", Length));
+    return EFI_UNSUPPORTED;
+  }
+
+  if (Aperture32Base != 0) {
+    NonPrefBase = Aperture32Base;
+    NonPrefSize = Aperture32Size;
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
+
+    ((UINT32 *)Property)[0] = cpu_to_fdt32 (0x82000000);
+    ((UINT32 *)Property)[1] = cpu_to_fdt32 (NonPrefBase >> 32);
+    ((UINT32 *)Property)[2] = cpu_to_fdt32 (NonPrefBase);
+    ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
+    ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
+    ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
+    ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
+
+    PrefBase  = EcamBase + EcamSize + 0x20000000;
+    PrefSize -= 0x20000000;
+  } else {
+    NonPrefBase = EcamBase + EcamSize + 0x20000000;
+    NonPrefSize = 0x80000000;         /* 2 GB fixed size */
+    PrefSize   -= (NonPrefSize + 0x20000000);
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
+
+    ((UINT32 *)Property)[1] = cpu_to_fdt32 (0x0);
+    ((UINT32 *)Property)[2] = cpu_to_fdt32 (0x40000000);
+    ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
+    ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
+    ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
+    ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
+
+    PrefBase = NonPrefBase + NonPrefSize;
+  }
+
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Base = 0x%llX\n", PcieId, PrefBase));
+  DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Size = 0x%llX\n", PcieId, PrefSize));
+
+  ((UINT32 *)Property)[8]  = cpu_to_fdt32 (PrefBase >> 32);
+  ((UINT32 *)Property)[9]  = cpu_to_fdt32 (PrefBase);
+  ((UINT32 *)Property)[10] = cpu_to_fdt32 (PrefBase >> 32);
+  ((UINT32 *)Property)[11] = cpu_to_fdt32 (PrefBase);
+  ((UINT32 *)Property)[12] = cpu_to_fdt32 (PrefSize >> 32);
+  ((UINT32 *)Property)[13] = cpu_to_fdt32 (PrefSize);
+
+  if (Length == (sizeof (Tmp32) * 21)) {
+    IoBase = EcamBase + EcamSize;
+    IoSize = SIZE_64KB;       /* 64K fixed size I/O aperture */
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Base = 0x%llX\n", PcieId, IoBase));
+    DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Size = 0x%llX\n", PcieId, IoSize));
+
+    ((UINT32 *)Property)[15] = cpu_to_fdt32 (0x0);
+    ((UINT32 *)Property)[16] = cpu_to_fdt32 (0x0);
+    ((UINT32 *)Property)[17] = cpu_to_fdt32 (IoBase >> 32);
+    ((UINT32 *)Property)[18] = cpu_to_fdt32 (IoBase);
+    ((UINT32 *)Property)[19] = cpu_to_fdt32 (IoSize>> 32);
+    ((UINT32 *)Property)[20] = cpu_to_fdt32 (IoSize);
+  }
+
+  /* Patch 'external-facing' property only for C8 controller */
+  if ((SocketMssBaseAddr != NULL) && (TH500_PCIE_ID_TO_INTERFACE (PcieId) == 8)) {
+    MSSBase  = SocketMssBaseAddr[Socket];
+    C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
+    C2CMode &= 0x3;
+    DEBUG ((DEBUG_INFO, "C2C Mode = %u\n", C2CMode));
+
+    if (C2CMode == TH500_MSS_C2C_MODE_TWO_GPU) {
+      RPNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
+      if (RPNodeOffset < 0) {
+        DEBUG ((DEBUG_ERROR, "RP Sub-Node is not found. Can't patch 'external-facing' property\n"));
+      } else {
+        INTN  Err;
+        Err = fdt_nop_property (Dtb, RPNodeOffset, "external-facing");
+        if (0 != Err) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "Failed to delete 'external-facing' property for Ctrl = %d\n",
+            TH500_PCIE_ID_TO_INTERFACE (PcieId)
+            ));
+        } else {
+          DEBUG ((
+            DEBUG_INFO,
+            "Deleted 'external-facing' property for Ctrl = %d\n",
+            TH500_PCIE_ID_TO_INTERFACE (PcieId)
+            ));
+        }
+      }
+    }
+  }
+
+  /* Add 'nvidia,socket-id' property */
+  Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,socket-id", Socket);
+  if (Ret) {
+    DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,socket-id\" property: %d\n", Ret));
+    return EFI_UNSUPPORTED;
+  }
+
+  /* Add 'nvidia,controller-id' property */
+  Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,controller-id", CtrlId);
+  if (Ret) {
+    DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,controller-id\" property: %d\n", Ret));
+    return EFI_UNSUPPORTED;
+  }
+
+  /* Patch 'linux,pci-domain' property from UEFI variables */
+  Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
+  {
+    Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
+  }
+
+  if (Mb1Config != NULL) {
+    if ((Mb1Config->Data.Mb1Data.Header.MajorVersion == TEGRABL_MB1_BCT_MAJOR_VERSION) &&
+        (Mb1Config->Data.Mb1Data.Header.MinorVersion >= 10))
+    {
+      Property = fdt_getprop (Dtb, NodeOffset, "linux,pci-domain", &Length);
+      if ((Property == NULL) || (Length != sizeof (Tmp32))) {
+        DEBUG ((DEBUG_ERROR, "Unexpected pcie property\n"));
+        return EFI_UNSUPPORTED;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "Patching 'linux,pci-domain' with = %x\n",
+        Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment
+        ));
+
+      Ret = fdt_setprop_u32 (Dtb, NodeOffset, "linux,pci-domain", Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment);
+      if (Ret) {
+        DEBUG ((DEBUG_ERROR, "Failed to add \"linux,pci-domain\" property: %d\n", Ret));
+        return EFI_UNSUPPORTED;
+      }
+    }
+  } else {
+    DEBUG ((DEBUG_WARN, "Failed to find UEFI early variables to patch \"linux,pci-domain\" property\n"));
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+GetDisableRegArray (
+  IN UINT32   SocketMask,
+  IN UINT64   SocketOffset,
+  IN UINT64   DisableRegAddr,
+  IN UINT32   DisableRegMask,
+  OUT UINT32  *DisableRegArray
+  )
+{
+  UINTN   Socket;
+  UINTN   DisableReg;
+  UINT64  SocketBase;
+
+  SocketBase = 0;
+  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++, SocketBase += SocketOffset) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    DisableReg  = MmioRead32 (SocketBase + DisableRegAddr);
+    DisableReg &= DisableRegMask;
+
+    DisableRegArray[Socket] = DisableReg;
+
+    DEBUG ((DEBUG_INFO, "%a: Socket %u Addr=0x%llx Reg=0x%x\n", __FUNCTION__, Socket, SocketBase + DisableRegAddr, DisableReg));
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -116,13 +455,17 @@ CommonFloorSweepPcie (
   )
 {
   EFI_STATUS           Status;
-  UINTN                Socket;
   INT32                ParentOffset;
   INT32                NodeOffset;
-  INT32                TmpOffset;
-  CHAR8                SocketStr[] = "/socket@00";
+  CHAR8                ParentNameStr[16];
   TEGRA_PLATFORM_TYPE  Platform;
   UINTN                ChipId;
+  CHAR8                *ParentNameFormat;
+  UINT32               InterfaceSocket;
+  INT32                FdtErr;
+  UINT32               PcieDisableRegArray[MAX_SUPPORTED_SOCKETS];
+  UINTN                Index;
+  UINTN                NumParentNodes;
 
   Status = CommonInitializeGlobalStructures ();
   if (EFI_ERROR (Status)) {
@@ -132,344 +475,87 @@ CommonFloorSweepPcie (
   ChipId   = TegraGetChipID ();
   Platform = TegraGetPlatform ();
 
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
-    UINT32  PcieDisableReg;
-    UINT64  ScratchBase;
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      Status = GetDisableRegArray (
+                 SocketMask,
+                 (1ULL << TH500_SOCKET_SHFT),
+                 TH500_SCRATCH_BASE_SOCKET_0 + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET,
+                 ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK,
+                 PcieDisableRegArray
+                 );
 
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
-
-    ScratchBase = SocketScratchBaseAddr[Socket];
-    if (ScratchBase == 0) {
-      continue;
-    }
-
-    switch (ChipId) {
-      case TH500_CHIP_ID:
-        if (Platform == TEGRA_PLATFORM_VDK) {
-          PcieDisableReg = TH500_PCIE_SIM_FLOORSWEEPING_INFO;
-        } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
-          PcieDisableReg = TH500_PCIE_FPGA_FLOORSWEEPING_INFO;
-        } else {
-          PcieDisableReg = MmioRead32 (ScratchBase + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET);
-        }
-
-        PcieDisableReg |= TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
-        PcieDisableReg &= ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK;
-        break;
-
-      default:
-        return EFI_UNSUPPORTED;
-    }
-
-    DEBUG ((
-      DEBUG_INFO,
-      "Socket %u PcieDisableReg=0x%x\n",
-      Socket,
-      PcieDisableReg
-      ));
-
-    AsciiSPrint (SocketStr, sizeof (SocketStr), "/socket@%u", Socket);
-    ParentOffset = fdt_path_offset (Dtb, SocketStr);
-    if (ParentOffset < 0) {
-      if (Socket == 0) {
-        ParentOffset = 0;
-      } else {
-        DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketStr));
-        return EFI_DEVICE_ERROR;
+      if (Platform == TEGRA_PLATFORM_VDK) {
+        PcieDisableRegArray[0] = TH500_PCIE_SIM_FLOORSWEEPING_INFO;
+      } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
+        PcieDisableRegArray[0] = TH500_PCIE_FPGA_FLOORSWEEPING_INFO;
       }
+
+      ParentNameFormat = "/socket@%u";
+      NumParentNodes   = PLATFORM_MAX_SOCKETS;
+      break;
+
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  for (Index = 0; Index < NumParentNodes; Index++) {
+    ASSERT (AsciiStrLen (ParentNameFormat) < sizeof (ParentNameStr));
+    AsciiSPrint (ParentNameStr, sizeof (ParentNameStr), ParentNameFormat, Index);
+    ParentOffset = fdt_path_offset (Dtb, ParentNameStr);
+    if (ParentOffset < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to find %a\n", __FUNCTION__, ParentNameStr));
+      continue;
     }
 
-    NodeOffset = fdt_first_subnode (Dtb, ParentOffset);
-    while (NodeOffset > 0) {
+    fdt_for_each_subnode (NodeOffset, Dtb, ParentOffset) {
       CONST VOID  *Property;
-      INT32       Length, Ret;
+      INT32       Length;
       UINT32      Tmp32;
-      UINT32      PcieId, CtrlId;
+      UINT32      PcieId;
 
       Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
       if ((Property == NULL) || (AsciiStrCmp (Property, "pci") != 0)) {
-        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-        continue;
+        // not a RP node - check for EP node, if supported
+        if (PcieEpCompatibility == NULL) {
+          continue;
+        } else {
+          Property = fdt_getprop (Dtb, NodeOffset, "compatible", &Length);
+          if ((Property == NULL) || (AsciiStrCmp (Property, PcieEpCompatibility) != 0)) {
+            continue;
+          }
+        }
       }
 
       Property = fdt_getprop (Dtb, NodeOffset, "linux,pci-domain", &Length);
       if ((Property == NULL) || (Length != sizeof (Tmp32))) {
-        DEBUG ((DEBUG_ERROR, "Unexpected pcie property\n"));
-        return EFI_UNSUPPORTED;
+        DEBUG ((DEBUG_ERROR, "Invalid pci-domain for %a, skipping\n", fdt_get_name (Dtb, NodeOffset, NULL)));
+        continue;
       }
 
       Tmp32  = *(CONST UINT32 *)Property;
       PcieId = fdt32_to_cpu (Tmp32);
-      DEBUG ((
-        DEBUG_INFO,
-        "Found pcie 0x%x (%a)\n",
-        PcieId,
-        fdt_get_name (Dtb, NodeOffset, NULL)
-        ));
-      ASSERT (PCIE_ID_TO_SOCKET (PcieId) == Socket);
-      CtrlId = PCIE_ID_TO_INTERFACE (PcieId);
+      DEBUG ((DEBUG_INFO, "Found pcie 0x%x (%a)\n", PcieId, fdt_get_name (Dtb, NodeOffset, NULL)));
 
-      if ((PcieDisableReg & (1UL << PCIE_ID_TO_INTERFACE (PcieId))) != 0) {
-        INT32  FdtErr;
-
-        TmpOffset  = NodeOffset;
-        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-
-        FdtErr = fdt_nop_node (Dtb, TmpOffset);
+      InterfaceSocket = PcieIdToSocket (ChipId, PcieId);
+      if (!(SocketMask & (1UL << InterfaceSocket)) ||
+          ((PcieDisableRegArray[InterfaceSocket] & (1UL << PcieIdToInterface (ChipId, PcieId))) != 0))
+      {
+        FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "disabled", sizeof ("disabled"));
         if (FdtErr < 0) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "Failed to delete PcieId=0x%x node: %a\n",
-            PcieId,
-            fdt_strerror (FdtErr)
-            ));
+          DEBUG ((DEBUG_ERROR, "Failed to disable PcieId=0x%x node: %a\n", PcieId, fdt_strerror (FdtErr)));
           return EFI_DEVICE_ERROR;
         }
 
-        DEBUG ((DEBUG_INFO, "Deleted PcieId=0x%x node\n", PcieId));
-      } else {
-        /* Patching PCIe DT node */
-        UINT64                        Aperture64Base;
-        UINT64                        Aperture64Size;
-        UINT32                        Aperture32Base;
-        UINT32                        Aperture32Size;
-        UINT64                        CbbFabricBase;
-        UINT64                        CbbCtlOffset;
-        UINT64                        EcamBase;
-        UINT64                        EcamSize;
-        UINT64                        NonPrefBase;
-        UINT64                        NonPrefSize;
-        UINT64                        PrefBase;
-        UINT64                        PrefSize;
-        UINT64                        IoBase;
-        UINT64                        IoSize;
-        UINT64                        MSSBase;
-        UINT32                        C2CMode;
-        INT32                         RPNodeOffset;
-        VOID                          *Hob;
-        TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
+        DEBUG ((DEBUG_INFO, "%a: Disabled PcieId=0x%x reg=0x%x mask=0x%x\n", __FUNCTION__, PcieId, PcieDisableRegArray[InterfaceSocket], SocketMask));
+        continue;
+      }
 
-        CbbFabricBase = SocketCbbFabricBaseAddr[Socket];
-        if (CbbFabricBase == 0) {
-          continue;
+      if (ChipId == TH500_CHIP_ID) {
+        Status = TH500UpdatePcieNode (InterfaceSocket, PcieId, Dtb, NodeOffset);
+        if (EFI_ERROR (Status)) {
+          return Status;
         }
-
-        switch (ChipId) {
-          case TH500_CHIP_ID:
-            CbbCtlOffset   = CbbFabricBase + 0x20 * PCIE_ID_TO_INTERFACE (PcieId);
-            Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
-                             MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
-
-            Aperture64Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_SIZE);
-            Aperture64Size = Aperture64Size << 16;
-
-            Aperture32Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_HIGH)) << 32) |
-                             MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_LOW);
-
-            Aperture32Size = MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_32BIT_SIZE);
-            Aperture32Size = Aperture32Size << 16;
-
-            break;
-
-          default:
-            return EFI_UNSUPPORTED;
-        }
-
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Base = 0x%llX\n", PcieId, Aperture64Base));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 64-bit Aperture Size = 0x%llX\n", PcieId, Aperture64Size));
-
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Base = 0x%llX\n", PcieId, Aperture32Base));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: 32-bit Aperture Size = 0x%llX\n", PcieId, Aperture32Size));
-
-        /*
-         * +-----------------------------------------------------+
-         * | 64-bit Aperture Usage                               |
-         * +----------+------------------------------------------+
-         * | 256 MB   | Reserved for VDM                         |
-         * +----------+------------------------------------------+
-         * | 256 MB   | ECAM                                     |
-         * +----------+------------------------------------------+
-         * | 512 MB   | RSVD (64K of this is used for I/O)       |
-         * +----------+------------------------------------------+
-         * | 2 GB     | Non-Prefetchable Region                  |
-         * |          | (if 32-bit space is not used)            |
-         * +----------+------------------------------------------+
-         * | Rest all | Prefetchable Region                      |
-         * +----------+------------------------------------------+
-        */
-
-        /* Patch ECAM Address in 'reg' property */
-        Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
-        if ((Property == NULL) || (Length != sizeof (Tmp32) * 20)) {
-          DEBUG ((DEBUG_ERROR, "Unexpected \"reg\" property. Length = %d\n", Length));
-          return EFI_UNSUPPORTED;
-        }
-
-        PrefSize  = Aperture64Size;
-        PrefSize -= TH500_VDM_SIZE;
-
-        EcamBase  = Aperture64Base + TH500_VDM_SIZE;
-        EcamSize  = TH500_ECAM_SIZE;
-        PrefSize -= EcamSize;
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: ECAM Base = 0x%llX\n", PcieId, EcamBase));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: ECAM Size = 0x%llX\n", PcieId, EcamSize));
-
-        ((UINT32 *)Property)[16] = cpu_to_fdt32 (EcamBase >> 32);
-        ((UINT32 *)Property)[17] = cpu_to_fdt32 (EcamBase);
-        ((UINT32 *)Property)[18] = cpu_to_fdt32 (EcamSize >> 32);
-        ((UINT32 *)Property)[19] = cpu_to_fdt32 (EcamSize);
-
-        /* Patch 'ranges' property */
-        Property = fdt_getprop (Dtb, NodeOffset, "ranges", &Length);
-        if ((Property == NULL) ||
-            ((Length != sizeof (Tmp32) * 21) &&
-             (Length != sizeof (Tmp32) * 14)))
-        {
-          DEBUG ((DEBUG_ERROR, "Unexpected \"ranges\" property. Length = %d\n", Length));
-          return EFI_UNSUPPORTED;
-        }
-
-        if (Aperture32Base != 0) {
-          NonPrefBase = Aperture32Base;
-          NonPrefSize = Aperture32Size;
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
-
-          ((UINT32 *)Property)[0] = cpu_to_fdt32 (0x82000000);
-          ((UINT32 *)Property)[1] = cpu_to_fdt32 (NonPrefBase >> 32);
-          ((UINT32 *)Property)[2] = cpu_to_fdt32 (NonPrefBase);
-          ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
-          ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
-          ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
-          ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
-
-          PrefBase  = EcamBase + EcamSize + 0x20000000;
-          PrefSize -= 0x20000000;
-        } else {
-          NonPrefBase = EcamBase + EcamSize + 0x20000000;
-          NonPrefSize = 0x80000000;   /* 2 GB fixed size */
-          PrefSize   -= (NonPrefSize + 0x20000000);
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Base = 0x%llX\n", PcieId, NonPrefBase));
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Non-Prefetchable Size = 0x%llX\n", PcieId, NonPrefSize));
-
-          ((UINT32 *)Property)[1] = cpu_to_fdt32 (0x0);
-          ((UINT32 *)Property)[2] = cpu_to_fdt32 (0x40000000);
-          ((UINT32 *)Property)[3] = cpu_to_fdt32 (NonPrefBase >> 32);
-          ((UINT32 *)Property)[4] = cpu_to_fdt32 (NonPrefBase);
-          ((UINT32 *)Property)[5] = cpu_to_fdt32 (NonPrefSize >> 32);
-          ((UINT32 *)Property)[6] = cpu_to_fdt32 (NonPrefSize);
-
-          PrefBase = NonPrefBase + NonPrefSize;
-        }
-
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Base = 0x%llX\n", PcieId, PrefBase));
-        DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: Prefetchable Size = 0x%llX\n", PcieId, PrefSize));
-
-        ((UINT32 *)Property)[8]  = cpu_to_fdt32 (PrefBase >> 32);
-        ((UINT32 *)Property)[9]  = cpu_to_fdt32 (PrefBase);
-        ((UINT32 *)Property)[10] = cpu_to_fdt32 (PrefBase >> 32);
-        ((UINT32 *)Property)[11] = cpu_to_fdt32 (PrefBase);
-        ((UINT32 *)Property)[12] = cpu_to_fdt32 (PrefSize >> 32);
-        ((UINT32 *)Property)[13] = cpu_to_fdt32 (PrefSize);
-
-        if (Length == (sizeof (Tmp32) * 21)) {
-          IoBase = EcamBase + EcamSize;
-          IoSize = SIZE_64KB; /* 64K fixed size I/O aperture */
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Base = 0x%llX\n", PcieId, IoBase));
-          DEBUG ((DEBUG_INFO, "PCIE_SEG[0x%X]: IO Size = 0x%llX\n", PcieId, IoSize));
-
-          ((UINT32 *)Property)[15] = cpu_to_fdt32 (0x0);
-          ((UINT32 *)Property)[16] = cpu_to_fdt32 (0x0);
-          ((UINT32 *)Property)[17] = cpu_to_fdt32 (IoBase >> 32);
-          ((UINT32 *)Property)[18] = cpu_to_fdt32 (IoBase);
-          ((UINT32 *)Property)[19] = cpu_to_fdt32 (IoSize>> 32);
-          ((UINT32 *)Property)[20] = cpu_to_fdt32 (IoSize);
-        }
-
-        /* Patch 'external-facing' property only for C8 controller */
-        if ((SocketMssBaseAddr != NULL) &&
-            (PCIE_ID_TO_INTERFACE (PcieId) == 8))
-        {
-          MSSBase  = SocketMssBaseAddr[Socket];
-          C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
-          C2CMode &= 0x3;
-          DEBUG ((DEBUG_INFO, "C2C Mode = %u\n", C2CMode));
-
-          if (C2CMode == TH500_MSS_C2C_MODE_TWO_GPU) {
-            RPNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
-            if (RPNodeOffset < 0) {
-              DEBUG ((DEBUG_ERROR, "RP Sub-Node is not found. Can't patch 'external-facing' property\n"));
-            } else {
-              INTN  Err;
-              Err = fdt_nop_property (Dtb, RPNodeOffset, "external-facing");
-              if (0 != Err) {
-                DEBUG ((
-                  DEBUG_ERROR,
-                  "Failed to delete 'external-facing' property for Ctrl = %d\n",
-                  PCIE_ID_TO_INTERFACE (PcieId)
-                  ));
-              } else {
-                DEBUG ((
-                  DEBUG_INFO,
-                  "Deleted 'external-facing' property for Ctrl = %d\n",
-                  PCIE_ID_TO_INTERFACE (PcieId)
-                  ));
-              }
-            }
-          }
-        }
-
-        /* Add 'nvidia,socket-id' property */
-        Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,socket-id", Socket);
-        if (Ret) {
-          DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,socket-id\" property: %d\n", Ret));
-          return EFI_UNSUPPORTED;
-        }
-
-        /* Add 'nvidia,controller-id' property */
-        Ret = fdt_setprop_u32 (Dtb, NodeOffset, "nvidia,controller-id", CtrlId);
-        if (Ret) {
-          DEBUG ((DEBUG_ERROR, "Failed to add \"nvidia,controller-id\" property: %d\n", Ret));
-          return EFI_UNSUPPORTED;
-        }
-
-        /* Patch 'linux,pci-domain' property from UEFI variables */
-        Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
-        if ((Hob != NULL) &&
-            (GET_GUID_HOB_DATA_SIZE (Hob) == (sizeof (TEGRABL_EARLY_BOOT_VARIABLES) * PcdGet32 (PcdTegraMaxSockets))))
-        {
-          Mb1Config = (TEGRABL_EARLY_BOOT_VARIABLES *)GET_GUID_HOB_DATA (Hob);
-        }
-
-        if (Mb1Config != NULL) {
-          if ((Mb1Config->Data.Mb1Data.Header.MajorVersion == TEGRABL_MB1_BCT_MAJOR_VERSION) &&
-              (Mb1Config->Data.Mb1Data.Header.MinorVersion >= 10))
-          {
-            Property = fdt_getprop (Dtb, NodeOffset, "linux,pci-domain", &Length);
-            if ((Property == NULL) || (Length != sizeof (Tmp32))) {
-              DEBUG ((DEBUG_ERROR, "Unexpected pcie property\n"));
-              return EFI_UNSUPPORTED;
-            }
-
-            DEBUG ((
-              DEBUG_INFO,
-              "Patching 'linux,pci-domain' with = %x\n",
-              Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment
-              ));
-
-            Ret = fdt_setprop_u32 (Dtb, NodeOffset, "linux,pci-domain", Mb1Config->Data.Mb1Data.PcieConfig[Socket][CtrlId].Segment);
-            if (Ret) {
-              DEBUG ((DEBUG_ERROR, "Failed to add \"linux,pci-domain\" property: %d\n", Ret));
-              return EFI_UNSUPPORTED;
-            }
-          }
-        } else {
-          DEBUG ((DEBUG_WARN, "Failed to find UEFI early variables to patch \"linux,pci-domain\" property\n"));
-        }
-
-        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       }
     }
   }
@@ -626,6 +712,25 @@ CommonFloorSweepCpus (
   IN  VOID    *Dtb
   )
 {
+  CHAR8  CpusStr[] = "/cpus";
+  INT32  CpusOffset;
+
+  CpusOffset = fdt_path_offset (Dtb, CpusStr);
+  if (CpusOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", CpusStr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return UpdateCpuFloorsweepingConfig (SocketMask, CpusOffset, Dtb);
+}
+
+EFI_STATUS
+EFIAPI
+TH500FloorSweepCpus (
+  IN  UINT32  SocketMask,
+  IN  VOID    *Dtb
+  )
+{
   UINTN       Socket;
   CHAR8       SocketCpusStr[] = "/socket@00/cpus";
   CHAR8       CpusStr[]       = "/cpus";
@@ -656,7 +761,7 @@ CommonFloorSweepCpus (
       DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
     }
 
-    Status = UpdateCpuFloorsweepingConfig (Socket, CpusOffset, Dtb);
+    Status = UpdateCpuFloorsweepingConfig ((1UL << Socket), CpusOffset, Dtb);
     if (EFI_ERROR (Status)) {
       break;
     }

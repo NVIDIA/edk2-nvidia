@@ -49,6 +49,13 @@ typedef struct {
 STATIC PLATFORM_CPU_INFO                   mCpuInfo       = { 0 };
 STATIC CONST TEGRA_PLATFORM_RESOURCE_INFO  *mResourceInfo = NULL;
 
+EFI_STATUS
+EFIAPI
+TH500FloorSweepCpus (
+  IN  UINT32  SocketMask,
+  IN  VOID    *Dtb
+  );
+
 /**
   Get floor sweep cpu info
 
@@ -416,9 +423,9 @@ PhandleIsNextLevelCache (
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
-  IN UINTN  Socket,
-  IN INT32  CpusOffset,
-  IN VOID   *Dtb
+  IN UINT32  SocketMask,
+  IN INT32   CpusOffset,
+  IN VOID    *Dtb
   )
 {
   UINTN        Cpu;
@@ -435,6 +442,10 @@ UpdateCpuFloorsweepingConfig (
   INT32        TmpOffset;
   CHAR8        CoreNodeStr[] = "coreXX";
   EFI_STATUS   Status;
+  CHAR8        SocketNodeStr[] = "socketXX";
+  INT32        CpuMapSocketOffset;
+  UINTN        Socket;
+  BOOLEAN      HasSocketNode;
   UINT32       L2CachePhandle;
   UINT32       L3CachePhandle;
 
@@ -592,66 +603,92 @@ UpdateCpuFloorsweepingConfig (
     return EFI_DEVICE_ERROR;
   }
 
-  Cluster = 0;
-  while (TRUE) {
-    AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
-    NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
-    if (NodeOffset >= 0) {
-      if (!ClusterIsPresent (Socket, Cluster)) {
-        FdtErr = fdt_del_node (Dtb, NodeOffset);
-        if (FdtErr < 0) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
-            ClusterNodeStr,
-            fdt_strerror (FdtErr)
-            ));
-          return EFI_DEVICE_ERROR;
-        }
+  HasSocketNode = TRUE;
+  for (Socket = 0; (Socket < PLATFORM_MAX_SOCKETS) && HasSocketNode; Socket++) {
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "socket%u", Socket);
+    CpuMapSocketOffset = fdt_subnode_offset (Dtb, CpuMapOffset, SocketNodeStr);
+    if (CpuMapSocketOffset < 0) {
+      HasSocketNode      = FALSE;
+      CpuMapSocketOffset = CpuMapOffset;
+    } else if (!(SocketMask & (1UL << Socket))) {
+      FdtErr = fdt_del_node (Dtb, CpuMapSocketOffset);
+      if (FdtErr < 0) {
+        DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a node: %a\n", SocketNodeStr, fdt_strerror (FdtErr)));
+        return EFI_DEVICE_ERROR;
+      }
 
-        DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
-      } else {
-        INT32       ClusterCpuNodeOffset;
-        CONST VOID  *Property;
+      DEBUG ((DEBUG_INFO, "Deleted socket%u node\n", Socket));
+      continue;
+    }
 
-        ClusterCpuNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
-        while (ClusterCpuNodeOffset > 0) {
-          Property = fdt_getprop (Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+    Cluster = 0;
+    while (TRUE) {
+      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
+      NodeOffset = fdt_subnode_offset (Dtb, CpuMapSocketOffset, ClusterNodeStr);
+      if (NodeOffset >= 0) {
+        if (!ClusterIsPresent (Socket, Cluster)) {
+          FdtErr = fdt_del_node (Dtb, NodeOffset);
+          if (FdtErr < 0) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
+              ClusterNodeStr,
+              fdt_strerror (FdtErr)
+              ));
+            return EFI_DEVICE_ERROR;
+          }
 
-          TmpOffset            = ClusterCpuNodeOffset;
-          ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
+          DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
+        } else {
+          INT32       ClusterCpuNodeOffset;
+          CONST VOID  *Property;
 
-          if (Property != NULL) {
-            if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
-              FdtErr = fdt_nop_node (Dtb, TmpOffset);
-              if (FdtErr < 0) {
-                DEBUG ((
-                  DEBUG_ERROR,
-                  "Failed to delete /cpus/cpu-map/%a cpu node: %a\r\n",
-                  ClusterNodeStr,
-                  fdt_strerror (FdtErr)
-                  ));
-                return EFI_DEVICE_ERROR;
+          ClusterCpuNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
+          while (ClusterCpuNodeOffset > 0) {
+            Property = fdt_getprop (Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+
+            TmpOffset            = ClusterCpuNodeOffset;
+            ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
+
+            if (Property != NULL) {
+              if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
+                FdtErr = fdt_nop_node (Dtb, TmpOffset);
+                if (FdtErr < 0) {
+                  DEBUG ((
+                    DEBUG_ERROR,
+                    "Failed to delete /cpus/cpu-map/%a cpu node: %a\r\n",
+                    ClusterNodeStr,
+                    fdt_strerror (FdtErr)
+                    ));
+                  return EFI_DEVICE_ERROR;
+                }
               }
             }
           }
+
+          Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
+          if (EFI_ERROR (Status)) {
+            return Status;
+          }
         }
 
-        Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
-        if (EFI_ERROR (Status)) {
-          return Status;
-        }
+        Cluster++;
+      } else {
+        break;
       }
+    }
 
-      Cluster++;
-    } else {
-      break;
+    Status = RenameChildNodesSequentially (Dtb, CpuMapSocketOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
+    if (EFI_ERROR (Status)) {
+      return Status;
     }
   }
 
-  Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (HasSocketNode) {
+    Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "socket%u", SocketNodeStr, sizeof (SocketNodeStr), 100);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;
@@ -675,7 +712,7 @@ FloorSweepGlobalCpus (
     return EFI_DEVICE_ERROR;
   }
 
-  return UpdateCpuFloorsweepingConfig (0, CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (0x1, CpusOffset, Dtb);
 }
 
 /**
@@ -803,13 +840,9 @@ FloorSweepGlobalThermals (
   return EFI_SUCCESS;
 }
 
-/**
-  Floorsweep sockets
-
-**/
 EFI_STATUS
 EFIAPI
-FloorSweepSockets (
+TH500FloorSweepSockets (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
   )
@@ -866,9 +899,7 @@ FloorSweepDtb (
   UINTN              ChipId;
   EFI_STATUS         Status;
 
-  Info = FloorSweepCpuInfo ();
-  FloorSweepSockets (Info->SocketMask, Dtb);
-
+  Info   = FloorSweepCpuInfo ();
   ChipId = TegraGetChipID ();
 
   switch (ChipId) {
@@ -881,7 +912,8 @@ FloorSweepDtb (
 
       break;
     case TH500_CHIP_ID:
-      Status = CommonFloorSweepCpus (Info->SocketMask, Dtb);
+      TH500FloorSweepSockets (Info->SocketMask, Dtb);
+      Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
 
       if (!EFI_ERROR (Status)) {
         Status = CommonFloorSweepPcie (Info->SocketMask, Dtb);

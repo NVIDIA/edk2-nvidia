@@ -34,6 +34,7 @@
   MemoryAllocationLib
   NvgLib
   TegraPlatformInfoLib
+  DeviceTreeHelperLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
