@@ -806,3 +806,6 @@
 
 #Number of scratch registers available per Frame
   gNVIDIATokenSpaceGuid.PcdPerFpLimit|0x0|UINT32|0x00000127
+
+#Control whether Physical Presence PCD is left enabled/disabled.
+  gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE|BOOLEAN|0x00000131
