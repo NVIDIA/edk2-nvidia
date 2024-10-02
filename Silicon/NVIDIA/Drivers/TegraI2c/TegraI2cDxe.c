@@ -24,6 +24,7 @@
 #include <Library/TimerLib.h>
 #include <Library/IoLib.h>
 #include <Library/PrintLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/PinControl.h>
@@ -1076,15 +1077,13 @@ TegraI2CDriverBindingStart (
     Private->ControllerId = 0x3f;
 
     for (Index = 0; Index <= 9; Index++) {
-      INT32        AliasOffset;
-      CONST CHAR8  *AliasName;
+      INT32  AliasOffset;
       AsciiSPrint (I2cName, sizeof (I2cName), "i2c%u", Index);
-      AliasName = fdt_get_alias (DeviceTreeNode->DeviceTreeBase, I2cName);
-      if (AliasName == NULL) {
+      Status = DeviceTreeGetNodeByPath (I2cName, &AliasOffset);
+      if (EFI_ERROR (Status)) {
         break;
       }
 
-      AliasOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, AliasName);
       if (AliasOffset == DeviceTreeNode->NodeOffset) {
         Private->ControllerId = Index;
         break;

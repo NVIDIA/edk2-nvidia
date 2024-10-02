@@ -302,7 +302,6 @@ AddIortPropNodes (
   UINT32                            ItsNodePresent;
   UINT32                            DualSmmuPresent;
   UINT32                            Indx;
-  CONST CHAR8                       *AliasName;
   UINT32                            NumberOfRegisters;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
 
@@ -318,13 +317,16 @@ AddIortPropNodes (
     do {
       // check for aliases in dtb
       if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
-        AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
-        if (AliasName == NULL) {
-          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component: %a \r\n", __FUNCTION__, DevMap->Alias));
+        Status = DeviceTreeGetNodeByPath (DevMap->Alias, &NodeOffset);
+        if (EFI_ERROR (Status)) {
+          if (Status == EFI_NOT_FOUND) {
+            DEBUG ((DEBUG_WARN, "%a: Didn't find the node for alias %a in DTB\n", __FUNCTION__, DevMap->Alias));
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get the node for alias %a\n", __FUNCTION__, Status, DevMap->Alias));
+          }
+
           break;
         }
-
-        NodeOffset = fdt_path_offset (Private->DtbBase, AliasName);
       } else {
         NodeOffset = fdt_node_offset_by_compatible (
                        Private->DtbBase,
