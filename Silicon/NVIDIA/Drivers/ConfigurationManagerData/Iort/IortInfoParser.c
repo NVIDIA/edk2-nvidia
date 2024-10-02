@@ -293,7 +293,6 @@ AddIortPropNodes (
   EFI_STATUS                        Status;
   INT32                             NodeOffset;
   IORT_PROP_NODE                    *PropNode;
-  CONST VOID                        *Prop;
   CONST UINT32                      *MsiProp;
   CONST UINT32                      *IommusProp;
   CONST UINT32                      *IommuMapProp;
@@ -304,19 +303,23 @@ AddIortPropNodes (
   UINT32                            Indx;
   UINT32                            NumberOfRegisters;
   NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
+  CONST CHAR8                       *CompatibleInfo[2];
 
-  ItsNodePresent = 0;
+  ItsNodePresent    = 0;
+  CompatibleInfo[1] = NULL;
 
   for ( ; DevMap->Compatibility != NULL; DevMap++) {
-    if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->ObjectName == NULL)) {
-      DEBUG ((DEBUG_WARN, "%a: Invalid named component \r\n", __FUNCTION__));
-      continue;
-    }
+    CompatibleInfo[0] = DevMap->Compatibility;
+    NodeOffset        = -1;
 
-    NodeOffset = -1;
-    do {
-      // check for aliases in dtb
-      if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
+    if (DevMap->ObjectId == EArmObjNamedComponent) {
+      if (DevMap->ObjectName == NULL) {
+        DEBUG ((DEBUG_WARN, "%a: Invalid named component (compatibility=\"%a\")\r\n", __FUNCTION__, DevMap->Compatibility));
+        continue;
+      }
+
+      // Check for Alias, and use only that instead of all compatible nodes if found
+      if (DevMap->Alias != NULL) {
         Status = DeviceTreeGetNodeByPath (DevMap->Alias, &NodeOffset);
         if (EFI_ERROR (Status)) {
           if (Status == EFI_NOT_FOUND) {
@@ -325,19 +328,28 @@ AddIortPropNodes (
             DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get the node for alias %a\n", __FUNCTION__, Status, DevMap->Alias));
           }
 
+          continue;
+        }
+
+        // Check DTB status and skip if it's not enabled
+        Status = DeviceTreeCheckNodeCompatibility (CompatibleInfo, NodeOffset);
+        if (EFI_ERROR (Status)) {
+          continue;
+        }
+      }
+    }
+
+    do {
+      // Find the next compatible node (if not using Alias)
+      if (DevMap->Alias == NULL) {
+        Status = DeviceTreeGetNextCompatibleNode (CompatibleInfo, &NodeOffset);
+        if (Status == EFI_NOT_FOUND) {
+          Status = EFI_SUCCESS;
+          break;
+        } else if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get a %a node\n", __FUNCTION__, Status, DevMap->Compatibility));
           break;
         }
-      } else {
-        NodeOffset = fdt_node_offset_by_compatible (
-                       Private->DtbBase,
-                       NodeOffset,
-                       DevMap->Compatibility
-                       );
-      }
-
-      // All the requested DTB nodes are optional
-      if (NodeOffset <= 0) {
-        break;
       }
 
       // The reg property is mandatory with requested entries
@@ -345,26 +357,26 @@ AddIortPropNodes (
       Status            = DeviceTreeGetRegisters (NodeOffset, NULL, &NumberOfRegisters);
       if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get register count for %a node\n", __FUNCTION__, Status, DevMap->Compatibility));
-        break;
+        continue;
       }
 
       if (NumberOfRegisters == 0) {
         DEBUG ((DEBUG_ERROR, "%a: Found zero registers for %a node\n", __FUNCTION__, DevMap->Compatibility));
         Status = EFI_DEVICE_ERROR;
-        break;
+        continue;
       }
 
       RegisterArray = (NVIDIA_DEVICE_TREE_REGISTER_DATA  *)AllocatePool (sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA) * NumberOfRegisters);
       if (RegisterArray == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate space for %u registers for %a node\n", __FUNCTION__, NumberOfRegisters, DevMap->Compatibility));
         Status = EFI_OUT_OF_RESOURCES;
-        break;
+        continue;
       }
 
       Status = DeviceTreeGetRegisters (NodeOffset, RegisterArray, &NumberOfRegisters);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get registers for %a node\n", __FUNCTION__, Status, DevMap->Compatibility));
-        break;
+        continue;
       }
 
       DualSmmuPresent = 0;
@@ -378,27 +390,10 @@ AddIortPropNodes (
         IommuMapProp = NULL;
         DevicesProp  = NULL;
 
-        // Check DTB status and skip if it's not enabled
-        Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
-        if ((Prop != NULL) && !((AsciiStrCmp (Prop, "okay") == 0) || (AsciiStrCmp (Prop, "ok") == 0))) {
-          continue;
-        }
-
         if (DevMap->ObjectId == EArmObjItsGroup) {
           ItsNodePresent = 1;
           Private->IoNodes[ITSIDENT_TYPE_INDEX].NumberOfNodes++;
           goto AllocatePropNode;
-        }
-
-        // Check DTB status and skip if it's not enabled
-        Prop = fdt_getprop (Private->DtbBase, NodeOffset, "status", &PropSize);
-        if ((Prop != NULL) && !((AsciiStrCmp (Prop, "okay") == 0) || (AsciiStrCmp (Prop, "ok") == 0))) {
-          // Alias path would be unique
-          if (DevMap->Alias != NULL) {
-            break;
-          }
-
-          continue;
         }
 
         // Check "msi-map" property for all DTB nodes
@@ -408,11 +403,6 @@ AddIortPropNodes (
         } else {
           // Skip if the target DTB node is not valid
           if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (MsiProp[1]), 1) == NULL) {
-            // Alias path would be unique
-            if (DevMap->Alias != NULL) {
-              break;
-            }
-
             continue;
           }
 
@@ -425,11 +415,6 @@ AddIortPropNodes (
           if ((IommusProp != NULL) && (PropSize == IOMMUS_PROP_LENGTH)) {
             // Check DTB status and skip if it's not enabled
             if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (IommusProp[0]), 1) == NULL) {
-              // Alias path would be unique
-              if (DevMap->Alias != NULL) {
-                break;
-              }
-
               continue;
             }
 
@@ -443,21 +428,11 @@ AddIortPropNodes (
               IommuMapProp = NULL;
               // Skip this node if both 'iommu-map' and 'msi-map' are not defined
               if (MsiProp == NULL) {
-                // Alias path would be unique
-                if (DevMap->Alias != NULL) {
-                  break;
-                }
-
                 continue;
               }
             } else {
               // Check DTB status and skip if it's not enabled
               if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (IommuMapProp[1]), 1) == NULL) {
-                // Alias path would be unique
-                if (DevMap->Alias != NULL) {
-                  break;
-                }
-
                 continue;
               }
 
@@ -476,11 +451,6 @@ AddIortPropNodes (
             } else {
               // Skip if the target DTB node is not valid
               if (FindPropNodeByPhandleInstance (Private, SwapBytes32 (*DevicesProp), 1) == NULL) {
-                // Alias path would be unique
-                if (DevMap->Alias != NULL) {
-                  break;
-                }
-
                 continue;
               }
             }
@@ -517,13 +487,9 @@ AllocatePropNode:
         PropNode->Signature       = IORT_PROP_NODE_SIGNATURE;
         InsertTailList (&Private->PropNodeList, &PropNode->Link);
         Private->IoNodes[IORT_TYPE_INDEX (DevMap->ObjectId)].NumberOfNodes++;
+        DEBUG ((DEBUG_INFO, "%a: Added a node of type %a, Name %a, Alias %a\n", __FUNCTION__, DevMap->Compatibility, DevMap->ObjectName, DevMap->Alias));
       }
-
-      // Alias path would be unique
-      if (DevMap->Alias != NULL) {
-        break;
-      }
-    } while (1);
+    } while (DevMap->Alias == NULL);
   }
 
   return EFI_SUCCESS;
