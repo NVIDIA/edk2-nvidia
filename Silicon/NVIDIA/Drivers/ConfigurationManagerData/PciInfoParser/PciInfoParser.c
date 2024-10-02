@@ -91,6 +91,7 @@ PciInfoParser (
                                 );
 
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find PciConfigurationDataProtocol\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -124,6 +125,7 @@ PciInfoParser (
   Desc.Data     = ConfigSpaceInfoArray;
   Status        = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add ConfigSpaceInfoArray to CM\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 

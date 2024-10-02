@@ -209,7 +209,7 @@ DeviceTreeGetRegisters (
 Returns information about the ranges of a given device tree node
 
 @param[in]      NodeOffset      - NodeHandle
-@param[in]      RangeName       - Name of the ranges property ("ranges", "dma-ranges", etc)
+@param[in]      RangeName       - Name of the ranges property ("ranges", "dma-ranges", "hbm-ranges", etc)
 @param[out]     RangesArray     - Buffer of size NumberOfRanges that will contain the list of ranges information
 @param[in,out]  NumberOfRanges  - On input contains size of RangesArray, on output number of required ranges.
 
@@ -233,7 +233,8 @@ DeviceTreeGetRanges (
   EFI_STATUS  Status;
   VOID        *DeviceTree;
   INT32       ParentOffset;
-  UINT64      AddressCells;
+  UINT64      ChildAddressCells;
+  UINT64      ParentAddressCells;
   UINT64      SizeCells;
   CONST VOID  *RangeProperty;
   CONST VOID  *RangeNames;
@@ -257,36 +258,48 @@ DeviceTreeGetRanges (
     return EFI_DEVICE_ERROR;
   }
 
-  Status = DeviceTreeGetParent (DeviceTree, NodeOffset, &ParentOffset);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = DeviceTreeGetNodePropertyValue64 (ParentOffset, "#address-cells", &AddressCells);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = DeviceTreeGetNodePropertyValue64 (ParentOffset, "#size-cells", &SizeCells);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  if ((AddressCells > 2) ||
-      (AddressCells == 0) ||
-      (SizeCells > 2) ||
-      (SizeCells == 0))
-  {
-    DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %llu, %llu\r\n", __FUNCTION__, AddressCells, SizeCells));
-    return EFI_DEVICE_ERROR;
-  }
-
   Status = DeviceTreeGetNodeProperty (NodeOffset, RangeName, &RangeProperty, &PropertySize);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  EntrySize = sizeof (UINT32) * (AddressCells + AddressCells + SizeCells);
+  Status = DeviceTreeGetParent (DeviceTree, NodeOffset, &ParentOffset);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue64 (NodeOffset, "#address-cells", &ChildAddressCells);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue64 (ParentOffset, "#address-cells", &ParentAddressCells);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue64 (NodeOffset, "#size-cells", &SizeCells);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if ((ParentAddressCells > 2) ||
+      (ParentAddressCells == 0) ||
+      (ChildAddressCells > 3) ||
+      (ChildAddressCells == 0) ||
+      (SizeCells > 2) ||
+      (SizeCells == 0))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %llu, %llu, %llu\r\n", __FUNCTION__, ChildAddressCells, ParentAddressCells, SizeCells));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // "hbm-ranges" doesn't have the ChildAddress field
+  if (AsciiStrCmp (RangeName, "hbm-ranges") == 0) {
+    ChildAddressCells = 0;
+  }
+
+  EntrySize = sizeof (UINT32) * (ChildAddressCells + ParentAddressCells + SizeCells);
   ASSERT ((PropertySize % EntrySize) == 0);
   NumberOfRangeRegions = PropertySize / EntrySize;
 
@@ -320,36 +333,65 @@ DeviceTreeGetRanges (
     UINT64  ChildAddressBase  = 0;
     UINT64  ParentAddressBase = 0;
     UINT64  RegionSize        = 0;
+    UINT32  ChildAddressHigh  = 0;
+
+    if (ChildAddressCells == 3) {
+      CopyMem (
+        (VOID *)&ChildAddressHigh,
+        RangeProperty + EntrySize * RegionIndex,
+        sizeof (UINT32)
+        );
+      ChildAddressHigh = Fdt32ToCpu (ChildAddressHigh);
+
+      CopyMem (
+        (VOID *)&ChildAddressBase,
+        RangeProperty + (EntrySize * RegionIndex) + sizeof (UINT32),
+        sizeof (UINT64)
+        );
+      ChildAddressBase = Fdt64ToCpu (ChildAddressBase);
+    } else if (ChildAddressCells == 2) {
+      CopyMem (
+        (VOID *)&ChildAddressBase,
+        RangeProperty + (EntrySize * RegionIndex),
+        sizeof (UINT64)
+        );
+      ChildAddressBase = Fdt64ToCpu (ChildAddressBase);
+    } else if (ChildAddressCells == 1) {
+      CopyMem (
+        (VOID *)&ChildAddressBase,
+        RangeProperty + (EntrySize * RegionIndex),
+        sizeof (UINT32)
+        );
+      ChildAddressBase = Fdt32ToCpu (ChildAddressBase);
+    }
 
     CopyMem (
-      (VOID *)&ChildAddressBase,
-      RangeProperty + EntrySize * RegionIndex,
-      AddressCells * sizeof (UINT32)
-      );
-    CopyMem (
       (VOID *)&ParentAddressBase,
-      RangeProperty + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)),
-      AddressCells * sizeof (UINT32)
+      RangeProperty + EntrySize * RegionIndex + (ChildAddressCells * sizeof (UINT32)),
+      ParentAddressCells * sizeof (UINT32)
       );
-    CopyMem ((VOID *)&RegionSize, RangeProperty + EntrySize * RegionIndex + (2 * (AddressCells * sizeof (UINT32))), SizeCells * sizeof (UINT32));
-    if (AddressCells == 2) {
-      ChildAddressBase  = Fdt64ToCpu (ChildAddressBase);
+    if (ParentAddressCells == 2) {
       ParentAddressBase = Fdt64ToCpu (ParentAddressBase);
     } else {
-      ChildAddressBase  = Fdt32ToCpu (ChildAddressBase);
       ParentAddressBase = Fdt32ToCpu (ParentAddressBase);
     }
 
+    CopyMem (
+      (VOID *)&RegionSize,
+      RangeProperty + EntrySize * RegionIndex + ((ChildAddressCells + ParentAddressCells) * sizeof (UINT32)),
+      SizeCells * sizeof (UINT32)
+      );
     if (SizeCells == 2) {
       RegionSize = Fdt64ToCpu (RegionSize);
     } else {
       RegionSize = Fdt32ToCpu (RegionSize);
     }
 
-    RangesArray[RegionIndex].ChildAddress  = ChildAddressBase;
-    RangesArray[RegionIndex].ParentAddress = ParentAddressBase;
-    RangesArray[RegionIndex].Size          = RegionSize;
-    RangesArray[RegionIndex].Name          = NULL;
+    RangesArray[RegionIndex].ChildAddressHigh = ChildAddressHigh;
+    RangesArray[RegionIndex].ChildAddress     = ChildAddressBase;
+    RangesArray[RegionIndex].ParentAddress    = ParentAddressBase;
+    RangesArray[RegionIndex].Size             = RegionSize;
+    RangesArray[RegionIndex].Name             = NULL;
 
     if (NameOffset < NameSize) {
       RangesArray[RegionIndex].Name = RangeNames + NameOffset;

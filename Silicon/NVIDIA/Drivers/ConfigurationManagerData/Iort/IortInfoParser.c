@@ -230,16 +230,16 @@ GetAddressLimit (
   IN IORT_PROP_NODE     *PropNode
   )
 {
-  CONST VOID    *Prop;
-  CONST UINT64  *IntProp;
-  UINT64        DmaAddr;
-  UINT32        AddrLimit;
-  INT32         PropSize;
-  UINT32        ChipID;
+  EFI_STATUS                      Status;
+  UINT64                          DmaAddr;
+  UINT32                          AddrLimit;
+  UINT32                          ChipID;
+  NVIDIA_DEVICE_TREE_RANGES_DATA  DmaRange;
+  UINT32                          NumRanges;
 
-  // TODO: add support for multi 'dma-ranges' entries if needed
-  Prop = fdt_getprop (Private->DtbBase, PropNode->NodeOffset, "dma-ranges", &PropSize);
-  if ((Prop == NULL) || (PropSize != DMARANGE_PROP_LENGTH)) {
+  NumRanges = 1;
+  Status    = DeviceTreeGetRanges (PropNode->NodeOffset, "dma-ranges", &DmaRange, &NumRanges);
+  if (EFI_ERROR (Status)) {
     ChipID = TegraGetChipID ();
     switch (ChipID) {
       case T234_CHIP_ID:
@@ -256,9 +256,8 @@ GetAddressLimit (
     return 0;
   }
 
-  IntProp  = Prop + sizeof (UINT32);
-  DmaAddr  = SwapBytes64 (IntProp[1]);  // DEV DMA range start address
-  DmaAddr += SwapBytes64 (IntProp[2]);  // DEV DMA range length
+  DmaAddr  = DmaRange.ParentAddress;
+  DmaAddr += DmaRange.Size;
 
   // Compute Log2 value of 64bit DMA end address
   AddrLimit = 0;

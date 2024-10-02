@@ -42,6 +42,7 @@ typedef struct {
 } NVIDIA_DEVICE_TREE_REGISTER_DATA;
 
 typedef struct {
+  EFI_PHYSICAL_ADDRESS    ChildAddressHigh;
   EFI_PHYSICAL_ADDRESS    ChildAddress;
   EFI_PHYSICAL_ADDRESS    ParentAddress;
   UINTN                   Size;

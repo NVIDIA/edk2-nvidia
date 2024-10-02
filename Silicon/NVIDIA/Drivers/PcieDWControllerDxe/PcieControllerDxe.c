@@ -1696,18 +1696,13 @@ DeviceDiscoveryNotify (
   PCI_ROOT_BRIDGE                              *RootBridge       = NULL;
   EFI_DEVICE_PATH_PROTOCOL                     *ParentDevicePath = NULL;
   CONST VOID                                   *BusProperty      = NULL;
-  CONST VOID                                   *RangesProperty   = NULL;
   INT32                                        PropertySize      = 0;
-  INT32                                        AddressCells;
-  INT32                                        PciAddressCells;
-  INT32                                        SizeCells;
-  INT32                                        RangeSize;
-  CONST VOID                                   *SegmentNumber = NULL;
-  CONST VOID                                   *ControllerId  = NULL;
-  CONST VOID                                   *BpmpPhandle   = NULL;
-  PCIE_CONTROLLER_PRIVATE                      *Private       = NULL;
-  NVIDIA_REGULATOR_PROTOCOL                    *Regulator     = NULL;
-  CONST VOID                                   *Property      = NULL;
+  CONST VOID                                   *SegmentNumber    = NULL;
+  CONST VOID                                   *ControllerId     = NULL;
+  CONST VOID                                   *BpmpPhandle      = NULL;
+  PCIE_CONTROLLER_PRIVATE                      *Private          = NULL;
+  NVIDIA_REGULATOR_PROTOCOL                    *Regulator        = NULL;
+  CONST VOID                                   *Property         = NULL;
   UINT32                                       Val;
   UINTN                                        ChipID;
   UINT32                                       NumberOfInterruptMaps;
@@ -1717,6 +1712,9 @@ DeviceDiscoveryNotify (
   NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA        *InterruptMap;
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *CMTokenProtocol;
   CM_OBJECT_TOKEN                              *TokenMap;
+  UINT32                                       NumberOfRanges;
+  NVIDIA_DEVICE_TREE_RANGES_DATA               *RangesArray;
+  UINT32                                       RangeIndex;
 
   Status    = EFI_SUCCESS;
   PcieFound = FALSE;
@@ -2110,23 +2108,32 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.MinBusNumber = RootBridge->Bus.Base;
       Private->PcieRootBridgeConfigurationIo.MaxBusNumber = RootBridge->Bus.Limit;
 
-      AddressCells    = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
-      PciAddressCells = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-      SizeCells       = fdt_size_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
-      RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
-
-      if (PciAddressCells != 3) {
-        DEBUG ((DEBUG_ERROR, "PCIe Controller, size 3 is required for address-cells, got %d\r\n", PciAddressCells));
-        Status = EFI_DEVICE_ERROR;
-        goto ErrorExit;
+      NumberOfRanges = 0;
+      Status         = DeviceTreeGetRanges (DeviceTreeNode->NodeOffset, "ranges", NULL, &NumberOfRanges);
+      if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration: %r\r\n", Status));
+        break;
       }
 
-      RangesProperty = fdt_getprop (
-                         DeviceTreeNode->DeviceTreeBase,
-                         DeviceTreeNode->NodeOffset,
-                         "ranges",
-                         &PropertySize
-                         );
+      if (NumberOfRanges == 0) {
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration: No ranges found\r\n"));
+        Status = EFI_UNSUPPORTED;
+        break;
+      }
+
+      RangesArray = AllocatePool (sizeof (NVIDIA_DEVICE_TREE_RANGES_DATA) * NumberOfRanges);
+      if (RangesArray == NULL) {
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unable to allocate space for %u ranges\n", NumberOfRanges));
+        Status = EFI_OUT_OF_RESOURCES;
+        break;
+      }
+
+      Status = DeviceTreeGetRanges (DeviceTreeNode->NodeOffset, "ranges", RangesArray, &NumberOfRanges);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unable to get ranges: %r\r\n", Status));
+        break;
+      }
+
       // Mark all regions as unsupported
       RootBridge->Io.Base          = MAX_UINT64;
       RootBridge->Mem.Base         = MAX_UINT64;
@@ -2134,13 +2141,7 @@ DeviceDiscoveryNotify (
       RootBridge->PMem.Base        = MAX_UINT64;
       RootBridge->PMemAbove4G.Base = MAX_UINT64;
 
-      if ((RangesProperty == NULL) || ((PropertySize % RangeSize) != 0)) {
-        DEBUG ((DEBUG_ERROR, "PCIe Controller: Unsupported ranges configuration\r\n"));
-        Status = EFI_UNSUPPORTED;
-        goto ErrorExit;
-      }
-
-      while (PropertySize != 0) {
+      for (RangeIndex = 0; RangeIndex < NumberOfRanges; RangeIndex++) {
         UINT32   Flags         = 0;
         UINT32   Space         = 0;
         BOOLEAN  Prefetchable  = FALSE;
@@ -2152,35 +2153,10 @@ DeviceDiscoveryNotify (
 
         ASSERT (Private->AddressMapCount < PCIE_NUMBER_OF_MAPPING_SPACE);
 
-        CopyMem (&Flags, RangesProperty, sizeof (UINT32));
-        Flags = SwapBytes32 (Flags);
-
-        CopyMem (&DeviceAddress, RangesProperty + sizeof (UINT32), sizeof (UINT64));
-        DeviceAddress = SwapBytes64 (DeviceAddress);
-
-        if (AddressCells == 2) {
-          CopyMem (&HostAddress, RangesProperty + (PciAddressCells * sizeof (UINT32)), sizeof (UINT64));
-          HostAddress = SwapBytes64 (HostAddress);
-        } else if (AddressCells == 1) {
-          CopyMem (&HostAddress, RangesProperty + (PciAddressCells * sizeof (UINT32)), sizeof (UINT32));
-          HostAddress = SwapBytes32 (HostAddress);
-        } else {
-          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid address cells (%d)\r\n", AddressCells));
-          Status = EFI_DEVICE_ERROR;
-          break;
-        }
-
-        if (SizeCells == 2) {
-          CopyMem (&Size, RangesProperty + ((PciAddressCells + AddressCells) * sizeof (UINT32)), sizeof (UINT64));
-          Size = SwapBytes64 (Size);
-        } else if (SizeCells == 1) {
-          CopyMem (&Size, RangesProperty + ((PciAddressCells + AddressCells) * sizeof (UINT32)), sizeof (UINT32));
-          Size = SwapBytes32 (Size);
-        } else {
-          DEBUG ((DEBUG_ERROR, "PCIe Controller: Invalid size cells (%d)\r\n", SizeCells));
-          Status = EFI_DEVICE_ERROR;
-          goto ErrorExit;
-        }
+        Flags         = RangesArray[RangeIndex].ChildAddressHigh;
+        DeviceAddress = RangesArray[RangeIndex].ChildAddress;
+        HostAddress   = RangesArray[RangeIndex].ParentAddress;
+        Size          = RangesArray[RangeIndex].Size;
 
         Space        = Flags & PCIE_DEVICETREE_SPACE_CODE;
         Prefetchable = ((Flags & PCIE_DEVICETREE_PREFETCHABLE) == PCIE_DEVICETREE_PREFETCHABLE);
@@ -2245,8 +2221,6 @@ DeviceDiscoveryNotify (
         Private->AddressMapInfo[Private->AddressMapCount].CpuAddress  = HostAddress;
         Private->AddressMapInfo[Private->AddressMapCount].AddressSize = Size;
         Private->AddressMapCount++;
-        RangesProperty += RangeSize;
-        PropertySize   -= RangeSize;
       }
 
       if (EFI_ERROR (Status)) {

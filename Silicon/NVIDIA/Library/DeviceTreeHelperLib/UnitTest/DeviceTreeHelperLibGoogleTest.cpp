@@ -35,11 +35,14 @@ typedef struct {
 } FDT_PROPERTY_32;
 
 #define MAX_REGISTER_NUMS  4
+#define MAX_SIZE_CELLS 2
+#define MAX_PARENT_ADDRESS_CELLS 2
+#define MAX_CHILD_ADDRESS_CELLS 3
 typedef struct {
   UINT32    Tag;
   UINT32    Length;
   UINT32    NameOffset;
-  UINT32    ValueBigEndian[MAX_REGISTER_NUMS * 3 * 2];
+  UINT32    ValueBigEndian[MAX_REGISTER_NUMS * (MAX_CHILD_ADDRESS_CELLS + MAX_PARENT_ADDRESS_CELLS + MAX_SIZE_CELLS)];
 } FDT_PROPERTY_MAX_MEMORY_RANGE;
 
 #define TEST_NODE_OFFSET                   5
@@ -300,6 +303,8 @@ TEST_F (PointerTestNoPlatform, CompilanceNoDtb) {
   EXPECT_EQ (EFI_DEVICE_ERROR, DeviceTreeGetRegisters (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
   NumberOfRegisters = 0;
   EXPECT_EQ (EFI_DEVICE_ERROR, DeviceTreeGetRanges (TEST_NODE_OFFSET, "ranges", NULL, &NumberOfRegisters));
+  EXPECT_EQ (EFI_DEVICE_ERROR, DeviceTreeGetRanges (TEST_NODE_OFFSET, "dma-ranges", NULL, &NumberOfRegisters));
+  EXPECT_EQ (EFI_DEVICE_ERROR, DeviceTreeGetRanges (TEST_NODE_OFFSET, "hbm-ranges", NULL, &NumberOfRegisters));
  #ifndef DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
   NumberOfRegisters = 0;
   EXPECT_EQ (EFI_DEVICE_ERROR, GetDeviceTreeRegisters (0, NULL, &NumberOfRegisters));
@@ -1885,12 +1890,13 @@ static int FdtSetPropNames( void *Fdt, int Offset, const char *Prop, const void 
 #define REGISTER_NAMES_1         "reg0"
 #define REGISTER_NAMES_2         "reg0\0reg10"
 #define REGISTER_NAMES_3         "reg0\0reg10\0reg100"
-class DeviceRegisters : public  DeviceTreeHelperPlatform, public  testing::WithParamInterface<::std::tuple<const CHAR8 *, bool, bool, int, int> > {
+class DeviceRegisters : public  DeviceTreeHelperPlatform, public  testing::WithParamInterface<::std::tuple<const CHAR8 *, bool, int, bool, int, int> > {
 protected:
   const CHAR8 *test_type;
-  bool Address64BBit;
+  bool ParentAddress64BBit;
+  int ChildAddressCells;
   bool Size64Bit;
-  int AddressCells;
+  int ParentAddressCells;
   int SizeCells;
   int NumberOfEntries;
   int SizeOfEntry;
@@ -1898,7 +1904,8 @@ protected:
   const void *SetPropRegPtr;
   const void *SetPropNamesPtr;
 
-  FDT_PROPERTY_32 AddressCellsProperty;
+  FDT_PROPERTY_32 ParentAddressCellsProperty;
+  FDT_PROPERTY_32 ChildAddressCellsProperty;
   FDT_PROPERTY_32 SizeCellsProperty;
   FDT_PROPERTY_MAX_MEMORY_RANGE RegisterProperty;
   constexpr static FDT_PROPERTY_LEN_100 RegisterNamesProperty = { 0, 0, 0, REGISTER_NAMES_4 };
@@ -1917,26 +1924,29 @@ protected:
     INT32        NamesSize;
     const CHAR8  *TestProperty;
     CHAR8        NameProperty[32];
-    int          NumberOfAddresses;
+    int          SizeOfDtbPropertyEntry;
 
     DeviceTreeHelperPlatform::SetUp ();
     for (unsigned int Index = 0; Index < (sizeof (RegisterProperty.ValueBigEndian)/sizeof (UINT32)); Index++) {
       RegisterProperty.ValueBigEndian[Index] = htobe32 ((Index+1) | ((Index+2) << 16));
     }
 
-    std::tie (test_type, Address64BBit, Size64Bit, NumberOfEntries, NumberOfNames) = GetParam ();
+    std::tie (test_type, ParentAddress64BBit, ChildAddressCells, Size64Bit, NumberOfEntries, NumberOfNames) = GetParam ();
 
     TestProperty = test_type;
     if (strcmp (test_type, "reg") == 0) {
       SizeOfEntry       = sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA);
-      NumberOfAddresses = 1;
+      SizeOfDtbPropertyEntry = ParentAddressCells + SizeCells;
     } else if (strcmp (test_type, "reg_dep") == 0) {
       SizeOfEntry       = sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA);
       TestProperty      = "reg";
-      NumberOfAddresses = 1;
+      SizeOfDtbPropertyEntry = ParentAddressCells + SizeCells;
     } else {
+      if (strcmp (test_type, "hbm-ranges") == 0) {
+        ChildAddressCells = 0;
+      }
       SizeOfEntry       = sizeof (NVIDIA_DEVICE_TREE_RANGES_DATA);
-      NumberOfAddresses = 2;
+      SizeOfDtbPropertyEntry = ChildAddressCells + ParentAddressCells + SizeCells;
     }
 
     strcpy (NameProperty, TestProperty);
@@ -1994,8 +2004,9 @@ protected:
            )
          );
 
-    AddressCells                        = Address64BBit ? 2 : 1;
-    AddressCellsProperty.ValueBigEndian = htobe32 (AddressCells);
+    ParentAddressCells                  = ParentAddress64BBit ? 2 : 1;
+    ParentAddressCellsProperty.ValueBigEndian = htobe32 (ParentAddressCells);
+    ChildAddressCellsProperty.ValueBigEndian = htobe32 (ChildAddressCells);
     SizeCells                           = Size64Bit ? 2 : 1;
     SizeCellsProperty.ValueBigEndian    = htobe32 (SizeCells);
     EXPECT_CALL (
@@ -2010,24 +2021,57 @@ protected:
       .WillRepeatedly (
          DoAll (
            SetArgPointee<3>(sizeof (UINT32)),
-           Return ((FDT_PROPERTY *)&AddressCellsProperty)
+           Return ((FDT_PROPERTY *)&ParentAddressCellsProperty)
            )
          );
-    EXPECT_CALL (
-      FdtMock,
-      FdtGetProperty (
-        Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
-        TEST_PARENT_NODE_OFFSET,
-        StrEq ("#size-cells"),
-        NotNull ()
+    if (strstr(test_type, "ranges") == NULL) {
+      EXPECT_CALL (
+        FdtMock,
+        FdtGetProperty (
+          Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+          TEST_PARENT_NODE_OFFSET,
+          StrEq ("#size-cells"),
+          NotNull ()
+          )
         )
-      )
-      .WillRepeatedly (
-         DoAll (
-           SetArgPointee<3>(sizeof (UINT32)),
-           Return ((FDT_PROPERTY *)&SizeCellsProperty)
-           )
-         );
+        .WillRepeatedly (
+           DoAll (
+             SetArgPointee<3>(sizeof (UINT32)),
+             Return ((FDT_PROPERTY *)&SizeCellsProperty)
+             )
+           );
+    } else {
+      EXPECT_CALL (
+        FdtMock,
+        FdtGetProperty (
+          Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+          TEST_NODE_OFFSET,
+          StrEq ("#address-cells"),
+          NotNull ()
+          )
+        )
+        .WillRepeatedly (
+           DoAll (
+             SetArgPointee<3>(sizeof (UINT32)),
+             Return ((FDT_PROPERTY *)&ChildAddressCellsProperty)
+             )
+           );
+      EXPECT_CALL (
+        FdtMock,
+        FdtGetProperty (
+          Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+          TEST_NODE_OFFSET,
+          StrEq ("#size-cells"),
+          NotNull ()
+          )
+        )
+        .WillRepeatedly (
+           DoAll (
+             SetArgPointee<3>(sizeof (UINT32)),
+             Return ((FDT_PROPERTY *)&SizeCellsProperty)
+             )
+           );
+    }
     if (NumberOfEntries != 0) {
       EXPECT_CALL (
         FdtMock,
@@ -2040,7 +2084,7 @@ protected:
         )
         .WillRepeatedly (
            DoAll (
-             SetArgPointee<3>(sizeof (UINT32) * ((AddressCells * NumberOfAddresses) + SizeCells) * NumberOfEntries),
+             SetArgPointee<3>(sizeof (UINT32) * SizeOfDtbPropertyEntry * NumberOfEntries),
              Return ((FDT_PROPERTY *)&RegisterProperty)
              )
            );
@@ -2129,7 +2173,8 @@ DeviceRegisters::GenericMemoryTest (
 {
   NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
   NVIDIA_DEVICE_TREE_RANGES_DATA    *RangesArray;
-  UINT64                            ExpectedAddress;
+  UINT64                            ExpectedChildAddress;
+  UINT64                            ExpectedChildAddressHigh;
   UINT64                            ExpectedParentAddress;
   UINT64                            ExpectedSize;
 
@@ -2151,15 +2196,15 @@ DeviceRegisters::GenericMemoryTest (
       }
       if (RegisterArray != NULL) {
         for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
-          unsigned int  AddressOffset = Index * (AddressCells + SizeCells);
-          unsigned int  SizeOffset    = Index * (AddressCells + SizeCells) + AddressCells;
-          if (Address64BBit) {
-            ExpectedAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressOffset]);
+          unsigned int  AddressOffset = Index * (ParentAddressCells + SizeCells);
+          unsigned int  SizeOffset    = Index * (ParentAddressCells + SizeCells) + ParentAddressCells;
+          if (ParentAddress64BBit) {
+            ExpectedParentAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressOffset]);
           } else {
-            ExpectedAddress = be32toh (RegisterProperty.ValueBigEndian[AddressOffset]);
+            ExpectedParentAddress = be32toh (RegisterProperty.ValueBigEndian[AddressOffset]);
           }
 
-          EXPECT_EQ (ExpectedAddress, RegisterArray[Index].BaseAddress);
+          EXPECT_EQ (ExpectedParentAddress, RegisterArray[Index].BaseAddress);
           if (Size64Bit) {
             ExpectedSize = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[SizeOffset]);
           } else {
@@ -2220,15 +2265,15 @@ DeviceRegisters::GenericMemoryTest (
 
         // check reg data saved by FdtSetProp mock
         for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
-          unsigned int  AddressOffset = Index * (AddressCells + SizeCells);
-          unsigned int  SizeOffset    = Index * (AddressCells + SizeCells) + AddressCells;
+          unsigned int  AddressOffset = Index * (ParentAddressCells + SizeCells);
+          unsigned int  SizeOffset    = Index * (ParentAddressCells + SizeCells) + ParentAddressCells;
           UINT64 SetSize;
           UINT64 SetAddr;
 
           EXPECT_LE (AddressOffset*4, SetRegisterProperty.Length);
           EXPECT_LE (SizeOffset*4, SetRegisterProperty.Length);
 
-          if (Address64BBit) {
+          if (ParentAddress64BBit) {
             SetAddr = be64toh (*(UINT64 *)&SetRegisterProperty.ValueBigEndian[AddressOffset]);
 
           } else {
@@ -2258,18 +2303,29 @@ DeviceRegisters::GenericMemoryTest (
     if (!EFI_ERROR (Status)) {
       EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeGetRanges (NodeOffset, NULL, RangesArray, NumberOfEntries));
       for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
-        unsigned int  AddressOffset       = Index * ((AddressCells*2) + SizeCells);
-        unsigned int  AddressParentOffset = Index * ((AddressCells*2) + SizeCells) + AddressCells;
-        unsigned int  SizeOffset          = Index * ((AddressCells*2) + SizeCells) + AddressCells*2;
-        if (Address64BBit) {
-          ExpectedAddress       = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressOffset]);
+        unsigned int  AddressChildOffset       = Index * ((ChildAddressCells+ParentAddressCells) + SizeCells);
+        unsigned int  AddressParentOffset = Index * ((ChildAddressCells+ParentAddressCells) + SizeCells) + ChildAddressCells;
+        unsigned int  SizeOffset          = Index * ((ChildAddressCells+ParentAddressCells) + SizeCells) + ChildAddressCells + ParentAddressCells;
+        if (ParentAddress64BBit) {
           ExpectedParentAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressParentOffset]);
         } else {
-          ExpectedAddress       = be32toh (RegisterProperty.ValueBigEndian[AddressOffset]);
           ExpectedParentAddress = be32toh (RegisterProperty.ValueBigEndian[AddressParentOffset]);
         }
 
-        EXPECT_EQ (ExpectedAddress, RangesArray[Index].ChildAddress);
+        ExpectedChildAddressHigh = 0;
+        if (ChildAddressCells == 3) {
+          ExpectedChildAddressHigh = be32toh (RegisterProperty.ValueBigEndian[AddressChildOffset]);
+          ExpectedChildAddress = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressChildOffset+1]);
+        } else if (ChildAddressCells == 2) {
+          ExpectedChildAddress       = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[AddressChildOffset]);
+        } else if (ChildAddressCells == 1) {
+          ExpectedChildAddress       = be32toh (RegisterProperty.ValueBigEndian[AddressChildOffset]);
+        } else if (ChildAddressCells == 0) {
+          ExpectedChildAddress = 0;
+        }
+
+        EXPECT_EQ (ExpectedChildAddress, RangesArray[Index].ChildAddress);
+        EXPECT_EQ (ExpectedChildAddressHigh, RangesArray[Index].ChildAddressHigh);
         EXPECT_EQ (ExpectedParentAddress, RangesArray[Index].ParentAddress);
         if (Size64Bit) {
           ExpectedSize = be64toh (*(UINT64 *)&RegisterProperty.ValueBigEndian[SizeOffset]);
@@ -2315,81 +2371,120 @@ TEST_P (DeviceRegisters, GetRegisters) {
 
   NumberOfRegisters = 0;
   if (NumberOfEntries != 0) {
-    EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-    EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+    // Reg tests ignore ChildAddressCells, but non-reg tests don't allow ChildAddressCells == 0
+    if ((ChildAddressCells == 0) && (strstr(test_type, "reg") == NULL)) {
+      EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+    } else {
+      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
 
-    TestData = malloc (SizeOfEntry * NumberOfRegisters);
-    ASSERT_NE (TestData, nullptr);
+      TestData = malloc (SizeOfEntry * NumberOfRegisters);
+      ASSERT_NE (TestData, nullptr);
 
-    NumberOfRegisters--;
-    EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, TestData, &NumberOfRegisters));
-    EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
-    EXPECT_EQ (EFI_SUCCESS, GenericMemoryTest (TEST_NODE_OFFSET, TestData, &NumberOfRegisters));
+      NumberOfRegisters--;
+      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, TestData, &NumberOfRegisters));
+      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+      EXPECT_EQ (EFI_SUCCESS, GenericMemoryTest (TEST_NODE_OFFSET, TestData, &NumberOfRegisters));
+
+      SizeCellsProperty.ValueBigEndian = htobe32 (3);
+      NumberOfRegisters                = 0;
+      EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      SizeCellsProperty.ValueBigEndian = htobe32 (0);
+      NumberOfRegisters                = 0;
+      EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      SizeCellsProperty.ValueBigEndian    = htobe32 (SizeCells);
+      ParentAddressCellsProperty.ValueBigEndian = htobe32 (MAX_PARENT_ADDRESS_CELLS+1);
+      NumberOfRegisters                   = 0;
+      EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      ParentAddressCellsProperty.ValueBigEndian = htobe32 (0);
+      NumberOfRegisters                   = 0;
+      EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+      ParentAddressCellsProperty.ValueBigEndian = htobe32 (ParentAddressCells);
+      if (strstr(test_type, "ranges") != NULL) {
+        ChildAddressCellsProperty.ValueBigEndian = htobe32 (MAX_CHILD_ADDRESS_CELLS+1);
+        NumberOfRegisters                   = 0;
+        EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+        ChildAddressCellsProperty.ValueBigEndian = htobe32 (ChildAddressCells);
+      }
+
+      // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
+      if (ParentAddressCells == DEFAULT_ADDRESS_CELLS_VALUE) {
+        EXPECT_CALL (
+          FdtMock,
+          FdtGetProperty (
+            Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+            TEST_PARENT_NODE_OFFSET,
+            StrEq ("#address-cells"),
+            NotNull ()
+            )
+          )
+          .WillOnce (
+            ReturnNull ()
+            )
+          .RetiresOnSaturation ();
+        NumberOfRegisters = 0;
+        EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+        EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+      }
+
+      // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
+      if ((strstr(test_type, "ranges") != NULL) && (ChildAddressCells == DEFAULT_ADDRESS_CELLS_VALUE)) {
+        EXPECT_CALL (
+          FdtMock,
+          FdtGetProperty (
+            Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+            TEST_NODE_OFFSET,
+            StrEq ("#address-cells"),
+            NotNull ()
+            )
+          )
+          .WillOnce (
+            ReturnNull ()
+            )
+          .RetiresOnSaturation ();
+        NumberOfRegisters = 0;
+        EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+        EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+      }
+
+      // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
+      if (SizeCells == DEFAULT_SIZE_CELLS_VALUE) {
+        if (strstr(test_type, "ranges") == NULL) {
+          EXPECT_CALL (
+            FdtMock,
+            FdtGetProperty (
+              Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+              TEST_PARENT_NODE_OFFSET,
+              StrEq ("#size-cells"),
+              NotNull ()
+              )
+            )
+            .WillOnce (
+              ReturnNull ()
+              )
+            .RetiresOnSaturation ();
+        } else {
+          EXPECT_CALL (
+            FdtMock,
+            FdtGetProperty (
+              Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+              TEST_NODE_OFFSET,
+              StrEq ("#size-cells"),
+              NotNull ()
+              )
+            )
+            .WillOnce (
+              ReturnNull ()
+              )
+            .RetiresOnSaturation ();
+        }
+        NumberOfRegisters = 0;
+        EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
+        EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
+      }
+    }
   } else {
     EXPECT_EQ (EFI_NOT_FOUND, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  }
-
-  SizeCellsProperty.ValueBigEndian = htobe32 (3);
-  NumberOfRegisters                = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  SizeCellsProperty.ValueBigEndian = htobe32 (0);
-  NumberOfRegisters                = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  SizeCellsProperty.ValueBigEndian    = htobe32 (SizeCells);
-  AddressCellsProperty.ValueBigEndian = htobe32 (3);
-  NumberOfRegisters                   = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  AddressCellsProperty.ValueBigEndian = htobe32 (0);
-  NumberOfRegisters                   = 0;
-  EXPECT_EQ (EFI_DEVICE_ERROR, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-  AddressCellsProperty.ValueBigEndian = htobe32 (AddressCells);
-
-  // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
-  if (AddressCells == DEFAULT_ADDRESS_CELLS_VALUE) {
-    EXPECT_CALL (
-      FdtMock,
-      FdtGetProperty (
-        Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
-        TEST_PARENT_NODE_OFFSET,
-        StrEq ("#address-cells"),
-        NotNull ()
-        )
-      )
-      .WillOnce (
-         ReturnNull ()
-         )
-      .RetiresOnSaturation ();
-    NumberOfRegisters = 0;
-    if (NumberOfEntries != 0) {
-      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
-    } else {
-      EXPECT_EQ (EFI_NOT_FOUND, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-    }
-  }
-
-  // We will ASSERT if this isn't true, and EDK2 UnitTestAssert doesn't work right under GoogleTest
-  if (SizeCells == DEFAULT_SIZE_CELLS_VALUE) {
-    EXPECT_CALL (
-      FdtMock,
-      FdtGetProperty (
-        Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
-        TEST_PARENT_NODE_OFFSET,
-        StrEq ("#size-cells"),
-        NotNull ()
-        )
-      )
-      .WillOnce (
-         ReturnNull ()
-         )
-      .RetiresOnSaturation ();
-    NumberOfRegisters = 0;
-    if (NumberOfEntries != 0) {
-      EXPECT_EQ (EFI_BUFFER_TOO_SMALL, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-      EXPECT_EQ (NumberOfRegisters, (UINT32)NumberOfEntries);
-    } else {
-      EXPECT_EQ (EFI_NOT_FOUND, GenericMemoryTest (TEST_NODE_OFFSET, NULL, &NumberOfRegisters));
-    }
   }
 
   if (TestData != NULL) {
@@ -2400,7 +2495,7 @@ TEST_P (DeviceRegisters, GetRegisters) {
 INSTANTIATE_TEST_SUITE_P (
   DeviceRegistersValues,
   DeviceRegisters,
-  Combine (Values ("reg", "reg_dep", "ranges"), Bool (), Bool (), Range (0, MAX_REGISTER_NUMS+1), Range (0, MAX_REGISTER_NUMS+1))
+  Combine (Values ("reg", "reg_dep", "ranges", "dma-ranges", "hbm-ranges"), Bool (), Range (0, MAX_CHILD_ADDRESS_CELLS+1), Bool (), Range (0, MAX_REGISTER_NUMS+1), Range (0, MAX_REGISTER_NUMS+1))
   );
 
 int
