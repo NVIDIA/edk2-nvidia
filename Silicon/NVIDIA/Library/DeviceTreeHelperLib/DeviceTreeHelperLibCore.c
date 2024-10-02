@@ -107,6 +107,7 @@ DeviceTreeGetNextCompatibleNode (
     return EFI_DEVICE_ERROR;
   }
 
+  Status           = EFI_NOT_FOUND;
   SearchNodeOffset = FdtNextNode (DeviceTree, *NodeOffset, NULL);
   while (SearchNodeOffset >= 0) {
     Status = DeviceTreeCheckNodeCompatibility (CompatibleInfo, SearchNodeOffset);

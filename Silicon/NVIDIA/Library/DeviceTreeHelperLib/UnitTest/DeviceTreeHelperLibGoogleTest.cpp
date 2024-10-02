@@ -653,6 +653,10 @@ TEST_P (DeviceEnumerationCompatible, GetNextCompatibleNode) {
   NodeOffset = -1;
   EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeGetNextCompatibleNode (NULL, &NodeOffset));
 
+  NodeOffset = TEST_MAX_OFFSET;
+  EXPECT_EQ (EFI_NOT_FOUND, DeviceTreeGetNextCompatibleNode (CompatibleInfo, &NodeOffset));
+  EXPECT_EQ (NodeOffset, TEST_MAX_OFFSET);
+
   NodeOffset = -1;
   NodeCount  = 0;
   while (TRUE) {
