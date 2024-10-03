@@ -59,10 +59,18 @@ verify_cmd_exists() {
 }
 
 # Verify we have prereqs
-verify_cmd_exists python3
-verify_cmd_exists virtualenv
-verify_cmd_exists mono
+if [[ -z "${UEFI_SKIP_VENV}" ]]; then
+  verify_cmd_exists python3
+  verify_cmd_exists virtualenv
+fi
+if [[ -z "${UEFI_SKIP_UPDATE}" ]]; then
+  verify_cmd_exists mono
+else
+  verify_cmd_exists iasl
+  verify_cmd_exists nasm
+fi
 verify_cmd_exists aarch64-linux-gnu-gcc
+verify_cmd_exists dtc
 
 # Verify we have at least Python 3.10
 if python3 -c "import sys; sys.exit(1) if sys.version_info < (3, 10) else sys.exit(0)"; then

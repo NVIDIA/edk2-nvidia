@@ -30,6 +30,10 @@ find_venv_activate
 
 STUART_BUILD_OPTIONS=${STUART_BUILD_OPTIONS:---verbose}
 
+if [[ "${UEFI_SKIP_UPDATE}" ]]; then
+  STUART_BUILD_OPTIONS+=" --noverify"
+fi
+
 if [[ -z "${UEFI_RELEASE_ONLY}" ]]; then
   _msg "Building DEBUG (${PLATFORM_BUILD})."
   stuart_build -c $@ ${STUART_BUILD_OPTIONS} --target DEBUG
