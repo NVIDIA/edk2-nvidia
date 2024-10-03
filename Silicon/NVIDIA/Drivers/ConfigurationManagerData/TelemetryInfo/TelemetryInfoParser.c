@@ -21,6 +21,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/BpmpIpc.h>
+#include <Protocol/GpuDsdAmlGenerationProtocol.h>
 
 #include <TH500/TH500Definitions.h>
 
@@ -64,6 +65,8 @@ UpdatePowerMeterStaInfo (
   UINT32                PwrMeterIndex;
   UINT8                 PwrMeterStatus;
   UINT32                *TelemetryData;
+  BOOLEAN               GpuPresent;
+  VOID                  *NVIDIAGpuDSDAMLGenerationProtocol;
 
   STATIC CHAR8 *CONST  AcpiPwrMeterStaPatchName[] = {
     "_SB_.PM00._STA",
@@ -90,11 +93,24 @@ UpdatePowerMeterStaInfo (
   TelLayoutValidFlags0 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS0_IDX];
   TelLayoutValidFlags1 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS1_IDX];
   TelLayoutValidFlags2 = TelemetryData[TH500_TEL_LAYOUT_VALID_FLAGS2_IDX];
+  GpuPresent           = FALSE;
 
   if (SocketId >= ((ARRAY_SIZE (AcpiPwrMeterStaPatchName)) / TH500_MAX_PWR_METER)) {
     DEBUG ((DEBUG_ERROR, "%a: Index %u exceeding AcpiPwrMeterStaPatchName size\r\n", __FUNCTION__, SocketId));
     Status = EFI_INVALID_PARAMETER;
     goto ErrorExit;
+  }
+
+  Status = gBS->LocateProtocol (&gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid, NULL, &NVIDIAGpuDSDAMLGenerationProtocol);
+  if (EFI_ERROR (Status)) {
+    GpuPresent = FALSE;
+  } else {
+    GpuPresent = TRUE;
+  }
+
+  if (GpuPresent) {
+    TelLayoutValidFlags0 = TelLayoutValidFlags0 & ~TH500_MODULE_PWR_IDX_VALID_FLAG;
+    TelLayoutValidFlags2 = TelLayoutValidFlags2 & ~TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG;
   }
 
   for (Index = 0; Index < TH500_MAX_PWR_METER; Index++) {
