@@ -2201,11 +2201,12 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
   SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
 !endif
 
+!ifdef CONFIG_RCM_BOOT
   #
   # RCM Support
   #
   Silicon/NVIDIA/Drivers/RcmDxe/RcmDxe.inf
-
+!endif
 
   #
   # Platform To Driver Configuration Support
