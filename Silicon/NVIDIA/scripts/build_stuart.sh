@@ -25,7 +25,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 
 _msg "Activating Python virtual environment."
-. venv/bin/activate
+find_venv_activate
+. ${VENV_ACTIVATE}
 
 STUART_BUILD_OPTIONS=${STUART_BUILD_OPTIONS:---verbose}
 

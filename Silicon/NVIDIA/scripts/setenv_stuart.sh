@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,16 @@ _msg() {
 _die() {
   echo "error: $2"
   exit $1
+}
+
+# Some old versions of virtualenv will create venv/local/bin/activate instead
+# of venv/bin/activate.
+# Sets VENV_ACTIVATE.
+function find_venv_activate() {
+  VENV_ACTIVATE=venv/local/bin/activate
+  if [ ! -e ${VENV_ACTIVATE} ]; then
+    VENV_ACTIVATE=venv/bin/activate
+  fi
 }
 
 # verify we are at the root of the workspace

@@ -21,16 +21,6 @@ PLATFORM_BUILD=$1
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 . ${SCRIPT_DIR}/setenv_stuart.sh
 
-# Some old versions of virtualenv will create venv/local/bin/activate instead
-# of venv/bin/activate.
-# Sets VENV_ACTIVATE.
-function find_venv_activate() {
-  VENV_ACTIVATE=venv/local/bin/activate
-  if [ ! -e ${VENV_ACTIVATE} ]; then
-    VENV_ACTIVATE=venv/bin/activate
-  fi
-}
-
 if [[ -z "${UEFI_SKIP_VENV}" ]]; then
   # Create a python virtual env, if we haven't already.
   find_venv_activate
