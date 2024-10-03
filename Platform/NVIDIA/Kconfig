@@ -330,6 +330,12 @@ menu "OS Hardware description"
 endmenu
 
 menu "Boot Options"
+  config RCM_BOOT
+  bool "Rcm Boot Support"
+  default y
+  help
+    UEFI RCM boot supported
+
   config BOOT_QUICK_BOOT
   bool "Quick boot support"
   default n
