@@ -11,6 +11,7 @@
 #define L4T_LAUNCHER_SUPPORT_PROTOCOL_H__
 
 #include <Uefi/UefiSpec.h>
+#include <Library/PlatformResourceLib.h>
 
 #define L4T_LAUNCHER_SUPPORT_PROTOCOL_GUID \
   { \
@@ -21,6 +22,14 @@
 // Define for forward reference.
 //
 typedef struct _L4T_LAUNCHER_SUPPORT_PROTOCOL L4T_LAUNCHER_SUPPORT_PROTOCOL;
+
+//
+// Structure to convey boot mode and associated metadata.
+//
+typedef struct {
+  TEGRA_BOOT_TYPE             BootType;
+  TEGRA_BASE_AND_SIZE_INFO    RcmBootOsInfo;
+} TEGRA_BOOT_MODE_METADATA;
 
 /**
   Get Rootfs Status (SR_RF) Register Value
@@ -108,12 +117,28 @@ EFI_STATUS
   CHAR8  *ModuleStr
   );
 
+/**
+  Gets the boot mode type and associated metadata.
+
+  @param[out] BootModeInfo  Boot mode info for the platform
+
+  @retval EFI_SUCCESS             The header size was successfully read
+  @retval EFI_INVALID_PARAMETER   BootModeInfo is NULL
+  @retval EFI_NOT_FOUND           Boot mode and metadata is not found
+**/
+typedef
+EFI_STATUS
+(EFIAPI *GET_BOOT_MODE_INFO)(
+  TEGRA_BOOT_MODE_METADATA  *BootModeInfo
+  );
+
 struct _L4T_LAUNCHER_SUPPORT_PROTOCOL {
   GET_ROOTFS_STATUS_REG              GetRootfsStatusReg;
   SET_ROOTFS_STATUS_REG              SetRootfsStatusReg;
   GET_BOOT_DEVICE_CLASS              GetBootDeviceClass;
   GET_BOOT_COMPONENT_HEADER_SIZE     GetBootComponentHeaderSize;
   APPLY_TEGRA_DEVICE_TREE_OVERLAY    ApplyTegraDeviceTreeOverlay;
+  GET_BOOT_MODE_INFO                 GetBootModeInfo;
 };
 
 extern EFI_GUID  gNVIDIAL4TLauncherSupportProtocol;

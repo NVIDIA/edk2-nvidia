@@ -11,8 +11,9 @@
 
 #include "Base.h"
 #include <Library/BaseLib.h>
+#include <Library/HobLib.h>
+#include <Library/PcdLib.h>
 #include <Library/PlatformBootOrderLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -51,12 +52,53 @@ GetBootComponentHeaderSize (
   return EFI_SUCCESS;
 }
 
+/**
+  Gets the boot mode type and associated metadata.
+
+  @param[out] BootModeInfo  Boot mode info for the platform
+
+  @retval EFI_SUCCESS             The header size was successfully read
+  @retval EFI_INVALID_PARAMETER   BootModeInfo is NULL
+  @retval EFI_NOT_FOUND           Boot mode and metadata is not found
+**/
+EFI_STATUS
+EFIAPI
+GetBootModeInfo (
+  TEGRA_BOOT_MODE_METADATA  *BootModeInfo
+  )
+{
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  if (BootModeInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    return EFI_NOT_FOUND;
+  }
+
+  BootModeInfo->BootType = PlatformResourceInfo->BootType;
+  if (BootModeInfo->BootType == TegrablBootRcm) {
+    BootModeInfo->RcmBootOsInfo.Base = PcdGet64 (PcdRcmKernelBase);
+    BootModeInfo->RcmBootOsInfo.Size = PcdGet64 (PcdRcmKernelSize);
+  }
+
+  return EFI_SUCCESS;
+}
+
 L4T_LAUNCHER_SUPPORT_PROTOCOL  mL4TLauncherSupport = {
   GetRootfsStatusReg,
   SetRootfsStatusReg,
   GetBootDeviceClass,
   GetBootComponentHeaderSize,
-  ApplyTegraDeviceTreeOverlay
+  ApplyTegraDeviceTreeOverlay,
+  GetBootModeInfo
 };
 
 /**
