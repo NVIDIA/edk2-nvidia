@@ -26,11 +26,17 @@
 
 [LibraryClasses]
   BaseLib
+  HobLib
+  PcdLib
   UefiLib
   UefiDriverEntryPoint
   TegraDeviceTreeKernelOverlayLib
   PlatformBootOrderLib
   PlatformResourceLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize
 
 [Protocols]
   gNVIDIAL4TLauncherSupportProtocol  ## PRODUCES
