@@ -1,7 +1,7 @@
 //
 // Copyright (c) 2011 - 2021, Arm Limited. All rights reserved.<BR>
 // Copyright (c) 2016 HP Development Company, L.P.
-// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -63,7 +63,7 @@
   stp      q30, q31, [x0, #0x2e0]
 
   // Store the SYS registers
-  EL1_OR_EL2_OR_EL3(x15)
+  EL1_OR_EL2(x15)
 1:mrs      x10, elr_el1   // Exception Link Register
   mrs      x11, spsr_el1  // Saved Processor Status Register 32bit
   mrs      x13, esr_el1   // EL1 Exception syndrome register 32bit
@@ -75,11 +75,6 @@
   mrs      x13, esr_el2   // EL2 Exception syndrome register 32bit
   mrs      x14, far_el2   // EL2 Fault Address Register
   b        4f
-
-3:mrs      x10, elr_el3   // Exception Link Register
-  mrs      x11, spsr_el3  // Saved Processor Status Register 32bit
-  mrs      x13, esr_el3   // EL3 Exception syndrome register 32bit
-  mrs      x14, far_el3   // EL3 Fault Address Register
 
 4:mrs      x12, fpsr      // Floating point Status Register  32bit
 
@@ -146,7 +141,7 @@ ASM_PFX(SwapSystemContext):
 
   msr      fpsr, x12
 
-  EL1_OR_EL2_OR_EL3(x28)
+  EL1_OR_EL2(x28)
 1:msr      elr_el1,  x10   // Exception Link Register
   msr      spsr_el1, x11  // Saved Processor Status Register 32bit
   msr      esr_el1,  x13   // EL2 Exception syndrome register 32bit
@@ -156,11 +151,6 @@ ASM_PFX(SwapSystemContext):
   msr      spsr_el2, x11  // Saved Processor Status Register 32bit
   msr      esr_el2,  x13   // EL2 Exception syndrome register 32bit
   msr      far_el2,  x14   // EL2 Fault Address Register
-  b        4f
-3:msr      elr_el3,  x10   // Exception Link Register
-  msr      spsr_el3, x11  // Saved Processor Status Register 32bit
-  msr      esr_el3,  x13   // EL2 Exception syndrome register 32bit
-  msr      far_el3,  x14   // EL2 Fault Address Register
   b        4f
 4:
 

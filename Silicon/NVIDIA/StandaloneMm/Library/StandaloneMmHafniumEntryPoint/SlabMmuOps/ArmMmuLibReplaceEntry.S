@@ -1,6 +1,6 @@
 #------------------------------------------------------------------------------
 #
-# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2016, Linaro Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -59,12 +59,11 @@ ASM_FUNC(ArmReplaceLiveTranslationEntry)
   dc    civac, x0
   dsb   nsh
 
-  EL1_OR_EL2_OR_EL3(x3)
+  EL1_OR_EL2(x3)
 1:__replace_entry 1
   b     4f
 2:__replace_entry 2
   b     4f
-3:__replace_entry 3
 
 4:msr   daif, x4
   ret

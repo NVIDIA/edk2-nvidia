@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -45,76 +45,7 @@ ASM_FUNC(_ModuleEntryPoint)
   bl ASM_PFX(TegraGetChipID)
   mov w28, w0
 
-  EL1_OR_EL2_OR_EL3(x1)
-
-3: MOV32 (w0, FixedPcdGet32(PcdArmNonSecModeTransition))
-  msr spsr_el3, x0
-
-  MOV32 (w0, FixedPcdGet32(PcdArmScr))
-  bl ASM_PFX(ArmWriteScr)
-
-  MOV32 (w0, FixedPcdGet32(PcdTegraArchTimerFreqInHz))
-  bl ASM_PFX(ArmWriteCntFrq)
-
-  bl ASM_PFX(ArmGicV3GetControlSystemRegisterEnable)
-  orr x0, x0, #1
-  bl ASM_PFX(ArmGicV3SetControlSystemRegisterEnable)
-
-  mov w0, w28
-  bl ASM_PFX(TegraGetGicRedistributorBaseAddress)
-  mov x19, x0
-  mov w0, w28
-  bl ASM_PFX(TegraGetGicDistributorBaseAddress)
-  mov x20, x0
-
-  bl ASM_PFX(ArmReadMpidr)
-  mov x4, x0
-
-  mov x0, x19
-
-  MOV64 (x2, 0x10000)
-  MOV32 (w5, 0xFFFFFFFF)
-
-//Find the redistributor for this CPU
-_RedistSearch:
-  ldr x3, [x0, #8]
-  lsr x3, x3, #32
-
-  cmp w3, w4
-  b.eq _FoundRedist
-  add x0, x0, x2
-  add x0, x0, x2
-  b _RedistSearch
-
-_FoundRedist:
-
-  //Set WAKER to indicate CPU is online
-  mov x1, #0
-  str w1, [x0, #20]
-
-  //Set all SGI/PPI to NS Group 1
-  add x0, x0, x2
-  str w5, [x0, #128]
-
-  //Set all SPI to NS Group 1
-  mov x6, #0
-  mov x7, #0x80
-  add x7, x20, x7
-_SpiLoop:
-  str w5, [x7]
-  add x7, x7, #4
-  add x6, x6, #1
-  cmp x6, #32
-  b.ne _SpiLoop
-
-  //Enable distributor ARE and all groups
-  ldr w1, [x20]
-  mov w1, #35
-  str w1, [x20]
-
-  adr x0, #12
-  msr elr_el3, x0
-  eret
+  EL1_OR_EL2(x1)
 
 1:
 2:
