@@ -27,6 +27,10 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
       Name (TIME, 0xFF)
       Name (LSTM, 0)
       Name (PWRV, 0x00000000)
+      Name (MPWV, 0x00000000)
+      Name (TPWV, 0x00000000)
+      Name (CPWV, 0x00000000)
+      Name (SPWV, 0x00000000)
 
       OperationRegion (BPTX, SystemMemory, BPMP_TX_MAILBOX_SOCKET_2, BPMP_CHANNEL_SIZE)
       Field (BPTX, AnyAcc, NoLock, Preserve) {
@@ -207,16 +211,20 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
                 And (VFG0, TH500_MODULE_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (MPWR, PWRV)
+                  Store (MPWR, MPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, MPWV)
                 }
               }
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_MODULE_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (MAPW, PWRV)
+                  Store (MAPW, MPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, MPWV)
                 }
               }
               Break
@@ -227,16 +235,20 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
                 And (VFG0, TH500_TH500_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (TPWR, PWRV)
+                  Store (TPWR, TPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, TPWV)
                 }
               }
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_TH500_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (TAPW, PWRV)
+                  Store (TAPW, TPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, TPWV)
                 }
               }
               Break
@@ -247,16 +259,20 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
                 And (VFG0, TH500_CPU_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (CPWR, PWRV)
+                  Store (CPWR, CPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, CPWV)
                 }
               }
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_CPU_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (CAPW, PWRV)
+                  Store (CAPW, CPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, CPWV)
                 }
               }
               Break
@@ -267,16 +283,20 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
                 And (VFG0, TH500_SOC_PWR_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (SPWR, PWRV)
+                  Store (SPWR, SPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, SPWV)
                 }
               }
               If (Arg1 == PWR_METER_MEASUREMENT_SAMPLING_TIME_1SEC) {
                 And (VFG2, TH500_SOC_PWR_1SEC_IDX_VALID_FLAG, Local5)
                 If (Local5 > 0) {
                   Store (SAPW, PWRV)
+                  Store (SAPW, SPWV)
                 } Else {
                   Store (PWR_METER_ERR_RETURN, PWRV)
+                  Store (PWR_METER_ERR_RETURN, SPWV)
                 }
               }
               Break
@@ -285,6 +305,29 @@ DefinitionBlock ("BpmpSsdtSocket2_th500.aml", "SSDT", 2, "NVIDIA", "BPMP_S2", 0x
 
           If (TIME != 0) {
             Store (Timer(), LSTM)
+          }
+
+        } Else {
+          Switch (Arg0) {
+            Case (TH500_MODULE_PWR) {
+              Store (MPWV, PWRV)
+              Break
+            }
+
+            Case (TH500_TH500_PWR) {
+              Store (TPWV, PWRV)
+              Break
+            }
+
+            Case (TH500_CPU_PWR) {
+              Store (CPWV, PWRV)
+              Break
+            }
+
+            Case (TH500_SOC_PWR) {
+              Store (SPWV, PWRV)
+              Break
+            }
           }
         }
         Return (PWRV)
