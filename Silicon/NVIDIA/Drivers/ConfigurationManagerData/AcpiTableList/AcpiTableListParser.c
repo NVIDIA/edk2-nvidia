@@ -9,7 +9,9 @@
 #include "AcpiTableListParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MpCoreInfoLib.h>
@@ -262,6 +264,11 @@ AcpiTableListParser (
       DEBUG ((DEBUG_ERROR, "%a: Unknown ChipID 0x%x\n", __FUNCTION__, ChipID));
       Status = EFI_NOT_FOUND;
       goto CleanupAndReturn;
+  }
+
+  // Update the OemId in the tables to match the PCD
+  for (Index = 0; Index < ArraySize; Index++) {
+    CopyMem (AcpiTableArray[Index]->OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (AcpiTableArray[Index]->OemId));
   }
 
   Status = PatchProtocol->RegisterAmlTables (

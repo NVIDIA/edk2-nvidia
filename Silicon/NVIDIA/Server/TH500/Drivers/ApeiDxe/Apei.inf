@@ -54,6 +54,7 @@
   gNVIDIAErrorSerializationProtocolGuid
 
 [Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gNVIDIATokenSpaceGuid.PcdErstBufferBase
   gNVIDIATokenSpaceGuid.PcdErstBufferSize

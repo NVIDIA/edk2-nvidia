@@ -31,7 +31,6 @@
 #include <Server/Erst.h>
 
 /* ACPI table creation default values */
-#define EFI_ACPI_OEM_ID            {'N','V','I','D','I','A'}
 #define EFI_ACPI_OEM_REVISION      0x00000001
 #define EFI_ACPI_CREATOR_ID        SIGNATURE_32('N','V','D','A')
 #define EFI_ACPI_CREATOR_REVISION  0x00000001

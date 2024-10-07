@@ -508,7 +508,8 @@ BuildSsdtSerialPortTable (
       ));
   }
 
-  // Patch Oem Table ID
+  // Patch Oem ID and Table ID
+  CopyMem ((*Table)->OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof ((*Table)->OemId));
   (*Table)->OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
 
 exit_handler:

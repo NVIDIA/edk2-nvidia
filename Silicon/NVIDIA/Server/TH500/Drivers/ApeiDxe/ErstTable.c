@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Error Record Serialization Table
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,7 +25,6 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
       .Signature       = EFI_ACPI_6_4_ERROR_RECORD_SERIALIZATION_TABLE_SIGNATURE,
       .Length          = sizeof (ERST_WITH_ENTRIES),
       .Revision        = EFI_ACPI_OEM_REVISION,
-      .OemId           = EFI_ACPI_OEM_ID,
       .OemTableId      = MAX_UINT64,
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
@@ -492,6 +491,7 @@ ErstCreateAcpiTable (
                                        ErstTable.Header.Header.Length
                                        );
   ErstTable.Header.Header.OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
+  CopyMem (ErstTable.Header.Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (ErstTable.Header.Header.OemId));
 
   Status = AcpiTableProtocol->InstallAcpiTable (
                                 AcpiTableProtocol,

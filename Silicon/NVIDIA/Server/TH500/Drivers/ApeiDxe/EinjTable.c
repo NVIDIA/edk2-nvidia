@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -20,7 +20,6 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
       .Signature       = EFI_ACPI_6_4_ERROR_INJECTION_TABLE_SIGNATURE,
       .Length          = sizeof (EINJ_WITH_ENTRIES),
       .Revision        = EFI_ACPI_OEM_REVISION,
-      .OemId           = EFI_ACPI_OEM_ID,
       .OemTableId      = MAX_UINT64,
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
@@ -258,6 +257,7 @@ EINJCreateAcpiTable (
                                        EinjTable.Header.Header.Length
                                        );
   EinjTable.Header.Header.OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
+  CopyMem (EinjTable.Header.Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (EinjTable.Header.Header.OemId));
 
   Status = AcpiTableProtocol->InstallAcpiTable (
                                 AcpiTableProtocol,

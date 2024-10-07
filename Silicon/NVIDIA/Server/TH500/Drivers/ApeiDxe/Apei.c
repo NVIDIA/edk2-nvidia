@@ -38,13 +38,13 @@ SdeiSetupTable (
       .Signature       = EFI_ACPI_6_X_SDEI_TABLE_SIGNATURE,
       .Length          = sizeof (EFI_ACPI_6_X_SDEI_TABLE),
       .Revision        = EFI_ACPI_6_X_SDEI_TABLE_REVISION,
-      .OemId           = EFI_ACPI_OEM_ID,
       .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
     }
   };
+  CopyMem (SdeiTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (SdeiTable->Header.OemId));
 
   Checksum                   = CalculateCheckSum8 ((UINT8 *)(SdeiTable), SdeiTable->Header.Length);
   SdeiTable->Header.Checksum = Checksum;

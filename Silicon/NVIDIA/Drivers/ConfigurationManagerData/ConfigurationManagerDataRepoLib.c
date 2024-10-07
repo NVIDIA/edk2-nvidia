@@ -7,6 +7,7 @@
 **/
 
 #include <Uefi.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PcdLib.h>
@@ -22,7 +23,7 @@ extern EDKII_PLATFORM_REPOSITORY_INFO  *mNVIDIAPlatformRepositoryInfo;
 STATIC
 CM_STD_OBJ_CONFIGURATION_MANAGER_INFO  CmInfo = {
   CONFIGURATION_MANAGER_REVISION,
-  CFG_MGR_OEM_ID
+  CFG_MGR_OEM_ID // Note: This gets overwritten with PcdAcpiDefaultOemId
 };
 
 EFI_STATUS
@@ -119,6 +120,8 @@ InitializePlatformRepository (
   NV_ASSERT_RETURN (mNVIDIAPlatformRepositoryInfo != NULL, return EFI_UNSUPPORTED, "Error initializing the CM Repo\n");
 
   Repo = mNVIDIAPlatformRepositoryInfo;
+
+  CopyMem (CmInfo.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (CmInfo.OemId));
 
   // Add the version information for the repo
   Status = Repo->NewEntry (

@@ -34,6 +34,7 @@
   TegraPlatformInfoLib
 
 [Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
 

@@ -24,6 +24,7 @@
   EmbeddedPkg/EmbeddedPkg.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
   ConfigurationManagerLib
@@ -31,6 +32,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
 
 [Guids]
   gNVIDIATokenSpaceGuid

@@ -125,7 +125,6 @@ HESTCreateAcpiTable (
       .Signature       = EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_SIGNATURE,
       .Length          = sizeof (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER),
       .Revision        = EFI_ACPI_OEM_REVISION,
-      .OemId           = EFI_ACPI_OEM_ID,
       .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
@@ -133,6 +132,7 @@ HESTCreateAcpiTable (
     },
     .ErrorSourceCount = 0
   };
+  CopyMem (HestTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (HestTable->Header.OemId));
 
   /* Assume all error sources are GHESv2 compliant for now */
   HestTable->ErrorSourceCount = 0;
@@ -310,7 +310,6 @@ BERTCreateAcpiTable (
       .Signature       = EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_SIGNATURE,
       .Length          = sizeof (EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER),
       .Revision        = EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_REVISION,
-      .OemId           = EFI_ACPI_OEM_ID,
       .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
@@ -319,6 +318,7 @@ BERTCreateAcpiTable (
     .BootErrorRegion       = (UINTN)Gess,
     .BootErrorRegionLength = Gess->DataLength + sizeof (EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE)
   };
+  CopyMem (BertTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (BertTable->Header.OemId));
 
   Checksum                   = CalculateCheckSum8 ((UINT8 *)(BertTable), BertTable->Header.Length);
   BertTable->Header.Checksum = Checksum;
