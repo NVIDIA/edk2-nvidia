@@ -2,7 +2,7 @@
   Oem partition access DXE Sample wrapper.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -92,7 +92,10 @@ SendCommunicateBuffer (
   //
   if (mMmCommunication2 == NULL) {
     Status = gBS->LocateProtocol (&gEfiMmCommunication2ProtocolGuid, NULL, (VOID **)&mMmCommunication2);
-    return Status;
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: locate Mm communicate failed: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
   }
 
   CommSize = DataSize + OFFSET_OF (EFI_MM_COMMUNICATE_HEADER, Data) + sizeof (OEM_PARTITION_COMMUNICATE_HEADER);
