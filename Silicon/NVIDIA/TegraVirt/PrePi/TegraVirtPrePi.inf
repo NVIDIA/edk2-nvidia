@@ -45,7 +45,6 @@
   FdtLib
   ArmLib
   IoLib
-  TimerLib
   SerialPortLib
   ExtractGuidedSectionLib
   LzmaDecompressLib

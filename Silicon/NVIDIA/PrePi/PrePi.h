@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -22,12 +22,6 @@
 #include <Library/SerialPortLib.h>
 
 #define SerialPrint(txt)  SerialPortWrite (txt, AsciiStrLen(txt)+1);
-
-RETURN_STATUS
-EFIAPI
-TimerConstructor (
-  VOID
-  );
 
 // Either implemented by PrePiLib or by MemoryInitPei
 VOID

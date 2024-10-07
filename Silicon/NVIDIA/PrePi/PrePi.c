@@ -252,13 +252,8 @@ CEntryPoint (
   SERIAL_MAPPING                *Mapping;
 
   if (PerformanceMeasurementEnabled ()) {
-    // Initialize the Timer Library to setup the Timer HW controller
-    if (!EFI_ERROR (TimerConstructor ())) {
-      // We cannot call yet the PerformanceLib because the HOB List has not been initialized
-      StartTimeStamp = GetPerformanceCounter ();
-    } else {
-      StartTimeStamp = 0;
-    }
+    // We cannot call yet the PerformanceLib because the HOB List has not been initialized
+    StartTimeStamp = GetPerformanceCounter ();
   } else {
     StartTimeStamp = 0;
   }
