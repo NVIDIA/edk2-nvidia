@@ -264,6 +264,8 @@ TEST_F (PointerTestNoPlatform, CompilanceNoDtb) {
   UINT32       NodePathSize;
   UINT32       NumberOfRegisters;
 
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterArray[1];
+
  #ifndef DISABLE_DEVICETREE_HELPER_DEPRECATED_APIS
   UINT64  KernelStart;
   UINT64  KernelDtbStart;
@@ -302,6 +304,10 @@ TEST_F (PointerTestNoPlatform, CompilanceNoDtb) {
   NumberOfRegisters = 0;
   EXPECT_EQ (EFI_DEVICE_ERROR, GetDeviceTreeRegisters (0, NULL, &NumberOfRegisters));
  #endif
+  NumberOfRegisters = 1;
+  EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeSetRegisters (TEST_NODE_OFFSET, NULL, NumberOfRegisters));
+  NumberOfRegisters = 0;
+  EXPECT_EQ (EFI_INVALID_PARAMETER, DeviceTreeSetRegisters (TEST_NODE_OFFSET, RegisterArray, NumberOfRegisters));
 }
 
 class PointerTestPlatform : public  DeviceTreeHelperPlatform {
@@ -1860,6 +1866,20 @@ INSTANTIATE_TEST_SUITE_P (
 
 #endif
 
+static FDT_PROPERTY_MAX_MEMORY_RANGE SetRegisterProperty;
+static int FdtSetPropReg( void *Fdt, int Offset, const char *Prop, const void *Data, unsigned int Size) {
+  memcpy (&SetRegisterProperty.ValueBigEndian, Data, Size);
+  SetRegisterProperty.Length = Size;
+  return 0;
+}
+
+static FDT_PROPERTY_LEN_100 SetRegisterNamesProperty;
+static int FdtSetPropNames( void *Fdt, int Offset, const char *Prop, const void *Data, unsigned int Size) {
+  memcpy (&SetRegisterNamesProperty.Data, Data, Size);
+  SetRegisterNamesProperty.Length = Size;
+  return 0;
+}
+
 #define TEST_PARENT_NODE_OFFSET  4
 #define REGISTER_NAMES_4         "reg0\0reg10\0reg100\0reg1000"
 #define REGISTER_NAMES_1         "reg0"
@@ -1873,8 +1893,10 @@ protected:
   int AddressCells;
   int SizeCells;
   int NumberOfEntries;
-  int NumberOfNames;
   int SizeOfEntry;
+  unsigned int NumberOfNames;
+  const void *SetPropRegPtr;
+  const void *SetPropNamesPtr;
 
   FDT_PROPERTY_32 AddressCellsProperty;
   FDT_PROPERTY_32 SizeCellsProperty;
@@ -1939,6 +1961,9 @@ protected:
       default:
         NamesSize = 0;
     }
+
+    memset (&SetRegisterProperty, 0, sizeof (SetRegisterProperty));
+    memset (&SetRegisterNamesProperty, 0, sizeof (SetRegisterNamesProperty));
 
     EXPECT_CALL (
       FdtMock,
@@ -2049,6 +2074,33 @@ protected:
              ReturnNull ()
              );
       }
+
+      EXPECT_CALL (
+        FdtMock,
+        FdtSetProp (
+          Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+          TEST_NODE_OFFSET,
+          StrEq (TestProperty),
+          NotNull (),
+          _
+          )
+        )
+        .WillRepeatedly (
+          FdtSetPropReg
+           );
+      EXPECT_CALL (
+        FdtMock,
+        FdtSetProp (
+          Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
+          TEST_NODE_OFFSET,
+          StrEq (NameProperty),
+          NotNull (),
+          _
+          )
+        )
+        .WillRepeatedly (
+          FdtSetPropNames
+        );
     } else {
       EXPECT_CALL (
         FdtMock,
@@ -2115,7 +2167,7 @@ DeviceRegisters::GenericMemoryTest (
           }
 
           EXPECT_EQ (ExpectedSize, RegisterArray[Index].Size);
-          if (Index < (unsigned int)NumberOfNames) {
+          if (Index < NumberOfNames) {
             switch (Index) {
               case 0:
                 EXPECT_STREQ (RegisterArray[Index].Name, "reg0");
@@ -2136,6 +2188,67 @@ DeviceRegisters::GenericMemoryTest (
             EXPECT_EQ (RegisterArray[Index].Name, nullptr);
           }
         }
+      }
+
+      // test DeviceTreeSetRegisters
+      if (strcmp (test_type, "reg") == 0) {
+        char ChangedName[50];
+        char SetRegisterExpectedNames[120];
+        unsigned int SetRegisterExpectedNamesSize = 0;
+        const char *NameEnding = "Changed";
+
+        // modify RegisterArray returned by GetRegisters
+        for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
+          RegisterArray[Index].BaseAddress++;
+          RegisterArray[Index].Size++;
+          if (Index < NumberOfNames) {
+            if (Index + 1 == NumberOfNames) {
+              strcpy(ChangedName, RegisterArray[Index].Name);
+              strcat(ChangedName, NameEnding);
+              RegisterArray[Index].Name = ChangedName;
+            }
+
+            strcpy (&SetRegisterExpectedNames[SetRegisterExpectedNamesSize], RegisterArray[Index].Name);
+            SetRegisterExpectedNamesSize += strlen (RegisterArray[Index].Name) + 1;
+          }
+        }
+
+        // perform SetRegisters
+        EFI_STATUS SetStatus;
+        SetStatus = DeviceTreeSetRegisters (NodeOffset, RegisterArray, *NumberOfEntries);
+        EXPECT_EQ (SetStatus, EFI_SUCCESS);
+
+        // check reg data saved by FdtSetProp mock
+        for (unsigned int Index = 0; Index < *NumberOfEntries; Index++) {
+          unsigned int  AddressOffset = Index * (AddressCells + SizeCells);
+          unsigned int  SizeOffset    = Index * (AddressCells + SizeCells) + AddressCells;
+          UINT64 SetSize;
+          UINT64 SetAddr;
+
+          EXPECT_LE (AddressOffset*4, SetRegisterProperty.Length);
+          EXPECT_LE (SizeOffset*4, SetRegisterProperty.Length);
+
+          if (Address64BBit) {
+            SetAddr = be64toh (*(UINT64 *)&SetRegisterProperty.ValueBigEndian[AddressOffset]);
+
+          } else {
+            SetAddr = be32toh (SetRegisterProperty.ValueBigEndian[AddressOffset]);
+          }
+
+          EXPECT_EQ (SetAddr, RegisterArray[Index].BaseAddress);
+
+          if (Size64Bit) {
+            SetSize = be64toh (*(UINT64 *)&SetRegisterProperty.ValueBigEndian[SizeOffset]);
+          } else {
+            SetSize = be32toh (SetRegisterProperty.ValueBigEndian[SizeOffset]);
+          }
+
+          EXPECT_EQ (SetSize, RegisterArray[Index].Size);
+        }
+
+        // check reg-names property data saved by FdtSetProp mock
+        EXPECT_EQ (SetRegisterNamesProperty.Length, SetRegisterExpectedNamesSize);
+        EXPECT_EQ (memcmp (SetRegisterNamesProperty.Data, SetRegisterExpectedNames, SetRegisterNamesProperty.Length), 0);
       }
     }
   } else if (SizeOfEntry == sizeof (NVIDIA_DEVICE_TREE_RANGES_DATA)) {
@@ -2165,7 +2278,7 @@ DeviceRegisters::GenericMemoryTest (
         }
 
         EXPECT_EQ (ExpectedSize, RangesArray[Index].Size);
-        if (Index < (unsigned int)NumberOfNames) {
+        if (Index < NumberOfNames) {
           switch (Index) {
             case 0:
               EXPECT_STREQ (RangesArray[Index].Name, "reg0");

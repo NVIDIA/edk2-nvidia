@@ -886,4 +886,27 @@ DeviceTreeGetNodeName (
   IN  INT32  NodeOffset
   );
 
+/**
+  Updates information about the registers of a given device tree node.
+  Note: Name fields in the RegisterArray may not be valid upon return
+  since they point to strings in the DTB.
+
+  @param[in]  NodeOffset        - NodeHandle
+  @param[in]  RegisterArray     - Buffer of size NumberOfRegisters that contains the list of register information
+  @param[in]  NumberOfRegisters - Contains size of RegisterArray
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - RegisterArray is NULL or NumberOfRegisters is 0
+  @retval EFI_NOT_FOUND         - No registers
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeSetRegisters (
+  IN INT32                                   NodeOffset,
+  IN CONST NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray,
+  IN UINT32                                  NumberOfRegisters
+  );
+
 #endif //__DEVICE_TREE_HELPER_LIB_H__

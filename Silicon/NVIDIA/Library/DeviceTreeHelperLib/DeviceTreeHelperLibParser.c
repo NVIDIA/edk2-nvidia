@@ -16,7 +16,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include "DeviceTreeHelperLibPrivate.h"
 
-#define DEVICE_TREE_MAX_PROPERTY_LENGTH  32
+#define DEVICE_TREE_MAX_NAME_LENGTH  32
 
 /**
   Returns parent node offset of the device
@@ -244,7 +244,7 @@ DeviceTreeGetRanges (
   UINTN       EntrySize;
   UINTN       NumberOfRangeRegions;
   UINTN       RegionIndex;
-  CHAR8       NamePropertyString[DEVICE_TREE_MAX_PROPERTY_LENGTH];
+  CHAR8       NamePropertyString[DEVICE_TREE_MAX_NAME_LENGTH];
 
   if ((RangeName == NULL) ||
       (NumberOfRanges == NULL) ||
@@ -1079,4 +1079,154 @@ DeviceTreeFindRegisterByName (
   DEBUG ((DEBUG_INFO, "%a: reg %a not found\n", __FUNCTION__, RegisterName));
 
   return EFI_NOT_FOUND;
+}
+
+/**
+  Updates information about the registers of a given device tree node.
+  Note: Name fields in the RegisterArray may not be valid upon return
+  since they point to strings in the DTB.
+
+  @param[in]  NodeOffset        - NodeHandle
+  @param[in]  RegisterArray     - Buffer of size NumberOfRegisters that contains the list of register information
+  @param[in]  NumberOfRegisters - Contains size of RegisterArray
+
+  @retval EFI_SUCCESS           - Operation successful
+  @retval EFI_INVALID_PARAMETER - RegisterArray is NULL or NumberOfRegisters is 0
+  @retval EFI_NOT_FOUND         - No registers
+  @retval EFI_DEVICE_ERROR      - Other Errors
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeSetRegisters (
+  IN INT32                                   NodeOffset,
+  IN CONST NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray,
+  IN UINT32                                  NumberOfRegisters
+  )
+{
+  EFI_STATUS   Status;
+  VOID         *DeviceTree;
+  INT32        ParentOffset;
+  UINT64       AddressCells;
+  UINT64       SizeCells;
+  VOID         *RegProperty;
+  VOID         *RegNames;
+  UINT32       PropertySize;
+  CONST CHAR8  *Name;
+  UINT32       NameSize;
+  INT32        NameOffset;
+  UINTN        EntrySize;
+  UINTN        RegionIndex;
+  UINT64       AddressBase;
+  UINT64       RegionSize;
+  UINTN        NameCount;
+  UINTN        RegNamesSize;
+  BOOLEAN      NullNameFound = FALSE;
+
+  if ((RegisterArray == NULL) || (NumberOfRegisters == 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetParent (DeviceTree, NodeOffset, &ParentOffset);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue64 (ParentOffset, "#address-cells", &AddressCells);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue64 (ParentOffset, "#size-cells", &SizeCells);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  if ((AddressCells > 2) || (AddressCells == 0) || (SizeCells > 2) || (SizeCells == 0)) {
+    DEBUG ((DEBUG_ERROR, "%a: Bad cell values, %llu, %llu\r\n", __FUNCTION__, AddressCells, SizeCells));
+    return EFI_DEVICE_ERROR;
+  }
+
+  EntrySize    = sizeof (UINT32) * (AddressCells + SizeCells);
+  PropertySize = NumberOfRegisters * EntrySize;
+  RegProperty  = (VOID *)AllocateZeroPool (PropertySize);
+
+  NameCount    = 0;
+  RegNamesSize = 0;
+  for (RegionIndex = 0; RegionIndex < NumberOfRegisters; RegionIndex++) {
+    AddressBase = RegisterArray[RegionIndex].BaseAddress;
+    RegionSize  = RegisterArray[RegionIndex].Size;
+
+    DEBUG ((DEBUG_INFO, "%a: %u - 0x%llx: 0x%llx %a\n", __FUNCTION__, RegionIndex, AddressBase, RegionSize, RegisterArray[RegionIndex].Name));
+
+    if (AddressCells == 2) {
+      AddressBase = CpuToFdt64 (AddressBase);
+    } else {
+      AddressBase = CpuToFdt32 (AddressBase);
+    }
+
+    if (SizeCells == 2) {
+      RegionSize = CpuToFdt64 (RegionSize);
+    } else {
+      RegionSize = CpuToFdt32 (RegionSize);
+    }
+
+    CopyMem (RegProperty + EntrySize * RegionIndex, (VOID *)&AddressBase, AddressCells * sizeof (UINT32));
+    CopyMem (RegProperty + EntrySize * RegionIndex + (AddressCells * sizeof (UINT32)), (VOID *)&RegionSize, SizeCells * sizeof (UINT32));
+
+    if ((RegisterArray[RegionIndex].Name != NULL) && !NullNameFound) {
+      NameCount++;
+      RegNamesSize += AsciiStrSize (RegisterArray[RegionIndex].Name);
+    } else {
+      NullNameFound = TRUE;
+      DEBUG ((DEBUG_INFO, "%a: register %u name skipped,\n", __FUNCTION__, RegionIndex));
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: size=%u node %d %a\n", __FUNCTION__, PropertySize, NodeOffset, FdtGetName (DeviceTree, NodeOffset, NULL)));
+
+  if (NameCount == 0) {
+    DEBUG ((DEBUG_INFO, "%a: no names found for %u registers\n", __FUNCTION__, NumberOfRegisters));
+    goto WriteRegProperty;
+  }
+
+  if (NameCount != NumberOfRegisters) {
+    DEBUG ((DEBUG_INFO, "%a: name/register count mismatch %u/%u\n", __FUNCTION__, NameCount, NumberOfRegisters));
+  }
+
+  // must process reg-names before updating reg property since Names point into DTB
+  RegNames   = (VOID *)AllocateZeroPool (RegNamesSize);
+  NameOffset = 0;
+  for (RegionIndex = 0; RegionIndex < NumberOfRegisters; RegionIndex++) {
+    Name = RegisterArray[RegionIndex].Name;
+    if (Name == NULL) {
+      break;
+    }
+
+    NameSize = AsciiStrSize (Name);
+    ASSERT (NameOffset + NameSize <= RegNamesSize);
+    DEBUG ((DEBUG_INFO, "%a: name %u size=%u '%a'\n", __FUNCTION__, RegionIndex, NameSize, Name));
+
+    CopyMem (RegNames + NameOffset, Name, NameSize);
+    NameOffset += NameSize;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: names size=%u node %d %a\n", __FUNCTION__, RegNamesSize, NodeOffset, FdtGetName (DeviceTree, NodeOffset, NULL)));
+
+  Status = DeviceTreeSetNodeProperty (NodeOffset, "reg-names", RegNames, RegNamesSize);
+  FreePool (RegNames);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+WriteRegProperty:
+  Status = DeviceTreeSetNodeProperty (NodeOffset, "reg", RegProperty, PropertySize);
+  FreePool (RegProperty);
+
+  return Status;
 }
