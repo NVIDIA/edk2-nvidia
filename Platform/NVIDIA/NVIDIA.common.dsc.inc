@@ -953,11 +953,21 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 !endif
 
 !ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
-gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("2ecc727c-9d50-4467-a5f1-768ca4e9c23e") }
+gNVIDIATokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("2ecc727c-9d50-4467-a5f1-768ca4e9c23e") }
 !else
 !ifdef CONFIG_SINGLE_BOOT_L4T_LAUNCHER
-gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373-4e78-aa7e-8631858e0217") }
+gNVIDIATokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373-4e78-aa7e-8631858e0217") }
 !endif
+!endif
+
+!ifdef CONFIG_RCM_BOOT_DEADLOOP_APP
+gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("2ecc727c-9d50-4467-a5f1-768ca4e9c23e") }
+!endif
+!ifdef CONFIG_RCM_BOOT_L4T_LAUNCHER
+gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("cbf481fb-b373-4e78-aa7e-8631858e0217") }
+!endif
+!ifdef CONFIG_RCM_BOOT_UEFI_SHELL
+gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-e05268d0b4d1") }
 !endif
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
@@ -2324,7 +2334,7 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 !endif
 
   # WFI App
-!ifdef CONFIG_SINGLE_BOOT_DEADLOOP_APP
+!ifdef CONFIG_DEADLOOP_APP_SUPPORT
   Silicon/NVIDIA/Application/WfiApp/WfiApp.inf
 !endif
 

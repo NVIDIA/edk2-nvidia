@@ -93,7 +93,8 @@
   gNVIDIATokenSpaceGuid.PcdTpmEnable
   gNVIDIATokenSpaceGuid.PcdMemoryTest
   gNVIDIATokenSpaceGuid.PcdSingleBootSupport
-  gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid
+  gNVIDIATokenSpaceGuid.PcdSingleBootApplicationGuid
+  gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs
 
@@ -112,6 +113,7 @@
   gEfiRtPropertiesTableGuid
   gNVIDIABeforeConsoleEventGuid
   gNVIDIAConnectCompleteEventGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid
@@ -135,3 +137,4 @@
   gNVIDIAMemoryTestConfig
   gNVIDIAAsyncDriverStatusProtocol
   gNVIDIASavedCapsuleProtocolGuid
+  gEfiRscHandlerProtocolGuid

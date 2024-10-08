@@ -14,6 +14,7 @@
 #include <IndustryStandard/Pci22.h>
 #include <Library/BootLogoLib.h>
 #include <Library/CapsuleLib.h>
+#include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DxeServicesLib.h>
 #include <Library/DxeServicesTableLib.h>
@@ -22,6 +23,7 @@
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
+#include <Library/PlatformBootManagerLib.h>
 #include <Library/PlatformBootOrderLib.h>
 #include <Library/PlatformBootOrderIpmiLib.h>
 #include <Library/BaseCryptLib.h>
@@ -34,6 +36,7 @@
 #include <Library/TimerLib.h>
 #include <Library/Tcg2PhysicalPresenceLib.h>
 #include <Library/TpmPlatformHierarchyLib.h>
+#include <Library/UefiRuntimeLib.h>
 #include <Library/StatusRegLib.h>
 #include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/BootChainProtocol.h>
@@ -48,8 +51,10 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
+#include <Protocol/ReportStatusCodeHandler.h>
 #include <Protocol/SavedCapsuleProtocol.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
+#include <Uefi/UefiSpec.h>
 #include <Guid/EventGroup.h>
 #include <Guid/FirmwarePerformance.h>
 #include <Guid/RtPropertiesTable.h>
@@ -57,10 +62,8 @@
 #include <Guid/SerialPortLibVendor.h>
 #include <IndustryStandard/Ipmi.h>
 #include <libfdt.h>
-#include "PlatformBm.h"
-#include "Library/DebugLib.h"
-#include "Library/UefiRuntimeLib.h"
 #include <NVIDIAConfiguration.h>
+#include "PlatformBm.h"
 
 #define WAIT_POLLED_PER_CYCLE_DELAY  1000      // 1 MS
 
@@ -1918,6 +1921,84 @@ WaitForPolledEnumeration (
 }
 
 /**
+  Deterimes if the single boot path should be taken and returns the app to
+  launch if that is the case.
+  This also detects if the system in RCM mode and willl return that app if
+  specified at build time.
+
+  @param[out] - Guid to boot if single boot path should be taken
+
+  @retval TRUE  - Single Boot path should be taken
+  @retval FALSE - Normal Boot path should be taken.
+ */
+BOOLEAN
+EFIAPI
+PlatformGetSingleBootApp (
+  EFI_GUID  **AppGuid OPTIONAL
+  )
+{
+  VOID                          *Hob;
+  EFI_GUID                      *LocalAppGuid;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+    if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+      LocalAppGuid = FixedPcdGetPtr (PcdRcmBootApplicationGuid);
+      if (!IsZeroGuid (LocalAppGuid)) {
+        if (AppGuid != NULL) {
+          *AppGuid = LocalAppGuid;
+        }
+
+        return TRUE;
+      }
+    }
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+  }
+
+  if (FeaturePcdGet (PcdSingleBootSupport)) {
+    LocalAppGuid = FixedPcdGetPtr (PcdSingleBootApplicationGuid);
+    if (!IsZeroGuid (LocalAppGuid)) {
+      if (AppGuid != NULL) {
+        *AppGuid = LocalAppGuid;
+      }
+
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+  Detect a boot failure in single boot mode and halt it that occurs.
+ */
+STATIC
+EFI_STATUS
+SingleBootStatusCodeCallback (
+  IN EFI_STATUS_CODE_TYPE   CodeType,
+  IN EFI_STATUS_CODE_VALUE  Value,
+  IN UINT32                 Instance,
+  IN EFI_GUID               *CallerId,
+  IN EFI_STATUS_CODE_DATA   *Data
+  )
+{
+  if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE)  &&
+      ((Value == (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_DXE_BS_EC_BOOT_OPTION_LOAD_ERROR)) ||
+       (Value == (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_DXE_BS_EC_BOOT_OPTION_FAILED))))
+  {
+    DEBUG ((DEBUG_ERROR, "Single Boot/RCM Failure detected, halting system\n"));
+    CpuDeadLoop ();
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Do the platform init, can be customized by OEM/IBV
   Possible things that can be done in PlatformBootManagerBeforeConsole:
   > Update console variable: 1. include hot-plug devices;
@@ -1940,6 +2021,9 @@ PlatformBootManagerBeforeConsole (
   BOOLEAN                       PlatformReconfigured = FALSE;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
   EFI_INPUT_KEY                 ShellKey;
+  BOOLEAN                       SingleBoot;
+  EFI_GUID                      *SingleBootAppGuid;
+  EFI_RSC_HANDLER_PROTOCOL      *RscHandler;
 
   if (FeaturePcdGet (PcdMemoryTestsSupported)) {
     // Attempt to delete variable to prevent forced allocation at targeted address.
@@ -1953,7 +2037,9 @@ PlatformBootManagerBeforeConsole (
            );
   }
 
-  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+  SingleBoot = PlatformGetSingleBootApp (&SingleBootAppGuid);
+
+  if (!SingleBoot) {
     //
     // Check Embedded UEFI Shell Setup Option
     //
@@ -2013,7 +2099,7 @@ PlatformBootManagerBeforeConsole (
   //
   FilterAndProcess (&gEfiPciIoProtocolGuid, NULL, ListPciDevices);
 
-  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+  if (!SingleBoot) {
     if (IsPlatformConfigurationNeeded ()) {
       PlatformReconfigured = TRUE;
 
@@ -2094,12 +2180,21 @@ PlatformBootManagerBeforeConsole (
     //
     EfiEventGroupSignal (&gNVIDIAConnectCompleteEventGuid);
 
+    // Don't wait for timeout
+    PcdSet16S (PcdPlatformBootTimeOut, 0);
+
     PlatformRegisterFvBootOption (
-      FixedPcdGetPtr (PcdSingleBootApplicationGuid),
+      SingleBootAppGuid,
       L"Boot Application",
       LOAD_OPTION_ACTIVE,
       LoadOptionTypeBoot
       );
+
+    Status = gBS->LocateProtocol (&gEfiRscHandlerProtocolGuid, NULL, (VOID **)&RscHandler);
+    ASSERT_EFI_ERROR (Status);
+    if (!EFI_ERROR (Status)) {
+      RscHandler->Register (SingleBootStatusCodeCallback, TPL_CALLBACK);
+    }
   }
 
   //
@@ -2520,7 +2615,7 @@ PlatformBootManagerAfterConsole (
   //
   // Display system and hotkey information after console is ready.
   //
-  if (!FeaturePcdGet (PcdSingleBootSupport)) {
+  if (!PlatformGetSingleBootApp (NULL)) {
     DisplaySystemAndHotkeyInformation ();
   }
 

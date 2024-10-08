@@ -397,6 +397,35 @@ menu "Boot Options"
   help
     UEFI RCM boot supported
 
+  choice RCM_BOOT_APP
+    depends on RCM_BOOT
+    prompt "Application to launch in RCM boot mode"
+
+    config RCM_BOOT_L4T_LAUNCHER
+    bool "L4T Launcher"
+    depends on L4T
+    select L4T_LAUNCHER_IN_FV
+    help
+      L4T Launcher is used to boot in RCM mode
+
+    config RCM_BOOT_UEFI_SHELL
+    bool "UEFI Shell"
+    depends on SHELL
+    help
+      UEFI Shell is used to boot in RCM mode
+
+    config RCM_BOOT_NORMAL
+    bool "Normal boot"
+    help
+      Standard UEFI boot processing is done in RCM mode
+
+    config RCM_BOOT_DEADLOOP_APP
+    bool "Deadloop application"
+    select DEADLOOP_APP_SUPPORT
+    help
+       Halt boot in RCM mode
+  endchoice
+
   config BOOT_QUICK_BOOT
   bool "Quick boot support"
   default n
@@ -445,20 +474,28 @@ menu "Boot Options"
     config SINGLE_BOOT_DEADLOOP_APP
     bool "Deadloop application"
     select BOOT_UI_MENU_DISABLED
+    select DEADLOOP_APP_SUPPORT
     help
        Launch application that deadloops
 
     config SINGLE_BOOT_L4T_LAUNCHER
     bool "L4T Launcher"
+    depends on L4T
     select BOOT_UI_MENU_DISABLED
+    select L4T_LAUNCHER_IN_FV
     help
       L4T Launcher default
-
   endchoice
 
   config BOOT_UI_MENU_DISABLED
   depends on SINGLE_BOOT_DEADLOOP_APP || SINGLE_BOOT_L4T_LAUNCHER
   bool "UI Menu Application disabled"
+
+  config L4T_LAUNCHER_IN_FV
+  bool
+
+  config DEADLOOP_APP_SUPPORT
+  bool
 
   choice SOC_DISPLAY_HANDOFF_MODE
     prompt "SOC Display Hand-Off Mode"
