@@ -32,7 +32,6 @@
   UefiLib
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
-  PlatformResourceLib
   MemoryAllocationLib
 
 [Protocols]
@@ -40,7 +39,6 @@
 
 [Guids]
   gEdkiiNonDiscoverableUfsDeviceGuid
-  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq

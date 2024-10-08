@@ -99,7 +99,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Xudc controller driver",
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .AutoEnableClocks                = TRUE,
-  .AutoDeassertPg                  = FALSE,
+  .AutoDeassertPg                  = FALSE
 };
 
 static EFI_STATUS

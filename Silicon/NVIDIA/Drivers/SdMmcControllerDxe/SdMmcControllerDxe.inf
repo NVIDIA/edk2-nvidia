@@ -37,7 +37,6 @@
   IoLib
   FdtLib
   DeviceDiscoveryDriverLib
-  PlatformResourceLib
   TegraPlatformInfoLib
 
 [Protocols]
@@ -50,7 +49,6 @@
 
 [Guids]
   gEdkiiNonDiscoverableSdhciDeviceGuid
-  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable

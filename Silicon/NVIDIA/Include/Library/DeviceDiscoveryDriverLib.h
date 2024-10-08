@@ -36,6 +36,7 @@ typedef struct {
   BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
   BOOLEAN         DelayEnumeration;
   BOOLEAN         ThreadedDeviceStart;
+  BOOLEAN         DisableInRcm;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig;
 

@@ -16,8 +16,10 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
+#include <Library/HobLib.h>
 #include <Library/DeviceDiscoveryLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TimerLib.h>
 #include <Library/SystemContextLib.h>
@@ -833,7 +835,26 @@ DeviceDiscoveryDriverInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                    Status;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+    // If doing RCM mode, check if driver is required in RCM mode.
+    if (gDeviceDiscoverDriverConfig.DisableInRcm) {
+      return EFI_UNSUPPORTED;
+    }
+  }
 
   mImageHandle = ImageHandle;
 

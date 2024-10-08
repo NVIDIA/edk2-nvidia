@@ -45,7 +45,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .ThreadedDeviceStart             = TRUE
+  .ThreadedDeviceStart             = TRUE,
+  .DisableInRcm                    = TRUE
 };
 
 STATIC

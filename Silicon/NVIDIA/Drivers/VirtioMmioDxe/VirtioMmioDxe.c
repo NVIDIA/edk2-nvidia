@@ -26,7 +26,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoResetModule                            = TRUE,
   .AutoDeassertPg                             = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = FALSE,
+  .SkipAutoDeinitControllerOnExitBootServices = FALSE
 };
 
 /**

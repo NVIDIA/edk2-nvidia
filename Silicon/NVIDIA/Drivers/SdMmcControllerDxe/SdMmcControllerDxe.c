@@ -13,12 +13,10 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <Protocol/SdMmcOverride.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/PlatformToDriverConfiguration.h>
@@ -138,7 +136,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA SdMmc controller driver",
   .AutoEnableClocks                = TRUE,
   .AutoResetModule                 = TRUE,
-  .SkipEdkiiNondiscoverableInstall = FALSE
+  .SkipEdkiiNondiscoverableInstall = FALSE,
+  .DisableInRcm                    = TRUE
 };
 
 #define MAX_SD_CONTROLLERS  16
@@ -187,8 +186,6 @@ DeviceDiscoveryNotify (
   UINT32                                         ClockId;
   CONST UINT32                                   *ClockIds;
   INT32                                          ClocksLength;
-  VOID                                           *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO                   *PlatformResourceInfo;
   UINT32                                         CurrentController;
 
   RegulatorPointer          = NULL;
@@ -210,20 +207,6 @@ DeviceDiscoveryNotify (
                     );
 
     case DeviceDiscoveryDriverBindingSupported:
-      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-      if ((Hob != NULL) &&
-          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-      {
-        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-      } else {
-        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
-        return EFI_NOT_FOUND;
-      }
-
-      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
-        return EFI_UNSUPPORTED;
-      }
-
       if (TegraGetPlatform () == TEGRA_PLATFORM_VSP) {
         DEBUG ((DEBUG_ERROR, "%a: VSP detected, skipping SdMmc\n", __FUNCTION__));
         return EFI_UNSUPPORTED;

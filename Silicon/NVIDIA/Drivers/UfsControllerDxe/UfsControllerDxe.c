@@ -13,7 +13,6 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/HobLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
@@ -21,7 +20,6 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/PlatformResourceLib.h>
 #include <libfdt.h>
 
 #include <Protocol/UfsHostControllerPlatform.h>
@@ -37,7 +35,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoEnableClocks                           = TRUE,
   .AutoDeassertReset                          = TRUE,
   .SkipEdkiiNondiscoverableInstall            = TRUE,
-  .SkipAutoDeinitControllerOnExitBootServices = TRUE
+  .SkipAutoDeinitControllerOnExitBootServices = TRUE,
+  .DisableInRcm                               = TRUE
 };
 
 //
@@ -498,10 +497,8 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                    Status;
-  UINTN                         RegionCount;
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  EFI_STATUS  Status;
+  UINTN       RegionCount;
 
   switch (Phase) {
     case DeviceDiscoveryDriverStart:
@@ -515,20 +512,6 @@ DeviceDiscoveryNotify (
                     NULL
                     );
     case DeviceDiscoveryDriverBindingSupported:
-      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-      if ((Hob != NULL) &&
-          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-      {
-        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-      } else {
-        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
-        return EFI_NOT_FOUND;
-      }
-
-      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
-        return EFI_UNSUPPORTED;
-      }
-
       Status = DeviceDiscoveryGetMmioRegionCount (ControllerHandle, &RegionCount);
       if (EFI_ERROR (Status) || (RegionCount < 2)) {
         return EFI_UNSUPPORTED;
