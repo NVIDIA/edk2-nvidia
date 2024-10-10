@@ -1004,6 +1004,22 @@ PcieEnableErrorReporting (
       Val_32 = ((1<<4) | (1<<5) | (1<<13) | (1<<17) | (1<<18) | (1<<22) | (1<<28));
       PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
     }
+
+    // Make UR based on option setting
+    Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, UncorrectableErrorMask);
+    Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    if (Status == EFI_SUCCESS) {
+      // bit 20 - UR masking
+      if (Mb1Config && Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].MaskUnsupportedRequest) {
+        DEBUG ((DEBUG_INFO, "Device [%04x:%02x:%02x.%x] : Enable unsupported request AER\n", Segment, Bus, Device, Function));
+        Val_32 |= (1<<20);
+      } else {
+        DEBUG ((DEBUG_INFO, "Device [%04x:%02x:%02x.%x] : Disable unsupported request AER\n", Segment, Bus, Device, Function));
+        Val_32 &= ~(1<<20);
+      }
+
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
+    }
   }
 
   Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, Capability);
@@ -1287,10 +1303,17 @@ PcieEnableErrorReporting (
         return EFI_DEVICE_ERROR;
       }
 
-      DeviceControl.Bits.CorrectableError   = 1;
-      DeviceControl.Bits.NonFatalError      = 1;
-      DeviceControl.Bits.FatalError         = 1;
-      DeviceControl.Bits.UnsupportedRequest = 1;
+      DeviceControl.Bits.CorrectableError = 1;
+      DeviceControl.Bits.NonFatalError    = 1;
+      DeviceControl.Bits.FatalError       = 1;
+      // Set UR based on option
+      if (Mb1Config && Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].MaskUnsupportedRequest) {
+        DEBUG ((DEBUG_INFO, "Device [%04x:%02x:%02x.%x] : Enable unspported request\n", Segment, Bus, Device, Function));
+        DeviceControl.Bits.UnsupportedRequest = 0;
+      } else {
+        DEBUG ((DEBUG_INFO, "Device [%04x:%02x:%02x.%x] : Disable unspported request\n", Segment, Bus, Device, Function));
+        DeviceControl.Bits.UnsupportedRequest = 1;
+      }
 
       Status = PciIo->Pci.Write (
                             PciIo,
