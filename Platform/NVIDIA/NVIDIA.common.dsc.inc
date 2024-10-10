@@ -1930,11 +1930,6 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   # BasicProfiler Support
   #
   Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
-
-  #
-  # Default Variables Device Tree overlay builds
-  #
-  Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree.inf
 !endif
 
 !ifdef CONFIG_RAS

@@ -28,9 +28,6 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetDscName(self):
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
-    def GetDtbPath(self):
-        return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Jetson/Jetson.defconfig"
