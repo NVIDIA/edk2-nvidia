@@ -29,10 +29,6 @@
 
 !include ArmVirtPkg/ArmVirt.dsc.inc
 
-!if $(ARCH) == AARCH64
-!include DynamicTablesPkg/DynamicTables.dsc.inc
-!endif
-
 !include MdePkg/MdeLibs.dsc.inc
 !include Silicon/NVIDIA/TegraVirt/IvcClient.dsc.inc
 
