@@ -8,6 +8,139 @@
 #
 #
 
+# README
+#
+# Definitions:
+# - User symbol:   a config that has a prompt, allowing the user to change its value. Its
+#                  value is saved in .defconfig if necessary to preserve your change.
+# - Helper symbol: a config without a prompt, only used internal to kconfig. Its value
+#                  is not saved in .defconfig. Putting it in .defconfig will have no effect.
+#
+# Developer guidance:
+# - "select":     Try to avoid. Only use this to enable helper symbols (eg. SUPPORTS_XYZ to allow
+#                 the user to make a choice about XYZ because the SOC/build type supports it).
+#                 NEVER use select for a user symbol, especially if it has dependencies, because
+#                 select ignores dependencies.
+#
+# - "depends on": This can hide user symbols that aren't relevant based on other
+#                 user symbol values or helper symbols. In many cases it is preferred
+#                 to "imply" the dependency, so that we can imply the user symbol that we want
+#                 and automatically have that imply its dependencies. The downside to this
+#                 is that we can't both "depends on" and "imply" the dependency. For example,
+#                 if config AB requires config A to also be set, we can either say that
+#                 AB "depends on" A, in which case AB will only be shown if A is set, and in
+#                 which case we must both imply A and imply AB in order to get AB enabled, or
+#                 we can say that AB "imply" A, in which case we can simply imply AB to get both
+#                 A and AB selected by default. The downside to using imply is that if the user
+#                 explicitly decides to disable A, then AB won't automatically be disabled.
+#
+# - "imply":      Preferred to suggest that a bool symbol be enabled (Kconfig will enable it
+#                 as long as its dependencies allow it). You can use this to set defaults
+#                 for user symbols in a different location than that user symbol. For
+#                 example, BUILD_T26X could "imply L4T" in the BUILD_T26X config, rather
+#                 than needing to add "default y if BUILD_T26X" to the L4T config. You can also
+#                 use it to auto-enable dependencies of a config (as long as you don't "depends on"
+#                 that config). If something requires a user symbol, it is preferred to
+#                 "imply NEED_*" that dependency, and then "default y if NEED_*" the dependency and
+#                 add a comment to warn about the invalid config that appears when "NEED_*" is set
+#                 but "*" is not.
+#
+# - "default":    Bool defaults to n if no other default applies, so avoid explicitly
+#                 writing an unconditional "default n" for bool symbols. See "choice"
+#                 for how to use default with a choice. For user symbols that are dependencies of
+#                 other user symbols, it may be good to default to "y" if the dependency is enabled.
+#                 Avoid "default y" without specific conditions, because we can't use imply or select
+#                 to clear an unconditional default.
+#
+# - "choice":     You can't select/imply/default a choice value, so instead we create a
+#                 hidden symbol outside of the choice stanza for each choice option
+#                 prepended by DEFAULT_* and imply that symbol, and then within the choice
+#                 stanza we have "default OPTION if DEFAULT_OPTION" to set the default. If
+#                 no default is specified for the choice, then the first visible config is selected.
+#
+# - "optional":   Put this on a choice to allow the choice to be disabled by default,
+#                 resulting in none of the options being enabled. The user can manually
+#                 enable it, but you can't enable it by default if its optional (AFAICT).
+#                 Only use this with extreme caution.
+#
+# - "menuconfig"  Don't use this at all. This is a convenient way to enable/disable a set of
+#                 options that is displayed in the submenu if the option is enabled, however
+#                 it blocks access to implying/selecting the options within the menu itself.
+#                 Instead do "config" for the top level option, and then "if (OPTION)
+#                 menu ... endmenu" to create the option and its menu. The result is almost the
+#                 same (the menu appears on the line below the option if the option is selected
+#                 instead of on the same line as the option) but allows us to control the configs
+#                 inside of the menu.
+#
+# Naming Conventions:
+#   User symbols (SHOULD be used in defconfig)
+# - SOC_*         Indicates the selected SOC family supported by the build.
+# - BUILD_*       Indicates the selected build type recipe.
+#   Helper symbols (CAN'T be used in defconfig!)
+# - SUPPORTS_*    Indicates that a hardware feature is supported by the SOC family.
+# - NEED_*        Indicates that a config is needed by another config for the build to work.
+# - DEFAULT_*     Selects a default for a "choice" stanza.
+# - SELECT_ALL_*  Enables all configs of the feature by default, to simplify
+# - USE_*         Use the numbers associated with * by default.
+#
+#  NOTE: Even though CONFIG_BUILD_*, CONFIG_SUPPORTS_*, CONFIG_NEED_*, CONFIG_DEFALUT_*, and
+#        CONFIG_SELECT_ALL_*, and CONFIG_USE_* entries may show up in .config, they should not be
+#        used outside of the Kconfig file. They are intended for internal use only.
+#
+#        BEWARE: only user symbols can be put into defconfig files. If you put a helper
+#        symbol (such as CONFIG_SUPPORTS_*=y) into the defconfig file, it will be ignored by Kconfig
+
+choice
+  prompt "SOC Support"
+
+  config SOC_NONE
+    bool "None - no hardware dependent features supported"
+
+  # Include Kconfig files for different SOC families
+  orsource "KconfigIncludes/Soc*.conf"
+
+endchoice
+
+# Temporary translation of SOC names
+# TODO: remove these when the inf files have been updated to the official names
+config SOC_ORIN
+bool
+default y if SOC_T23X
+
+config SOC_T264
+bool
+default y if SOC_T26X
+
+config SOC_GRACE
+bool
+default y if SOC_T24X
+
+config SOC_JETSON
+bool
+default y if SOC_GENERAL
+
+choice
+  prompt "Build Type"
+
+  config BUILD_NONE
+    bool "None - save and reload this choice before selecting another build to reset options to defaults"
+
+  # Include Kconfig files for different build types
+  orsource "KconfigIncludes/Build*.conf"
+
+endchoice
+
+# Add support for hardware features that are common between some SOC families
+orsource "KconfigIncludes/Common*.conf"
+
+config FIRMWARE_MANAGEMENT_FMP_ESRT_GUID
+string "ESRT System GUID"
+help
+  GUID used for ESRT table
+
+if !BUILD_NONE
+menu "Build Configuration"
+
 menu "General"
   config LOCALNAME
   string "String appended to platform names"
@@ -16,35 +149,13 @@ menu "General"
     Optional string appended to platform names.
 endmenu
 
-menu "SOC Support"
-  config SOC_ORIN
-  bool "Orin"
-  select SOC_JETSON
-  help
-    Support for Orin (T234)
-
-  config SOC_T264
-  bool "T264"
-  select SOC_JETSON
-  help
-    Support for T264
-
-  config SOC_JETSON
-  bool
-
-  config SOC_GRACE
-  bool "Grace"
-  select SOC_DATACENTER
-  help
-    Support for Grace (TH500)
-
-  config SOC_DATACENTER
-  bool
-endmenu
-
 menu "Security options"
 
-  config SECURITY_TPM_SUPPORT
+  config DEFAULT_SECURITY_TPM_FIRMWARE
+  bool
+  config DEFAULT_SECURITY_TPM_DISCRETE
+  bool
+  config DEFAULT_SECURITY_TPM_NONE
   bool
 
   choice SECURITY_TPM_MODE
@@ -52,17 +163,17 @@ menu "Security options"
     help
       TPM type.
 
-    default SECURITY_TPM_DISCRETE
+    default SECURITY_TPM_DISCRETE if DEFAULT_SECURITY_TPM_DISCRETE
+    default SECURITY_TPM_FIRMWARE if DEFAULT_SECURITY_TPM_FIRMWARE
+    default SECURITY_TPM_NONE if DEFAULT_SECURITY_TPM_NONE
 
     config SECURITY_TPM_DISCRETE
     bool "dTPM"
-    select SECURITY_TPM_SUPPORT
     help
       Discrete TPM support.
 
     config SECURITY_TPM_FIRMWARE
     bool "fTPM"
-    select SECURITY_TPM_SUPPORT
     help
       Firmware TPM support.
 
@@ -72,8 +183,13 @@ menu "Security options"
       No TPM support.
   endchoice
 
+  config SECURITY_TPM_SUPPORT
+  bool
+  default y if (SECURITY_TPM_DISCRETE || SECURITY_TPM_FIRMWARE)
+
   config INFINEON_TPM_FW_UPDATE
     bool "Infineon TPM FW Update"
+    depends on SECURITY_TPM_SUPPORT
     help
       Support Infineon TPM firmware update driver.
 
@@ -82,13 +198,21 @@ menu "Security options"
    help
      Support for locking UEFI menu with password.
 
-  config SECURITY_MM_SUPPORT
+  config DEFAULT_SECURITY_MM_NONE
+  bool
+  config DEFAULT_SECURITY_MM_FFA
+  bool
+  config DEFAULT_SECURITY_MM_OPTEE
   bool
 
   choice SECURITY_MM_TYPE
     prompt "UEFI MM Type"
     help
       Standalone MM type.
+
+    default SECURITY_MM_NONE if DEFAULT_SECURITY_MM_NONE
+    default SECURITY_MM_FFA if DEFAULT_SECURITY_MM_FFA
+    default SECURITY_MM_OPTEE if DEFAULT_SECURITY_MM_OPTEE
 
     config SECURITY_MM_NONE
     bool "Not supported"
@@ -97,16 +221,21 @@ menu "Security options"
 
     config SECURITY_MM_FFA
     bool "FFA"
-    select SECURITY_MM_SUPPORT
     help
       UEFI MM with FFA support
 
     config SECURITY_MM_OPTEE
     bool "OPTEE"
-    select SECURITY_MM_SUPPORT
     help
       UEFI MM with OPTEE support
   endchoice
+
+  config SECURITY_MM_SUPPORT
+  bool
+  default y if (SECURITY_MM_FFA || SECURITY_MM_OPTEE)
+
+  comment "INVALID CONFIG - only one of SECURITY_MM_[FFA|OPTEE] can be chosen"
+  depends on SECURITY_MM_FFA && SECURITY_MM_OPTEE
 
   config SECURITY_PHYSICAL_PRESENCE
   bool "Physical Presence forced"
@@ -122,20 +251,26 @@ menu "Security options"
 
   config SECURITY_UEFI_SECURE_BOOT
   bool "UEFI Secure Boot support"
-  default y
   help
     Support for UEFI Secure Boot verification of third party components.
 
   config SECURITY_UEFI_SECURE_BOOT_BMC_EVENT_REPORT
   bool "UEFI Report Secure Boot Events to BMC."
-  default n
   help
     Support to send POST codes related to UEFI secure boot to the BMC.
+
+  config DEFAULT_SECURITY_NON_HW_RNG
+  bool
+  config DEFAULT_SECURITY_HW_RNG
+  bool
 
   choice SECURITY_RNG_TYPE
     prompt "UEFI RNG Type"
     help
       RNG Type.
+
+    default SECURITY_NON_HW_RNG if DEFAULT_SECURITY_NON_HW_RNG
+    default SECURITY_HW_RNG if DEFAULT_SECURITY_HW_RNG
 
     config SECURITY_NON_HW_RNG
     bool "Unsafe RNG driver not based on HW RNG."
@@ -163,24 +298,30 @@ menu "Variable options"
 endmenu
 
 menu "Hardware support"
-  menuconfig PCIE
+  config PCIE
   bool "PCIe Support"
-  default y
   help
     Overall PCIe support
+
+  config SUPPORTS_DESIGNWARE_PCIE
+  bool
+
+  config SUPPORTS_NVIDIA_PCIE
+  bool
 
   if PCIE
     config DESIGNWARE_PCIE
     bool
-    default y if SOC_JETSON
+    depends on SUPPORTS_DESIGNWARE_PCIE
+    default y
 
     config NVIDIA_PCIE
     bool
-    default y if (SOC_GRACE || SOC_T264)
+    depends on SUPPORTS_NVIDIA_PCIE
+    default y
 
     config NVME
     bool "NVMe support"
-    default y
     help
       Support for NVMe drives on the system
   endif
@@ -188,124 +329,239 @@ menu "Hardware support"
   config SDHCI
   bool
 
+  config SUPPORTS_NVIDIA_SDHCI
+  bool
+
   config NVIDIA_SDHCI
   bool
-  default y if (SDHCI && SOC_JETSON)
+  depends on SUPPORTS_NVIDIA_SDHCI
+  default y if SDHCI
 
   config EMMC
   bool "eMMC support"
-  select SDHCI
+  imply SDHCI
   help
     eMMC support
 
   config SDCARD
   bool "SD Card support"
-  select SDHCI
+  imply SDHCI
   help
     SD card support
 
+  config SCSI
+  bool
+
   config UFS
   bool "UFS Support"
+  imply SCSI
   help
     Support for UFS devices
 
   config SATA
   bool "SATA Support"
+  imply SCSI
   help
     Support for SATA devices
 
-  config SCSI
+  config NEED_VIRTIO
   bool
-  default y if (SATA || UFS || NETWORKING_ISCSI)
 
   config VIRTIO
   bool "Virtio support"
+  default y if NEED_VIRTIO
   help
     Support for Virtio devices
+  comment "INVALID CONFIG - a selected config requires VIRTIO, but VIRTIO has been disabled"
+  depends on !VIRTIO && NEED_VIRTIO
+
+  config SUPPORTS_NETWORKING_DEVICE_NVIDIA
+  bool
 
   config NETWORKING_DEVICE_NVIDIA
   bool
-  default y if SOC_JETSON
+  depends on SUPPORTS_NETWORKING_DEVICE_NVIDIA
   help
     Support for internal SoC NIC
+  default y
+  #Note: always enabled to make sure NIC works on OS. Can still be disabled via .defconfig if needed
+  #      Without this the ethernet MAC address won't be correct
+
+  config SUPPORTS_SOC_USB
+  bool
 
   config SOC_USB
   bool
-  default y if SOC_JETSON
+  depends on SUPPORTS_SOC_USB
   help
     Support for internal SoC USB controller
-
-  menuconfig USB
-  bool "USB Support"
   default y
+  #Note: always enabled to make sure USB works on OS. Can still be disabled via .defconfig if needed
+
+  config SELECT_ALL_USB_DEVICES
+  bool
+
+  config NEED_USB
+  bool
+
+  config USB
+  bool "USB Support"
   help
     Support for USB devices
+  default y if NEED_USB
+  default y if SELECT_ALL_USB_DEVICES
+  comment "INVALID CONFIG - a selected config requires USB, but USB has been disabled"
+  depends on !USB && NEED_USB
 
   if USB
-    config XHCI
-    default y
-    bool "XHCI controller support"
+    menu "USB Options"
+      config XHCI
+      bool "XHCI controller support"
 
-    config EHCI
-    bool "EHCI controller support"
+      config EHCI
+      bool "EHCI controller support"
 
-    config UHCI
-    bool "UHCI controller support"
+      config UHCI
+      bool "UHCI controller support"
 
-    menu "USB Devices"
-      config USB_MASS_STORAGE
-      bool "USB Mass Storage support"
-      default y
+      menu "USB Devices"
+        config USB_MASS_STORAGE
+        bool "USB Mass Storage support"
+        default y if SELECT_ALL_USB_DEVICES
 
-      config USB_KEYBOARD
-      bool "USB Keyboard support"
-      default y
+        config USB_KEYBOARD
+        bool "USB Keyboard support"
+        default y if SELECT_ALL_USB_DEVICES
 
-      config USB_MOUSE
-      bool "USB Mouse support"
-      default y
+        config USB_MOUSE
+        bool "USB Mouse support"
+        default y if SELECT_ALL_USB_DEVICES
+      endmenu
+
+      config USB_FW_RENESAS
+      bool "Load Renesas USB FW"
+      help
+        Load FW for Renesas USB Controller. In addition, the FW must be acquired
+        from Renesas and "BLD_*_ENABLE_RENESAS_USB_FW=1" must be added as a build
+        flag.
     endmenu
-
-    config USB_FW_RENESAS
-    bool "Load Renesas USB FW"
-    help
-      Load FW for Renesas USB Controller. In addition, the FW must be acquired
-      from Renesas and "BLD_*_ENABLE_RENESAS_USB_FW=1" must be added as a build
-      flag.
   endif
 
   menu "Display hardware"
+    config SUPPORTS_NVIDIA_DISPLAY
+    bool
+
     config NVIDIA_DISPLAY
+    depends on SUPPORTS_NVIDIA_DISPLAY
     bool "NVIDIA internal display support"
     help
       Support for internal SoC display devices
+
     config ASPEED_2600_DISPLAY
     bool "ASPEED AST2600 BMC VGA display"
     help
       Support for ASPEED AST2600 BMC VGA display device
+
+    config DEFAULT_SOC_DISPLAY_HANDOFF_MODE_NEVER
+    bool
+    config DEFAULT_SOC_DISPLAY_HANDOFF_MODE_ALWAYS
+    bool
+    config DEFAULT_SOC_DISPLAY_HANDOFF_MODE_AUTO
+    bool
+
+    choice SOC_DISPLAY_HANDOFF_MODE
+      prompt "SOC Display Hand-Off Mode"
+      help
+        How to hand-off the SOC display.
+
+      default SOC_DISPLAY_HANDOFF_MODE_NEVER if DEFAULT_SOC_DISPLAY_HANDOFF_MODE_NEVER
+      default SOC_DISPLAY_HANDOFF_MODE_ALWAYS if DEFAULT_SOC_DISPLAY_HANDOFF_MODE_ALWAYS
+      default SOC_DISPLAY_HANDOFF_MODE_AUTO if DEFAULT_SOC_DISPLAY_HANDOFF_MODE_AUTO
+
+      config SOC_DISPLAY_HANDOFF_MODE_NEVER
+      bool "Never"
+      help
+        Always reset the display on UEFI exit.
+
+      config SOC_DISPLAY_HANDOFF_MODE_ALWAYS
+      bool "Always"
+      help
+        Never reset the display on UEFI exit.
+
+      config SOC_DISPLAY_HANDOFF_MODE_AUTO
+      bool "Auto"
+      help
+        Reset the display on UEFI exit unless it is active (requires
+        kernel support).
+    endchoice
+
+    config DEFAULT_DEFAULT_GOP_MODE_MAX
+    bool
+    config DEFAULT_DEFAULT_GOP_MODE_1080p
+    bool
+    config DEFAULT_DEFAULT_GOP_MODE_800_600
+    bool
+
+    choice DEFAULT_GOP_MODE
+      prompt "Default display resolution"
+      default DEFAULT_GOP_MODE_MAX if DEFAULT_DEFAULT_GOP_MODE_MAX
+      default DEFAULT_GOP_MODE_1080p if DEFAULT_DEFAULT_GOP_MODE_1080p
+      default DEFAULT_GOP_MODE_800_600 if DEFAULT_DEFAULT_GOP_MODE_800_600
+
+      config DEFAULT_GOP_MODE_MAX
+      bool "Max"
+      help
+        Maximum supported resolution
+
+      config DEFAULT_GOP_MODE_1080p
+      bool "1080p"
+      help
+        1920x1080
+
+      config DEFAULT_GOP_MODE_800_600
+      bool "800x600"
+      help
+        800x600
+    endchoice
+
+    config LOGO
+    bool "Boot Logo Support"
+    help
+      Adds support for a boot logo during boot, will not be used if there no graphics console supported.
+
   endmenu
 
-  menuconfig IPMI_BMC
+  config IPMI_BMC
   bool "BMC support"
   help
      Support for IPMI based BMC
+
   if IPMI_BMC
-    config REDFISH
-    bool "Redfish support"
-    select NETWORKING
-    select NETWORKING_HTTP
-    select NETWORKING_IPV4
-    select NETWORKING_IPV6
-    help
-      Redfish support for BMC communication
+    menu "BMC Features"
+      config REDFISH
+      bool "Redfish support"
+      imply NEED_NETWORKING
+      imply NETWORKING_HTTP
+      imply NETWORKING_IPV4
+      imply NETWORKING_IPV6
+      help
+        Redfish support for BMC communication
+    endmenu
   endif
 
-  config FIRMWARE_PARTITION_SUPPORT
+  config DEFAULT_SERIAL_PORT_CONSOLE_MDEMODULE
   bool
-  default y if (SOC_JETSON || FIRMWARE_MANAGEMENT_DIRECT)
+  config DEFAULT_SERIAL_PORT_CONSOLE_TEGRA
+  bool
+  config DEFAULT_SERIAL_PORT_CONSOLE_NONE
+  bool
 
   choice SERIAL_PORT_CONSOLE
   prompt "Serial port console"
+    default SERIAL_PORT_CONSOLE_MDEMODULE if DEFAULT_SERIAL_PORT_CONSOLE_MDEMODULE
+    default SERIAL_PORT_CONSOLE_TEGRA if DEFAULT_SERIAL_PORT_CONSOLE_TEGRA
+    default SERIAL_PORT_CONSOLE_NONE if DEFAULT_SERIAL_PORT_CONSOLE_NONE
+
     config SERIAL_PORT_CONSOLE_MDEMODULE
     bool "Single serial console"
     help
@@ -322,8 +578,17 @@ menu "Hardware support"
       No serial port console
   endchoice
 
+  config DEFAULT_REAL_TIME_CLOCK_MAXIM
+  bool
+  config DEFAULT_REAL_TIME_CLOCK_NUVOTON
+  bool
+
   choice REAL_TIME_CLOCK
-  prompt "Realtime clock type"
+    prompt "Realtime clock type"
+
+    default REAL_TIME_CLOCK_MAXIM if DEFAULT_REAL_TIME_CLOCK_MAXIM
+    default REAL_TIME_CLOCK_NUVOTON if DEFAULT_REAL_TIME_CLOCK_NUVOTON
+
     config REAL_TIME_CLOCK_MAXIM
     bool "Maxim"
     help
@@ -340,9 +605,20 @@ menu "Hardware support"
   help
     Expose RTC over I2C to OS, disables runtime clock support
 
-  config RAS
+  config SUPPORTS_RAS
   bool
-  default y if SOC_DATACENTER
+
+  if SUPPORTS_RAS
+    config RAS
+    bool "Reliability, Availability, Serviceability support"
+
+    config PRM_RAS_CPER_MODULE
+    bool "PRM RAS module support"
+    depends on RAS
+    imply PRM_PACKAGE_SUPPORT
+    help
+      Exposes API to pull RW SPI flash data from OS via PRM ACPI method
+  endif
 
   config BOOTLOADER_RAMDISK
   bool "Early bootloader ramdisk support"
@@ -356,34 +632,41 @@ menu "OS Hardware description"
 
   config ACPI
   bool "ACPI support"
-  default y
-  select CONFIG_MANAGER
+  imply CONFIG_MANAGER
   help
-    Platform supports ACPI
+    Platform supports ACPI boot
 
   config DEVICETREE
   bool "Device tree support"
   help
-    Platform supports Devicetree
+    Platform supports DeviceTree boot
 
   config SMBIOS
-  bool "SMBIOS support"
-  default y
-  select CONFIG_MANAGER
-  help
-    Platform supports SMBIOS
+    bool "SMBIOS support"
+    imply CONFIG_MANAGER
+    default y if DEFAULT_SMBIOS_ARM || DEFAULT_SMBIOS_DYNAMICTABLESPKG
+    help
+      Platform supports SMBIOS
+
+  config DEFAULT_SMBIOS_ARM
+  bool
+  config DEFAULT_SMBIOS_DYNAMICTABLESPKG
+  bool
 
   choice SMBIOS_TYPE
     prompt "SMBIOS generator type"
+    depends on SMBIOS
+
+    default SMBIOS_ARM if DEFAULT_SMBIOS_ARM
+    default SMBIOS_DYNAMICTABLESPKG if DEFAULT_SMBIOS_DYNAMICTABLESPKG
+
     config SMBIOS_ARM
     bool "ARM SMBIOS Driver"
-    depends on SMBIOS
     help
       Non-DynamicTablesPkg based SMBIOS generator
 
     config SMBIOS_DYNAMICTABLESPKG
     bool "SMBIOS Dynamic Tables Pkg Driver"
-    depends on SMBIOS
     help
       DynamicTablesPkg based SMBIOS generator
   endchoice
@@ -391,7 +674,6 @@ menu "OS Hardware description"
   config ACPI_THERMAL_ZONE_SINGLE
   bool "Single thermal zone per package"
   depends on ACPI
-  default y
   help
     Force thermal zone generation to a single zone due to some OS limitations.
 endmenu
@@ -399,51 +681,71 @@ endmenu
 menu "Boot Options"
   config RCM_BOOT
   bool "Rcm Boot Support"
-  default n
+  default y if DEFAULT_RCM_BOOT_L4T_LAUNCHER || DEFAULT_RCM_BOOT_UEFI_SHELL || DEFAULT_RCM_BOOT_NORMAL || DEFAULT_RCM_BOOT_DEADLOOP_APP
   help
     UEFI RCM boot supported
 
-  choice RCM_BOOT_APP
-    depends on RCM_BOOT
-    prompt "Application to launch in RCM boot mode"
+  config DEFAULT_RCM_BOOT_L4T_LAUNCHER
+  bool
+  config DEFAULT_RCM_BOOT_UEFI_SHELL
+  bool
+  config DEFAULT_RCM_BOOT_NORMAL
+  bool
+  config DEFAULT_RCM_BOOT_DEADLOOP_APP
+  bool
 
-    config RCM_BOOT_L4T_LAUNCHER
-    bool "L4T Launcher"
-    depends on L4T
-    select L4T_LAUNCHER_IN_FV
-    help
-      L4T Launcher is used to boot in RCM mode
+  if (RCM_BOOT)
+    choice RCM_BOOT_APP
+      prompt "Application to launch in RCM boot mode"
 
-    config RCM_BOOT_UEFI_SHELL
-    bool "UEFI Shell"
-    depends on SHELL
-    help
-      UEFI Shell is used to boot in RCM mode
+      default RCM_BOOT_L4T_LAUNCHER if DEFAULT_RCM_BOOT_L4T_LAUNCHER
+      default RCM_BOOT_UEFI_SHELL if DEFAULT_RCM_BOOT_UEFI_SHELL
+      default RCM_BOOT_NORMAL if DEFAULT_RCM_BOOT_NORMAL
+      default RCM_BOOT_DEADLOOP_APP if DEFAULT_RCM_BOOT_DEADLOOP_APP
+      default RCM_BOOT_NORMAL
 
-    config RCM_BOOT_NORMAL
-    bool "Normal boot"
-    help
-      Standard UEFI boot processing is done in RCM mode
+      config RCM_BOOT_L4T_LAUNCHER
+      bool "L4T Launcher"
+      imply NEED_L4T
+      imply L4T_LAUNCHER_IN_FV
+      help
+        L4T Launcher is used to boot in RCM mode
 
-    config RCM_BOOT_DEADLOOP_APP
-    bool "Deadloop application"
-    select DEADLOOP_APP_SUPPORT
-    help
-       Halt boot in RCM mode
-  endchoice
+      config RCM_BOOT_UEFI_SHELL
+      bool "UEFI Shell"
+      imply NEED_SHELL
+      help
+        UEFI Shell is used to boot in RCM mode
+
+      config RCM_BOOT_NORMAL
+      bool "Normal boot"
+      help
+        Standard UEFI boot processing is done in RCM mode
+
+      config RCM_BOOT_DEADLOOP_APP
+      bool "Deadloop application"
+      imply DEADLOOP_APP_SUPPORT
+      help
+         Halt boot in RCM mode
+    endchoice
+  endif
+
+  config NEED_BOOT_QUICK_BOOT
+  bool
 
   config BOOT_QUICK_BOOT
-  bool "Quick boot support"
-  default n
+  bool "Quick boot support in the build"
+  default y if NEED_BOOT_QUICK_BOOT
   help
     UEFI quick boot supported
+  comment "INVALID CONFIG - a selected config requires BOOT_QUICK_BOOT, but BOOT_QUICK_BOOT has been disabled"
+  depends on !BOOT_QUICK_BOOT && NEED_BOOT_QUICK_BOOT
 
   config BOOT_QUICK_BOOT_ENABLED
   bool "Quick boot default enabled"
-  default n
-  depends on BOOT_QUICK_BOOT
+  imply NEED_BOOT_QUICK_BOOT
   help
-    UEFI quick boot supported
+    UEFI quick boot support enabled
 
   config BOOT_DEFAULT_TIMEOUT
   int "Boot timeout"
@@ -452,25 +754,48 @@ menu "Boot Options"
   help
     UEFI boot timeout
 
+  config NEED_ANDROID_PARTITION_SUPPORT
+  bool
+
   config BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
   bool "Android partition support"
-  default n
   help
     Support for native android boot partition, without EFI system partition
+  default y if NEED_ANDROID_PARTITION_SUPPORT
+  comment "INVALID CONFIG - a selected config requires BOOT_NATIVE_ANDROID_PARTITION_SUPPORT, but BOOT_NATIVE_ANDROID_PARTITION_SUPPORT has been disabled"
+  depends on !BOOT_NATIVE_ANDROID_PARTITION_SUPPORT && NEED_ANDROID_PARTITION_SUPPORT
+
+  config NEED_ANDROID_FASTBOOT
+  bool
 
   config BOOT_ANDROID_FASTBOOT
   bool "Android Fastboot support"
+  default y if NEED_ANDROID_FASTBOOT
   help
-    Support for android fast boot
+    Support for Android Fastboot
+  imply NEED_ANDROID_PARTITION_SUPPORT
+  comment "INVALID CONFIG - a selected config requires BOOT_ANDROID_FASTBOOT, but BOOT_ANDROID_FASTBOOT has been disabled"
+  depends on !BOOT_ANDROID_FASTBOOT && NEED_ANDROID_FASTBOOT
 
   config BOOT_NVIDIA_CUSTOM_OPTION_DESCRIPTION
   bool "NVIDIA Custom boot order description"
-  default n
-  help
+    help
     Support for nvidia specific overrides for boot options
+
+  config DEFAULT_SINGLE_BOOT_NONE
+  bool
+  config DEFAULT_SINGLE_BOOT_DEADLOOP_APP
+  bool
+  config DEFAULT_SINGLE_BOOT_L4T_LAUNCHER
+  bool
 
   choice SINGLE_BOOT_SUPPORT
     prompt "Single boot built-in boot application support"
+
+    default SINGLE_BOOT_NONE if DEFAULT_SINGLE_BOOT_NONE
+    default SINGLE_BOOT_DEADLOOP_APP if DEFAULT_SINGLE_BOOT_DEADLOOP_APP
+    default SINGLE_BOOT_L4T_LAUNCHER if DEFAULT_SINGLE_BOOT_L4T_LAUNCHER
+    default SINGLE_BOOT_NONE
 
     config SINGLE_BOOT_NONE
     bool "Not supported"
@@ -479,22 +804,22 @@ menu "Boot Options"
 
     config SINGLE_BOOT_DEADLOOP_APP
     bool "Deadloop application"
-    select BOOT_UI_MENU_DISABLED
-    select DEADLOOP_APP_SUPPORT
+    imply BOOT_UI_MENU_DISABLED
+    imply DEADLOOP_APP_SUPPORT
     help
        Launch application that deadloops
 
     config SINGLE_BOOT_L4T_LAUNCHER
     bool "L4T Launcher"
-    depends on L4T
-    select BOOT_UI_MENU_DISABLED
-    select L4T_LAUNCHER_IN_FV
+    imply NEED_L4T
+    imply BOOT_UI_MENU_DISABLED
+    imply L4T_LAUNCHER_IN_FV
     help
       L4T Launcher default
+
   endchoice
 
   config BOOT_UI_MENU_DISABLED
-  depends on SINGLE_BOOT_DEADLOOP_APP || SINGLE_BOOT_L4T_LAUNCHER
   bool "UI Menu Application disabled"
 
   config L4T_LAUNCHER_IN_FV
@@ -503,60 +828,16 @@ menu "Boot Options"
   config DEADLOOP_APP_SUPPORT
   bool
 
-  choice SOC_DISPLAY_HANDOFF_MODE
-    prompt "SOC Display Hand-Off Mode"
-    help
-      How to hand-off the SOC display.
-
-    default SOC_DISPLAY_HANDOFF_MODE_NEVER
-
-    config SOC_DISPLAY_HANDOFF_MODE_NEVER
-    bool "Never"
-    help
-      Always reset the display on UEFI exit.
-
-    config SOC_DISPLAY_HANDOFF_MODE_ALWAYS
-    bool "Always"
-    help
-      Never reset the display on UEFI exit.
-
-    config SOC_DISPLAY_HANDOFF_MODE_AUTO
-    bool "Auto"
-    help
-      Reset the display on UEFI exit unless it is active (requires
-      kernel support).
-  endchoice
+  config NEED_L4T
+  bool
 
   config L4T
   bool "L4T Support"
+  default y if NEED_L4T
   help
     Support for L4T configuration options
-
-  choice DEFAULT_GOP_MODE
-    prompt "Default display resolution"
-    default DEFAULT_GOP_MODE_MAX
-
-    config DEFAULT_GOP_MODE_MAX
-    bool "Max"
-    help
-      Maximum supported resolution
-
-    config DEFAULT_GOP_MODE_1080p
-    bool "1080p"
-    help
-       1920x1080
-
-    config DEFAULT_GOP_MODE_800_600
-    bool "800x600"
-    help
-       800x600
-  endchoice
-
-  config LOGO
-  bool "Boot Logo Support"
-  default y
-  help
-    Adds support for a boot logo during boot, will not be used if there no graphics console supported.
+  comment "INVALID CONFIG - a selected config requires L4T, but L4T has been disabled"
+  depends on !L4T && NEED_L4T
 
 endmenu
 
@@ -583,157 +864,202 @@ menu "Debug Options"
   default 0x23 if (HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
   default 0x43 if (!HALT_ON_ASSERT && DEBUG_PRINT_ENABLE_RELEASE)
 
-  config DEBUG_DYNAMIC_PRINT_LEVEL
-  bool "Settable debug error level"
-  depends on SOC_GRACE
-  help
-    Add support for being able to change the debug print level from early boot
+  config SUPPORTS_DYNAMAIC_DEBUG_PRINT
+  bool
+
+  if SUPPORTS_DYNAMAIC_DEBUG_PRINT
+    config NEED_DEBUG_DYNAMIC_PRINT_LEVEL
+    bool
+
+    config DEBUG_DYNAMIC_PRINT_LEVEL
+    bool "Settable debug error level"
+    default y if NEED_DEBUG_DYNAMIC_PRINT_LEVEL
+    help
+      Add support for being able to change the debug print level from early boot
+    comment "INVALID CONFIG - a selected config requires DEBUG_DYNAMIC_PRINT_LEVEL, but DEBUG_DYNAMIC_PRINT_LEVEL has been disabled"
+    depends on !DEBUG_DYNAMIC_PRINT_LEVEL && NEED_DEBUG_DYNAMIC_PRINT_LEVEL
+
+    config DEBUG_LEVEL_MENU_SUPPORT
+    bool "Debug print level menu support"
+    imply NEED_DEBUG_DYNAMIC_PRINT_LEVEL
+    help
+      Support for UI menu to change the debug print level
+  endif
+
+  config SUPPORTS_DEBUG_LOG_SCRATCH_REGISTER
+  bool
 
   config DEBUG_LOG_SCRATCH_REG
   bool "Log debug information to Scratch Registers"
+  depends on SUPPORTS_DEBUG_LOG_SCRATCH_REGISTER
   help
     Add support to log debug Assert/Exception information to Scratch Registers
 
-  config DEBUG_LEVEL_MENU_SUPPORT
-  bool "Debug print level menu support"
-  depends on DEBUG_DYNAMIC_PRINT_LEVEL
-  help
-    Support for UI menu to change the debug print level
+  config DEFAULT_MEMORY_TEST_LEVEL_IGNORE
+  bool
+  config DEFAULT_MEMORY_TEST_LEVEL_QUICK
+  bool
+  config DEFAULT_MEMORY_TEST_LEVEL_SPARSE
+  bool
+  config DEFAULT_MEMORY_TEST_LEVEL_EXTENSIVE
+  bool
 
-  menuconfig MEMORY_TEST
+  config MEMORY_TEST
   bool "Memory Test support"
   help
     Memory test support enabled
+  default y if DEFAULT_MEMORY_TEST_LEVEL_IGNORE || DEFAULT_MEMORY_TEST_LEVEL_QUICK || DEFAULT_MEMORY_TEST_LEVEL_SPARSE || DEFAULT_MEMORY_TEST_LEVEL_EXTENSIVE
 
   if MEMORY_TEST
-    choice MEMORY_TEST_LEVEL
-    prompt "Memory Test Level"
-      config MEMORY_TEST_LEVEL_IGNORE
-      bool "Ignore memory test"
+    menu "Memory Test Options"
+      choice MEMORY_TEST_LEVEL
+      prompt "Memory Test Level"
+        default MEMORY_TEST_LEVEL_IGNORE if DEFAULT_MEMORY_TEST_LEVEL_IGNORE
+        default MEMORY_TEST_LEVEL_QUICK if DEFAULT_MEMORY_TEST_LEVEL_QUICK
+        default MEMORY_TEST_LEVEL_SPARSE if DEFAULT_MEMORY_TEST_LEVEL_SPARSE
+        default MEMORY_TEST_LEVEL_EXTENSIVE if DEFAULT_MEMORY_TEST_LEVEL_EXTENSIVE
 
-      config MEMORY_TEST_LEVEL_QUICK
-      bool "Quick"
+        config MEMORY_TEST_LEVEL_IGNORE
+        bool "Ignore memory test"
 
-      config MEMORY_TEST_LEVEL_SPARSE
-      bool "Sparse"
+        config MEMORY_TEST_LEVEL_QUICK
+        bool "Quick"
 
-      config MEMORY_TEST_LEVEL_EXTENSIVE
-      bool "Extensive"
-    endchoice
+        config MEMORY_TEST_LEVEL_SPARSE
+        bool "Sparse"
 
-    config MEMORY_TEST_NEXT_BOOT
-    bool "Enable memory test on next boot"
-    help
-      Should the memory tests run on the next boot
+        config MEMORY_TEST_LEVEL_EXTENSIVE
+        bool "Extensive"
+      endchoice
 
-    config MEMORY_TEST_SINGLE_BOOT
-    bool "Single boot memory test"
-    help
-      Should memory tests be disabled after next run
-
-    config MEMORY_TEST_ITERATIONS
-    int "Number of memory test iterations"
-    default 1
-    help
-      How many times should each memory test be run
-
-    config MEMORY_TEST_WALKING_1_BIT
-    bool "Walking 1 bit test"
-
-    config MEMORY_TEST_ADDRESS_CHECK
-    bool "Address check test"
-
-    config MEMORY_TEST_MOVING_INVERSIONS_01
-    bool "Moving inversions 0/1 test"
-
-    config MEMORY_TEST_MOVING_INVERSIONS_8BIT
-    bool "Moving inversion 8-bit test"
-
-    config MEMORY_TEST_MOVING_INVERSIONS_RANDOM
-    bool "Moving inversions random test"
-
-    config MEMORY_TEST_BLOCK_MOVE
-    bool "Block move test"
-
-    config MEMORY_TEST_MOVING_INVERSIONS_64BIT
-    bool "Moving inversion 64-bit test"
-
-    config MEMORY_TEST_RANDOM_SEQUENCE
-    bool "Random sequence test"
-
-    config MEMORY_TEST_MODULO_20
-    bool "Modulo 20 test"
-
-    config MEMORY_TEST_BIT_FADE
-    bool "Bit fade test"
-
-    if MEMORY_TEST_BIT_FADE
-      config MEMORY_TEST_BIT_FADE_PATTERN
-      hex "Bit Fade pattern"
-      default 0xAA55AA55AA55AA55
-
-      config MEMORY_TEST_BIT_FADE_WAIT
-      int "Bit fade wait time (ms)"
-      default 0
+      config MEMORY_TEST_NEXT_BOOT
+      bool "Enable memory test on next boot"
       help
-        Time in ms to wait for bit fade test in ms
-    endif
+        Should the memory tests run on the next boot
+
+      config MEMORY_TEST_SINGLE_BOOT
+      bool "Single boot memory test"
+      help
+        Should memory tests be disabled after next run
+
+      config MEMORY_TEST_ITERATIONS
+      int "Number of memory test iterations"
+      default 1
+      help
+        How many times should each memory test be run
+
+      config MEMORY_TEST_WALKING_1_BIT
+      bool "Walking 1 bit test"
+
+      config MEMORY_TEST_ADDRESS_CHECK
+      bool "Address check test"
+
+      config MEMORY_TEST_MOVING_INVERSIONS_01
+      bool "Moving inversions 0/1 test"
+
+      config MEMORY_TEST_MOVING_INVERSIONS_8BIT
+      bool "Moving inversion 8-bit test"
+
+      config MEMORY_TEST_MOVING_INVERSIONS_RANDOM
+      bool "Moving inversions random test"
+
+      config MEMORY_TEST_BLOCK_MOVE
+      bool "Block move test"
+
+      config MEMORY_TEST_MOVING_INVERSIONS_64BIT
+      bool "Moving inversion 64-bit test"
+
+      config MEMORY_TEST_RANDOM_SEQUENCE
+      bool "Random sequence test"
+
+      config MEMORY_TEST_MODULO_20
+      bool "Modulo 20 test"
+
+      config MEMORY_TEST_BIT_FADE
+      bool "Bit fade test"
+
+      if MEMORY_TEST_BIT_FADE
+        config MEMORY_TEST_BIT_FADE_PATTERN
+        hex "Bit Fade pattern"
+        default 0xAA55AA55AA55AA55
+
+        config MEMORY_TEST_BIT_FADE_WAIT
+        int "Bit fade wait time (ms)"
+        default 0
+        help
+          Time in ms to wait for bit fade test in ms
+      endif
+    endmenu
   endif
 endmenu
 
-menuconfig FIRMWARE_MANAGEMENT
-bool "Firmware Management"
-default y
-help
-  Support for UEFI FMP services
-if FIRMWARE_MANAGEMENT
+config DEFAULT_FIRMWARE_MANAGEMENT_DIRECT
+bool
+config DEFAULT_FIRMWARE_MANAGEMENT_EROT
+bool
+config DEFAULT_FIRMWARE_MANAGEMENT_BLOB
+bool
+
+config FIRMWARE_MANAGEMENT
+  bool "Firmware Management"
+  default y if DEFAULT_FIRMWARE_MANAGEMENT_DIRECT || DEFAULT_FIRMWARE_MANAGEMENT_EROT || DEFAULT_FIRMWARE_MANAGEMENT_BLOB
+  help
+    Support for UEFI FMP services
+
+menu "Firmware Management Options"
+depends on FIRMWARE_MANAGEMENT
+
   choice FIRMWARE_MANAGEMENT_TYPE
-  prompt "Firmware update type"
-  help
-    Method of performing firmware update operations
-
-  config FIRMWARE_MANAGEMENT_DIRECT
-    bool "Direct access"
+    prompt "Firmware update type"
     help
-      Direct modification of the firmware
+      Method of performing firmware update operations
 
-  config FIRMWARE_MANAGEMENT_EROT
-    bool "eROT access"
-    help
-      Update via eROT
+    default FIRMWARE_MANAGEMENT_DIRECT if DEFAULT_FIRMWARE_MANAGEMENT_DIRECT
+    default FIRMWARE_MANAGEMENT_EROT if DEFAULT_FIRMWARE_MANAGEMENT_EROT
+    default FIRMWARE_MANAGEMENT_BLOB if DEFAULT_FIRMWARE_MANAGEMENT_BLOB
 
-  config FIRMWARE_MANAGEMENT_BLOB
-    bool "Blob access"
-    help
-      Blob update
+    config FIRMWARE_MANAGEMENT_DIRECT
+      bool "Direct access"
+      help
+        Direct modification of the firmware
+
+    config FIRMWARE_MANAGEMENT_EROT
+      bool "eROT access"
+      help
+        Update via eROT
+
+    config FIRMWARE_MANAGEMENT_BLOB
+      bool "Blob access"
+      help
+        Blob update
   endchoice
-
-  config FIRMWARE_MANAGEMENT_FMP_ESRT_GUID
-  string "ESRT System GUID"
-  default "004ad128-93d8-43a7-9fad-4ac77a931035"
-  help
-    GUID used for ESRT table
 
   config FIRMWARE_CAPSULE_SUPPORTED
   bool "Support firmware capsule update"
-  default y
   help
     Support for firmware update via capsule
 
   config RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
   bool "Support runtime firmware capsule delivery"
-  default n
   depends on FIRMWARE_CAPSULE_SUPPORTED && FIRMWARE_MANAGEMENT_BLOB
   help
     Support for firmware update via runtime capsule delivery
 
+  config USE_GENERAL_FIRMWARE_CAPSULE_SIZE
+  bool
+  config USE_SERVER_FIRMWARE_CAPSULE_SIZE
+  bool
+
   config FIRMWARE_CAPSULE_SIZE
   hex "Size of firmware capsule supported"
-  default 0xc00000
+  default 0x1400000 if USE_SERVER_FIRMWARE_CAPSULE_SIZE
+  default 0xc00000 if USE_GENERAL_FIRMWARE_CAPSULE_SIZE
+  default 0x0
   depends on FIRMWARE_CAPSULE_SUPPORTED
   help
     Size of the firmware capsule to use
-endif
+endmenu
+
 menu  "Watchdog settings"
 
   config  BOOT_WATCHDOG_TIMEOUT
@@ -744,54 +1070,69 @@ menu  "Watchdog settings"
     This may be customized based on changes in the boot.
     For example changing the debug print level may impact boot time.
 
+  config  SUPPORTS_ARM_WATCHDOG
+  bool
+
   config  ARM_WATCHDOG
     bool "Use ARM watchdog instead of timer"
-    default  y
+    depends on SUPPORTS_ARM_WATCHDOG
     help
       Use the ARM generic watchdog timer driver
 
 endmenu
 
-menuconfig NETWORKING
+config SELECT_ALL_NETWORKING_MODES
+bool
+
+config NEED_NETWORKING
+bool
+
+config NETWORKING
 bool "Networking support"
-default y
 help
   Overall networking support in UEFI
+default y if SELECT_ALL_NETWORKING_MODES
+default y if NEED_NETWORKING
+comment "INVALID CONFIG - a selected config requires NETWORKING, but NETWORKING has been disabled"
+depends on !NETWORKING && NEED_NETWORKING
 
-if NETWORKING
+menu "Networking Options"
+depends on NETWORKING
+
   config NETWORKING_HTTP
   bool "HTTP/HTTPS support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
   help
     Support for HTTP stack in UEFI
 
   config NETWORKING_PXE
   bool "PXE support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
   help
     Support for PXE boot
 
   config NETWORKING_ISCSI
   bool "iSCSI support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
+  imply SCSI
   help
     Support for iSCSI boot
 
   config NETWORKING_VLAN
   bool "VLAN support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
   help
     Support for VLAN configuration
 
   config NETWORKING_IPV4
   bool "IPv4 support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
   help
     Support for IPv4
 
   config NETWORKING_IPV6
   bool "IPv6 support"
-  default y
+  default y if SELECT_ALL_NETWORKING_MODES
   help
     Support for IPv6
 
@@ -809,29 +1150,27 @@ if NETWORKING
 
     config NETWORKING_DEVICE_ASIX
     bool "ASIX USB NIC"
-    depends on USB
+    imply NEED_USB
     help
       Support for ASIX USB devices
 
     config NETWORKING_DEVICE_USB_RNDIS
     bool "USB RNDIS NIC"
-    depends on USB
+    imply NEED_USB
     help
       Support for USB RNDIS NICs
 
     config NETWORKING_DEVICE_VIRTIO
     bool "Virtio NIC"
-    depends on VIRTIO
+    imply NEED_VIRTIO
     help
       Support for Virtio NICs
   endmenu
-
-endif
+endmenu
 
 menu "Filesystems"
   config FS_FAT
   bool "FAT Filesystem support"
-  default y
   help
     Support for FAT file systems. Required for standard UEFI boot
 
@@ -847,69 +1186,96 @@ menu "Filesystems"
     Support for firmware volume based file systems. Normally used for shell usage.
 endmenu
 
-menuconfig SHELL
+config SELECT_ALL_SHELL_COMMANDS
+bool
+
+config NEED_SHELL
+bool
+
+config DEFAULT_SHELL_LEVEL_MINIMAL
+bool
+config DEFAULT_SHELL_LEVEL_SCRIPTING
+bool
+config DEFAULT_SHELL_LEVEL_BASIC
+bool
+config DEFAULT_SHELL_LEVEL_INTERACTIVE
+bool
+
+config SHELL
 bool "UEFI Shell support"
-default y
+default y if NEED_SHELL
+default y if SELECT_ALL_SHELL_COMMANDS
+default y if DEFAULT_SHELL_LEVEL_MINIMAL || DEFAULT_SHELL_LEVEL_SCRIPTING || DEFAULT_SHELL_LEVEL_BASIC || DEFAULT_SHELL_LEVEL_INTERACTIVE
 help
   Support for UEFI shell in the main UEFI firmware image
+comment "INVALID CONFIG - a selected config requires SHELL, but SHELL has been disabled"
+depends on !SHELL && NEED_SHELL
 
 if SHELL
-  choice SHELL_LEVEL
-    prompt "Shell Level support"
-    default SHELL_LEVEL_INTERACTIVE
+  menu "Shell Options"
+
+    choice SHELL_LEVEL
+      prompt "Shell Level support"
+      help
+        Shell level supported, documented in the UEFI Shell specification
+
+      default SHELL_LEVEL_MINIMAL if DEFAULT_SHELL_LEVEL_MINIMAL
+      default SHELL_LEVEL_SCRIPTING if DEFAULT_SHELL_LEVEL_SCRIPTING
+      default SHELL_LEVEL_BASIC if DEFAULT_SHELL_LEVEL_BASIC
+      default SHELL_LEVEL_INTERACTIVE if DEFAULT_SHELL_LEVEL_INTERACTIVE
+      default SHELL_LEVEL_INTERACTIVE
+
+      config SHELL_LEVEL_MINIMAL
+      bool "Minimal (0)"
+
+      config SHELL_LEVEL_SCRIPTING
+      imply SHELL_LEVEL_1_SUPPORTED
+      bool "Scripting (1)"
+
+      config SHELL_LEVEL_BASIC
+      imply SHELL_LEVEL_1_SUPPORTED
+      imply SHELL_LEVEL_2_SUPPORTED
+      bool "Basic (2)"
+
+      config SHELL_LEVEL_INTERACTIVE
+      imply SHELL_LEVEL_1_SUPPORTED
+      imply SHELL_LEVEL_2_SUPPORTED
+      imply SHELL_LEVEL_3_SUPPORTED
+      bool "Interactive (3)"
+    endchoice
+
+    config SHELL_LEVEL_1_SUPPORTED
+    bool
+    config SHELL_LEVEL_2_SUPPORTED
+    bool
+    config SHELL_LEVEL_3_SUPPORTED
+    bool
+
+    config SHELL_DEBUG_COMMANDS
+    bool "Shell debug commands"
+    default y if SELECT_ALL_SHELL_COMMANDS
     help
-      Shell level supported, documented in the UEFI Shell specification
+      Add support for shell debug commands (comp, dblk, dmem, mm, mode, pci, setvar, etc)
 
-    config SHELL_LEVEL_MINIMAL
-    bool "Minimal (0)"
+    config SHELL_DRIVER_COMMANDS
+    bool "Shell driver commands"
+    default y if SELECT_ALL_SHELL_COMMANDS
+    help
+      Add support for shell driver commands (connect, devtree, dh, disconnect, drivers, unload, etc)
 
-    config SHELL_LEVEL_SCRIPTING
-    select SHELL_LEVEL_1_SUPPORTED
-    bool "Scripting (1)"
+    config SHELL_NETWORK_COMMANDS
+    bool "Shell network commands"
+    default y if SELECT_ALL_SHELL_COMMANDS
+    imply NEED_NETWORKING
+    help
+      Add support for shell network commands
 
-    config SHELL_LEVEL_BASIC
-    select SHELL_LEVEL_1_SUPPORTED
-    select SHELL_LEVEL_2_SUPPORTED
-    bool "Basic (2)"
-
-    config SHELL_LEVEL_INTERACTIVE
-    select SHELL_LEVEL_1_SUPPORTED
-    select SHELL_LEVEL_2_SUPPORTED
-    select SHELL_LEVEL_3_SUPPORTED
-    bool "Interactive (3)"
-  endchoice
-
-  config SHELL_LEVEL_1_SUPPORTED
-  bool
-  config SHELL_LEVEL_2_SUPPORTED
-  bool
-  config SHELL_LEVEL_3_SUPPORTED
-  bool
-
-  config SHELL_DEBUG_COMMANDS
-  bool "Shell debug commands"
-  default y
-  help
-    Add support for shell debug commands (comp, dblk, dmem, mm, mode, pci, setvar, etc)
-
-  config SHELL_DRIVER_COMMANDS
-  bool "Shell driver commands"
-  default y
-  help
-    Add support for shell driver commands (connect, devtree, dh, disconnect, drivers, unload, etc)
-
-  config SHELL_NETWORK_COMMANDS
-  bool "Shell network commands"
-  default y
-  depends on NETWORKING
-  help
-    Add support for shell network commands
-
-  config NVIDIA_SHELL_APPLICATIONS
-  bool "NVIDIA Test applications"
-  default y
-  help
-    Add support for NVIDIA test applications
+    config NVIDIA_SHELL_APPLICATIONS
+    bool "NVIDIA Test applications"
+    default y if SELECT_ALL_SHELL_COMMANDS
+    help
+      Add support for NVIDIA test applications
+  endmenu
 endif
 
 config EBC
@@ -917,21 +1283,26 @@ config EBC
   help
     Adds support for EFI byte code (EBC) drivers in UEFI
 
+config SUPPORTS_SERVER_POWER_CONTROLLERS
+  bool
+
 config SERVER_POWER_CONTROLLERS
   bool "Server Configure Power Controllers"
-  depends on SOC_GRACE
+  depends on SUPPORTS_SERVER_POWER_CONTROLLERS
   help
     Adds support for configuring power controllers for server systems via UEFI ui
 
-config PRM_RAS_CPER_MODULE
-  bool "PRM RAS module support"
-  help
-    Exposes API to pull RW SPI flash data from OS via PRM ACPI method
-
 config PRM_PACKAGE_SUPPORT
   bool "edk2 PrmPkg support"
-  default y if PRM_RAS_CPER_MODULE
+
+# Add some more complicated dependencies
+config FIRMWARE_PARTITION_SUPPORT
+  bool
+  default y if FIRMWARE_MANAGEMENT_DIRECT
 
 config FIRMWARE_PARTITION_MM_DXE_DRIVER
   bool
   default y if (FIRMWARE_PARTITION_SUPPORT || FIRMWARE_MANAGEMENT_BLOB || PRM_RAS_CPER_MODULE)
+
+endmenu
+endif
