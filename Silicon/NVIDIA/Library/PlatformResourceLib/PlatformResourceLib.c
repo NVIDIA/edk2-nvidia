@@ -628,7 +628,18 @@ GetPlatformResourceInformationStandaloneMm (
   IN PHYSICAL_ADDRESS              CpuBootloaderAddress
   )
 {
-  return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
+  UINTN  ChipID;
+
+  ChipID = TegraGetChipID ();
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
+    default:
+      DEBUG ((DEBUG_ERROR, "%a Invalid ChipId 0x%x\n", __FUNCTION__, ChipID));
+      break;
+  }
+
+  return EFI_UNSUPPORTED;
 }
 
 /**
@@ -721,11 +732,22 @@ GetSocketMaskStMm (
   )
 {
   UINT32  SocketMask;
+  UINTN   ChipID;
+
+  ChipID     = TegraGetChipID ();
+  SocketMask = 0;
 
   if (CpuBlAddress == 0) {
     SocketMask = 0x1;
   } else {
-    SocketMask = TH500GetSocketMask (CpuBlAddress);
+    switch (ChipID) {
+      case TH500_CHIP_ID:
+        SocketMask = TH500GetSocketMask (CpuBlAddress);
+        break;
+      default:
+        DEBUG ((DEBUG_ERROR, "%a Unsupported Chip %u\n", __FUNCTION__, ChipID));
+        break;
+    }
   }
 
   return SocketMask;

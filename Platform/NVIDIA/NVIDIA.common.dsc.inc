@@ -2297,7 +2297,10 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   #
   # Tegra EEPROM Support
   #
-  Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf
+  Silicon/NVIDIA/Drivers/EepromDxe/Eeprom.inf {
+    <LibraryClasses>
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
 
   #
   # Tegra Pin Control support
