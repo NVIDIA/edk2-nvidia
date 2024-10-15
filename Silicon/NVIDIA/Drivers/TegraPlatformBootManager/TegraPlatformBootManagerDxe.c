@@ -655,7 +655,38 @@ AndroidBootImgAppendKernelArgs (
   IN UINTN   Size
   )
 {
-  return PlatformAppendKernelArgs (Args, Size);
+  CHAR16      *DtbKernelArgs = NULL;
+  EFI_STATUS  Status;
+
+  if ((Args == NULL) || (Size == 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    DEBUG ((DEBUG_ERROR, "%a: Using DTB Kernel Command Line\n", __FUNCTION__));
+    Status = GetDtbCommandLine (&DtbKernelArgs);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: no DTB cmdline\n", __FUNCTION__));
+      *Args = L'\0';
+    } else {
+      Status = StrCpyS (Args, Size / sizeof (CHAR16), DtbKernelArgs);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: cmdline copy failed\n", __FUNCTION__));
+        goto Error;
+      }
+    }
+
+    DEBUG ((DEBUG_ERROR, "DTB cmdline: %s\n", Args));
+  }
+
+  Status = PlatformAppendKernelArgs (Args, Size);
+
+Error:
+  if (DtbKernelArgs != NULL) {
+    gBS->FreePool (DtbKernelArgs);
+  }
+
+  return Status;
 }
 
 /*
@@ -778,7 +809,7 @@ RefreshAutoEnumeratedBootOptions (
 
       ImgKernelArgs = KernelArgsProtocol->KernelArgs;
 
-      // Always use DTB arguments on pre-silicon targets
+      // Allow DTB cmdline to replace image cmdline
       if ((ImgKernelArgs != NULL) &&
           (StrLen (ImgKernelArgs) != 0) &&
           (PcdGetBool (PcdBootAndroidImage) == FALSE))
