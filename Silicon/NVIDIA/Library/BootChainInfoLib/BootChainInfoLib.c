@@ -21,6 +21,12 @@
 
 #define MAX_BOOT_CHAIN_INFO_MAPPING  2
 #define PARTITION_PREFIX_LENGTH      2
+#define PARTITION_SUFFIX_LENGTH      2
+
+CHAR16  *SuffixPartitionNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
+  L"_a",
+  L"_b",
+};
 
 CHAR16  *T234PartitionNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
   L"A_",
@@ -55,6 +61,19 @@ GetBootChainPartitionName (
              MAX_PARTITION_NAME_LEN,
              BasePartitionName
              );
+  }
+
+  if (PcdGetBool (PcdPartitionNamesHaveSuffixes)) {
+    Identifier = SuffixPartitionNameId[BootChain];
+    UnicodeSPrint (
+      BootChainPartitionName,
+      sizeof (CHAR16) * MAX_PARTITION_NAME_LEN,
+      L"%s%s",
+      BasePartitionName,
+      Identifier
+      );
+
+    return EFI_SUCCESS;
   }
 
   ChipID = TegraGetChipID ();
@@ -132,86 +151,15 @@ GetActivePartitionName (
 
 EFI_STATUS
 EFIAPI
-GetPartitionBaseNameAndBootChain (
-  IN  CONST CHAR16  *PartitionName,
-  OUT CHAR16        *BaseName,
-  OUT UINTN         *BootChain
-  )
-{
-  UINTN  ChipID;
-  UINTN  Index;
-
-  if ((PartitionName == NULL) || (BaseName == NULL) || (BootChain == NULL)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  if (TegraGetPlatform () != TEGRA_PLATFORM_SILICON) {
-    *BootChain = 0;
-    return StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
-  }
-
-  ChipID = TegraGetChipID ();
-  switch (ChipID) {
-    case T234_CHIP_ID:
-    {
-      for (Index = 0; Index < MAX_BOOT_CHAIN_INFO_MAPPING; Index++) {
-        if (StrnCmp (PartitionName, T234PartitionNameId[Index], PARTITION_PREFIX_LENGTH) == 0) {
-          StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName + PARTITION_PREFIX_LENGTH);
-          *BootChain = Index;
-          return EFI_SUCCESS;
-        }
-      }
-
-      // no prefix, base name is partition name
-      StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
-      *BootChain = 0;
-      return EFI_SUCCESS;
-    }
-    case T194_CHIP_ID:
-    {
-      CONST CHAR16  *BSuffix;
-      UINTN         BSuffixLength;
-      CONST CHAR16  *SuffixStart;
-      UINTN         NameLength;
-
-      // check if boot chain B suffix is present, if not, it's boot chain A
-      BSuffix       = T194PartitionNameId[1];
-      BSuffixLength = StrLen (BSuffix);
-      NameLength    = StrLen (PartitionName);
-      if (NameLength > BSuffixLength) {
-        SuffixStart = PartitionName + NameLength - BSuffixLength;
-        if (StrnCmp (SuffixStart, BSuffix, BSuffixLength) == 0) {
-          StrnCpyS (
-            BaseName,
-            MAX_PARTITION_NAME_LEN,
-            PartitionName,
-            NameLength - BSuffixLength
-            );
-          *BootChain = 1;
-          return EFI_SUCCESS;
-        }
-      }
-
-      StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
-      *BootChain = 0;
-      return EFI_SUCCESS;
-    }
-    default:
-      return EFI_UNSUPPORTED;
-  }
-
-  return EFI_NOT_FOUND;
-}
-
-EFI_STATUS
-EFIAPI
 GetPartitionBaseNameAndBootChainAny (
   IN  CONST CHAR16  *PartitionName,
   OUT CHAR16        *BaseName,
   OUT UINTN         *BootChain
   )
 {
-  UINTN  Index;
+  UINTN         Index;
+  CONST CHAR16  *SuffixStart;
+  UINTN         NameLength;
 
   if ((PartitionName == NULL) || (BaseName == NULL) || (BootChain == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -221,6 +169,22 @@ GetPartitionBaseNameAndBootChainAny (
   for (Index = 0; Index < MAX_BOOT_CHAIN_INFO_MAPPING; Index++) {
     if (StrnCmp (PartitionName, T234PartitionNameId[Index], PARTITION_PREFIX_LENGTH) == 0) {
       StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName + PARTITION_PREFIX_LENGTH);
+      *BootChain = Index;
+      return EFI_SUCCESS;
+    }
+  }
+
+  // check for name with suffix
+  NameLength  = StrLen (PartitionName);
+  SuffixStart = PartitionName + NameLength - PARTITION_SUFFIX_LENGTH;
+  for (Index = 0; Index < MAX_BOOT_CHAIN_INFO_MAPPING; Index++) {
+    if (StrnCmp (SuffixStart, SuffixPartitionNameId[Index], PARTITION_SUFFIX_LENGTH) == 0) {
+      StrnCpyS (
+        BaseName,
+        MAX_PARTITION_NAME_LEN,
+        PartitionName,
+        NameLength - PARTITION_SUFFIX_LENGTH
+        );
       *BootChain = Index;
       return EFI_SUCCESS;
     }
@@ -250,35 +214,11 @@ GetPartitionBaseNameAndBootChainAny (
         return EFI_SUCCESS;
       }
     }
-
-    StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
-    *BootChain = 0;
-    return EFI_SUCCESS;
-  }
-}
-
-EFI_STATUS
-EFIAPI
-GetBootChainPartitionNameAny (
-  IN  CONST CHAR16  *BasePartitionName,
-  IN  UINTN         BootChain,
-  OUT CHAR16        *BootChainPartitionName
-  )
-{
-  if ((BasePartitionName == NULL) || (BootChainPartitionName == NULL) ||
-      (BootChain >= MAX_BOOT_CHAIN_INFO_MAPPING))
-  {
-    return EFI_INVALID_PARAMETER;
   }
 
-  UnicodeSPrint (
-    BootChainPartitionName,
-    sizeof (CHAR16) * MAX_PARTITION_NAME_LEN,
-    L"%s%s",
-    T234PartitionNameId[BootChain],
-    BasePartitionName
-    );
-
+  // default is partition name is base name
+  StrCpyS (BaseName, MAX_PARTITION_NAME_LEN, PartitionName);
+  *BootChain = BOOT_CHAIN_A;
   return EFI_SUCCESS;
 }
 

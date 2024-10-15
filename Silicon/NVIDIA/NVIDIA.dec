@@ -690,6 +690,7 @@
 #FwPartition and FwImage
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|FALSE|BOOLEAN|0x00000053
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|TRUE|BOOLEAN|0x00000058
+  gNVIDIATokenSpaceGuid.PcdPartitionNamesHaveSuffixes|FALSE|BOOLEAN|0x00000043
 
 #BrBct config and options
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x0|UINT32|0x00000054

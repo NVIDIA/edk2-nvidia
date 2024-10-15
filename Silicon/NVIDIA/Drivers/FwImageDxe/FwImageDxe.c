@@ -662,7 +662,7 @@ FwImageProtocolCallback (
       continue;
     }
 
-    Status = GetPartitionBaseNameAndBootChain (PartitionName, ImageName, &BootChain);
+    Status = GetPartitionBaseNameAndBootChainAny (PartitionName, ImageName, &BootChain);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to get base name for %s: %r\n", PartitionName, Status));
       continue;

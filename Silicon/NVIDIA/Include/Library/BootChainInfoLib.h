@@ -61,26 +61,6 @@ GetBootChainPartitionName (
   );
 
 /**
-  Get base name and boot chain index from partition name
-
-  @param[in]  PartitionName         Pointer to partition name string
-  @param[out] BaseName              Pointer to buffer of MAX_PARTITION_NAME_LEN
-                                    CHAR16 characters to contain the
-                                    base partition name
-  @param[out] BootChain             Pointer to boot chain (0=a, 1=b)
-
-  @retval EFI_SUCCESS               Operation successful.
-  @retval others                    Error occurred.
-**/
-EFI_STATUS
-EFIAPI
-GetPartitionBaseNameAndBootChain (
-  IN  CONST CHAR16  *PartitionName,
-  OUT CHAR16        *BaseName,
-  OUT UINTN         *BootChain
-  );
-
-/**
   Get base name and boot chain index from partition name without knowing
   platform.
 
@@ -99,28 +79,6 @@ GetPartitionBaseNameAndBootChainAny (
   IN  CONST CHAR16  *PartitionName,
   OUT CHAR16        *BaseName,
   OUT UINTN         *BootChain
-  );
-
-/**
-  Retrieve Boot Chain Partition Name without knowing platform.
-  Returns T234-style names.
-
-  @param[in]  BasePartitionName        Pointer to base partition name string
-  @param[in]  BootChain                Boot chain (0=a, 1=b)
-  @param[out] BootChainPartitionName   Pointer to buffer of MAX_PARTITION_NAME_LEN
-                                       CHAR16 characters to contain the
-                                       boot chain partition name
-
-  @retval EFI_SUCCESS               Operation successful.
-  @retval others                    Error occurred.
-
-**/
-EFI_STATUS
-EFIAPI
-GetBootChainPartitionNameAny (
-  IN  CONST CHAR16  *BasePartitionName,
-  IN  UINTN         BootChain,
-  OUT CHAR16        *BootChainPartitionName
   );
 
 /**

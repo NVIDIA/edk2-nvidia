@@ -51,6 +51,11 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
   NULL
 };
 
+STATIC CONST CHAR16  *GptPseudoPartitionName[BOOT_CHAIN_COUNT] = {
+  L"A_GPT",
+  L"B_GPT"
+};
+
 /**
   Check if given Name is in List.
 
@@ -748,7 +753,6 @@ FwPartitionAddFromDeviceGpt (
   UINTN                       GptHeaderOffset;
   UINTN                       GptDataOffset;
   UINT32                      BootChain;
-  CHAR16                      GptPartitionName[MAX_PARTITION_NAME_LEN];
 
   BlockSize       = NVIDIA_GPT_BLOCK_SIZE;
   PartitionCount  = mNumFwPartitions;
@@ -875,19 +879,16 @@ FwPartitionAddFromDeviceGpt (
 
   // add partitions for GPT updates
   for (BootChain = 0; BootChain < BOOT_CHAIN_COUNT; BootChain++) {
-    Status = GetBootChainPartitionNameAny (L"GPT", BootChain, GptPartitionName);
-    NV_ASSERT_EFI_ERROR_RETURN (Status, goto Done);
-
     GptDataOffset = GptGetGptDataOffset (BootChain, DeviceSizeInBytes, DeviceInfo->BlockSize);
 
     Status = FwPartitionAdd (
-               GptPartitionName,
+               GptPseudoPartitionName[BootChain],
                DeviceInfo,
                GptDataOffset,
                GptGetGptDataSize ()
                );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Error adding %s partition: %r\n", __FUNCTION__, GptPartitionName, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Error adding %s partition: %r\n", __FUNCTION__, GptPseudoPartitionName[BootChain], Status));
       goto Done;
     }
   }

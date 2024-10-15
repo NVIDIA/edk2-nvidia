@@ -35,3 +35,4 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain
+  gNVIDIATokenSpaceGuid.PcdPartitionNamesHaveSuffixes

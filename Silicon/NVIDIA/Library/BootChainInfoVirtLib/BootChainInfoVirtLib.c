@@ -123,6 +123,7 @@ GetActivePartitionName (
            );
 }
 
+STATIC
 EFI_STATUS
 EFIAPI
 GetPartitionBaseNameAndBootChain (
@@ -173,31 +174,6 @@ GetPartitionBaseNameAndBootChainAny (
   )
 {
   return GetPartitionBaseNameAndBootChain (PartitionName, BaseName, BootChain);
-}
-
-EFI_STATUS
-EFIAPI
-GetBootChainPartitionNameAny (
-  IN  CONST CHAR16  *BasePartitionName,
-  IN  UINTN         BootChain,
-  OUT CHAR16        *BootChainPartitionName
-  )
-{
-  if ((BasePartitionName == NULL) || (BootChainPartitionName == NULL) ||
-      (BootChain >= BOOT_CHAIN_COUNT))
-  {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  UnicodeSPrint (
-    BootChainPartitionName,
-    sizeof (CHAR16) * MAX_PARTITION_NAME_LEN,
-    L"%s%s",
-    BasePartitionName,
-    PartitionNameSuffix[BootChain]
-    );
-
-  return EFI_SUCCESS;
 }
 
 UINT32
