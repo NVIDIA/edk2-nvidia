@@ -1152,9 +1152,14 @@ AccessMb1Record (
   Header  = (EFI_MM_COMMUNICATE_HEADER *)mMmCommunicationBuffer;
   Payload = (NVIDIA_MM_MB1_RECORD_PAYLOAD *)&Header->Data;
 
+  STATIC_ASSERT (
+    sizeof (Payload->Data) >= sizeof (EarlyVariable->Data.Mb1Data),
+    "MM MB1 record payload too small"
+    );
+
   if (Write) {
     Payload->Command = NVIDIA_MM_MB1_RECORD_WRITE_CMD;
-    CopyMem (Payload->Data, &EarlyVariable->Data.Mb1Data, sizeof (Payload->Data));
+    CopyMem (Payload->Data, &EarlyVariable->Data.Mb1Data, sizeof (EarlyVariable->Data.Mb1Data));
   } else {
     Payload->Command = NVIDIA_MM_MB1_RECORD_READ_CMD;
   }
@@ -1176,7 +1181,7 @@ AccessMb1Record (
   }
 
   if (!Write) {
-    CopyMem (&EarlyVariable->Data.Mb1Data, Payload->Data, sizeof (Payload->Data));
+    CopyMem (&EarlyVariable->Data.Mb1Data, Payload->Data, sizeof (EarlyVariable->Data.Mb1Data));
   }
 
   return Status;
