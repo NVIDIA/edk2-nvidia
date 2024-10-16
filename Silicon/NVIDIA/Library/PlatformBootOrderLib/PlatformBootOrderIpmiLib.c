@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -38,6 +38,7 @@ GetIPMIBootOrderParameter (
   IPMI_GET_BOOT_OPTIONS_REQUEST  BootOptionsRequest;
   UINT32                         ResponseSize;
 
+  ZeroMem (&BootOptionsRequest, sizeof (IPMI_GET_BOOT_OPTIONS_REQUEST));
   BootOptionsRequest.ParameterSelector.Bits.ParameterSelector = ParameterSelector;
   BootOptionsRequest.SetSelector                              = 0;
   BootOptionsRequest.BlockSelector                            = 0;
