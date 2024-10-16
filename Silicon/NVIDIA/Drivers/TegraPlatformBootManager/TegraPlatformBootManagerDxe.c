@@ -22,6 +22,7 @@
 #include <Protocol/KernelCmdLineUpdate.h>
 #include <Protocol/AndroidBootImg.h>
 #include <Protocol/KernelArgsProtocol.h>
+#include <Protocol/PlatformKernelArgsProtocol.h>
 
 #include <NVIDIAConfiguration.h>
 
@@ -618,9 +619,10 @@ GetPlatformCommandLine (
 }
 
 // Append platform specific commands
+STATIC
 EFI_STATUS
 EFIAPI
-AndroidBootImgAppendKernelArgs (
+PlatformAppendKernelArgs (
   IN CHAR16  *Args,
   IN UINTN   Size
   )
@@ -643,6 +645,17 @@ AndroidBootImgAppendKernelArgs (
   gBS->FreePool (NewArgs);
   NewArgs = NULL;
   return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+AndroidBootImgAppendKernelArgs (
+  IN CHAR16  *Args,
+  IN UINTN   Size
+  )
+{
+  return PlatformAppendKernelArgs (Args, Size);
 }
 
 /*
@@ -1091,6 +1104,10 @@ EDKII_PLATFORM_BOOT_MANAGER_PROTOCOL  mPlatformBootManager = {
 
 STATIC ANDROID_BOOTIMG_PROTOCOL  mAndroidBootImgProtocol = { AndroidBootImgAppendKernelArgs, NULL };
 
+STATIC NVIDIA_PLATFORM_KERNEL_ARGS_PROTOCOL  mPlatformKernelArgsProtocol = {
+  PlatformAppendKernelArgs
+};
+
 EFI_STATUS
 EFIAPI
 PlatformBootManagerEntryPoint (
@@ -1104,6 +1121,8 @@ PlatformBootManagerEntryPoint (
                 &mPlatformBootManager,
                 &gAndroidBootImgProtocolGuid,
                 &mAndroidBootImgProtocol,
+                &gNVIDIAPlatformKernelArgsProtocolGuid,
+                &mPlatformKernelArgsProtocol,
                 NULL
                 );
 }

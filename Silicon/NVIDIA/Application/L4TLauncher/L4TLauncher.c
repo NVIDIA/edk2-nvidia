@@ -27,6 +27,7 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/DiskIo.h>
 #include <Protocol/LoadFile2.h>
+#include <Protocol/PlatformKernelArgsProtocol.h>
 
 #include <Guid/LinuxEfiInitrdMedia.h>
 #include <Protocol/Pkcs7Verify.h>
@@ -364,21 +365,21 @@ UpdateBootCfgFile (
   IN BOOLEAN     RecoveryPresent
   )
 {
-  EFI_STATUS                Status;
-  CHAR8                     CorrectPartitionContent[MAX_BOOTCONFIG_CONTENT_SIZE];
-  CHAR8                     ReadPartitionContent[MAX_BOOTCONFIG_CONTENT_SIZE];
-  CHAR16                    CpuBootArgs[MAX_CBOOTARG_SIZE/sizeof (CHAR16)];
-  UINTN                     CorrectSize;
-  UINT64                    FileSize;
-  EFI_FILE_HANDLE           FileHandle;
-  EFI_DEVICE_PATH           *FullDevicePath;
-  ANDROID_BOOTIMG_PROTOCOL  *AndroidBootProtocol;
+  EFI_STATUS                            Status;
+  CHAR8                                 CorrectPartitionContent[MAX_BOOTCONFIG_CONTENT_SIZE];
+  CHAR8                                 ReadPartitionContent[MAX_BOOTCONFIG_CONTENT_SIZE];
+  CHAR16                                CpuBootArgs[MAX_CBOOTARG_SIZE/sizeof (CHAR16)];
+  UINTN                                 CorrectSize;
+  UINT64                                FileSize;
+  EFI_FILE_HANDLE                       FileHandle;
+  EFI_DEVICE_PATH                       *FullDevicePath;
+  NVIDIA_PLATFORM_KERNEL_ARGS_PROTOCOL  *KernelArgsProtocol;
 
   ZeroMem (CpuBootArgs, MAX_CBOOTARG_SIZE);
-  Status = gBS->LocateProtocol (&gAndroidBootImgProtocolGuid, NULL, (VOID **)&AndroidBootProtocol);
+  Status = gBS->LocateProtocol (&gNVIDIAPlatformKernelArgsProtocolGuid, NULL, (VOID **)&KernelArgsProtocol);
   if (!EFI_ERROR (Status)) {
-    if (AndroidBootProtocol->AppendArgs != NULL) {
-      Status = AndroidBootProtocol->AppendArgs (CpuBootArgs, MAX_CBOOTARG_SIZE);
+    if (KernelArgsProtocol->Append != NULL) {
+      Status = KernelArgsProtocol->Append (CpuBootArgs, MAX_CBOOTARG_SIZE);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Failed to get platform addition arguments\r\n", __FUNCTION__);
         return Status;
@@ -1405,10 +1406,10 @@ ExtLinuxBootMenu (
 }
 
 /**
-  Boots an android style partition located with Partition base name and bootchain
+  Boot using extlinux configuration
 
   @param[in]  ImageHandle       Handle of this application
-  @param[in]  DeviceHandle      The handle of partition where this file lives on.
+  @param[in]  DeviceHandle      Handle of device for extlinux boot
   @param[in]  BootOption        Boot options to load
 
   @retval EFI_SUCCESS    The operation completed successfully.
@@ -1423,29 +1424,29 @@ ExtLinuxBoot (
   IN EXTLINUX_BOOT_OPTION  *BootOption
   )
 {
-  EFI_STATUS                 Status;
-  CHAR16                     *NewArgs = NULL;
-  UINTN                      ArgSize;
-  ANDROID_BOOTIMG_PROTOCOL   *AndroidBootProtocol;
-  EFI_HANDLE                 RamDiskLoadFileHandle = NULL;
-  UINTN                      FdtSize;
-  UINTN                      KernelSize;
-  VOID                       *KernelBase       = NULL;
-  VOID                       *AcpiBase         = NULL;
-  VOID                       *OldFdtBase       = NULL;
-  VOID                       *NewFdtBase       = NULL;
-  VOID                       *ExpandedFdtBase  = NULL;
-  BOOLEAN                    FdtUpdated        = FALSE;
-  EFI_DEVICE_PATH_PROTOCOL   *KernelDevicePath = NULL;
-  EFI_HANDLE                 KernelHandle      = NULL;
-  EFI_LOADED_IMAGE_PROTOCOL  *ImageInfo;
-  VOID                       *OverlayBuffer = NULL;
-  UINTN                      OverlaySize;
-  CHAR16                     *Overlays = NULL;
-  CHAR16                     *OverlayPath;
-  UINTN                      Index;
-  CHAR8                      SWModule[] = "kernel";
-  INTN                       FdtStatus;
+  EFI_STATUS                            Status;
+  CHAR16                                *NewArgs = NULL;
+  UINTN                                 ArgSize;
+  NVIDIA_PLATFORM_KERNEL_ARGS_PROTOCOL  *KernelArgsProtocol;
+  EFI_HANDLE                            RamDiskLoadFileHandle = NULL;
+  UINTN                                 FdtSize;
+  UINTN                                 KernelSize;
+  VOID                                  *KernelBase       = NULL;
+  VOID                                  *AcpiBase         = NULL;
+  VOID                                  *OldFdtBase       = NULL;
+  VOID                                  *NewFdtBase       = NULL;
+  VOID                                  *ExpandedFdtBase  = NULL;
+  BOOLEAN                               FdtUpdated        = FALSE;
+  EFI_DEVICE_PATH_PROTOCOL              *KernelDevicePath = NULL;
+  EFI_HANDLE                            KernelHandle      = NULL;
+  EFI_LOADED_IMAGE_PROTOCOL             *ImageInfo;
+  VOID                                  *OverlayBuffer = NULL;
+  UINTN                                 OverlaySize;
+  CHAR16                                *Overlays = NULL;
+  CHAR16                                *OverlayPath;
+  UINTN                                 Index;
+  CHAR8                                 SWModule[] = "kernel";
+  INTN                                  FdtStatus;
 
   // Process Args
   ArgSize = StrSize (BootOption->BootArgs) + MAX_CBOOTARG_SIZE;
@@ -1455,10 +1456,10 @@ ExtLinuxBoot (
     goto Exit;
   }
 
-  Status = gBS->LocateProtocol (&gAndroidBootImgProtocolGuid, NULL, (VOID **)&AndroidBootProtocol);
+  Status = gBS->LocateProtocol (&gNVIDIAPlatformKernelArgsProtocolGuid, NULL, (VOID **)&KernelArgsProtocol);
   if (!EFI_ERROR (Status)) {
-    if (AndroidBootProtocol->AppendArgs != NULL) {
-      Status = AndroidBootProtocol->AppendArgs (NewArgs, ArgSize);
+    if (KernelArgsProtocol->Append != NULL) {
+      Status = KernelArgsProtocol->Append (NewArgs, ArgSize);
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"%a: Failed to get platform addition arguments\r\n", __FUNCTION__);
         goto Exit;
@@ -2374,7 +2375,7 @@ BootAndroidStyleImage (
 
   DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
 
-  DEBUG ((DEBUG_ERROR, "%a", ImageHeader.KernelArgs));
+  DEBUG ((DEBUG_ERROR, "%a\n", ImageHeader.KernelArgs));
 
   Status = AndroidBootImgBoot ((VOID *)ImageBase, ImageBufferSize);
   if (EFI_ERROR (Status)) {

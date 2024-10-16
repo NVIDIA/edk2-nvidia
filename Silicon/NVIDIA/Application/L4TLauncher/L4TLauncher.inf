@@ -55,12 +55,12 @@
   gEfiLoadedImageProtocolGuid
   gEfiDevicePathProtocolGuid
   gEfiPartitionInfoProtocolGuid
-  gAndroidBootImgProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
   gEfiLoadFile2ProtocolGuid
   gEfiPkcs7VerifyProtocolGuid
   gNVIDIAL4TLauncherSupportProtocol
+  gNVIDIAPlatformKernelArgsProtocolGuid
 
 [UserExtensions.TianoCore."ExtraFiles"]
   L4TLauncherExtra.uni
