@@ -36,6 +36,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
     def __init__(self):
         super().__init__()
+        self.config_out = None
 
         # Create an instance of our SettingsManager to use.
         # - stuart's invokeables framework finds the SettingsManager and uses
@@ -178,7 +179,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         from kconfiglib import Kconfig
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
-        config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
+        self.config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
         config_out_dsc = (
             ws_dir / "nvidia-config" / self.settings.GetName() / "config.dsc.inc"
         )
@@ -210,8 +211,8 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             # replace=False creates a merged configuration
             print(kconf.load_config(ws_dir / config, replace=False))
 
-        if config_out.is_file ():
-            print(kconf.load_config(config_out, replace=False))
+        if self.config_out.is_file ():
+            print(kconf.load_config(self.config_out, replace=False))
 
         kconf.write_config(os.devnull)
 
@@ -229,15 +230,15 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             raise ValueError("Aborting due to Kconfig warnings")
 
         # Write the merged configuration
-        print(kconf.write_config(config_out))
+        print(kconf.write_config(self.config_out))
 
         if self._menuconfig:
             from menuconfig import menuconfig
-            os.environ["KCONFIG_CONFIG"] = str(config_out)
+            os.environ["KCONFIG_CONFIG"] = str(self.config_out)
             menuconfig(kconf)
 
         # Create version of config that edk2 can consume
-        with open(config_out, "r") as f, open(config_out_dsc, "w") as fo:
+        with open(self.config_out, "r") as f, open(config_out_dsc, "w") as fo:
             for line in f:
                 # strip the file of "
                 line = line.replace('"', "").replace("'", "")
@@ -418,6 +419,12 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             logging.info("Generating uefi image %s", fw_img)
             fw_img.parent.mkdir(parents=True, exist_ok=True)
             FormatUefiBinary(str(fw_vol), str(fw_img))
+
+            # If we also have a config file, save it relative to the image
+            # file.  This records the config used to build the firmware image.
+            if self.config_out:
+                fw_conf = fw_img.with_name("config_" + fw_img.name).with_suffix("")
+                shutil.copyfile(self.config_out, fw_conf)
 
         # Copy the boot app, if appropriate for this platform
         boot_rel = self.settings.GetBootAppName()
