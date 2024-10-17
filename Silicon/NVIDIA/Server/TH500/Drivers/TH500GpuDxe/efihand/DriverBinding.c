@@ -760,7 +760,9 @@ NVIDIAGpuDriverStart (
         DEBUG ((DEBUG_INFO, "DEBUG: Tegra Platform VDK Detected. Disabling FSP calls.\n"));
       }
     } else {
-      DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "ERROR: Open 'GpuFirmwareBootCompleteProtocol' Protocol on Handle [%p] Status '%r'.\n", ControllerHandle, Status));
+      }
     }
 
     // Install the GPU DSD AML Generation Protocol instance on the supported ControllerHandle
