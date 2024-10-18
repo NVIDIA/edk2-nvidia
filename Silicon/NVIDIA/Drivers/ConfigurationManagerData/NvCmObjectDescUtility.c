@@ -198,7 +198,7 @@ EFIAPI
 NvAddMultipleCmObjWithTokens (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN  CONST CM_OBJ_DESCRIPTOR      *CmObjDesc,
-  IN        CM_OBJECT_TOKEN        *ElementTokenMap,
+  IN        CM_OBJECT_TOKEN        *ElementTokenMap OPTIONAL,
   IN        CM_OBJECT_TOKEN        Token
   )
 {
@@ -211,7 +211,6 @@ NvAddMultipleCmObjWithTokens (
   NV_ASSERT_RETURN (CmObjDesc != NULL, return EFI_INVALID_PARAMETER, "%a: CmObjDesc pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (CmObjDesc->Count > 0, return EFI_INVALID_PARAMETER, "%a: CmObjDesc's count can't be 0\n", __FUNCTION__);
   NV_ASSERT_RETURN ((CmObjDesc->Data != NULL) || (CmObjDesc->Size == 0), return EFI_INVALID_PARAMETER, "%a: CmObjDesc's Data is NULL while Size is not\n", __FUNCTION__);
-  NV_ASSERT_RETURN (ElementTokenMap != NULL, return EFI_INVALID_PARAMETER, "%a: ElementTokenMap pointer is NULL\n", __FUNCTION__);
 
   // Add the multi-object array with the provided tokens
   Status = NvHwInfoAddWithTokenMap (FdtParserHandle, FdtParserHandle->Context, CmObjDesc, ElementTokenMap, Token);

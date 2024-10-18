@@ -98,6 +98,10 @@ ConfigManagerEntryFind (
 
     if (Token != CM_NULL_TOKEN) {
       if (Token != Repo[Index].Token) {
+        if (Repo[Index].ElementTokenMap == NULL) {
+          continue;
+        }
+
         // Token must be for a particular element
         TokenCount = Desc->Count;
         for (SubobjectIndex = 0; SubobjectIndex < TokenCount; SubobjectIndex++) {
@@ -152,7 +156,7 @@ ConfigManagerEntryAddWithTokenMap (
   IN UINT32                          CmObjectSize,
   IN UINT32                          CmObjectCount,
   IN VOID                            *CmObjectPtr,
-  IN CM_OBJECT_TOKEN                 *ElementTokenMap,
+  IN CM_OBJECT_TOKEN                 *ElementTokenMap OPTIONAL,
   IN CM_OBJECT_TOKEN                 Token
   )
 {
@@ -163,7 +167,6 @@ ConfigManagerEntryAddWithTokenMap (
 
   NV_ASSERT_RETURN (This != NULL, return EFI_INVALID_PARAMETER, "%a: This pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (CmObjectCount != 0, return EFI_INVALID_PARAMETER, "%a: CmObjectCount can't be 0\n", __FUNCTION__);
-  NV_ASSERT_RETURN (ElementTokenMap != NULL, return EFI_INVALID_PARAMETER, "%a: ElementTokenMap is NULL\n", __FUNCTION__);
 
   // Don't currently support resizing
   if (This->EntryCount >= This->MaxEntries) {
@@ -189,12 +192,16 @@ ConfigManagerEntryAddWithTokenMap (
   Desc->Size     = CmObjectSize;
   Desc->Data     = Data;
   Desc->Count    = CmObjectCount;
-  // ArmObjCmRef objects have a >1 count, but only one token which is used to locate the object itself
-  TokenCount             = (CmObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef)) ? 1 : Desc->Count;
-  Entry->ElementTokenMap = AllocateCopyPool (TokenCount * sizeof (CM_OBJECT_TOKEN), ElementTokenMap);
-  if (Entry->ElementTokenMap == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u bytes to copy the token map into the repo\n", __FUNCTION__, TokenCount * sizeof (CM_OBJECT_TOKEN)));
-    return EFI_OUT_OF_RESOURCES;
+  // ArmObjCmRef objects have a >1 count, but shouldn't have an ElementTokenMap
+  if ((CmObjectId == CREATE_CM_ARM_OBJECT_ID (EArmObjCmRef)) || (ElementTokenMap == NULL)) {
+    Entry->ElementTokenMap = NULL;
+  } else {
+    TokenCount             = Desc->Count;
+    Entry->ElementTokenMap = AllocateCopyPool (TokenCount * sizeof (CM_OBJECT_TOKEN), ElementTokenMap);
+    if (Entry->ElementTokenMap == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u bytes to copy the token map into the repo\n", __FUNCTION__, TokenCount * sizeof (CM_OBJECT_TOKEN)));
+      return EFI_OUT_OF_RESOURCES;
+    }
   }
 
   Entry->Token = Token;
@@ -331,21 +338,23 @@ ConfigManagerEntryExtend (
   NV_ASSERT_RETURN (ElementSize == (CmObjectSize/CmObjectCount), return EFI_INVALID_PARAMETER, "%a: Previous element size is %u (%u/%u), but extended element size is %u (%u/%u)\n", __FUNCTION__, ElementSize, Desc->Size, Desc->Count, CmObjectSize/CmObjectCount, CmObjectSize, CmObjectCount);
 
   // Extend the TokenMap with the new entries
-  NewTokens = NULL;
-  Status    = This->NewTokenMap (This, CmObjectCount, &NewTokens);
-  if (EFI_ERROR (Status) || (NewTokens == NULL)) {
-    goto CleanupAndReturn;
-  }
+  if (Entry->ElementTokenMap != NULL) {
+    NewTokens = NULL;
+    Status    = This->NewTokenMap (This, CmObjectCount, &NewTokens);
+    if (EFI_ERROR (Status) || (NewTokens == NULL)) {
+      goto CleanupAndReturn;
+    }
 
-  NewTokenMap = ReallocatePool (sizeof (CM_OBJECT_TOKEN) * Desc->Count, sizeof (CM_OBJECT_TOKEN) * (Desc->Count + CmObjectCount), Entry->ElementTokenMap);
-  if (NewTokenMap == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to reallocate %u bytes to extend the token map with %u new entries\n", __FUNCTION__, sizeof (CM_OBJECT_TOKEN) *(Desc->Count + CmObjectCount), CmObjectCount));
-    Status = EFI_OUT_OF_RESOURCES;
-    goto CleanupAndReturn;
-  }
+    NewTokenMap = ReallocatePool (sizeof (CM_OBJECT_TOKEN) * Desc->Count, sizeof (CM_OBJECT_TOKEN) * (Desc->Count + CmObjectCount), Entry->ElementTokenMap);
+    if (NewTokenMap == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Unable to reallocate %u bytes to extend the token map with %u new entries\n", __FUNCTION__, sizeof (CM_OBJECT_TOKEN) *(Desc->Count + CmObjectCount), CmObjectCount));
+      Status = EFI_OUT_OF_RESOURCES;
+      goto CleanupAndReturn;
+    }
 
-  CopyMem (&NewTokenMap[Desc->Count], NewTokens, CmObjectCount * sizeof (CM_OBJECT_TOKEN));
-  Entry->ElementTokenMap = NewTokenMap;
+    CopyMem (&NewTokenMap[Desc->Count], NewTokens, CmObjectCount * sizeof (CM_OBJECT_TOKEN));
+    Entry->ElementTokenMap = NewTokenMap;
+  }
 
   // Extend the Data with the new entries
   NewData = ReallocatePool (Desc->Size, Desc->Size + CmObjectSize, Desc->Data);
@@ -575,7 +584,7 @@ NvHwInfoAddWithTokenMap (
   IN        HW_INFO_PARSER_HANDLE  ParserHandle,
   IN        VOID                   *Context,
   IN  CONST CM_OBJ_DESCRIPTOR      *CmObjDesc,
-  IN        CM_OBJECT_TOKEN        *ElementTokenMap,
+  IN        CM_OBJECT_TOKEN        *ElementTokenMap OPTIONAL,
   IN        CM_OBJECT_TOKEN        Token
   )
 {
@@ -586,7 +595,6 @@ NvHwInfoAddWithTokenMap (
   NV_ASSERT_RETURN (ParserHandle != NULL, return EFI_INVALID_PARAMETER, "%a: ParserHandle pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (Context != NULL, return EFI_INVALID_PARAMETER, "%a: Context pointer is NULL\n", __FUNCTION__);
   NV_ASSERT_RETURN (CmObjDesc != NULL, return EFI_INVALID_PARAMETER, "%a: CmObjDesc pointer is NULL\n", __FUNCTION__);
-  NV_ASSERT_RETURN (ElementTokenMap != NULL, return EFI_INVALID_PARAMETER, "%a: ElementTokenMap pointer is NULL\n", __FUNCTION__);
 
   Repo = (EDKII_PLATFORM_REPOSITORY_INFO *)Context;
 

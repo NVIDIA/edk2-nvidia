@@ -115,16 +115,12 @@ ProtocolBasedObjectsParser (
             TokenMap    = TokenMapDesc->Data;
             ObjectToken = CM_NULL_TOKEN;
           } else {
-            // Token is the token to use for storing the ArmObjCmRef object. It has multi-count, but is special with only a single-entry token map
+            // Token is the token to use for storing the ArmObjCmRef object. It has multi-count, but is special with no TokenMap
             ObjectToken = InputToken;
-            Status      = NvAllocateCmTokens (ParserHandle, Desc.Count, &TokenMap);
-            if (EFI_ERROR (Status)) {
-              DEBUG ((DEBUG_ERROR, "%a: Got %r trying to allocate a token map with %u tokens\n", __FUNCTION__, Status, Desc.Count));
-              goto CleanupAndReturn;
-            }
+            TokenMap    = NULL;
           }
         } else if (Desc.Count == 1) {
-          TokenMap    = &InputToken;
+          TokenMap    = NULL;
           ObjectToken = InputToken;
         } else {
           DEBUG ((DEBUG_ERROR, "%a: Found an entry with count of zero; skipping it\n", __FUNCTION__));

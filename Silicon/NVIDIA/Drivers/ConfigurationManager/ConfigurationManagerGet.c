@@ -69,7 +69,8 @@ NVIDIAPlatformGetObject (
   // If the user specified an element token, we want just a single entry
   if ((Entry->CmObjectDesc.Count > 1) &&
       (Token != CM_NULL_TOKEN) &&
-      (Token != Entry->Token))
+      (Token != Entry->Token) &&
+      (Entry->ElementTokenMap != NULL))
   {
     ElemSize = CmObject->Size / CmObject->Count;
     for (ElemIndex = 0; ElemIndex < Entry->CmObjectDesc.Count; ElemIndex++) {
