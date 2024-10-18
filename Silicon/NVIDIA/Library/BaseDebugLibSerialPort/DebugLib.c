@@ -24,7 +24,8 @@
 #include <Library/SerialPortLib.h>
 #include <Library/DebugPrintErrorLevelLib.h>
 #include <Library/TimerLib.h>
-#include <Library/ResetSystemLib.h>
+#include <IndustryStandard/ArmStdSmc.h>
+#include <Library/ArmMonitorLib.h>
 
 //
 // Define the maximum debug and assert message length that this library supports
@@ -196,6 +197,28 @@ DebugBPrint (
 }
 
 /**
+  This function causes a system-wide reset (cold reset), in which
+  all circuitry within the system returns to its initial state. This type of reset
+  is asynchronous to system operation and operates without regard to
+  cycle boundaries.
+
+  Copied from ArmPsciResetSystemLib to avoid a circular dependency.
+**/
+STATIC
+VOID
+DebugResetCold (
+  VOID
+  )
+{
+  ARM_MONITOR_ARGS  Args;
+
+  // Send a PSCI 0.2 SYSTEM_RESET command
+  Args.Arg0 = ARM_SMC_ID_PSCI_SYSTEM_RESET;
+
+  ArmMonitorCall (&Args);
+}
+
+/**
   Prints an assert message containing a filename, line number, and description.
   This may be followed by a breakpoint or a dead loop.
 
@@ -276,7 +299,7 @@ DebugAssert (
       MicroSecondDelay (ResetDelay * 1000000);
     }
 
-    ResetCold ();
+    DebugResetCold ();
   }
 }
 

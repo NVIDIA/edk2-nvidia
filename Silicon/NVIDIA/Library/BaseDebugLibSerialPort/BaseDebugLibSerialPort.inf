@@ -27,6 +27,7 @@
   DebugLib.c
 
 [Packages]
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
@@ -38,7 +39,7 @@
   PrintLib
   BaseLib
   DebugPrintErrorLevelLib
-  ResetSystemLib
+  ArmMonitorLib
   IoLib
   DebugLogScratchRegLib
 
