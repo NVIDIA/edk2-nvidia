@@ -20,6 +20,10 @@
     (a) = NULL;      \
   }
 
+// Forward declarations - must match ConfigurationManagerTokenProtocol.h
+typedef struct _NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL;
+typedef struct PlatformRepositoryInfo                        EDKII_PLATFORM_REPOSITORY_INFO;
+
 /** Function pointer to a parser function.
 
   A parser parses a Device Tree to populate a specific CmObj type. None,
@@ -77,7 +81,7 @@ typedef struct PlatformRepositoryInfoEntry {
   CM_OBJECT_TOKEN      *ElementTokenMap;
 } EDKII_PLATFORM_REPOSITORY_INFO_ENTRY;
 
-typedef struct PlatformRepositoryInfo {
+struct PlatformRepositoryInfo {
   EDKII_PLATFORM_REPOSITORY_INFO_ENTRY           *Entries;
   UINT32                                         EntryCount;
   UINT32                                         MaxEntries;
@@ -90,7 +94,7 @@ typedef struct PlatformRepositoryInfo {
   NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL    *TokenProtocol;
 
   // Add new entry and return token map for it
-  EFI_STATUS (*NewEntry)(
+  EFI_STATUS                                     (*NewEntry)(
     struct PlatformRepositoryInfo  *This,
     CM_OBJECT_ID                   CmObjectId,
     UINT32                         CmObjectSize,
@@ -101,7 +105,7 @@ typedef struct PlatformRepositoryInfo {
     );
 
   // Add new entry with the specified token map
-  EFI_STATUS (*NewEntryWithMap)(
+  EFI_STATUS    (*NewEntryWithMap)(
     struct PlatformRepositoryInfo  *This,
     CM_OBJECT_ID                   CmObjectId,
     UINT32                         CmObjectSize,
@@ -112,14 +116,14 @@ typedef struct PlatformRepositoryInfo {
     );
 
   // Allocate a TokenMap with tokens for a new entry
-  EFI_STATUS (*NewTokenMap)(
+  EFI_STATUS    (*NewTokenMap)(
     struct PlatformRepositoryInfo  *This,
     UINT32                         TokenCount,
     CM_OBJECT_TOKEN                **TokenMap
     );
 
   // Extend an existing entry with additional elements and return new tokens for them
-  EFI_STATUS (*ExtendEntry)(
+  EFI_STATUS    (*ExtendEntry)(
     struct PlatformRepositoryInfo  *This,
     CM_OBJECT_ID                   CmObjectId,
     UINT32                         CmObjectSize,
@@ -130,13 +134,13 @@ typedef struct PlatformRepositoryInfo {
     );
 
   // Find an entry
-  EFI_STATUS (*FindEntry)(
+  EFI_STATUS    (*FindEntry)(
     struct PlatformRepositoryInfo         *This,
     CM_OBJECT_ID                          CmObjectId,
     CM_OBJECT_TOKEN                       Token,
     EDKII_PLATFORM_REPOSITORY_INFO_ENTRY  **Entry
     );
-} EDKII_PLATFORM_REPOSITORY_INFO;
+};
 
 extern EFI_GUID  gNVIDIAConfigurationManagerDataProtocolGuid;
 

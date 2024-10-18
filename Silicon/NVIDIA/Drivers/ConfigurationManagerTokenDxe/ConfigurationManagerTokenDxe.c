@@ -18,6 +18,8 @@
 
 #include "ConfigurationManagerTokenDxePrivate.h"
 
+#define INITIAL_TOKEN_VALUE  (CM_NULL_TOKEN + 1)
+
 /** ConfigManagerAllocateToken: allocates tokens to be used for upcoming entries
 
   This allocates tokens for future ConfigurationManager data, allowing tokens to
@@ -80,6 +82,108 @@ ConfigManagerAllocateTokens (
   return EFI_SUCCESS;
 }
 
+typedef struct SANITY_CHECKER_INFO {
+  UINT32    First;
+  UINT32    Last;
+  UINT64    *ValuesFound;
+} SANITY_CHECKER_INFO;
+
+/**
+ * Checks if a given token is present in the sanity checker's range.
+ *
+ * @param Token The token to be checked.
+ * @param Checker The sanity checker.
+ *
+ * @return EFI_SUCCESS if the token is present and not previously checked.
+ *         EFI_DEVICE_ERROR if the token is present and has already been checked.
+ *         EFI_INVALID_PARAMETER if the token is not in the sanity checker's range.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+CheckRepoToken (
+  IN  CM_OBJECT_TOKEN      Token,
+  IN  SANITY_CHECKER_INFO  *Checker
+  )
+{
+  UINT32  BitIndex;
+  UINT32  Offset;
+
+  if (Token == CM_NULL_TOKEN) {
+    return EFI_SUCCESS;
+  }
+
+  if ((Token >= Checker->First) && (Token <= Checker->Last)) {
+    BitIndex = Token - Checker->First;
+    Offset   = BitIndex / 64;
+    BitIndex = BitIndex % 64;
+    DEBUG ((DEBUG_VERBOSE, "%a: Checking token %u (Offset %u, BitIndex %u)\n", __FUNCTION__, Token, Offset, BitIndex));
+    if (Checker->ValuesFound[Offset] & (1ull << BitIndex)) {
+      DEBUG ((DEBUG_ERROR, "%a: Token %u has already been seen\n", __FUNCTION__, Token));
+      return EFI_DEVICE_ERROR;
+    }
+
+    Checker->ValuesFound[Offset] |= 1ull << BitIndex;
+    return EFI_SUCCESS;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Token %u is out of range\n", __FUNCTION__, Token));
+  return EFI_INVALID_PARAMETER;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+ConfigManagerSanityCheckRepoTokens (
+  IN NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL  *This,
+  IN  EDKII_PLATFORM_REPOSITORY_INFO              *Repo
+  )
+{
+  EFI_STATUS                                                Status;
+  SANITY_CHECKER_INFO                                       Checker;
+  NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL_PRIVATE_DATA  *Private;
+  UINT32                                                    RepoIndex;
+  UINT32                                                    MapIndex;
+
+  NV_ASSERT_RETURN (This != NULL, return EFI_INVALID_PARAMETER, "%a: This pointer is NULL\n", __FUNCTION__);
+
+  Private = NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL_PRIVATE_DATA_FROM_PROTOCOL (This);
+
+  // Allocate and Initialize the tracker
+  Checker.First = INITIAL_TOKEN_VALUE;
+  Checker.Last  = Private->NextToken - 1;
+  DEBUG ((DEBUG_VERBOSE, "%a: Sanity checking tokens %u to %u. Allocating %u bytes\n", __FUNCTION__, Checker.First, Checker.Last, ((Checker.Last - Checker.First + 64) / 64) * sizeof (UINT64)));
+  Checker.ValuesFound = AllocateZeroPool (((Checker.Last - Checker.First + 64) / 64) * sizeof (UINT64));
+  if (Checker.ValuesFound == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Check all the tokens in Repo
+  for (RepoIndex = 0; RepoIndex < Repo->EntryCount; RepoIndex++) {
+    Status = CheckRepoToken (Repo->Entries[RepoIndex].Token, &Checker);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r for RepoIndex %x\n", __FUNCTION__, Status, RepoIndex));
+      return Status;
+    }
+
+    if (Repo->Entries[RepoIndex].ElementTokenMap != NULL) {
+      // Check each element in the ElementTokenMap
+      DEBUG ((DEBUG_VERBOSE, "%a: Checking RepoIndex %x ElementCount %x\n", __FUNCTION__, RepoIndex, Repo->Entries[RepoIndex].CmObjectDesc.Count));
+      for (MapIndex = 0; MapIndex < Repo->Entries[RepoIndex].CmObjectDesc.Count; MapIndex++) {
+        Status = CheckRepoToken (Repo->Entries[RepoIndex].ElementTokenMap[MapIndex], &Checker);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r for RepoIndex %x MapIndex %x\n", __FUNCTION__, Status, RepoIndex, MapIndex));
+          return Status;
+        }
+      }
+    }
+  }
+
+  FreePool (Checker.ValuesFound);
+
+  return EFI_SUCCESS;
+}
+
 /**
   Initialize the Configuration Manager Token Protocol Driver.
 
@@ -108,8 +212,9 @@ ConfigurationManagerTokenProtocolInit (
   }
 
   Private->Signature                                        = NVIDIA_CONFIGURATION_MANAGER_TOKEN_PROTOCOL_SIGNATURE;
-  Private->NextToken                                        = (CM_NULL_TOKEN + 1);
+  Private->NextToken                                        = INITIAL_TOKEN_VALUE;
   Private->ConfigurationManagerTokenProtocol.AllocateTokens = ConfigManagerAllocateTokens;
+  Private->ConfigurationManagerTokenProtocol.SanityCheck    = ConfigManagerSanityCheckRepoTokens;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,

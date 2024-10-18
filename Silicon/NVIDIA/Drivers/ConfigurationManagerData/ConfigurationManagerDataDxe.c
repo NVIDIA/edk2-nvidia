@@ -142,6 +142,15 @@ ConfigurationManagerDataDxeInitialize (
     return Status;
   }
 
+ #if !defined (MDEPKG_NDEBUG)
+  Status = mNVIDIAPlatformRepositoryInfo->TokenProtocol->SanityCheck (mNVIDIAPlatformRepositoryInfo->TokenProtocol, mNVIDIAPlatformRepositoryInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: SanityCheck returned %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+ #endif
+
   return gBS->InstallMultipleProtocolInterfaces (
                 &ImageHandle,
                 &gNVIDIAConfigurationManagerDataProtocolGuid,
