@@ -1469,8 +1469,8 @@ typedef struct {
            prompt = STRING_TOKEN(STR_PCIE_MAX_PAYLOAD_SIZE_SOCKET##socket##_PCIE##pcie##_TITLE),  \
            help = STRING_TOKEN(STR_PCIE_MAX_PAYLOAD_SIZE_HELP),                                   \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
-           option text = STRING_TOKEN(STR_PCIE_128B), value = 0, flags = 0;                       \
-           option text = STRING_TOKEN(STR_PCIE_256B), value = 1, flags = 0;                       \
+           option text = STRING_TOKEN(STR_AUTO), value = 0, flags = 0;                            \
+           option text = STRING_TOKEN(STR_PCIE_128B), value = 1, flags = 0;                       \
            endoneof;                                                                              \
   checkbox varid = NVIDIA_CONFIG_HII_CONTROL.Extended10bitTagEnable##socket[pcie],                \
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_EXTENDED_10BIT_TAG_ENABLE,              \

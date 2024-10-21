@@ -223,6 +223,7 @@
 #string STR_PCIE_1024B                                #language x-UEFI-redfish-Bios.v1_2_0 "1024B"
 #string STR_PCIE_2048B                                #language x-UEFI-redfish-Bios.v1_2_0 "2048B"
 #string STR_PCIE_4096B                                #language x-UEFI-redfish-Bios.v1_2_0 "4096B"
+#string STR_AUTO                                      #language x-UEFI-redfish-Bios.v1_2_0 "Auto"
 
 #string STR_PCIE_ENABLE_ASPM_L1_SOCKET0_PCIE0_TITLE       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie0EnableASPML1"
 #string STR_PCIE_ENABLE_ASPM_L1_SOCKET0_PCIE1_TITLE       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie1EnableASPML1"

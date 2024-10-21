@@ -17,6 +17,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
@@ -57,7 +58,9 @@ PciTreeTraverseGetMaxpayload (
   UINT8    SecBus;
   BOOLEAN  DeviceFound = FALSE;
 
-  CfgBase = MmcfgBase + ((Bus << 20)|(Dev << 15)|(Func << 12));
+  PCI_REG_PCIE_DEVICE_CAPABILITY  DeviceCap;
+
+  CfgBase = MmcfgBase + PCI_ECAM_ADDRESS (Bus, Dev, Func, 0);
   // Read DIDVID
   Data32 =  MmioRead32 (CfgBase);
   // Device not present, return
@@ -73,8 +76,8 @@ PciTreeTraverseGetMaxpayload (
   }
 
   // Read device capability register
-  Data32      = MmioRead32 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability));
-  *MaxPayload = MIN (*MaxPayload, Data32 & 7);
+  DeviceCap.Uint32 = MmioRead32 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability));
+  *MaxPayload      = MIN (*MaxPayload, DeviceCap.Bits.MaxPayloadSize);
 
   // Is this bridge device?
   if (!(MmioRead8 (CfgBase + PCI_HEADER_TYPE_OFFSET) & 0x7F)) {
@@ -91,7 +94,7 @@ PciTreeTraverseGetMaxpayload (
   for (PcieDev = 0; PcieDev <= PCI_MAX_DEVICE; PcieDev++) {
     for (PcieFunc = 0; PcieFunc <= PCI_MAX_FUNC; PcieFunc++) {
       UINT64  CfgBaseLocal;
-      CfgBaseLocal = MmcfgBase + ((SecBus << 20)|(PcieDev << 15)|(PcieFunc << 12));
+      CfgBaseLocal = MmcfgBase + PCI_ECAM_ADDRESS (SecBus, PcieDev, PcieFunc, 0);
       // Read DIDVID
       Data32 =  MmioRead32 (CfgBaseLocal);
       // Device not present, return
@@ -151,9 +154,10 @@ PciTreeTraverseSetMaxpayload (
   UINT32  PcieOff;
   UINT8   PcieDev;
   UINT8   PcieFunc;
-  UINT32  Data16;
 
-  CfgBase = MmcfgBase + ((Bus << 20)|(Dev << 15)|(Func << 12));
+  PCI_REG_PCIE_DEVICE_CONTROL  DeviceControl;
+
+  CfgBase = MmcfgBase + PCI_ECAM_ADDRESS (Bus, Dev, Func, 0);
   // Read DIDVID
   Data32 =  MmioRead32 (CfgBase);
   // Device not present, return
@@ -169,16 +173,14 @@ PciTreeTraverseSetMaxpayload (
   }
 
   // Read device control register
-  Data16 = MmioRead16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl));
+  DeviceControl.Uint16 = MmioRead16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl));
   // Update maxpayload field bit 5-7
-  Data16 &= ~0xE0;
-  Data16 |= MaxPayload << 5;
+  DeviceControl.Bits.MaxPayloadSize = MaxPayload;
   // Set MRRS to 5 bit 14-12
-  Data16 &= ~0x7000;
-  Data16 |= 5 << 12;
+  DeviceControl.Bits.MaxReadRequestSize = PCIE_MAX_READ_REQ_SIZE_4096B;
   // Write back
-  MmioWrite16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl), Data16);
-  Data16 = MmioRead16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl));
+  MmioWrite16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl), DeviceControl.Uint16);
+  DeviceControl.Uint16 = MmioRead16 (CfgBase + PcieOff + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl));
 
   // Is this bridge device?
   if (!(MmioRead8 (CfgBase + PCI_HEADER_TYPE_OFFSET) & 0x7F)) {
@@ -193,7 +195,7 @@ PciTreeTraverseSetMaxpayload (
   for (PcieDev = 0; PcieDev <= PCI_MAX_DEVICE; PcieDev++) {
     for (PcieFunc = 0; PcieFunc <= PCI_MAX_FUNC; PcieFunc++) {
       UINT64  CfgBaseLocal;
-      CfgBaseLocal = MmcfgBase + (((SecBus) << 20)|(PcieDev << 15)|(PcieFunc << 12));
+      CfgBaseLocal = MmcfgBase + PCI_ECAM_ADDRESS (SecBus, PcieDev, PcieFunc, 0);
       // Read DIDVID
       Data32 =  MmioRead32 (CfgBaseLocal);
       // Device not present, return
@@ -239,7 +241,7 @@ PciTreeTraverseResetBus (
   UINT8   PcieDev;
   UINT8   PcieFunc;
 
-  CfgBase = MmcfgBase + ((Bus << 20)|(Dev << 15)|(Func << 12));
+  CfgBase = MmcfgBase + PCI_ECAM_ADDRESS (Bus, Dev, Func, 0);
   // Read DIDVID
   Data32 =  MmioRead32 (CfgBase);
   // Device not present, return
@@ -260,7 +262,7 @@ PciTreeTraverseResetBus (
   for (PcieDev = 0; PcieDev <= PCI_MAX_DEVICE; PcieDev++) {
     for (PcieFunc = 0; PcieFunc <= PCI_MAX_FUNC; PcieFunc++) {
       UINT64  CfgBaseLocal;
-      CfgBaseLocal = MmcfgBase + (((SecBus) << 20)|(PcieDev << 15)|(PcieFunc << 12));
+      CfgBaseLocal = MmcfgBase + PCI_ECAM_ADDRESS (SecBus, PcieDev, PcieFunc, 0);
       // Read DIDVID
       Data32 =  MmioRead32 (CfgBaseLocal);
       // Device not present, return
@@ -310,7 +312,7 @@ PciTreeTraverseDumpBus (
   UINT8   PcieDev;
   UINT8   PcieFunc;
 
-  CfgBase = MmcfgBase + ((Bus << 20)|(Dev << 15)|(Func << 12));
+  CfgBase = MmcfgBase + PCI_ECAM_ADDRESS (Bus, Dev, Func, 0);
   // Read DIDVID
   Data32 =  MmioRead32 (CfgBase);
   // Device not present, return
@@ -331,9 +333,9 @@ PciTreeTraverseDumpBus (
   for (PcieDev = 0; PcieDev <= PCI_MAX_DEVICE; PcieDev++) {
     for (PcieFunc = 0; PcieFunc <= PCI_MAX_FUNC; PcieFunc++) {
       UINT64  CfgBaseLocal;
-      CfgBaseLocal = MmcfgBase + (((SecBus) << 20)|(PcieDev << 15)|(PcieFunc << 12));
+      CfgBaseLocal = MmcfgBase + PCI_ECAM_ADDRESS (SecBus, PcieDev, PcieFunc, 0);
       // Read DIDVID
-      Data32 =  MmioRead32 (CfgBaseLocal);
+      Data32 = MmioRead32 (CfgBaseLocal);
       // Device not present, return
       if ((Data32 == 0) || (Data32 == 0xFFFFFFFF)) {
         if (PcieFunc != 0) {
@@ -371,8 +373,11 @@ RootPortConfigPcieCapability (
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo = NULL;
   EFI_STATUS                                        Status           = EFI_SUCCESS;
   UINT64                                            CfgBase;
-  UINT8                                             MaxPayload = 5;
-  UINT8                                             NextBus    = 0;
+  UINT8                                             MaxPayload = PCIE_MAX_PAYLOAD_SIZE_4096B;
+  UINT8                                             NextBus = 0;
+  UINT32                                            Socket, Ctrl;
+  UINTN                                             BufferSize;
+  UINT32                                            *MaxPayloadSize;
 
   Status = gBS->HandleProtocol (RootBridgeHandle, &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid, (VOID **)&RootBridgeCfgIo);
   if (EFI_ERROR (Status)) {
@@ -381,13 +386,82 @@ RootPortConfigPcieCapability (
   }
 
   // root port config base
-  CfgBase = RootBridgeCfgIo->EcamBase + ((0 << 20) | (0 << 15) | (0 << 12));
+  CfgBase = RootBridgeCfgIo->EcamBase + PCI_ECAM_ADDRESS (0, 0, 0, 0);
   PciTreeTraverseDumpBus (CfgBase, 0, 0, 0);
   PciTreeTraverseResetBus (CfgBase, 0, 0, 0);
   PciTreeTraverseDumpBus (CfgBase, 0, 0, 0);
   PciTreeTraverseGetMaxpayload (CfgBase, 0, 0, 0, &MaxPayload, &NextBus);
+
+  //
+  // Get pcie mps setup variable size.
+  //
+  BufferSize = 0;
+  Status     = gRT->GetVariable (
+                      L"PcieMaxPayloadSize",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      NULL
+                      );
+
+  if (Status == EFI_BUFFER_TOO_SMALL) {
+    MaxPayloadSize = (UINT32 *)AllocateZeroPool (BufferSize);
+    if (MaxPayloadSize != NULL) {
+      //
+      // Get pcie mps setup variable.
+      //
+      Status = gRT->GetVariable (
+                      L"PcieMaxPayloadSize",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      MaxPayloadSize
+                      );
+
+      if (!EFI_ERROR (Status)) {
+        Socket = RootBridgeCfgIo->SocketID;
+        Ctrl   = RootBridgeCfgIo->ControllerID;
+        //
+        // According to setup variable to map actual MaxPayload setting.
+        //
+        if (Socket < PcdGet32 (PcdTegraMaxSockets)) {
+          switch ((MaxPayloadSize[Socket] >> (Ctrl * 3)) & 7ULL) {
+            case 1:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_128B) ? PCIE_MAX_PAYLOAD_SIZE_128B : MaxPayload;
+              break;
+            case 2:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_256B) ? PCIE_MAX_PAYLOAD_SIZE_256B : MaxPayload;
+              break;
+            case 3:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_512B) ? PCIE_MAX_PAYLOAD_SIZE_512B : MaxPayload;
+              break;
+            case 4:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_1024B) ? PCIE_MAX_PAYLOAD_SIZE_1024B : MaxPayload;
+              break;
+            case 5:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_2048B) ? PCIE_MAX_PAYLOAD_SIZE_2048B : MaxPayload;
+              break;
+            case 6:
+              MaxPayload = (MaxPayload > PCIE_MAX_PAYLOAD_SIZE_4096B) ? PCIE_MAX_PAYLOAD_SIZE_4096B : MaxPayload;
+              break;
+            default:
+            case 0:
+              //
+              // The default of MaxPayloadSize HII setting is Auto, which means
+              // the DevCtrl.Mps will be set to NVIDIA recommended configuration.
+              //
+              break;
+          }
+        }
+      }
+
+      FreePool (MaxPayloadSize);
+    }
+  }
+
   PciTreeTraverseSetMaxpayload (CfgBase, 0, 0, 0, MaxPayload);
   PciTreeTraverseResetBus (CfgBase, 0, 0, 0);
   PciTreeTraverseDumpBus (CfgBase, 0, 0, 0);
+
   return (Status);
 }
