@@ -81,7 +81,7 @@ typedef struct {
   CM_ARM_OBJ_REF                                      AddressMapRefInfo[PCIE_NUMBER_OF_MAPPING_SPACE];
   CM_ARM_PCI_INTERRUPT_MAP_INFO                       InterruptMapInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
   CM_ARM_OBJ_REF                                      InterruptRefInfo[PCIE_NUMBER_OF_INTERRUPT_MAP];
-  EDKII_PLATFORM_REPOSITORY_INFO                      RepoInfo[PCIE_REPO_OBJECTS];
+  LEGACY_CM_PROTOCOL_OBJECT                           RepoInfo[PCIE_REPO_OBJECTS];
 } PCIE_CONTROLLER_PRIVATE;
 #define PCIE_CONTROLLER_PRIVATE_DATA_FROM_THIS(a)  CR(a, PCIE_CONTROLLER_PRIVATE, PcieRootBridgeConfigurationIo, PCIE_CONTROLLER_SIGNATURE)
 

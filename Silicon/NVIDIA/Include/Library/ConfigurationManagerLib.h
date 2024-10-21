@@ -17,8 +17,8 @@
 EFI_STATUS
 EFIAPI
 RegisterProtocolBasedObjects (
-  EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo,
-  EDKII_PLATFORM_REPOSITORY_INFO  **CurrentPlatformRepositoryInfo
+  LEGACY_CM_PROTOCOL_OBJECT  *PlatformRepositoryInfo,
+  LEGACY_CM_PROTOCOL_OBJECT  **CurrentPlatformRepositoryInfo
   );
 
 #endif /* __CONFIGURATION_MANAGER_LIB_H_ */

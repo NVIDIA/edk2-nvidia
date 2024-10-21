@@ -23,19 +23,19 @@
 EFI_STATUS
 EFIAPI
 RegisterProtocolBasedObjects (
-  EDKII_PLATFORM_REPOSITORY_INFO  *PlatformRepositoryInfo,
-  EDKII_PLATFORM_REPOSITORY_INFO  **CurrentPlatformRepositoryInfo
+  LEGACY_CM_PROTOCOL_OBJECT  *PlatformRepositoryInfo,
+  LEGACY_CM_PROTOCOL_OBJECT  **CurrentPlatformRepositoryInfo
   )
 {
-  EFI_STATUS                      Status;
-  EDKII_PLATFORM_REPOSITORY_INFO  *StartOfList;
-  EDKII_PLATFORM_REPOSITORY_INFO  *EndOfList;
-  EDKII_PLATFORM_REPOSITORY_INFO  *SearchList;
-  EDKII_PLATFORM_REPOSITORY_INFO  *ToAddList;
-  UINTN                           NumberOfProtocols;
-  UINTN                           ProtocolIndex;
-  EDKII_PLATFORM_REPOSITORY_INFO  **ProtocolList;
-  VOID                            *NewBuffer;
+  EFI_STATUS                 Status;
+  LEGACY_CM_PROTOCOL_OBJECT  *StartOfList;
+  LEGACY_CM_PROTOCOL_OBJECT  *EndOfList;
+  LEGACY_CM_PROTOCOL_OBJECT  *SearchList;
+  LEGACY_CM_PROTOCOL_OBJECT  *ToAddList;
+  UINTN                      NumberOfProtocols;
+  UINTN                      ProtocolIndex;
+  LEGACY_CM_PROTOCOL_OBJECT  **ProtocolList;
+  VOID                       *NewBuffer;
 
   StartOfList  = PlatformRepositoryInfo;
   EndOfList    = *CurrentPlatformRepositoryInfo;
@@ -61,7 +61,7 @@ RegisterProtocolBasedObjects (
 
     while (ToAddList->CmObjectPtr != NULL) {
       if (ToAddList->CmObjectToken != CM_NULL_TOKEN) {
-        CopyMem (EndOfList, ToAddList, sizeof (EDKII_PLATFORM_REPOSITORY_INFO));
+        CopyMem (EndOfList, ToAddList, sizeof (LEGACY_CM_PROTOCOL_OBJECT));
         EndOfList++;
       } else {
         // If there is no token look for matching node
@@ -86,7 +86,7 @@ RegisterProtocolBasedObjects (
         }
 
         if (SearchList == EndOfList) {
-          CopyMem (EndOfList, ToAddList, sizeof (EDKII_PLATFORM_REPOSITORY_INFO));
+          CopyMem (EndOfList, ToAddList, sizeof (LEGACY_CM_PROTOCOL_OBJECT));
           EndOfList++;
         }
       }

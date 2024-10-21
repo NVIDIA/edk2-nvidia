@@ -12,25 +12,7 @@
 #include <Library/UefiLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/NVIDIADebugLib.h>
-
-// Note: This should match the definition of EDKII_PLATFORM_REPOSITORY_INFO in ConfigurationManagerDataProtocol.h
-
-typedef struct ProtocolParserEntry {
-  // Configuration Manager Object ID
-  CM_OBJECT_ID       CmObjectId;
-
-  // Configuration Manager Object Token
-  CM_OBJECT_TOKEN    CmObjectToken;
-
-  // Configuration Manager Object Size
-  UINT32             CmObjectSize;
-
-  // Configuration Manager Object Count
-  UINT32             CmObjectCount;
-
-  // Configuration Manager Object Pointer
-  VOID               *CmObjectPtr;
-} LEGACY_CM_PROTOCOL_OBJECT;
+#include <Protocol/ConfigurationManagerDataProtocol.h>
 
 /** Protocol based objecsts parser function.
 

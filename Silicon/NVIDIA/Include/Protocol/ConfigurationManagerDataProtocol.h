@@ -21,7 +21,7 @@
 /** A structure describing the platform configuration
     manager repository information
 */
-typedef struct PlatformRepositoryInfo {
+typedef struct ProtocolParserEntry {
   // Configuration Manager Object ID
   CM_OBJECT_ID       CmObjectId;
 
@@ -36,7 +36,7 @@ typedef struct PlatformRepositoryInfo {
 
   // Configuration Manager Object Pointer
   VOID               *CmObjectPtr;
-} EDKII_PLATFORM_REPOSITORY_INFO;
+} LEGACY_CM_PROTOCOL_OBJECT;
 
 extern EFI_GUID  gNVIDIAConfigurationManagerDataProtocolGuid;
 
