@@ -1,0 +1,21 @@
+#/** @file
+#
+#  Partition Manifest file for StandaloneMmJetson.
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = ManifestJetson
+  FILE_GUID                      = f5190cb2-c4f5-4db9-8556-4bbc28b06907
+  MODULE_TYPE                    = USER_DEFINED
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  StandaloneMmJetson.dts
+  StmmJetsonDeviceRegions.dtsi
+
+[Packages]
+  MdePkg/MdePkg.dec

@@ -1,0 +1,35 @@
+## @file
+##
+##  Library to log data to scratch registers, this used by the DebugLib or the
+##  Exception Handler Library.
+
+##  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DebugLogScratchRegLib
+  FILE_GUID                      = daa52593-d780-4217-a8dd-fff7d726d922
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DebugLogScratchRegLib
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+ DebugLogScratchRegLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  PrintLib
+  BaseLib
+

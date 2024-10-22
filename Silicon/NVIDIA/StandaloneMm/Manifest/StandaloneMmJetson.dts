@@ -1,0 +1,108 @@
+/*
+ * Partition manifest for the StMM Secure Partition
+ *
+ * SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause.
+ *
+ *
+ */
+
+/dts-v1/;
+
+/ {
+#define SECURE_RO		0x1
+#define SECURE_RW		0x3
+#define SECURE_EXECUTE_RO 	0x5
+#define SECURE_EXECUTE_RW 	0x7
+#define NON_SECURE_RO 		0x9
+#define NON_SECURE_RW 		0xB
+#define NON_SECURE_EXECUTE_RO 	0xD
+#define NON_SECURE_EXECUTE_RW 	0xF
+	compatible = "arm,ffa-manifest-1.0";
+
+	/* Properties */
+	description = "StandaloneMm Firmware";
+	ffa-version = <0x00010001>; /* 31:16 - Major, 15:0 - Minor */
+	uuid = <0x8afb129b 0x64ca4760 0x8618c888 0x4caa6c4a>;
+	id = <1>;
+	auxiliary-id = <0xae>;
+	stream-endpoint-ids = <0 1 2 3>;
+	execution-ctx-count = <1>;
+	exception-level = <2>; /* S-EL1 */
+	execution-state = <0>; /* AARCH64 */
+	load-address = <0x00000000 0x89B00000>;
+	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
+	reserved-pages-count = <0>; 
+	xlat-granule = <0>; /* 4KiB */
+	boot-order = <1>;
+	messaging-method = <3>; /* Direct messaging with managed exit */
+	run-time-model = <0>; /* Run to completion */
+	ns-interrupts-action = <0>; /* Non-secure interrupt is queued */
+	other-s-interrupts-action = <0>; /* Other-Secure interrupt is queued */
+
+	/* Boot protocol */
+	gp-register-num = <0x0>;
+
+	rx_tx-info {
+		compatible = "arm,ffa-manifest-rx_tx-buffer";
+		rx-buffer = <&rxbuffer>;
+		tx-buffer = <&txbuffer>;
+	};
+
+	memory-regions {
+		compatible = "arm,ffa-manifest-memory-regions";
+
+		/*
+		 * Regions will either be allocated by MB2 at the end of the SP space, or
+		 * outside of SP space.
+		 */
+		rxbuffer: rx-buffer {
+			description = "rx-buffer";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8B52F000>;
+			attributes = <SECURE_RO>; /* read-only */
+		};
+		/* Reserved memory for stage-1 table entries */
+		stage1-entries {
+			description = "stage1-entries";
+			pages-count = <96>;
+			base-address = <0x00000000 0x8B530000>;
+			attributes = <SECURE_RW>; /* read-write */
+		};
+		/* Shared memory between StMM and NS world */
+		stmmns-memory {
+			description = "stmmns-memory";
+			pages-count = <512>;
+			base-address = <0x00000000 0x8B590000>;
+			attributes = <NON_SECURE_RW>; /* read-write */
+			nv-non-secure-memory = <0x1>;
+		};
+		txbuffer: tx-buffer {
+			description = "tx-buffer";
+			pages-count = <1>;
+			base-address = <0x00000000 0x8B790000>;
+			attributes = <SECURE_RW>; /* read-write */
+		};
+		stmmprm-0-memory {
+			description = "stmmprm-0-memory";
+			pages-count = <17>;
+			base-address = <0x00000000 0x8B791000>;
+			attributes = <NON_SECURE_RW>; /* read-write */
+			nv-non-secure-memory = <0x1>;
+		};
+		cpubl-params {
+			description  = "cpubl-params";
+			pages-count  = <0x4>;
+			base-address = <0x00000000 0x8B7A8000>;
+			attributes   = <NON_SECURE_RO>; /* read-only */
+		};
+	};
+
+	device-regions {
+		compatible = "arm,ffa-manifest-device-regions";
+		#include "StmmJetsonDeviceRegions.dtsi"
+	};
+
+	metadata {
+	};
+};
