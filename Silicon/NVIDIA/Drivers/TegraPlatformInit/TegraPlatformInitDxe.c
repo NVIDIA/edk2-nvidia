@@ -731,6 +731,12 @@ TegraPlatformInitialize (
       DEBUG ((DEBUG_ERROR, "Platform Override To Use Emulated Variable Store\n"));
       EmulatedVariablesUsed = TRUE;
     }
+
+    if (NULL != fdt_get_property (DtbBase, NodeOffset, "use-partition-name-suffixes", NULL)) {
+      DEBUG ((DEBUG_INFO, "Using partition name suffixes\n"));
+
+      PcdSetBoolS (PcdPartitionNamesHaveSuffixes, TRUE);
+    }
   }
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);

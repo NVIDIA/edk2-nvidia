@@ -104,6 +104,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+  gNVIDIATokenSpaceGuid.PcdPartitionNamesHaveSuffixes
 
 [Depex]
   TRUE
