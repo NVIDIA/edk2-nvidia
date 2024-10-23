@@ -292,19 +292,19 @@ GetAddressSizeCells (
   IN OUT INT32          *SizeCells
   )
 {
-  EFI_STATUS   Status;
   INT32        NodeOffset;
   INT32        Length;
   CONST INT32  *Prop;
-  CONST CHAR8  *CompatArray[2];
 
   NodeOffset = -1;
 
-  CompatArray[0] = "nvidia,tegra234-host1x";
-  CompatArray[1] = NULL;
-  Status         = DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset);
+  NodeOffset = fdt_node_offset_by_compatible (
+                 Private->DtbBase,
+                 NodeOffset,
+                 "nvidia,tegra234-host1x"
+                 );
 
-  if (EFI_ERROR (Status)) {
+  if (NodeOffset <= 0) {
     return EFI_SUCCESS;
   }
 
@@ -347,7 +347,6 @@ AddIortPropNodes (
   IN CONST IORT_DEVICE_NODE_MAP   *DevMap
   )
 {
-  EFI_STATUS      Status;
   INT32           NodeOffset;
   IORT_PROP_NODE  *PropNode;
   CONST VOID      *Prop;
@@ -362,9 +361,9 @@ AddIortPropNodes (
   UINT32          ItsNodePresent;
   UINT32          DualSmmuPresent;
   UINT32          Indx;
+  CONST CHAR8     *AliasName;
   INT32           AddressCells;
   INT32           SizeCells;
-  CONST CHAR8     *CompatArray[2];
 
   ItsNodePresent = 0;
   AddressCells   = 1;
@@ -382,16 +381,23 @@ AddIortPropNodes (
     do {
       // check for aliases in dtb
       if ((DevMap->ObjectId == EArmObjNamedComponent) && (DevMap->Alias != NULL)) {
-        Status = DeviceTreeGetNodeByPath (DevMap->Alias, &NodeOffset);
-      } else {
-        CompatArray[0] = DevMap->Compatibility;
-        CompatArray[1] = NULL;
+        AliasName = fdt_get_alias (Private->DtbBase, DevMap->Alias);
+        if (AliasName == NULL) {
+          DEBUG ((DEBUG_WARN, "%a: Invalid alias for named component: %a \r\n", __FUNCTION__, DevMap->Alias));
+          break;
+        }
 
-        Status = DeviceTreeGetNextCompatibleNode (CompatArray, &NodeOffset);
+        NodeOffset = fdt_path_offset (Private->DtbBase, AliasName);
+      } else {
+        NodeOffset = fdt_node_offset_by_compatible (
+                       Private->DtbBase,
+                       NodeOffset,
+                       DevMap->Compatibility
+                       );
       }
 
       // All the requested DTB nodes are optional
-      if (EFI_ERROR (Status)) {
+      if (NodeOffset <= 0) {
         break;
       }
 
