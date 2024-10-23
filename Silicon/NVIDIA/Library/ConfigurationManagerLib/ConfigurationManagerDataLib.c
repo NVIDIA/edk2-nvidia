@@ -337,14 +337,14 @@ ConfigManagerEntryExtend (
     goto CleanupAndReturn;
   }
 
-  NewTokenMap = ReallocatePool (sizeof (CM_OBJECT_TOKEN) * CmObjectCount, sizeof (CM_OBJECT_TOKEN) * (Desc->Count + CmObjectCount), Entry->ElementTokenMap);
+  NewTokenMap = ReallocatePool (sizeof (CM_OBJECT_TOKEN) * Desc->Count, sizeof (CM_OBJECT_TOKEN) * (Desc->Count + CmObjectCount), Entry->ElementTokenMap);
   if (NewTokenMap == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to reallocate %u bytes to extend the token map with %u new entries\n", __FUNCTION__, sizeof (CM_OBJECT_TOKEN) *(Desc->Count + CmObjectCount), CmObjectCount));
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
 
-  CopyMem (&NewTokenMap[Desc->Count], NewTokens, CmObjectCount);
+  CopyMem (&NewTokenMap[Desc->Count], NewTokens, CmObjectCount * sizeof (CM_OBJECT_TOKEN));
   Entry->ElementTokenMap = NewTokenMap;
 
   // Extend the Data with the new entries
