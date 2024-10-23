@@ -21,8 +21,6 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/SiblingPartitionLib.h>
 
-STATIC EFI_PHYSICAL_ADDRESS       mRamLoadedBaseAddress  = 0;
-STATIC UINT64                     mRamLoadedSize         = 0;
 STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
 STATIC UINT64                     mInitRdSize            = 0;
 STATIC SINGLE_VENHW_NODE_DEVPATH  mRcmLoadFileDevicePath = {
@@ -237,8 +235,6 @@ AndroidBootOnConnectCompleteHandler (
   ANDROID_BOOT_PRIVATE_DATA  *Private;
   EFI_HANDLE                 MscHandle;
   MiscCmdType                MiscCmd;
-  UINTN                      DataSize;
-  UINT32                     BootMode;
   CHAR16                     PartitionName[MAX_PARTITION_NAME_LEN];
   UINTN                      Count;
   BOOLEAN                    RecoveryPartitonFound;
@@ -248,27 +244,18 @@ AndroidBootOnConnectCompleteHandler (
   Private = (ANDROID_BOOT_PRIVATE_DATA *)Context;
 
   // Check recovery mode
-  if (PcdGetBool (PcdBootAndroidImage)) {
-    MscHandle = GetSiblingPartitionHandle (
-                  Private->ControllerHandle,
-                  MISC_PARTITION_BASE_NAME
-                  );
-    Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
-    if (EFI_ERROR (Status)) {
-      return;
-    }
+  MscHandle = GetSiblingPartitionHandle (
+                Private->ControllerHandle,
+                MISC_PARTITION_BASE_NAME
+                );
+  Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
 
-    if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
-      Private->RecoveryMode = TRUE;
-      DEBUG ((DEBUG_ERROR, "%a: misc command %d, doing recovery\n", __FUNCTION__, MiscCmd));
-    }
-  } else {
-    DataSize = sizeof (BootMode);
-    Status   = gRT->GetVariable (L4T_BOOTMODE_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootMode);
-    if (!EFI_ERROR (Status) && (BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY)) {
-      Private->RecoveryMode = TRUE;
-      DEBUG ((DEBUG_ERROR, "%a: L4T recovery mode detected\n", __FUNCTION__));
-    }
+  if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
+    Private->RecoveryMode = TRUE;
+    DEBUG ((DEBUG_ERROR, "%a: misc command %d, doing recovery\n", __FUNCTION__, MiscCmd));
   }
 
   if (Private->RecoveryMode) {
@@ -301,6 +288,77 @@ AndroidBootOnConnectCompleteHandler (
       AndroidBootUninstallProtocols (Private);
     }
   }
+}
+
+/*
+  Set the kernel command line into DT.
+
+  @param[in] CmdLine     Kernel command line for DTB.
+
+  @retval EFI_SUCCESS    Command line set correctly.
+
+  @retval Others         Failure.
+*/
+STATIC
+EFI_STATUS
+AndroidBootDxeUpdateDtbCmdLine (
+  IN CHAR16  *CmdLine
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTreeBase;
+  INT32       NodeOffset;
+  INT32       Ret;
+  INT32       CommandLineLength;
+  INT32       CommandLineBytes;
+  CHAR8       *CmdLineDtb;
+  VOID        *AcpiBase;
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
+  if (!EFI_ERROR (Status)) {
+    return EFI_SUCCESS;
+  }
+
+  DeviceTreeBase = NULL;
+  Status         = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTreeBase);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  CommandLineLength = StrSize (CmdLine);
+  CommandLineBytes  = CommandLineLength * sizeof (CHAR16);
+  CmdLineDtb        = NULL;
+  Status            = gBS->AllocatePool (
+                             EfiBootServicesData,
+                             CommandLineBytes,
+                             (VOID **)&CmdLineDtb
+                             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  gBS->SetMem (CmdLineDtb, CommandLineBytes, 0);
+
+  UnicodeStrToAsciiStrS (CmdLine, CmdLineDtb, CommandLineBytes);
+
+  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
+  if (NodeOffset < 0) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  Ret = fdt_setprop (DeviceTreeBase, NodeOffset, "bootargs", CmdLineDtb, CommandLineBytes);
+  if (Ret < 0) {
+    Status = EFI_DEVICE_ERROR;
+    goto Exit;
+  }
+
+Exit:
+  if (CmdLineDtb != NULL) {
+    gBS->FreePool (CmdLineDtb);
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1108,16 +1166,14 @@ AndroidBootLoadFile (
 
   BufSize = ImgData->RamdiskSize;
 
-  if (PcdGetBool (PcdBootAndroidImage)) {
-    // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
-    // if kernel boot and vendor_boot ramdisk exists
-    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
-    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
-       && (VendorImgData != NULL))
-    {
-      BufSize               += VendorImgData->VendorRamdiskSize + BOOTCONFIG_RESERVED_SIZE;
-      BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
-    }
+  // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
+  // if kernel boot and vendor_boot ramdisk exists
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+     && (VendorImgData != NULL))
+  {
+    BufSize               += VendorImgData->VendorRamdiskSize + BOOTCONFIG_RESERVED_SIZE;
+    BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
   }
 
   // Allocate a buffer reserved in EfiBootServicesData
@@ -1136,43 +1192,41 @@ AndroidBootLoadFile (
   BufBaseRamdisk = BufBase;
   BufSizeRamdisk = BufSize - BootConfigReservedSize;
 
-  if (PcdGetBool (PcdBootAndroidImage)) {
-    // recovery kernel has dedicated ramdisk in recovery.img
-    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
-    if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
-       && (VendorImgData != NULL))
-    {
-      // ramdisk layout in memory
-      // - vendor_boot ramdisk, followed by
-      // - generic_boot ramdisk, then
-      // - boot_config
-      Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize);
-      BufSize = VendorImgData->VendorRamdiskSize;
-      Status  = AndroidBootRead (
-                  VendorBlockIo,
-                  VendorDiskIo,
-                  Addr,
-                  (VOID *)BufBase,
-                  BufSize
-                  );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Unable to read disk for vendor ramdisk from offset %x" \
-          " to %09p: %r\n",
-          __FUNCTION__,
-          Addr,
-          BufBase,
-          Status
-          ));
-        goto ErrorExit;
-      }
-
-      DEBUG ((DEBUG_INFO, "%a: Vendor RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
-
-      // Android Boot Ramdisk is following Vendor Boot Ramdisk
-      BufBase += BufSize;
+  // recovery kernel has dedicated ramdisk in recovery.img
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
+     && (VendorImgData != NULL))
+  {
+    // ramdisk layout in memory
+    // - vendor_boot ramdisk, followed by
+    // - generic_boot ramdisk, then
+    // - boot_config
+    Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize);
+    BufSize = VendorImgData->VendorRamdiskSize;
+    Status  = AndroidBootRead (
+                VendorBlockIo,
+                VendorDiskIo,
+                Addr,
+                (VOID *)BufBase,
+                BufSize
+                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Unable to read disk for vendor ramdisk from offset %x" \
+        " to %09p: %r\n",
+        __FUNCTION__,
+        Addr,
+        BufBase,
+        Status
+        ));
+      goto ErrorExit;
     }
+
+    DEBUG ((DEBUG_INFO, "%a: Vendor RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
+
+    // Android Boot Ramdisk is following Vendor Boot Ramdisk
+    BufBase += BufSize;
   }
 
   Addr = ImgData->PageSize + ImgData->Offset + \
@@ -1200,7 +1254,7 @@ AndroidBootLoadFile (
 
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
-  if ((PcdGetBool (PcdBootAndroidImage)) && (ImgData->HeaderVersion >= 3)) {
+  if (ImgData->HeaderVersion >= 3) {
     Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
     if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
        && (VendorImgData != NULL))
@@ -1339,6 +1393,7 @@ AndroidBootDxeLoadFile (
   EFI_DISK_IO_PROTOCOL       *VendorDiskIo     = NULL;
   EFI_HANDLE                 VendorBootHandle;
   CHAR16                     VendorBootPartitionName[MAX_PARTITION_NAME_LEN];
+  ANDROID_BOOTIMG_PROTOCOL   *AndroidBootImgProtocol;
 
   // Verify if the valid parameters
   if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
@@ -1376,9 +1431,8 @@ AndroidBootDxeLoadFile (
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  // Vendor_boot is very Android specific
-  // and it requires boot_img header version to be at least 3
-  if ((PcdGetBool (PcdBootAndroidImage)) && (ImgData.HeaderVersion >= 3)) {
+  // Vendor_boot requires boot_img header version to be at least 3
+  if (ImgData.HeaderVersion >= 3) {
     Status = GetActivePartitionName (L"vendor_boot", VendorBootPartitionName);
     // Ignore vendor_boot ramdisk if vendor_boot partition not exist
     if (!EFI_ERROR (Status)) {
@@ -1420,6 +1474,30 @@ AndroidBootDxeLoadFile (
 
   // Load kernel dtb
   AndroidBootDxeLoadDtb (Private);
+
+  // Append Kernel Command Line Args
+  Status = gBS->LocateProtocol (
+                  &gAndroidBootImgProtocolGuid,
+                  NULL,
+                  (VOID **)&AndroidBootImgProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AndroidBootImgProtocol->AppendArgs (
+                                     Private->KernelArgsProtocol.KernelArgs,
+                                     (sizeof (CHAR16) * (ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + PcdGet32 (PcdAndroidKernelCommandLineOverflow)))
+                                     );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AndroidBootDxeUpdateDtbCmdLine (Private->KernelArgsProtocol.KernelArgs);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB\n", __FUNCTION__));
+    return Status;
+  }
 
   // Load Android Boot image
   Status = AndroidBootLoadFile (
@@ -1767,7 +1845,7 @@ AndroidBootDriverBindingStart (
   }
 
   // Allocate KernelArgs
-  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * (ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + PcdGet32 (PcdAndroidKernelCommandLineOverflow)));
   if (KernelArgs == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -2083,80 +2161,6 @@ AndroidBootDriverBindingStop (
 **/
 EFI_STATUS
 EFIAPI
-RamloadLoadFile (
-  IN EFI_LOAD_FILE_PROTOCOL    *This,
-  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
-  IN BOOLEAN                   BootPolicy,
-  IN OUT UINTN                 *BufferSize,
-  IN VOID                      *Buffer OPTIONAL
-  )
-{
-  // Verify if the valid parameters
-  if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  if (!BootPolicy) {
-    return EFI_UNSUPPORTED;
-  }
-
-  // Check if the given buffer size is big enough
-  // EFI_BUFFER_TOO_SMALL gets boot manager allocate a bigger buffer
-  if (mRamLoadedSize == 0) {
-    return EFI_NOT_FOUND;
-  }
-
-  if ((Buffer == NULL) || (*BufferSize < mRamLoadedSize)) {
-    *BufferSize = mRamLoadedSize;
-    return EFI_BUFFER_TOO_SMALL;
-  }
-
-  CopyMem (Buffer, (VOID *)(UINTN)mRamLoadedBaseAddress, mRamLoadedSize);
-
-  return EFI_SUCCESS;
-}
-
-///
-/// Ramload LoadFile Protocol instance
-///
-GLOBAL_REMOVE_IF_UNREFERENCED
-EFI_LOAD_FILE_PROTOCOL  mRamloadLoadFile = {
-  RamloadLoadFile
-};
-
-/**
-  Causes the driver to load a specified file.
-
-  @param  This                  Protocol instance pointer.
-  @param  FilePath              The device specific path of the file to load.
-  @param  BootPolicy            If TRUE, indicates that the request originates from the
-                                boot manager is attempting to load FilePath as a boot
-                                selection. If FALSE, then FilePath must match as exact file
-                                to be loaded.
-  @param  BufferSize            On input the size of Buffer in bytes. On output with a return
-                                code of EFI_SUCCESS, the amount of data transferred to
-                                Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
-                                the size of Buffer required to retrieve the requested file.
-  @param  Buffer                The memory buffer to transfer the file to. IF Buffer is NULL,
-                                then the size of the requested file is returned in
-                                BufferSize.
-
-  @retval EFI_SUCCESS           The file was loaded.
-  @retval EFI_UNSUPPORTED       The device does not support the provided BootPolicy
-  @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
-                                BufferSize is NULL.
-  @retval EFI_NO_MEDIA          No medium was present to load the file.
-  @retval EFI_DEVICE_ERROR      The file was not loaded due to a device error.
-  @retval EFI_NO_RESPONSE       The remote system did not respond.
-  @retval EFI_NOT_FOUND         The file was not found.
-  @retval EFI_ABORTED           The file load process was manually cancelled.
-  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current directory entry.
-                                BufferSize has been updated with the size needed to complete
-                                the request.
-
-**/
-EFI_STATUS
-EFIAPI
 RcmLoadFile (
   IN EFI_LOAD_FILE_PROTOCOL    *This,
   IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
@@ -2165,8 +2169,14 @@ RcmLoadFile (
   IN VOID                      *Buffer OPTIONAL
   )
 {
-  EFI_STATUS         Status;
-  ANDROID_BOOT_DATA  ImgData;
+  EFI_STATUS                   Status;
+  ANDROID_BOOT_DATA            ImgData;
+  UINTN                        NumOfHandles;
+  EFI_HANDLE                   *HandleBuffer;
+  UINTN                        Count;
+  EFI_LOAD_FILE_PROTOCOL       *LoadFileProtocol;
+  NVIDIA_KERNEL_ARGS_PROTOCOL  *NvidiaKernelArgsProtocol;
+  ANDROID_BOOTIMG_PROTOCOL     *AndroidBootImgProtocol;
 
   // Verify if the valid parameters
   if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
@@ -2194,13 +2204,89 @@ RcmLoadFile (
     return EFI_BUFFER_TOO_SMALL;
   }
 
+  HandleBuffer = NULL;
+  NumOfHandles = 0;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiLoadFileProtocolGuid,
+                        NULL,
+                        &NumOfHandles,
+                        &HandleBuffer
+                        );
+  if (EFI_ERROR (Status) || (NumOfHandles == 0) || (HandleBuffer == NULL)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  NvidiaKernelArgsProtocol = NULL;
+  for (Count = 0; Count < NumOfHandles; Count++) {
+    LoadFileProtocol = NULL;
+    Status           = gBS->HandleProtocol (
+                              HandleBuffer[Count],
+                              &gEfiLoadFileProtocolGuid,
+                              (VOID **)&LoadFileProtocol
+                              );
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
+
+    if (This == LoadFileProtocol) {
+      Status = gBS->HandleProtocol (
+                      HandleBuffer[Count],
+                      &gNVIDIALoadfileKernelArgsProtocol,
+                      (VOID **)&NvidiaKernelArgsProtocol
+                      );
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+
+      break;
+    }
+  }
+
+  if (NvidiaKernelArgsProtocol == NULL) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Append Kernel Command Line Args
+  AndroidBootImgProtocol = NULL;
+  Status                 = gBS->LocateProtocol (
+                                  &gAndroidBootImgProtocolGuid,
+                                  NULL,
+                                  (VOID **)&AndroidBootImgProtocol
+                                  );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = AndroidBootImgProtocol->AppendArgs (
+                                     NvidiaKernelArgsProtocol->KernelArgs,
+                                     (sizeof (CHAR16) * (ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + PcdGet32 (PcdAndroidKernelCommandLineOverflow)))
+                                     );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = AndroidBootDxeUpdateDtbCmdLine (NvidiaKernelArgsProtocol->KernelArgs);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB\n", __FUNCTION__));
+    goto Exit;
+  }
+
   // Load Android Boot image
   Status = AndroidBootLoadFile (NULL, NULL, &ImgData, NULL, NULL, NULL, Buffer);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
-  return EFI_SUCCESS;
+  DEBUG ((DEBUG_ERROR, "%a: KernelArgs: %s\n", __FUNCTION__, NvidiaKernelArgsProtocol->KernelArgs));
+
+Exit:
+  if (HandleBuffer != NULL) {
+    gBS->FreePool (HandleBuffer);
+  }
+
+  return Status;
 }
 
 ///
@@ -2248,7 +2334,7 @@ AndroidBootPrepareBootFromMemory (
   CHAR16      *KernelArgs = NULL;
 
   // Allocate KernelArgs
-  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * ANDROID_BOOTIMG_KERNEL_ARGS_SIZE);
+  KernelArgs = AllocateZeroPool (sizeof (CHAR16) * (ANDROID_BOOTIMG_KERNEL_ARGS_SIZE + PcdGet32 (PcdAndroidKernelCommandLineOverflow)));
   if (KernelArgs == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }

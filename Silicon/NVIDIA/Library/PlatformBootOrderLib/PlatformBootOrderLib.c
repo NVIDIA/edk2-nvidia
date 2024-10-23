@@ -305,7 +305,6 @@ GetBootClassOfOption (
   IN UINTN                         Count
   )
 {
-  UINTN                         OptionalDataSize;
   UINTN                         BootPriorityIndex;
   EFI_DEVICE_PATH_PROTOCOL      *DevicePathNode;
   UINT8                         ExtraSpecifier;
@@ -335,34 +334,28 @@ GetBootClassOfOption (
 
   ExtraSpecifier = MAX_UINT8;
 
-  OptionalDataSize = 0;
-  if (Option->OptionalData != NULL) {
-    OptionalDataSize = StrSize ((CONST CHAR16 *)Option->OptionalData);
+ #ifdef EDKII_UNIT_TEST_FRAMEWORK_ENABLED
+  TEGRA_PLATFORM_RESOURCE_INFO  _PlatformResourceInfo = { .BootType = TegrablBootInvalid };
+  PlatformResourceInfo = &_PlatformResourceInfo;
+  (VOID)Hob;
+ #else
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get PlatformResourceInfo\n", __FUNCTION__));
+    goto ReturnResult;
   }
 
-  if ((Option->OptionalData != NULL) &&
-      (Option->OptionalDataSize == OptionalDataSize + sizeof (EFI_GUID)) &&
-      CompareGuid (
-        (EFI_GUID *)((UINT8 *)Option->OptionalData + OptionalDataSize),
-        &gNVIDIABmBootOptionGuid
-        ))
-  {
-    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-    if ((Hob != NULL) &&
-        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-    {
-      PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-    } else {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to get PlatformResourceInfo\n", __FUNCTION__));
-      goto ReturnResult;
-    }
+ #endif
 
-    if (PlatformResourceInfo->BootType == TegrablBootRcm) {
-      for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
-        if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
-          Result = &Table[BootPriorityIndex];
-          goto ReturnResult;
-        }
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
+        Result = &Table[BootPriorityIndex];
+        goto ReturnResult;
       }
     }
   } else {

@@ -16,7 +16,6 @@
 #include <Uefi.h>
 
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/BaseLib.h>
@@ -36,6 +35,7 @@
 #include <Protocol/LoadFile.h>
 #include <Protocol/LoadFile2.h>
 #include <Protocol/KernelArgsProtocol.h>
+#include <Protocol/AndroidBootImg.h>
 
 #define FDT_ADDITIONAL_ENTRIES_SIZE               0x400
 #define ANDROID_BOOT_SIGNATURE                    SIGNATURE_64 ('A','N','D','R','O','I','D','!')

@@ -47,6 +47,5 @@
 [Guids]
   gEfiGlobalVariableGuid
   gNVIDIATokenSpaceGuid
-  gNVIDIABmBootOptionGuid
   gEfiEventReadyToBootGuid
   gNVIDIAPlatformResourceDataGuid

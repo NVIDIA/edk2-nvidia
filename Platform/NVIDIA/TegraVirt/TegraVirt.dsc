@@ -224,6 +224,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialFifoControl|0x27
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize|1
 
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+
 [PcdsPatchableInModule.common]
   #
   # These will be set at boot time.

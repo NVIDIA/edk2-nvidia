@@ -46,7 +46,6 @@
   gFdtTableGuid
   gEfiAcpiTableGuid
   gNVIDIARcmKernelGuid
-  gNVIDIABmBootOptionGuid
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid

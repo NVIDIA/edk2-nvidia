@@ -53,6 +53,7 @@
 
 [Protocols]
   gNVIDIALoadfileKernelArgsProtocol
+  gAndroidBootImgProtocolGuid
 
 [Guids]
   gFdtTableGuid
@@ -61,10 +62,10 @@
   gEfiPartTypeSystemPartGuid
   gEfiEventReadyToBootGuid
   gNVIDIAConnectCompleteEventGuid
-  gNVIDIAPublicVariableGuid
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
   gNVIDIATokenSpaceGuid.PcdRcmKernelBase
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow

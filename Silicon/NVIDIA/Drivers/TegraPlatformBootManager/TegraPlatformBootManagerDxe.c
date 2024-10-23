@@ -556,68 +556,6 @@ UpdateKernelCommandLine (
   return EFI_SUCCESS;
 }
 
-/*
-  Get the final kernel command line and its length to be patched in load option.
-
-  @param[in]  InCmdLine  Input command line.
-
-  @param[out] OutCmdLine Output command line.
-
-  @param[out] OutCmdLen  Output command line length.
-
-  @retval EFI_SUCCESS    Command line and its length generated correctly.
-
-  @retval Others         Failure.
-*/
-STATIC
-EFI_STATUS
-GetPlatformCommandLine (
-  IN  CHAR16  *InCmdLine,
-  OUT CHAR16  **OutCmdLine,
-  OUT UINTN   *OutCmdLen
-  )
-{
-  EFI_STATUS  Status;
-  CHAR16      *UpdatedCommandLine;
-  CHAR16      *CommandLine;
-  UINTN       CommandLineBytes;
-
-  UpdatedCommandLine = NULL;
-  Status             = UpdateKernelCommandLine (InCmdLine, &UpdatedCommandLine);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  CommandLineBytes = StrSize (UpdatedCommandLine) + sizeof (EFI_GUID);
-
-  CommandLine = NULL;
-  Status      = gBS->AllocatePool (
-                       EfiBootServicesData,
-                       CommandLineBytes,
-                       (VOID **)&CommandLine
-                       );
-  if (EFI_ERROR (Status)) {
-    gBS->FreePool (UpdatedCommandLine);
-    return Status;
-  }
-
-  gBS->SetMem (CommandLine, CommandLineBytes, 0);
-
-  gBS->CopyMem (CommandLine, UpdatedCommandLine, StrSize (UpdatedCommandLine));
-
-  gBS->CopyMem (
-         (CHAR8 *)CommandLine + StrSize (UpdatedCommandLine),
-         &gNVIDIABmBootOptionGuid,
-         sizeof (EFI_GUID)
-         );
-
-  *OutCmdLine = CommandLine;
-  *OutCmdLen  = CommandLineBytes;
-
-  gBS->FreePool (UpdatedCommandLine);
-  return EFI_SUCCESS;
-}
-
 // Append platform specific commands
 STATIC
 EFI_STATUS
@@ -727,14 +665,6 @@ RefreshAutoEnumeratedBootOptions (
   )
 {
   EFI_STATUS                    Status;
-  CHAR16                        *ImgKernelArgs;
-  NVIDIA_KERNEL_ARGS_PROTOCOL   *KernelArgsProtocol;
-  CHAR16                        *DtbKernelArgs;
-  CHAR16                        *InputKernelArgs;
-  CHAR16                        *CmdLine;
-  UINTN                         CmdLen;
-  EFI_HANDLE                    Handle;
-  EFI_DEVICE_PATH               *DevicePath;
   EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
   UINTN                         Count;
@@ -752,11 +682,6 @@ RefreshAutoEnumeratedBootOptions (
     DEBUG ((DEBUG_ERROR, "%a: found invalid parameter\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
-
-  ImgKernelArgs = NULL;
-  DtbKernelArgs = NULL;
-  CmdLine       = NULL;
-  CmdLen        = 0;
 
   Status = gBS->AllocatePool (
                   EfiBootServicesData,
@@ -786,92 +711,6 @@ RefreshAutoEnumeratedBootOptions (
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: *UpdatedBootOptionsCount = %lu\n", __FUNCTION__, *UpdatedBootOptionsCount));
-
-  for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
-    if (CompareGuid ((EFI_GUID *)UpdatedLoadOption[Count].OptionalData, &mBmAutoCreateBootOptionGuid)) {
-      DevicePath = UpdatedLoadOption[Count].FilePath;
-      Status     = gBS->LocateDevicePath (&gNVIDIALoadfileKernelArgsProtocol, &DevicePath, &Handle);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_VERBOSE, "%a: Got %r for option, so it doesn't have a LoadfileKernelArgsGuid\n", __FUNCTION__, Status));
-        Status = EFI_SUCCESS;
-        continue;
-      }
-
-      Status = gBS->HandleProtocol (
-                      Handle,
-                      &gNVIDIALoadfileKernelArgsProtocol,
-                      (VOID **)&KernelArgsProtocol
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: HandleProtocol got %r\n", __FUNCTION__, Status));
-        ASSERT_EFI_ERROR (Status);
-      }
-
-      ImgKernelArgs = KernelArgsProtocol->KernelArgs;
-
-      // Allow DTB cmdline to replace image cmdline
-      if ((ImgKernelArgs != NULL) &&
-          (StrLen (ImgKernelArgs) != 0) &&
-          (PcdGetBool (PcdBootAndroidImage) == FALSE))
-      {
-        DEBUG ((DEBUG_ERROR, "%a: Using Image Kernel Command Line\n", __FUNCTION__));
-        InputKernelArgs = ImgKernelArgs;
-      } else {
-        DEBUG ((DEBUG_ERROR, "%a: Using DTB Kernel Command Line\n", __FUNCTION__));
-        Status = GetDtbCommandLine (&DtbKernelArgs);
-        if (EFI_ERROR (Status)) {
-          goto Error;
-        }
-
-        InputKernelArgs = DtbKernelArgs;
-      }
-
-      Status = GetPlatformCommandLine (InputKernelArgs, &CmdLine, &CmdLen);
-      if (EFI_ERROR (Status)) {
-        goto Error;
-      }
-
-      DEBUG ((DEBUG_VERBOSE, "%a: ImgKernelArgs: %s\n", __FUNCTION__, ImgKernelArgs));
-      DEBUG ((DEBUG_VERBOSE, "%a: DtbKernelArgs: %s\n", __FUNCTION__, DtbKernelArgs));
-      DEBUG ((DEBUG_VERBOSE, "%a: InputKernelArgs: %s\n", __FUNCTION__, InputKernelArgs));
-      DEBUG ((DEBUG_VERBOSE, "%a: Cmdline: %s\n", __FUNCTION__, CmdLine));
-
-      DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
-      DEBUG ((DEBUG_ERROR, "%s\n", CmdLine));
-
-      UpdatedLoadOption[Count].OptionalDataSize = CmdLen;
-      gBS->FreePool (UpdatedLoadOption[Count].OptionalData);
-      Status = gBS->AllocatePool (
-                      EfiBootServicesData,
-                      CmdLen,
-                      (VOID **)&UpdatedLoadOption[Count].OptionalData
-                      );
-      if (EFI_ERROR (Status)) {
-        goto Error;
-      }
-
-      gBS->CopyMem (UpdatedLoadOption[Count].OptionalData, CmdLine, CmdLen);
-
-      Status = KernelArgsProtocol->UpdateKernelArgs (KernelArgsProtocol, CmdLine);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to UpdateKernelArgs\n", __FUNCTION__, Status));
-        goto Error;
-      }
-
-      DEBUG ((DEBUG_VERBOSE, "%a: Protocol->KernelArgs: %s\n", __FUNCTION__, KernelArgsProtocol->KernelArgs));
-    } else {
-      DEBUG ((DEBUG_VERBOSE, "%a: Skipping option because it doesn't have the GUID\n", __FUNCTION__));
-    }
-  }
-
-Error:
-  if (DtbKernelArgs != NULL) {
-    gBS->FreePool (DtbKernelArgs);
-  }
-
-  if (CmdLine != NULL) {
-    gBS->FreePool (CmdLine);
-  }
 
   return Status;
 }
