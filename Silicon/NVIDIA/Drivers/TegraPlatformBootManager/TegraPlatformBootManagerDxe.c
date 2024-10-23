@@ -876,92 +876,10 @@ Error:
   return Status;
 }
 
-/**
-  Return TRUE when the boot option is tegra specific.
-
-  @param [in] BootOption Pointer to the boot option to check.
-
-
-  @retval TRUE           The boot option is tegra created.
-
-  @retval FALSE T        The boot option is not tegra added.
-**/
-STATIC
-BOOLEAN
-IsTegraBootOption (
-  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
-  )
-{
-  UINTN  Length;
-
-  if ((BootOption->OptionalData == NULL) ||
-      (BootOption->OptionalDataSize == 0))
-  {
-    return FALSE;
-  }
-
-  Length = StrLen ((CONST CHAR16 *)BootOption->OptionalData);
-
-  if ((BootOption->OptionalDataSize == ((Length + 1) * sizeof (CHAR16)) + sizeof (EFI_GUID)) &&
-      CompareGuid (
-        (EFI_GUID *)((UINT8 *)BootOption->OptionalData + ((Length + 1) * sizeof (CHAR16))),
-        &gNVIDIABmBootOptionGuid
-        ))
-  {
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-/**
-  Return the index of the load option in the load option array.
-
-  The function consider two load options match with changed configuration when the
-  OptionType, Attributes, Description and FilePath are equal but OptionalData is
-  different.
-
-  @param [in] Key     Pointer to the load option to be found.
-
-  @param [in] Array   Pointer to the array of load options to be found.
-
-  @param [in] Count   Number of entries in the Array.
-
-
-  @retval -1          Key wasn't found in the Array.
-
-  @retval 0 ~ Count-1 The index of the Key in the Array.
-**/
-STATIC
-INTN
-EFIAPI
-TegraBootManagerMatchLoadOptionConfigurationChange (
-  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *Key,
-  IN CONST EFI_BOOT_MANAGER_LOAD_OPTION  *Array,
-  IN UINTN                               Count
-  )
-{
-  UINTN  Index;
-
-  for (Index = 0; Index < Count; Index++) {
-    if ((Key->OptionType == Array[Index].OptionType) &&
-        (Key->Attributes == Array[Index].Attributes) &&
-        (StrCmp (Key->Description, Array[Index].Description) == 0) &&
-        (CompareMem (Key->FilePath, Array[Index].FilePath, GetDevicePathSize (Key->FilePath)) == 0) &&
-        (Key->OptionalDataSize != Array[Index].OptionalDataSize) &&
-        (CompareMem (Key->OptionalData, Array[Index].OptionalData, Key->OptionalDataSize) != 0))
-    {
-      return (INTN)Index;
-    }
-  }
-
-  return -1;
-}
-
 /*
   This function refreshes NV boot options specific to the platform.
-  1. This function finds NV options that have changed in terms of configuration data and
-  updates the same NV option without modifying the boot order.
+  1. This function detects if a new android or removable boot option is detected
+     and adds it to the top of boot order.
   2. This function finds NV options that are not valid any more and deletes them.
 
   @param[in] BootOptions        An array of updated auto enumerated platform boot options.
@@ -986,7 +904,6 @@ RefreshNvBootOptions (
   EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
   UINTN                         NvBootOptionsCount;
   UINTN                         Index;
-  INTN                          Match;
 
   if ((BootOptions == NULL) ||
       (BootOptionsCount == 0))
@@ -1035,23 +952,8 @@ RefreshNvBootOptions (
 
   for (Index = 0; Index < NvBootOptionsCount; Index++) {
     if (((DevicePathType (NvBootOptions[Index].FilePath) != BBS_DEVICE_PATH) ||
-         (DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP)) &&
-        IsTegraBootOption (&NvBootOptions[Index]))
+         (DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP)))
     {
-      Match = TegraBootManagerMatchLoadOptionConfigurationChange (&NvBootOptions[Index], BootOptions, BootOptionsCount);
-      if (Match != -1) {
-        BootOptions[Match].OptionNumber = NvBootOptions[Index].OptionNumber;
-        Status                          = EfiBootManagerLoadOptionToVariable (&BootOptions[Match]);
-        if (EFI_ERROR (Status)) {
-          EfiBootManagerDeleteLoadOptionVariable (
-            BootOptions[Match].OptionNumber,
-            BootOptions[Match].OptionType
-            );
-        }
-
-        continue;
-      }
-
       if (EfiBootManagerFindLoadOption (&NvBootOptions[Index], BootOptions, BootOptionsCount) == -1) {
         Status = EfiBootManagerDeleteLoadOptionVariable (
                    NvBootOptions[Index].OptionNumber,
