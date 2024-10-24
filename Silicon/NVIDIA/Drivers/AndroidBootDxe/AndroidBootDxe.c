@@ -309,8 +309,7 @@ AndroidBootDxeUpdateDtbCmdLine (
   VOID        *DeviceTreeBase;
   INT32       NodeOffset;
   INT32       Ret;
-  INT32       CommandLineLength;
-  INT32       CommandLineBytes;
+  UINT32      CommandLineLength;
   CHAR8       *CmdLineDtb;
   VOID        *AcpiBase;
 
@@ -325,21 +324,21 @@ AndroidBootDxeUpdateDtbCmdLine (
     return Status;
   }
 
-  CommandLineLength = StrSize (CmdLine);
-  CommandLineBytes  = CommandLineLength * sizeof (CHAR16);
-  CmdLineDtb        = NULL;
-  Status            = gBS->AllocatePool (
-                             EfiBootServicesData,
-                             CommandLineBytes,
-                             (VOID **)&CmdLineDtb
-                             );
+  CommandLineLength = StrLen (CmdLine);
+  CommandLineLength++;
+  CmdLineDtb = NULL;
+  Status     = gBS->AllocatePool (
+                      EfiBootServicesData,
+                      CommandLineLength,
+                      (VOID **)&CmdLineDtb
+                      );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  gBS->SetMem (CmdLineDtb, CommandLineBytes, 0);
+  gBS->SetMem (CmdLineDtb, CommandLineLength, 0);
 
-  UnicodeStrToAsciiStrS (CmdLine, CmdLineDtb, CommandLineBytes);
+  UnicodeStrToAsciiStrS (CmdLine, CmdLineDtb, CommandLineLength);
 
   NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
   if (NodeOffset < 0) {
@@ -347,7 +346,7 @@ AndroidBootDxeUpdateDtbCmdLine (
     goto Exit;
   }
 
-  Ret = fdt_setprop (DeviceTreeBase, NodeOffset, "bootargs", CmdLineDtb, CommandLineBytes);
+  Ret = fdt_setprop (DeviceTreeBase, NodeOffset, "bootargs", CmdLineDtb, CommandLineLength);
   if (Ret < 0) {
     Status = EFI_DEVICE_ERROR;
     goto Exit;
