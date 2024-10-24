@@ -158,11 +158,21 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         parserObj.add_argument("--menuconfig", dest="MENUCONFIG",
                                action='store_true', default=False, help="Show configuration menu before build.")
+        parserObj.add_argument("--skip-config", dest="SKIPCONFIG",
+                               action='store_true', default=False, help="Skip configuration steps.")
+        parserObj.add_argument("--skipallbuild", dest="SKIPALLBUILD",
+                               action='store_true', default=False, help="Skip all build steps.")
 
     def RetrievePlatformCommandLineOptions(self, args):
+        super().RetrievePlatformCommandLineOptions(args)
         ''' Retrieve command line options from the argparser namespace '''
         self._jobs = args.JOBS
         self._menuconfig = args.MENUCONFIG
+        self._skipconfig = args.SKIPCONFIG
+        if args.SKIPALLBUILD:
+            self.SkipPostBuild = True
+            self.SkipBuild = True
+            self.SkipPreBuild = True
 
     def GetMaxJobs(self):
         ''' Return the value of the --jobs option.
@@ -372,9 +382,10 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         shell_environment.GetEnvironment().set_shell_var(
             "CONF_PATH", str(confdir_path))
 
-        defconf = self.settings.GetConfigFiles()
-        if defconf:
-            self.BuildConfigFile ()
+        if not self._skipconfig:
+            defconf = self.settings.GetConfigFiles()
+            if defconf:
+                self.BuildConfigFile ()
 
         # Must return 0 to indicate success.
         return 0
