@@ -1495,7 +1495,7 @@ AndroidBootDxeLoadFile (
 
   Status = AndroidBootDxeUpdateDtbCmdLine (Private->KernelArgsProtocol.KernelArgs);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB. Error Status: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
@@ -2269,7 +2269,7 @@ RcmLoadFile (
 
   Status = AndroidBootDxeUpdateDtbCmdLine (NvidiaKernelArgsProtocol->KernelArgs);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Could not update kernel command line in DTB. Error Status: %r\n", __FUNCTION__, Status));
     goto Exit;
   }
 
