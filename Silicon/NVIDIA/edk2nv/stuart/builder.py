@@ -125,6 +125,13 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         logging.debug("The following 'Can't set value' messages are expected")
         return super().ParseTargetFile()
 
+    def ConvertToDos(self, in_file, out_file):
+        ''' Save in_file as out_file, but with DOS-style line endings. '''
+        with open(in_file, "r") as fin:
+            with open(out_file, "w", newline="\r\n") as fout:
+                for line in fin:
+                    fout.write(line)
+
     #######################################
     # UefiBuilder hooks
 
@@ -190,6 +197,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
         self.config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
+        self.defconfig_out = ws_dir / "nvidia-config" / self.settings.GetName() / "defconfig"
         config_out_dsc = (
             ws_dir / "nvidia-config" / self.settings.GetName() / "config.dsc.inc"
         )
@@ -240,7 +248,19 @@ class NVIDIAPlatformBuilder(UefiBuilder):
             raise ValueError("Aborting due to Kconfig warnings")
 
         # Write the merged configuration
-        print(kconf.write_config(self.config_out))
+        tmp_config = self.config_out.with_suffix(".tmp")
+        kconf.write_config(tmp_config)
+        self.ConvertToDos(tmp_config, self.config_out)
+        tmp_config.unlink()
+        print(f"Configuration saved to {self.config_out}")
+
+        # Generate a minimal config.
+        tmp_config = self.defconfig_out.with_suffix(".tmp")
+        kconf.write_min_config(tmp_config,
+                                     header=self.settings.GetDefconfigHeader())
+        self.ConvertToDos(tmp_config, self.defconfig_out)
+        tmp_config.unlink()
+        print(f"Minimal configuration saved to {self.defconfig_out}")
 
         if self._menuconfig:
             from menuconfig import menuconfig

@@ -25,6 +25,12 @@ __all__ = [
 
 reason_setman = "Set in platform CiSettingsManager"
 
+defconfig_header_template = """\
+# SPDX-FileCopyrightText: Copyright (c) 2023-{year} NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+"""
+
 
 class AbstractNVIDIASettingsManager(UpdateSettingsManager,
                                     SetupSettingsManager):
@@ -454,6 +460,15 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The path must be relative to GetWorkspaceRoot().
         '''
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Kconfig"
+
+    def GetDefconfigHeader(self):
+        ''' Return the header to use when generating defconfig
+
+            This string will be added to the top of the defconfig generated
+            under nvidia-config/.  defconfig is generated as a convenience.
+        '''
+        year= time.strftime("%Y")
+        return defconfig_header_template.format(year=year)
 
 
 class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
