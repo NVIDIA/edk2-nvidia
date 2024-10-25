@@ -422,7 +422,6 @@ DeviceDiscoveryStart (
   NVIDIA_CLOCK_NODE_PROTOCOL        *ClockProtocol           = NULL;
   NVIDIA_RESET_NODE_PROTOCOL        *ResetProtocol           = NULL;
   NVIDIA_POWER_GATE_NODE_PROTOCOL   *PgProtocol              = NULL;
-  NVIDIA_COMPATIBILITY_MAPPING      *MappingNode             = gDeviceCompatibilityMap;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node                    = NULL;
   UINTN                             Index;
   NVIDIA_DEVICE_DISCOVERY_CONTEXT   *DeviceDiscoveryContext = NULL;
@@ -446,21 +445,6 @@ DeviceDiscoveryStart (
   Status = gBS->HandleProtocol (Controller, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
   if (EFI_ERROR (Status)) {
     Node = NULL;
-  }
-
-  Status = EFI_UNSUPPORTED;
-  while (MappingNode->Compatibility != NULL) {
-    if (CompareGuid (NonDiscoverableProtocol->Type, MappingNode->DeviceType)) {
-      Status = EFI_SUCCESS;
-      break;
-    }
-
-    MappingNode++;
-  }
-
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, no guid mapping\r\n", __FUNCTION__));
-    goto ErrorExit;
   }
 
   Status = DeviceDiscoveryNotify (
