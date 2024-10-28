@@ -69,6 +69,7 @@
 #string STR_PRODUCT_ASSET_TAG_PROTECTION        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/AssetTagProtection"
 #string STR_PRODUCT_CHASSIS_ASSET_TAG           #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/ProductAssetTag"
 #string STR_MAX_CORES_PROMPT                    #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/ActiveCores"
+#string STR_EMBEDDED_UEFI_SHELL_PROMPT          #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/EmbeddedUefiShell"
 
 #string STR_SERVER_POWER_CONTROL_PROMPT                 #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/ServerPowerControl"
 #string NVIDIA_SERVER_POWER_CTL_INPUT_PWR_CAPPING_50MS  #language x-UEFI-redfish-Bios.v1_2_0 "InputPowerCappingUsing50msTimescale"
