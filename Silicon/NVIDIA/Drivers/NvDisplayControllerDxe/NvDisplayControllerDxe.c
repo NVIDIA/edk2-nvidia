@@ -1083,8 +1083,12 @@ DisplayCheckPerformHandoff (
   )
 {
   EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
   VOID                          *Table;
+
+  Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
+  if (!EFI_ERROR (Status)) {
+    return TRUE;
+  }
 
   switch (Context->HandoffMode) {
     case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
@@ -1095,26 +1099,9 @@ DisplayCheckPerformHandoff (
       return TRUE;
 
     case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
-      Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table);
-      if (!EFI_ERROR (Status)) {
-        /* ACPI boot: reset the display unless it is active. */
-        Status = LocateChildGop (
-                   Context->DriverHandle,
-                   Context->ControllerHandle,
-                   &Gop
-                   );
-        return !EFI_ERROR (Status) && CheckGopModeActive (Gop);
-      }
-
-      Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Table);
-      if (!EFI_ERROR (Status)) {
-        /* DT boot: reset the display unless the last FDT update was
-           successful. */
-        return Context->FdtUpdated;
-      }
-
-      /* Default to display reset. */
-      return FALSE;
+      /* DT boot: reset the display unless the last FDT update was
+          successful. */
+      return Context->FdtUpdated;
   }
 }
 

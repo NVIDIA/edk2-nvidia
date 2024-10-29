@@ -99,6 +99,7 @@
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
   gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting
+  gNVIDIATokenSpaceGuid.PcdNvGopSupported
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

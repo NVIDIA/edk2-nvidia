@@ -965,6 +965,7 @@ typedef struct {
   BOOLEAN    AdvertiseACS_1[MAX_PCIE];
   BOOLEAN    AdvertiseACS_2[MAX_PCIE];
   BOOLEAN    AdvertiseACS_3[MAX_PCIE];
+  BOOLEAN    NvDisplayHandoffControlSupported;
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \
