@@ -45,6 +45,19 @@ UINT8  RemovableHardwareDeviceSubType[] = {
   HW_PCI_DP
 };
 
+/**
+  Return TRUE when the boot option is auto-created instead of manually added.
+
+  @param BootOption Pointer to the boot option to check.
+
+  @retval TRUE  The boot option is auto-created.
+  @retval FALSE The boot option is manually added.
+**/
+BOOLEAN
+BmIsAutoCreateBootOption (
+  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOption
+  );
+
 /*
   Checks whether the auto-enumerated boot option is valid for the platform.
 
@@ -791,7 +804,8 @@ RefreshNvBootOptions (
 
   for (Index = 0; Index < NvBootOptionsCount; Index++) {
     if (((DevicePathType (NvBootOptions[Index].FilePath) != BBS_DEVICE_PATH) ||
-         (DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP)))
+         (DevicePathSubType (NvBootOptions[Index].FilePath) != BBS_BBS_DP)) &&
+        BmIsAutoCreateBootOption (&NvBootOptions[Index]))
     {
       if (EfiBootManagerFindLoadOption (&NvBootOptions[Index], BootOptions, BootOptionsCount) == -1) {
         Status = EfiBootManagerDeleteLoadOptionVariable (
