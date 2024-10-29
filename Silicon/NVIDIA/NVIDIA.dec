@@ -492,6 +492,9 @@
   ## Mask used to limit debug output, used to filter out debug messages when enabled with menu.
   gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFFFFFFF|UINT32|0x0000012F
 
+  ## Use to determine if the internal nvidia GOP driver is supported.
+  gNVIDIATokenSpaceGuid.PcdNvGopSupported|FALSE|BOOLEAN|0x00000132
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

@@ -1178,6 +1178,7 @@ typedef struct {
   BOOLEAN    DisableL23AtWarmReset_1[MAX_PCIE];
   BOOLEAN    DisableL23AtWarmReset_2[MAX_PCIE];
   BOOLEAN    DisableL23AtWarmReset_3[MAX_PCIE];
+  BOOLEAN    NvDisplayHandoffControlSupported;
 } NVIDIA_CONFIG_HII_CONTROL;
 
 #define ADD_GOTO_SOCKET_FORM(socket)                                       \

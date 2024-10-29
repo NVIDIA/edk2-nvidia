@@ -2030,6 +2030,10 @@ InitializeSettings (
   VOID                                  *HobPointer;
   BOOLEAN                               DiscardVariableOverrides;
   CHAR16                                ProductInfoVariableName[] = L"ProductInfo";
+  BOOLEAN                               AcpiMode;
+  VOID                                  *Table;
+
+  AcpiMode = !EFI_ERROR (EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &Table));
 
   // Initialize PCIe Form Settings
   PcdSet8S (PcdPcieResourceConfigNeeded, PcdGet8 (PcdPcieResourceConfigNeeded));
@@ -2186,12 +2190,13 @@ InitializeSettings (
     mExt10bitTagReqEnable = 0;
   }
 
-  mHiiControlSettings.L4TSupported         = PcdGetBool (PcdL4TConfigurationSupport);
-  mHiiControlSettings.QuickBootSupported   = FeaturePcdGet (PcdQuickBootSupported);
-  mHiiControlSettings.DebugMenuSupported   = FeaturePcdGet (PcdDebugMenuSupport);
-  mHiiControlSettings.RedfishSupported     = FeaturePcdGet (PcdRedfishSupported);
-  mHiiControlSettings.TpmPresent           = PcdGetBool (PcdTpmPresent);
-  mHiiControlSettings.MemoryTestsSupported = PcdGetBool (PcdMemoryTestsSupported);
+  mHiiControlSettings.L4TSupported                     = PcdGetBool (PcdL4TConfigurationSupport);
+  mHiiControlSettings.QuickBootSupported               = FeaturePcdGet (PcdQuickBootSupported);
+  mHiiControlSettings.DebugMenuSupported               = FeaturePcdGet (PcdDebugMenuSupport);
+  mHiiControlSettings.RedfishSupported                 = FeaturePcdGet (PcdRedfishSupported);
+  mHiiControlSettings.TpmPresent                       = PcdGetBool (PcdTpmPresent);
+  mHiiControlSettings.MemoryTestsSupported             = PcdGetBool (PcdMemoryTestsSupported);
+  mHiiControlSettings.NvDisplayHandoffControlSupported = PcdGetBool (PcdNvGopSupported) && !AcpiMode;
 
   HobPointer = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
   if (HobPointer != NULL) {

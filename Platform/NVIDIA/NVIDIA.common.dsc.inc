@@ -982,6 +982,10 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
 !endif
 
+!ifdef CONFIG_NVIDIA_DISPLAY
+  gNVIDIATokenSpaceGuid.PcdNvGopSupported|TRUE
+!endif
+
   # SBSA Watchdog - always override the ArmPkg.dec values
   gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|$(CONFIG_ARM_WATCHDOG_CONTROL_BASE)
   gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|$(CONFIG_ARM_WATCHDOG_REFRESH_BASE)
