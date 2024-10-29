@@ -363,6 +363,7 @@ formset
       endcheckbox;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.NvDisplayHandoffControlSupported == 0;
     oneof varid = SocDisplayHandoffMode.Mode,
       questionid = KEY_SOC_DISPLAY_HANDOFF_MODE,
       prompt = STRING_TOKEN(STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT),
@@ -372,6 +373,7 @@ formset
       option text = STRING_TOKEN(STR_ALWAYS), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS, flags = 0;
       option text = STRING_TOKEN(STR_AUTO), value = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO, flags = 0;
     endoneof;
+    endif;
   endform;
 
   //

@@ -481,6 +481,9 @@
   ## The maximum number of boot options supported.
   gNVIDIATokenSpaceGuid.PcdMaximumBootOptions|0xFF|UINT16|0x0000012D
 
+  ## Use to determine if the internal nvidia GOP driver is supported.
+  gNVIDIATokenSpaceGuid.PcdNvGopSupported|FALSE|BOOLEAN|0x00000132
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
