@@ -665,7 +665,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   gIpmiFeaturePkgTokenSpaceGuid.PcdIpmiFeatureEnable|True
 !endif
 
-!ifdef CONFIG_QUICK_BOOT
+!ifndef CONFIG_BOOT_QUICK_BOOT
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported|FALSE
 !endif
 
