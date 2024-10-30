@@ -631,6 +631,10 @@ NvHwInfoAddWithTokenMap (
   This can also be a dispatcher. I.e. a function that not parsing a
   Device Tree but calling other parsers.
 
+  The function will continue running all the parsers even if some hit
+  errors, and will return the first error code (other than EFI_NOT_FOUND)
+  it encounters.
+
   @param [in]  ParserHandle      A handle to the parser instance.
   @param [in]  FdtBranch         When searching for DT node name, restrict
                                  the search to this Device Tree branch.
@@ -640,7 +644,6 @@ NvHwInfoAddWithTokenMap (
   @retval EFI_SUCCESS             The function completed successfully.
   @retval EFI_ABORTED             An error occurred.
   @retval EFI_INVALID_PARAMETER   Invalid parameter.
-  @retval EFI_NOT_FOUND           Not found.
   @retval EFI_UNSUPPORTED         Unsupported.
 **/
 EFI_STATUS
@@ -653,6 +656,7 @@ NvHwInfoParse (
   )
 {
   EFI_STATUS  Status;
+  EFI_STATUS  ReturnStatus = EFI_SUCCESS;
   UINT32      Index;
 
   NV_ASSERT_RETURN (ParserHandle != NULL, return EFI_INVALID_PARAMETER, "%a: ParserHandle pointer is NULL\n", __FUNCTION__);
@@ -666,13 +670,15 @@ NvHwInfoParse (
                                         );
     if (Status == EFI_NOT_FOUND) {
       DEBUG ((DEBUG_WARN, "%a: \"%a\" Parser at index %u in the table returned %r - Ignoring it\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, Status));
-      Status = EFI_SUCCESS; // Don't trigger an error in this case
+    } else if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: \"%a\" Parser at index %u in the table returned %r. This may be a fatal error, but attempting to continue anyway\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, Status));
+      if (!EFI_ERROR (ReturnStatus)) {
+        ReturnStatus = Status;
+      }
     }
-
-    NV_ASSERT_RETURN (!EFI_ERROR (Status), return Status, "%a: \"%a\" Parser at index %u in the table returned %r\n", __FUNCTION__, HwInfoParserTable[Index].ParserName, Index, Status);
   }
 
-  return EFI_SUCCESS;
+  return ReturnStatus;
 }
 
 /**

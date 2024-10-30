@@ -50,7 +50,7 @@ InitializePlatformRepository (
       break;
 
     default:
-      DEBUG ((DEBUG_WARN, "%a: New Config Manager not running because ChipId 0x%x isn't supported yet\n", __FUNCTION__, ChipID));
+      DEBUG ((DEBUG_WARN, "%a: Config Manager not running because ChipId 0x%x isn't supported yet\n", __FUNCTION__, ChipID));
       return EFI_UNSUPPORTED;
   }
 
@@ -81,8 +81,7 @@ InitializePlatformRepository (
 
   Status = NvHwInfoParse (Parser, -1, Entry->CmObjectDesc.Data, Entry->CmObjectDesc.Count);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r from NvHwInfoParse\n", __FUNCTION__, Status));
-    return Status;
+    DEBUG ((DEBUG_ERROR, "%a: Got %r from NvHwInfoParse. Attempting to continue anyway.\n", __FUNCTION__, Status));
   }
 
   // Server platform require all OemTableIds to reflect the board config, so update them here
@@ -134,12 +133,8 @@ ConfigurationManagerDataDxeInitialize (
   EFI_STATUS  Status;
 
   Status = InitializePlatformRepository ();
-  if (Status == EFI_UNSUPPORTED) {
-    DEBUG ((DEBUG_ERROR, "%a: InitializePlatformRepository returned EFI_UNSUPPORTED\n", __FUNCTION__));
-    return EFI_SUCCESS;
-  } else if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: InitializePlatformRepository returned %r\n", __FUNCTION__, Status));
-    return Status;
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: InitializePlatformRepository returned %r. Attempting to continue anyway\n", __FUNCTION__, Status));
   }
 
  #if !defined (MDEPKG_NDEBUG)
