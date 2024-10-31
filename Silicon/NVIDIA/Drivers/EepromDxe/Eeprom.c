@@ -42,28 +42,13 @@ PopulateEepromData (
   )
 {
   UINTN                    ChipID;
-  T194_EEPROM_DATA         *T194EepromData;
   T234_EEPROM_DATA         *T234EepromData;
   TEGRA_EEPROM_BOARD_INFO  *EepromBoardInfo;
   CONST CHAR8              *BoardId;
 
   ChipID = TegraGetChipID ();
 
-  if (ChipID == T194_CHIP_ID) {
-    T194EepromData  = (T194_EEPROM_DATA *)EepromData;
-    EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
-    BoardId         = TegraBoardIdFromPartNumber (&T194EepromData->PartNumber);
-    CopyMem ((VOID *)EepromBoardInfo->BoardId, BoardId, TEGRA_BOARD_ID_LEN);
-    CopyMem ((VOID *)EepromBoardInfo->ProductId, (VOID *)&T194EepromData->PartNumber, sizeof (T194EepromData->PartNumber));
-    CopyMem ((VOID *)EepromBoardInfo->SerialNumber, (VOID *)&T194EepromData->SerialNumber, sizeof (T194EepromData->SerialNumber));
-    if ((CompareMem (T194EepromData->CustomerBlockSignature, EEPROM_CUSTOMER_BLOCK_SIGNATURE, sizeof (T194EepromData->CustomerBlockSignature)) == 0) &&
-        (CompareMem (T194EepromData->CustomerTypeSignature, EEPROM_CUSTOMER_TYPE_SIGNATURE, sizeof (T194EepromData->CustomerTypeSignature)) == 0))
-    {
-      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T194EepromData->CustomerEthernetMacAddress, NET_ETHER_ADDR_LEN);
-    } else {
-      CopyMem ((VOID *)EepromBoardInfo->MacAddr, (VOID *)T194EepromData->EthernetMacAddress, NET_ETHER_ADDR_LEN);
-    }
-  } else if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
+  if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
     T234EepromData  = (T234_EEPROM_DATA *)EepromData;
     EepromBoardInfo = (TEGRA_EEPROM_BOARD_INFO *)BoardInfo;
     BoardId         = TegraBoardIdFromPartNumber (&T234EepromData->PartNumber);
@@ -95,34 +80,12 @@ ValidateEepromData (
   )
 {
   UINTN             ChipID;
-  T194_EEPROM_DATA  *T194EepromData;
   T234_EEPROM_DATA  *T234EepromData;
   UINT8             Checksum;
 
   ChipID = TegraGetChipID ();
 
-  if (ChipID == T194_CHIP_ID) {
-    T194EepromData = (T194_EEPROM_DATA *)EepromData;
-    if (!IgnoreVersionCheck &&
-        (T194EepromData->Version != T194_EEPROM_VERSION))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Invalid version in eeprom %x\r\n", __FUNCTION__, T194EepromData->Version));
-      return EFI_DEVICE_ERROR;
-    }
-
-    if ((T194EepromData->Size <= ((UINTN)&T194EepromData->Reserved2 - (UINTN)T194EepromData))) {
-      DEBUG ((DEBUG_ERROR, "%a: Invalid size in eeprom %x\r\n", __FUNCTION__, T194EepromData->Size));
-      return EFI_DEVICE_ERROR;
-    }
-
-    if (!IgnoreCRCCheck) {
-      Checksum = CalculateCrc8 (EepromData, EEPROM_DATA_SIZE - 1, 0, TYPE_CRC8_MAXIM);
-      if (Checksum != T194EepromData->Checksum) {
-        DEBUG ((DEBUG_ERROR, "%a: CRC mismatch, expected %02x got %02x\r\n", __FUNCTION__, Checksum, T194EepromData->Checksum));
-        return EFI_DEVICE_ERROR;
-      }
-    }
-  } else if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
+  if ((ChipID == T234_CHIP_ID) || (ChipID == T264_CHIP_ID)) {
     T234EepromData = (T234_EEPROM_DATA *)EepromData;
     if (!IgnoreVersionCheck &&
         (T234EepromData->Version != T234_EEPROM_VERSION))

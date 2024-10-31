@@ -6,9 +6,6 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "Dsdt_T194.offset.h"
-#include "Dsdt_T194.hex"
-
 #include "Dsdt_T234.hex"
 #include "Dsdt_T234.offset.h"
 

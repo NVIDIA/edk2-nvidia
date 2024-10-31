@@ -868,10 +868,6 @@ FwPartitionAddFromDeviceGpt (
     goto Done;
   }
 
-  if (mChipId == T194_CHIP_ID) {
-    goto Done;
-  }
-
   // only add GPT update support for boot device
   if (FwPartitionFindByName (L"BCT") == NULL) {
     goto Done;

@@ -2,7 +2,7 @@
 
   Tegra Platform Info stub library unit tests
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,7 +33,6 @@ TegraGetChipIDTest (
   )
 {
   UINT32  ChipIdArray[] = {
-    T194_CHIP_ID,
     T234_CHIP_ID
   };
   UINTN   Index;

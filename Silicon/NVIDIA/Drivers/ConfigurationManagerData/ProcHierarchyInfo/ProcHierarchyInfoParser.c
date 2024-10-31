@@ -115,11 +115,7 @@ ProcHierarchyInfoParser (
     goto CleanupAndReturn;
   }
 
-  if (ChipID == T194_CHIP_ID) {
-    Status = CacheInfoParserT194 (ParserHandle, FdtBranch, &CacheHierarchyInfo);
-  } else {
-    Status = CacheInfoParser (ParserHandle, FdtBranch, &CacheHierarchyInfo);
-  }
+  Status = CacheInfoParser (ParserHandle, FdtBranch, &CacheHierarchyInfo);
 
   if (EFI_ERROR (Status)) {
     goto CleanupAndReturn;

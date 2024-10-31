@@ -18,7 +18,6 @@
 [Sources]
   RegisterGicParsers.c
   GicDParser.c
-  GicDParserT194.c
   GicItsParser.c
   GicMsiFrameParser.c
   GicRedistributorParser.c

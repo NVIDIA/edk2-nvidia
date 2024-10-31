@@ -18,7 +18,6 @@
 #include <Library/PrintLib.h>
 #include <Guid/ArmMpCoreInfo.h>
 #include <libfdt.h>
-#include "T194ResourceConfig.h"
 #include "T234ResourceConfig.h"
 #include "TH500ResourceConfig.h"
 #include <Library/FloorSweepingLib.h>
@@ -60,8 +59,6 @@ GetTegraUARTBaseAddress (
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      return FixedPcdGet64 (PcdTegra16550UartBaseT194);
     case T234_CHIP_ID:
       return FixedPcdGet64 (PcdTegra16550UartBaseT234);
     case TH500_CHIP_ID:
@@ -116,10 +113,6 @@ GetUARTInstanceInfo (
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      *UARTInstanceType    = TEGRA_UART_TYPE_TCU;
-      *UARTInstanceAddress = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64 (PcdTegra16550UartBaseT194);
-      return EFI_SUCCESS;
     case T234_CHIP_ID:
       if (!GetSharedUARTInstanceId (ChipID, &SharedUARTInstanceId)) {
         return EFI_UNSUPPORTED;
@@ -152,12 +145,6 @@ GetGicInfo (
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      // *CompatString = "arm,gic-v2";
-      GicInfo->GicCompatString = "arm,gic-400";
-      GicInfo->ItsCompatString = "";
-      GicInfo->Version         = 2;
-      break;
     case T234_CHIP_ID:
       GicInfo->GicCompatString = "arm,gic-v3";
       GicInfo->ItsCompatString = "arm,gic-v3-its";
@@ -189,21 +176,12 @@ GetCPUBLBaseAddress (
   UINTN  CpuBootloaderAddress;
   UINTN  CpuBootloaderAddressLo;
   UINTN  CpuBootloaderAddressHi;
-  UINTN  SystemMemoryBaseAddress;
 
   ChipID = TegraGetChipID ();
 
   CpuBootloaderAddressLo = (UINTN)MmioRead32 (TegraGetBLInfoLocationAddress (ChipID));
   CpuBootloaderAddressHi = (UINTN)MmioRead32 (TegraGetBLInfoLocationAddress (ChipID) + sizeof (UINT32));
   CpuBootloaderAddress   = (CpuBootloaderAddressHi << 32) | CpuBootloaderAddressLo;
-
-  if (ChipID == T194_CHIP_ID) {
-    SystemMemoryBaseAddress = TegraGetSystemMemoryBaseAddress (ChipID);
-
-    if (CpuBootloaderAddress < SystemMemoryBaseAddress) {
-      CpuBootloaderAddress <<= 16;
-    }
-  }
 
   return CpuBootloaderAddress;
 }
@@ -226,8 +204,6 @@ GetDramPageBlacklistInfoAddress (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
     case T234_CHIP_ID:
       return T234GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
     case TH500_CHIP_ID:
@@ -255,8 +231,6 @@ GetDTBBaseAddress (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetDTBBaseAddress (CpuBootloaderAddress);
     case T234_CHIP_ID:
       return T234GetDTBBaseAddress (CpuBootloaderAddress);
     case TH500_CHIP_ID:
@@ -284,8 +258,6 @@ GetGRBlobBaseAddress (
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      return T194GetGRBlobBaseAddress (CpuBootloaderAddress);
     case T234_CHIP_ID:
       return T234GetGRBlobBaseAddress (CpuBootloaderAddress);
     default:
@@ -338,8 +310,6 @@ ValidateActiveBootChain (
   switch (ChipID) {
     case T234_CHIP_ID:
       return T234ValidateActiveBootChain (CpuBootloaderAddress);
-    case T194_CHIP_ID:
-      return T194ValidateActiveBootChain (CpuBootloaderAddress);
     case TH500_CHIP_ID:
       return TH500ValidateActiveBootChain (CpuBootloaderAddress);
     default:
@@ -364,9 +334,6 @@ SetNextBootChain (
   switch (ChipID) {
     case T234_CHIP_ID:
       return T234SetNextBootChain (BootChain);
-      break;
-    case T194_CHIP_ID:
-      return T194SetNextBootChain (BootChain);
       break;
     default:
       return EFI_UNSUPPORTED;
@@ -598,8 +565,6 @@ GetPlatformResourceInformation (
   switch (ChipID) {
     case T234_CHIP_ID:
       return T234GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
-    case T194_CHIP_ID:
-      return T194GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
     case TH500_CHIP_ID:
       return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, FALSE);
     default:
@@ -647,9 +612,6 @@ UpdatePlatformResourceInformation (
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      Status = T194GetEnabledCoresBitMap (PlatformResourceInfo);
-      break;
     case T234_CHIP_ID:
       Status = T234GetEnabledCoresBitMap (PlatformResourceInfo);
       break;
@@ -679,9 +641,6 @@ UpdatePlatformResourceInformation (
   DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, PlatformResourceInfo->NumberOfEnabledCores));
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      Status = T194UpdatePlatformResourceInformation (PlatformResourceInfo);
-      break;
     case T234_CHIP_ID:
       Status = T234UpdatePlatformResourceInformation (PlatformResourceInfo);
       break;
@@ -725,8 +684,6 @@ GetRootfsStatusReg (
   switch (ChipID) {
     case T234_CHIP_ID:
       return T234GetRootfsStatusReg (RegisterValue);
-    case T194_CHIP_ID:
-      return T194GetRootfsStatusReg (RegisterValue);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -745,8 +702,6 @@ SetRootfsStatusReg (
   switch (ChipID) {
     case T234_CHIP_ID:
       return T234SetRootfsStatusReg (RegisterValue);
-    case T194_CHIP_ID:
-      return T194SetRootfsStatusReg (RegisterValue);
     default:
       return EFI_UNSUPPORTED;
   }
@@ -935,9 +890,6 @@ SetNextBootRecovery (
   switch (ChipID) {
     case T234_CHIP_ID:
       T234SetNextBootRecovery ();
-      break;
-    case T194_CHIP_ID:
-      T194SetNextBootRecovery ();
       break;
     default:
       break;

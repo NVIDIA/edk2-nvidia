@@ -65,7 +65,6 @@ typedef struct {
   UINT32                                              PcieCapOffset;
   UINT32                                              ASPML1SSCapOffset;
   BOOLEAN                                             LinkUp;
-  BOOLEAN                                             IsT194;
   BOOLEAN                                             IsT234;
   BOOLEAN                                             EnableSRNS;
   BOOLEAN                                             EnableExtREFCLK;

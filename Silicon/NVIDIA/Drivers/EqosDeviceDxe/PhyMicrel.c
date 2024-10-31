@@ -1,10 +1,10 @@
 /** @file
 
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2023, Connect Tech Inc. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -174,8 +174,6 @@ PhyMicrelGetRGMIITimings (
 
   if (ChipID == T234_CHIP_ID) {
     CopyMem (Timings, &TimingsKSZ9031Orin, sizeof (MICREL_TIMING_VALUES));
-  } else if (ChipID == T194_CHIP_ID) {
-    CopyMem (Timings, &TimingsKSZ9031Xavier, sizeof (MICREL_TIMING_VALUES));
   } else {
     DEBUG ((DEBUG_ERROR, "Micrel: %a: Unsupported Chip ID %X\n", __FUNCTION__, ChipID));
     return EFI_UNSUPPORTED;

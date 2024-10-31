@@ -375,23 +375,21 @@ DtbUpdateChosenNodeMacAddresses (
   }
 
   ChipID = TegraGetChipID ();
-  if (ChipID != T194_CHIP_ID) {
-    if (mNumMacAddresses == 0) {
-      DEBUG ((DEBUG_ERROR, "%a: mNumMacAddresses is 0\n", __FUNCTION__));
-    }
+  if (mNumMacAddresses == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: mNumMacAddresses is 0\n", __FUNCTION__));
+  }
 
-    MacValue = mMacValue;
-    for (Count = 0; Count < mNumMacAddresses; Count++, MacValue++) {
-      AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
+  MacValue = mMacValue;
+  for (Count = 0; Count < mNumMacAddresses; Count++, MacValue++) {
+    AsciiSPrint (Buffer, sizeof (Buffer), "nvidia,ether-mac%u", Count);
 
-      MacString = DtbUpdateGetMacString (MacValue);
+    MacString = DtbUpdateGetMacString (MacValue);
 
-      DEBUG ((DEBUG_INFO, "%a: setting %a to %a (%llx)\n", __FUNCTION__, Buffer, MacString, MacValue));
+    DEBUG ((DEBUG_INFO, "%a: setting %a to %a (%llx)\n", __FUNCTION__, Buffer, MacString, MacValue));
 
-      Status = DeviceTreeSetNodeProperty (NodeOffset, Buffer, MacString, AsciiStrSize (MacString));
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: error setting %a to %a (%llx)\n", __FUNCTION__, Buffer, MacString, MacValue));
-      }
+    Status = DeviceTreeSetNodeProperty (NodeOffset, Buffer, MacString, AsciiStrSize (MacString));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: error setting %a to %a (%llx)\n", __FUNCTION__, Buffer, MacString, MacValue));
     }
   }
 }

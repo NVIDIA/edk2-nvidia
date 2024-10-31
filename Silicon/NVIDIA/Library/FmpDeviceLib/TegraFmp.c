@@ -656,28 +656,8 @@ GetPackageImageName (
   )
 {
   CONST CHAR16  *PkgImageName;
-  EFI_STATUS    Status;
-  UINTN         ImageIndex;
 
   PkgImageName = Name;
-
-  // special case for T194 mb1_b when B is inactive boot chain being updated
-  if ((StrCmp (Name, L"mb1") == 0) && (mActiveBootChain == BOOT_CHAIN_A)) {
-    Status = FwPackageGetImageIndex (
-               Header,
-               L"mb1_b",
-               mIsProductionFused,
-               mPlatformCompatSpec,
-               mPlatformSpec,
-               &ImageIndex
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "No mb1_b in package: %r\n", Status));
-    } else {
-      DEBUG ((DEBUG_INFO, "Using package mb1_b image\n"));
-      PkgImageName = L"mb1_b";
-    }
-  }
 
   if ((StrCmp (Name, L"GPT") == 0) ||
       (StrCmp (Name, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) == 0))

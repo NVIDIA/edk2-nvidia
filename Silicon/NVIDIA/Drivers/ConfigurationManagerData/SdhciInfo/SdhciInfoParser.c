@@ -19,12 +19,6 @@
 extern unsigned char  sdctemplate_aml_code[];
 
 STATIC
-CONST CHAR8  *T194Compatibility[] = {
-  "nvidia,tegra194-sdhci",
-  NULL
-};
-
-STATIC
 CONST CHAR8  *T234Compatibility[] = {
   "nvidia,tegra234-sdhci",
   NULL
@@ -102,9 +96,6 @@ SdhciInfoParser (
 
   ChipID = TegraGetChipID ();
   switch (ChipID) {
-    case T194_CHIP_ID:
-      CompatibleInfo = T194Compatibility;
-      break;
     case T234_CHIP_ID:
       CompatibleInfo = T234Compatibility;
       break;

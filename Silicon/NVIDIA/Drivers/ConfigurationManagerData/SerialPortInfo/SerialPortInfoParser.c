@@ -95,15 +95,6 @@ SerialPortInfoParser (
   ChipID           = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_16550) {
-        Map = TegraSerialPortCompatibility;
-      } else {
-        return EFI_SUCCESS;
-      }
-
-      break;
-
     case T234_CHIP_ID: // JDS TODO - confirm that this is correct
       if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_16550) {
         Map = TegraSerialPortCompatibility;

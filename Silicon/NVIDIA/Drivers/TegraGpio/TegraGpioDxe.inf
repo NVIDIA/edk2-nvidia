@@ -47,8 +47,6 @@
   gNVIDIAI2cExpanderPlatformGpioProtocolGuid
 
 [Guids]
-  gNVIDIANonDiscoverableT194GpioDeviceGuid
-  gNVIDIANonDiscoverableT194GpioAonDeviceGuid
   gNVIDIANonDiscoverableT234GpioDeviceGuid
   gNVIDIANonDiscoverableT234GpioAonDeviceGuid
   gNVIDIANonDiscoverableT23xGpioDeviceGuid

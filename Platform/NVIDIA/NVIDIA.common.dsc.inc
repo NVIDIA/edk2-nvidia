@@ -54,7 +54,6 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   #
   # Define Image Type ID GUIDs for Firmware Management Protocol
   #
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194 = be3f5d68-7654-4ed2-838c-2a2faf901a78
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T264 = 3c834404-d2d7-4912-8c1c-6e850b5f2824
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
@@ -1507,9 +1506,7 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ThermalZoneInfo/ThermalZoneInfo.inf
 !endif
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProtocolBasedObjects/ProtocolBasedObjects.inf
-      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/AhciInfo/AhciInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SdhciInfo/SdhciInfo.inf
-      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/I2cInfo/I2cInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HdaInfo/HdaInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/FanInfo/FanInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Gic/Gic.inf

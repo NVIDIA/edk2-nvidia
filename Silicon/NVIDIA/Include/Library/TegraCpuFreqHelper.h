@@ -1,7 +1,7 @@
 /** @file
-This module installs the SMBIOS data tables for T194.
+This module is a helper function to get the CPU Freq
 
-Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 

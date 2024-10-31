@@ -1845,10 +1845,8 @@ IortInfoParser (
 
   ChipID = TegraGetChipID ();
 
-  // T194 and T234 require enable variable
-  if ((ChipID == T194_CHIP_ID) ||
-      (ChipID == T234_CHIP_ID))
-  {
+  // T234 require enable variable
+  if ((ChipID == T234_CHIP_ID)) {
     DataSize = sizeof (EnableIortTableGen);
     Status   = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
     if (EFI_ERROR (Status)) {

@@ -49,8 +49,6 @@ TegraReadSocId (
   INT32  *SocId
   )
 {
-  UINT32  ChipId;
-
   if (SocId == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -58,18 +56,9 @@ TegraReadSocId (
   *SocId = ArmCallSmc1 (SMCCC_ARCH_SOC_ID, &SocParam, NULL, NULL);
   if (*SocId < 0) {
     return EFI_DEVICE_ERROR;
-  } else {
-    if (SocParam == SMCCC_ARCH_SOC_ID_GET_SOC_VERSION) {
-      ChipId = TegraGetChipID ();
-      if (ChipId == T194_CHIP_ID) {
-        if (*SocId == T194_SOC_ID_VERSION_ALT) {
-          *SocId = T194_SOC_ID_VERSION_FIX;
-        }
-      }
-    }
-
-    return EFI_SUCCESS;
   }
+
+  return EFI_SUCCESS;
 }
 
 TEGRA_PLATFORM_TYPE
@@ -129,8 +118,6 @@ TegraGetMinorVersion (
   ChipId = TegraGetChipID ();
 
   switch (ChipId) {
-    case T194_CHIP_ID:
-      break;
     case TH500_CHIP_ID:
       // Minor Rev and Opt Subrev are swapped for TH500
       MinorRev  = ((SocId >> SOC_ID_REVISION_OPT_SUBREV_SHIFT) & SOC_ID_REVISION_OPT_SUBREV_MASK);

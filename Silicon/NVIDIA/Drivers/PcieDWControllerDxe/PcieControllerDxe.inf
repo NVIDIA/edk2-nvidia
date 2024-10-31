@@ -70,7 +70,6 @@
   gNVIDIAPciConfigurationDataProtocolGuid
 
 [Guids]
-  gNVIDIANonDiscoverableT194PcieDeviceGuid
   gNVIDIANonDiscoverableT234PcieDeviceGuid
   gNVIDIAKernelCmdLineUpdateGuid
   gEfiEventExitBootServicesGuid

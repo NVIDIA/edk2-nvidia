@@ -33,11 +33,6 @@ CHAR16  *T234PartitionNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
   L"B_",
 };
 
-CHAR16  *T194PartitionNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
-  L"",
-  L"_b",
-};
-
 EFI_STATUS
 EFIAPI
 GetBootChainPartitionName (
@@ -87,16 +82,6 @@ GetBootChainPartitionName (
         L"%s%s",
         Identifier,
         BasePartitionName
-        );
-      break;
-    case T194_CHIP_ID:
-      Identifier = T194PartitionNameId[BootChain];
-      UnicodeSPrint (
-        BootChainPartitionName,
-        sizeof (CHAR16) * MAX_PARTITION_NAME_LEN,
-        L"%s%s",
-        BasePartitionName,
-        Identifier
         );
       break;
     default:
@@ -188,32 +173,6 @@ GetPartitionBaseNameAndBootChainAny (
         );
       *BootChain = Index;
       return EFI_SUCCESS;
-    }
-  }
-
-  // check for t194-style name with suffix
-  {
-    CONST CHAR16  *BSuffix;
-    UINTN         BSuffixLength;
-    CONST CHAR16  *SuffixStart;
-    UINTN         NameLength;
-
-    // check if boot chain B suffix is present, if not, it's boot chain A
-    BSuffix       = T194PartitionNameId[1];
-    BSuffixLength = StrLen (BSuffix);
-    NameLength    = StrLen (PartitionName);
-    if (NameLength > BSuffixLength) {
-      SuffixStart = PartitionName + NameLength - BSuffixLength;
-      if (StrnCmp (SuffixStart, BSuffix, BSuffixLength) == 0) {
-        StrnCpyS (
-          BaseName,
-          MAX_PARTITION_NAME_LEN,
-          PartitionName,
-          NameLength - BSuffixLength
-          );
-        *BootChain = 1;
-        return EFI_SUCCESS;
-      }
     }
   }
 

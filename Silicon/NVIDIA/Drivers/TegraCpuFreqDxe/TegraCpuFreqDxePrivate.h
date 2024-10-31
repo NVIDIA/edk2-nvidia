@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver Private header.
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -36,20 +36,5 @@ typedef struct {
   UINT16    ndiv_min;
 } BPMP_CPU_NDIV_LIMITS_RESPONSE;
 #pragma pack ()
-
-UINT64
-GetT194PmCntr (
-  VOID
-  );
-
-VOID
-SetT194CpuNdiv (
-  IN UINT64  Ndiv
-  );
-
-UINT64
-GetT194CpuNdiv (
-  VOID
-  );
 
 #endif

@@ -36,18 +36,11 @@ GetBootComponentHeaderSize (
   OUT UINTN  *HeaderSize
   )
 {
-  UINTN  ChipID;
-
   if (HeaderSize == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  ChipID = TegraGetChipID ();
-  if (ChipID == T194_CHIP_ID) {
-    *HeaderSize = SIZE_4KB;
-  } else {
-    *HeaderSize =  SIZE_8KB;
-  }
+  *HeaderSize =  SIZE_8KB;
 
   return EFI_SUCCESS;
 }

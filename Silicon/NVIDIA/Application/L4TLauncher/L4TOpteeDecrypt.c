@@ -195,10 +195,7 @@ GetImageEncryptionInfo (
       goto CloseSession;
     }
 
-    if (HeaderSize == SIZE_4KB) {
-      Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_4K;
-      Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_4K_BCH;
-    } else if (HeaderSize == SIZE_8KB) {
+    if (HeaderSize == SIZE_8KB) {
       Info->ImageHeaderSize   = BOOT_COMPONENT_HEADER_SIZE_8K;
       Info->ImageLengthOffset = BINARY_LEN_OFFSET_IN_8K_BCH;
     } else {

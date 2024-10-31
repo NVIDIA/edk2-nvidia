@@ -124,7 +124,6 @@ GenericTimerParser (
 
   ChipID = TegraGetChipID ();
   switch (ChipID) {
-    case T194_CHIP_ID:
     case T234_CHIP_ID:
     case T264_CHIP_ID:
       GenericTimerInfo = &GenericTimerInfo_Jetson;

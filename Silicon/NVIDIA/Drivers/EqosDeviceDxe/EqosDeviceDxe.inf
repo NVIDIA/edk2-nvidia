@@ -100,7 +100,6 @@
 
 [Guids]
   gDwEqosNetNonDiscoverableDeviceGuid
-  gDwEqosNetT194NonDiscoverableDeviceGuid
   gDwMgbeNetNonDiscoverableDeviceGuid
   gNVIDIATokenSpaceGuid
   gFdtTableGuid

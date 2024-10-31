@@ -17,7 +17,6 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <T194/T194Definitions.h>
 #include <Protocol/TegraCpuFreq.h>
 
 #define TH500_TRBE_INT  22
@@ -283,11 +282,9 @@ GicCParser (
   }
 
   // PMU
-  if (ChipID != T194_CHIP_ID) {
-    Status = GetPmuBaseInterrupt (&PmuBaseInterrupt);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_WARN, "%a: Got %r trying to get PmuBaseInterrupt - continuing with it set to 0\n", __FUNCTION__, Status));
-    }
+  Status = GetPmuBaseInterrupt (&PmuBaseInterrupt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: Got %r trying to get PmuBaseInterrupt - continuing with it set to 0\n", __FUNCTION__, Status));
   }
 
   DbgFeatures = ArmReadIdAA64Dfr0 ();
@@ -383,14 +380,10 @@ GicCParser (
     // This value must be contiguous from 0-(N-1)
     GicCInfo[CoreIndex].CPUInterfaceNumber = CoreIndex;
     // This value must be globally unique, including across sockets
-    GicCInfo[CoreIndex].AcpiProcessorUid       = (SocketId * MaxCoresPerSocket) + (ClusterId * MaxCoresPerCluster) + CoreId;
-    GicCInfo[CoreIndex].Flags                  = EFI_ACPI_6_4_GIC_ENABLED;
-    GicCInfo[CoreIndex].ParkingProtocolVersion = 0;
-    if (ChipID == T194_CHIP_ID) {
-      GicCInfo[CoreIndex].PerformanceInterruptGsiv = T194_PMU_BASE_INTERRUPT + CoreIndex;
-    } else {
-      GicCInfo[CoreIndex].PerformanceInterruptGsiv = PmuBaseInterrupt;
-    }
+    GicCInfo[CoreIndex].AcpiProcessorUid         = (SocketId * MaxCoresPerSocket) + (ClusterId * MaxCoresPerCluster) + CoreId;
+    GicCInfo[CoreIndex].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
+    GicCInfo[CoreIndex].ParkingProtocolVersion   = 0;
+    GicCInfo[CoreIndex].PerformanceInterruptGsiv = PmuBaseInterrupt;
 
     GicCInfo[CoreIndex].ParkedAddress = 0;
     if (GicInfo->Version < 3) {

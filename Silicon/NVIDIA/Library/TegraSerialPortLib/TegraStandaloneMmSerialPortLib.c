@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library for StandaloneMm
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -45,14 +45,9 @@ SerialPortIdentify (
     EFI_VIRTUAL_ADDRESS  Base;
     UINTN                Size;
 
-    Status = GetDeviceRegion ("combuart-t194", &Base, &Size);
+    Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
     if (!EFI_ERROR (Status)) {
       TegraUartObj = TegraCombinedSerialPortGetObject ();
-    } else {
-      Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
-      if (!EFI_ERROR (Status)) {
-        TegraUartObj = TegraCombinedSerialPortGetObject ();
-      }
     }
 
     if (TegraUartObj != NULL) {
@@ -67,11 +62,7 @@ SerialPortIdentify (
       // Try the legacy fallback mode to select the SerialPort
       SerialBaseAddress = GetTegraUARTBaseAddress ();
       ChipID            = TegraGetChipID ();
-      if (ChipID == T194_CHIP_ID) {
-        TegraUartObj = TegraCombinedSerialPortGetObject ();
-      } else {
-        TegraUartObj = Tegra16550SerialPortGetObject ();
-      }
+      TegraUartObj      = Tegra16550SerialPortGetObject ();
     }
 
     // Select the SerialPort based on the retrieved UART instance info

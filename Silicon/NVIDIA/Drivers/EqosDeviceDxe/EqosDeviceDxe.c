@@ -30,15 +30,14 @@
 #include "DtAcpiMacUpdate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,eqos",                &gDwEqosNetNonDiscoverableDeviceGuid     },
-  { "nvidia,nvmgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid     },
-  { "nvidia,tegra194-eqos",       &gDwEqosNetT194NonDiscoverableDeviceGuid },
-  { "nvidia,tegra264-eqos",       NULL                                     },
-  { "nvidia,tegra264-mgbe",       NULL                                     },
-  { "nvidia,*-eqos",              &gDwEqosNetNonDiscoverableDeviceGuid     },
-  { "nvidia,*-mgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid     },
-  { "snps,dwc-qos-ethernet-4.10", &gDwEqosNetNonDiscoverableDeviceGuid     },
-  { NULL,                         NULL                                     }
+  { "nvidia,eqos",                &gDwEqosNetNonDiscoverableDeviceGuid },
+  { "nvidia,nvmgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid },
+  { "nvidia,tegra264-eqos",       NULL                                 },
+  { "nvidia,tegra264-mgbe",       NULL                                 },
+  { "nvidia,*-eqos",              &gDwEqosNetNonDiscoverableDeviceGuid },
+  { "nvidia,*-mgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid },
+  { "snps,dwc-qos-ethernet-4.10", &gDwEqosNetNonDiscoverableDeviceGuid },
+  { NULL,                         NULL                                 }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
@@ -225,13 +224,8 @@ DeviceDiscoveryNotify (
 
       ZeroMem (Snp, sizeof (SIMPLE_NETWORK_DRIVER));
 
-      if (CompareGuid (Device->Type, &gDwEqosNetT194NonDiscoverableDeviceGuid)) {
-        // Bit 39 is in use set to max of 38-bit
-        Snp->MaxAddress = BIT39 - 1;
-      } else {
-        // 40-bit address
-        Snp->MaxAddress = BIT41 - 1;
-      }
+      // 40-bit address
+      Snp->MaxAddress = BIT41 - 1;
 
       DevicePath = (SIMPLE_NETWORK_DEVICE_PATH *)AllocateCopyPool (sizeof (SIMPLE_NETWORK_DEVICE_PATH), &PathTemplate);
       if (DevicePath == NULL) {

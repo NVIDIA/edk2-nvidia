@@ -182,8 +182,6 @@ STATIC CONST GPIO_CONTROLLER  Th500GpioAonControllers[] = {
 };
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-gpio",      &gNVIDIANonDiscoverableT194GpioDeviceGuid     },
-  { "nvidia,tegra194-gpio-aon",  &gNVIDIANonDiscoverableT194GpioAonDeviceGuid  },
   { "nvidia,tegra234-gpio",      &gNVIDIANonDiscoverableT234GpioDeviceGuid     },
   { "nvidia,tegra234-gpio-aon",  &gNVIDIANonDiscoverableT234GpioAonDeviceGuid  },
   { "nvidia,tegra23x-gpio",      &gNVIDIANonDiscoverableT23xGpioDeviceGuid     },
@@ -577,13 +575,7 @@ DeviceDiscoveryNotify (
         return Status;
       }
 
-      if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioDeviceGuid)) {
-        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra194GpioControllers);
-        mControllerArray[mControllerCount].ControllerDefault = Tegra194GpioControllers;
-      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT194GpioAonDeviceGuid)) {
-        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra194GpioAonControllers);
-        mControllerArray[mControllerCount].ControllerDefault = Tegra194GpioAonControllers;
-      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioDeviceGuid)) {
+      if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioDeviceGuid)) {
         mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Tegra234GpioControllers);
         mControllerArray[mControllerCount].ControllerDefault = Tegra234GpioControllers;
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234GpioAonDeviceGuid)) {

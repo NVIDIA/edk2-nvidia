@@ -27,7 +27,6 @@
 #include "UsbPadCtlPrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid    },
   { "nvidia,tegra23*-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid    },
   { "nvidia,tegra*-xusb-padctl",   &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid },
   { NULL,                          NULL                                           }
@@ -158,20 +157,8 @@ DeviceDiscoveryNotify (
         goto ErrorExit;
       }
 
-      if (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT194UsbPadDeviceGuid)) {
-        Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw194;
-        Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw194;
-        Private->mUsbPadCtlProtocol.InitDevHw   = NULL;
-        Private->mUsbPadCtlProtocol.DeInitDevHw = NULL;
-        Private->PlatConfig                     = Tegra194UsbConfig;
-
-        /* Initialize Platform specific USB Ports information from DT */
-        Status = InitPlatInfo194 (DeviceTreeNode, &Private->PlatConfig);
-        if (Status != EFI_SUCCESS) {
-          return Status;
-        }
-      } else if ((CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) ||
-                 (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid)))
+      if ((CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) ||
+          (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid)))
       {
         // Both T234 and current USB Pad controllers are handled by this path.
         // If new hardare strings are not compatible with the T234 path new logic

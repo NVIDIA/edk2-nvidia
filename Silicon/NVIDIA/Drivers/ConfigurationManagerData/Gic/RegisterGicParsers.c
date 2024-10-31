@@ -22,7 +22,6 @@
     }\
   } while (FALSE);
 
-REGISTER_PARSER_FUNCTION (GicDParserT194, NULL)
 REGISTER_PARSER_FUNCTION (GicDParser, NULL)
 REGISTER_PARSER_FUNCTION (GicRedistributorParser, NULL)
 REGISTER_PARSER_FUNCTION (GicItsParser, NULL)
@@ -31,7 +30,6 @@ REGISTER_PARSER_FUNCTION (GicMsiFrameParser, NULL)
 /** Registers the Gic parsers
 
   The following parsers are potentially registered:
-    GicDParserT194
     GicDParser
     GicRedistributorParser
     GicItsParser
@@ -63,32 +61,24 @@ RegisterGicParsers (
 {
   EFI_STATUS  Status;
 
-  // Note: T194 does GicD here and the rest as part of ProcHierarchyInfo
-  if (TegraGetChipID () == T194_CHIP_ID) {
-    Status = RegisterGicDParserT194 (ImageHandle, SystemTable);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicDParserT194\n", __FUNCTION__, Status));
-    }
-  } else {
-    Status = RegisterGicDParser (ImageHandle, SystemTable);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicDParser\n", __FUNCTION__, Status));
-    }
+  Status = RegisterGicDParser (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicDParser\n", __FUNCTION__, Status));
+  }
 
-    Status = RegisterGicRedistributorParser (ImageHandle, SystemTable);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicRedistributorParser\n", __FUNCTION__, Status));
-    }
+  Status = RegisterGicRedistributorParser (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicRedistributorParser\n", __FUNCTION__, Status));
+  }
 
-    Status = RegisterGicItsParser (ImageHandle, SystemTable);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicItsParser\n", __FUNCTION__, Status));
-    }
+  Status = RegisterGicItsParser (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicItsParser\n", __FUNCTION__, Status));
+  }
 
-    Status = RegisterGicMsiFrameParser (ImageHandle, SystemTable);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicMsiFrameParser\n", __FUNCTION__, Status));
-    }
+  Status = RegisterGicMsiFrameParser (ImageHandle, SystemTable);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: got %r trying to register GicMsiFrameParser\n", __FUNCTION__, Status));
   }
 
   return Status;

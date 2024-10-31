@@ -31,13 +31,6 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   NULL
 };
 
-STATIC CONST CHAR16  *SystemFwImageNamesT194[] = {
-  L"bootloader-dtb",
-  L"mts-preboot",
-  L"mts-proper",
-  NULL
-};
-
 STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"dce-fw",
   L"mb2rf",
@@ -148,13 +141,6 @@ FwImageGetRequiredList (
   CONST CHAR16  **ImageList;
 
   switch (ChipId) {
-    case T194_CHIP_ID:
-      ImageList = CombineLists (
-                    SystemFwImageNamesT194,
-                    SystemFwImageNamesCommon,
-                    ImageCount
-                    );
-      break;
     case T234_CHIP_ID:
       ImageList = CombineLists (
                     SystemFwImageNamesT234,

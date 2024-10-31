@@ -6,7 +6,6 @@
 
 #include <AsmMacroIoLibV8.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <T194/T194Definitions.h>
 #include <T234/T234Definitions.h>
 #include <TH500/TH500Definitions.h>
 #include "TegraPlatformInfoLibPrivate.h"
@@ -15,14 +14,8 @@ ASM_FUNC(TegraGetChipID)
   MOV64 (x0, SMCCC_ARCH_SOC_ID)
   MOV64 (x1, SMCCC_ARCH_SOC_ID_GET_SOC_VERSION)
   smc #0
-  MOV64 (x1, T194_SOC_ID_VERSION_ALT)
-  cmp w0, w1
-  b.eq _T194ChipID
   lsr w0, w0, #SOC_ID_VERSION_CHIPID_SHIFT
   and w0, w0, #SOC_ID_VERSION_CHIPID_MASK
-  ret
-_T194ChipID:
-  MOV64 (x0, T194_CHIP_ID)
   ret
 
 ASM_FUNC(TegraGetSystemMemoryBaseAddress)
@@ -32,12 +25,6 @@ ASM_FUNC(TegraGetSystemMemoryBaseAddress)
 ASM_FUNC(TegraGetBLCarveoutOffset)
   mov w1, w0
   mov x4, x30
-
-_T194Carveout:
-  cmp w1, #T194_CHIP_ID
-  bne _T234Carveout
-  MOV64 (x0, T194_BL_CARVEOUT_OFFSET)
-  b _ReturnCarveout
 
 _T234Carveout:
   cmp w1, #T234_CHIP_ID
@@ -76,15 +63,7 @@ _ReturnCarveout:
   ret
 
 ASM_FUNC(TegraGetBLInfoLocationAddress)
-  cmp w0, #T194_CHIP_ID
-  bne _DefaultBLInfoAddr
-  MOV64 (x0, T194_BLINFO_LOCATION_ADDRESS)
-  ret
-
-_DefaultBLInfoAddr:
   MOV64 (x0, DEFAULT_BLINFO_LOCATION_ADDRESS)
-
-_ReturnBLInfoAddr:
   ret
 
 ASM_FUNC(TegraGetBLCarveoutInfoLocationAddress)
@@ -93,25 +72,11 @@ ASM_FUNC(TegraGetBLCarveoutInfoLocationAddress)
   mov w0, w1
   bl TegraGetBLInfoLocationAddress
   mov x3, x0
-  cmp w1, #T194_CHIP_ID
-  beq _T194CarveoutInfo
   add x5, x3, #4
   ldr w5, [x5]
   lsl x5, x5, #32
   ldr w3, [x3]
   orr x3, x3, x5
-  b _BootloaderAddressGood
-
-_T194CarveoutInfo:
-  mov w0, w1
-  bl TegraGetSystemMemoryBaseAddress
-  mov x5, x0
-  ldr w3, [x3]
-  cmp x3, x5
-  b.ge _BootloaderAddressGood
-  lsl x3, x3, #16
-
-_BootloaderAddressGood:
   mov w0, w1
   bl TegraGetBLCarveoutOffset
   mov x4, x0

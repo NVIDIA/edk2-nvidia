@@ -92,14 +92,6 @@ GetCpuFreqAddresses (
 
   ChipID = TegraGetChipID ();
 
-  if (ChipID == T194_CHIP_ID) {
-    if (BpmpPhandle != NULL) {
-      *BpmpPhandle = 0;
-    }
-
-    return EFI_SUCCESS;
-  }
-
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
                   &gNVIDIACpuFreqT234,
@@ -268,22 +260,9 @@ GetCpuNdiv (
   ChipID       = TegraGetChipID ();
   PlatformType = TegraGetPlatform ();
 
-  if (ChipID == T194_CHIP_ID) {
-    if (PlatformType == TEGRA_PLATFORM_SILICON) {
-      if (ArmReadMpidr () == Mpidr) {
-        *Ndiv  = GetT194CpuNdiv () & NDIV_MASK;
-        Status = EFI_SUCCESS;
-      } else {
-        Status = EFI_UNSUPPORTED;
-      }
-    } else {
-      Status = EFI_UNSUPPORTED;
-    }
-  } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
-    if (!EFI_ERROR (Status)) {
-      *Ndiv = MmioRead32 (NdivAddress);
-    }
+  Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
+  if (!EFI_ERROR (Status)) {
+    *Ndiv = MmioRead32 (NdivAddress);
   }
 
   return Status;
@@ -305,22 +284,9 @@ SetCpuNdiv (
   ChipID       = TegraGetChipID ();
   PlatformType = TegraGetPlatform ();
 
-  if (ChipID == T194_CHIP_ID) {
-    if (PlatformType == TEGRA_PLATFORM_SILICON) {
-      if (ArmReadMpidr () == Mpidr) {
-        SetT194CpuNdiv (Ndiv);
-        Status = EFI_SUCCESS;
-      } else {
-        Status = EFI_UNSUPPORTED;
-      }
-    } else {
-      Status = EFI_UNSUPPORTED;
-    }
-  } else {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
-    if (!EFI_ERROR (Status)) {
-      MmioWrite32 (NdivAddress, Ndiv);
-    }
+  Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
+  if (!EFI_ERROR (Status)) {
+    MmioWrite32 (NdivAddress, Ndiv);
   }
 
   return Status;

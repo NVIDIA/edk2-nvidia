@@ -33,7 +33,6 @@
 [Sources.common]
   PlatformResourceConfig.c
   PlatformResourceLib.c
-  T194ResourceConfig.c
   T234ResourceConfig.c
   TH500ResourceConfig.c
   TH500Tcg2EventLog.c
@@ -49,17 +48,13 @@
   gNVIDIAPlatformResourceDataGuid
 
 [FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT194
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234
-  gNVIDIATokenSpaceGuid.PcdBootROMRegisterBaseAddressT194
-  gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdBootLoaderRegisterBaseAddressT234
-  gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdRootfsRegisterBaseAddressT234
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled

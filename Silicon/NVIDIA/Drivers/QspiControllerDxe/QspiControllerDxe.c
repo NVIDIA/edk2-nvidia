@@ -28,7 +28,6 @@
 #define QSPI_CONTROLLER_SIGNATURE  SIGNATURE_32('Q','S','P','I')
 
 #define QSPI_NUM_CHIP_SELECTS_DEFAULT  1
-#define QSPI_NUM_CHIP_SELECTS_T194     1
 #define QSPI_NUM_CHIP_SELECTS_T234     1
 #define QSPI_NUM_CHIP_SELECTS_T264     1
 #define QSPI_NUM_CHIP_SELECTS_TH500    4
@@ -304,9 +303,7 @@ QspiControllerApplyDeviceSpecificSettings (
   //
   // Enable/Disable wait state
   //
-  if ((TegraGetChipID () != T194_CHIP_ID) &&
-      (Private->ControllerType == CONTROLLER_TYPE_QSPI))
-  {
+  if ((Private->ControllerType == CONTROLLER_TYPE_QSPI)) {
     if (DeviceFeature == QspiDevFeatWaitStateEn) {
       Status = QspiEnableWaitState (Private->QspiBaseAddress, TRUE);
       if (EFI_ERROR (Status)) {
@@ -383,9 +380,6 @@ DetectNumChipSelects (
   ChipID = TegraGetChipID ();
 
   switch (ChipID) {
-    case T194_CHIP_ID:
-      NumChipSelects = QSPI_NUM_CHIP_SELECTS_T194;
-      break;
     case T234_CHIP_ID:
       NumChipSelects = QSPI_NUM_CHIP_SELECTS_T234;
       break;

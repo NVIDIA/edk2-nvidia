@@ -208,10 +208,6 @@ CheckAndRemapCpu (
   ChipId = TegraGetChipID ();
 
   switch (ChipId) {
-    case T194_CHIP_ID:
-      Status  = NvgConvertCpuLogicalToMpidr (LogicalCore, Mpidr);
-      *Mpidr &= MPIDR_AFFINITY_MASK;
-      break;
     case T234_CHIP_ID:
       Status = MceAriCheckCoreEnabled (Mpidr);
       break;
@@ -903,7 +899,6 @@ FloorSweepDtb (
   ChipId = TegraGetChipID ();
 
   switch (ChipId) {
-    case T194_CHIP_ID:
     case T234_CHIP_ID:
       Status = FloorSweepGlobalCpus (Dtb);
       if (!EFI_ERROR (Status)) {

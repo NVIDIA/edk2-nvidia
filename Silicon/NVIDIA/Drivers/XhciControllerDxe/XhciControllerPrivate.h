@@ -55,9 +55,6 @@
 #define XUSB_BASE_ADDR_SHIFT  15
 #define XUSB_BASE_ADDR_MASK   0x1ffff
 
-#define XUSB_T194_BASE_ADDR_SHIFT  18
-#define XUSB_T194_BASE_ADDR_MASK   0x3fff
-
 #define XUSB_T234_BASE2_ADDR_SHIFT  16
 #define XUSB_T234_BASE2_ADDR_MASK   0xffff
 
@@ -71,16 +68,6 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS    CfgAddress;
   EFI_PHYSICAL_ADDRESS    Base2Address;
 } TEGRA_XUSB_SOC;
-
-TEGRA_XUSB_SOC  Tegra186Soc = {
-  .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,
-  .Cfg4AddrMask  = XUSB_BASE_ADDR_MASK,
-};
-
-TEGRA_XUSB_SOC  Tegra194Soc = {
-  .Cfg4AddrShift = XUSB_T194_BASE_ADDR_SHIFT,
-  .Cfg4AddrMask  = XUSB_T194_BASE_ADDR_MASK,
-};
 
 TEGRA_XUSB_SOC  Tegra234Soc = {
   .Cfg4AddrShift = XUSB_BASE_ADDR_SHIFT,

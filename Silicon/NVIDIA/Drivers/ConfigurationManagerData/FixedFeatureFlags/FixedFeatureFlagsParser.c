@@ -44,20 +44,26 @@ FixedFeatureFlagsParser (
   IN        INT32                  FdtBranch
   )
 {
+ #if 0
+  // This feature isn't supported on any current platforms.  However, we
+  // anticipate needing it in the future.  Keeping the code, but commenting it
+  // for now.
+
   EFI_STATUS                          Status;
   CM_ARCH_COMMON_FIXED_FEATURE_FLAGS  FixedFeatureFlags = {
     EFI_ACPI_6_4_PWR_BUTTON
   };
+ #endif
 
   if (ParserHandle == NULL) {
     ASSERT (0);
     return EFI_INVALID_PARAMETER;
   }
 
-  if (TegraGetChipID () != T194_CHIP_ID) {
-    return EFI_SUCCESS;
-  }
+  // This feature is not supported on any current platforms.
+  return EFI_SUCCESS;
 
+ #if 0
   // Add the CmObj to the Configuration Manager.
   Status = NvAddSingleCmObj (
              ParserHandle,
@@ -68,6 +74,7 @@ FixedFeatureFlagsParser (
              );
   ASSERT_EFI_ERROR (Status);
   return Status;
+ #endif
 }
 
 REGISTER_PARSER_FUNCTION (FixedFeatureFlagsParser, NULL)

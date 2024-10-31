@@ -19,7 +19,6 @@
 
 [Sources.common]
   UsbPadCtlDxe.c
-  UsbPadCtlTegra194.c
   UsbPadCtlTegra234.c
 
 [Packages]
@@ -52,7 +51,6 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
 
 [Guids]
-  gNVIDIANonDiscoverableT194UsbPadDeviceGuid
   gNVIDIANonDiscoverableT234UsbPadDeviceGuid
   gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid
 

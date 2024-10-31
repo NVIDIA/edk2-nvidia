@@ -11,7 +11,6 @@
 
 #define UEFI_DECLARE_ALIGNED(var, size)  var __attribute__ ((aligned (size)))
 
-#define T194_CHIP_ID    0x19
 #define T234_CHIP_ID    0x23
 #define T234_MAJOR_REV  0x4
 #define T264_CHIP_ID    0x26
@@ -22,7 +21,6 @@
 #define NOR_FLASH_CHIP_SELECT_TH500_SIL     0
 
 // Jetson SKUs
-#define T194_SKU         1
 #define T234_SKU         2
 #define T234SLT_SKU      3
 #define T234_PRESIL_SKU  255

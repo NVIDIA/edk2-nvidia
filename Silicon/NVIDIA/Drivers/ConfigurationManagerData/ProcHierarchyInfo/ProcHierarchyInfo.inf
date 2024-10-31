@@ -18,7 +18,6 @@
 [Sources]
   ProcHierarchyInfoParser.c
   ../CacheInfo/CacheInfoParser.c
-  ../CacheInfo/CacheInfoParserT194.c
   ../Gic/GicCParser.c
   ../Gic/LpiParser.c
   ProcHierarchyInfoParser.h

@@ -596,38 +596,21 @@ SetGicInfoPcdsFromDtb (
     goto Exit;
   }
 
-  // Set Pcd values by looping through the RegisterSize for each platform
+  // RegisterData[0] has Gic Distributor Base and Size
+  PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
 
-  if (ChipID == T194_CHIP_ID) {
-    // RegisterData[0] has Gic Distributor Base and Size
-    PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
+  // RegisterData[1] has GIC Redistributor Base and Size
+  PcdSet64S (PcdGicRedistributorsBase, RegisterData[1].BaseAddress);
 
-    // RegisterData[1] has Interrupt Interface Base and Size
-    PcdSet64S (PcdGicInterruptInterfaceBase, RegisterData[1].BaseAddress);
+  // RegisterData[2] has GicH Base and Size
+  // RegisterData[3] has GicV Base and Size
 
-    DEBUG ((
-      DEBUG_INFO,
-      "Found GIC distributor and Interrupt Interface Base@ 0x%Lx (0x%Lx)\n",
-      PcdGet64 (PcdGicDistributorBase),
-      PcdGet64 (PcdGicInterruptInterfaceBase)
-      ));
-  } else {
-    // RegisterData[0] has Gic Distributor Base and Size
-    PcdSet64S (PcdGicDistributorBase, RegisterData[0].BaseAddress);
-
-    // RegisterData[1] has GIC Redistributor Base and Size
-    PcdSet64S (PcdGicRedistributorsBase, RegisterData[1].BaseAddress);
-
-    // RegisterData[2] has GicH Base and Size
-    // RegisterData[3] has GicV Base and Size
-
-    DEBUG ((
-      DEBUG_INFO,
-      "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
-      PcdGet64 (PcdGicDistributorBase),
-      PcdGet64 (PcdGicRedistributorsBase)
-      ));
-  }
+  DEBUG ((
+    DEBUG_INFO,
+    "Found GIC distributor and (re)distributor Base @ 0x%Lx (0x%Lx)\n",
+    PcdGet64 (PcdGicDistributorBase),
+    PcdGet64 (PcdGicRedistributorsBase)
+    ));
 
 Exit:
   if (RegisterData != NULL) {
@@ -679,9 +662,7 @@ TegraPlatformInitialize (
   }
 
   if (PlatformType == TEGRA_PLATFORM_SILICON) {
-    if (ChipID == T194_CHIP_ID) {
-      LibPcdSetSku (T194_SKU);
-    } else if (ChipID == T234_CHIP_ID) {
+    if (ChipID == T234_CHIP_ID) {
       T234SkuSet = FALSE;
       Property   = fdt_getprop (DtbBase, 0, "model", &Length);
       if ((Property != NULL) && (Length != 0)) {

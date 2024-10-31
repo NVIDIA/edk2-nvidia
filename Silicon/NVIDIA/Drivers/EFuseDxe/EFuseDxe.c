@@ -11,7 +11,7 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -94,26 +94,9 @@ EfuseWriteRegister (
   IN OUT UINT32                 *RegisterValue
   )
 {
-  EFI_STATUS         Status;
-  EFUSE_DXE_PRIVATE  *Private;
-  UINT32             ChipID;
-
-  ChipID = TegraGetChipID ();
-  if (ChipID != T194_CHIP_ID) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Private = EFUSE_PRIVATE_DATA_FROM_THIS (This);
-  if ((RegisterOffset > (Private->RegionSize - sizeof (UINT32))) ||
-      (RegisterValue == NULL))
-  {
-    Status = EFI_INVALID_PARAMETER;
-  } else {
-    // TODO: Add fuse write support.
-    Status = EFI_SUCCESS;
-  }
-
-  return Status;
+  // Write is not supported on existing platforms.
+  NV_ASSERT_RETURN (FALSE, return EFI_DEVICE_ERROR, "Efuse write is not supported\r\n");
+  return EFI_DEVICE_ERROR;
 }
 
 /**

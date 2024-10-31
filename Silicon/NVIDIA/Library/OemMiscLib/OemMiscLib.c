@@ -522,13 +522,6 @@ GetProcessorVersion (
     if (ProcessorVersion == NULL) {
       ChipId = TegraGetChipID ();
       switch (ChipId) {
-        case T194_CHIP_ID:
-          ProcessorVersion = AllocateZeroPool (CPUVERSTATIC);
-          if (ProcessorVersion != NULL) {
-            UnicodeSPrint (ProcessorVersion, CPUVERSTATIC, L"Xavier");
-          }
-
-          break;
         case T234_CHIP_ID:
           ProcessorVersion = AllocateZeroPool (CPUVERSTATIC);
           if (ProcessorVersion != NULL) {

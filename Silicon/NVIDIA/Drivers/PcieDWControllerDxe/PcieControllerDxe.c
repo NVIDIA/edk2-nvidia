@@ -47,14 +47,12 @@
 
 #include "PcieControllerDt.h"
 #include "PcieControllerPrivate.h"
-#include <T194/T194Definitions.h>
 #include <T234/T234Definitions.h>
 
 STATIC EFI_EVENT  mFdtTableEvent;
 STATIC EFI_EVENT  mReadyToBootEvent;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra194-pcie", &gNVIDIANonDiscoverableT194PcieDeviceGuid },
   { "nvidia,tegra234-pcie", &gNVIDIANonDiscoverableT234PcieDeviceGuid },
   { NULL,                   NULL                                      }
 };
@@ -125,7 +123,6 @@ CHAR8  CoreResetNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
 struct cmd_uphy_pcie_controller_state_request {
   /*
    * @brief PCIE controller number
-   * Valid numbers for T194: 0, 1, 2, 3, 4
    * Valid numbers for T234: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
    */
   uint8_t    pcie_controller;
@@ -300,9 +297,6 @@ config_gen3_gen4_eq_presets (
 
   val  = MmioRead32 (Private->DbiBase + GEN3_EQ_CONTROL_OFF);
   val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
-  if (Private->IsT194) {
-    val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
-  }
 
   if (Private->IsT234) {
     val |= (0x340 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
@@ -314,36 +308,6 @@ config_gen3_gen4_eq_presets (
   val  = MmioRead32 (Private->DbiBase + GEN3_RELATED_OFF);
   val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
   MmioWrite32 (Private->DbiBase + GEN3_RELATED_OFF, val);
-}
-
-STATIC
-VOID
-ConfigureSidebandSignals (
-  IN PCIE_CONTROLLER_PRIVATE  *Private
-  )
-{
-  NVIDIA_PINMUX_PROTOCOL  *mPmux = NULL;
-  UINT32                  RegVal;
-  EFI_STATUS              Status = EFI_SUCCESS;
-
-  Status = gBS->LocateProtocol (
-                  &gNVIDIAPinMuxProtocolGuid,
-                  NULL,
-                  (VOID **)&mPmux
-                  );
-  if (EFI_ERROR (Status) || (mPmux == NULL)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    return;
-  }
-
-  mPmux->ReadReg (mPmux, PADCTL_PEX_RST, &RegVal);
-  RegVal &= ~PADCTL_PEX_RST_E_INPUT;
-  mPmux->WriteReg (mPmux, PADCTL_PEX_RST, RegVal);
 }
 
 STATIC
@@ -700,9 +664,6 @@ PrepareHost (
   /* Configure Gen2+ N_FTS */
   val  = MmioRead32 (Private->DbiBase + PORT_LOGIC_GEN2_CTRL);
   val &= ~FTS_MASK;
-  if (Private->IsT194) {
-    val |= 52;
-  }
 
   if (Private->IsT234) {
     val |= 80;
@@ -856,31 +817,6 @@ CheckLinkUp (
   }
 
   return Private->LinkUp;
-}
-
-STATIC
-BOOLEAN
-EFIAPI
-IsAGXXavier (
-  VOID
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      NumberOfPlatformNodes;
-
-  NumberOfPlatformNodes = 0;
-  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
-  if (Status != EFI_NOT_FOUND) {
-    return TRUE;
-  }
-
-  NumberOfPlatformNodes = 0;
-  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
-  if (Status != EFI_NOT_FOUND) {
-    return TRUE;
-  }
-
-  return FALSE;
 }
 
 STATIC
@@ -1378,16 +1314,14 @@ UninitializeController (
     return Status;
   }
 
-  if (!((Private->CtrlId == 5) && Private->IsT194)) {
-    if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
-      Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 0);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
-        return Status;
-      }
-
-      DEBUG ((DEBUG_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+  if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
+    Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 0);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to disable Controller-%u\n", Private->CtrlId));
+      return Status;
     }
+
+    DEBUG ((DEBUG_INFO, "Disabled Controller-%u through BPMP-FW\n", Private->CtrlId));
   }
 
   /* Assert powergate nodes */
@@ -1785,8 +1719,6 @@ DeviceDiscoveryNotify (
       ChipID = TegraGetChipID ();
       if (ChipID == T234_CHIP_ID) {
         Private->IsT234 = TRUE;
-      } else if (ChipID == T194_CHIP_ID) {
-        Private->IsT194 = TRUE;
       }
 
       Private->ControllerHandle = ControllerHandle;
@@ -2011,28 +1943,22 @@ DeviceDiscoveryNotify (
       /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
       MicroSecondDelay (100000);
 
-      if ((Private->CtrlId == 5) && Private->IsT194) {
-        ConfigureSidebandSignals (Private);
-      } else {
-        EFI_STATUS  Status;
+      Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
+        Status = EFI_NOT_READY;
+        goto ErrorExit;
+      }
 
-        Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
+      if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
+        Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 1);
         if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
+          DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
           Status = EFI_NOT_READY;
           goto ErrorExit;
         }
 
-        if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
-          Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 1);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
-            Status = EFI_NOT_READY;
-            goto ErrorExit;
-          }
-
-          DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
-        }
+        DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
       }
 
       if (NULL != fdt_get_property (
@@ -2047,14 +1973,12 @@ DeviceDiscoveryNotify (
         Private->EnableSRNS = FALSE;
       }
 
-      if (Private->IsT194) {
-        Private->EnableExtREFCLK = FALSE;
-      } else if (NULL != fdt_get_property (
-                           DeviceTreeNode->DeviceTreeBase,
-                           DeviceTreeNode->NodeOffset,
-                           "nvidia,enable-ext-refclk",
-                           NULL
-                           ))
+      if (NULL != fdt_get_property (
+                    DeviceTreeNode->DeviceTreeBase,
+                    DeviceTreeNode->NodeOffset,
+                    "nvidia,enable-ext-refclk",
+                    NULL
+                    ))
       {
         Private->EnableExtREFCLK = TRUE;
       } else {
@@ -2254,10 +2178,7 @@ DeviceDiscoveryNotify (
       }
 
       Private->ConfigSpaceInfo.PciSegmentGroupNumber = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
-      if (Private->IsT194) {
-        Private->ConfigSpaceInfo.StartBusNumber = T194_PCIE_BUS_MIN;
-        Private->ConfigSpaceInfo.EndBusNumber   = T194_PCIE_BUS_MAX;
-      } else if (Private->IsT234) {
+      if (Private->IsT234) {
         Private->ConfigSpaceInfo.StartBusNumber = T234_PCIE_BUS_MIN;
         Private->ConfigSpaceInfo.EndBusNumber   = T234_PCIE_BUS_MAX;
       } else {
@@ -2378,35 +2299,18 @@ DeviceDiscoveryNotify (
         Index++;
       }
 
-      // Limit configuration manager entries for T194 as it does not support ECAM so needs special OS support
-      if ((Private->IsT194) &&
-          ((PcdGet8 (PcdPcieEntryInAcpi) != 1) ||
-           (IsAGXXavier () && (Private->ConfigSpaceInfo.PciSegmentGroupNumber == AGX_XAVIER_AHCI_SEGMENT))))
-      {
-        Status = gBS->InstallMultipleProtocolInterfaces (
-                        &ControllerHandle,
-                        &gNVIDIAPciHostBridgeProtocolGuid,
-                        RootBridge,
-                        &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
-                        &Private->PcieRootBridgeConfigurationIo,
-                        &gNVIDIAConfigurationManagerDataObjectGuid,
-                        &Private->RepoInfo,
-                        NULL
-                        );
-      } else {
-        Status = gBS->InstallMultipleProtocolInterfaces (
-                        &ControllerHandle,
-                        &gNVIDIAPciHostBridgeProtocolGuid,
-                        RootBridge,
-                        &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
-                        &Private->PcieRootBridgeConfigurationIo,
-                        &gNVIDIAConfigurationManagerDataObjectGuid,
-                        &Private->RepoInfo,
-                        &gNVIDIAPciConfigurationDataProtocolGuid,
-                        &Private->ConfigSpaceInfo,
-                        NULL
-                        );
-      }
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &ControllerHandle,
+                      &gNVIDIAPciHostBridgeProtocolGuid,
+                      RootBridge,
+                      &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
+                      &Private->PcieRootBridgeConfigurationIo,
+                      &gNVIDIAConfigurationManagerDataObjectGuid,
+                      &Private->RepoInfo,
+                      &gNVIDIAPciConfigurationDataProtocolGuid,
+                      &Private->ConfigSpaceInfo,
+                      NULL
+                      );
 
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to install root bridge info (%r)\r\n", __FUNCTION__, Status));

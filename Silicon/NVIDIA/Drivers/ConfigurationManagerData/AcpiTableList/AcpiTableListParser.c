@@ -18,11 +18,6 @@
 
 #include <Protocol/AmlPatchProtocol.h>
 
-// #include "Dsdt_T194.offset.h"
-extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA194_OffsetTable[];
-// #include "Dsdt_T194.hex"
-extern unsigned char  dsdt_t194_aml_code[];
-
 // #include "Dsdt_T234.hex"
 extern AML_OFFSET_TABLE_ENTRY  DSDT_TEGRA234_OffsetTable[];
 // #include "Dsdt_T234.offset.h"
@@ -76,20 +71,6 @@ extern AML_OFFSET_TABLE_ENTRY  SSDT_SDCTEMP_OffsetTable[];
 extern unsigned char  i2ctemplate_aml_code[];
 // #include "I2cTemplate.offset.h"
 extern AML_OFFSET_TABLE_ENTRY  SSDT_I2CTEMP_OffsetTable[];
-
-/** The platform ACPI info for T194.
-*/
-STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiTableArray_T194[] = {
-  (EFI_ACPI_DESCRIPTION_HEADER *)dsdt_t194_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)sdctemplate_aml_code,
-  (EFI_ACPI_DESCRIPTION_HEADER *)i2ctemplate_aml_code
-};
-
-STATIC AML_OFFSET_TABLE_ENTRY  *OffsetTableArray_T194[] = {
-  DSDT_TEGRA194_OffsetTable,
-  SSDT_SDCTEMP_OffsetTable,
-  SSDT_I2CTEMP_OffsetTable
-};
 
 // CmAcpiTableList is shared by all platforms
 STATIC
@@ -255,13 +236,6 @@ AcpiTableListParser (
 
   // Locate the tables based on ChipID
   switch (ChipID) {
-    case T194_CHIP_ID:
-      DsdtTable        = dsdt_t194_aml_code;
-      AcpiTableArray   = AcpiTableArray_T194;
-      OffsetTableArray = OffsetTableArray_T194;
-      ArraySize        = ARRAY_SIZE (AcpiTableArray_T194);
-      break;
-
     case T234_CHIP_ID:
       DsdtTable        = dsdt_t234_aml_code;
       AcpiTableArray   = AcpiTableArray_T234;
