@@ -17,12 +17,6 @@ menu "General"
 endmenu
 
 menu "SOC Support"
-  config SOC_XAVIER
-  bool "Xavier"
-  select SOC_JETSON
-  help
-    Support for Xavier (T194)
-
   config SOC_ORIN
   bool "Orin"
   select SOC_JETSON

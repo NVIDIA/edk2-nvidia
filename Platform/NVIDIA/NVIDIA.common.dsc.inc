@@ -67,9 +67,6 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
 
 [SkuIds]
   0|DEFAULT
-!ifdef CONFIG_SOC_XAVIER
-  1|T194
-!endif
 !ifdef CONFIG_SOC_ORIN
   2|T234
   3|T234SLT|T234
@@ -1227,25 +1224,6 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   !endif
 !endif
 
-!ifdef CONFIG_SOC_XAVIER
-[PcdsDynamicDefault.common.T194]
-  gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
-  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase|0x03882000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA194'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T194)")}
-  gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
-  gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x4000
-  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x1000
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE
-  gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
-
-[PcdsDynamicHii.common.T194]
-  gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded|L"PCIeResourceConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
-  gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded|L"PCIeInOsConfig"|gNVIDIATokenSpaceGuid|0x0|1|BS
-!endif
-
 !ifdef CONFIG_SOC_ORIN
 [PcdsDynamicDefault.common.T234]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
@@ -1895,20 +1873,11 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 !ifdef CONFIG_NVIDIA_DISPLAY
   Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
-  !ifdef CONFIG_SOC_XAVIER
-    Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf {
-      <LibraryClasses>
-      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-    }
-  !endif
 !endif
 
   #
   # SE RNG
   #
-!ifdef CONFIG_SOC_XAVIER
-  Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
-!endif
 !ifdef CONFIG_SOC_ORIN
   Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 !endif

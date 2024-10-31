@@ -404,9 +404,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.fdf.inc
   INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
-  !ifdef CONFIG_SOC_XAVIER
-    INF Silicon/NVIDIA/Tegra/T194/Drivers/T194GraphicsOutputDxe/T194GraphicsOutputDxe.inf
-  !endif
 !endif
 !ifdef CONFIG_ASPEED_2600_DISPLAY
   #
@@ -419,9 +416,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # SE RNG
   #
-!ifdef CONFIG_SOC_XAVIER
-  INF Silicon/NVIDIA/Tegra/T194/Drivers/SeRngDxe/SeRngDxe.inf
-!endif
 !ifdef CONFIG_SOC_ORIN
   INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 !endif
