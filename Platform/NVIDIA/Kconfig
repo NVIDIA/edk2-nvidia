@@ -393,7 +393,7 @@ endmenu
 menu "Boot Options"
   config RCM_BOOT
   bool "Rcm Boot Support"
-  default y
+  default n
   help
     UEFI RCM boot supported
 
