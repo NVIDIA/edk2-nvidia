@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -579,6 +579,48 @@ FwDeviceAddAsPartition (
         }
       } else {
         DEBUG ((DEBUG_ERROR, "%a: Can't find partition MM-RAS: %r\n", __FUNCTION__, Status));
+      }
+
+      Status = GetPartitionInfoStMm (
+                 (UINTN)CpuBlParamsAddr,
+                 TEGRABL_CMET,
+                 &DeviceInstance,
+                 &PartitionOffset,
+                 &PartitionSize
+                 );
+      if (!EFI_ERROR (Status)) {
+        Status = FwPartitionAdd (
+                   L"MM-CMET",
+                   DeviceInfo,
+                   PartitionOffset,
+                   PartitionSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Can't add partition MM-CMET\n", __FUNCTION__));
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Can't find partition MM-CMET: %r\n", __FUNCTION__, Status));
+      }
+
+      Status = GetPartitionInfoStMm (
+                 (UINTN)CpuBlParamsAddr,
+                 TEGRABL_EARLY_BOOT_VARS,
+                 &DeviceInstance,
+                 &PartitionOffset,
+                 &PartitionSize
+                 );
+      if (!EFI_ERROR (Status)) {
+        Status = FwPartitionAdd (
+                   L"MM-EBV",
+                   DeviceInfo,
+                   PartitionOffset,
+                   PartitionSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Can't add partition EARLY_BOOT_VARS\n", __FUNCTION__));
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Can't find partition EARLY_BOOT_VARS: %r\n", __FUNCTION__, Status));
       }
 
       Status = GetPartitionInfoStMm (

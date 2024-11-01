@@ -2,7 +2,7 @@
 
   PRM Module for CPER error dump
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,8 +20,10 @@
 #include <Protocol/FwPartitionProtocol.h>
 #include "PrmRasModule.h"
 
-STATIC   NVIDIA_FW_PARTITION_PROTOCOL  *mFwPartitionProtocol = NULL;
-STATIC   EFI_EVENT                     mAddressChangeEvent   = NULL;
+STATIC   NVIDIA_FW_PARTITION_PROTOCOL  *MmRasFwPartition   = NULL;
+STATIC   NVIDIA_FW_PARTITION_PROTOCOL  *MmCmetFwPartition  = NULL;
+STATIC   NVIDIA_FW_PARTITION_PROTOCOL  *MmEbvFwPartition   = NULL;
+STATIC   EFI_EVENT                     mAddressChangeEvent = NULL;
 
 STATIC
 VOID
@@ -31,7 +33,14 @@ AddressChangeNotify (
   IN VOID       *Context
   )
 {
-  EfiConvertPointer (0x0, (VOID **)&mFwPartitionProtocol);
+  EfiConvertPointer (0x0, (VOID **)&MmRasFwPartition);
+  if (MmCmetFwPartition != NULL) {
+    EfiConvertPointer (0x0, (VOID **)&MmCmetFwPartition);
+  }
+
+  if (MmEbvFwPartition != NULL) {
+    EfiConvertPointer (0x0, (VOID **)&MmEbvFwPartition);
+  }
 }
 
 /**
@@ -46,6 +55,7 @@ AddressChangeNotify (
 **/
 PRM_HANDLER_EXPORT (RasPrmHandler) {
   EFI_STATUS                                 Status;
+  NVIDIA_FW_PARTITION_PROTOCOL               *mFwPartitionProtocol;
   PRM_RAS_MODULE_STATIC_DATA_CONTEXT_BUFFER  *RasDataBuffer;
   UINTN                                      ReadOffset;
   UINTN                                      ReadSize;
@@ -70,6 +80,28 @@ PRM_HANDLER_EXPORT (RasPrmHandler) {
     return EFI_NOT_FOUND;
   }
 
+  RasDataBuffer = (PRM_RAS_MODULE_STATIC_DATA_CONTEXT_BUFFER *)&ContextBuffer->StaticDataBuffer->Data[0];
+
+  // Use the highest byte (bit60~63) for partition selection
+  switch (RasDataBuffer->PartitionCommand.Select) {
+    case PRM_MM_RAS_PARTITION_OFFSET:
+      mFwPartitionProtocol = MmRasFwPartition;
+      break;
+
+    case PRM_MM_CMET_PARTITION_OFFSET:
+      mFwPartitionProtocol = MmCmetFwPartition;
+      break;
+
+    case PRM_MM_EARLY_BOOT_VARS_OFFSET:
+      mFwPartitionProtocol = MmEbvFwPartition;
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: FW Partition protocol %x not support\n", __FUNCTION__, RasDataBuffer->PartitionCommand.Select));
+      mFwPartitionProtocol = NULL;
+      break;
+  }
+
   if (mFwPartitionProtocol == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: FW Partition protocol not found\n", __FUNCTION__));
     return EFI_NOT_FOUND;
@@ -80,13 +112,11 @@ PRM_HANDLER_EXPORT (RasPrmHandler) {
     return EFI_UNSUPPORTED;
   }
 
-  RasDataBuffer = (PRM_RAS_MODULE_STATIC_DATA_CONTEXT_BUFFER *)&ContextBuffer->StaticDataBuffer->Data[0];
-
   // 64K alignment
-  RasDataBuffer->PartitionOffset &= 0xFFFFFFFFFFFF0000;
+  RasDataBuffer->PartitionCommand.Offset &= 0xFFFFFFFFFFF0000;
 
-  if (RasDataBuffer->PartitionOffset + PRM_SPI_ACCESS_DATA_SIZE > Attributes.Bytes) {
-    DEBUG ((DEBUG_ERROR, "%a: Wrong partition offset input\n", __FUNCTION__));
+  if (RasDataBuffer->PartitionCommand.Offset + PRM_SPI_ACCESS_DATA_SIZE > Attributes.Bytes) {
+    DEBUG ((DEBUG_ERROR, "%a: Partition offset %lx is larger than %lx\n", __FUNCTION__, RasDataBuffer->PartitionCommand.Offset, Attributes.Bytes));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -94,7 +124,7 @@ PRM_HANDLER_EXPORT (RasPrmHandler) {
   RasDataBuffer->DataSize      = PRM_SPI_ACCESS_DATA_SIZE;
 
   // Read SPI data
-  ReadOffset = RasDataBuffer->PartitionOffset;
+  ReadOffset = RasDataBuffer->PartitionCommand.Offset;
   ReadSize   = RasDataBuffer->DataSize;
   ReadData   = RasDataBuffer->CperData;
 
@@ -139,10 +169,11 @@ PrmRasModuleInit (
   EFI_HANDLE                    *Handles;
   UINTN                         HandleCount;
   NVIDIA_FW_PARTITION_PROTOCOL  *FwPartitionProtocol;
-  BOOLEAN                       IsProtocolFound;
 
-  IsProtocolFound = FALSE;
-  HandleCount     = 0;
+  MmRasFwPartition  = NULL;
+  MmCmetFwPartition = NULL;
+  MmEbvFwPartition  = NULL;
+  HandleCount       = 0;
 
   //
   // Get MM-NorFlash FwPartitionProtocol
@@ -169,14 +200,21 @@ PrmRasModuleInit (
     if (!EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: PartitionName = %s\n", __FUNCTION__, FwPartitionProtocol->PartitionName));
       if (StrCmp (FwPartitionProtocol->PartitionName, L"MM-RAS") == 0) {
-        IsProtocolFound = TRUE;
-        break;
+        MmRasFwPartition = FwPartitionProtocol;
+      }
+
+      if (StrCmp (FwPartitionProtocol->PartitionName, L"MM-CMET") == 0) {
+        MmCmetFwPartition = FwPartitionProtocol;
+      }
+
+      if (StrCmp (FwPartitionProtocol->PartitionName, L"MM-EBV") == 0) {
+        MmEbvFwPartition = FwPartitionProtocol;
       }
     }
   } while (HandleCount > 0);
 
-  if (!IsProtocolFound) {
-    DEBUG ((DEBUG_ERROR, "%a: Cannot find FW Partition.\n", __FUNCTION__));
+  if (MmRasFwPartition == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Cannot find MM-RAS FW Partition.\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
@@ -192,8 +230,6 @@ PrmRasModuleInit (
     DEBUG ((DEBUG_ERROR, "%a: Error creating address change event: %r\n", __FUNCTION__, Status));
     return Status;
   }
-
-  mFwPartitionProtocol = FwPartitionProtocol;
 
   return EFI_SUCCESS;
 }
