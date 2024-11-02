@@ -155,6 +155,16 @@
       Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
   }
 
+  #
+  # RamDiskOS driver Host Based GoogleTest
+  #
+  Silicon/NVIDIA/Drivers/RamDiskOS/GoogleTest/RamDiskOSGoogleTest.inf {
+    <LibraryClasses>
+     HobLib|MdePkg/Test/Mock/Library/GoogleTest/MockHobLib/MockHobLib.inf
+     UefiBootServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockUefiBootServicesTableLib/MockUefiBootServicesTableLib.inf
+     RamDiskProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockRamDiskProto/MockRamDiskProto.inf
+  }
+
   Silicon/NVIDIA/Library/WildcardStringLib/UnitTest/WildcardStringLibGoogleTest.inf
 
 [PcdsDynamicDefault]

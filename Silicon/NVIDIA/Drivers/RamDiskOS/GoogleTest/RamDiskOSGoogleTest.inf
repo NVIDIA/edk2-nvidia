@@ -1,0 +1,47 @@
+## @file
+# Unit test suite for the RamDiskOS driver using Google Test
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = RamDiskOSGoogleTest
+  FILE_GUID           = b93e7ee1-0bc7-4a1a-a85b-8e96c8d2fbe2
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  RamDiskOSGoogleTest.cpp
+  ../RamDiskOS.c
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+  gEfiVirtualDiskGuid
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPkg/ArmPkg.dec
+
+[Pcd]
+
+
+[LibraryClasses]
+  GoogleTestLib
+  RamDiskProtoLib
+  HobLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiRamDiskProtocolGuid
