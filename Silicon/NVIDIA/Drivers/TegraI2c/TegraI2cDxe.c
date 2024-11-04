@@ -1073,15 +1073,15 @@ TegraI2CDriverBindingStart (
       Private->ControllerId = 0x3f;
     }
   } else {
-    CHAR8  I2cName[] = "i2cx";
+    CHAR8  I2cName[] = "i2cxx";
     Private->ControllerId = 0x3f;
 
-    for (Index = 0; Index <= 9; Index++) {
+    for (Index = 0; Index <= 19; Index++) {
       INT32  AliasOffset;
       AsciiSPrint (I2cName, sizeof (I2cName), "i2c%u", Index);
       Status = DeviceTreeGetNodeByPath (I2cName, &AliasOffset);
       if (EFI_ERROR (Status)) {
-        break;
+        continue;
       }
 
       if (AliasOffset == DeviceTreeNode->NodeOffset) {
