@@ -28,7 +28,7 @@
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid    },
   { "nvidia,tegra234-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid    },
-  { "nvidia,tegra*-xusb-padctl",   &gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid },
+  { "nvidia,tegra264-xusb-padctl", &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid },
   { NULL,                          NULL                                           }
 };
 
@@ -73,7 +73,6 @@ DeviceDiscoveryNotify (
   NVIDIA_USBPADCTL_PROTOCOL  *mUsbPadCtlProtocol;
   EFI_PHYSICAL_ADDRESS       BaseAddress;
   UINTN                      RegionSize;
-  BOOLEAN                    T234Platform;
   NON_DISCOVERABLE_DEVICE    *NonDiscoverableProtocol;
 
   Status         = EFI_SUCCESS;
@@ -83,12 +82,11 @@ DeviceDiscoveryNotify (
   mPmux          = NULL;
   mClockProtocol = NULL;
   BaseAddress    = 0;
-  T234Platform   = FALSE;
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
 
-      Private = AllocatePool (sizeof (USBPADCTL_DXE_PRIVATE));
+      Private = AllocateZeroPool (sizeof (USBPADCTL_DXE_PRIVATE));
       if (NULL == Private) {
         DEBUG ((
           DEBUG_ERROR,
@@ -172,9 +170,9 @@ DeviceDiscoveryNotify (
           return Status;
         }
       } else if ((CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) ||
-                 (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid)))
+                 (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid)))
       {
-        // Both T234 and unknown USB Pad controllers are handled by this path.
+        // Both T234 and current USB Pad controllers are handled by this path.
         // If new hardare strings are not compatible with the T234 path new logic
         // will be needed.
         Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw234;
@@ -182,10 +180,15 @@ DeviceDiscoveryNotify (
         Private->mUsbPadCtlProtocol.InitDevHw   = InitUsbDevHw234;
         Private->mUsbPadCtlProtocol.DeInitDevHw = DeInitUsbDevHw234;
         Private->PlatConfig                     = Tegra234UsbConfig;
-        T234Platform                            = TRUE;
+
+        if (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) {
+          Private->T234Platform = TRUE;
+        } else {
+          Private->T264Platform = TRUE;
+        }
 
         /* Initialize Platform specific USB Ports information from DT */
-        Status = InitPlatInfo234 (DeviceTreeNode, &Private->PlatConfig);
+        Status = InitPlatInfo234 (DeviceTreeNode, Private);
         if (Status != EFI_SUCCESS) {
           return Status;
         }
@@ -208,7 +211,7 @@ DeviceDiscoveryNotify (
                       (VOID **)&mPmux
                       );
       if (EFI_ERROR (Status) || (mPmux == NULL)) {
-        if (T234Platform == FALSE) {
+        if (!Private->T234Platform && !Private->T264Platform) {
           DEBUG ((
             DEBUG_ERROR,
             "%a: Couldn't get gNVIDIAPinMuxProtocolGuid Handle: %r\n",
@@ -219,7 +222,7 @@ DeviceDiscoveryNotify (
         }
       }
 
-      if (T234Platform == TRUE) {
+      if (Private->T234Platform || Private->T264Platform) {
         Status = DeviceDiscoveryGetMmioRegion (
                    ControllerHandle,
                    1,

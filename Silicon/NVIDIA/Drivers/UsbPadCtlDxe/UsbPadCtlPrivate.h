@@ -73,6 +73,9 @@ typedef struct {
   UINT32     OcPin;
   UINT32     VbusSupply; /* Regulator ID read from Port's Property in DT */
   UINT32     FuseHsCurrLevel;
+  UINT32     FuseHsTermRangeAdj;
+  UINT32     FuseHsRecOs;
+  UINT32     FuseHsSqOs;
 } PORT_INFO;
 
 /* Stores Platform Specific Information */
@@ -83,7 +86,6 @@ typedef struct {
   PORT_INFO    *Usb2Ports;
   PORT_INFO    *Usb3Ports;
   UINT32       FuseHsSquelchLevel;
-  UINT32       FuseHsTermRangeAdj;
   UINT32       FuseRpdCtrl;
   UINT32       *Usb2ClockIds;
   UINT32       NumUsb2Clocks;
@@ -102,6 +104,8 @@ typedef struct {
   EFI_EVENT                    TimerEvent;              /* Used for Over Current Handling */
   EFI_PHYSICAL_ADDRESS         BaseAddress;
   BOOLEAN                      HandleOverCurrent;
+  BOOLEAN                      T234Platform;
+  BOOLEAN                      T264Platform;
 } USBPADCTL_DXE_PRIVATE;
 #define PADCTL_PRIVATE_DATA_FROM_THIS(a)      CR(a, USBPADCTL_DXE_PRIVATE, mUsbPadCtlProtocol, PADCTL_SIGNATURE)
 #define PADCTL_PRIVATE_DATA_FROM_PROTOCOL(a)  PADCTL_PRIVATE_DATA_FROM_THIS(a)
@@ -147,7 +151,7 @@ DeInitUsbDevHw234 (
 EFI_STATUS
 InitPlatInfo234 (
   CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
-  PADCTL_PLAT_CONFIG                      *PlatConfig
+  USBPADCTL_DXE_PRIVATE                   *Private
   );
 
 extern PADCTL_PLAT_CONFIG  Tegra234UsbConfig;

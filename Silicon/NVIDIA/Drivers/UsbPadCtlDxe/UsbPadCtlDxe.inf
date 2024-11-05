@@ -53,7 +53,7 @@
 [Guids]
   gNVIDIANonDiscoverableT194UsbPadDeviceGuid
   gNVIDIANonDiscoverableT234UsbPadDeviceGuid
-  gNVIDIANonDiscoverableUnknownUsbPadDeviceGuid
+  gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid
 
 [Depex]
   gNVIDIARegulatorProtocolGuid

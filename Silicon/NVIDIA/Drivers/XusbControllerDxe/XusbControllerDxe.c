@@ -91,15 +91,17 @@ XUSB_DEVICE_CONTEXT                s_xusb_device_context;
 static struct tegrabl_usbf_config  *g_usbconfig;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,*-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
-  { NULL,            NULL                                  }
+  { "nvidia,tegra264-xudc", NULL                                  },
+  { "nvidia,tegra234-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
+  { NULL,                   NULL                                  }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Xudc controller driver",
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .AutoEnableClocks                = TRUE,
-  .AutoDeassertPg                  = FALSE
+  .AutoDeassertPg                  = FALSE,
+  .ThreadedDeviceStart             = FALSE,
 };
 
 static EFI_STATUS
@@ -170,9 +172,29 @@ OnExitBootServices (
 
   Private = (XUDC_CONTROLLER_PRIVATE_DATA *)Context;
 
+  // Skip in ACPI case.
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, &AcpiBase);
   if (!EFI_ERROR (Status)) {
     return;
+  }
+
+  // Check PG state before stopping the USB device mode controller.
+  PgProtocol = NULL;
+  PgState    = CmdPgStateOn;
+  Status     = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
+    if (EFI_ERROR (Status)) {
+      return;
+    }
+
+    if (PgState != CmdPgStateOn) {
+      break;
+    }
   }
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -185,52 +207,32 @@ OnExitBootServices (
     return;
   }
 
-  if ((PlatformResourceInfo->BootType == TegrablBootRcm) &&
-      (Private->XudcBaseAddress != 0))
+  // Stop USB device mode controller.
+  if ((Private->XudcBaseAddress != 0) &&
+      (PgState == CmdPgStateOn))
   {
-    PgProtocol = NULL;
-    PgState    = CmdPgStateOn;
-    Status     = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
+    MmioBitFieldWrite32 (
+      Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0,
+      XUSB_DEV_XHCI_CTRL_0_RUN_SHIFT,
+      XUSB_DEV_XHCI_CTRL_0_RUN_SHIFT,
+      0
+      );
+  }
+
+  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+    Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
     if (EFI_ERROR (Status)) {
       return;
     }
 
-    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-      Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
-      if (EFI_ERROR (Status)) {
-        return;
-      }
-
-      if (PgState != CmdPgStateOn) {
-        break;
-      }
-    }
-
     if (PgState == CmdPgStateOn) {
-      MmioBitFieldWrite32 (
-        Private->XudcBaseAddress + XUSB_DEV_XHCI_CTRL_0,
-        XUSB_DEV_XHCI_CTRL_0_RUN_SHIFT,
-        XUSB_DEV_XHCI_CTRL_0_RUN_SHIFT,
-        0
-        );
-    }
-
-    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-      Status = PgProtocol->Deassert (PgProtocol, PgProtocol->PowerGateId[Index]);
-      if (EFI_ERROR (Status)) {
-        return;
-      }
-    }
-
-    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
       Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Xudc Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
         return;
       }
     }
   }
-
-  return;
 }
 
 static EFI_STATUS

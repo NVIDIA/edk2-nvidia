@@ -45,16 +45,18 @@
 #define VREG_DIR_OUT  VREG_DIR(2)
 #define PD_VREG       (1 << 6)
 
-#define FUSE_USB_CALIB_0                   _MK_ADDR_CONST(0x1f0)
-#define FUSE_USB_CALIB_TERMRANGEADJ_MASK   0x780
-#define FUSE_USB_CALIB_TERMRANGEADJ_SHIFT  7
-#define FUSE_USB_CALIB_SQUELCHLEVEL_MASK   0xE0000000
-#define FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT  29
+#define FUSE_USB_CALIB_0                     _MK_ADDR_CONST(0x1f0)
+#define FUSE_USB_CALIB_0_TERMRANGEADJ_MASK   0x780
+#define FUSE_USB_CALIB_0_TERMRANGEADJ_SHIFT  7
+#define FUSE_USB_CALIB_SQUELCHLEVEL_MASK     0xE0000000
+#define FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT    29
 #define HS_CURR_LEVEL_PADX_SHIFT(x)  ((x) ? (11 + (x - 1) * 6) : 0)
 #define HS_CURR_LEVEL_PAD_MASK  (0x3f)
 
-#define FUSE_USB_CALIB_EXT_0              _MK_ADDR_CONST(0x350)
-#define FUSE_USB_CALIB_EXT_RPD_CTRL_MASK  0x1F
+#define FUSE_USB_CALIB_EXT_0  _MK_ADDR_CONST(0x350)
+#define FUSE_USB_CALIB_TERM_RANGE_ADJ_PADX_SHIFT(x)  ((x) ? (5 + (x - 1) * 4) : 7)
+#define FUSE_USB_CALIB_TERM_RANGE_ADJ_PADX_MASK  0xf
+#define FUSE_USB_CALIB_EXT_RPD_CTRL_MASK         0x1F
 
 #define XUSB_PADCTL_USB2_PAD_MUX_0  _MK_ADDR_CONST(0x4)
 #define USB2_PAD_MUX_PORT_SHIFT(x)  ((x) * 2)
@@ -169,12 +171,11 @@ InitUsb2PadX (
   IN USBPADCTL_DXE_PRIVATE  *Private
   )
 {
-  UINT32              RegData, RpdCtrl, i, TermRangeAdj;
+  UINT32              RegData, RpdCtrl, i;
   PADCTL_PLAT_CONFIG  *PlatConfig = &(Private->PlatConfig);
   PORT_INFO           *Usb2Ports  = PlatConfig->Usb2Ports;
 
-  TermRangeAdj = PlatConfig->FuseHsTermRangeAdj;
-  RpdCtrl      = PlatConfig->FuseRpdCtrl;
+  RpdCtrl = PlatConfig->FuseRpdCtrl;
 
   for (i = 0; i < PlatConfig->NumHsPhys; i++) {
     /* Enable PADS only for Ports that are enabled in DT */
@@ -219,7 +220,7 @@ InitUsb2PadX (
 
     RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_1 (i));
     RegData &= ~TERM_RANGE_ADJ(~0);
-    RegData |= TERM_RANGE_ADJ (PlatConfig->FuseHsTermRangeAdj);
+    RegData |= TERM_RANGE_ADJ (Usb2Ports[i].FuseHsTermRangeAdj);
     RegData &= ~RPD_CTRL(~0);
     RegData |= RPD_CTRL (PlatConfig->FuseRpdCtrl);
     PadCtlWrite (Private, USB2_OTG_PADX_CTL_1 (i), RegData);
@@ -866,24 +867,27 @@ ReadFuseCalibration (
   USBPADCTL_DXE_PRIVATE  *Private
   )
 {
-  UINT32                 RegVal, i;
+  UINT32                 RegVal, i, RegValExt0;
   PADCTL_PLAT_CONFIG     *PlatConfig = &(Private->PlatConfig);
   NVIDIA_EFUSE_PROTOCOL  *mEfuse     = Private->mEfuse;
 
   mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_0, &RegVal);
+  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT_0, &RegValExt0);
 
   /* Read Platform Specific Squelch Level and TermRangeAdj Values */
-  PlatConfig->FuseHsSquelchLevel = (RegVal & FUSE_USB_CALIB_SQUELCHLEVEL_MASK) >> FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT;
-  PlatConfig->FuseHsTermRangeAdj = (RegVal & FUSE_USB_CALIB_TERMRANGEADJ_MASK) >> FUSE_USB_CALIB_TERMRANGEADJ_SHIFT;
+  PlatConfig->FuseHsSquelchLevel              = (RegVal & FUSE_USB_CALIB_SQUELCHLEVEL_MASK) >> FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT;
+  PlatConfig->Usb2Ports[0].FuseHsTermRangeAdj = (RegVal & FUSE_USB_CALIB_0_TERMRANGEADJ_MASK) >> FUSE_USB_CALIB_0_TERMRANGEADJ_SHIFT;
 
   /* Read the PAD Specific HS CURR LEVEL Value from Fuse */
   for (i = 0; i < PlatConfig->NumHsPhys; i++) {
     PlatConfig->Usb2Ports[i].FuseHsCurrLevel = (RegVal >> HS_CURR_LEVEL_PADX_SHIFT (i)) & HS_CURR_LEVEL_PAD_MASK;
+    if (i > 0) {
+      PlatConfig->Usb2Ports[i].FuseHsTermRangeAdj = (RegValExt0 >> FUSE_USB_CALIB_TERM_RANGE_ADJ_PADX_SHIFT (i)) & FUSE_USB_CALIB_TERM_RANGE_ADJ_PADX_MASK;
+    }
   }
 
   /* Read Platform Specific RpdCtrl Value */
-  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT_0, &RegVal);
-  PlatConfig->FuseRpdCtrl = RegVal & FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
+  PlatConfig->FuseRpdCtrl = RegValExt0 & FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
   return EFI_SUCCESS;
 }
 

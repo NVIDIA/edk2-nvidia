@@ -2,7 +2,7 @@
 
   XHCI Controller Driver private structures
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -99,6 +99,8 @@ typedef struct {
   NVIDIA_USBFW_PROTOCOL             *mUsbFwProtocol;
   EFI_EVENT                         ExitBootServicesEvent;
   EFI_HANDLE                        ControllerHandle;
+  BOOLEAN                           T234Platform;
+  BOOLEAN                           T264Platform;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a)  CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

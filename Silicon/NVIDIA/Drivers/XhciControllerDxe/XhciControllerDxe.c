@@ -26,7 +26,6 @@
 #include <Protocol/UsbPadCtl.h>
 #include <Protocol/UsbFwProtocol.h>
 #include <Protocol/XhciController.h>
-#include <Protocol/BpmpIpc.h>
 #include <Protocol/PowerGateNodeProtocol.h>
 #include "XhciControllerPrivate.h"
 
@@ -45,7 +44,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoResetModule                 = FALSE,
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .ThreadedDeviceStart             = FALSE
+  .ThreadedDeviceStart             = FALSE,
 };
 
 /* XhciController Protocol Function used to return the Xhci
@@ -102,6 +101,9 @@ OnExitBootServices (
   UINT32                           Index;
   UINT32                           PgState;
   VOID                             *AcpiBase;
+  EFI_PHYSICAL_ADDRESS             BaseAddress;
+  UINT8                            CapLength;
+  UINT32                           val;
 
   Private    = (XHCICONTROLLER_DXE_PRIVATE *)Context;
   PgProtocol = NULL;
@@ -112,6 +114,16 @@ OnExitBootServices (
   if (!EFI_ERROR (Status)) {
     return;
   }
+
+  BaseAddress = Private->XusbSoc->BaseAddress;
+  CapLength   = MmioRead8 (BaseAddress);
+  val         = MmioRead32 (BaseAddress + CapLength);
+
+  val = 0;
+  MmioWrite32 (BaseAddress + CapLength, val);
+
+  val = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
+  DEBUG ((DEBUG_ERROR, "Xhci OnExitBootServices usbsts after stop write: %x\r\n", val));
 
   /* Do UsbPadCtlDxe DeInit */
   Private->mUsbPadCtlProtocol->DeInitHw (Private->mUsbPadCtlProtocol);
@@ -173,19 +185,17 @@ DeviceDiscoveryNotify (
   UINTN                            i;
   XHCICONTROLLER_DXE_PRIVATE       *Private;
   NON_DISCOVERABLE_DEVICE          *Device;
-  BOOLEAN                          T234Platform;
   BOOLEAN                          LoadIfrRom;
   TEGRA_PLATFORM_TYPE              PlatformType;
-  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol = NULL;
   UINT32                           Index;
   VOID                             *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+  UINT32                           PgState;
   EFI_STATUS                       ErrorStatus;
   VOID                             *ErrorProtocol;
 
-  T234Platform = FALSE;
   LoadIfrRom   = FALSE;
-
   PlatformType = TegraGetPlatform ();
 
   switch (Phase) {
@@ -231,7 +241,17 @@ DeviceDiscoveryNotify (
       } else {
         // Only other supported platform is Tegra234 other targets will use this by default
         Private->XusbSoc = &Tegra234Soc;
-        T234Platform     = TRUE;
+        if (!EFI_ERROR (
+               DeviceTreeCheckNodeSingleCompatibility (
+                 "nvidia,tegra234-*",
+                 DeviceTreeNode->NodeOffset
+                 )
+               ))
+        {
+          Private->T234Platform = TRUE;
+        } else {
+          Private->T264Platform = TRUE;
+        }
       }
 
       Status = DeviceDiscoveryGetMmioRegion (
@@ -268,7 +288,7 @@ DeviceDiscoveryNotify (
 
       Private->XusbSoc->CfgAddress = CfgAddress;
 
-      if (T234Platform == TRUE) {
+      if (Private->T234Platform || Private->T264Platform) {
         Status = DeviceDiscoveryGetMmioRegion (
                    ControllerHandle,
                    2,
@@ -361,25 +381,16 @@ DeviceDiscoveryNotify (
         goto ErrorExit;
       }
 
-      Status = gBS->CreateEventEx (
-                      EVT_NOTIFY_SIGNAL,
-                      TPL_NOTIFY,
-                      OnExitBootServices,
-                      Private,
-                      &gEfiEventExitBootServicesGuid,
-                      &Private->ExitBootServicesEvent
-                      );
-      if (EFI_ERROR (Status)) {
-        goto ErrorExit;
-      }
-
       /* Pass Xhci Config Address to Falcon Library before using Library's
        * other functions */
       FalconSetHostCfgAddr (CfgAddress);
 
-      /* Set Base 2 adress, only valid in T234 */
-      FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
+      /* Set Base 2 adress, only valid in T234 & T264 */
+      if (Private->T234Platform || Private->T264Platform) {
+        FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
+      }
 
+      DEBUG ((DEBUG_INFO, "%a: before UsbPadCtl Init\n", __FUNCTION__));
       /* Initialize USB Pad Registers */
       Status = Private->mUsbPadCtlProtocol->InitHw (Private->mUsbPadCtlProtocol);
       if (EFI_ERROR (Status)) {
@@ -392,6 +403,7 @@ DeviceDiscoveryNotify (
         goto ErrorExit;
       }
 
+      DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_4_0 Init\n", __FUNCTION__));
       /* Program Xhci PCI Cfg Registers */
       reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_4_0);
       reg_val &= ~(Private->XusbSoc->Cfg4AddrMask << Private->XusbSoc->Cfg4AddrShift);
@@ -401,7 +413,8 @@ DeviceDiscoveryNotify (
 
       DeviceDiscoveryThreadMicroSecondDelay (200);
 
-      if (T234Platform) {
+      if (Private->T234Platform || Private->T264Platform) {
+        DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_7_0 Init\n", __FUNCTION__));
         reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_7_0);
         reg_val &= ~(Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
         reg_val |= Private->XusbSoc->Base2Address &
@@ -417,6 +430,7 @@ DeviceDiscoveryNotify (
         DeviceDiscoveryThreadMicroSecondDelay (100);
       }
 
+      DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_1_0 Init\n", __FUNCTION__));
       reg_val = MmioRead32 (CfgAddress + XUSB_CFG_1_0);
       reg_val =
         NV_FLD_SET_DRF_DEF (XUSB_CFG, 1, MEMORY_SPACE, ENABLED, reg_val);
@@ -425,7 +439,7 @@ DeviceDiscoveryNotify (
 
       BaseAddress = Private->XusbSoc->BaseAddress;
 
-      if (T234Platform) {
+      if (Private->T234Platform || Private->T264Platform) {
         /* Check if HW/FW Clears Controller Not Ready Flag */
         CapLength = MmioRead8 (BaseAddress);
 
@@ -438,9 +452,14 @@ DeviceDiscoveryNotify (
           DeviceDiscoveryThreadMicroSecondDelay (1000);
         }
 
+        DEBUG ((DEBUG_INFO, "Xhci Status Register: 0x%x\n", StatusRegister));
         if ((StatusRegister & USBSTS_CNR)) {
           /* CNR still set, need to load FW to clear */
           LoadIfrRom = TRUE;
+          DEBUG ((DEBUG_ERROR, "CNR is set, Failed to get MB2 FW load\n"));
+          if (Private->T264Platform) {
+            goto skipXusbFwLoad;
+          }
         } else {
           goto skipXusbFwLoad;
         }
@@ -514,6 +533,18 @@ skipXusbFwLoad:
         goto ErrorExit;
       }
 
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_NOTIFY,
+                      OnExitBootServices,
+                      Private,
+                      &gEfiEventExitBootServicesGuid,
+                      &Private->ExitBootServicesEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        goto ErrorExit;
+      }
+
       if (gDeviceDiscoverDriverConfig.SkipEdkiiNondiscoverableInstall) {
         Status = gBS->InstallMultipleProtocolInterfaces (
                         &ControllerHandle,
@@ -532,6 +563,24 @@ skipXusbFwLoad:
   return EFI_SUCCESS;
 
 ErrorExit:
+  if (PgProtocol != NULL) {
+    /* Assert the PG in error case */
+    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+      ErrorStatus = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
+      if (EFI_ERROR (ErrorStatus)) {
+        DEBUG ((DEBUG_ERROR, "Xhci pg GetState fail: %d\r\n", PgProtocol->PowerGateId[Index]));
+      } else {
+        /* Assert the PG if it is ON */
+        if (PgState == CmdPgStateOn) {
+          ErrorStatus = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+          if (EFI_ERROR (ErrorStatus)) {
+            DEBUG ((DEBUG_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
+          }
+        }
+      }
+    }
+  }
+
   ErrorStatus = gBS->HandleProtocol (
                        DriverHandle,
                        &gNVIDIAXhciControllerProtocolGuid,

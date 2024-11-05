@@ -36,6 +36,10 @@
 #define USB2_OTG_PD     (1 << 26)
 #define USB2_OTG_PD_DR  (1 << 2)
 
+#define USB2_OTG_PADX_CTL_3(i)  (0x94 + (i) * 0x40)
+#define USB2_REC_OS(x)          (((x) & 0xf) << 9)
+#define USB2_SQ_OS(x)           (((x) & 0xff) << 14)
+
 #define USB2_BATTERY_CHRG_OTGPADX_CTL1(x)  (0x84 + (x) * 0x40)
 #define VREG_LEVEL_500MA  0x0
 #define VREG_LEVEL_900MA  0x1
@@ -46,16 +50,27 @@
 #define VREG_DIR_OUT  VREG_DIR(2)
 #define PD_VREG       (1 << 6)
 
-#define FUSE_USB_CALIB_0                   _MK_ADDR_CONST(0x1f0)
-#define FUSE_USB_CALIB_TERMRANGEADJ_MASK   0x780
-#define FUSE_USB_CALIB_TERMRANGEADJ_SHIFT  7
-#define FUSE_USB_CALIB_SQUELCHLEVEL_MASK   0xE0000000
-#define FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT  29
+#define FUSE_USB_CALIB_0                     _MK_ADDR_CONST(0x1f0)
+#define FUSE_USB_CALIB_0_TERMRANGEADJ_MASK   0x780
+#define FUSE_USB_CALIB_0_TERMRANGEADJ_SHIFT  7
+#define FUSE_USB_CALIB_SQUELCHLEVEL_MASK     0xE0000000
+#define FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT    29
 #define HS_CURR_LEVEL_PADX_SHIFT(x)  ((x) ? (11 + (x - 1) * 6) : 0)
 #define HS_CURR_LEVEL_PAD_MASK  (0x3f)
 
 #define FUSE_USB_CALIB_EXT_0              _MK_ADDR_CONST(0x350)
 #define FUSE_USB_CALIB_EXT_RPD_CTRL_MASK  0x1F
+#define FUSE_USB_CALIB_EXT_TERM_RANGE_ADJ_PADX_SHIFT(x)  ((x) ? (5 + (x - 1) * 4) : 7)
+#define FUSE_USB_CALIB_EXT_TERM_RANGE_ADJ_PADX_MASK  0xf
+#define FUSE_USB_CALIB_EXT_REC_OS_PADX_SHIFT(x)  (17 + (x) * 4)
+#define FUSE_USB_CALIB_EXT_REC_OS_PADX_MASK  0xf
+
+#define FUSE_USB_CALIB_EXT2_0  _MK_ADDR_CONST(0x3ec)
+#define FUSE_USB_CALIB_EXT2_SQ_OS_PADX_SHIFT(x)  ((x) * 8)
+#define FUSE_USB_CALIB_EXT2_SQ_OS_PADX_MASK  0xff
+
+#define FUSE_USB_CALIB_EXT3_0                _MK_ADDR_CONST(0x4bc)
+#define FUSE_USB_CALIB_EXT3_REC_OS_PAD_MASK  0xf
 
 #define XUSB_PADCTL_USB2_PAD_MUX_0  _MK_ADDR_CONST(0x4)
 #define USB2_PAD_MUX_PORT_SHIFT(x)  ((x) * 2)
@@ -109,7 +124,12 @@
 #define XUSB_PADCTL_USB2_BIAS_PAD_CTL1  (0x288)
 #define USB2_TRK_START_TIMER(x)       (((x) & 0x7f) << 12)
 #define USB2_TRK_DONE_RESET_TIMER(x)  (((x) & 0x7f) << 19)
-#define USB2_PD_TRK  (1 << 26)
+#define USB2_PD_TRK         (1 << 26)
+#define USB2_TRK_COMPLETED  (1UL << 31)
+
+#define XUSB_PADCTL_USB2_BIAS_PAD_CTL2  (0x28c)
+#define  USB2_TRK_HW_MODE               (1 << 0)
+#define  CYA_TRK_CODE_UPDATE_ON_IDLE    (1UL << 31)
 
 #define XUSB_PADCTL_USB2_VBUS_ID  (0x360)
 #define VBUS_OVERRIDE             (1 << 14)
@@ -135,19 +155,21 @@
 #define UART_USB_VBUS_EN_TRISTATE  (0x1 << 4)
 #define UART_USB_SF_SEL_HSIO       (0x1 << 10)
 
+#define VBUS_SUPPLY_INVALID  0xdeadbeef
+
 /* Number of USB Pads on the Platform */
 #define TEGRA234_USB3_PHYS   (4)
 #define TEGRA234_UTMI_PHYS   (4)
 #define TEGRA234_OC_PIN_NUM  (2)
 
-#define ENABLE_FUSE  (0)
+#define ENABLE_FUSE  (1)
 
 /* Dev Mode */
 #define XUSB_PADCTL_USB2_BIAS_PAD_CTL_1_0_RESET_VAL  (0x4820000U)
 
 /* Dev fuse */
-#define TERM_RANGE_ADJ_MASK     FUSE_USB_CALIB_TERMRANGEADJ_MASK
-#define TERM_RANGE_ADJ_SHIFT    FUSE_USB_CALIB_TERMRANGEADJ_SHIFT
+#define TERM_RANGE_ADJ_MASK     FUSE_USB_CALIB_0_TERMRANGEADJ_MASK
+#define TERM_RANGE_ADJ_SHIFT    FUSE_USB_CALIB_0_TERMRANGEADJ_SHIFT
 #define HS_CURR_LEVEL_MASK      HS_CURR_LEVEL_PAD_MASK
 #define HS_CURR_LEVEL_SHIFT     0
 #define HS_SQUELCH_LEVEL_MASK   FUSE_USB_CALIB_SQUELCHLEVEL_MASK
@@ -186,12 +208,11 @@ InitUsb2PadX (
   IN USBPADCTL_DXE_PRIVATE  *Private
   )
 {
-  UINT32              RegData, RpdCtrl, i, TermRangeAdj;
+  UINT32              RegData, RpdCtrl, i;
   PADCTL_PLAT_CONFIG  *PlatConfig = &(Private->PlatConfig);
   PORT_INFO           *Usb2Ports  = PlatConfig->Usb2Ports;
 
-  TermRangeAdj = PlatConfig->FuseHsTermRangeAdj;
-  RpdCtrl      = PlatConfig->FuseRpdCtrl;
+  RpdCtrl = PlatConfig->FuseRpdCtrl;
 
   for (i = 0; i < PlatConfig->NumHsPhys; i++) {
     /* Enable PADS only for Ports that are enabled in DT */
@@ -238,11 +259,22 @@ InitUsb2PadX (
 
       RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_1 (i));
       RegData &= ~TERM_RANGE_ADJ(~0);
-      RegData |= TERM_RANGE_ADJ (PlatConfig->FuseHsTermRangeAdj);
+      RegData |= TERM_RANGE_ADJ (Usb2Ports[i].FuseHsTermRangeAdj);
       RegData &= ~RPD_CTRL(~0);
       RegData |= RPD_CTRL (PlatConfig->FuseRpdCtrl);
       PadCtlWrite (Private, USB2_OTG_PADX_CTL_1 (i), RegData);
+
+      if (Private->T264Platform) {
+        RegData  = PadCtlRead (Private, USB2_OTG_PADX_CTL_3 (i));
+        RegData &= ~USB2_REC_OS(~0);
+        RegData |= USB2_REC_OS (Usb2Ports[i].FuseHsRecOs);
+        RegData &= ~USB2_SQ_OS(~0);
+        RegData |= USB2_SQ_OS (Usb2Ports[i].FuseHsSqOs);
+        PadCtlWrite (Private, USB2_OTG_PADX_CTL_3 (i), RegData);
+      }
     } else {
+      RegData |= HS_CURR_LEVEL (7);
+
       RegData &= ~LS_FSLEW(~0);
       RegData |= LS_FSLEW (6);
       RegData &= ~LS_RSLEW(~0);
@@ -315,18 +347,20 @@ InitBiasPad (
   UINT32              Index;
   EFI_STATUS          Status;
 
-  /* Enable USB2 related Clocks like Usb2 Tracking Clock etc */
-  for (Index = 0; Index < PlatConfig->NumUsb2Clocks; Index++) {
-    Status = Private->mClockProtocol->Enable (Private->mClockProtocol, PlatConfig->Usb2ClockIds[Index], TRUE);
-    if (EFI_ERROR (Status)) {
-      /* Print Error and Conitnue as USB3(Super Speed) might still be partially working */
-      DEBUG ((
-        DEBUG_ERROR,
-        "Unable to Enable USB2 Clock:%d Status: %x\n",
-        PlatConfig->Usb2ClockIds[Index],
-        Status
-        ));
-      continue;
+  if (!Private->T264Platform) {
+    /* Enable USB2 related Clocks like Usb2 Tracking Clock etc */
+    for (Index = 0; Index < PlatConfig->NumUsb2Clocks; Index++) {
+      Status = Private->mClockProtocol->Enable (Private->mClockProtocol, PlatConfig->Usb2ClockIds[Index], TRUE);
+      if (EFI_ERROR (Status)) {
+        /* Print Error and Conitnue as USB3(Super Speed) might still be partially working */
+        DEBUG ((
+          DEBUG_ERROR,
+          "Unable to Enable USB2 Clock:%d Status: %x\n",
+          PlatConfig->Usb2ClockIds[Index],
+          Status
+          ));
+        continue;
+      }
     }
   }
 
@@ -353,6 +387,19 @@ InitBiasPad (
   RegVal  = PadCtlRead (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
   RegVal &= ~USB2_PD_TRK;
   PadCtlWrite (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1, RegVal);
+
+  gBS->Stall (200);
+
+  RegVal  = PadCtlRead (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+  RegVal |= USB2_TRK_COMPLETED;
+  PadCtlWrite (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL1, RegVal);
+
+  /* Disable periodic tracking explicitly before disabling
+   * the clock to avoid unstable connections
+   */
+  RegVal  = PadCtlRead (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL2);
+  RegVal &= ~(USB2_TRK_HW_MODE | CYA_TRK_CODE_UPDATE_ON_IDLE);
+  PadCtlWrite (Private, XUSB_PADCTL_USB2_BIAS_PAD_CTL2, RegVal);
 }
 
 STATIC
@@ -638,19 +685,21 @@ EnableVbus (
       Private->HandleOverCurrent = TRUE;
     } else {
       /* Enable VBUS Regulator through GPIO */
-      if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, TRUE))) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "Couldn't Enable Regulator: %d for USB Port: %u\n",
-          Usb2Ports[i].VbusSupply,
-          i
-          ));
+      if (Usb2Ports[i].VbusSupply != VBUS_SUPPLY_INVALID) {
+        if (EFI_ERROR (mRegulator->Enable (mRegulator, Usb2Ports[i].VbusSupply, TRUE))) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "Couldn't Enable Regulator: %d for USB Port: %u\n",
+            Usb2Ports[i].VbusSupply,
+            i
+            ));
 
-        /* Printing the Error and continuing here so that other Ports will
-         * still keep working and USB is not disabled completely
-         */
-        Usb2Ports[i].PortEnabled = FALSE;
-        continue;
+          /* Printing the Error and continuing here so that other Ports will
+           * still keep working and USB is not disabled completely
+           */
+          Usb2Ports[i].PortEnabled = FALSE;
+          continue;
+        }
       }
     }
   }
@@ -727,17 +776,18 @@ FindUsb2PadClocks (
 EFI_STATUS
 InitPlatInfo234 (
   CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode,
-  PADCTL_PLAT_CONFIG                      *PlatConfig
+  USBPADCTL_DXE_PRIVATE                   *Private
   )
 {
-  PORT_INFO   *Ports = NULL, *Usb2Ports, *Usb3Ports;
-  UINT32      i;
-  INT32       NodeOffset = -1;
-  INT32       PortsOffset, PropertySize;
-  CONST VOID  *Property  = NULL;
-  BOOLEAN     PortsFound = FALSE;
-  CHAR8       Name[7];
-  UINTN       CharCount;
+  PORT_INFO           *Ports = NULL, *Usb2Ports, *Usb3Ports;
+  UINT32              i;
+  INT32               NodeOffset = -1;
+  INT32               PortsOffset, PropertySize;
+  CONST VOID          *Property  = NULL;
+  BOOLEAN             PortsFound = FALSE;
+  CHAR8               Name[7];
+  UINTN               CharCount;
+  PADCTL_PLAT_CONFIG  *PlatConfig = &Private->PlatConfig;
 
   Ports = AllocateZeroPool ((PlatConfig->NumHsPhys + PlatConfig->NumSsPhys) * sizeof (PORT_INFO));
   if (NULL == Ports) {
@@ -750,11 +800,12 @@ InitPlatInfo234 (
 
   Usb2Ports = PlatConfig->Usb2Ports;
   Usb3Ports = PlatConfig->Usb3Ports;
-
-  if (FindUsb2PadClocks (PlatConfig, DeviceTreeNode) != EFI_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "Couldn't find USB2 Clocks Info in Device Tree\n"));
-    FreePool (Ports);
-    return EFI_UNSUPPORTED;
+  if (!Private->T264Platform) {
+    if (FindUsb2PadClocks (PlatConfig, DeviceTreeNode) != EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "Couldn't find USB2 Clocks Info in Device Tree\n"));
+      FreePool (Ports);
+      return EFI_UNSUPPORTED;
+    }
   }
 
   /* Finding the USB2 Ports that are enabled on the Platform */
@@ -769,6 +820,7 @@ InitPlatInfo234 (
   for (i = 0; i < PlatConfig->NumHsPhys; i++) {
     /* The Port is disabled by default */
     Usb2Ports[i].PortEnabled = FALSE;
+    Usb2Ports[i].VbusSupply  = VBUS_SUPPLY_INVALID;
 
     CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%u", i);
     NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
@@ -804,7 +856,6 @@ InitPlatInfo234 (
       Usb2Ports[i].VbusSupply = SwapBytes32 (*(UINT32 *)Property);
     } else {
       DEBUG ((DEBUG_ERROR, "Couldn't find Vbus Supply for Port: %a\n", Name));
-      continue;
     }
 
     /* Check if OverCurrent Handling is Enabled on Port */
@@ -895,24 +946,46 @@ ReadFuseCalibration (
   USBPADCTL_DXE_PRIVATE  *Private
   )
 {
-  UINT32                 RegVal, i;
+  UINT32                 RegVal, RegVal2, i;
   PADCTL_PLAT_CONFIG     *PlatConfig = &(Private->PlatConfig);
   NVIDIA_EFUSE_PROTOCOL  *mEfuse     = Private->mEfuse;
 
   mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_0, &RegVal);
+  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT_0, &RegVal2);
 
   /* Read Platform Specific Squelch Level and TermRangeAdj Values */
-  PlatConfig->FuseHsSquelchLevel = (RegVal & FUSE_USB_CALIB_SQUELCHLEVEL_MASK) >> FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT;
-  PlatConfig->FuseHsTermRangeAdj = (RegVal & FUSE_USB_CALIB_TERMRANGEADJ_MASK) >> FUSE_USB_CALIB_TERMRANGEADJ_SHIFT;
+  PlatConfig->FuseHsSquelchLevel              = (RegVal & FUSE_USB_CALIB_SQUELCHLEVEL_MASK) >> FUSE_USB_CALIB_SQUELCHLEVEL_SHIFT;
+  PlatConfig->Usb2Ports[0].FuseHsTermRangeAdj = (RegVal & FUSE_USB_CALIB_0_TERMRANGEADJ_MASK) >> FUSE_USB_CALIB_0_TERMRANGEADJ_SHIFT;
 
   /* Read the PAD Specific HS CURR LEVEL Value from Fuse */
   for (i = 0; i < PlatConfig->NumHsPhys; i++) {
     PlatConfig->Usb2Ports[i].FuseHsCurrLevel = (RegVal >> HS_CURR_LEVEL_PADX_SHIFT (i)) & HS_CURR_LEVEL_PAD_MASK;
+    if (i > 0) {
+      PlatConfig->Usb2Ports[i].FuseHsTermRangeAdj = (RegVal2 >> FUSE_USB_CALIB_EXT_TERM_RANGE_ADJ_PADX_SHIFT (i)) & FUSE_USB_CALIB_EXT_TERM_RANGE_ADJ_PADX_MASK;
+    }
   }
 
   /* Read Platform Specific RpdCtrl Value */
-  mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT_0, &RegVal);
-  PlatConfig->FuseRpdCtrl = RegVal & FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
+  PlatConfig->FuseRpdCtrl = RegVal2 & FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
+
+  if (Private->T264Platform) {
+    mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT2_0, &RegVal);
+
+    for (i = 0; i < PlatConfig->NumHsPhys; i++) {
+      // Get Rec OS from FUSE_USB_CALIB_EXT_0 for port 0~2
+      if (i < 3) {
+        PlatConfig->Usb2Ports[i].FuseHsRecOs = (RegVal2 >> FUSE_USB_CALIB_EXT_REC_OS_PADX_SHIFT (i)) & FUSE_USB_CALIB_EXT_REC_OS_PADX_MASK;
+      } else {
+        // Get Rec OS from FUSE_USB_CALIB_EXT_3 for port 3
+        mEfuse->ReadReg (mEfuse, FUSE_USB_CALIB_EXT3_0, &RegVal2);
+        PlatConfig->Usb2Ports[i].FuseHsRecOs = (RegVal2 >> FUSE_USB_CALIB_EXT_REC_OS_PADX_SHIFT (i)) & FUSE_USB_CALIB_EXT_REC_OS_PADX_MASK;
+      }
+
+      // Get Sq OS from FUSE_USB_CALIB_EXT_2
+      PlatConfig->Usb2Ports[i].FuseHsSqOs = (RegVal >> FUSE_USB_CALIB_EXT2_SQ_OS_PADX_SHIFT (i)) & FUSE_USB_CALIB_EXT2_SQ_OS_PADX_MASK;
+    }
+  }
+
   return EFI_SUCCESS;
 }
 
