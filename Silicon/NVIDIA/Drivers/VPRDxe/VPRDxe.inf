@@ -36,6 +36,7 @@
 [Guids]
   gEfiAcpiTableGuid
   gFdtTableGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE
