@@ -250,6 +250,7 @@ AndroidBootOnConnectCompleteHandler (
                 );
   Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: no misc partition cmd: %r\n", __FUNCTION__, Status));
     return;
   }
 
