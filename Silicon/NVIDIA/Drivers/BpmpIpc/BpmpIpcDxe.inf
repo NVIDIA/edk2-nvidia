@@ -42,6 +42,7 @@
   FdtLib
   DtPlatformDtbLoaderLib
   DeviceDiscoveryLib
+  DtbUpdateLib
   DeviceTreeHelperLib
 
 [Protocols]
@@ -60,6 +61,7 @@
   gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout
   gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize
 
 [Depex]
   gEfiDevicePathProtocolGuid

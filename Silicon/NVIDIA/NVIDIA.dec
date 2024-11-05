@@ -304,9 +304,6 @@
 #Tegra SPI FLASH Block Protocols Available
   gNVIDIATokenSpaceGuid.PcdTegraNorBlockProtocols|FALSE|BOOLEAN|0x00000003
 
-#Timeout in microseconds in hsp doorbell response, 0 for infinite
-  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
-
 #Timeout in microseconds in for bpmp response, 0 for infinite
   gNVIDIATokenSpaceGuid.PcdBpmpResponseTimeout|0|UINT32|0x00000008
 
@@ -795,6 +792,9 @@
 #Indicate if there is a GPT for each boot chain
   gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|FALSE|BOOLEAN|0x000000A5
 
+#Timeout in microseconds in hsp doorbell response, 0 for infinite
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007
+
 #Option to boot board in recovery mode
   gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting|0|UINT8|0x00000128
 
@@ -862,3 +862,6 @@
 
 #Control whether Physical Presence PCD is left enabled/disabled.
   gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE|BOOLEAN|0x00000131
+
+#HSP Doorbell Region Size
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x0|UINT32|0x00000150

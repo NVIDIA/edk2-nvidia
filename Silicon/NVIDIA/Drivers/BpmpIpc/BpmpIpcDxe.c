@@ -22,6 +22,7 @@
 #include <Protocol/BpmpIpc.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceDiscoveryLib.h>
+#include <Library/DtbUpdateLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include "BpmpIpcDxePrivate.h"
 
@@ -292,17 +293,33 @@ BpmpIpcInitialize (
   Status = ProcessDTNodes (DeviceTreeBase, &BpmpDeviceTreeIsSupported, ImageHandle, &BpmpDeviceInfo, &BpmpDevice, &BpmpDeviceCount);
 
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Done;
   }
 
   // HSP
   Status = ProcessDTNodes (DeviceTreeBase, &HspDeviceTreeIsSupported, ImageHandle, &HspDeviceInfo, &HspDevice, &HspDeviceCount);
 
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Done;
   }
 
   Status = BpmpIpcProtocolInit (BpmpDeviceInfo, BpmpDevice, BpmpDeviceCount, HspDeviceInfo, HspDevice, HspDeviceCount);
+
+Done:
+  if (EFI_ERROR (Status) || !BpmpPresent) {
+    DEBUG ((DEBUG_ERROR, "%a: WARNING: Installing dummy BPMP protocol\n", __FUNCTION__));
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &ImageHandle,
+                    &gNVIDIABpmpIpcProtocolGuid,
+                    &mBpmpDummyProtocol,
+                    &gNVIDIADummyBpmpIpcProtocolGuid,
+                    NULL,
+                    NULL
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+    }
+  }
 
   return Status;
 }

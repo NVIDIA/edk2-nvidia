@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,8 @@
 #include <Library/PcdLib.h>
 
 #define BOTH_ALIGNED(a, b, align)  ((((UINTN)(a) | (UINTN)(b)) & ((align) - 1)) == 0)
-#define PLATFORM_MAX_SOCKETS  (PcdGet32 (PcdTegraMaxSockets))
+#define PLATFORM_MAX_SOCKETS       (PcdGet32 (PcdTegraMaxSockets))
+#define BPMP_IPC_COMM_BUFFER_SIZE  SIZE_4KB
 
 /**
   Copy Length bytes from Source to Destination, using mmio accesses for specified direction.
@@ -658,6 +659,19 @@ BpmpIpcProtocolInit (
       }
     }
 
+    // In some cases, we may have a single resource. In that case, set rx buffer at fixed offset above tx buffer.
+    if ((NULL != PrivateData->Channels[Index].TxChannel) &&
+        (NULL == PrivateData->Channels[Index].RxChannel))
+    {
+      if (BpmpDevice[Index].Resources->AddrLen < (2 * BPMP_IPC_COMM_BUFFER_SIZE)) {
+        DEBUG ((EFI_D_ERROR, "%a: Bpmp buffer too small: %llu\r\n", __FUNCTION__, BpmpDevice[Index].Resources->AddrLen));
+        Status = EFI_UNSUPPORTED;
+        goto ErrorExit;
+      }
+
+      PrivateData->Channels[Index].RxChannel = (IVC_CHANNEL *)((UINT8 *)PrivateData->Channels[Index].TxChannel + BPMP_IPC_COMM_BUFFER_SIZE);
+    }
+
     if ((NULL == PrivateData->Channels[Index].TxChannel) ||
         (NULL == PrivateData->Channels[Index].RxChannel))
     {
@@ -675,26 +689,26 @@ BpmpIpcProtocolInit (
     }
 
     if (HspIndex >= HspDeviceCount) {
-      DEBUG ((DEBUG_ERROR, "%a, HSP device with phandle %u not found.", __FUNCTION__, PrivateData->Channels[Index].HspPhandle));
+      DEBUG ((DEBUG_ERROR, "%a, HSP device with phandle %u not found.\n", __FUNCTION__, PrivateData->Channels[Index].HspPhandle));
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;
     }
 
     Status = HspDoorbellInit (&HspNodeInfo[HspIndex], &HspDevice[HspIndex], PrivateData->Channels[Index].HspDoorbellLocation);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize Hsp Doorbell: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize Hsp Doorbell: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
     Status = HspDoorbellEnableChannel (PrivateData->Channels[Index].HspDoorbellLocation, HspDoorbellBpmp);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
     Status = InitializeIvcChannel (&PrivateData->Channels[Index]);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize channel: %r", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a, Failed to initialize channel: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
   }
@@ -706,7 +720,7 @@ BpmpIpcProtocolInit (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r\n", __FUNCTION__, Status));
     goto ErrorExit;
   }
 
@@ -715,6 +729,10 @@ BpmpIpcProtocolInit (
 ErrorExit:
   if (EFI_ERROR (Status)) {
     if (NULL != PrivateData) {
+      if (NULL != PrivateData->TimerEvent) {
+        gBS->CloseEvent (PrivateData->TimerEvent);
+      }
+
       if (NULL != PrivateData->Channels) {
         FreePool (PrivateData->Channels);
       }

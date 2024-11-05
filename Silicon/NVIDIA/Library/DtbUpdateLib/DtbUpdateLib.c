@@ -32,9 +32,151 @@ STATIC CONST CHAR8  *mMacAddressCompatibility[] = {
   "nvidia,tegra186-eqos",
   "nvidia,tegra194-eqos",
   "nvidia,tegra234-mgbe",
+  "nvidia,tegra264-mgbe",
+  "nvidia,tegra264-eqos",
   "snps,dwc-qos-ethernet-4.10",
   NULL
 };
+
+/**
+ * Update DTB BPMP IPC memory regions, if necessary.
+ *
+ * @param[in] Dtb                   Pointer to DTB
+
+ * @retval None
+**/
+STATIC
+VOID
+EFIAPI
+DtbUpdateBpmpIpcRegions (
+  VOID  *Dtb
+  )
+{
+  CHAR8                         BpmpPathStr[20];
+  CHAR8                         *BpmpPathFormat;
+  INT32                         NodeOffset;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_RESOURCE_INFO           *ResourceInfo;
+  CONST NVDA_MEMORY_REGION      *BpmpIpcRegions;
+  UINT32                        Socket;
+  UINT32                        MemoryPhandle;
+  UINT32                        MaxSockets;
+  CONST VOID                    *Property;
+  INT32                         PropertySize = 0;
+  INT32                         ParentOffset;
+  INT32                         AddressCells;
+  INT32                         SizeCells;
+  UINT32                        CellIndex;
+  INT32                         FdtStatus;
+  UINT32                        RegData[4];
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) ||
+      (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get platform resource hob\n", __FUNCTION__));
+    return;
+  }
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  ResourceInfo         = PlatformResourceInfo->ResourceInfo;
+  BpmpIpcRegions       = ResourceInfo->BpmpIpcRegions;
+  if (BpmpIpcRegions == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no BPMP IPC regions\n", __FUNCTION__));
+    return;
+  }
+
+  MaxSockets = PcdGet32 (PcdTegraMaxSockets);
+  for (Socket = 0; Socket < MaxSockets; Socket++) {
+    if (!(PlatformResourceInfo->SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    if (Socket == 0) {
+      BpmpPathFormat = "/bpmp";
+    } else {
+      BpmpPathFormat = "/bpmp_s%u";
+    }
+
+    if (BpmpIpcRegions[Socket].MemoryLength == 0) {
+      DEBUG ((DEBUG_ERROR, "%a: BPMP IPC socket%u size 0\n", __FUNCTION__, Socket));
+      continue;
+    }
+
+    ASSERT (AsciiStrSize (BpmpPathFormat) < sizeof (BpmpPathStr));
+    AsciiSPrint (BpmpPathStr, sizeof (BpmpPathStr), BpmpPathFormat, Socket);
+    NodeOffset = fdt_path_offset (Dtb, BpmpPathStr);
+    if (NodeOffset < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u bpmp node missing\n", __FUNCTION__, Socket));
+      continue;
+    }
+
+    Property = fdt_getprop (Dtb, NodeOffset, "status", &PropertySize);
+    if ((Property != NULL) && (AsciiStrCmp (Property, "okay") != 0)) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u bpmp node disabled\n", __FUNCTION__, Socket));
+      continue;
+    }
+
+    Property = fdt_getprop (Dtb, NodeOffset, "memory-region", &PropertySize);
+    if ((Property == NULL) || (PropertySize != sizeof (UINT32))) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u bad bpmp memory-region %p %d\n", __FUNCTION__, Socket, Property, PropertySize));
+      continue;
+    }
+
+    MemoryPhandle = fdt32_to_cpu (*(CONST UINT32 *)Property);
+    DEBUG ((DEBUG_INFO, "%a: socket%u memory-region phandle = 0x%x\n", __FUNCTION__, Socket, MemoryPhandle));
+
+    NodeOffset = fdt_node_offset_by_phandle (Dtb, MemoryPhandle);
+    if (NodeOffset < 0) {
+      DEBUG ((DEBUG_INFO, "%a: socket%u err=%d finding phandle=0x%x\n", __FUNCTION__, Socket, NodeOffset, MemoryPhandle));
+      continue;
+    }
+
+    ParentOffset = fdt_parent_offset (Dtb, NodeOffset);
+    if (ParentOffset < 0) {
+      DEBUG ((DEBUG_INFO, "%a: socket%u err=%d finding phandle=0x%x parent\n", __FUNCTION__, Socket, ParentOffset, MemoryPhandle));
+      continue;
+    }
+
+    AddressCells = fdt_address_cells (Dtb, ParentOffset);
+    SizeCells    = fdt_size_cells (Dtb, ParentOffset);
+    if ((SizeCells <= 0) || (AddressCells <= 0) || (SizeCells > 2) || (AddressCells > 2)) {
+      DEBUG ((DEBUG_INFO, "%a: socket%u phandle=0x%x parent error addr=%d, size=%d\n", __FUNCTION__, Socket, MemoryPhandle, AddressCells, SizeCells));
+      continue;
+    }
+
+    CellIndex = 0;
+    if (AddressCells == 2) {
+      RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryBaseAddress >> 32);
+    }
+
+    RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryBaseAddress);
+
+    if (SizeCells == 2) {
+      RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryLength >> 32);
+    }
+
+    RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryLength);
+
+    FdtStatus = fdt_setprop (Dtb, NodeOffset, "reg", RegData, CellIndex * sizeof (UINT32));
+    if (FdtStatus != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u phandle=0x%x error=%d setting reg\n", __FUNCTION__, Socket, MemoryPhandle, FdtStatus));
+      continue;
+    }
+
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: socket%u updated bpmp-shmem phandle=0x%x cells=%u 0x%llx 0x%llx\n",
+      __FUNCTION__,
+      Socket,
+      MemoryPhandle,
+      CellIndex,
+      BpmpIpcRegions[Socket].MemoryBaseAddress,
+      BpmpIpcRegions[Socket].MemoryLength
+      ));
+  }
+}
 
 /**
   Get MAC address string from value
@@ -262,6 +404,7 @@ DtbUpdateForUefi (
 {
   SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
 
+  DtbUpdateBpmpIpcRegions (Dtb);
   DtbUpdateGetMacAddressInfo ();
   DtbUpdateAllNodeMacAddresses ();
 }

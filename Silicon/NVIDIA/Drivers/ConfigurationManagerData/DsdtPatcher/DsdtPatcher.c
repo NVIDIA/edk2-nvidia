@@ -222,6 +222,93 @@ ErrorExit:
   return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
+STATIC CONST CHAR8  *BpmpIpcCompatibleInfo[] = {
+  "nvidia,tegra264-bpmp-shmem",
+  NULL
+};
+
+STATIC CHAR8  *BpmpIpcResources[] = {
+  ACPI_MRQ0_TX,
+  ACPI_MRQ0_RX,
+};
+
+/** patch MRQ0 BPMP IPC TX/RX resource data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateBpmpIpcInfo (
+  IN NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol
+  )
+{
+  EFI_STATUS                               Status;
+  INT32                                    NodeOffset;
+  NVIDIA_AML_NODE_INFO                     AcpiNodeInfo;
+  EFI_ACPI_QWORD_ADDRESS_SPACE_DESCRIPTOR  Descriptor;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA         RegisterData;
+  UINT32                                   NumRegisters;
+  UINT64                                   BpmpShmemBase;
+  UINTN                                    Index;
+
+  NodeOffset = -1;
+  Status     = DeviceTreeGetNextCompatibleNode (BpmpIpcCompatibleInfo, &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: no compat DTB node: %r\n", __FUNCTION__, Status));
+    if (Status == EFI_NOT_FOUND) {
+      return EFI_SUCCESS;
+    }
+
+    goto ErrorExit;
+  }
+
+  NumRegisters = 1;
+  Status       = DeviceTreeGetRegisters (NodeOffset, &RegisterData, &NumRegisters);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: get registers failed: %r\n", __FUNCTION__, Status));
+    goto ErrorExit;
+  }
+
+  BpmpShmemBase = RegisterData.BaseAddress;
+
+  for (Index = 0; Index < ARRAY_SIZE (BpmpIpcResources); Index++) {
+    Status = PatchProtocol->FindNode (PatchProtocol, BpmpIpcResources[Index], &AcpiNodeInfo);
+    if (EFI_ERROR (Status)) {
+      if ((Index == 0) && (Status == EFI_NOT_FOUND)) {
+        DEBUG ((DEBUG_INFO, "%a: %a not found, skipping\n", __FUNCTION__, BpmpIpcResources[Index]));
+        return EFI_SUCCESS;
+      }
+
+      DEBUG ((DEBUG_ERROR, "%a: finding %a failed: %r\n", __FUNCTION__, BpmpIpcResources[Index], Status));
+      goto ErrorExit;
+    }
+
+    Status = PatchProtocol->GetNodeData (PatchProtocol, &AcpiNodeInfo, &Descriptor, sizeof (Descriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %a get data failed: %r\n", __FUNCTION__, BpmpIpcResources[Index], Status));
+      goto ErrorExit;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: %a min/max=0x%llx/0x%llx: %r\n", __FUNCTION__, BpmpIpcResources[Index], Descriptor.AddrRangeMin, Descriptor.AddrRangeMax, Status));
+
+    Descriptor.AddrRangeMin += BpmpShmemBase;
+    Descriptor.AddrRangeMax += BpmpShmemBase;
+
+    DEBUG ((DEBUG_INFO, "%a: setting %a min/max to 0x%llx/0x%llx\n", __FUNCTION__, BpmpIpcResources[Index], Descriptor.AddrRangeMin, Descriptor.AddrRangeMax));
+
+    Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &Descriptor, sizeof (Descriptor));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %a set data failed: %r\n", __FUNCTION__, BpmpIpcResources[Index], Status));
+      goto ErrorExit;
+    }
+  }
+
+ErrorExit:
+  return Status;
+}
+
 /** patch EEPROMs data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -399,6 +486,11 @@ DsdtPatcher (
   }
 
   Status = UpdateSSIFInfo (PatchProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdateBpmpIpcInfo (PatchProtocol);
   if (EFI_ERROR (Status)) {
     return Status;
   }

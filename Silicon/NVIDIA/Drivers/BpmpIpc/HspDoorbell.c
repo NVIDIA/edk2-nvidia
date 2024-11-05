@@ -2,7 +2,7 @@
 #include "BpmpIpcDxePrivate.h"
   HspDoorbell protocol implementation for BPMP IPC driver.
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -101,6 +101,7 @@ HspDoorbellEnableChannel (
     if (Timeout != 0) {
       Timeout--;
       if (Timeout == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: HSP Doorbell timed out after %u us\r\n", __FUNCTION__, PcdGet32 (PcdHspDoorbellTimeout)));
         return EFI_NOT_READY;
       }
     }
@@ -155,7 +156,7 @@ HspDoorbellInit (
 
   for (Index = HspDoorbellDpmu; Index < HspDoorbellMax; Index++) {
     DoorbellLocation[Index] = HspBase;
-    HspBase                += HSP_DOORBELL_REGION_SIZE;
+    HspBase                += PcdGet32 (PcdHspDoorbellRegionSize);
   }
 
   return EFI_SUCCESS;

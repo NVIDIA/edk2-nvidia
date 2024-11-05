@@ -1119,6 +1119,11 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 !endif
 gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 
+  #
+  # Hsp Doorbell Region Size
+  #
+  gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x100
+
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)
