@@ -49,43 +49,6 @@ STATIC VOID     *RegistrationPolicy = NULL;
 STATIC BOOLEAN  VariablesParsed     = FALSE;
 
 /**
-  Check if the Device is an AGX Xavier Device type.
-
-  @retval TRUE  Device is an AGX Xavier.
-  @retval FALSE Not an AGX Xavier Device.
-
-**/
-STATIC
-BOOLEAN
-IsAgxXavier (
-  VOID
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      NumberOfPlatformNodes;
-
-  NumberOfPlatformNodes = 0;
-  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,p2972-0000", NULL, &NumberOfPlatformNodes);
-  if (Status != EFI_NOT_FOUND) {
-    return TRUE;
-  }
-
-  NumberOfPlatformNodes = 0;
-  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,galen", NULL, &NumberOfPlatformNodes);
-  if (Status != EFI_NOT_FOUND) {
-    return TRUE;
-  }
-
-  NumberOfPlatformNodes = 0;
-  Status                = GetMatchingEnabledDeviceTreeNodes ("nvidia,e3360_1099", NULL, &NumberOfPlatformNodes);
-  if (Status != EFI_NOT_FOUND) {
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-/**
   Check if StMM has signalled a tampered Variable Store that needs a reboot.
 
 **/
@@ -140,10 +103,7 @@ SetSecurityPcd (
   VOID
   )
 {
-  if ((IsAgxXavier () == TRUE) &&
-      (IsSecureBootEnabled () == TRUE) &&
-      (PcdGetBool (PcdUserPhysicalPresence) == TRUE))
-  {
+  if (IsSecureBootEnabled () == TRUE) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Setting Physical Presence PCD to FALSE\n",

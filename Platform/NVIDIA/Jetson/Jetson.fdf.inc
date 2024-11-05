@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -184,3 +184,8 @@
   #
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+
+  #
+  # L4T launcher
+  #
+  INF Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf

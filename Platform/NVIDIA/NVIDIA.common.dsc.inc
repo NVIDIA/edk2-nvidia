@@ -641,7 +641,7 @@ CONFIG_MEMORY_TEST=n
   #
   # Allow physical presence activities
   #
-  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables

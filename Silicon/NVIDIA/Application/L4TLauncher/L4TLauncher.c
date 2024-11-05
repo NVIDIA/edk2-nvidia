@@ -1,14 +1,18 @@
 /** @file
   The main process for L4TLauncher application.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include <PiPei.h>
+
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
+#include <Library/HobLib.h>
+#include <Library/PcdLib.h>
 #include <Library/ShellLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -2213,6 +2217,71 @@ Exit:
 }
 
 /**
+  Boots an android style image already loaded in memory
+
+  @param[in]  ImageBase  Address of android style image in memory.
+  @param[in]  ImageSize  Size of android style image in memory.
+
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+BootAndroidStyleImage (
+  IN EFI_PHYSICAL_ADDRESS  ImageBase,
+  IN UINT64                ImageSize
+  )
+{
+  EFI_STATUS              Status;
+  ANDROID_BOOTIMG_HEADER  ImageHeader;
+  UINTN                   ImageBufferSize;
+  UINTN                   SignatureOffset;
+  UINT8                   Signature[SIZE_2KB];
+  UINTN                   SignatureSize = sizeof (Signature);
+
+  memcpy (&ImageHeader, (VOID *)ImageBase, sizeof (ANDROID_BOOTIMG_HEADER));
+  Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Android image header not seen\r\n");
+    return Status;
+  }
+
+  if (ImageSize < ImageBufferSize) {
+    return Status;
+  }
+
+  if (IsSecureBootEnabled ()) {
+    SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+    memcpy (Signature, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
+    Status = VerifyDetachedSignature (
+               Signature,
+               SignatureSize,
+               (VOID *)ImageBase,
+               ImageBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to verify kernel image signature\r\n");
+      goto Exit;
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Cmdline: \n", __FUNCTION__));
+
+  DEBUG ((DEBUG_ERROR, "%a", ImageHeader.KernelArgs));
+
+  Status = AndroidBootImgBoot ((VOID *)ImageBase, ImageBufferSize);
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"Failed to boot image: %r\r\n", Status);
+  }
+
+Exit:
+
+  return Status;
+}
+
+/**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers, including
   both device drivers and bus drivers.
@@ -2232,15 +2301,17 @@ L4TLauncher (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_DEVICE_PATH            *FullDevicePath;
-  EFI_LOADED_IMAGE_PROTOCOL  *LoadedImage;
-  EFI_STATUS                 Status;
-  EFI_HANDLE                 LoadedImageHandle  = 0;
-  EFI_HANDLE                 RootFsDeviceHandle = 0;
-  L4T_BOOT_PARAMS            BootParams;
-  EXTLINUX_BOOT_CONFIG       ExtLinuxConfig;
-  UINTN                      ExtLinuxBootOption;
-  UINTN                      Index;
+  EFI_DEVICE_PATH               *FullDevicePath;
+  EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
+  EFI_STATUS                    Status;
+  EFI_HANDLE                    LoadedImageHandle  = 0;
+  EFI_HANDLE                    RootFsDeviceHandle = 0;
+  L4T_BOOT_PARAMS               BootParams;
+  EXTLINUX_BOOT_CONFIG          ExtLinuxConfig;
+  UINTN                         ExtLinuxBootOption;
+  UINTN                         Index;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Status = gBS->HandleProtocol (ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID **)&LoadedImage);
   if (EFI_ERROR (Status)) {
@@ -2261,122 +2332,140 @@ L4TLauncher (
     }
   }
 
-  if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_GRUB) {
-    ErrorPrint (L"%a: Attempting GRUB Boot\r\n", __FUNCTION__);
-    do {
-      FullDevicePath = FileDevicePath (LoadedImage->DeviceHandle, GRUB_PATH);
-      if (FullDevicePath == NULL) {
-        ErrorPrint (L"%a: Failed to create full device path\r\n", __FUNCTION__);
-        BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
-        break;
-      }
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    ErrorPrint (L"%a: Failed to get PlatformResourceInfo\r\n", __FUNCTION__);
+    return EFI_NOT_FOUND;
+  }
 
-      Status = gBS->LoadImage (FALSE, ImageHandle, FullDevicePath, NULL, 0, &LoadedImageHandle);
-      if (EFI_ERROR (Status)) {
-        if (Status != EFI_NOT_FOUND) {
-          ErrorPrint (L"%a: Unable to load image: %r\r\n", __FUNCTION__, Status);
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+    ErrorPrint (L"%a: Attempting RCM Boot\r\n", __FUNCTION__);
+    Status = BootAndroidStyleImage (PcdGet64 (PcdRcmKernelBase), PcdGet64 (PcdRcmKernelSize));
+    if (EFI_ERROR (Status)) {
+      ErrorPrint (L"Failed to boot image: %r\r\n", Status);
+    }
+  } else {
+    if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_GRUB) {
+      ErrorPrint (L"%a: Attempting GRUB Boot\r\n", __FUNCTION__);
+      do {
+        FullDevicePath = FileDevicePath (LoadedImage->DeviceHandle, GRUB_PATH);
+        if (FullDevicePath == NULL) {
+          ErrorPrint (L"%a: Failed to create full device path\r\n", __FUNCTION__);
+          BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
+          break;
         }
 
-        BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
-        break;
+        Status = gBS->LoadImage (FALSE, ImageHandle, FullDevicePath, NULL, 0, &LoadedImageHandle);
+        if (EFI_ERROR (Status)) {
+          if (Status != EFI_NOT_FOUND) {
+            ErrorPrint (L"%a: Unable to load image: %r\r\n", __FUNCTION__, Status);
+          }
+
+          BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
+          break;
+        }
+
+        Status = UpdateBootConfig (LoadedImage->DeviceHandle, BootParams.BootChain);
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Unable to update partition files\r\n", __FUNCTION__);
+          BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
+          break;
+        }
+
+        // Before calling the image, enable the Watchdog Timer for  the 5 Minute period
+        gBS->SetWatchdogTimer (5 * 60, 0x10000, 0, NULL);
+
+        Status = gBS->StartImage (LoadedImageHandle, NULL, NULL);
+
+        // Clear the Watchdog Timer if the image returns
+        gBS->SetWatchdogTimer (0, 0x10000, 0, NULL);
+
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Unable to start image: %r\r\n", __FUNCTION__, Status);
+          break;
+        }
+      } while (FALSE);
+    }
+
+    if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_DIRECT) {
+      ErrorPrint (L"%a: Attempting Direct Boot\r\n", __FUNCTION__);
+      do {
+        Status = ProcessExtLinuxConfig (LoadedImage->DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Unable to process extlinux config: %r\r\n", __FUNCTION__, Status);
+          BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
+          break;
+        }
+
+        ExtLinuxBootOption = ExtLinuxBootMenu (&ExtLinuxConfig);
+
+        Status = ExtLinuxBoot (ImageHandle, RootFsDeviceHandle, &ExtLinuxConfig.BootOptions[ExtLinuxBootOption]);
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Unable to boot via extlinux: %r\r\n", __FUNCTION__, Status);
+          BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
+          break;
+        }
+      } while (FALSE);
+
+      for (Index = 0; Index < ExtLinuxConfig.NumberOfBootOptions; Index++) {
+        if (ExtLinuxConfig.BootOptions[Index].BootArgs != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].BootArgs);
+          ExtLinuxConfig.BootOptions[Index].BootArgs = NULL;
+        }
+
+        if (ExtLinuxConfig.BootOptions[Index].DtbPath != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].DtbPath);
+          ExtLinuxConfig.BootOptions[Index].DtbPath = NULL;
+        }
+
+        if (ExtLinuxConfig.BootOptions[Index].InitrdPath != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].InitrdPath);
+          ExtLinuxConfig.BootOptions[Index].InitrdPath = NULL;
+        }
+
+        if (ExtLinuxConfig.BootOptions[Index].Label != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].Label);
+          ExtLinuxConfig.BootOptions[Index].Label = NULL;
+        }
+
+        if (ExtLinuxConfig.BootOptions[Index].LinuxPath != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].LinuxPath);
+          ExtLinuxConfig.BootOptions[Index].LinuxPath = NULL;
+        }
+
+        if (ExtLinuxConfig.BootOptions[Index].MenuLabel != NULL) {
+          FreePool (ExtLinuxConfig.BootOptions[Index].MenuLabel);
+          ExtLinuxConfig.BootOptions[Index].MenuLabel = NULL;
+        }
       }
 
-      Status = UpdateBootConfig (LoadedImage->DeviceHandle, BootParams.BootChain);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Unable to update partition files\r\n", __FUNCTION__);
-        BootParams.BootMode = NVIDIA_L4T_BOOTMODE_DIRECT;
-        break;
-      }
-
-      // Before calling the image, enable the Watchdog Timer for  the 5 Minute period
-      gBS->SetWatchdogTimer (5 * 60, 0x10000, 0, NULL);
-
-      Status = gBS->StartImage (LoadedImageHandle, NULL, NULL);
-
-      // Clear the Watchdog Timer if the image returns
-      gBS->SetWatchdogTimer (0, 0x10000, 0, NULL);
-
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Unable to start image: %r\r\n", __FUNCTION__, Status);
-        break;
-      }
-    } while (FALSE);
-  }
-
-  if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_DIRECT) {
-    ErrorPrint (L"%a: Attempting Direct Boot\r\n", __FUNCTION__);
-    do {
-      Status = ProcessExtLinuxConfig (LoadedImage->DeviceHandle, BootParams.BootChain, &ExtLinuxConfig, &RootFsDeviceHandle);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Unable to process extlinux config: %r\r\n", __FUNCTION__, Status);
-        BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
-        break;
-      }
-
-      ExtLinuxBootOption = ExtLinuxBootMenu (&ExtLinuxConfig);
-
-      Status = ExtLinuxBoot (ImageHandle, RootFsDeviceHandle, &ExtLinuxConfig.BootOptions[ExtLinuxBootOption]);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Unable to boot via extlinux: %r\r\n", __FUNCTION__, Status);
-        BootParams.BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
-        break;
-      }
-    } while (FALSE);
-
-    for (Index = 0; Index < ExtLinuxConfig.NumberOfBootOptions; Index++) {
-      if (ExtLinuxConfig.BootOptions[Index].BootArgs != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].BootArgs);
-        ExtLinuxConfig.BootOptions[Index].BootArgs = NULL;
-      }
-
-      if (ExtLinuxConfig.BootOptions[Index].DtbPath != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].DtbPath);
-        ExtLinuxConfig.BootOptions[Index].DtbPath = NULL;
-      }
-
-      if (ExtLinuxConfig.BootOptions[Index].InitrdPath != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].InitrdPath);
-        ExtLinuxConfig.BootOptions[Index].InitrdPath = NULL;
-      }
-
-      if (ExtLinuxConfig.BootOptions[Index].Label != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].Label);
-        ExtLinuxConfig.BootOptions[Index].Label = NULL;
-      }
-
-      if (ExtLinuxConfig.BootOptions[Index].LinuxPath != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].LinuxPath);
-        ExtLinuxConfig.BootOptions[Index].LinuxPath = NULL;
-      }
-
-      if (ExtLinuxConfig.BootOptions[Index].MenuLabel != NULL) {
-        FreePool (ExtLinuxConfig.BootOptions[Index].MenuLabel);
-        ExtLinuxConfig.BootOptions[Index].MenuLabel = NULL;
+      if (ExtLinuxConfig.MenuTitle != NULL) {
+        FreePool (ExtLinuxConfig.MenuTitle);
+        ExtLinuxConfig.MenuTitle = NULL;
       }
     }
 
-    if (ExtLinuxConfig.MenuTitle != NULL) {
-      FreePool (ExtLinuxConfig.MenuTitle);
-      ExtLinuxConfig.MenuTitle = NULL;
-    }
-  }
-
-  // Not in else to allow fallback
-  if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_BOOTIMG) {
-    ErrorPrint (L"%a: Attempting Kernel Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
-      // Warm reset if there is valid rootfs
-      if (IsValidRootfs()) {
-        ResetCold ();
+    // Not in else to allow fallback
+    if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_BOOTIMG) {
+      ErrorPrint (L"%a: Attempting Kernel Boot\r\n", __FUNCTION__);
+      Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, BOOTIMG_BASE_NAME, BOOTIMG_DTB_BASE_NAME, &BootParams);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to boot %s:%d partition\r\n", BOOTIMG_BASE_NAME, BootParams.BootChain);
+        // Warm reset if there is valid rootfs
+        if (IsValidRootfs ()) {
+          ResetCold ();
+        }
       }
-    }
-  } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
-    ErrorPrint (L"%a: Attempting Recovery Boot\r\n", __FUNCTION__);
-    Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to boot %s:%d partition\r\n", RECOVERY_BASE_NAME, BootParams.BootChain);
+    } else if (BootParams.BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
+      ErrorPrint (L"%a: Attempting Recovery Boot\r\n", __FUNCTION__);
+      Status = BootAndroidStylePartition (LoadedImage->DeviceHandle, RECOVERY_BASE_NAME, RECOVERY_DTB_BASE_NAME, &BootParams);
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to boot %s:%d partition\r\n", RECOVERY_BASE_NAME, BootParams.BootChain);
+      }
     }
   }
 
