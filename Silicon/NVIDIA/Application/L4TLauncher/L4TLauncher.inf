@@ -1,7 +1,7 @@
 ## @file
 #  Application to launch L4T A/B.
 #
-# Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,6 +34,8 @@
   UefiBootServicesTableLib
   UefiApplicationEntryPoint
   BaseMemoryLib
+  HobLib
+  PcdLib
   DebugLib
   DevicePathLib
   UefiLib
@@ -49,10 +51,15 @@
   OpteeNvLib
   TegraPlatformInfoLib
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize
+
 [Guids]
   gNVIDIAPublicVariableGuid
   gFdtTableGuid
   gEfiSecureBootEnableDisableGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
   gEfiLoadedImageProtocolGuid

@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -641,7 +641,7 @@ CONFIG_MEMORY_TEST=n
   #
   # Allow physical presence activities
   #
-  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|FALSE
+  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables

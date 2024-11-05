@@ -2,7 +2,7 @@
 #
 #  This Package provides all definitions for NVIDIA silicon
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -156,8 +156,11 @@
   # guid to indicate Default Variable Driver completion.
   gNVIDIADefaultVarDoneGuid = { 0x386dea10, 0xe2c3, 0x4848, { 0xa6, 0xc0, 0x63,0x61, 0x32, 0xf5, 0x65,0x60 } }
 
-   # guid of fTPM TA in OP-TEE
+  # guid of fTPM TA in OP-TEE
   gNVIDIAFtpmOpteeGuid = { 0xbc50d971, 0xd4c9, 0x42c4, { 0x82, 0xcb, 0x34, 0x3f, 0xb7, 0xf3, 0x78, 0x96 } }
+
+  # L4T Launcher Application Guid
+  gNVIDIAL4TLauncherApplicationGuid = { 0xcbf481fb, 0xb373, 0x4e78, { 0xaa, 0x7e, 0x86, 0x31, 0x85, 0x8e, 0x02, 0x17 } }
 
 [Protocols]
   gNVIDIADeviceTreeCompatibilityProtocolGuid      = { 0x1e710608, 0x28a3, 0x4c0b, { 0x9b, 0xec, 0x1c, 0x75, 0x49, 0xa7, 0x0d, 0x90 } }

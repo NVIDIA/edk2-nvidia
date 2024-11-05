@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -1109,6 +1109,32 @@ DisplaySystemAndHotkeyInformation (
 
 STATIC
 BOOLEAN
+IsSingleBootNeeded (
+  VOID
+  )
+{
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get PlatformResourceInfo\r\n", __FUNCTION__));
+    ASSERT (FALSE);
+  }
+
+  if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+STATIC
+BOOLEAN
 IsPlatformConfigurationNeeded (
   VOID
   )
@@ -1380,41 +1406,58 @@ PlatformBootManagerBeforeConsole (
   //
   FilterAndProcess (&gEfiGraphicsOutputProtocolGuid, NULL, AddOutput);
 
-  if (IsPlatformConfigurationNeeded ()) {
+  if (!IsSingleBootNeeded ()) {
+    if (IsPlatformConfigurationNeeded ()) {
+      //
+      // Connect the rest of the devices.
+      //
+      EfiBootManagerConnectAll ();
+
+      //
+      // Enumerate all possible boot options.
+      //
+      EfiBootManagerRefreshAllBootOption ();
+
+      //
+      // Register platform-specific boot options and keyboard shortcuts.
+      //
+      PlatformRegisterOptionsAndKeys ();
+
+      //
+      // Register UEFI Shell
+      //
+      PlatformRegisterFvBootOption (
+        &gUefiShellFileGuid,
+        L"UEFI Shell",
+        LOAD_OPTION_ACTIVE,
+        LoadOptionTypeBoot
+        );
+
+      //
+      // Set Boot Order
+      //
+      SetBootOrder ();
+
+      //
+      // Set platform has been configured
+      //
+      PlatformConfigured ();
+    }
+  } else {
     //
     // Connect the rest of the devices.
     //
     EfiBootManagerConnectAll ();
 
-    //
-    // Enumerate all possible boot options.
-    //
-    EfiBootManagerRefreshAllBootOption ();
+    // Don't wait for timeout
+    PcdSet16S (PcdPlatformBootTimeOut, 0);
 
-    //
-    // Register platform-specific boot options and keyboard shortcuts.
-    //
-    PlatformRegisterOptionsAndKeys ();
-
-    //
-    // Register UEFI Shell
-    //
     PlatformRegisterFvBootOption (
-      &gUefiShellFileGuid,
-      L"UEFI Shell",
+      &gNVIDIAL4TLauncherApplicationGuid,
+      L"Boot Application",
       LOAD_OPTION_ACTIVE,
       LoadOptionTypeBoot
       );
-
-    //
-    // Set Boot Order
-    //
-    SetBootOrder ();
-
-    //
-    // Set platform has been configured
-    //
-    PlatformConfigured ();
   }
 
   //
@@ -1718,10 +1761,12 @@ PlatformBootManagerAfterConsole (
   //
   BootLogoEnableLogo ();
 
-  //
-  // Display system and hotkey information after console is ready.
-  //
-  DisplaySystemAndHotkeyInformation ();
+  if (!IsSingleBootNeeded ()) {
+    //
+    // Display system and hotkey information after console is ready.
+    //
+    DisplaySystemAndHotkeyInformation ();
+  }
 
   //
   // Run memory test
