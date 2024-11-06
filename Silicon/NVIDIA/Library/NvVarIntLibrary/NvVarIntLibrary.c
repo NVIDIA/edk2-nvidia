@@ -177,9 +177,16 @@ MeasureBootVars (
 
     DEBUG ((DEBUG_INFO, "Adding %s Size %u %p\n", BootOptionName, BootOptionSize, BootOptions[Index]));
     HashApiUpdate (HashContext, BootOptions[Index], BootOptionSize);
+    FreePool (BootOptions[Index]);
   }
 
 ExitMeasureBootVars:
+
+  if (BootOptions != NULL) {
+    FreePool (BootOptions);
+    BootOptions = NULL;
+  }
+
   if ((UpdatingBootOrder == TRUE)) {
     BootOrder = NULL;
     BootCount = 0;
@@ -598,7 +605,6 @@ ComputeVarMeasurement (
   )
 {
   EFI_STATUS  Status;
-  UINTN       Index;
 
   if (HashContext == NULL) {
     HashContext = AllocateRuntimeZeroPool (HashApiGetContextSize ());
@@ -625,21 +631,11 @@ ComputeVarMeasurement (
     Status = EFI_DEVICE_ERROR;
   }
 
-  if ((BootCount != 0) && (BootOptions != NULL)) {
-    for (Index = 0; Index < BootCount; Index++) {
-      if (BootOptions[Index] != NULL) {
-        FreePool (BootOptions[Index]);
-      }
-    }
-
-    FreePool (BootOptions);
-    BootCount   = 0;
-    BootOptions = NULL;
-  }
-
   if (BootOrder != NULL) {
     FreePool (BootOrder);
   }
+
+  BootCount = 0;
 
   Status = EFI_SUCCESS;
 
