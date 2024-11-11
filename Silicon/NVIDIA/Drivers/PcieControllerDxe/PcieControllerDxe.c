@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,8 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/KernelCmdLineUpdate.h>
@@ -2117,30 +2119,32 @@ DeviceDiscoveryNotify (
   IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
   )
 {
-  EFI_STATUS                 Status;
-  PCI_ROOT_BRIDGE            *RootBridge       = NULL;
-  EFI_DEVICE_PATH_PROTOCOL   *ParentDevicePath = NULL;
-  CONST VOID                 *BusProperty      = NULL;
-  CONST VOID                 *RangesProperty   = NULL;
-  INT32                      PropertySize      = 0;
-  INT32                      AddressCells;
-  INT32                      PciAddressCells;
-  INT32                      SizeCells;
-  INT32                      RangeSize;
-  CONST VOID                 *SegmentNumber = NULL;
-  CONST VOID                 *ControllerId  = NULL;
-  PCIE_CONTROLLER_PRIVATE    *Private       = NULL;
-  NVIDIA_REGULATOR_PROTOCOL  *Regulator     = NULL;
-  CONST VOID                 *Property      = NULL;
-  UINT32                     Val;
-  UINTN                      ChipID;
-  UINT32                     DeviceTreeHandle;
-  UINT32                     NumberOfInterrupts;
-  UINT32                     Index;
-  UINT32                     Index2;
-  BOOLEAN                    RegisterConfigurationData;
-  BOOLEAN                    PcieFound;
-  CONST UINT32               *InterruptMap;
+  EFI_STATUS                    Status;
+  PCI_ROOT_BRIDGE               *RootBridge       = NULL;
+  EFI_DEVICE_PATH_PROTOCOL      *ParentDevicePath = NULL;
+  CONST VOID                    *BusProperty      = NULL;
+  CONST VOID                    *RangesProperty   = NULL;
+  INT32                         PropertySize      = 0;
+  INT32                         AddressCells;
+  INT32                         PciAddressCells;
+  INT32                         SizeCells;
+  INT32                         RangeSize;
+  CONST VOID                    *SegmentNumber = NULL;
+  CONST VOID                    *ControllerId  = NULL;
+  PCIE_CONTROLLER_PRIVATE       *Private       = NULL;
+  NVIDIA_REGULATOR_PROTOCOL     *Regulator     = NULL;
+  CONST VOID                    *Property      = NULL;
+  UINT32                        Val;
+  UINTN                         ChipID;
+  UINT32                        DeviceTreeHandle;
+  UINT32                        NumberOfInterrupts;
+  UINT32                        Index;
+  UINT32                        Index2;
+  BOOLEAN                       RegisterConfigurationData;
+  BOOLEAN                       PcieFound;
+  CONST UINT32                  *InterruptMap;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   NumberOfInterrupts        = 2;
   RegisterConfigurationData = TRUE;
@@ -2190,6 +2194,20 @@ DeviceDiscoveryNotify (
       break;
 
     case DeviceDiscoveryDriverBindingStart:
+      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+      if ((Hob != NULL) &&
+          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+      {
+        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+      } else {
+        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+        return EFI_UNSUPPORTED;
+      }
+
+      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+        return EFI_UNSUPPORTED;
+      }
+
       RootBridge = AllocateZeroPool (sizeof (PCI_ROOT_BRIDGE));
       if (RootBridge == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device bridge structure\r\n", __FUNCTION__));

@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,8 +15,6 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <ConfigurationManagerObject.h>
 #include <Protocol/ConfigurationManagerDataProtocol.h>
-
-#define BIT(x)  (1UL << (x))
 
 #define upper_32_bits(n)  ((UINT32)((n) >> 32))
 #define lower_32_bits(n)  ((UINT32)(n))
