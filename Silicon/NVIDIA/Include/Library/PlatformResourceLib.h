@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -23,7 +23,7 @@
 #define TEGRA_UART_TYPE_TCU    0xFE
 #define TEGRA_UART_TYPE_NONE   0xFF
 
-#define BIT(x)  (1 << (x))
+#define BIT(x)  (1UL << (x))
 
 #define MAX_EEPROM_DATA_SIZE  256
 #define MAX_SUPPORTED_CORES   1024
