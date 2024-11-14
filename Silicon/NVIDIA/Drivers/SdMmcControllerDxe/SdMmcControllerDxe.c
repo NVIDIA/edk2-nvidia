@@ -101,9 +101,12 @@ SdMmcNotify (
   IN OUT  VOID                     *PhaseData
   )
 {
-  EFI_PHYSICAL_ADDRESS  SlotBaseAddress = 0;
-  UINTN                 SlotSize;
-  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS              SlotBaseAddress = 0;
+  UINTN                             SlotSize;
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
+  UINT8                             TapValue;
+  UINT8                             TrimValue;
 
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, Slot, &SlotBaseAddress, &SlotSize);
   if (EFI_ERROR (Status)) {
@@ -112,8 +115,26 @@ SdMmcNotify (
   }
 
   if (PhaseType == EdkiiSdMmcInitHostPost) {
+    Node   = NULL;
+    Status = gBS->HandleProtocol (ControllerHandle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: no DT protocol: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
+
+    if (NULL != fdt_get_property (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
+      TapValue  = SDHCI_TAP_EMBEDDED;
+      TrimValue = SDHCI_TRIM_EMBEDDED;
+    } else {
+      TapValue  = SDHCI_TAP_REMOVABLE;
+      TrimValue = SDHCI_TRIM_REMOVABLE;
+    }
+
     // Enable SDMMC Clock again.
     MmioOr32 (SlotBaseAddress + SD_MMC_HC_CLOCK_CTRL, SD_MMC_CLK_CTRL_SD_CLK_EN);
+    // Set trim and tap
+    MmioBitFieldWrite32 (SlotBaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL, SDHCI_CLOCK_CTRL_TRIM_START, SDHCI_CLOCK_CTRL_TRIM_END, TrimValue);
+    MmioBitFieldWrite32 (SlotBaseAddress + SDHCI_TEGRA_VENDOR_CLOCK_CTRL, SDHCI_CLOCK_CTRL_TAP_START, SDHCI_CLOCK_CTRL_TAP_END, TapValue);
   }
 
   return EFI_SUCCESS;

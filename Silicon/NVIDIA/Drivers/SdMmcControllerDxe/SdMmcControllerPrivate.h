@@ -23,13 +23,21 @@
 
 /* Tegra SDHOST controller vendor register definitions */
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL               0x100
-#define SDHCI_CLOCK_CTRL_TAP_MASK                   0x00ff0000
-#define SDHCI_CLOCK_CTRL_TAP_SHIFT                  16
+#define SDHCI_CLOCK_CTRL_TRIM_START                 24
+#define SDHCI_CLOCK_CTRL_TRIM_END                   28
+#define SDHCI_CLOCK_CTRL_TAP_START                  16
+#define SDHCI_CLOCK_CTRL_TAP_END                    23
 #define SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_START  8
 #define SDHCI_CLOCK_CTRL_BASE_CLOCK_OVERRIDE_END    15
 #define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE      5
 #define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE     3
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE    2
+
+#define SDHCI_TRIM_EMBEDDED   5
+#define SDHCI_TRIM_REMOVABLE  5
+
+#define SDHCI_TAP_EMBEDDED   9
+#define SDHCI_TAP_REMOVABLE  11
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL           0x120
 #define SDHCI_MISC_CTRL_ENABLE_SDR104_BIT      3
