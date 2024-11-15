@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -27,6 +27,7 @@ do {                                                                 \
 
 #define SAVED_BOOT_ORDER_VARIABLE_NAME        L"SavedBootOrder"
 #define SAVED_BOOT_ORDER_FLAGS_VARIABLE_NAME  L"SavedBootOrderFlags"
+#define BOOT_TO_UIAPP_VARIABLE_NAME           L"BootToUiApp"
 
 #define SAVED_BOOT_ORDER_ALL_INSTANCES_FLAG  0x1
 #define SAVED_BOOT_ORDER_VIRTUAL_FLAG        0x2

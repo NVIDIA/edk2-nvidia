@@ -376,6 +376,7 @@ RestoreBootOrder (
 
   // At this point, we've confirmed that BootOrder equals SavedBootOrder except with one device or class moved to the beginning
 
+  // If we're triggering this from an event, make sure BootCurrent is the reordered BootNum. If not, we don't need to restore.
   if (Event != NULL) {
     Status = GetEfiGlobalVariable2 (L"BootCurrent", (VOID **)&BootCurrent, &BootCurrentSize);
     if (EFI_ERROR (Status) || (BootCurrent == NULL) || (BootCurrentSize != sizeof (UINT16))) {
@@ -436,6 +437,99 @@ CleanupAndReturn:
   }
 }
 
+STATIC
+BOOLEAN
+CheckBootToUiAppVariable (
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     BootToUiApp;
+  UINTN       BootToUiAppSize;
+
+  BootToUiApp     = FALSE;
+  BootToUiAppSize = sizeof (BootToUiApp);
+  Status          = gRT->GetVariable (
+                           BOOT_TO_UIAPP_VARIABLE_NAME,
+                           &gNVIDIATokenSpaceGuid,
+                           NULL,
+                           &BootToUiAppSize,
+                           &BootToUiApp
+                           );
+
+  if (EFI_ERROR (Status)) {
+    if (Status == EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_INFO, "%a: BootToUiApp not found\n", __FUNCTION__));
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Got error getting BootToUiApp variable: %r\n", __FUNCTION__, Status));
+    }
+  }
+
+  return BootToUiApp;
+}
+
+STATIC
+EFI_STATUS
+SetBootToUiAppVariable (
+  IN BOOLEAN  BootToUiApp
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = gRT->SetVariable (
+                  BOOT_TO_UIAPP_VARIABLE_NAME,
+                  &gNVIDIATokenSpaceGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                  sizeof (BootToUiApp),
+                  &BootToUiApp
+                  );
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got error setting BootToUiApp variable to %a: %r\n", __FUNCTION__, BootToUiApp ? "TRUE" : "FALSE", Status));
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+SetOsIndications (
+  IN UINT64  OsIndicationsValue,
+  IN UINT64  OsIndicationsMask
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      OsIndications;
+  UINTN       OsIndicationsSize;
+
+  OsIndications     = 0;
+  OsIndicationsSize = sizeof (OsIndications);
+  Status            = gRT->GetVariable (
+                             EFI_OS_INDICATIONS_VARIABLE_NAME,
+                             &gEfiGlobalVariableGuid,
+                             NULL,
+                             &OsIndicationsSize,
+                             &OsIndications
+                             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error getting OsIndications: %r. Will create it\n", __FUNCTION__, Status));
+  }
+
+  OsIndications &= ~OsIndicationsMask;
+  OsIndications |= (OsIndicationsValue & OsIndicationsMask);
+  Status         = gRT->SetVariable (
+                          EFI_OS_INDICATIONS_VARIABLE_NAME,
+                          &gEfiGlobalVariableGuid,
+                          EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+                          sizeof (OsIndications),
+                          &OsIndications
+                          );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error setting OsIndications: %r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
 VOID
 EFIAPI
 ProcessIPMIBootOrderUpdates (
@@ -455,8 +549,6 @@ ProcessIPMIBootOrderUpdates (
   UINT16                        *ClassInstanceList;
   UINTN                         ClassInstanceLength;
   UINTN                         ClassInstanceLengthRemaining;
-  UINT64                        OsIndications;
-  UINTN                         OsIndicationsSize;
   BOOLEAN                       IPv6;
   EFI_EVENT                     ReadyToBootEvent;
   NVIDIA_BOOT_ORDER_PRIORITY    *VirtualBootClass;
@@ -466,11 +558,13 @@ ProcessIPMIBootOrderUpdates (
   UINT16                        DesiredOptionNumber;
   BOOLEAN                       WillModifyBootOrder;
   UINT8                         BootOrderFlags;
+  BOOLEAN                       BootToUiApp;
 
   ClassInstanceList   = NULL;
   BootOrder           = NULL;
   VirtualBootClass    = NULL;
   VirtualInstanceList = NULL;
+  BootToUiApp         = CheckBootToUiAppVariable ();
 
   if ((mBootOptionsResponse == NULL) || (mBootOptionsRequest == NULL)) {
     goto CleanupAndReturn;
@@ -511,32 +605,16 @@ ProcessIPMIBootOrderUpdates (
       RequestedClassName = "cdrom";
       break;
     case IPMI_BOOT_DEVICE_SELECTOR_BIOS_SETUP:
-      OsIndications     = 0;
-      OsIndicationsSize = sizeof (OsIndications);
-      Status            = gRT->GetVariable (
-                                 EFI_OS_INDICATIONS_VARIABLE_NAME,
-                                 &gEfiGlobalVariableGuid,
-                                 NULL,
-                                 &OsIndicationsSize,
-                                 &OsIndications
-                                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Error getting OsIndications to request to boot to UEFI menu: %r\n", Status));
+      BootToUiApp = TRUE;
+      if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
+        DEBUG ((DEBUG_ERROR, "IPMI requested to boot to UEFI Menu persistently\n"));
+        Status = SetBootToUiAppVariable (TRUE);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Unable to make the change persistent: %r\n", Status));
+        }
+      } else {
+        DEBUG ((DEBUG_ERROR, "IPMI requested to boot to UEFI Menu for this boot\n"));
       }
-
-      OsIndications |= EFI_OS_INDICATIONS_BOOT_TO_FW_UI;
-      Status         = gRT->SetVariable (
-                              EFI_OS_INDICATIONS_VARIABLE_NAME,
-                              &gEfiGlobalVariableGuid,
-                              EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
-                              sizeof (OsIndications),
-                              &OsIndications
-                              );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Error setting OsIndications to request to boot to UEFI menu: %r\n", Status));
-      }
-
-      DEBUG ((DEBUG_ERROR, "IPMI requested to boot to UEFI Menu\n"));
 
       goto AcknowledgeAndCleanup;
       break;
@@ -785,6 +863,13 @@ ProcessIPMIBootOrderUpdates (
     DEBUG ((DEBUG_INFO, "%a: IPMI request doesn't modify BootOrder\n", __FUNCTION__));
   }
 
+  // We've successfully processed a BootOrder update that wasn't a request for UiApp or None, so don't run UiApp
+  BootToUiApp = FALSE;
+  if (BootOptionsParameters->Parm5.Data1.Bits.PersistentOptions) {
+    // Something else is persistently booting now
+    SetBootToUiAppVariable (FALSE);
+  }
+
 AcknowledgeAndCleanup:
   BootOptionsParameters = (IPMI_BOOT_OPTIONS_PARAMETERS *)&mBootOptionsRequest->ParameterData[0];
 
@@ -803,6 +888,10 @@ AcknowledgeAndCleanup:
   }
 
 CleanupAndReturn:
+  if (BootToUiApp) {
+    SetOsIndications (EFI_OS_INDICATIONS_BOOT_TO_FW_UI, EFI_OS_INDICATIONS_BOOT_TO_FW_UI);
+  }
+
   FREE_NON_NULL (mBootOptionsRequest);
   FREE_NON_NULL (mBootOptionsResponse);
   FREE_NON_NULL (ClassInstanceList);
