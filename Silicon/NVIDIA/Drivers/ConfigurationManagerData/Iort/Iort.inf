@@ -38,5 +38,6 @@
 
 [Guids]
   gNVIDIATokenSpaceGuid
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]

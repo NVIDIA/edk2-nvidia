@@ -1142,6 +1142,8 @@ TH500GetPlatformResourceInformation (
     return Status;
   }
 
+  PlatformResourceInfo->PcieAddressBits = TH500_PCIE_ADDRESS_BITS;
+
   return EFI_SUCCESS;
 }
 

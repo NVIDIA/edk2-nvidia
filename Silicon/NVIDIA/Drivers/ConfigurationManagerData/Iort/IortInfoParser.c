@@ -17,11 +17,11 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/HobLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-#include <T234/T234Definitions.h>
-#include <TH500/TH500Definitions.h>
 #include "ConfigurationIortPrivate.h"
 
 #define for_each_list_entry(tmp, list)       \
@@ -232,27 +232,24 @@ GetAddressLimit (
   EFI_STATUS                      Status;
   UINT64                          DmaAddr;
   UINT32                          AddrLimit;
-  UINT32                          ChipID;
   NVIDIA_DEVICE_TREE_RANGES_DATA  DmaRange;
   UINT32                          NumRanges;
+  VOID                            *Hob;
 
   NumRanges = 1;
   Status    = DeviceTreeGetRanges (PropNode->NodeOffset, "dma-ranges", &DmaRange, &NumRanges);
   if (EFI_ERROR (Status)) {
-    ChipID = TegraGetChipID ();
-    switch (ChipID) {
-      case T234_CHIP_ID:
-        return T234_PCIE_ADDRESS_BITS;
-        break;
-      case TH500_CHIP_ID:
-        return TH500_PCIE_ADDRESS_BITS;
-        break;
-      default:
-        NV_ASSERT_RETURN (FALSE, return 0, "%a: Unsupported ChipID 0x%x\n", __FUNCTION__, ChipID);
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+    {
+      AddrLimit = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->PcieAddressBits;
+    } else {
+      ASSERT (FALSE);
+      AddrLimit = 0;
     }
 
-    // Attempting to avoid a false cppcheck error
-    return 0;
+    return AddrLimit;
   }
 
   DmaAddr  = DmaRange.ParentAddress;

@@ -161,6 +161,7 @@ typedef struct {
   UINT32                        UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];
   TEGRA_BASE_AND_SIZE_INFO      *EgmRetiredPages;
   TEGRA_BPMP_PG_VOTES_TACKER    BpmpPgVotesTracker;
+  UINT8                         PcieAddressBits;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**

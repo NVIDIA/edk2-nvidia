@@ -769,7 +769,8 @@ T234GetPlatformResourceInformation (
   PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_XUSB].Base);
   PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryLength      = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_XUSB].Size);
 
-  PlatformResourceInfo->BootType = CPUBL_PARAMS (CpuBootloaderParams, BootType);
+  PlatformResourceInfo->BootType        = CPUBL_PARAMS (CpuBootloaderParams, BootType);
+  PlatformResourceInfo->PcieAddressBits = T234_PCIE_ADDRESS_BITS;
 
   return EFI_SUCCESS;
 }
