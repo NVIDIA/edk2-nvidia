@@ -463,4 +463,36 @@ TegraGetMaxCoreCount (
   IN UINTN  Socket
   );
 
+/**
+  Return PCIe interface number from ID
+
+  @param[in]  ChipId                Chip ID
+  @param[in]  PcieId                PCIe ID
+
+  @retval  UINT32                  PCIe interface number
+
+**/
+UINT32
+EFIAPI
+PcieIdToInterface (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  );
+
+/**
+  Return socket from PCIe ID
+
+  @param[in]  ChipId                Chip ID
+  @param[in]  PcieId                Pcie ID
+
+  @retval  UINT32                   Socket of PCIe interface
+
+**/
+UINT32
+EFIAPI
+PcieIdToSocket (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

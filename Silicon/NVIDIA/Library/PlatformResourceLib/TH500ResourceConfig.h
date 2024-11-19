@@ -139,4 +139,24 @@ TH500TegraGetMaxCoreCount (
   IN UINTN  Socket
   );
 
+/**
+  Return PCIe interface number from ID
+
+**/
+UINT32
+EFIAPI
+TH500PcieIdToInterface (
+  IN UINT32  PcieId
+  );
+
+/**
+  Return socket from PCIe ID
+
+**/
+UINT32
+EFIAPI
+TH500PcieIdToSocket (
+  IN UINT32  PcieId
+  );
+
 #endif //__TH500_RESOURCE_CONFIG_H__

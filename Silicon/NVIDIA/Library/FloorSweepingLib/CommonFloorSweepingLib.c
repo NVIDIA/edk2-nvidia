@@ -73,64 +73,6 @@ STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
 STATIC CONST CHAR8  *PcieEpCompatibility;
 
 /**
-  Return PCIe interface number from ID
-
-**/
-STATIC
-UINT32
-EFIAPI
-PcieIdToInterface (
-  IN UINTN   ChipId,
-  IN UINT32  PcieId
-  )
-{
-  UINT32  Interface;
-
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      Interface = TH500_PCIE_ID_TO_INTERFACE (PcieId);
-      break;
-
-    default:
-      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
-      ASSERT (0);
-      Interface = PcieId;
-      break;
-  }
-
-  return Interface;
-}
-
-/**
-  Return socket from PCIe ID
-
-**/
-STATIC
-UINT32
-EFIAPI
-PcieIdToSocket (
-  IN UINTN   ChipId,
-  IN UINT32  PcieId
-  )
-{
-  UINT32  Socket;
-
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      Socket = TH500_PCIE_ID_TO_SOCKET (PcieId);
-      break;
-
-    default:
-      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
-      ASSERT (0);
-      Socket = PcieId;
-      break;
-  }
-
-  return Socket;
-}
-
-/**
   Initialize global structures
 
 **/
@@ -204,8 +146,8 @@ TH500UpdatePcieNode (
     return EFI_SUCCESS;
   }
 
-  CtrlId         = TH500_PCIE_ID_TO_INTERFACE (PcieId);
-  CbbCtlOffset   = CbbFabricBase + 0x20 * TH500_PCIE_ID_TO_INTERFACE (PcieId);
+  CtrlId         = PcieIdToInterface (TH500_CHIP_ID, PcieId);
+  CbbCtlOffset   = CbbFabricBase + 0x20 * PcieIdToInterface (TH500_CHIP_ID, PcieId);
   Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
                    MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
 
@@ -330,7 +272,7 @@ TH500UpdatePcieNode (
   }
 
   /* Patch 'external-facing' property only for C8 controller */
-  if ((SocketMssBaseAddr != NULL) && (TH500_PCIE_ID_TO_INTERFACE (PcieId) == 8)) {
+  if ((SocketMssBaseAddr != NULL) && (PcieIdToInterface (TH500_CHIP_ID, PcieId) == 8)) {
     MSSBase  = SocketMssBaseAddr[Socket];
     C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
     C2CMode &= 0x3;
@@ -347,13 +289,13 @@ TH500UpdatePcieNode (
           DEBUG ((
             DEBUG_ERROR,
             "Failed to delete 'external-facing' property for Ctrl = %d\n",
-            TH500_PCIE_ID_TO_INTERFACE (PcieId)
+            PcieIdToInterface (TH500_CHIP_ID, PcieId)
             ));
         } else {
           DEBUG ((
             DEBUG_INFO,
             "Deleted 'external-facing' property for Ctrl = %d\n",
-            TH500_PCIE_ID_TO_INTERFACE (PcieId)
+            PcieIdToInterface (TH500_CHIP_ID, PcieId)
             ));
         }
       }

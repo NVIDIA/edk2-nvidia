@@ -455,7 +455,7 @@ UpdateVDM (
 
   Request.Lane              = (UINT16)0;
   Request.Command           = (UINT16)CmdUphyPcieConfigVdm;
-  Request.Controller        = (UINT8)TH500_PCIE_ID_TO_INTERFACE (Segment);
+  Request.Controller        = (UINT8)(Segment & TH500_PCIE_ID_TO_INTERFACE_MASK);
   Request.BusDeviceFunction = (UINT16)(((Bus      & 0xff) << 8) |
                                        ((Device   & 0x1f) << 3) |
                                        ((Function & 0x07) << 0));

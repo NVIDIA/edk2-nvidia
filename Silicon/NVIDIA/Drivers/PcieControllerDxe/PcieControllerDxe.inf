@@ -49,6 +49,7 @@
   MemoryAllocationLib
   DxeServicesTableLib
   DevicePathLib
+  PlatformResourceLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable

@@ -1245,3 +1245,21 @@ TH500TegraGetMaxCoreCount (
 
   return CpuBootloaderParams->EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket];
 }
+
+UINT32
+EFIAPI
+TH500PcieIdToInterface (
+  IN UINT32  PcieId
+  )
+{
+  return PcieId & TH500_PCIE_ID_TO_INTERFACE_MASK;
+}
+
+UINT32
+EFIAPI
+TH500PcieIdToSocket (
+  IN UINT32  PcieId
+  )
+{
+  return (PcieId >> TH500_PCIE_ID_TO_SOCKET_SHIFT) & TH500_SOCKET_MASK;
+}

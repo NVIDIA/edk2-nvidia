@@ -999,3 +999,51 @@ TegraGetMaxCoreCount (
 
   return CoreCount;
 }
+
+UINT32
+EFIAPI
+PcieIdToInterface (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  )
+{
+  UINT32  Interface;
+
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      Interface = TH500PcieIdToInterface (PcieId);
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
+      ASSERT (0);
+      Interface = PcieId;
+      break;
+  }
+
+  return Interface;
+}
+
+UINT32
+EFIAPI
+PcieIdToSocket (
+  IN UINTN   ChipId,
+  IN UINT32  PcieId
+  )
+{
+  UINT32  Socket;
+
+  switch (ChipId) {
+    case TH500_CHIP_ID:
+      Socket = TH500PcieIdToSocket (PcieId);
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
+      ASSERT (0);
+      Socket = PcieId;
+      break;
+  }
+
+  return Socket;
+}

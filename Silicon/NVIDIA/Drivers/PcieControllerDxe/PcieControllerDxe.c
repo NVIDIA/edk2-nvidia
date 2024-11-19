@@ -27,13 +27,13 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/PciHostBridgeResourceAllocation.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
@@ -934,8 +934,8 @@ PcieEnableErrorReporting (
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
-  Socket = (Segment >> 4) & 0xF;
-  Ctrl   = (Segment) & 0xF;
+  Socket = PcieIdToSocket (ChipId, Segment);
+  Ctrl   = PcieIdToInterface (ChipId, Segment);
 
   PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
 
@@ -1395,8 +1395,8 @@ PcieEnableECRC (
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
-  Socket = (Segment >> 4) & 0xF;
-  Ctrl   = (Segment) & 0xF;
+  Socket = PcieIdToSocket (ChipId, Segment);
+  Ctrl   = PcieIdToInterface (ChipId, Segment);
 
   if (ChipId == TH500_CHIP_ID) {
     Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
