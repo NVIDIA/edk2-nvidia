@@ -56,6 +56,15 @@
 
 extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
+/**
+  Get total enabled cores count of all sockets
+
+  @return UINT32         Total number of enabled cores
+**/
+UINT32
+GetTotalEnabledCores (
+  );
+
 //
 // These are the VFR compiler generated data representing our VFR data.
 //
@@ -1710,6 +1719,7 @@ SyncHiiSettings (
   UINTN                         AvailableSockets;
   UINTN                         SymmetricalActiveCoresPerSocket;
   UINTN                         OverflowActiveCoresPerSocket;
+  UINTN                         TotalEnabledCores;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
@@ -1872,6 +1882,12 @@ SyncHiiSettings (
 
     if (mHiiControlSettings.ActiveCores < AvailableSockets) {
       mHiiControlSettings.ActiveCores = 0;
+    }
+
+    TotalEnabledCores = GetTotalEnabledCores ();
+    if (mHiiControlSettings.ActiveCores > TotalEnabledCores) {
+      DEBUG ((DEBUG_ERROR, "%a: Max ActiveCores can't exceed %u", __func__, TotalEnabledCores));
+      mHiiControlSettings.ActiveCores = TotalEnabledCores;
     }
 
     SymmetricalActiveCoresPerSocket = mHiiControlSettings.ActiveCores / AvailableSockets;
