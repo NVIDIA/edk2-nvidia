@@ -425,6 +425,7 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   DynamicPlatRepoLib|DynamicTablesPkg/Library/Common/DynamicPlatRepoLib/DynamicPlatRepoLib.inf
   HwInfoParserLib|DynamicTablesPkg/Library/FdtHwInfoParserLib/FdtHwInfoParserLib.inf
   MpCoreInfoLib|Silicon/NVIDIA/Library/MpCoreInfoLib/MpCoreInfoLib.inf
+  NumaInfoLib|Silicon/NVIDIA/Library/NumaInfoLib/NumaInfoLib.inf
 !endif
 
 !if $(BUILD_PROJECT_TYPE) == PROJECT_MU
@@ -1520,7 +1521,6 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Tpm2Parser/Tpm2Parser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/MpamParser/MpamParser.inf
 
-      HbmParserLib|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HbmParserLib/HbmParserLib.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SlitParser/SlitParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SratParser/SratParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/HmatParser/HmatParser.inf

@@ -28,7 +28,7 @@
 
 [LibraryClasses]
   ConfigurationManagerDataRepoLib
-  HbmParserLib
+  NumaInfoLib
   PcdLib
 
 [Pcd]

@@ -1,42 +1,52 @@
-## @file
-#  HmatParser
+#/** @file
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
-##
+#
+#**/
 
 [Defines]
-  INF_VERSION    = 0x00010019
-  BASE_NAME      = HmatParser
-  FILE_GUID      = eecd51c6-5edc-4c4d-b491-c23afc55107b
-  VERSION_STRING = 1.0
-  MODULE_TYPE    = DXE_DRIVER
-  LIBRARY_CLASS  = NULL|DXE_DRIVER
-  CONSTRUCTOR    = RegisterHmatParser
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = NumaInfoLib
+  FILE_GUID                      = 756862b9-3e88-4107-bcfb-0790c59b4798
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NumaInfoLib
+  CONSTRUCTOR                    = NumaInfoLibConstructor
 
-[Sources]
-  HmatParser.c
-  HmatParser.h
+[Sources.common]
+  NumaInfoLib.c
 
 [Packages]
-  DynamicTablesPkg/DynamicTablesPkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  ConfigurationManagerDataRepoLib
-  NumaInfoLib
+  BaseMemoryLib
+  DebugLib
+  FloorSweepingLib
+  HobLib
+  MemoryAllocationLib
   PcdLib
+  UefiBootServicesTableLib
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorId
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+
+  #CPU GPU domain distance information
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance
+  gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance
+  gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance
+
+#CPU GPU domain bandwidth and latency information
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
@@ -52,16 +62,17 @@
   gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
 
-[Guids]
-
 [Protocols]
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
+  gEfiPciIoProtocolGuid

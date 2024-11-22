@@ -8,14 +8,14 @@
 
 #include "HmatParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
-
-#include "../HbmParserLib/HbmParserLib.h"
+#include "Base.h"
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NumaInfoLib.h>
 #include <Library/PcdLib.h>
 
 #include <TH500/TH500Definitions.h>
@@ -43,138 +43,6 @@ GetSizeOfLatencyAndBandwidthInfoStruct (
   return Size;
 }
 
-VOID
-EFIAPI
-ObtainLatencyBandwidthInfo (
-  UINT16  *ReadLatencyList,
-  UINT16  *WriteLatencyList,
-  UINT16  *AccessBandwidthList,
-  UINT32  NumInitProxDmns,
-  UINT32  NumTarProxDmns
-  )
-{
-  // Populate with max latency or least bandwidth
-  for (UINTN InitIndex = 0; InitIndex < NumInitProxDmns; InitIndex++) {
-    for (UINTN TargIndex = 0; TargIndex < NumTarProxDmns; TargIndex++) {
-      ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = NORMALIZED_UNREACHABLE_LATENCY;
-      WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = NORMALIZED_UNREACHABLE_LATENCY;
-      AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = NORMALIZED_UNREACHABLE_BANDWIDTH;
-    }
-  }
-
-  // cpu to local and remote cpus
-  for (UINTN InitIndex = 0; InitIndex < PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
-    // check if socket enabled for this Index
-    if (!IsSocketEnabled (InitIndex)) {
-      continue;
-    }
-
-    for (UINTN TargIndex = 0; TargIndex <  PcdGet32 (PcdTegraMaxSockets); TargIndex++) {
-      if (!IsSocketEnabled (TargIndex)) {
-        continue;
-      }
-
-      if (InitIndex == TargIndex) {
-        // cpu to local cpu
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdCpuToLocalCpuReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdCpuToLocalCpuWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdCpuToLocalCpuAccessBandwidth);
-      } else {
-        // cpu to remote cpu
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdCpuToRemoteCpuReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdCpuToRemoteCpuWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdCpuToRemoteCpuAccessBandwidth);
-      }
-    }
-  }
-
-  // cpu to local gpu hbm and remote gpu hbm
-  for (UINTN InitIndex = 0; InitIndex < PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
-    // check if socket enabled for this Index
-    if (!IsSocketEnabled (InitIndex)) {
-      continue;
-    }
-
-    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START; TargIndex < NumTarProxDmns; TargIndex++) {
-      if (!IsGpuEnabledOnSocket ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
-        continue;
-      }
-
-      if ((TargIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex)) &&
-          (TargIndex < (TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex) + TH500_GPU_MAX_NR_MEM_PARTITIONS)))
-      {
-        // local hbm
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdCpuToLocalHbmReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdCpuToLocalHbmWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdCpuToLocalHbmAccessBandwidth);
-      } else {
-        // remote hbm
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdCpuToRemoteHbmReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdCpuToRemoteHbmWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdCpuToRemoteHbmAccessBandwidth);
-      }
-    }
-  }
-
-  // gpu to local hbm and remote hbm
-  for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
-    // check if CPU socket enabled for this GPU Index
-    if (!IsGpuEnabledOnSocket (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
-      continue;
-    }
-
-    // for all proximity domains
-    for (UINTN TargIndex = TH500_GPU_HBM_PXM_DOMAIN_START;
-         TargIndex < NumTarProxDmns;
-         TargIndex++)
-    {
-      if (!IsGpuEnabledOnSocket ((TargIndex - TH500_GPU_HBM_PXM_DOMAIN_START)/TH500_GPU_MAX_NR_MEM_PARTITIONS)) {
-        continue;
-      }
-
-      if ((TargIndex >= TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex-TH500_GPU_PXM_DOMAIN_START)) &&
-          (TargIndex < TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (InitIndex-TH500_GPU_PXM_DOMAIN_START) + TH500_GPU_MAX_NR_MEM_PARTITIONS))
-      {
-        // local hbm
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdGpuToLocalHbmReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdGpuToLocalHbmWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdGpuToLocalHbmAccessBandwidth);
-      } else {
-        // remote hbm
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdGpuToRemoteHbmReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdGpuToRemoteHbmWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth);
-      }
-    }
-  }
-
-  // gpu to local cpu and remote cpu
-  for (UINTN InitIndex = TH500_GPU_PXM_DOMAIN_START; InitIndex < TH500_GPU_PXM_DOMAIN_START + PcdGet32 (PcdTegraMaxSockets); InitIndex++) {
-    // check if CPU socket enabled for this GPU Index
-    if (!IsGpuEnabledOnSocket (InitIndex - TH500_GPU_PXM_DOMAIN_START)) {
-      continue;
-    }
-
-    for (UINTN TargIndex = 0; TargIndex <  PcdGet32 (PcdTegraMaxSockets); TargIndex++) {
-      if (!IsSocketEnabled (TargIndex)) {
-        continue;
-      }
-
-      if ((InitIndex - TH500_GPU_PXM_DOMAIN_START) == TargIndex) {
-        // local cpu
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdGpuToLocalCpuReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdGpuToLocalCpuWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdGpuToLocalCpuAccessBandwidth);
-      } else {
-        // remote cpu
-        ReadLatencyList[InitIndex * NumInitProxDmns + TargIndex]     = PcdGet32 (PcdGpuToRemoteCpuReadLatency);
-        WriteLatencyList[InitIndex * NumInitProxDmns + TargIndex]    = PcdGet32 (PcdGpuToRemoteCpuWriteLatency);
-        AccessBandwidthList[InitIndex * NumInitProxDmns + TargIndex] = PcdGet32 (PcdGpuToRemoteCpuAccessBandwidth);
-      }
-    }
-  }
-}
-
 EFI_STATUS
 EFIAPI
 HmatParser (
@@ -187,35 +55,44 @@ HmatParser (
   EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER                *HmatTable;
   UINT32                                                                  HmatTableSize;
   UINTN                                                                   NumLatBwInfoStruct;
+  UINT32                                                                  MaxProximityDomain;
   UINT32                                                                  NumInitProxDmns;
   UINT32                                                                  NumTarProxDmns;
   UINT32                                                                  InfoStructIdx;
   UINT32                                                                  *ProximityDomainValue;
-  UINT16                                                                  *LatencyBandwidthValue;
-  UINT16                                                                  *ReadLatencyList;
-  UINT16                                                                  *WriteLatencyList;
-  UINT16                                                                  *LatencyBandwidthEntries;
-  UINT16                                                                  *AccessBandwidthList;
+  UINT32                                                                  ReadIndex;
+  UINT16                                                                  ReadLatency;
+  UINT32                                                                  WriteIndex;
+  UINT16                                                                  WriteLatency;
+  UINT32                                                                  AccessBandwidthIndex;
+  UINT16                                                                  AccessBandwidth;
+  UINT16                                                                  ValueOffset;
   UINT32                                                                  *InitiatorProximityDomainList;
   UINT32                                                                  *TargetProximityDomainList;
   UINT32                                                                  Index;
+  UINT32                                                                  IndexInit;
+  UINT32                                                                  IndexTarget;
   CM_STD_OBJ_ACPI_TABLE_INFO                                              AcpiTableHeader;
   EFI_STATUS                                                              Status = EFI_SUCCESS;
+  NUMA_INFO_DOMAIN_INFO                                                   DomainInfo;
+  UINT16                                                                  *LatencyBandwidthValueArray[ARRAY_SIZE (InfoDataType)];
 
+  ReadIndex                    = MAX_UINT32;
+  WriteIndex                   = MAX_UINT32;
+  AccessBandwidthIndex         = MAX_UINT32;
   TargetProximityDomainList    = NULL;
   InitiatorProximityDomainList = NULL;
-  ReadLatencyList              = NULL;
-  WriteLatencyList             = NULL;
-  AccessBandwidthList          = NULL;
 
   // Number of Latency Bandwidth Information Structures
   // Read Latency, Write Latency and Access Bandwidth structures
-  NumLatBwInfoStruct = 3;
-  InfoStructIdx      = 0;
+  NumLatBwInfoStruct = ARRAY_SIZE (InfoDataType);
 
   // Proximity Domains
-  NumInitProxDmns = GetMaxPxmDomains ();
-  NumTarProxDmns  = GetMaxPxmDomains ();
+  Status = NumaInfoGetDomainLimits (&MaxProximityDomain, &NumInitProxDmns, &NumTarProxDmns);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: NumaInfoGetDomainLimits failed: %r\n", __FUNCTION__, Status));
+    goto ErrorExit;
+  }
 
   // Generate and populate Initiator proximity domain list
   InitiatorProximityDomainList = (UINT32 *)AllocateZeroPool (sizeof (UINT32) * NumInitProxDmns);
@@ -223,10 +100,6 @@ HmatParser (
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Initiator Proximity DomainList entry\r\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto ErrorExit;
-  }
-
-  for (Index = 0; Index < NumInitProxDmns; Index++) {
-    InitiatorProximityDomainList[Index] = Index;
   }
 
   // Generate and populate Target proximity domain list
@@ -237,39 +110,27 @@ HmatParser (
     goto ErrorExit;
   }
 
-  for (Index = 0; Index < NumTarProxDmns; Index++) {
-    TargetProximityDomainList[Index] = Index;
+  IndexInit   = 0;
+  IndexTarget = 0;
+  for (Index = 0; Index <= MaxProximityDomain; Index++) {
+    Status = NumaInfoGetDomainDetails (Index, &DomainInfo);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (DomainInfo.InitiatorDomain) {
+      InitiatorProximityDomainList[IndexInit] = Index;
+      IndexInit++;
+    }
+
+    if (DomainInfo.TargetDomain) {
+      TargetProximityDomainList[IndexTarget] = Index;
+      IndexTarget++;
+    }
   }
 
-  // Collect Read/Write Latency and bandwidth info
-  ReadLatencyList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
-  if (ReadLatencyList == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Read Latency list entry\r\n", __FUNCTION__));
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
-
-  WriteLatencyList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
-  if (WriteLatencyList == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Write Latency list entry\r\n", __FUNCTION__));
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
-
-  AccessBandwidthList = (UINT16 *)AllocateZeroPool (sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns);
-  if (AccessBandwidthList == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate Access Bandwidth list entry\r\n", __FUNCTION__));
-    Status = EFI_OUT_OF_RESOURCES;
-    goto ErrorExit;
-  }
-
-  ObtainLatencyBandwidthInfo (
-    ReadLatencyList,
-    WriteLatencyList,
-    AccessBandwidthList,
-    NumInitProxDmns,
-    NumTarProxDmns
-    );
+  ASSERT (IndexInit == NumInitProxDmns);
+  ASSERT (IndexTarget == NumTarProxDmns);
 
   // Calculate the size of the Table to be allocated
   HmatTableSize = sizeof (EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER) +
@@ -301,7 +162,7 @@ HmatParser (
   LatBwInfoStruct = (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)(HmatTable + 1);
 
   // Populate Latency Bandwidth Info structures
-  for ( ; InfoStructIdx < NumLatBwInfoStruct; InfoStructIdx++ ) {
+  for (InfoStructIdx = 0; InfoStructIdx < NumLatBwInfoStruct; InfoStructIdx++ ) {
     LatBwInfoStruct->Type                  = (UINT16)(EFI_ACPI_6_5_HMAT_TYPE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO);
     LatBwInfoStruct->Reserved[0]           = EFI_ACPI_RESERVED_BYTE;
     LatBwInfoStruct->Reserved[1]           = EFI_ACPI_RESERVED_BYTE;
@@ -318,42 +179,66 @@ HmatParser (
     // assigning proximity domain values at an offset
     ProximityDomainValue = (UINT32 *)((UINT8 *)LatBwInfoStruct +
                                       sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO));
-    for (UINT32 DomainIndex = 0; DomainIndex < NumInitProxDmns; DomainIndex++) {
-      *ProximityDomainValue = InitiatorProximityDomainList[DomainIndex];
-      ProximityDomainValue++;
-    }
-
-    for (UINT32 DomainIndex = 0; DomainIndex < NumTarProxDmns; DomainIndex++) {
-      *ProximityDomainValue = TargetProximityDomainList[DomainIndex];
-      ProximityDomainValue++;
-    }
+    CopyMem (ProximityDomainValue, InitiatorProximityDomainList, sizeof (UINT32) * NumInitProxDmns);
+    ProximityDomainValue += NumInitProxDmns;
+    CopyMem (ProximityDomainValue, TargetProximityDomainList, sizeof (UINT32) * NumTarProxDmns);
 
     // assigning latency or bandwidth values at an offset
-    LatencyBandwidthValue = (UINT16 *)((UINT8 *)LatBwInfoStruct +
-                                       sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
-                                       sizeof (UINT32) * NumInitProxDmns +
-                                       sizeof (UINT32) * NumTarProxDmns);
-    switch (LatBwInfoStruct->DataType) {
+    LatencyBandwidthValueArray[InfoStructIdx] = (UINT16 *)((UINT8 *)LatBwInfoStruct +
+                                                           sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
+                                                           sizeof (UINT32) * NumInitProxDmns +
+                                                           sizeof (UINT32) * NumTarProxDmns);
+
+    switch (InfoDataType[InfoStructIdx]) {
       case READ_LATENCY_DATATYPE:
-        LatencyBandwidthEntries = ReadLatencyList;
+        ReadIndex = InfoStructIdx;
         break;
       case WRITE_LATENCY_DATATYPE:
-        LatencyBandwidthEntries = WriteLatencyList;
+        WriteIndex = InfoStructIdx;
         break;
       case ACCESS_BANDWIDTH_DATATYPE:
-        LatencyBandwidthEntries = AccessBandwidthList;
+        AccessBandwidthIndex = InfoStructIdx;
         break;
-    }
-
-    for (UINT32 ValIndex = 0; ValIndex < NumInitProxDmns * NumTarProxDmns; ValIndex++) {
-      *LatencyBandwidthValue = LatencyBandwidthEntries[ValIndex];
-      LatencyBandwidthValue++;
+      default:
+        break;
     }
 
     // Next HMAT structure
     NextLatBwInfoStruct = (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)((UINT8 *)LatBwInfoStruct
                                                                                                      + LatBwInfoStruct->Length);
     LatBwInfoStruct = NextLatBwInfoStruct;
+  }
+
+  for (IndexInit = 0; IndexInit < NumInitProxDmns; IndexInit++) {
+    for (IndexTarget = 0; IndexTarget < NumTarProxDmns; IndexTarget++) {
+      ValueOffset = IndexInit * NumTarProxDmns + IndexTarget;
+      Status      = NumaInfoGetDistances (
+                      InitiatorProximityDomainList[IndexInit],
+                      TargetProximityDomainList[IndexTarget],
+                      NULL,
+                      &ReadLatency,
+                      &WriteLatency,
+                      &AccessBandwidth
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: NumaInfoGetDistances failed: %r\n", __FUNCTION__, Status));
+        ReadLatency     = HMAT_INVALID_VALUE_ENTRY;
+        WriteLatency    = HMAT_INVALID_VALUE_ENTRY;
+        AccessBandwidth = HMAT_INVALID_VALUE_ENTRY;
+      }
+
+      if (ReadIndex != MAX_UINT32) {
+        LatencyBandwidthValueArray[ReadIndex][ValueOffset] = ReadLatency;
+      }
+
+      if (WriteIndex != MAX_UINT32) {
+        LatencyBandwidthValueArray[WriteIndex][ValueOffset] = WriteLatency;
+      }
+
+      if (AccessBandwidthIndex != MAX_UINT32) {
+        LatencyBandwidthValueArray[AccessBandwidthIndex][ValueOffset] = AccessBandwidth;
+      }
+    }
   }
 
   // Install HMAT Table
@@ -388,21 +273,6 @@ ErrorExit:
   if (TargetProximityDomainList != NULL) {
     FreePool (TargetProximityDomainList);
     TargetProximityDomainList = NULL;
-  }
-
-  if (ReadLatencyList != NULL) {
-    FreePool (ReadLatencyList);
-    ReadLatencyList = NULL;
-  }
-
-  if (WriteLatencyList != NULL) {
-    FreePool (WriteLatencyList);
-    WriteLatencyList = NULL;
-  }
-
-  if (AccessBandwidthList != NULL) {
-    FreePool (AccessBandwidthList);
-    AccessBandwidthList = NULL;
   }
 
   return Status;

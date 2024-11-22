@@ -11,9 +11,7 @@
 
 #include <Library/NvCmObjectDescUtility.h>
 
-#define NORMALIZED_UNREACHABLE_LATENCY    0xFFFF
-#define NORMALIZED_UNREACHABLE_BANDWIDTH  0x0
-
+#define HMAT_INVALID_VALUE_ENTRY              0xFFFF
 #define ENTRY_BASE_UNIT_NANO_SEC_TO_PICO_SEC  0x3E8
 #define ENTRY_BASE_UNIT_GBPS_TO_MBPS          0x3E8
 
@@ -24,16 +22,6 @@
 UINT64
 EFIAPI
 GetSizeOfLatencyAndBandwidthInfoStruct (
-  UINT32  NumInitProxDmns,
-  UINT32  NumTarProxDmns
-  );
-
-VOID
-EFIAPI
-ObtainLatencyBandwidthInfo (
-  UINT16  *ReadLatencyList,
-  UINT16  *WriteLatencyList,
-  UINT16  *AccessBandwidthList,
   UINT32  NumInitProxDmns,
   UINT32  NumTarProxDmns
   );
