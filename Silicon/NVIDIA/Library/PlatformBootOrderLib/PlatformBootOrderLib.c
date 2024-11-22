@@ -225,6 +225,7 @@ PrintBootOrder (
   UINTN                         BootOrderIndex;
   CHAR16                        OptionName[sizeof ("Boot####")];
   EFI_BOOT_MANAGER_LOAD_OPTION  Option;
+  CONST CHAR8                   *AttributeString;
 
   if (!DebugPrintLevelEnabled (DebugPrintLevel)) {
     return;
@@ -265,7 +266,17 @@ PrintBootOrder (
       goto CleanupAndReturn;
     }
 
-    DEBUG ((DebugPrintLevel, "%a: BootOrder[%llu] = 0x%04x = %s\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Option.Description));
+    AttributeString = "";
+    if (Option.Attributes & LOAD_OPTION_HIDDEN) {
+      AttributeString = "  [Hidden - will be skipped]";
+    } else if (!(Option.Attributes & LOAD_OPTION_ACTIVE)) {
+      AttributeString = "  [Inactive - will be skipped]";
+    } else if (Option.Attributes & LOAD_OPTION_CATEGORY_APP) {
+      AttributeString = "  [App - will be skipped]";
+    }
+
+    DEBUG ((DebugPrintLevel, "%a: BootOrder[%llu] = 0x%04x = %s %a\n", __FUNCTION__, BootOrderIndex, BootOrder[BootOrderIndex], Option.Description, AttributeString));
+
     EfiBootManagerFreeLoadOption (&Option);
   }
 
