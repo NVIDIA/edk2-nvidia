@@ -19,7 +19,6 @@
 #include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/TegraCpuFreq.h>
@@ -71,7 +70,6 @@ GetCpuFreqAddresses (
   CONST UINT32                      *SocketRegProperty;
   CONST VOID                        *Property    = NULL;
   INT32                             PropertySize = 0;
-  UINTN                             ChipID;
 
   if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
     Core    = GET_MPIDR_AFF0 (Mpidr);
@@ -89,8 +87,6 @@ GetCpuFreqAddresses (
   {
     return EFI_NOT_FOUND;
   }
-
-  ChipID = TegraGetChipID ();
 
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
@@ -249,16 +245,11 @@ GetCpuNdiv (
   )
 {
   EFI_STATUS            Status;
-  UINTN                 ChipID;
-  TEGRA_PLATFORM_TYPE   PlatformType;
   EFI_PHYSICAL_ADDRESS  NdivAddress;
 
   if (Ndiv == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
-  ChipID       = TegraGetChipID ();
-  PlatformType = TegraGetPlatform ();
 
   Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
   if (!EFI_ERROR (Status)) {
@@ -277,12 +268,7 @@ SetCpuNdiv (
   )
 {
   EFI_STATUS            Status;
-  UINTN                 ChipID;
-  TEGRA_PLATFORM_TYPE   PlatformType;
   EFI_PHYSICAL_ADDRESS  NdivAddress;
-
-  ChipID       = TegraGetChipID ();
-  PlatformType = TegraGetPlatform ();
 
   Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
   if (!EFI_ERROR (Status)) {

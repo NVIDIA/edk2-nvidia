@@ -41,7 +41,6 @@
   PcdLib
   PlatformResourceLib
   PrintLib
-  TegraPlatformInfoLib
 
 [Protocols]
   gNVIDIABpmpIpcProtocolGuid

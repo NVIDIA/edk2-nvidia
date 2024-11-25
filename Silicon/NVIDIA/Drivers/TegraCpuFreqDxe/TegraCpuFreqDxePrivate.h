@@ -18,7 +18,6 @@
 #define TH500_SCRATCH_FREQ_CORE_REG(Cluster)      (((Cluster >> 1) << 14) | ((Cluster & 0x1) << 12))
 #define CLUSTER_ACTMON_REFCLK_REG(cluster, core)  (0x30000 + (cluster * 0x10000) + 0x9000 + (core * 8) + 0x20)
 #define CLUSTER_ACTMON_CORE_REG(cluster, core)    (0x30000 + (cluster * 0x10000) + 0x9000 + (core * 8) + 0x40)
-#define NDIV_MASK          0x1FF
 #define REFCLK_FREQ        408000000
 #define TH500_REFCLK_FREQ  1000000000
 #define HZ_TO_MHZ(x)  (x/1000000)
