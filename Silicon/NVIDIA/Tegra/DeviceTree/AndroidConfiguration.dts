@@ -35,7 +35,7 @@
 
 						gNVIDIATokenSpaceGuid {
 							DefaultBootPriority {
-								data = "emmc,ufs";
+								data = "boot.img";
 								locked;
 							};
 						};
