@@ -10,6 +10,7 @@
 #include "DsdtPatcher.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
+#include <Library/UefiLib.h>
 #include <Library/ConfigurationManagerDataLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/NVIDIADebugLib.h>
@@ -17,6 +18,13 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
+
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateGedInfo (
+  IN NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol
+  );
 
 /** patch PLAT data in DSDT.
 
@@ -49,6 +57,25 @@ ErrorExit:
   return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
 }
 
+/**
+  Required gNVIDIARasNsCommPcieDpcDataProtocolGuid install
+  event notify callback for DSDT GED data patch.
+
+  @param[in]   Event                  Event structure
+  @param[in]   Context                Notification context
+
+**/
+VOID
+EFIAPI
+OnRequiredProtocolReady (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  gBS->CloseEvent (Event);
+  UpdateGedInfo ((NVIDIA_AML_PATCH_PROTOCOL *)Context);
+}
+
 /** patch GED data in DSDT.
 
   @retval EFI_SUCCESS   Success
@@ -64,6 +91,7 @@ UpdateGedInfo (
   EFI_STATUS                  Status;
   NVIDIA_AML_NODE_INFO        AcpiNodeInfo;
   RAS_PCIE_DPC_COMM_BUF_INFO  *DpcCommBuf = NULL;
+  VOID                        *Registration;
 
   Status = gBS->LocateProtocol (
                   &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
@@ -77,6 +105,18 @@ UpdateGedInfo (
       __FUNCTION__,
       Status
       ));
+    if (Status == EFI_NOT_FOUND) {
+      Status = EfiNamedEventListen (
+                 &gNVIDIARasNsCommPcieDpcDataProtocolGuid,
+                 TPL_NOTIFY,
+                 OnRequiredProtocolReady,
+                 PatchProtocol,
+                 &Registration
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to initialize event for gNVIDIARasNsCommPcieDpcDataProtocolGuid\n", __FUNCTION__));
+      }
+    }
   }
 
   if (DpcCommBuf == NULL) {
