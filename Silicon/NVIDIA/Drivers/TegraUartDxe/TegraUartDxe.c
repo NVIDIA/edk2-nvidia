@@ -82,6 +82,9 @@ DeviceDiscoveryNotify (
   EFI_SERIAL_IO_PROTOCOL  *Interface;
   UINT8                   SerialConfig;
   BOOLEAN                 InstallSerialIO;
+  CONST CHAR8             *ClockName;
+  UINT32                  ClockNameLength;
+  UINT64                  ClockRate;
 
   SerialConfig = PcdGet8 (PcdSerialPortConfig);
 
@@ -139,13 +142,28 @@ DeviceDiscoveryNotify (
           return EFI_UNSUPPORTED;
         }
 
-        Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
+        Status = DeviceTreeGetNodeProperty (
+                   DeviceTreeNode->NodeOffset,
+                   "clock-names",
+                   (CONST VOID **)&ClockName,
+                   &ClockNameLength
+                   );
+        if (EFI_ERROR (Status)) {
+          ClockName = UART_CLOCK_NAME;
+        }
+
+        DEBUG ((DEBUG_INFO, "%a: using %a\n", __FUNCTION__, ClockName));
+
+        Status = DeviceDiscoveryGetClockId (ControllerHandle, ClockName, &ClockId);
         if (!EFI_ERROR (Status)) {
-          Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
+          ClockRate = UART_CLOCK_RATE;
+          Status    = DeviceDiscoverySetClockFreq (ControllerHandle, ClockName, ClockRate);
           if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
+            DEBUG ((DEBUG_ERROR, "%a: Unable to set clock %a frequency\n", __FUNCTION__, ClockName));
             return Status;
           }
+
+          DEBUG ((DEBUG_INFO, "%a: set %a clk freq to 0x%llu\n", __FUNCTION__, ClockName, ClockRate));
         }
 
         Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
