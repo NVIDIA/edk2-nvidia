@@ -23,8 +23,8 @@
 #string STR_BOOT_CONFIG_FORM_TITLE       #language en-US "Boot Configuration"
 #string STR_BOOT_CONFIG_FORM_HELP        #language en-US "Boot configuration options"
 
-#string STR_TH500_CONFIG_FORM_TITLE       #language en-US "Grace Configuration"
-#string STR_TH500_CONFIG_FORM_HELP        #language en-US "Grace configuration options"
+#string STR_TH500_CONFIG_FORM_TITLE       #language en-US "SoC Configuration"
+#string STR_TH500_CONFIG_FORM_HELP        #language en-US "SoC configuration options"
 
 #string STR_DEBUG_CONFIG_FORM_TITLE       #language en-US "Debug Configuration"
 #string STR_DEBUG_CONFIG_FORM_HELP        #language en-US "Debug configuration options"
