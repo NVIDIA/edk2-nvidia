@@ -12,17 +12,18 @@
 #include <Library/ArmLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/PcdLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Protocol/BpmpIpc.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/TegraCpuFreq.h>
-#include <libfdt.h>
+#include <ArmNameSpaceObjects.h>
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 
@@ -43,6 +44,114 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .SkipAutoDeinitControllerOnExitBootServices = TRUE
 };
 
+// Cache the handles as they won't change
+STATIC EFI_HANDLE  *mCpuFreqHandles    = NULL;
+STATIC UINTN       mCpuFreqHandleCount = 0;
+STATIC EFI_GUID    *mCpuFreqGuid       = NULL;
+
+/**
+ * Returns the device handle of the relates to the given MpIdr.
+ *
+ * @param[in]  Mpidr       The MpIdr of the CPU to get the device handle for.
+ * @param[out] Handle      The device handle of the CPU frequency node.
+ * @param[out] DeviceGuid  The device guid of the CPU frequency node.
+ *
+ * @retval EFI_SUCCESS     The device handle was returned.
+ * @retval EFI_NOT_FOUND   The device handle was not found.
+ * @retval EFI_UNSUPPORTED The CPU frequency driver does not support this platform.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+GetDeviceHandle (
+  IN UINT64       Mpidr,
+  OUT EFI_HANDLE  *Handle,
+  OUT EFI_GUID    **DeviceGuid
+  )
+{
+  EFI_STATUS                        Status;
+  UINT32                            NodeSocket;
+  UINT32                            Socket;
+  UINTN                             Index;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
+  INT32                             ParentOffset;
+
+  if (mCpuFreqHandles == NULL) {
+    Index = 0;
+    while (gDeviceCompatibilityMap[Index].DeviceType != NULL) {
+      Status = gBS->LocateHandleBuffer (
+                      ByProtocol,
+                      gDeviceCompatibilityMap[Index].DeviceType,
+                      NULL,
+                      &mCpuFreqHandleCount,
+                      &mCpuFreqHandles
+                      );
+      if (!EFI_ERROR (Status)) {
+        mCpuFreqGuid = gDeviceCompatibilityMap[Index].DeviceType;
+        break;
+      }
+
+      Index++;
+    }
+  }
+
+  // No CPU frequency controllers found
+  if (mCpuFreqHandles == NULL) {
+    return EFI_UNSUPPORTED;
+  }
+
+  if (mCpuFreqHandleCount == 1) {
+    *Handle     = mCpuFreqHandles[0];
+    *DeviceGuid = mCpuFreqGuid;
+    return EFI_SUCCESS;
+  } else {
+    // Multiple CPU frequency controllers found, find the one that matches the socket
+    Status = MpCoreInfoGetProcessorLocation (Mpidr, &Socket, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      return EFI_NOT_FOUND;
+    }
+
+    for (Index = 0; Index < mCpuFreqHandleCount; Index++) {
+      Status = gBS->HandleProtocol (mCpuFreqHandles[Index], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      Status = DeviceTreeGetParentOffset (Node->NodeOffset, &ParentOffset);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      Status = DeviceTreeGetNodePropertyValue32 (ParentOffset, "reg", &NodeSocket);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      if (NodeSocket == Socket) {
+        *Handle     = mCpuFreqHandles[Index];
+        *DeviceGuid = mCpuFreqGuid;
+        return EFI_SUCCESS;
+      }
+    }
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+/**
+ * This function retrieves the addresses of the CPU frequency registers for the specified core.
+ *
+ * @param[in]  Mpidr              MpIdr of the CPU to get info on.
+ * @param[out] NdivAddress        If provided, returns the address of the NDIV register.
+ * @param[out] RefClockAddress    If provided, returns the address of the reference clock register.
+ * @param[out] CoreClockAddress   If provided, returns the address of the core clock register.
+ * @param[out] RefClockFreq       If provided, returns the reference clock frequency.
+ * @param[out] BpmpPhandle        If provided, returns the phandle of the BPMP node.
+ *
+ * @retval EFI_SUCCESS             The addresses were returned.
+ * @retval EFI_NOT_FOUND           Mpidr is not valid for this platform.
+ * @retval EFI_UNSUPPORTED         Cpu Frequency driver does not support this platform.
+ */
 STATIC
 EFI_STATUS
 EFIAPI
@@ -56,228 +165,87 @@ GetCpuFreqAddresses (
   )
 {
   EFI_STATUS                        Status;
-  UINTN                             HandleCount;
-  EFI_HANDLE                        *HandleBuffer;
+  EFI_HANDLE                        Handle;
+  EFI_GUID                          *DeviceGuid;
   EFI_PHYSICAL_ADDRESS              RegionBase;
   UINTN                             RegionSize;
-  UINT8                             Socket;
-  UINT8                             Cluster;
-  UINT8                             Core;
-  UINT32                            LinearId;
-  UINT32                            Index;
+  UINT32                            Cluster;
+  UINT32                            Core;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
-  INT32                             ParentOffset;
-  CONST UINT32                      *SocketRegProperty;
-  CONST VOID                        *Property    = NULL;
-  INT32                             PropertySize = 0;
+  EFI_PHYSICAL_ADDRESS              LocalNdivAddress;
+  EFI_PHYSICAL_ADDRESS              LocalRefClockAddress;
+  EFI_PHYSICAL_ADDRESS              LocalCoreClockAddress;
+  UINT64                            LocalRefClockFreq;
 
-  if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
-    Core    = GET_MPIDR_AFF0 (Mpidr);
-    Cluster = GET_MPIDR_AFF1 (Mpidr);
-    Socket  = GET_MPIDR_AFF2 (Mpidr);
-  } else {
-    Core    = GET_MPIDR_AFF1 (Mpidr);
-    Cluster = GET_MPIDR_AFF2 (Mpidr);
-    Socket  = GET_MPIDR_AFF3 (Mpidr);
+  Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
-  if ((Core >= PcdGet32 (PcdTegraMaxCoresPerCluster)) ||
-      (Cluster >= PcdGet32 (PcdTegraMaxClusters)) ||
-      (Socket >= PcdGet32 (PcdTegraMaxSockets)))
-  {
+  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Cluster, &Core);
+  if (EFI_ERROR (Status)) {
     return EFI_NOT_FOUND;
   }
 
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gNVIDIACpuFreqT234,
-                  NULL,
-                  &HandleCount,
-                  &HandleBuffer
-                  );
-  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+  Status = gBS->HandleProtocol (Handle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  if (HandleCount == 1) {
-    Status = gBS->HandleProtocol (HandleBuffer[0], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    Property = fdt_getprop (
-                 Node->DeviceTreeBase,
-                 Node->NodeOffset,
-                 "status",
-                 &PropertySize
-                 );
-    if ((Property != NULL) &&
-        (AsciiStrCmp (Property, "okay") != 0))
-    {
-      return EFI_UNSUPPORTED;
-    }
-
-    Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[0], 0, &RegionBase, &RegionSize);
-    if (EFI_ERROR (Status)) {
-      FreePool (HandleBuffer);
-      return Status;
-    }
-
-    if (NdivAddress != NULL) {
-      LinearId     = Cluster * PcdGet32 (PcdTegraMaxCoresPerCluster) + Core;
-      *NdivAddress = RegionBase + SCRATCH_FREQ_CORE_REG (LinearId);
-    }
-
-    if (RefClockAddress != NULL) {
-      *RefClockAddress = RegionBase + CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
-    }
-
-    if (CoreClockAddress != NULL) {
-      *CoreClockAddress = RegionBase + CLUSTER_ACTMON_CORE_REG (Cluster, Core);
-    }
-
-    if (RefClockFreq != NULL) {
-      *RefClockFreq = REFCLK_FREQ;
-    }
-
-    if (BpmpPhandle != NULL) {
-      *BpmpPhandle = 0;
-    }
-
-    FreePool (HandleBuffer);
-    return EFI_SUCCESS;
-  } else if (HandleCount != 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Unexpected number of cpu frequency controllers - %u\r\n", __FUNCTION__, HandleCount));
-    FreePool (HandleBuffer);
-    return EFI_UNSUPPORTED;
-  }
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gNVIDIACpuFreqTH500,
-                  NULL,
-                  &HandleCount,
-                  &HandleBuffer
-                  );
-  if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
+  Status = DeviceDiscoveryGetMmioRegion (Handle, 0, &RegionBase, &RegionSize);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  for (Index = 0; Index < HandleCount; Index++) {
-    Status = gBS->HandleProtocol (HandleBuffer[Index], &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+  LocalNdivAddress      = 0;
+  LocalRefClockAddress  = 0;
+  LocalCoreClockAddress = 0;
+  LocalRefClockFreq     = 0;
+
+  if (DeviceGuid == &gNVIDIACpuFreqT234) {
+    LocalNdivAddress      = RegionBase + T234_SCRATCH_FREQ_CORE_REG (Cluster, Core);
+    LocalRefClockAddress  = RegionBase + T234_CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
+    LocalCoreClockAddress = RegionBase + T234_CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+    LocalRefClockFreq     = T234_REFCLK_FREQ;
+  } else if (DeviceGuid == &gNVIDIACpuFreqTH500) {
+    LocalNdivAddress  = RegionBase + TH500_SCRATCH_FREQ_CORE_REG (Cluster);
+    LocalRefClockFreq = TH500_REFCLK_FREQ;
+  }
+
+  if (NdivAddress != NULL) {
+    *NdivAddress = LocalNdivAddress;
+  }
+
+  if (RefClockAddress != NULL) {
+    *RefClockAddress = LocalRefClockAddress;
+  }
+
+  if (CoreClockAddress != NULL) {
+    *CoreClockAddress = LocalCoreClockAddress;
+  }
+
+  if (RefClockFreq != NULL) {
+    *RefClockFreq = LocalRefClockFreq;
+  }
+
+  if (BpmpPhandle != NULL) {
+    Status = DeviceTreeGetNodePropertyValue32 (Node->NodeOffset, "nvidia,bpmp", BpmpPhandle);
     if (EFI_ERROR (Status)) {
-      continue;
+      DEBUG ((DEBUG_ERROR, "Failed to get Bpmp node phandle.\n"));
     }
-
-    Property = fdt_getprop (
-                 Node->DeviceTreeBase,
-                 Node->NodeOffset,
-                 "status",
-                 &PropertySize
-                 );
-    if ((Property != NULL) &&
-        (AsciiStrCmp (Property, "okay") != 0))
-    {
-      return EFI_UNSUPPORTED;
-    }
-
-    ParentOffset      = fdt_parent_offset (Node->DeviceTreeBase, Node->NodeOffset);
-    SocketRegProperty = fdt_getprop (
-                          Node->DeviceTreeBase,
-                          ParentOffset,
-                          "reg",
-                          NULL
-                          );
-    if ((SocketRegProperty == NULL) || (*SocketRegProperty != SwapBytes32 (Socket))) {
-      continue;
-    }
-
-    Status = DeviceDiscoveryGetMmioRegion (HandleBuffer[Index], 0, &RegionBase, &RegionSize);
-    if (EFI_ERROR (Status)) {
-      FreePool (HandleBuffer);
-      return Status;
-    }
-
-    if (NdivAddress != NULL) {
-      *NdivAddress = RegionBase + TH500_SCRATCH_FREQ_CORE_REG (Cluster);
-    }
-
-    if (RefClockAddress != NULL) {
-      *RefClockAddress = 0;
-    }
-
-    if (CoreClockAddress != NULL) {
-      *CoreClockAddress = 0;
-    }
-
-    if (RefClockFreq != NULL) {
-      *RefClockFreq = TH500_REFCLK_FREQ;
-    }
-
-    if (BpmpPhandle != NULL) {
-      Property = fdt_getprop (
-                   Node->DeviceTreeBase,
-                   Node->NodeOffset,
-                   "nvidia,bpmp",
-                   &PropertySize
-                   );
-      if ((Property == NULL) || (PropertySize < sizeof (UINT32))) {
-        DEBUG ((DEBUG_ERROR, "Failed to get Bpmp node phandle.\n"));
-      } else {
-        CopyMem ((VOID *)BpmpPhandle, Property, sizeof (UINT32));
-        *BpmpPhandle = SwapBytes32 (*BpmpPhandle);
-      }
-    }
-
-    FreePool (HandleBuffer);
-    return EFI_SUCCESS;
   }
 
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
-STATIC
-EFI_STATUS
-EFIAPI
-GetCpuNdiv (
-  IN UINT64   Mpidr,
-  OUT UINT16  *Ndiv
-  )
-{
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  NdivAddress;
-
-  if (Ndiv == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
-  if (!EFI_ERROR (Status)) {
-    *Ndiv = MmioRead32 (NdivAddress);
-  }
-
-  return Status;
-}
-
-STATIC
-EFI_STATUS
-EFIAPI
-SetCpuNdiv (
-  IN UINT64   Mpidr,
-  OUT UINT16  Ndiv
-  )
-{
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  NdivAddress;
-
-  Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
-  if (!EFI_ERROR (Status)) {
-    MmioWrite32 (NdivAddress, Ndiv);
-  }
-
-  return Status;
-}
-
+/**
+ * This function converts an NDIV value to a frequency.
+ *
+ * @param[in] Limits  The NDIV limits for the CPU.
+ * @param[in] Ndiv    The NDIV value to convert.
+ *
+ * @return The frequency in Hz.
+ */
 STATIC
 UINT64
 EFIAPI
@@ -289,6 +257,14 @@ ConvertNdivToFreq (
   return ((UINT64)Limits->ref_clk_hz * (UINT64)Ndiv) / ((UINT64)Limits->pdiv * (UINT64)Limits->mdiv);
 }
 
+/**
+ * This function converts a frequency to an NDIV value.
+ *
+ * @param[in] Limits  The NDIV limits for the CPU.
+ * @param[in] Freq    The frequency to convert.
+ *
+ * @return The NDIV value.
+ */
 STATIC
 UINT64
 EFIAPI
@@ -300,6 +276,16 @@ ConvertFreqToNdiv (
   return (Freq * (UINT64)Limits->pdiv * (UINT64)Limits->mdiv) / (UINT64)Limits->ref_clk_hz;
 }
 
+/**
+ * This function retrieves the NDIV limits for the specified core.
+ *
+ * @param[in]  Mpidr  MpIdr of the CPU to get info on.
+ * @param[out] Limits The NDIV limits for the CPU.
+ *
+ * @retval EFI_SUCCESS     The NDIV limits were returned.
+ * @retval EFI_NOT_FOUND   Mpidr is not valid for this platform.
+ * @retval EFI_UNSUPPORTED The CPU frequency driver does not support this platform.
+ */
 STATIC
 EFI_STATUS
 EFIAPI
@@ -332,10 +318,9 @@ TegraCpuGetNdivLimits (
     return Status;
   }
 
-  if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
-    Request.ClusterId = GET_CLUSTER_ID (Mpidr);
-  } else {
-    Request.ClusterId = GET_MPIDR_AFF2 (Mpidr);
+  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Request.ClusterId, NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = BpmpIpcProtocol->Communicate (
@@ -385,6 +370,7 @@ TegraCpuFreqGetInfo (
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         CurrentNdiv;
+  EFI_PHYSICAL_ADDRESS           NdivAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
   if (EFI_ERROR (Status)) {
@@ -392,11 +378,12 @@ TegraCpuFreqGetInfo (
   }
 
   if (CurrentFrequency != NULL) {
-    Status = GetCpuNdiv (Mpidr, &CurrentNdiv);
+    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
+    CurrentNdiv       = MmioRead32 (NdivAddress);
     *CurrentFrequency = ConvertNdivToFreq (&Limits, CurrentNdiv);
   }
 
@@ -441,6 +428,7 @@ TegraCpuFreqSet (
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         DesiredNdiv;
+  EFI_PHYSICAL_ADDRESS           NdivAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
   if (EFI_ERROR (Status)) {
@@ -448,9 +436,18 @@ TegraCpuFreqSet (
   }
 
   DesiredNdiv = ConvertFreqToNdiv (&Limits, DesiredFrequency);
-  return SetCpuNdiv (Mpidr, DesiredNdiv);
+  Status      = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  MmioWrite32 (NdivAddress, DesiredNdiv);
+  return EFI_SUCCESS;
 }
 
+/**
+ * This function builds the address structure for the given parameters.
+ */
 STATIC
 VOID
 EFIAPI
@@ -608,7 +605,7 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS  Status;
-  EFI_STATUS  StatusLocal; // Local status for errors that should not be returned
+  EFI_STATUS  StatusLocal;   // Local status for errors that should not be returned
   UINT64      CurrentFreq;
   UINT64      MaxFreq;
 
@@ -626,6 +623,7 @@ DeviceDiscoveryNotify (
         break;
       }
 
+      // Set the boot CPU to max frequency
       StatusLocal = mCpuFreqProtocol.GetInfo (
                                        &mCpuFreqProtocol,
                                        ArmReadMpidr (),

@@ -36,22 +36,16 @@
   UefiLib
   UefiDriverEntryPoint
   DebugLib
+  DeviceTreeHelperLib
   IoLib
   MemoryAllocationLib
-  PcdLib
-  PlatformResourceLib
+  MpCoreInfoLib
   PrintLib
 
 [Protocols]
   gNVIDIABpmpIpcProtocolGuid
   gNVIDIATegraCpuFrequencyProtocolGuid
   gNVIDIADeviceTreeNodeProtocolGuid
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
-  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported
 
 [Guids]
   gNVIDIACpuFreqT234
