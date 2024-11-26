@@ -51,7 +51,8 @@ typedef struct {
       UINT64    UartBaudRate          : 4;
       UINT64    EInjEnable            : 1;
       UINT64    DisableChannelSparing : 1;
-      UINT64    FeatureFieldsUnused   : 53;
+      UINT64    EccAlgorithm          : 2;
+      UINT64    FeatureFieldsUnused   : 51;
     };
   };
 } TEGRABL_FEATURE_DATA;

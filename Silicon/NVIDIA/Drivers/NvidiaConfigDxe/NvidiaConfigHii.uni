@@ -92,6 +92,10 @@
 #string STR_EINJ_ENABLE_HELP                 #language en-US "Enable Error Injection ACPI Table"
 #string STR_DISABLE_CHANNEL_SPARING_PROMPT   #language en-US "Disable Channel Sparing"
 #string STR_DISABLE_CHANNEL_SPARING_HELP     #language en-US "Setting this option allows all of DRAM memory channels to be enabled."
+#string STR_ECC_ALGORITHM_PROMPT             #language en-US "ECC Algorithm"
+#string STR_ECC_ALGORITHM_HELP               #language en-US "This option allows the DRAM ECC Algorithm to be configured."
+#string STR_ECC_ALGORITHM_HSIAO              #language en-US "Hsiao"
+#string STR_ECC_ALGORITHM_RS                 #language en-US "Reed-Solomon"
 #string STR_MAX_CORES_PROMPT                 #language en-US "Max Enabled Cores"
 #string STR_MAX_CORES_HELP                   #language en-US "Specify Desired Number Of Cores For System.\r\nEnter 0 for system default.\r\nInput greater than system maximum would be rejected."
 

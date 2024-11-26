@@ -95,6 +95,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_EINJ_ENABLE_HELP),
   STRING_TOKEN (STR_DISABLE_CHANNEL_SPARING_PROMPT),
   STRING_TOKEN (STR_DISABLE_CHANNEL_SPARING_HELP),
+  STRING_TOKEN (STR_ECC_ALGORITHM_PROMPT),
+  STRING_TOKEN (STR_ECC_ALGORITHM_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
@@ -1760,6 +1762,11 @@ SyncHiiSettings (
     mHiiControlSettings.DisableChannelSparing = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
     mHiiControlSettings.PerfVersion           = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel        = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+    if (mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm > ECC_ALGORITHM_RS) {
+      mHiiControlSettings.EccAlgorithm = ECC_ALGORITHM_HSIAO;
+    } else {
+      mHiiControlSettings.EccAlgorithm = mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm;
+    }
 
     mHiiControlSettings.ActiveCores = 0;
     for (Index = 0; Index < MAX_SOCKETS; Index++) {
@@ -1881,6 +1888,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate          = mHiiControlSettings.UartBaudRate;
     mMb1Config.Data.Mb1Data.FeatureData.EInjEnable            = mHiiControlSettings.EInjEnable;
     mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing = mHiiControlSettings.DisableChannelSparing;
+    mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm          = mHiiControlSettings.EccAlgorithm;
     mMb1Config.Data.Mb1Data.PerfVersion                       = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                    = mHiiControlSettings.UefiDebugLevel;
 
@@ -2319,6 +2327,10 @@ InitializeSettings (
       mHiiControlSettings.DisableChannelSparingSupported = TRUE;
     }
 
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 18) {
+      mHiiControlSettings.EccAlgorithmSupported = TRUE;
+    }
+
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 11) {
       mHiiControlSettings.PCIeACSConfigSupported = TRUE;
     }
@@ -2735,6 +2747,9 @@ GetDefaultValue (
       break;
     case KEY_DISABLE_CHANNEL_SPARING:
       Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.DisableChannelSparing;
+      break;
+    case KEY_ECC_ALGORITHM:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.EccAlgorithm;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

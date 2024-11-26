@@ -688,6 +688,17 @@ formset
     endcheckbox;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.EccAlgorithmSupported == 0;
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.EccAlgorithm,
+      questionid = KEY_ECC_ALGORITHM,
+      prompt = STRING_TOKEN(STR_ECC_ALGORITHM_PROMPT),
+      help   = STRING_TOKEN(STR_ECC_ALGORITHM_HELP),
+      flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+      option text = STRING_TOKEN(STR_ECC_ALGORITHM_HSIAO),   value = ECC_ALGORITHM_HSIAO,   flags = DEFAULT;
+      option text = STRING_TOKEN(STR_ECC_ALGORITHM_RS),      value = ECC_ALGORITHM_RS,      flags = 0;
+    endoneof;
+    endif;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
         questionid = KEY_MAX_CORES,
