@@ -460,7 +460,7 @@ NumaInfoLibConstructor (
         mNumaInfo[NumaIndex].DeviceHandleType              = EFI_ACPI_6_5_PCI_DEVICE_HANDLE;
         mNumaInfo[NumaIndex].DeviceHandle.Pci.PciBdfNumber = SwapBytes16 (BusNumber << 8 | DeviceNumber << 3 | FunctionNumber);
         mNumaInfo[NumaIndex].DeviceHandle.Pci.PciSegment   = SegmentNumber;
-        mNumaInfo[NumaIndex].InitiatorDomain               = FALSE;
+        mNumaInfo[NumaIndex].InitiatorDomain               = TRUE;
         mNumaInfo[NumaIndex].TargetDomain                  = TRUE;
         NumaIndex++;
       }
