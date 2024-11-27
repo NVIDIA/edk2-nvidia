@@ -65,6 +65,14 @@ TEGRA_MMIO_INFO  T410MmioInfo[] = {
     T410_WDT_RFRSH_BASE,
     SIZE_4KB
   },
+  {
+    T410_HSP_SHRD_MBOX_RAS_UEFI_SOCKET_0,
+    SIZE_4KB
+  },
+  {
+    T410_HSP_SHRD_MBOX_RAS_UEFI_SOCKET_1,
+    SIZE_4KB
+  },
   // Placeholder for memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM that would
   // be treated as MMIO memory.
   {

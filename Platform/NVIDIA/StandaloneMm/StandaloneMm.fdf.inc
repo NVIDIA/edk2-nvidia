@@ -30,7 +30,7 @@
   #
   # MM Error Serialization Driver
   #
-  INF Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+  INF Silicon/NVIDIA/Drivers/RAS/ErrorSerializationMmDxe/ErrorSerializationMm.inf
 
 ################################################################################
 #

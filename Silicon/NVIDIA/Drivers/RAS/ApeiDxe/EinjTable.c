@@ -194,16 +194,17 @@ EFI_ACPI_6_X_EINJ_TRIGGER_ERROR_ACTION_TABLE
       .RegisterBitWidth  = 32,
       .RegisterBitOffset = 0,
       .AccessSize        = EFI_ACPI_6_6_DWORD,
-      .Address           = TH500_SW_IO0_BASE + INTR_CTLR_SW_IO_N_INTR_STATUS_SET_0_OFFSET
+      /*.Address dynamically assigned */
     },
-    .Value = 0x1,
-    .Mask  = 0x1
+    /*.Value dynamically assigned */
+    /*.Mask dynamically assigned */
   }
 };
 
 VOID
 EINJCreateAcpiTable (
-  RAS_FW_EINJ_COMM_STRUCT  *EinjComm
+  RAS_FW_EINJ_COMM_STRUCT  *EinjComm,
+  RAS_FW_INTERFACE         *RasFwInterface
   )
 {
   UINTN                                          TableHandle;
@@ -217,7 +218,10 @@ EINJCreateAcpiTable (
                   (VOID **)&AcpiTableProtocol
                   );
 
-  /* Copy the Trigger Action Table in memory */
+  /* Setup and copy the Trigger Action Table in memory */
+  TriggerErrorActionTable.TriggerActions[0].RegisterRegion.Address = RasFwInterface->EinjDoorbellAddress;
+  TriggerErrorActionTable.TriggerActions[0].Value                  = RasFwInterface->EinjDoorbellValue;
+  TriggerErrorActionTable.TriggerActions[0].Mask                   = RasFwInterface->EinjDoorbellMask;
   CopyMem (
     (VOID *)&(EinjComm->TriggerErrorActionTable),
     (VOID *)&TriggerErrorActionTable,
@@ -272,13 +276,13 @@ EINJCreateAcpiTable (
 
 EFI_STATUS
 EinjSetupTable (
-  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  IN RAS_FW_INTERFACE  *RasFwInterface
   )
 {
   RAS_FW_EINJ_COMM_STRUCT  *EinjComm;
 
   /* RAS_FW should have initialized the shared EINJ structure */
-  EinjComm = (RAS_FW_EINJ_COMM_STRUCT *)RasFwBufferInfo->EinjBase;
+  EinjComm = (RAS_FW_EINJ_COMM_STRUCT *)(RasFwInterface->RasFwBufferInfo[0].EinjBase);
   if (EinjComm->Signature == EINJ_DISABLED_SIGNATURE) {
     DEBUG ((DEBUG_ERROR, "%a: EINJ is disabled\n", __FUNCTION__));
     return EFI_SUCCESS;
@@ -287,7 +291,7 @@ EinjSetupTable (
     return EFI_NOT_FOUND;
   }
 
-  EINJCreateAcpiTable (EinjComm);
+  EINJCreateAcpiTable (EinjComm, RasFwInterface);
 
   return EFI_SUCCESS;
 }

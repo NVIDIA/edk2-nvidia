@@ -8,7 +8,7 @@
 #include "Apei.h"
 
 EFI_ACPI_TABLE_PROTOCOL  *AcpiTableProtocol;
-RAS_FW_BUFFER            RasFwBufferInfo;
+RAS_FW_BUFFER            *RasFwBufferInfo;
 VOID                     *MMCommProtNotify;
 
 STATIC
@@ -72,32 +72,37 @@ STATIC CONST CHAR8  *PcieCompatibleInfo[] = {
 STATIC
 VOID
 ApeiDxeNotifyC2cGpuPresence (
-  VOID              *Dtb,
-  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  VOID                 *Dtb,
+  IN RAS_FW_INTERFACE  *RasFwInterface,
+  IN UINT32            SocketCount
   )
 {
-  EFI_MM_COMMUNICATE_HEADER  CommunicationHeader;
-  INT32                      NodeOffset;
+  BOOLEAN  C2cGpuPresent = FALSE;
+  INT32    NodeOffset;
 
-  CopyGuid (&(CommunicationHeader.HeaderGuid), &gNVIDIAApeiSetRasFwFlag);
-  CommunicationHeader.MessageLength = sizeof (BOOLEAN);
-  BOOLEAN  *pC2cGpuPresent = (BOOLEAN *)(RasFwBufferInfo->CommBase + sizeof (CommunicationHeader.HeaderGuid) +
-                                         sizeof (CommunicationHeader.MessageLength));
-
-  *pC2cGpuPresent = FALSE;
-  NodeOffset      = -1;
+  NodeOffset = -1;
   while (DeviceTreeGetNextCompatibleNode (PcieCompatibleInfo, &NodeOffset) != EFI_NOT_FOUND) {
     CONST VOID  *Property;
     INT32       Length;
 
     Property = FdtGetProp (Dtb, NodeOffset, "c2c-partitions", &Length);
     if ((Property != NULL)) {
-      *pC2cGpuPresent = TRUE;
+      C2cGpuPresent = TRUE;
       break;
     }
   }
 
-  FfaGuidedCommunication (&CommunicationHeader, RasFwBufferInfo);
+  for (UINT32 Socket = 0; Socket < SocketCount; Socket++) {
+    EFI_MM_COMMUNICATE_HEADER  CommunicationHeader;
+
+    CopyGuid (&(CommunicationHeader.HeaderGuid), &gNVIDIAApeiSetRasFwFlag);
+    CommunicationHeader.MessageLength = sizeof (BOOLEAN);
+    BOOLEAN  *pC2cGpuPresent = (BOOLEAN *)(RasFwInterface->RasFwBufferInfo[Socket].CommBase + sizeof (CommunicationHeader.HeaderGuid) +
+                                           sizeof (CommunicationHeader.MessageLength));
+    *pC2cGpuPresent = C2cGpuPresent;
+
+    RasFwInterface->GuidedComm (Socket, &CommunicationHeader, &(RasFwInterface->RasFwBufferInfo[Socket]));
+  }
 }
 
 /**
@@ -113,16 +118,18 @@ ApeiDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  VOID        *DtbBase;
-  UINTN       DtbSize;
-  INTN        NodeOffset;
-  BOOLEAN     SkipSdei;
-  BOOLEAN     SkipHest;
-  BOOLEAN     SkipBert;
-  BOOLEAN     SkipEinj;
-  BOOLEAN     SkipErst;
-  EFI_EVENT   MmCommunication2ReadyEvent;
+  EFI_STATUS        Status;
+  VOID              *DtbBase;
+  UINTN             DtbSize;
+  INTN              NodeOffset;
+  BOOLEAN           SkipSdei;
+  BOOLEAN           SkipHest;
+  BOOLEAN           SkipBert;
+  BOOLEAN           SkipEinj;
+  BOOLEAN           SkipErst;
+  EFI_EVENT         MmCommunication2ReadyEvent;
+  UINT32            MaxSocketValue, SocketCount;
+  RAS_FW_INTERFACE  *RasFwInterface;
 
   SkipSdei = FALSE;
   SkipHest = FALSE;
@@ -132,8 +139,11 @@ ApeiDxeInitialize (
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto exit;
   }
+
+  MpCoreInfoGetPlatformInfo (NULL, &MaxSocketValue, NULL, NULL, NULL);
+  SocketCount = MaxSocketValue+1;
 
   NodeOffset = FdtPathOffset (DtbBase, "/firmware/uefi");
   if (NodeOffset >= 0) {
@@ -163,64 +173,24 @@ ApeiDxeInitialize (
     }
   }
 
-  ZeroMem ((UINT8 *)&RasFwBufferInfo, sizeof (RAS_FW_BUFFER));
-
   Status = gBS->LocateProtocol (
                   &gEfiAcpiTableProtocolGuid,
                   NULL,
                   (VOID **)&AcpiTableProtocol
                   );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto exit;
   }
 
-  if (!SkipSdei) {
-    Status = SdeiSetupTable ();
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-  }
-
-  Status = FfaGetRasFwBuffer (&RasFwBufferInfo);
-  if (!EFI_ERROR (Status)) {
-    NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
-    if (NVIDIARasNsCommPcieDpcData == NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: RAS_FW NS Memory allocation for NVIDIARasNsCommPcieDpcData failed\r\n",
-        __FUNCTION__
-        ));
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    ApeiDxeNotifyC2cGpuPresence (DtbBase, &RasFwBufferInfo);
-
-    Status = HestBertSetupTables (&RasFwBufferInfo, SkipHest, SkipBert);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-
-    Status = SetTimeOfDay (&RasFwBufferInfo);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Unable to SetTimeOfDay, RTC might not be working: %r\n", __FUNCTION__, Status));
-    }
-
-    if (!SkipEinj) {
-      Status = EinjSetupTable (&RasFwBufferInfo);
-      if (EFI_ERROR (Status)) {
-        return Status;
-      }
-    }
-
-    NVIDIARasNsCommPcieDpcData->PcieBase = RasFwBufferInfo.PcieBase;
-    NVIDIARasNsCommPcieDpcData->PcieSize = RasFwBufferInfo.PcieSize;
-  } else {
+  NVIDIARasNsCommPcieDpcData = (RAS_PCIE_DPC_COMM_BUF_INFO *)AllocateZeroPool (sizeof (RAS_PCIE_DPC_COMM_BUF_INFO));
+  if (NVIDIARasNsCommPcieDpcData == NULL) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to get RAS_FW NS shared mem: %r\n",
-      __FUNCTION__,
-      Status
+      "%a: RAS_FW NS Memory allocation for NVIDIARasNsCommPcieDpcData failed\r\n",
+      __FUNCTION__
       ));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto exit;
   }
 
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -231,10 +201,44 @@ ApeiDxeInitialize (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to install NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
-    return EFI_PROTOCOL_ERROR;
+    Status = EFI_PROTOCOL_ERROR;
+    goto exit;
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: Successfully installed NVIDIARasNsCommPcieDpcDataProtocol (%r)\r\n", __FUNCTION__, Status));
+
+  Status = RASFwInterfaceInit (SocketCount, &RasFwInterface);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  if (!SkipSdei) {
+    Status = SdeiSetupTable ();
+    if (EFI_ERROR (Status)) {
+      goto exit;
+    }
+  }
+
+  ApeiDxeNotifyC2cGpuPresence (DtbBase, RasFwInterface, SocketCount);
+  Status = HestBertSetupTables (RasFwInterface, SkipHest, SkipBert, SocketCount);
+  if (EFI_ERROR (Status)) {
+    goto exit;
+  }
+
+  Status = SetTimeOfDay (RasFwInterface, SocketCount);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to SetTimeOfDay, RTC might not be working: %r\n", __FUNCTION__, Status));
+  }
+
+  NVIDIARasNsCommPcieDpcData->PcieBase = RasFwInterface->RasFwBufferInfo[0].PcieBase;
+  NVIDIARasNsCommPcieDpcData->PcieSize = RasFwInterface->RasFwBufferInfo[0].PcieSize;
+
+  if (!SkipEinj) {
+    Status = EinjSetupTable (RasFwInterface);
+    if (EFI_ERROR (Status)) {
+      goto exit;
+    }
+  }
 
   // ERST uses MmCommunication2's buffer, so don't install till available
   if (!SkipErst) {
@@ -247,9 +251,14 @@ ApeiDxeInitialize (
                                    );
     if (NULL == MmCommunication2ReadyEvent) {
       Status = EFI_OUT_OF_RESOURCES;
-      return Status;
+      goto exit;
     }
   }
 
-  return Status;
+exit:
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: APEI driver failed (%r)\r\n", __FUNCTION__, Status));
+  }
+
+  return EFI_SUCCESS;
 }

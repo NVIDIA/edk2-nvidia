@@ -13,24 +13,26 @@
  * published its list of error sources during boot, and this function will
  * query them.
  *
- * @param  RasFwBufferInfo
+ * @param  RasFwInterface
+ * @param  Socket
  *
  * @return EFI_STATUS
  **/
 STATIC
 EFI_STATUS
 GetErrorSources (
-  IN RAS_FW_BUFFER  *RasFwBufferInfo
+  IN RAS_FW_INTERFACE  *RasFwInterface,
+  IN UINT32            Socket
   )
 {
   EFI_MM_COMMUNICATE_HEADER  CommunicationHeader;
   UINTN                      MaxSize;
 
-  MaxSize = RasFwBufferInfo->CommSize - sizeof (EFI_MM_COMMUNICATE_HEADER);
+  MaxSize = RasFwInterface->RasFwBufferInfo[Socket].CommSize - sizeof (EFI_MM_COMMUNICATE_HEADER);
   CopyGuid (&(CommunicationHeader.HeaderGuid), &gEfiApeiGetErrorSourcesGuid);
   CommunicationHeader.MessageLength = MaxSize;
 
-  return FfaGuidedCommunication (&CommunicationHeader, RasFwBufferInfo);
+  return RasFwInterface->GuidedComm (Socket, &CommunicationHeader, &(RasFwInterface->RasFwBufferInfo[Socket]));
 }
 
 /**
@@ -77,11 +79,13 @@ SetupNotificationStructure (
  * Given a pointer to the error sources, build the HEST table.
  *
  * @param  ErrorSourceInfo             Error source information from RAS_FW.
+ * @param  RasFwInterface
 **/
 STATIC
 VOID
 HESTCreateAcpiTable (
-  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo
+  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo,
+  RAS_FW_INTERFACE            *RasFwInterface
   )
 {
   EFI_ACPI_6_6_HARDWARE_ERROR_SOURCE_TABLE_HEADER                 *HestTable;
@@ -108,12 +112,13 @@ HESTCreateAcpiTable (
 
   for (i = 0; i < TotalNumErrorSource; i++) {
     if (ErrorSource[i].GhesType == EFI_ACPI_6_6_GENERIC_HARDWARE_ERROR_VERSION_2) {
-      if (ErrorSource[i].EventId != BERT_EVENT_ID) {
+      if (ErrorSource[i].EventId != RasFwInterface->BertEventId) {
         /* Each error source can lead to 2 entries to support dynamic GSIV/SDEI */
         HestTableSize += sizeof (EFI_ACPI_6_6_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) * 2;
       }
     } else {
       DEBUG ((DEBUG_ERROR, "%a: Unsupported type=%d\n", __FUNCTION__, ErrorSource[i].GhesType));
+      ASSERT (0);
     }
   }
 
@@ -143,7 +148,7 @@ HESTCreateAcpiTable (
       continue;
     }
 
-    if (ErrorSource[i].EventId == BERT_EVENT_ID) {
+    if (ErrorSource[i].EventId == RasFwInterface->BertEventId) {
       continue;
     }
 
@@ -196,10 +201,11 @@ HESTCreateAcpiTable (
 
     DEBUG ((
       DEBUG_INFO,
-      "%a: Added GHES entry for SourceId=%d. ErrStatusAddress=0x%llx\n",
+      "%a: Added GHES entry for SourceId=%d. ErrStatusAddress=0x%llx ErrorStatusBlockLength=0x%x\n",
       __FUNCTION__,
       GHESv2Instance.SourceId,
-      GHESv2Instance.ErrorStatusAddress.Address
+      GHESv2Instance.ErrorStatusAddress.Address,
+      GHESv2Instance.ErrorStatusBlockLength
       ));
 
     /*
@@ -256,11 +262,13 @@ HESTCreateAcpiTable (
  * Note: BERT error data is simply a special error source within the RAS_FW error sources.
  *
  * @param  ErrorSourceInfo             Error source information from RAS_FW.
+ * @param  RasFwInterface
 **/
 STATIC
 VOID
 BERTCreateAcpiTable (
-  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo
+  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo,
+  RAS_FW_INTERFACE            *RasFwInterface
   )
 {
   EFI_STATUS                                   Status = EFI_SUCCESS;
@@ -288,7 +296,7 @@ BERTCreateAcpiTable (
                   );
 
   for (i = 0; i < TotalNumErrorSource; i++) {
-    if (ErrorSource[i].EventId == BERT_EVENT_ID) {
+    if (ErrorSource[i].EventId == RasFwInterface->BertEventId) {
       BERTErrorSourceInfo = &(ErrorSource[i]);
     }
   }
@@ -336,49 +344,69 @@ BERTCreateAcpiTable (
 
 EFI_STATUS
 HestBertSetupTables (
-  RAS_FW_BUFFER  *RasFwBufferInfo,
-  BOOLEAN        SkipHestTable,
-  BOOLEAN        SkipBertTable
+  RAS_FW_INTERFACE  *RasFwInterface,
+  BOOLEAN           SkipHestTable,
+  BOOLEAN           SkipBertTable,
+  UINT32            SocketCount
   )
 {
   EFI_MM_COMMUNICATE_HEADER   *CommunicationHeader;
-  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo;
-  EFI_STATUS                  Status;
+  EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo, *GlobalErrorSourceInfo;
+  EFI_STATUS                  Status                 = EFI_SUCCESS;
+  UINT32                      MaxErrorSourceInfoSize = 0;
 
-  Status = GetErrorSources (RasFwBufferInfo);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get ErrorSourceInfo: %u\n", __FUNCTION__, Status));
-    return Status;
+  for (UINT32 Socket = 0; Socket < SocketCount; Socket++) {
+    MaxErrorSourceInfoSize += RasFwInterface->RasFwBufferInfo[Socket].CommSize;
   }
 
-  CommunicationHeader = (EFI_MM_COMMUNICATE_HEADER *)RasFwBufferInfo->CommBase;
+  GlobalErrorSourceInfo = (EFI_APEI_ERROR_SOURCE_INFO *)AllocateZeroPool (MaxErrorSourceInfoSize);
+  ASSERT (GlobalErrorSourceInfo != NULL);
 
-  if (CommunicationHeader->MessageLength == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: No data from RAS_FW\n", __FUNCTION__));
-    return Status;
+  for (UINT32 Socket = 0U; Socket < SocketCount; Socket++) {
+    UINT8   *CopyFrom, *CopyTo;
+    UINT32  Length;
+
+    Status = GetErrorSources (RasFwInterface, Socket);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get ErrorSourceInfo (S%u): %u\n", __FUNCTION__, Socket, Status));
+      return Status;
+    }
+
+    CommunicationHeader = (EFI_MM_COMMUNICATE_HEADER *)RasFwInterface->RasFwBufferInfo[Socket].CommBase;
+    if (CommunicationHeader->MessageLength == 0) {
+      DEBUG ((DEBUG_ERROR, "%a: No data from RAS_FW on S%u\n", __FUNCTION__, Socket));
+      return Status;
+    }
+
+    ErrorSourceInfo = (EFI_APEI_ERROR_SOURCE_INFO *)AllocateZeroPool (RasFwInterface->RasFwBufferInfo[Socket].CommSize);
+    ASSERT (ErrorSourceInfo != NULL);
+    MmioReadBuffer32 ((UINTN)&(CommunicationHeader->Data), RasFwInterface->RasFwBufferInfo[Socket].CommSize, (UINT32 *)ErrorSourceInfo);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: ErrorRecordRegion(S%u) 0x%p (Size: 0x%x) Entries : %d\n",
+      __FUNCTION__,
+      Socket,
+      ErrorSourceInfo->ErrorRecordsRegionBase,
+      ErrorSourceInfo->ErrorRecordsRegionSize,
+      ErrorSourceInfo->NumErrorSource
+      ));
+    CopyFrom = (UINT8 *)ErrorSourceInfo + sizeof (EFI_APEI_ERROR_SOURCE_INFO);
+    CopyTo   = (UINT8 *)GlobalErrorSourceInfo + sizeof (EFI_APEI_ERROR_SOURCE_INFO) + (GlobalErrorSourceInfo->NumErrorSource * sizeof (EFI_APEI_ERROR_SOURCE));
+    Length   = ErrorSourceInfo->NumErrorSource * sizeof (EFI_APEI_ERROR_SOURCE);
+    CopyMem (CopyTo, CopyFrom, Length);
+    GlobalErrorSourceInfo->NumErrorSource += ErrorSourceInfo->NumErrorSource;
+    FreePool (ErrorSourceInfo);
   }
-
-  ErrorSourceInfo = (EFI_APEI_ERROR_SOURCE_INFO *)AllocateZeroPool (RasFwBufferInfo->CommSize);
-  MmioReadBuffer64 ((UINTN)&(CommunicationHeader->Data), RasFwBufferInfo->CommSize, (UINT64 *)ErrorSourceInfo);
-
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: ErrorRecordRegion 0x%p (Size: 0x%x) Entries : %d\n",
-    __FUNCTION__,
-    ErrorSourceInfo->ErrorRecordsRegionBase,
-    ErrorSourceInfo->ErrorRecordsRegionSize,
-    ErrorSourceInfo->NumErrorSource
-    ));
 
   if (!SkipHestTable) {
-    HESTCreateAcpiTable (ErrorSourceInfo);
+    HESTCreateAcpiTable (GlobalErrorSourceInfo, RasFwInterface);
   }
 
   if (!SkipBertTable) {
-    BERTCreateAcpiTable (ErrorSourceInfo);
+    BERTCreateAcpiTable (GlobalErrorSourceInfo, RasFwInterface);
   }
 
-  FreePool (ErrorSourceInfo);
+  FreePool (GlobalErrorSourceInfo);
 
   return Status;
 }

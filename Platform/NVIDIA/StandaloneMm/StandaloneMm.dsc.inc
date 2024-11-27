@@ -127,7 +127,7 @@
   #
   # MM Error Serialization Driver
   #
-  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
+  Silicon/NVIDIA/Drivers/RAS/ErrorSerializationMmDxe/ErrorSerializationMm.inf
 
   #
   # MM Oem Partition Sample Driver.

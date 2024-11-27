@@ -19,12 +19,8 @@
   Apei.h
   HestBertTables.c
   EinjTable.c
-  RASFwInterface.c
   RASTimeOfDay.c
   ErstTable.c
-
-[Sources.AARCH64]
-  AArch64/FfaSmc.S
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -42,6 +38,9 @@
   TimerLib
   TimeBaseLib
   DeviceTreeHelperLib
+  DeviceDiscoveryLib
+  MpCoreInfoLib
+  RASFwInterfaceLib
 
 [Protocols]
   gEfiAcpiTableProtocolGuid       # PROTOCOL ALWAYS_CONSUMED

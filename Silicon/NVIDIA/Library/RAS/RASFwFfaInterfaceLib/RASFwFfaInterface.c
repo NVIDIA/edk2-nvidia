@@ -1,11 +1,15 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
-#include "Apei.h"
+#include "RASFwFfaInterface.h"
+#include <Server/LicSwIo.h>
+#include <TH500/TH500Definitions.h>
+
+RAS_FW_INTERFACE  gRasFwInterface;
 
 static UINT16  RasFwVmId = 0;
 
@@ -288,6 +292,7 @@ FfaGetRasFwBuffer (
 
 EFI_STATUS
 FfaGuidedCommunication (
+  IN UINT32                     Socket,
   IN EFI_MM_COMMUNICATE_HEADER  *CommunicateHeader,
   IN RAS_FW_BUFFER              *RasFwBufferInfo
   )
@@ -331,6 +336,39 @@ FfaGuidedCommunication (
       ));
     return EFI_INVALID_PARAMETER;
   }
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+RASFwInterfaceInit (
+  UINT32            SocketCount,
+  RAS_FW_INTERFACE  **RasFwInterfaceOut
+  )
+{
+  EFI_STATUS  Status;
+
+  ASSERT (RasFwInterfaceOut != NULL);
+  gRasFwInterface.RasFwBufferInfo = AllocateZeroPool (sizeof (RAS_FW_BUFFER));
+  ASSERT (gRasFwInterface.RasFwBufferInfo != NULL);
+
+  Status = FfaGetRasFwBuffer (&(gRasFwInterface.RasFwBufferInfo[0]));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get RAS_FW NS shared mem: %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return EFI_PROTOCOL_ERROR;
+  }
+
+  gRasFwInterface.GuidedComm          = FfaGuidedCommunication;
+  gRasFwInterface.BertEventId         = FFA_BERT_EVENT_ID;
+  gRasFwInterface.EinjDoorbellAddress = TH500_SW_IO0_BASE + INTR_CTLR_SW_IO_N_INTR_STATUS_SET_0_OFFSET;
+  gRasFwInterface.EinjDoorbellValue   = BIT0;
+  gRasFwInterface.EinjDoorbellMask    = BIT0;
+  *RasFwInterfaceOut                  = &gRasFwInterface;
 
   return EFI_SUCCESS;
 }

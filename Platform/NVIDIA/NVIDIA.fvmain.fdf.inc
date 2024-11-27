@@ -468,7 +468,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # APEI
   #
-  INF Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf
+  INF Silicon/NVIDIA/Drivers/RAS/ApeiDxe/Apei.inf
 !endif
 
 !ifdef CONFIG_BOOTLOADER_RAMDISK

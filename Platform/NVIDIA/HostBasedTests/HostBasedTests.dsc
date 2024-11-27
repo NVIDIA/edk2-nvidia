@@ -101,7 +101,7 @@
   #
   # ErrorSerializationMmDxe Host Based UnitTest Support
   #
-  Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/UnitTest/ErrorSerializationDxeUnitTestsHost.inf {
+  Silicon/NVIDIA/Drivers/RAS/ErrorSerializationMmDxe/UnitTest/ErrorSerializationDxeUnitTestsHost.inf {
     <LibraryClasses>
       MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
       StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf

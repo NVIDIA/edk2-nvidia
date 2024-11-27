@@ -863,9 +863,30 @@ menu "Hardware support"
   config SUPPORTS_RAS
   bool
 
+  config SUPPORTS_RAS_FW_INTERFACE_FFA
+  bool
+
+  config SUPPORTS_RAS_FW_INTERFACE_HSP
+  bool
+
   if SUPPORTS_RAS
     config RAS
     bool "Reliability, Availability, Serviceability support"
+
+    config RAS_FW_INTERFACE_FFA
+    bool
+    depends on SUPPORTS_RAS_FW_INTERFACE_FFA
+    default y
+
+    config RAS_FW_INTERFACE_HSP
+    bool
+    depends on SUPPORTS_RAS_FW_INTERFACE_HSP
+    default y
+
+    comment "INVALID CONFIG - no RAS interface is supported by the selected SOC. RAS cannot be enabled"
+    depends on !RAS_FW_INTERFACE_FFA && !RAS_FW_INTERFACE_HSP
+    comment "INVALID CONFIG - only one of RAS_FW_INTERFACE_[FFA|HSP] can be chosen. RAS cannot be enabled"
+    depends on RAS_FW_INTERFACE_FFA && RAS_FW_INTERFACE_HSP
 
     config PRM_RAS_CPER_MODULE
     bool "PRM RAS module support"

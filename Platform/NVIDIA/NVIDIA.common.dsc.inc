@@ -192,6 +192,12 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
 
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
+!ifdef CONFIG_RAS_FW_INTERFACE_HSP
+  RASFwInterfaceLib|Silicon/NVIDIA/Library/RAS/RASFwHspInterfaceLib/RASFwHspInterfaceLib.inf
+!endif
+!ifdef CONFIG_RAS_FW_INTERFACE_FFA
+  RASFwInterfaceLib|Silicon/NVIDIA/Library/RAS/RASFwFfaInterfaceLib/RASFwFfaInterfaceLib.inf
+!endif
 
   #
   # Uncomment (and comment out the next line) For RealView Debugger. The Standard IO window
@@ -2390,7 +2396,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   # APEI
   #
-  Silicon/NVIDIA/Server/TH500/Drivers/ApeiDxe/Apei.inf {
+  Silicon/NVIDIA/Drivers/RAS/ApeiDxe/Apei.inf {
     <LibraryClasses>
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
