@@ -325,6 +325,8 @@ CONFIG_ARM_WATCHDOG_INTERRUPT=0
   PldmFwUpdatePkgLib|Silicon/NVIDIA/Library/PldmFwUpdatePkgLib/PldmFwUpdatePkgLib.inf
   PldmFwUpdateTaskLib|Silicon/NVIDIA/Library/PldmFwUpdateTaskLib/PldmFwUpdateTaskLib.inf
   ErotLib|Silicon/NVIDIA/Library/ErotLib/ErotLib.inf
+!else
+  ErotLib|Silicon/NVIDIA/Library/ErotLibNull/ErotLibNull.inf
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpBlobLib/FmpBlobLib.inf

@@ -70,6 +70,7 @@
   HashApiLib|CryptoPkg/Library/BaseHashApiLib/BaseHashApiLib.inf
   NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
   MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
+  ErotLib|Silicon/NVIDIA/Library/ErotLibNull/ErotLibNull.inf
 
 [LibraryClasses.common.MM_STANDALONE]
   HobLib|StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf

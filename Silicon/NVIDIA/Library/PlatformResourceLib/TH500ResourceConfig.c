@@ -12,6 +12,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DramCarveoutLib.h>
+#include <Library/ErotLib.h>
 #include <Library/GoldenRegisterLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
@@ -919,7 +920,43 @@ TH500ValidateActiveBootChain (
   IN  UINTN  CpuBootloaderAddress
   )
 {
-  return TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_GOOD);
+  UINT32      SocketMask;
+  UINTN       Socket;
+  EFI_STATUS  Status;
+  UINT32      BootChain;
+
+  Status = TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_GOOD);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: set state failed: %r\n", __FUNCTION__, Status));
+  }
+
+  Status = TH500GetActiveBootChain (CpuBootloaderAddress, TH500_PRIMARY_SOCKET, &BootChain);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: get boot chain failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = ErotLibInit ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: lib init error: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    Status = ErotSendBootComplete (Socket, BootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
+    } else {
+      DEBUG ((DEBUG_ERROR, "BootComplete successful, socket %u\n", Socket));
+    }
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**

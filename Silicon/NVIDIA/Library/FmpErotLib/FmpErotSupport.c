@@ -72,7 +72,6 @@ STATIC CHAR16      *mVersionString  = NULL;
 STATIC UINT32      mActiveBootChain = MAX_UINT32;
 STATIC EFI_EVENT   mEndOfDxeEvent   = NULL;
 STATIC EFI_HANDLE  mImageHandle     = NULL;
-STATIC UINT32      mSocketMask      = 0;
 
 STATIC PLDM_FW_QUERY_DEVICE_IDS_RESPONSE  *mQueryDeviceIdsRsp = NULL;
 STATIC PLDM_FW_GET_FW_PARAMS_RESPONSE     *mGetFwParamsRsp    = NULL;
@@ -406,6 +405,9 @@ FmpErotGetVersionInfo (
   CHAR16                                         ReleaseDate[9] = { L'\0' };
   BOOLEAN                                        ErotComponentFound;
   CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *FwComponentEntry;
+  CONST CHAR8                                    *ComponentVersionString;
+  UINTN                                          ComponentVersionStringLength;
+  CONST CHAR8                                    *ComponentReleaseDate;
 
   Protocol = ErotGetMctpProtocolBySocket (FMP_EROT_SOCKET);
   if (Protocol == NULL) {
@@ -460,13 +462,30 @@ FmpErotGetVersionInfo (
     return EFI_UNSUPPORTED;
   }
 
-  if (ComponentEntry->ActiveVersionStringType != PLDM_FW_STRING_TYPE_ASCII) {
+  if ((ComponentEntry->ActiveVersionStringType != PLDM_FW_STRING_TYPE_ASCII) ||
+      ((ComponentEntry->PendingVersionStringLength != 0) &&
+       (ComponentEntry->PendingVersionStringType != PLDM_FW_STRING_TYPE_ASCII)))
+  {
     DEBUG ((DEBUG_ERROR, "%a: bad str type=%u\n", __FUNCTION__, ComponentEntry->ActiveVersionStringType));
     return EFI_UNSUPPORTED;
   }
 
+  // if booting chain 0, use pending version, if any, since we are booting it
+  if ((ComponentEntry->PendingVersionStringLength != 0) &&
+      (mActiveBootChain == 0))
+  {
+    // pending string follows active string
+    ComponentVersionString       = (CHAR8 *)&ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength];
+    ComponentVersionStringLength = ComponentEntry->PendingVersionStringLength;
+    ComponentReleaseDate         = ComponentEntry->PendingReleaseDate;
+  } else {
+    ComponentVersionString       = (CHAR8 *)ComponentEntry->ActiveVersionString;
+    ComponentVersionStringLength = ComponentEntry->ActiveVersionStringLength;
+    ComponentReleaseDate         = ComponentEntry->ActiveReleaseDate;
+  }
+
   // allocate unicode buffer and convert ascii version
-  VersionStrLen  = (ComponentEntry->ActiveVersionStringLength + 1) * sizeof (CHAR16);
+  VersionStrLen  = (ComponentVersionStringLength + 1) * sizeof (CHAR16);
   mVersionString = (CHAR16 *)AllocateRuntimePool (VersionStrLen);
   if (mVersionString == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: string alloc failed\n", __FUNCTION__));
@@ -477,8 +496,8 @@ FmpErotGetVersionInfo (
     mVersionString,
     VersionStrLen,
     "%.*a",
-    ComponentEntry->ActiveVersionStringLength,
-    ComponentEntry->ActiveVersionString
+    ComponentVersionStringLength,
+    ComponentVersionString
     );
   Status = PcdSetPtrS (PcdFirmwareVersionString, &VersionStrLen, mVersionString);
   if (EFI_ERROR (Status)) {
@@ -492,7 +511,7 @@ FmpErotGetVersionInfo (
     VersionStrLen,
     "%.*a",
     sizeof (ComponentEntry->ActiveReleaseDate),
-    ComponentEntry->ActiveReleaseDate
+    ComponentReleaseDate
     );
   Status = PcdSetPtrS (PcdFirmwareReleaseDateString, &VersionStrLen, ReleaseDate);
   if (EFI_ERROR (Status)) {
@@ -511,11 +530,19 @@ FmpErotGetVersionInfo (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: got version=0x%x (%s %s) Pending=%.*a\n",
+    "%a: got version=0x%x str=%s date=%s chain=%u\n",
     __FUNCTION__,
     mVersion,
     mVersionString,
     ReleaseDate,
+    mActiveBootChain
+    ));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Active=%.*a Pending=%.*a\n",
+    __FUNCTION__,
+    ComponentEntry->ActiveVersionStringLength,
+    ComponentEntry->ActiveVersionString,
     ComponentEntry->PendingVersionStringLength,
     &ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength]
     ));
@@ -524,7 +551,7 @@ FmpErotGetVersionInfo (
 }
 
 /**
-  Handle EndOfDxe event - send BootComplete and install FMP protocol.
+  Handle EndOfDxe event - install FMP protocol.
 
   @param[in]  Event         Event pointer.
   @param[in]  Context       Event notification context.
@@ -540,7 +567,6 @@ FmpErotEndOfDxeNotify (
   IN VOID       *Context
   )
 {
-  UINTN       Socket;
   EFI_STATUS  Status;
 
   FmpParamLibInit ();
@@ -549,19 +575,6 @@ FmpErotEndOfDxeNotify (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: lib init error: %r\n", __FUNCTION__, Status));
     goto Done;
-  }
-
-  for (Socket = 0; Socket <= HighBitSet32 (mSocketMask); Socket++) {
-    if (!(mSocketMask & (1UL << Socket))) {
-      continue;
-    }
-
-    Status = ErotSendBootComplete (Socket, mActiveBootChain);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: ErotSendBootComplete failed socket %u: %r\n", __FUNCTION__, Socket, Status));
-    } else {
-      DEBUG ((DEBUG_ERROR, "BootComplete successful, socket %u\n", Socket));
-    }
   }
 
   Status = FmpErotGetVersionInfo ();
@@ -645,7 +658,6 @@ FmpErotLibConstructor (
   {
     PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
     mActiveBootChain     = PlatformResourceInfo->ActiveBootChain;
-    mSocketMask          = PlatformResourceInfo->SocketMask;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Error getting active boot chain\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
@@ -675,7 +687,6 @@ Done:
 
     mImageHandle     = NULL;
     mActiveBootChain = MAX_UINT32;
-    mSocketMask      = 0;
   }
 
   return EFI_SUCCESS;

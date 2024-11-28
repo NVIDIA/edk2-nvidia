@@ -28,6 +28,7 @@
   HobLib
   MceAriLib
   NvgLib
+  ErotLib
 
 [Sources.common]
   PlatformResourceConfig.c
