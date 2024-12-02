@@ -157,10 +157,14 @@
 
 #define VBUS_SUPPLY_INVALID  0xdeadbeef
 
-/* Number of USB Pads on the Platform */
+/* Number of T234 USB Pads on the Platform */
 #define TEGRA234_USB3_PHYS   (4)
 #define TEGRA234_UTMI_PHYS   (4)
 #define TEGRA234_OC_PIN_NUM  (2)
+
+/* Number of T23x USB Pads on the Platform */
+#define TEGRA23X_USB3_PHYS  (3)
+#define TEGRA23X_UTMI_PHYS  (3)
 
 #define ENABLE_FUSE  (1)
 
@@ -179,6 +183,11 @@ PADCTL_PLAT_CONFIG  Tegra234UsbConfig = {
   .NumHsPhys = TEGRA234_UTMI_PHYS,
   .NumSsPhys = TEGRA234_USB3_PHYS,
   .NumOcPins = TEGRA234_OC_PIN_NUM,
+};
+
+PADCTL_PLAT_CONFIG  Tegra23xUsbConfig = {
+  .NumHsPhys = TEGRA23X_UTMI_PHYS,
+  .NumSsPhys = TEGRA23X_USB3_PHYS,
 };
 
 STATIC

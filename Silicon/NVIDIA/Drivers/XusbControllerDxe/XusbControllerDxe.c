@@ -92,7 +92,7 @@ static struct tegrabl_usbf_config  *g_usbconfig;
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra264-xudc", NULL                                  },
-  { "nvidia,tegra234-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
+  { "nvidia,tegra23*-xudc", &gNVIDIANonDiscoverableXudcDeviceGuid },
   { NULL,                   NULL                                  }
 };
 
@@ -100,6 +100,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                      = L"NVIDIA Xudc controller driver",
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .AutoEnableClocks                = TRUE,
+  .AutoDeassertReset               = TRUE,
   .AutoDeassertPg                  = FALSE,
   .ThreadedDeviceStart             = FALSE,
 };
@@ -208,6 +209,7 @@ OnExitBootServices (
   }
 
   // Stop USB device mode controller.
+  // For T23x with no PG, PgState should keep the value as ON.
   if ((Private->XudcBaseAddress != 0) &&
       (PgState == CmdPgStateOn))
   {
@@ -2424,89 +2426,6 @@ XudcUsbDeviceStart (
   return Status;
 }
 
-static EFI_STATUS
-XudcCarInitPllRate (
-  UINT32  clockId
-  )
-{
-  SCMI_CLOCK2_PROTOCOL          *ClockProtocol = NULL;
-  EFI_STATUS                    Status;
-  UINT32                        ClockId;
-  BOOLEAN                       ClockStatus;
-  CHAR8                         ClockName[SCMI_MAX_STR_LEN];
-  UINT64                        ClockRate;
-
-  ClockRate = 0;
-  ClockId   = clockId;
-
-  Status = gBS->LocateProtocol (&gArmScmiClock2ProtocolGuid, NULL, (VOID **)&ClockProtocol);
-  if (EFI_ERROR (Status)) {
-    return EFI_NOT_READY;
-  }
-
-  Status = ClockProtocol->GetClockAttributes (ClockProtocol, ClockId, &ClockStatus, ClockName);
-  if (EFI_ERROR (Status)) {
-    return EFI_DEVICE_ERROR;
-  }
-
-  Status = ClockProtocol->RateGet (ClockProtocol, ClockId, &ClockRate);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Get clock rate fail\n"));
-    return EFI_DEVICE_ERROR;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Clock rate: 0x%llu\n", ClockRate));
-
-  return EFI_SUCCESS;
-}
-
-static EFI_STATUS
-XudcCarclockInit (
-  VOID
-  )
-{
-  EFI_STATUS Status = EFI_SUCCESS;
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_XUSB_CORE_DEV\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_XUSB_CORE_DEV);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_XUSB_SS\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_XUSB_SS);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_XUSB_SS_SUPERSPEED\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_XUSB_SS_SUPERSPEED);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_XUSB_FS\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_XUSB_FS);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_UTMIP_PLL\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_UTMIP_PLL);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-  DEBUG ((DEBUG_VERBOSE, "Init TEGRA234_CLK_USB2_TRK\n"));
-  Status = XudcCarInitPllRate (TEGRA234_CLK_USB2_TRK);
-  if (Status != EFI_SUCCESS) {
-    goto fail;
-  }
-
-fail:
-  return Status;
-}
-
 static VOID
 XudcClockPadProgramming (
   void
@@ -2514,12 +2433,6 @@ XudcClockPadProgramming (
 {
   UINT32                     val;
   EFI_STATUS err = EFI_SUCCESS;
-
-  err = XudcCarclockInit ();
-  if (err != EFI_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "XUDC clock init fail\n"));
-    goto fail;
-  }
 
   /* Initialize USB Pad Registers */
   err = mPrivate->mUsbPadCtlProtocol->InitDevHw (mPrivate->mUsbPadCtlProtocol);

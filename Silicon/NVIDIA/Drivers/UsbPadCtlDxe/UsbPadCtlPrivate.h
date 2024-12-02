@@ -155,5 +155,6 @@ InitPlatInfo234 (
   );
 
 extern PADCTL_PLAT_CONFIG  Tegra234UsbConfig;
+extern PADCTL_PLAT_CONFIG  Tegra23xUsbConfig;
 
 #endif /* USB_PADCTL_PRIVATE_H_ */

@@ -17,6 +17,7 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Protocol/Regulator.h>
@@ -27,8 +28,8 @@
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra194-xusb-padctl", &gNVIDIANonDiscoverableT194UsbPadDeviceGuid    },
-  { "nvidia,tegra234-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid    },
-  { "nvidia,tegra264-xusb-padctl", &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid },
+  { "nvidia,tegra23*-xusb-padctl", &gNVIDIANonDiscoverableT234UsbPadDeviceGuid    },
+  { "nvidia,tegra*-xusb-padctl",   &gNVIDIANonDiscoverableCurrentUsbPadDeviceGuid },
   { NULL,                          NULL                                           }
 };
 
@@ -179,11 +180,23 @@ DeviceDiscoveryNotify (
         Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw234;
         Private->mUsbPadCtlProtocol.InitDevHw   = InitUsbDevHw234;
         Private->mUsbPadCtlProtocol.DeInitDevHw = DeInitUsbDevHw234;
-        Private->PlatConfig                     = Tegra234UsbConfig;
 
         if (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) {
+          if (!EFI_ERROR (
+                 DeviceTreeCheckNodeSingleCompatibility (
+                   "nvidia,tegra234*",
+                   DeviceTreeNode->NodeOffset
+                   )
+                 ))
+          {
+            Private->PlatConfig = Tegra234UsbConfig;
+          } else {
+            Private->PlatConfig = Tegra23xUsbConfig;
+          }
+
           Private->T234Platform = TRUE;
         } else {
+          Private->PlatConfig   = Tegra234UsbConfig;
           Private->T264Platform = TRUE;
         }
 
