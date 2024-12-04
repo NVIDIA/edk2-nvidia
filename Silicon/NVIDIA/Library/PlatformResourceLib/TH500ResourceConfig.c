@@ -418,18 +418,18 @@ TH500BuildDramRegions (
 
   RegionCount = 0;
 
+  Status = TH500GetMemoryMode (CpuBootloaderParams, &MemoryMode);
+  NV_ASSERT_RETURN (
+    !EFI_ERROR (Status),
+    return Status,
+    "%a: Failed to get memory mode\r\n",
+    __FUNCTION__
+    );
+
   for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
     }
-
-    Status = TH500GetMemoryMode (CpuBootloaderParams, &MemoryMode);
-    NV_ASSERT_RETURN (
-      !EFI_ERROR (Status),
-      return Status,
-      "%a: Failed to get memory mode\r\n",
-      __FUNCTION__
-      );
 
     Status = TH500GetMemoryInfo (CpuBootloaderParams, Socket, MemoryMode, &MemoryBase, &MemorySize);
     NV_ASSERT_RETURN (
@@ -442,32 +442,30 @@ TH500BuildDramRegions (
     Base = MemoryBase;
     Size = MemorySize;
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+  }
 
-    if (Socket == TH500_PRIMARY_SOCKET) {
-      if (MemoryMode == Th500MemoryModeNormal) {
-        DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
-      } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
-        DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
-      } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
-        DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
-      } else {
-        DEBUG ((DEBUG_ERROR, "Memory Mode: Unknown\n"));
-      }
+  if (MemoryMode == Th500MemoryModeNormal) {
+    DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
+  } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
+    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
+  } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
+    DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
+  } else {
+    DEBUG ((DEBUG_ERROR, "Memory Mode: Unknown\n"));
+  }
 
-      if (MemoryMode == Th500MemoryModeEgmNoHv) {
-        Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
-        Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
-        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+  if (MemoryMode == Th500MemoryModeEgmNoHv) {
+    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base;
+    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size;
+    PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
 
-        Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base;
-        Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size;
-        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
+    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base;
+    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size;
+    PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
 
-        Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Base;
-        Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Size;
-        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-      }
-    }
+    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
+    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+    PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
 
   *DramRegions     = Regions;
