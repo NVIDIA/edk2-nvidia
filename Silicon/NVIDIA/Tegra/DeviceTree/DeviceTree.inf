@@ -23,6 +23,7 @@
   BootOrderPxe.dts
   BootOrderSata.dts
   BootOrderSD.dts
+  BootOrderShell.dts
   BootOrderUfs.dts
   BootOrderUsb.dts
   L4TConfiguration.dts
