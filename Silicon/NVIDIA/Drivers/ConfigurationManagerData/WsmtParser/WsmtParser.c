@@ -35,7 +35,7 @@ WsmtParser (
   //
   // Allocate and zero out TPM2 Interface Info
   //
-  WsmtTable = AllocateZeroPool (sizeof (WsmtTable));
+  WsmtTable = AllocateZeroPool (sizeof (*WsmtTable));
   if (WsmtTable == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate WSMT table.\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
