@@ -1503,9 +1503,10 @@ AndroidBootDxeLoadFile (
   // Vendor_boot requires boot_img header version to be at least 3
   if (ImgData.HeaderVersion >= 3) {
     if ((PcdGetBool (PcdBootAndroidImage))) {
-      Status = AvbVerifyBoot (FALSE, Private->ControllerHandle, &AvbCmdline);
+      Status = AvbVerifyBoot (Private->RecoveryMode, Private->ControllerHandle, &AvbCmdline);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to AVB verify\n", __FUNCTION__, Status));
+        return Status;
       }
 
       Status = CopyAndroidBootArgsToBootConfig (AvbCmdline);

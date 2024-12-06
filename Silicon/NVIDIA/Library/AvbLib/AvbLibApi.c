@@ -19,6 +19,9 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/SiblingPartitionLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/DeviceTreeHelperLib.h>
+#include <Library/BaseCryptLib.h>
+#include <Library/BootConfigProtocolLib.h>
 
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
@@ -317,8 +320,58 @@ ValidateVbmetaPublicKey (
   OUT bool           *OutIsTrusted
   )
 {
-  *OutIsTrusted = true;
-  return AVB_IO_RESULT_OK;
+  BOOLEAN      Response;
+  INT32        NodeOffset;
+  EFI_STATUS   Status;
+  UINT8        StoredHashValue[SHA1_DIGEST_SIZE];
+  UINT8        *HashValueInDtb = NULL;
+  UINT32       KeyLenInDtb;
+  UINT32       KeyHashLenInDtb;
+  AvbIOResult  AvbResult = AVB_IO_RESULT_OK;
+
+  *OutIsTrusted = FALSE;
+
+  Response = Sha1HashAll (PubKey, PubKeyLen, StoredHashValue);
+  if (Response == FALSE) {
+    AvbResult = AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+  // Read Pubkey Hash from UEFI-DTB
+  NodeOffset = -1;
+  Status     = DeviceTreeGetNodeByPath ("/chosen", &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r getting /chosen\n", __FUNCTION__, Status));
+    AvbResult = AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "avb_key0_size", &KeyLenInDtb);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r geting avb_key0_size \n", __FUNCTION__, Status));
+    // no key0 makes AVB boot to yellow state
+    AvbResult = AVB_IO_RESULT_OK;
+    goto Exit;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "avb_key0_sha1", (CONST VOID **)&HashValueInDtb, &KeyHashLenInDtb);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r getting avb_key0_sha1 \n", __FUNCTION__, Status));
+    // no key0 makes AVB boot to yellow state
+    AvbResult = AVB_IO_RESULT_OK;
+    goto Exit;
+  }
+
+  // Compare pubkey0 SHA1
+  if ((KeyLenInDtb == PubKeyLen) &&
+      (KeyHashLenInDtb == SHA1_DIGEST_SIZE) &&
+      (0 == CompareMem ((VOID *)StoredHashValue, (VOID *)HashValueInDtb, SHA1_DIGEST_SIZE)))
+  {
+    *OutIsTrusted = TRUE;
+  }
+
+Exit:
+  return AvbResult;
 }
 
 /**
@@ -510,7 +563,7 @@ VerifiedBootGetBootState (
   }
 
   RequestedPartitions = IsRecovery ? RecoveryRequestedPartitions : NormalRequestedPartitions;
-  Flags              |= DeviceUnlocked ? AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR : 0;
+  Flags              |= AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR;
   Flags              |= IsRecovery ? AVB_SLOT_VERIFY_FLAGS_NO_VBMETA_PARTITION : 0;
 
   AvbRes = avb_slot_verify (
@@ -522,7 +575,29 @@ VerifiedBootGetBootState (
              SlotData
              );
 
-  return AvbRes == AVB_SLOT_VERIFY_RESULT_OK ? EFI_SUCCESS : EFI_SECURITY_VIOLATION;
+  /**
+    * Orange state:
+    * Device is unlocked
+    * Red state:
+    * Any fatal failure during verification
+    * Yellow state:
+    * Verification passed, but public key for vbmeta.img does not match the
+    * PKC public key for the platform
+    * Green state:
+    * Verification passed with the platform public key in vbmeta.img
+    **/
+
+  if (DeviceUnlocked == TRUE) {
+    *BootState = VERIFIED_BOOT_ORANGE_STATE;
+  } else if (AvbRes == AVB_SLOT_VERIFY_RESULT_ERROR_PUBLIC_KEY_REJECTED) {
+    *BootState = VERIFIED_BOOT_YELLOW_STATE;
+  } else if (AvbRes != AVB_SLOT_VERIFY_RESULT_OK) {
+    *BootState = VERIFIED_BOOT_RED_STATE;
+  } else {
+    *BootState = VERIFIED_BOOT_GREEN_STATE;
+  }
+
+  return (*BootState != VERIFIED_BOOT_RED_STATE) ? EFI_SUCCESS : EFI_SECURITY_VIOLATION;
 }
 
 EFI_STATUS
@@ -532,9 +607,11 @@ AvbVerifyBoot (
   OUT CHAR8      **AvbCmdline
   )
 {
-  AVB_BOOT_STATE     BootState = VERIFIED_BOOT_UNKNOWN_STATE;
-  EFI_STATUS         Status;
-  AvbSlotVerifyData  *SlotData = NULL;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate = NULL;
+  AVB_BOOT_STATE                     BootState         = VERIFIED_BOOT_UNKNOWN_STATE;
+  EFI_STATUS                         Status;
+  AvbSlotVerifyData                  *SlotData     = NULL;
+  CHAR8                              *BootStateStr = NULL;
 
   mControllerHandle = ControllerHandle;
 
@@ -548,5 +625,28 @@ AvbVerifyBoot (
     *AvbCmdline = SlotData->cmdline;
   }
 
+  BootStateStr = (BootState == VERIFIED_BOOT_RED_STATE) ? "red" :
+                 (BootState == VERIFIED_BOOT_YELLOW_STATE) ? "yellow" :
+                 (BootState == VERIFIED_BOOT_GREEN_STATE) ? "green" :
+                 (BootState == VERIFIED_BOOT_ORANGE_STATE) ? "orange" : "unknown";
+
+  DEBUG ((DEBUG_ERROR, "%a: Android verifiedbootstate = %a\n", __FUNCTION__, BootStateStr));
+
+  // WAR to make it always in "orange state" as bootloader-unlock for fastbootd flash and adb remount
+  // TODO: remove this WAR when AVB TA/RPMB is implmented to store unlock state
+  BootStateStr = "orange";
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %r to get BootConfigUpdateProtocol\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  Status = BootConfigUpdate->UpdateBootConfigs (BootConfigUpdate, "verifiedbootstate", BootStateStr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %r to update BootConfigUpdateProtocol\n", __FUNCTION__, Status));
+  }
+
+Exit:
   return Status;
 }

@@ -128,6 +128,7 @@
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
       BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
       NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
+      BaseCryptLib|CryptoPkg/Library/BaseCryptLibNull/BaseCryptLibNull.inf
       AvbLib|Silicon/NVIDIA/Library/AvbStubLib/AvbStubLib.inf
   }
 

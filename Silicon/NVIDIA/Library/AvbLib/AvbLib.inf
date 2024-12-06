@@ -50,6 +50,8 @@
 [Packages]
   MdePkg/MdePkg.dec
   ShellPkg/ShellPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  CryptoPkg/CryptoPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -61,11 +63,15 @@
   HandleParsingLib
   BootChainInfoLib
   MemoryAllocationLib
+  DeviceTreeHelperLib
+  BaseCryptLib
+  BootConfigProtocolLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
+  gNVIDIABootConfigUpdateProtocol
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS = -DAVB_COMPILATION -DAVB_ENABLE_DEBUG
