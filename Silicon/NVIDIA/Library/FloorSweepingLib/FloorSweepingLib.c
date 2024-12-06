@@ -774,7 +774,7 @@ FloorSweepDtb (
     return Status;
   }
 
-  if (ChipId == TH500_CHIP_ID) {
+  if ((ChipId == TH500_CHIP_ID) || (ChipId == T410_CHIP_ID)) {
     TH500FloorSweepSockets (SocketMask);
     Status = TH500FloorSweepCpus ();
   } else {
