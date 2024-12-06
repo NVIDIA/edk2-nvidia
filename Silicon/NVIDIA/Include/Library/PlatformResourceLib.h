@@ -131,6 +131,23 @@ typedef struct {
 } TEGRA_BPMP_PG_VOTES_TACKER;
 
 typedef struct {
+  CONST CHAR8    *IpName;
+  CONST CHAR8    **CompatibilityList;
+  CONST CHAR8    *IdProperty;
+  UINT32         *DisableReg;
+} TEGRA_FLOOR_SWEEPING_IP_ENTRY;
+
+typedef struct {
+  UINT64                           SocketAddressMask;
+  UINT8                            AddressToSocketShift;
+  CONST CHAR8                      *PcieEpCompatibility;
+  UINT32                           *PcieDisableRegArray;
+  CONST CHAR8                      *PcieParentNameFormat;
+  UINT8                            PcieNumParentNodes;
+  TEGRA_FLOOR_SWEEPING_IP_ENTRY    *IpTable;
+} TEGRA_FLOOR_SWEEPING_INFO;
+
+typedef struct {
   UINT32                        SocketMask;
   UINT32                        MaxPossibleSockets;
   UINT32                        MaxPossibleClusters;
@@ -164,6 +181,7 @@ typedef struct {
   TEGRA_BASE_AND_SIZE_INFO      *EgmRetiredPages;
   TEGRA_BPMP_PG_VOTES_TACKER    BpmpPgVotesTracker;
   UINT8                         PcieAddressBits;
+  TEGRA_FLOOR_SWEEPING_INFO     *FloorSweepingInfo;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**

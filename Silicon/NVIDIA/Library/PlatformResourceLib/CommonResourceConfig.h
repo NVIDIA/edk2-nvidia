@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023 NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -31,6 +31,21 @@ EFIAPI
 CommonConfigGetEnabledCoresBitMap (
   IN CONST COMMON_RESOURCE_CONFIG_INFO  *ConfigInfo,
   IN TEGRA_PLATFORM_RESOURCE_INFO       *PlatformResourceInfo
+  );
+
+/**
+  Get disable register for each socket
+
+**/
+EFI_STATUS
+EFIAPI
+GetDisableRegArray (
+  IN UINT32   SocketMask,
+  IN UINT64   SocketOffset,
+  IN UINT64   DisableRegAddr,
+  IN UINT32   DisableRegMask,
+  IN UINT32   DisableRegShift,
+  OUT UINT32  *DisableRegArray
   );
 
 #endif

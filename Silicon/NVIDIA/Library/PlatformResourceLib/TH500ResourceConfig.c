@@ -1037,6 +1037,55 @@ Th500CpuC2cMode (
 }
 
 /**
+  Initialize floorsweeping info
+
+**/
+EFI_STATUS
+EFIAPI
+TH500InitFloorSweepingInfo (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  TEGRA_FLOOR_SWEEPING_INFO  *Info;
+  EFI_STATUS                 Status;
+  TEGRA_PLATFORM_TYPE        Platform;
+  UINT32                     *PcieDisableRegArray;
+
+  Platform = TegraGetPlatform ();
+
+  // Get PCIe disable reg
+  PcieDisableRegArray = AllocateZeroPool (TH500_MAX_SOCKETS * sizeof (*PcieDisableRegArray));
+  Status              = GetDisableRegArray (
+                          PlatformResourceInfo->SocketMask,
+                          (0x1ULL << TH500_SOCKET_SHFT),
+                          TH500_SCRATCH_BASE_SOCKET_0 + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET,
+                          ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK,
+                          TH500_PCIE_FLOORSWEEPING_DISABLE_SHIFT,
+                          PcieDisableRegArray
+                          );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: PcieDisableRegArray failed: %r\n", __FUNCTION__, Status));
+  }
+
+  if (Platform == TEGRA_PLATFORM_VDK) {
+    PcieDisableRegArray[0] = TH500_PCIE_SIM_FLOORSWEEPING_INFO;
+  } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
+    PcieDisableRegArray[0] = TH500_PCIE_FPGA_FLOORSWEEPING_INFO;
+  }
+
+  Info                       = AllocateZeroPool (sizeof (TEGRA_FLOOR_SWEEPING_INFO));
+  Info->SocketAddressMask    = TH500_SOCKET_MASK;
+  Info->AddressToSocketShift = TH500_SOCKET_SHFT;
+  Info->PcieDisableRegArray  = PcieDisableRegArray;
+  Info->PcieParentNameFormat = "/socket@%u";
+  Info->PcieNumParentNodes   = TH500_MAX_SOCKETS;
+
+  PlatformResourceInfo->FloorSweepingInfo = Info;
+
+  return EFI_SUCCESS;
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -1268,11 +1317,23 @@ TH500UpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
+  EFI_STATUS  Status;
+
   if (PlatformResourceInfo == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  return Th500CpuC2cMode (PlatformResourceInfo);
+  Status = Th500CpuC2cMode (PlatformResourceInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = TH500InitFloorSweepingInfo (PlatformResourceInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
 }
 
 UINTN

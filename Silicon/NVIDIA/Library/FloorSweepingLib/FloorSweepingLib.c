@@ -211,13 +211,9 @@ CheckAndRemapCpu (
     case T234_CHIP_ID:
       Status = MceAriCheckCoreEnabled (Mpidr);
       break;
-    case TH500_CHIP_ID:
-      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr);
-      break;
+
     default:
-      Status = EFI_UNSUPPORTED;
-      ASSERT (FALSE);
-      *Mpidr = 0;
+      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr);
       break;
   }
 
@@ -898,30 +894,38 @@ FloorSweepDtb (
   Info   = FloorSweepCpuInfo ();
   ChipId = TegraGetChipID ();
 
-  switch (ChipId) {
-    case T234_CHIP_ID:
-      Status = FloorSweepGlobalCpus (Dtb);
-      if (!EFI_ERROR (Status)) {
-        Status = FloorSweepGlobalThermals (Dtb);
-      }
+  if (ChipId == T234_CHIP_ID) {
+    Status = FloorSweepGlobalCpus (Dtb);
+    if (!EFI_ERROR (Status)) {
+      Status = FloorSweepGlobalThermals (Dtb);
+    }
 
-      break;
-    case TH500_CHIP_ID:
-      TH500FloorSweepSockets (Info->SocketMask, Dtb);
-      Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
+    return Status;
+  }
 
-      if (!EFI_ERROR (Status)) {
-        Status = CommonFloorSweepPcie (Info->SocketMask, Dtb);
-      }
+  // common floorsweeping flow
+  Status = CommonInitializeGlobalStructures (Dtb);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-      if (!EFI_ERROR (Status)) {
-        Status = CommonFloorSweepScfCache (Info->SocketMask, Dtb);
-      }
+  if (ChipId == TH500_CHIP_ID) {
+    TH500FloorSweepSockets (Info->SocketMask, Dtb);
+    Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
+  } else {
+    Status = CommonFloorSweepCpus (Info->SocketMask, Dtb);
+  }
 
-      break;
-    default:
-      Status = EFI_UNSUPPORTED;
-      break;
+  if (!EFI_ERROR (Status)) {
+    Status = CommonFloorSweepPcie (Info->SocketMask, Dtb);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = CommonFloorSweepScfCache (Info->SocketMask, Dtb);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = CommonFloorSweepIps (Info->SocketMask);
   }
 
   return Status;

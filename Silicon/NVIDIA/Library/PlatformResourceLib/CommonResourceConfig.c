@@ -6,6 +6,7 @@
 *
 **/
 
+#include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
@@ -144,6 +145,43 @@ CommonConfigGetEnabledCoresBitMap (
       CoresPerSocket,
       ConfigInfo->MaxCoreDisableWords
       );
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Get disable register for each socket
+
+**/
+EFI_STATUS
+EFIAPI
+GetDisableRegArray (
+  IN UINT32   SocketMask,
+  IN UINT64   SocketOffset,
+  IN UINT64   DisableRegAddr,
+  IN UINT32   DisableRegMask,
+  IN UINT32   DisableRegShift,
+  OUT UINT32  *DisableRegArray
+  )
+{
+  UINTN   Socket;
+  UINTN   DisableReg;
+  UINT64  SocketBase;
+
+  SocketBase = 0;
+  for (Socket = 0; Socket <= HighBitSet32 (SocketMask); Socket++, SocketBase += SocketOffset) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    DisableReg   = MmioRead32 (SocketBase + DisableRegAddr);
+    DisableReg >>= DisableRegShift;
+    DisableReg  &= DisableRegMask;
+
+    DisableRegArray[Socket] = DisableReg;
+
+    DEBUG ((DEBUG_INFO, "%a: Socket %u Addr=0x%llx Reg=0x%x\n", __FUNCTION__, Socket, SocketBase + DisableRegAddr, DisableReg));
   }
 
   return EFI_SUCCESS;

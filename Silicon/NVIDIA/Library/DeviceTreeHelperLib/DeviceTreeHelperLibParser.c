@@ -1682,3 +1682,34 @@ WriteRegProperty:
 
   return Status;
 }
+
+/**
+  Returns unit address for node in DTB
+
+  @param[in]      NodeOffset      Node offset
+
+  @retval         UINT64          Unit address of node
+                  0               Address could not be parsed from node name
+
+**/
+UINT64
+EFIAPI
+DeviceTreeGetNodeUnitAddress (
+  IN  INT32  NodeOffset
+  )
+{
+  CONST CHAR8  *NodeName;
+  CONST CHAR8  *UnitAddressString;
+  UINT64       UnitAddress;
+
+  NodeName          = DeviceTreeGetNodeName (NodeOffset);
+  UnitAddressString = AsciiStrStr (NodeName, "@");
+  if (UnitAddressString == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: couldn't get address from %a\n", __FUNCTION__, NodeName));
+    return 0;
+  }
+
+  UnitAddress = AsciiStrDecimalToUint64 (++UnitAddressString);
+
+  return UnitAddress;
+}

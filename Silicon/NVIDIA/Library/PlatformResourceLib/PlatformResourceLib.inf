@@ -29,6 +29,7 @@
   MceAriLib
   NvgLib
   ErotLib
+  BaseLib
 
 [Sources.common]
   PlatformResourceConfig.c

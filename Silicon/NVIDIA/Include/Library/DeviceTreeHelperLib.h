@@ -1043,4 +1043,19 @@ DeviceTreeSetRegisters (
   IN UINT32                                  NumberOfRegisters
   );
 
+/**
+  Returns unit address for node in DTB
+
+  @param[in]      NodeOffset      Node offset
+
+  @retval         UINT64          Unit address of node
+                  0               Address could not be parsed from node name
+
+**/
+UINT64
+EFIAPI
+DeviceTreeGetNodeUnitAddress (
+  IN  INT32  NodeOffset
+  );
+
 #endif //__DEVICE_TREE_HELPER_LIB_H__

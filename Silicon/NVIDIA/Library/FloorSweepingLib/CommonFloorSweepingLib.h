@@ -61,4 +61,24 @@ CommonCheckAndRemapCpu (
   IN OUT UINT64  *Mpidr
   );
 
+/**
+  Floorseep IPs
+
+**/
+EFI_STATUS
+EFIAPI
+CommonFloorSweepIps (
+  IN  UINT32  SocketMask
+  );
+
+/**
+  Initialize global structures
+
+**/
+EFI_STATUS
+EFIAPI
+CommonInitializeGlobalStructures (
+  IN  VOID  *Dtb
+  );
+
 #endif // __COMMON_FLOOR_SWEEPING_LIB_H__

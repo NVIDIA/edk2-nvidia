@@ -32,7 +32,7 @@ UpdateCpuFloorsweepingConfig (
   IN VOID    *Dtb
   );
 
-STATIC UINT64  *SocketScratchBaseAddr;
+STATIC UINT64  *SocketScratchBaseAddr                        = NULL;
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_SCRATCH_BASE_SOCKET_0,
   TH500_SCRATCH_BASE_SOCKET_1,
@@ -40,7 +40,7 @@ STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_SCRATCH_BASE_SOCKET_3,
 };
 
-STATIC UINT64  *SocketCbbFabricBaseAddr;
+STATIC UINT64  *SocketCbbFabricBaseAddr                        = NULL;
 STATIC UINT64  TH500SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_CBB_FABRIC_BASE_SOCKET_0,
   TH500_CBB_FABRIC_BASE_SOCKET_1,
@@ -48,7 +48,7 @@ STATIC UINT64  TH500SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_CBB_FABRIC_BASE_SOCKET_3,
 };
 
-STATIC UINT64  *SocketMssBaseAddr;
+STATIC UINT64  *SocketMssBaseAddr                        = NULL;
 STATIC UINT64  TH500SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_MSS_BASE_SOCKET_0,
   TH500_MSS_BASE_SOCKET_1,
@@ -56,38 +56,49 @@ STATIC UINT64  TH500SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_MSS_BASE_SOCKET_3,
 };
 
-STATIC UINT32  *ScfCacheDisableScratchOffset;
+STATIC UINT32  *ScfCacheDisableScratchOffset                                  = NULL;
 STATIC UINT32  TH500ScfCacheDisableScratchOffset[MAX_SCF_CACHE_DISABLE_WORDS] = {
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
 };
 
-STATIC UINT32  *ScfCacheDisableScratchMask;
+STATIC UINT32  *ScfCacheDisableScratchMask                                  = NULL;
 STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
   TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
 };
 
-STATIC CONST CHAR8  *PcieEpCompatibility;
+STATIC TEGRA_PLATFORM_RESOURCE_INFO  *mPlatformResourceInfo = NULL;
 
 /**
   Initialize global structures
 
 **/
-STATIC
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
-  VOID
+  IN  VOID  *Dtb
   )
 {
   EFI_STATUS  Status;
   UINTN       ChipId;
+  VOID        *Hob;
+
+  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    (Hob != NULL) &&
+    (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+    return EFI_DEVICE_ERROR,
+    "Failed to get PlatformResourceInfo\r\n"
+    );
+
+  mPlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
 
   ChipId = TegraGetChipID ();
-
   switch (ChipId) {
     case TH500_CHIP_ID:
       SocketScratchBaseAddr        = TH500SocketScratchBaseAddr;
@@ -95,14 +106,16 @@ CommonInitializeGlobalStructures (
       ScfCacheDisableScratchMask   = TH500ScfCacheDisableScratchMask;
       SocketMssBaseAddr            = TH500SocketMssBaseAddr;
       SocketCbbFabricBaseAddr      = TH500SocketCbbFabricBaseAddr;
-      PcieEpCompatibility          = NULL;
       Status                       = EFI_SUCCESS;
-
       break;
 
     default:
-      Status = EFI_UNSUPPORTED;
+      Status = EFI_SUCCESS;
       break;
+  }
+
+  if (mPlatformResourceInfo->FloorSweepingInfo == NULL) {
+    Status = EFI_UNSUPPORTED;
   }
 
   return Status;
@@ -353,36 +366,20 @@ TH500UpdatePcieNode (
   return EFI_SUCCESS;
 }
 
-STATIC
 EFI_STATUS
 EFIAPI
-GetDisableRegArray (
-  IN UINT32   SocketMask,
-  IN UINT64   SocketOffset,
-  IN UINT64   DisableRegAddr,
-  IN UINT32   DisableRegMask,
-  OUT UINT32  *DisableRegArray
+FloorSweepDisableNode (
+  IN INT32  NodeOffset
   )
 {
-  UINTN   Socket;
-  UINTN   DisableReg;
-  UINT64  SocketBase;
+  EFI_STATUS  Status;
 
-  SocketBase = 0;
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++, SocketBase += SocketOffset) {
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
-
-    DisableReg  = MmioRead32 (SocketBase + DisableRegAddr);
-    DisableReg &= DisableRegMask;
-
-    DisableRegArray[Socket] = DisableReg;
-
-    DEBUG ((DEBUG_INFO, "%a: Socket %u Addr=0x%llx Reg=0x%x\n", __FUNCTION__, Socket, SocketBase + DisableRegAddr, DisableReg));
+  Status = DeviceTreeSetNodeProperty (NodeOffset, "status", "disabled", sizeof ("disabled"));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: error disabling node %a status=%r\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), Status));
   }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
@@ -396,50 +393,33 @@ CommonFloorSweepPcie (
   IN  VOID    *Dtb
   )
 {
-  EFI_STATUS           Status;
-  INT32                ParentOffset;
-  INT32                NodeOffset;
-  CHAR8                ParentNameStr[16];
-  TEGRA_PLATFORM_TYPE  Platform;
-  UINTN                ChipId;
-  CHAR8                *ParentNameFormat;
-  UINT32               InterfaceSocket;
-  INT32                FdtErr;
-  UINT32               PcieDisableRegArray[MAX_SUPPORTED_SOCKETS];
-  UINTN                Index;
-  UINTN                NumParentNodes;
+  EFI_STATUS                       Status;
+  INT32                            ParentOffset;
+  INT32                            NodeOffset;
+  CHAR8                            ParentNameStr[16];
+  UINTN                            ChipId;
+  CONST CHAR8                      *ParentNameFormat;
+  UINT32                           InterfaceSocket;
+  INT32                            FdtErr;
+  UINT32                           *PcieDisableRegArray;
+  UINTN                            Index;
+  UINTN                            NumParentNodes;
+  CONST CHAR8                      *PcieEpCompatibility;
+  CONST TEGRA_FLOOR_SWEEPING_INFO  *Info;
 
-  Status = CommonInitializeGlobalStructures ();
-  if (EFI_ERROR (Status)) {
-    return Status;
+  Info = mPlatformResourceInfo->FloorSweepingInfo;
+
+  // check for PCIe floorsweeping supported
+  if (Info->PcieDisableRegArray == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no  PcieDisableRegArray\n", __FUNCTION__));
+    return EFI_SUCCESS;
   }
 
-  ChipId   = TegraGetChipID ();
-  Platform = TegraGetPlatform ();
-
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      Status = GetDisableRegArray (
-                 SocketMask,
-                 (1ULL << TH500_SOCKET_SHFT),
-                 TH500_SCRATCH_BASE_SOCKET_0 + TH500_PCIE_FLOORSWEEPING_DISABLE_OFFSET,
-                 ~TH500_PCIE_FLOORSWEEPING_DISABLE_MASK,
-                 PcieDisableRegArray
-                 );
-
-      if (Platform == TEGRA_PLATFORM_VDK) {
-        PcieDisableRegArray[0] = TH500_PCIE_SIM_FLOORSWEEPING_INFO;
-      } else if (Platform == TEGRA_PLATFORM_SYSTEM_FPGA) {
-        PcieDisableRegArray[0] = TH500_PCIE_FPGA_FLOORSWEEPING_INFO;
-      }
-
-      ParentNameFormat = "/socket@%u";
-      NumParentNodes   = PLATFORM_MAX_SOCKETS;
-      break;
-
-    default:
-      return EFI_UNSUPPORTED;
-  }
+  PcieDisableRegArray = Info->PcieDisableRegArray;
+  PcieEpCompatibility = Info->PcieEpCompatibility;
+  ParentNameFormat    = Info->PcieParentNameFormat;
+  NumParentNodes      = Info->PcieNumParentNodes;
+  ChipId              = TegraGetChipID ();
 
   for (Index = 0; Index < NumParentNodes; Index++) {
     ASSERT (AsciiStrLen (ParentNameFormat) < sizeof (ParentNameStr));
@@ -538,24 +518,19 @@ CommonFloorSweepScfCache (
   IN  VOID    *Dtb
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Socket;
-  UINTN       CoresPerSocket;
-  UINTN       ScfCacheCount;
-  UINT32      ScfCacheSize;
-  UINT32      ScfCacheSets;
-  INT32       NodeOffset;
-  INT32       FdtErr;
-  UINT32      Tmp32;
-  CHAR8       SocketNodeStr[] = "/socket@xxxxxxxxxxx";
+  UINTN   Socket;
+  UINTN   CoresPerSocket;
+  UINTN   ScfCacheCount;
+  UINT32  ScfCacheSize;
+  UINT32  ScfCacheSets;
+  INT32   NodeOffset;
+  INT32   FdtErr;
+  UINT32  Tmp32;
+  CHAR8   SocketNodeStr[] = "/socket@xxxxxxxxxxx";
 
-  Status = CommonInitializeGlobalStructures ();
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
+  // check for SCF floorsweeping supported
   if (ScfCacheDisableScratchOffset == NULL) {
-    // SCF floorsweeping is not supported
+    DEBUG ((DEBUG_INFO, "%a: no ScfCache offset\n", __FUNCTION__));
     return EFI_SUCCESS;
   }
 
@@ -769,4 +744,145 @@ CommonCheckAndRemapCpu (
   }
 
   return Status;
+}
+
+STATIC
+UINT8
+EFIAPI
+FloorSweepGetDtbNodeSocket (
+  INT32   NodeOffset,
+  UINT64  SocketAddressMask,
+  UINT8   AddressToSocketShift
+  )
+{
+  UINT8   Socket;
+  UINT64  UnitAddress;
+
+  UnitAddress = DeviceTreeGetNodeUnitAddress (NodeOffset);
+  Socket      = (UnitAddress >> AddressToSocketShift) & SocketAddressMask;
+
+  DEBUG ((DEBUG_INFO, "%a: addr=0x%llx socket=%u\n", __FUNCTION__, UnitAddress, Socket));
+
+  return Socket;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FloorSweepIpEntry (
+  IN  UINT32                               SocketMask,
+  IN  INT32                                IpsOffset,
+  IN  CONST TEGRA_FLOOR_SWEEPING_IP_ENTRY  *IpEntry
+  )
+{
+  EFI_STATUS                       Status;
+  UINTN                            Socket;
+  INT32                            NodeOffset;
+  BOOLEAN                          NodeIsDisabled;
+  BOOLEAN                          IpIsDisabled;
+  UINTN                            MaxSockets;
+  UINT32                           DisableReg;
+  UINT32                           Id;
+  CONST TEGRA_FLOOR_SWEEPING_INFO  *Info;
+
+  NV_ASSERT_RETURN (((mPlatformResourceInfo != NULL) && (IpEntry->DisableReg != NULL)), return EFI_INVALID_PARAMETER, "%a: Bad param\n", __FUNCTION__);
+
+  Info         = mPlatformResourceInfo->FloorSweepingInfo;
+  MaxSockets   = mPlatformResourceInfo->MaxPossibleSockets;
+  IpIsDisabled = FALSE;
+  for (Socket = 0; Socket < MaxSockets; Socket++) {
+    if (!(SocketMask & (1UL << Socket)) || (IpEntry->DisableReg[Socket] != 0)) {
+      IpIsDisabled = TRUE;
+      break;
+    }
+  }
+
+  if (!IpIsDisabled) {
+    DEBUG ((DEBUG_INFO, "%a: no disables for IP %a\n", __FUNCTION__, IpEntry->IpName));
+    return EFI_SUCCESS;
+  }
+
+  NodeOffset = 0;
+  while (1) {
+    Status = DeviceTreeGetNextCompatibleSubnode (IpEntry->CompatibilityList, IpsOffset, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+
+    if (MaxSockets == 1) {
+      Socket = 0;
+    } else {
+      Socket = FloorSweepGetDtbNodeSocket (
+                 NodeOffset,
+                 Info->SocketAddressMask,
+                 Info->AddressToSocketShift
+                 );
+    }
+
+    if (((0x1UL << Socket) && SocketMask) == 0) {
+      NodeIsDisabled = TRUE;
+      DisableReg     = MAX_UINT32;
+    } else {
+      NodeIsDisabled = FALSE;
+      DisableReg     = IpEntry->DisableReg[Socket];
+      if (DisableReg != 0) {
+        if (IpEntry->IdProperty == NULL) {
+          NodeIsDisabled = TRUE;
+        } else {
+          Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, IpEntry->IdProperty, &Id);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: getting %a failed, ignoring %a node: %r\n", __FUNCTION__, IpEntry->IdProperty, DeviceTreeGetNodeName (NodeOffset), Status));
+          } else {
+            NodeIsDisabled = ((DisableReg & (1UL << Id)) != 0);
+          }
+        }
+      }
+    }
+
+    if (NodeIsDisabled) {
+      Status = FloorSweepDisableNode (NodeOffset);
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: node %a is %a socket=%u, reg=0x%x, status=%r\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), (NodeIsDisabled) ? "disabled" : "enabled", Socket, DisableReg, Status));
+  }
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+CommonFloorSweepIps (
+  IN  UINT32  SocketMask
+  )
+{
+  CONST CHAR8                          *IpsRootName = "/bus@0";
+  INT32                                IpsOffset;
+  EFI_STATUS                           Status;
+  CONST TEGRA_FLOOR_SWEEPING_IP_ENTRY  *IpTable;
+  CONST TEGRA_FLOOR_SWEEPING_INFO      *Info;
+
+  Info    = mPlatformResourceInfo->FloorSweepingInfo;
+  IpTable = Info->IpTable;
+
+  // check for IP floorsweeping supported
+  if (IpTable == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no IpTable\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  Status = DeviceTreeGetNodeByPath (IpsRootName, &IpsOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: IP root %a failed, using 0: %r\n", __FUNCTION__, IpsRootName, Status));
+    IpsOffset = 0;
+  }
+
+  while (IpTable->IpName != NULL) {
+    Status = FloorSweepIpEntry (SocketMask, IpsOffset, IpTable);
+
+    DEBUG ((DEBUG_INFO, "%a: floorswept %a nodes: %r\n", __FUNCTION__, IpTable->IpName, Status));
+
+    IpTable++;
+  }
+
+  return EFI_SUCCESS;
 }
