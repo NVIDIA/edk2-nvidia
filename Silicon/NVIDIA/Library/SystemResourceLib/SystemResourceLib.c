@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -152,10 +152,6 @@ InstallMmioRegions (
   *MmioRegionsCount += InstallMmioRegion (
                          (TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK),
                          SIZE_4KB
-                         );
-  *MmioRegionsCount += InstallMmioRegion (
-                         TegraGetGicDistributorBaseAddress (ChipID),
-                         SIZE_64KB
                          );
   *MmioRegionsCount += InstallMmioRegion (GetTegraUARTBaseAddress (), SIZE_4KB);
 

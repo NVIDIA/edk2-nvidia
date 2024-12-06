@@ -102,45 +102,6 @@ TegraGetBLCarveoutInfoLocationAddress (
   );
 
 /**
-  Returns gic distributor base address for a given chip.
-
-  @param[in] ChipID    Tegra Chip ID
-
-  @retval              Gic distributor base address.
-
-**/
-extern UINT64
-TegraGetGicDistributorBaseAddress (
-  UINT32  ChipID
-  );
-
-/**
-  Returns gic redistributor base address for a given chip.
-
-  @param[in] ChipID    Tegra Chip ID
-
-  @retval              Gic redistributor base address.
-
-**/
-extern UINT64
-TegraGetGicRedistributorBaseAddress (
-  UINT32  ChipID
-  );
-
-/**
-  Returns gic interrupt interface base address for a given chip.
-
-  @param[in] ChipID    Tegra Chip ID
-
-  @retval              Gic interrupt interface base address.
-
-**/
-extern UINT64
-TegraGetGicInterruptInterfaceBaseAddress (
-  UINT32  ChipID
-  );
-
-/**
   Returns tegra platform type.
 
   This Function returns the type of the underlying tegra platform.

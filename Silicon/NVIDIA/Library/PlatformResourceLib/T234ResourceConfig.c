@@ -33,6 +33,10 @@
 
 TEGRA_MMIO_INFO  T234MmioInfo[] = {
   {
+    T234_GIC_DISTRIBUTOR_BASE,
+    SIZE_64KB
+  },
+  {
     FixedPcdGet64 (PcdTegraCombinedUartTxMailbox),
     SIZE_4KB
   },
