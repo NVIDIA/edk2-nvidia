@@ -63,6 +63,12 @@ STATIC CHAR16  *pKernelPartitionDtbMapping[][2] = {
   },
   {
     L"kernel_b", L"kernel-dtb_b"
+  },
+  {
+    L"boot_a", L"kernel-dtb_a"
+  },
+  {
+    L"boot_b", L"kernel-dtb_b"
   }
 };
 
@@ -236,6 +242,7 @@ AndroidBootOnConnectCompleteHandler (
   EFI_HANDLE                 MscHandle;
   MiscCmdType                MiscCmd;
   CHAR16                     PartitionName[MAX_PARTITION_NAME_LEN];
+  CHAR16                     *KernelName = NULL;
   UINTN                      Count;
   BOOLEAN                    RecoveryPartitonFound;
 
@@ -275,7 +282,8 @@ AndroidBootOnConnectCompleteHandler (
       AndroidBootUninstallProtocols (Private);
     }
   } else {
-    Status = GetActivePartitionName (L"kernel", PartitionName);
+    KernelName = PcdGetBool (PcdBootAndroidImage) ? L"boot" : L"kernel";
+    Status     = GetActivePartitionName (KernelName, PartitionName);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: couldn't get active name: %r\n", __FUNCTION__, Status));
       return;
