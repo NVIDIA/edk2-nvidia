@@ -294,7 +294,7 @@ GetWriteOffset (
         *Offset     = BlockOffset;
         break;
       } else if (ReadBuf[0] == VAR_INT_VALID) {
-        ValidRecord = CurOffset;
+        ValidRecord = BlockOffset;
       }
 
       BlockOffset += This->MeasurementSize;
@@ -313,7 +313,7 @@ GetWriteOffset (
     if ((ValidRecord == 0) || (NumPartitionBlocks == 1)) {
       *Offset = This->PartitionByteOffset;
     } else {
-      CurBlock = (ValidRecord / This->PartitionByteOffset);
+      CurBlock = (ValidRecord / This->BlockSize);
       if (CurBlock == EndBlock) {
         *Offset = This->PartitionByteOffset;
       } else {
