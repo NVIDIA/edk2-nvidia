@@ -242,7 +242,12 @@ InitializeRootfsStatusReg (
   UINT32      MaxRetryCount;
   UINT32      RootfsStatus;
 
-  Status = gL4TSupportProtocol->GetRootfsStatusReg (&RegisterValue);
+  if (gL4TSupportProtocol != NULL) {
+    Status = gL4TSupportProtocol->GetRootfsStatusReg (&RegisterValue);
+  } else {
+    Status = GetRootfsStatusReg (&RegisterValue);
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -287,7 +292,12 @@ InitializeRootfsStatusReg (
   RegisterValue = SR_RF_RETRY_COUNT_B_SET (RetryCount, RegisterValue);
 
   // Write Rootfs Status register
-  Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValue);
+  if (gL4TSupportProtocol != NULL) {
+    Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValue);
+  } else {
+    Status = SetRootfsStatusReg (RegisterValue);
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -692,7 +702,12 @@ ValidateRootfsStatus (
     // Clear the SR_RF when boot to recovery kernel.
     // Slot status can be set to normal via UEFI menu in next boot
     // or via OTA.
-    Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
+    if (gL4TSupportProtocol != NULL) {
+      Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
+    } else {
+      Status = SetRootfsStatusReg (0x0);
+    }
+
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -846,7 +861,12 @@ Exit:
       return Status;
     }
 
-    Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValueRf);
+    if (gL4TSupportProtocol != NULL) {
+      Status = gL4TSupportProtocol->SetRootfsStatusReg (RegisterValueRf);
+    } else {
+      Status = SetRootfsStatusReg (RegisterValueRf);
+    }
+
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -875,7 +895,12 @@ Exit:
     // Trigger a reset to switch the BootChain if the UpdateFlag of BootChainFwNext is 1
     if (mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag) {
       // Clear the rootfs status register before issuing a reset
-      Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
+      if (gL4TSupportProtocol != NULL) {
+        Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
+      } else {
+        Status = SetRootfsStatusReg (0x0);
+      }
+
       if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,

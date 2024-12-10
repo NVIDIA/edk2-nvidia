@@ -7,8 +7,12 @@
 
 **/
 
+#include <PiPei.h>
+
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
+#include <Library/HobLib.h>
+#include <Library/PcdLib.h>
 #include <Library/ShellLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -40,6 +44,8 @@
 
 #include <NVIDIAConfiguration.h>
 #include <libfdt.h>
+#include <Library/PlatformBootOrderLib.h>
+#include <Library/TegraDeviceTreeOverlayLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
 
@@ -1566,7 +1572,12 @@ ExtLinuxBoot (
           goto Exit;
         }
 
-        Status = gL4TSupportProtocol->ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
+        if (gL4TSupportProtocol != NULL) {
+          Status = gL4TSupportProtocol->ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
+        } else {
+          Status = ApplyTegraDeviceTreeOverlay (ExpandedFdtBase, OverlayBuffer, SWModule);
+        }
+
         if (EFI_ERROR (Status)) {
           goto Exit;
         }
@@ -2462,7 +2473,12 @@ GetDeviceHandleForFvBoot (
       continue;
     }
 
-    Status = gL4TSupportProtocol->GetBootDeviceClass (DevicePath, &DeviceClass);
+    if (gL4TSupportProtocol != NULL) {
+      Status = gL4TSupportProtocol->GetBootDeviceClass (DevicePath, &DeviceClass);
+    } else {
+      Status = GetBootDeviceClass (DevicePath, &DeviceClass);
+    }
+
     if (EFI_ERROR (Status)) {
       continue;
     }
@@ -2514,17 +2530,19 @@ L4TLauncher (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_DEVICE_PATH            *FullDevicePath;
-  EFI_LOADED_IMAGE_PROTOCOL  *LoadedImage;
-  EFI_STATUS                 Status;
-  TEGRA_BOOT_MODE_METADATA   BootModeMetaData;
-  EFI_HANDLE                 LoadedImageHandle  = 0;
-  EFI_HANDLE                 RootFsDeviceHandle = 0;
-  EFI_HANDLE                 DeviceHandle       = 0;
-  L4T_BOOT_PARAMS            BootParams;
-  EXTLINUX_BOOT_CONFIG       ExtLinuxConfig;
-  UINTN                      ExtLinuxBootOption;
-  UINTN                      Index;
+  EFI_DEVICE_PATH               *FullDevicePath;
+  EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
+  EFI_STATUS                    Status;
+  TEGRA_BOOT_MODE_METADATA      BootModeMetaData;
+  EFI_HANDLE                    LoadedImageHandle  = 0;
+  EFI_HANDLE                    RootFsDeviceHandle = 0;
+  EFI_HANDLE                    DeviceHandle       = 0;
+  L4T_BOOT_PARAMS               BootParams;
+  EXTLINUX_BOOT_CONFIG          ExtLinuxConfig;
+  UINTN                         ExtLinuxBootOption;
+  UINTN                         Index;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Status = gBS->HandleProtocol (ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID **)&LoadedImage);
   if (EFI_ERROR (Status)) {
@@ -2532,10 +2550,11 @@ L4TLauncher (
     return Status;
   }
 
-  Status = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
+  gL4TSupportProtocol = NULL;
+  Status              = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"%a: Unable to locate L4T Support protocol: %r\r\n", __FUNCTION__, Status);
-    return Status;
+    ErrorPrint (L"%a: Using legacy interface. Support would be deprecated soon!!!\r\n", __FUNCTION__);
   }
 
   Status = ProcessBootParams (LoadedImage, &BootParams);
@@ -2553,7 +2572,27 @@ L4TLauncher (
     }
   }
 
-  Status = gL4TSupportProtocol->GetBootModeInfo (&BootModeMetaData);
+  if (gL4TSupportProtocol != NULL) {
+    Status = gL4TSupportProtocol->GetBootModeInfo (&BootModeMetaData);
+  } else {
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    if ((Hob != NULL) &&
+        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+    {
+      PlatformResourceInfo      = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+      BootModeMetaData.BootType = PlatformResourceInfo->BootType;
+      if (BootModeMetaData.BootType == TegrablBootRcm) {
+        BootModeMetaData.RcmBootOsInfo.Base = PcdGet64 (PcdRcmKernelBase);
+        BootModeMetaData.RcmBootOsInfo.Size = PcdGet64 (PcdRcmKernelSize);
+      }
+
+      Status = EFI_SUCCESS;
+    } else {
+      ErrorPrint (L"%a: Failed to get PlatformResourceInfo\r\n", __FUNCTION__);
+      Status = EFI_NOT_FOUND;
+    }
+  }
+
   if (EFI_ERROR (Status)) {
     return Status;
   }

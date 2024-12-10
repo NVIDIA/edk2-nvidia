@@ -34,6 +34,8 @@
   UefiBootServicesTableLib
   UefiApplicationEntryPoint
   BaseMemoryLib
+  HobLib
+  PcdLib
   DebugLib
   DevicePathLib
   UefiLib
@@ -43,13 +45,20 @@
   UefiRuntimeServicesTableLib
   AndroidBootImgLib
   SecureBootVariableLib
+  TegraDeviceTreeKernelOverlayLib
   OpteeNvLib
+  PlatformBootOrderLib
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gFdtTableGuid
   gEfiSecureBootEnableDisableGuid
+  gNVIDIAPlatformResourceDataGuid
   gNVIDIATokenSpaceGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdRcmKernelBase
+  gNVIDIATokenSpaceGuid.PcdRcmKernelSize
 
 [Protocols]
   gEfiLoadedImageProtocolGuid

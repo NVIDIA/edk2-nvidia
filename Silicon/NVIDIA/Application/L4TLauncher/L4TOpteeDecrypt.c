@@ -13,6 +13,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/HandleParsingLib.h>
 #include <Library/PrintLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/OpteeNvLib.h>
 #include <Library/FileHandleLib.h>
 #include <libfdt_env.h>
@@ -114,6 +115,7 @@ GetImageEncryptionInfo (
   EFI_GUID                CPD_TA_UUID   = TA_CPUBL_PAYLOAD_DECRYPTION_UUID;
   OPTEE_SESSION           *OpteeSession = NULL;
   UINTN                   HeaderSize;
+  UINTN                   ChipID;
 
   if (!IsOpteePresent ()) {
     ErrorPrint (L"%a: optee is not present\r\n", __FUNCTION__);
@@ -189,7 +191,19 @@ GetImageEncryptionInfo (
   if (MessageArg->Params[1].Union.Value.A == 1) {
     Info->ImageEncrypted = TRUE;
 
-    Status = gL4TSupportProtocol->GetBootComponentHeaderSize (&HeaderSize);
+    if (gL4TSupportProtocol != NULL) {
+      Status = gL4TSupportProtocol->GetBootComponentHeaderSize (&HeaderSize);
+    } else {
+      ChipID = TegraGetChipID ();
+      if (ChipID == T194_CHIP_ID) {
+        HeaderSize = SIZE_4KB;
+      } else {
+        HeaderSize = SIZE_8KB;
+      }
+
+      Status = EFI_SUCCESS;
+    }
+
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"%a: Failed to get boot component header size %r\r\n", __FUNCTION__, Status);
       goto CloseSession;
