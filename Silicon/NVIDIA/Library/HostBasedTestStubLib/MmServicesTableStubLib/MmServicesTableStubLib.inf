@@ -1,0 +1,32 @@
+## @file
+#
+#  MmServices Table Lib stubs for host based tests
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MmServicesTableStubLib
+  FILE_GUID                      = 996de160-b605-4536-9e2d-a48a2d84da45
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MmServicesTableLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+
+[Protocols]
+  gNVIDIAVarIntGuid
+
+[Sources.common]
+  MmServicesTableStubLib.c

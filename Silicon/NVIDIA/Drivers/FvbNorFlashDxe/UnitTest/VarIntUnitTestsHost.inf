@@ -1,0 +1,58 @@
+## @file
+# Unit tests for the Var Store Integrity module of FvbNorFlashStandaloneMm.c
+#
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = VarIntUnitTestsHost
+  FILE_GUID                      = 218dc6ef-5c64-430b-80ed-715211958db4
+  MODULE_TYPE                    = HOST_APPLICATION
+  VERSION_STRING                 = 1.0
+
+#
+# The following information is for reference only
+# and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = X64
+#
+
+[Sources]
+  VarIntUnitTestsHost.c
+  ../VarIntCheck.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  CryptoPkg/CryptoPkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  SecurityPkg/SecurityPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  NorFlashStubLib
+  UnitTestLib
+  PcdLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeLib
+  NvVarIntLib
+  MmServicesTableLib
+  ArmSvcLib
+
+[Protocols]
+  gNVIDIAVarIntGuid
+
+[Pcd]
+  gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
+
+[Guids]
+  gEfiImageSecurityDatabaseGuid

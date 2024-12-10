@@ -167,6 +167,14 @@
 
   Silicon/NVIDIA/Library/WildcardStringLib/UnitTest/WildcardStringLibGoogleTest.inf
 
+  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/UnitTest/VarIntUnitTestsHost.inf {
+    <LibraryClasses>
+     NvVarIntLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/NvVarIntStubLib/NvVarIntStubLib.inf
+    <PcdsFixedAtBuild>
+      gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x16
+  }
+
+
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
@@ -177,3 +185,4 @@
 
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdBuildEpoch|$(BUILD_EPOCH)
+  gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy|0x00000002
