@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 9 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -116,6 +116,15 @@ InstallSmbiosType9Cm (
     AsciiSPrint (Type9tNodeStr, sizeof (Type9tNodeStr), "/firmware/smbios/type9@%u", Index);
     NodeOffset = fdt_path_offset (DtbBase, Type9tNodeStr);
     if (NodeOffset < 0) {
+      continue;
+    }
+
+    //
+    // Evaluate 'condition' of each Type 9 node and skip it if condition is not met
+    //
+    Status = EvaluateDtbNodeCondition (Private, NodeOffset);
+    ASSERT (Status != EFI_INVALID_PARAMETER);
+    if (Status == EFI_UNSUPPORTED) {
       continue;
     }
 

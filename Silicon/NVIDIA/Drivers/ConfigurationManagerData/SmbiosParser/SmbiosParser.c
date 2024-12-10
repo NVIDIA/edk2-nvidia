@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS tables.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -10,8 +10,13 @@
 #include <Library/DebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/FruLib.h>
+#include <Library/IoLib.h>
+#include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <libfdt.h>
+
+#include <Protocol/PciIo.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosParser.h"
@@ -34,6 +39,8 @@
 #include "ConfigurationSmbiosType41/SmbiosType41Parser.h"
 #include "ConfigurationSmbiosType43/SmbiosType43Parser.h"
 #include "ConfigurationSmbiosType45/SmbiosType45Parser.h"
+
+#define PCIE_SBDF(s, b, d, f)  (((s) << 16) | ((b) << 8) | ((d) << 3) | (f))
 
 /**
   Find FRU by FRU description
@@ -130,6 +137,204 @@ AllocateCopyString (
   }
 
   return (CHAR8 *)AllocateCopyPool (AsciiStrLen (String) + 1, String);
+}
+
+/**
+  Check if the input DTB node has condition and if the condition is satisfied.
+  Examples:
+
+    type9@1 {
+      condition {
+        type = "pcie";
+        address = <PCIE_SBDF(9,1,0,0) 0x00>;
+        value = <0x102315B3 0xFFFFFFFF>;
+      };
+      ...
+    };
+
+    type39@0 {
+      condition {
+        type = "fru-desc";
+        value = "PDU_FRU0";
+      };
+      ...
+    };
+
+  @param[in] Private     Pointer to the private data of SMBIOS creators
+  @param[in] NodeOffset  Offset to DTB node to check
+
+  @retval EFI_SUCCESS             The condition is satisfied.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No condition found.
+  @retval EFI_UNSUPPORTED         The condition is not satisfied.
+**/
+EFI_STATUS
+EvaluateDtbNodeCondition (
+  IN  CM_SMBIOS_PRIVATE_DATA  *Private,
+  IN  INTN                    NodeOffset
+  )
+{
+  EFI_STATUS           Status;
+  VOID                 *DtbBase;
+  CONST VOID           *Property;
+  INT32                Length;
+  INT32                DtbOffset;
+  FRU_DEVICE_INFO      *Fru;
+  CHAR8                *TypeStr;
+  CHAR8                *FruDesc;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINTN                Index;
+  UINTN                HandleCount;
+  EFI_HANDLE           *Handles;
+  UINT32               PcieSBDF;
+  UINT32               PcieRegOffset;
+  UINT32               Value;
+  UINT32               ExpectedValue;
+  UINT32               ExpectedMask = 0xFFFFFFFF;
+  BOOLEAN              Unexpected   = FALSE;
+  UINTN                Segment;
+  UINTN                Bus;
+  UINTN                Device;
+  UINTN                Function;
+  UINT64               MmioAddr;
+
+  if ((Private == NULL) || (NodeOffset < 0)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DtbBase = Private->DtbBase;
+
+  //
+  // Check if the node has "condition"
+  //
+  DtbOffset = fdt_subnode_offset (DtbBase, NodeOffset, "condition");
+  if (DtbOffset < 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  //
+  // Supported condition types: fru-desc, pci, mmio
+  //
+  Property = fdt_getprop (DtbBase, DtbOffset, "type", &Length);
+  if ((Property == NULL) || (Length == 0)) {
+    DEBUG ((DEBUG_ERROR, "'condition/type' not found.\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  TypeStr = (CHAR8 *)Property;
+
+  //
+  // If 'unexpected' is defined, negate the condition
+  //
+  Property = fdt_getprop (DtbBase, DtbOffset, "unexpected", &Length);
+  if (Property != NULL) {
+    Unexpected = TRUE;
+  }
+
+  //
+  // Check if FRU is present
+  //
+  if (AsciiStriCmp (TypeStr, "fru-desc") == 0) {
+    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    if ((Property == NULL) || (Length == 0)) {
+      DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    FruDesc = (CHAR8 *)Property;
+    Fru     = FindFruByDescription (Private, FruDesc);
+    if (Fru != NULL) {
+      return Unexpected ? EFI_UNSUPPORTED : EFI_SUCCESS;
+    }
+
+    return Unexpected ? EFI_SUCCESS : EFI_UNSUPPORTED;
+  }
+
+  //
+  // Read PCI config space register and check if it matches 'value'
+  //
+  if (AsciiStriCmp (TypeStr, "pcie") == 0) {
+    Property = fdt_getprop (DtbBase, DtbOffset, "address", &Length);
+    if ((Property == NULL) || (Length < 8)) {
+      DEBUG ((DEBUG_ERROR, "'condition/address' not found.\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    PcieSBDF      = fdt32_to_cpu (*(UINT32 *)Property);
+    PcieRegOffset = fdt32_to_cpu (*((UINT32 *)Property + 1));
+
+    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    if ((Property == NULL) || (Length < 4)) {
+      DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    ExpectedValue = fdt32_to_cpu (*(UINT32 *)Property);
+    if (Length == 8) {
+      ExpectedMask = fdt32_to_cpu (*((UINT32 *)Property + 1));
+    }
+
+    //
+    // Locate protocol based on SBDF and read the CSR
+    //
+    Status = gBS->LocateHandleBuffer (ByProtocol, &gEfiPciIoProtocolGuid, NULL, &HandleCount, &Handles);
+    ASSERT_EFI_ERROR (Status);
+
+    for (Index = 0; Index < HandleCount; Index++) {
+      Status = gBS->HandleProtocol (Handles[Index], &gEfiPciIoProtocolGuid, (VOID **)&PciIo);
+      ASSERT_EFI_ERROR (Status);
+
+      Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+      ASSERT_EFI_ERROR (Status);
+
+      if (PcieSBDF == PCIE_SBDF (Segment, Bus, Device, Function)) {
+        Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, PcieRegOffset, 1, &Value);
+        if (!EFI_ERROR (Status) && ((Value & ExpectedMask) == (ExpectedValue & ExpectedMask))) {
+          return Unexpected ? EFI_UNSUPPORTED : EFI_SUCCESS;
+        }
+
+        return Unexpected ? EFI_SUCCESS : EFI_UNSUPPORTED;
+      }
+    }
+
+    DEBUG ((DEBUG_ERROR, "%a: SBDF %08x not found\n", __FUNCTION__, PcieSBDF));
+    return Unexpected ? EFI_SUCCESS : EFI_UNSUPPORTED;
+  }
+
+  //
+  // Read MMIO register and matches it against 'value'
+  //
+  if (AsciiStriCmp (TypeStr, "mmio") == 0) {
+    Property = fdt_getprop (DtbBase, DtbOffset, "address", &Length);
+    if ((Property == NULL) || (Length < 8)) {
+      DEBUG ((DEBUG_ERROR, "'condition/address' not found.\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    MmioAddr = fdt64_to_cpu (*(UINT32 *)Property);
+
+    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    if ((Property == NULL) || (Length < 4)) {
+      DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    ExpectedValue = fdt32_to_cpu (*(UINT32 *)Property);
+    if (Length == 8) {
+      ExpectedMask = fdt32_to_cpu (*((UINT32 *)Property + 1));
+    }
+
+    Value = MmioRead32 (MmioAddr);
+    if ((Value & ExpectedMask) == (ExpectedValue & ExpectedMask)) {
+      return Unexpected ? EFI_UNSUPPORTED : EFI_SUCCESS;
+    }
+
+    return Unexpected ? EFI_SUCCESS : EFI_UNSUPPORTED;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: condition/type='%a' not supported\n", __FUNCTION__, TypeStr));
+  return EFI_INVALID_PARAMETER;
 }
 
 /** Install the SMBIOS tables to Configuration Manager Data driver

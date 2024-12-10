@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Driver private structures for SMBIOS tables.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -116,6 +116,23 @@ GetFruExtraStr (
 CHAR8 *
 AllocateCopyString (
   IN  CHAR8  *String
+  );
+
+/**
+  Check if the input DTB node has condition and if the condition is satisfied.
+
+  @param[in] Private     Pointer to the private data of SMBIOS creators
+  @param[in] NodeOffset  Offset to DTB node to check
+
+  @retval EFI_SUCCESS             The condition is satisfied.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No condition found.
+  @retval EFI_UNSUPPORTED         The condition is not satisfied.
+**/
+EFI_STATUS
+EvaluateDtbNodeCondition (
+  IN  CM_SMBIOS_PRIVATE_DATA  *Private,
+  IN  INTN                    NodeOffset
   );
 
 /**
