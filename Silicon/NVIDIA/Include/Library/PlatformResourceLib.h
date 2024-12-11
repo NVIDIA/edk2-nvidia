@@ -138,13 +138,24 @@ typedef struct {
 } TEGRA_FLOOR_SWEEPING_IP_ENTRY;
 
 typedef struct {
-  UINT64                           SocketAddressMask;
-  UINT8                            AddressToSocketShift;
-  CONST CHAR8                      *PcieEpCompatibility;
-  UINT32                           *PcieDisableRegArray;
-  CONST CHAR8                      *PcieParentNameFormat;
-  UINT8                            PcieNumParentNodes;
-  TEGRA_FLOOR_SWEEPING_IP_ENTRY    *IpTable;
+  UINT32    ScfDisableWords;
+  UINT64    *ScfDisableSocketBase;
+  UINT32    *ScfDisableOffset;
+  UINT32    *ScfDisableMask;
+  UINT32    *ScfDisableShift;
+  UINT32    ScfSliceSize;
+  UINT32    ScfSliceSets;
+} TEGRA_FLOOR_SWEEPING_SCF_CACHE;
+
+typedef struct {
+  UINT64                            SocketAddressMask;
+  UINT8                             AddressToSocketShift;
+  CONST CHAR8                       *PcieEpCompatibility;
+  UINT32                            *PcieDisableRegArray;
+  CONST CHAR8                       *PcieParentNameFormat;
+  UINT8                             PcieNumParentNodes;
+  TEGRA_FLOOR_SWEEPING_SCF_CACHE    *ScfCacheInfo;
+  TEGRA_FLOOR_SWEEPING_IP_ENTRY     *IpTable;
 } TEGRA_FLOOR_SWEEPING_INFO;
 
 typedef struct {

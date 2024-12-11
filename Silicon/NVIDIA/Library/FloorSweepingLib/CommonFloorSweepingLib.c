@@ -20,9 +20,7 @@
 
 #include "CommonFloorSweepingLib.h"
 
-#define TH500_MAX_SOCKETS            4
-#define MAX_CORE_DISABLE_WORDS       3
-#define MAX_SCF_CACHE_DISABLE_WORDS  3
+#define TH500_MAX_SOCKETS  4
 
 EFI_STATUS
 EFIAPI
@@ -31,14 +29,6 @@ UpdateCpuFloorsweepingConfig (
   IN INT32   CpusOffset,
   IN VOID    *Dtb
   );
-
-STATIC UINT64  *SocketScratchBaseAddr                        = NULL;
-STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
-  TH500_SCRATCH_BASE_SOCKET_0,
-  TH500_SCRATCH_BASE_SOCKET_1,
-  TH500_SCRATCH_BASE_SOCKET_2,
-  TH500_SCRATCH_BASE_SOCKET_3,
-};
 
 STATIC UINT64  *SocketCbbFabricBaseAddr                        = NULL;
 STATIC UINT64  TH500SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
@@ -54,20 +44,6 @@ STATIC UINT64  TH500SocketMssBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_MSS_BASE_SOCKET_1,
   TH500_MSS_BASE_SOCKET_2,
   TH500_MSS_BASE_SOCKET_3,
-};
-
-STATIC UINT32  *ScfCacheDisableScratchOffset                                  = NULL;
-STATIC UINT32  TH500ScfCacheDisableScratchOffset[MAX_SCF_CACHE_DISABLE_WORDS] = {
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
-};
-
-STATIC UINT32  *ScfCacheDisableScratchMask                                  = NULL;
-STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
-  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
 };
 
 STATIC TEGRA_PLATFORM_RESOURCE_INFO  *mPlatformResourceInfo = NULL;
@@ -101,12 +77,9 @@ CommonInitializeGlobalStructures (
   ChipId = TegraGetChipID ();
   switch (ChipId) {
     case TH500_CHIP_ID:
-      SocketScratchBaseAddr        = TH500SocketScratchBaseAddr;
-      ScfCacheDisableScratchOffset = TH500ScfCacheDisableScratchOffset;
-      ScfCacheDisableScratchMask   = TH500ScfCacheDisableScratchMask;
-      SocketMssBaseAddr            = TH500SocketMssBaseAddr;
-      SocketCbbFabricBaseAddr      = TH500SocketCbbFabricBaseAddr;
-      Status                       = EFI_SUCCESS;
+      SocketMssBaseAddr       = TH500SocketMssBaseAddr;
+      SocketCbbFabricBaseAddr = TH500SocketCbbFabricBaseAddr;
+      Status                  = EFI_SUCCESS;
       break;
 
     default:
@@ -518,19 +491,25 @@ CommonFloorSweepScfCache (
   IN  VOID    *Dtb
   )
 {
-  UINTN   Socket;
-  UINTN   CoresPerSocket;
-  UINTN   ScfCacheCount;
-  UINT32  ScfCacheSize;
-  UINT32  ScfCacheSets;
-  INT32   NodeOffset;
-  INT32   FdtErr;
-  UINT32  Tmp32;
-  CHAR8   SocketNodeStr[] = "/socket@xxxxxxxxxxx";
+  UINTN                                 Socket;
+  UINTN                                 CoresPerSocket;
+  UINTN                                 ScfCacheCount;
+  UINT32                                ScfCacheSize;
+  UINT32                                ScfCacheSets;
+  INT32                                 NodeOffset;
+  INT32                                 FdtErr;
+  UINT32                                Tmp32;
+  CHAR8                                 SocketNodeStr[] = "/socket@xxxxxxxxxxx";
+  CONST TEGRA_FLOOR_SWEEPING_INFO       *Info;
+  CONST TEGRA_FLOOR_SWEEPING_SCF_CACHE  *Scf;
+
+  Info = mPlatformResourceInfo->FloorSweepingInfo;
+
+  Scf = Info->ScfCacheInfo;
 
   // check for SCF floorsweeping supported
-  if (ScfCacheDisableScratchOffset == NULL) {
-    DEBUG ((DEBUG_INFO, "%a: no ScfCache offset\n", __FUNCTION__));
+  if (Scf == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: no ScfCache info\n", __FUNCTION__));
     return EFI_SUCCESS;
   }
 
@@ -545,7 +524,7 @@ CommonFloorSweepScfCache (
 
     // total number of scf cache elements per socket is same as CPU cores
     ScfCacheCount = CoresPerSocket;
-    UINT64  ScratchBase = SocketScratchBaseAddr[Socket];
+    UINT64  ScratchBase = Scf->ScfDisableSocketBase[Socket];
     UINTN   ScfScratchWord;
 
     if (ScratchBase == 0) {
@@ -553,19 +532,19 @@ CommonFloorSweepScfCache (
     }
 
     for (ScfScratchWord = 0;
-         ScfScratchWord < MAX_SCF_CACHE_DISABLE_WORDS;
+         ScfScratchWord < Scf->ScfDisableWords;
          ScfScratchWord++)
     {
       UINT32  DisableScratchReg;
 
-      DisableScratchReg  = MmioRead32 (ScratchBase + ScfCacheDisableScratchOffset[ScfScratchWord]);
-      DisableScratchReg |= ScfCacheDisableScratchMask[ScfScratchWord];
-      DisableScratchReg &= ~ScfCacheDisableScratchMask[ScfScratchWord];
-      ScfCacheCount     -= BitsSet (DisableScratchReg);
+      DisableScratchReg   = MmioRead32 (ScratchBase + Scf->ScfDisableOffset[ScfScratchWord]);
+      DisableScratchReg >>= Scf->ScfDisableShift[ScfScratchWord];
+      DisableScratchReg  &= ~Scf->ScfDisableMask[ScfScratchWord];
+      ScfCacheCount      -= BitsSet (DisableScratchReg);
     }
 
-    ScfCacheSize = ScfCacheCount * SCF_CACHE_SLICE_SIZE;
-    ScfCacheSets = ScfCacheCount * SCF_CACHE_SLICE_SETS;
+    ScfCacheSize = ScfCacheCount * Scf->ScfSliceSize;
+    ScfCacheSets = ScfCacheCount * Scf->ScfSliceSets;
 
     DEBUG ((
       DEBUG_INFO,

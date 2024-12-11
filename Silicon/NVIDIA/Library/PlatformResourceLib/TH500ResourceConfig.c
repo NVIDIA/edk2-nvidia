@@ -28,7 +28,8 @@
 #include "TH500ResourceConfigPrivate.h"
 #include "Uefi/UefiBaseType.h"
 
-#define MAX_CORE_DISABLE_WORDS  3
+#define MAX_CORE_DISABLE_WORDS       3
+#define MAX_SCF_CACHE_DISABLE_WORDS  3
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
   TH500_SCRATCH_BASE_SOCKET_0,
@@ -56,6 +57,34 @@ STATIC COMMON_RESOURCE_CONFIG_INFO  TH500CommonResourceConfigInfo = {
   TH500SocketScratchBaseAddr,
   TH500CoreDisableScratchOffset,
   TH500CoreDisableScratchMask,
+};
+
+STATIC UINT32  TH500ScfCacheDisableScratchOffset[MAX_SCF_CACHE_DISABLE_WORDS] = {
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
+};
+
+STATIC UINT32  TH500ScfCacheDisableScratchMask[MAX_SCF_CACHE_DISABLE_WORDS] = {
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
+  TH500_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
+};
+
+STATIC UINT32  TH500ScfCacheDisableScratchShift[MAX_SCF_CACHE_DISABLE_WORDS] = {
+  0,
+  0,
+  0,
+};
+
+STATIC TEGRA_FLOOR_SWEEPING_SCF_CACHE  TH500ScfCacheInfo = {
+  .ScfDisableWords      = MAX_SCF_CACHE_DISABLE_WORDS,
+  .ScfDisableSocketBase = TH500SocketScratchBaseAddr,
+  .ScfDisableOffset     = TH500ScfCacheDisableScratchOffset,
+  .ScfDisableMask       = TH500ScfCacheDisableScratchMask,
+  .ScfDisableShift      = TH500ScfCacheDisableScratchShift,
+  .ScfSliceSize         = SCF_CACHE_SLICE_SIZE,
+  .ScfSliceSets         = SCF_CACHE_SLICE_SETS,
 };
 
 TEGRA_MMIO_INFO  TH500MmioInfo[] = {
@@ -1079,6 +1108,7 @@ TH500InitFloorSweepingInfo (
   Info->PcieDisableRegArray  = PcieDisableRegArray;
   Info->PcieParentNameFormat = "/socket@%u";
   Info->PcieNumParentNodes   = TH500_MAX_SOCKETS;
+  Info->ScfCacheInfo         = &TH500ScfCacheInfo;
 
   PlatformResourceInfo->FloorSweepingInfo = Info;
 
