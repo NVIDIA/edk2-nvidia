@@ -2,7 +2,7 @@
 
   Status code Driver via debug lib
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -52,10 +52,7 @@ DebugStatusCodeCallback (
   if ((Data != NULL) &&
       ReportStatusCodeExtractAssertInfo (CodeType, Value, Data, &Filename, &Description, &LineNumber))
   {
-    //
-    // Print ASSERT() information into output buffer.
-    //
-    DEBUG ((DEBUG_ERROR, "\r\nDXE_ASSERT!: %a (%u): %a\r\n", Filename, LineNumber, Description));
+    DebugAssert (Filename, LineNumber, Description);
   } else if ((Data != NULL) &&
              ReportStatusCodeExtractDebugInfo (Data, &ErrorLevel, &Marker, &Format))
   {

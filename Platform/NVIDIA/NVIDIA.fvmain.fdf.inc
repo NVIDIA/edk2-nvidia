@@ -38,6 +38,8 @@ FvNameGuid         = $(PLATFORM_GUID)
 
   APRIORI DXE {
     INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+    INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
+    INF Silicon/NVIDIA/Drivers/DebugStatusCodeDxe/DebugStatusCodeDxe.inf
     INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
     INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
     INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
@@ -100,7 +102,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
 !endif
   INF MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
-  INF MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
 
 !ifdef CONFIG_FIRMWARE_PARTITION_SUPPORT
   #

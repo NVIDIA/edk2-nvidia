@@ -98,7 +98,7 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !endif
 
 [LibraryClasses.common]
-  DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  DebugLib|MdeModulePkg/Library/PeiDxeDebugLibReportStatusCode/PeiDxeDebugLibReportStatusCode.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLib/DebugLogScratchRegLib.inf
 !ifdef CONFIG_DEBUG_DYNAMIC_PRINT_LEVEL
   # Configurable DebugLib
@@ -496,6 +496,7 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   PerformanceLib|MdeModulePkg/Library/PeiPerformanceLib/PeiPerformanceLib.inf
   ArmGicArchLib|ArmPkg/Library/ArmGicArchSecLib/ArmGicArchSecLib.inf
   SortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
+  DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
 
 [LibraryClasses.common.PEI_CORE]
   HobLib|MdePkg/Library/PeiHobLib/PeiHobLib.inf
@@ -536,6 +537,7 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   ExtractGuidedSectionLib|MdePkg/Library/DxeExtractGuidedSectionLib/DxeExtractGuidedSectionLib.inf
   DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
   PerformanceLib|MdeModulePkg/Library/DxeCorePerformanceLib/DxeCorePerformanceLib.inf
+  DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
 
 [LibraryClasses.common.DXE_DRIVER]
   DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
@@ -573,7 +575,6 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   ReportStatusCodeLib|MdeModulePkg/Library/RuntimeDxeReportStatusCodeLib/RuntimeDxeReportStatusCodeLib.inf
   BaseCryptLib|CryptoPkg/Library/BaseCryptLib/RuntimeCryptLib.inf
   VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLibRuntimeDxe.inf
-  DebugLib|MdePkg/Library/DxeRuntimeDebugLibSerialPort/DxeRuntimeDebugLibSerialPort.inf
 !ifdef CONFIG_RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
   SavedCapsuleLib|Silicon/NVIDIA/Library/SavedCapsuleDataFlashLib/SavedCapsuleDataFlashLib.inf
@@ -732,7 +733,6 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !else
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|$(CONFIG_DEBUG_PROPERTY_DEBUG)
 !endif
-  gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial|FALSE
 
   #  BIT0 - Enable Progress Code.
   #  BIT1 - Enable Error Code.
@@ -1452,7 +1452,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
   EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
   MdeModulePkg/Universal/TimestampDxe/TimestampDxe.inf
-  MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
   Silicon/NVIDIA/Drivers/DebugStatusCodeDxe/DebugStatusCodeDxe.inf {
     <LibraryClasses>
       DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
