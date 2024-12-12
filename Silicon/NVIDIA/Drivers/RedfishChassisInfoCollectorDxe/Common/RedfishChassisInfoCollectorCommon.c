@@ -172,6 +172,7 @@ HandleResource (
   CHAR16                  DtbChassisInfoPropUri[MAX_URI_LENGTH];
   CONST VOID              *Property;
   INT32                   Length;
+  UINTN                   Size;
   CHAR8                   ChassisInfoNodeString[] = "/firmware/redfish/chassis-info/prop@xx";
 
   if (Private == NULL) {
@@ -240,8 +241,8 @@ HandleResource (
     }
 
     if (DtbChassisInfoPropAttr.Bits.EfiVariableWriteOnceFlag) {
-      Length = sizeof (Reading);
-      Status = gRT->GetVariable (DtbChassisInfoPropVarName, &gNVIDIATokenSpaceGuid, NULL, (UINTN *)&Length, Reading);
+      Size   = sizeof (Reading);
+      Status = gRT->GetVariable (DtbChassisInfoPropVarName, &gNVIDIATokenSpaceGuid, NULL, &Size, Reading);
       if (Status != EFI_NOT_FOUND) {
         // Variable is exist already.
         DEBUG (
