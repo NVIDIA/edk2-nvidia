@@ -49,27 +49,24 @@ STATIC
 VOID
 EFIAPI
 DtbUpdateBpmpIpcRegions (
-  VOID  *Dtb
+  VOID
   )
 {
-  CHAR8                         BpmpPathStr[20];
-  CHAR8                         *BpmpPathFormat;
-  INT32                         NodeOffset;
-  VOID                          *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  TEGRA_RESOURCE_INFO           *ResourceInfo;
-  CONST NVDA_MEMORY_REGION      *BpmpIpcRegions;
-  UINT32                        Socket;
-  UINT32                        MemoryPhandle;
-  UINT32                        MaxSockets;
-  CONST VOID                    *Property;
-  INT32                         PropertySize = 0;
-  INT32                         ParentOffset;
-  INT32                         AddressCells;
-  INT32                         SizeCells;
-  UINT32                        CellIndex;
-  INT32                         FdtStatus;
-  UINT32                        RegData[4];
+  CHAR8                             BpmpPathStr[20];
+  CHAR8                             *BpmpPathFormat;
+  INT32                             NodeOffset;
+  VOID                              *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO      *PlatformResourceInfo;
+  TEGRA_RESOURCE_INFO               *ResourceInfo;
+  CONST NVDA_MEMORY_REGION          *BpmpIpcRegions;
+  UINT32                            Socket;
+  UINT32                            MemoryPhandle;
+  UINT32                            MaxSockets;
+  CONST VOID                        *Property;
+  UINT32                            PropertySize;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA  RegisterArray[1];
+  UINT32                            RegisterCount;
+  EFI_STATUS                        Status;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob == NULL) ||
@@ -106,72 +103,52 @@ DtbUpdateBpmpIpcRegions (
 
     ASSERT (AsciiStrSize (BpmpPathFormat) < sizeof (BpmpPathStr));
     AsciiSPrint (BpmpPathStr, sizeof (BpmpPathStr), BpmpPathFormat, Socket);
-    NodeOffset = fdt_path_offset (Dtb, BpmpPathStr);
-    if (NodeOffset < 0) {
-      DEBUG ((DEBUG_ERROR, "%a: socket%u bpmp node missing\n", __FUNCTION__, Socket));
+    Status = DeviceTreeGetNodeByPath (BpmpPathStr, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u no bpmp node: %r\n", __FUNCTION__, Socket, Status));
       continue;
     }
 
-    Property = fdt_getprop (Dtb, NodeOffset, "status", &PropertySize);
-    if ((Property != NULL) && (AsciiStrCmp (Property, "okay") != 0)) {
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "status", &Property, &PropertySize);
+    if (!EFI_ERROR (Status) && (AsciiStrCmp (Property, "okay") != 0)) {
       DEBUG ((DEBUG_ERROR, "%a: socket%u bpmp node disabled\n", __FUNCTION__, Socket));
       continue;
     }
 
-    Property = fdt_getprop (Dtb, NodeOffset, "memory-region", &PropertySize);
-    if ((Property == NULL) || (PropertySize != sizeof (UINT32))) {
-      DEBUG ((DEBUG_ERROR, "%a: socket%u bad bpmp memory-region %p %d\n", __FUNCTION__, Socket, Property, PropertySize));
+    Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "memory-region", &MemoryPhandle);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u bad bpmp memory-region: %r\n", __FUNCTION__, Socket, Status));
       continue;
     }
 
-    MemoryPhandle = fdt32_to_cpu (*(CONST UINT32 *)Property);
-    DEBUG ((DEBUG_INFO, "%a: socket%u memory-region phandle = 0x%x\n", __FUNCTION__, Socket, MemoryPhandle));
-
-    NodeOffset = fdt_node_offset_by_phandle (Dtb, MemoryPhandle);
-    if (NodeOffset < 0) {
-      DEBUG ((DEBUG_INFO, "%a: socket%u err=%d finding phandle=0x%x\n", __FUNCTION__, Socket, NodeOffset, MemoryPhandle));
+    Status = DeviceTreeGetNodeByPHandle (MemoryPhandle, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: socket%u err finding phandle=0x%x: %r\n", __FUNCTION__, Socket, MemoryPhandle, Status));
       continue;
     }
 
-    ParentOffset = fdt_parent_offset (Dtb, NodeOffset);
-    if (ParentOffset < 0) {
-      DEBUG ((DEBUG_INFO, "%a: socket%u err=%d finding phandle=0x%x parent\n", __FUNCTION__, Socket, ParentOffset, MemoryPhandle));
+    RegisterCount = ARRAY_SIZE (RegisterArray);
+    Status        = DeviceTreeGetRegisters (NodeOffset, RegisterArray, &RegisterCount);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: socket%u shmem 0x%x err getting reg: %r\n", __FUNCTION__, Socket, MemoryPhandle, Status));
       continue;
     }
 
-    AddressCells = fdt_address_cells (Dtb, ParentOffset);
-    SizeCells    = fdt_size_cells (Dtb, ParentOffset);
-    if ((SizeCells <= 0) || (AddressCells <= 0) || (SizeCells > 2) || (AddressCells > 2)) {
-      DEBUG ((DEBUG_INFO, "%a: socket%u phandle=0x%x parent error addr=%d, size=%d\n", __FUNCTION__, Socket, MemoryPhandle, AddressCells, SizeCells));
-      continue;
-    }
+    RegisterArray[0].BaseAddress = BpmpIpcRegions[Socket].MemoryBaseAddress;
+    RegisterArray[0].Size        = BpmpIpcRegions[Socket].MemoryLength;
 
-    CellIndex = 0;
-    if (AddressCells == 2) {
-      RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryBaseAddress >> 32);
-    }
-
-    RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryBaseAddress);
-
-    if (SizeCells == 2) {
-      RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryLength >> 32);
-    }
-
-    RegData[CellIndex++] = cpu_to_fdt32 (BpmpIpcRegions[Socket].MemoryLength);
-
-    FdtStatus = fdt_setprop (Dtb, NodeOffset, "reg", RegData, CellIndex * sizeof (UINT32));
-    if (FdtStatus != 0) {
-      DEBUG ((DEBUG_ERROR, "%a: socket%u phandle=0x%x error=%d setting reg\n", __FUNCTION__, Socket, MemoryPhandle, FdtStatus));
+    Status = DeviceTreeSetRegisters (NodeOffset, RegisterArray, RegisterCount);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: socket%u shmem 0x%x err setting reg: %r\n", __FUNCTION__, Socket, MemoryPhandle, Status));
       continue;
     }
 
     DEBUG ((
       DEBUG_INFO,
-      "%a: socket%u updated bpmp-shmem phandle=0x%x cells=%u 0x%llx 0x%llx\n",
+      "%a: socket%u updated bpmp-shmem phandle=0x%x 0x%llx 0x%llx\n",
       __FUNCTION__,
       Socket,
       MemoryPhandle,
-      CellIndex,
       BpmpIpcRegions[Socket].MemoryBaseAddress,
       BpmpIpcRegions[Socket].MemoryLength
       ));
@@ -402,7 +379,7 @@ DtbUpdateForUefi (
 {
   SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
 
-  DtbUpdateBpmpIpcRegions (Dtb);
+  DtbUpdateBpmpIpcRegions ();
   DtbUpdateGetMacAddressInfo ();
   DtbUpdateAllNodeMacAddresses ();
 }
