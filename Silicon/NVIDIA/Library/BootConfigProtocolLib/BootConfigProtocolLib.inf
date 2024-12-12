@@ -1,0 +1,33 @@
+#
+#  SPDX-FileCopyrightText:  Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootConfigProtocolLib
+  FILE_GUID                      = f864d58f-e550-4286-a330-cdb0a35e7565
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BootConfigProtocolLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  MemoryAllocationLib
+
+[Sources.common]
+  BootConfigProtocolLib.c
+
+[Pcd]
+
+[Guids]
+
+[Protocols]
+  gNVIDIABootConfigUpdateProtocol             ## SOMETIMES_PRODUCES
+  gNVIDIACvmEepromProtocolGuid                ## SOMETIMES_CONSUMES
