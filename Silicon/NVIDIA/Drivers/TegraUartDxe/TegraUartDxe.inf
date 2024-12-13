@@ -42,6 +42,7 @@
   DeviceTreeHelperLib
   IoLib
   MemoryAllocationLib
+  SerialPortLib
   TegraSbsaSerialPortLib
   Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
