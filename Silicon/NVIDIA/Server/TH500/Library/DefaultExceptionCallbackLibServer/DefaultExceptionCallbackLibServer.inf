@@ -28,6 +28,7 @@
   UefiLib
   BaseLib
   DebugLib
+  DebugLogScratchRegLib
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdNvLogToScratchRegs           ## SOMETIMES_CONSUMES
