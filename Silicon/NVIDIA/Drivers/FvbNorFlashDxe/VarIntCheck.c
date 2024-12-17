@@ -294,7 +294,7 @@ GetWriteOffset (
         *Offset     = BlockOffset;
         break;
       } else if (ReadBuf[0] == VAR_INT_VALID) {
-        ValidRecord = CurOffset;
+        ValidRecord = BlockOffset;
       }
 
       BlockOffset += This->MeasurementSize;
@@ -313,7 +313,7 @@ GetWriteOffset (
     if ((ValidRecord == 0) || (NumPartitionBlocks == 1)) {
       *Offset = This->PartitionByteOffset;
     } else {
-      CurBlock = (ValidRecord / This->PartitionByteOffset);
+      CurBlock = (ValidRecord / This->BlockSize);
       if (CurBlock == EndBlock) {
         *Offset = This->PartitionByteOffset;
       } else {
@@ -483,6 +483,8 @@ GetLastValidMeasurements (
   UINT64                     StartOffset;
   UINT64                     EndOffset;
   UINT64                     CurOffset;
+  UINT64                     BlockOffset;
+  UINT64                     BlockEnd;
   UINT64                     NumValidRecords;
   UINT8                      *ReadBuf;
 
@@ -499,50 +501,58 @@ GetLastValidMeasurements (
   EndOffset   = StartOffset + VarInt->PartitionSize;
 
   CurOffset       = StartOffset;
+  BlockOffset     = CurOffset;
+  BlockEnd        = BlockOffset + VarInt->BlockSize;
   NumValidRecords = 0;
   *NumRecords     = 0;
 
   while (CurOffset < EndOffset) {
-    Status = NorFlash->Read (
-                         NorFlash,
-                         CurOffset,
-                         VarInt->MeasurementSize,
-                         ReadBuf
-                         );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: NorFlash Read Failed at %lu offset %r\n",
-        __FUNCTION__,
-        CurOffset,
-        Status
-        ));
-      goto ExitGetLastValidMeasuremets;
-    }
-
-    if ((ReadBuf[0] == VAR_INT_VALID) ||
-        (ReadBuf[0] == VAR_INT_PENDING))
-    {
-      NumValidRecords++;
-      if (NumValidRecords > MAX_VALID_RECORDS) {
+    while (BlockOffset < BlockEnd) {
+      Status = NorFlash->Read (
+                           NorFlash,
+                           BlockOffset,
+                           VarInt->MeasurementSize,
+                           ReadBuf
+                           );
+      if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,
-          "%a: More than %d Valid measurements found %x\n",
+          "%a: NorFlash Read Failed at %lu offset %r\n",
           __FUNCTION__,
-          MAX_VALID_RECORDS,
-          ReadBuf[0]
+          BlockOffset,
+          Status
           ));
-        Status = EFI_DEVICE_ERROR;
         goto ExitGetLastValidMeasuremets;
-      } else {
-        DEBUG ((DEBUG_INFO, "Found Record at %lu Header %x\n", CurOffset, ReadBuf[0]));
-        CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, VarInt->MeasurementSize);
-        *NumRecords                               += 1;
-        Records[(NumValidRecords - 1)]->ByteOffset = CurOffset;
       }
+
+      if ((ReadBuf[0] == VAR_INT_VALID) ||
+          (ReadBuf[0] == VAR_INT_PENDING))
+      {
+        NumValidRecords++;
+        if (NumValidRecords > MAX_VALID_RECORDS) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: More than %d Valid measurements found %x\n",
+            __FUNCTION__,
+            MAX_VALID_RECORDS,
+            ReadBuf[0]
+            ));
+          Status = EFI_DEVICE_ERROR;
+          goto ExitGetLastValidMeasuremets;
+        } else {
+          DEBUG ((DEBUG_INFO, "Found Record at %lu Header %x\n", BlockOffset, ReadBuf[0]));
+          CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, VarInt->MeasurementSize);
+          *NumRecords                               += 1;
+          Records[(NumValidRecords - 1)]->ByteOffset = BlockOffset;
+        }
+      }
+
+      BlockOffset += VarInt->MeasurementSize;
     }
 
-    CurOffset += VarInt->MeasurementSize;
+    CurOffset  += VarInt->BlockSize;
+    BlockEnd   += VarInt->BlockSize;
+    BlockOffset = CurOffset;
   }
 
 ExitGetLastValidMeasuremets:
