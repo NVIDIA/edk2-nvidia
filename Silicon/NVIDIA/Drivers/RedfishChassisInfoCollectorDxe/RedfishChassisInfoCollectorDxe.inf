@@ -46,6 +46,7 @@
   UefiRuntimeServicesTableLib
 
 [Guids]
+  gNVIDIATokenSpaceGuid
 
 [Protocols]
   gEdkIIRedfishConfigHandlerProtocolGuid          ## PRODUCED
