@@ -17,6 +17,7 @@
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/MpCoreInfoLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
@@ -27,8 +28,12 @@
 
 #include <Library/DeviceDiscoveryDriverLib.h>
 
+#include "Base.h"
+#include "ProcessorBind.h"
 #include "TegraCpuFreqDxePrivate.h"
+#include "Uefi/UefiBaseType.h"
 
+// Additional GUIDs will need to update the GetCpuCppcOffsets and GetRefClockFreq functions
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra234-ccplex-cluster", &gNVIDIACpuFreqT234  },
   { "nvidia,th500-cpufreq",           &gNVIDIACpuFreqTH500 },
@@ -49,8 +54,19 @@ STATIC EFI_HANDLE  *mCpuFreqHandles    = NULL;
 STATIC UINTN       mCpuFreqHandleCount = 0;
 STATIC EFI_GUID    *mCpuFreqGuid       = NULL;
 
+typedef struct {
+  UINTN    DesiredPerformance;
+  UINTN    GuaranteedPerformance;
+  UINTN    MinimumPerformance;
+  UINTN    MaximumPerformance;
+  UINTN    ReferencePerformanceCounter;
+  UINTN    DeliveredPerformanceCounter;
+  UINTN    PerformanceLimited;
+  UINTN    AutonomousSelectionEnable;
+} CPPC_REGISTER_OFFSETS;
+
 /**
- * Returns the device handle of the relates to the given MpIdr.
+ * Returns the device handle of the contoller that relates to the given MpIdr.
  *
  * @param[in]  Mpidr       The MpIdr of the CPU to get the device handle for.
  * @param[out] Handle      The device handle of the CPU frequency node.
@@ -97,6 +113,7 @@ GetDeviceHandle (
 
   // No CPU frequency controllers found
   if (mCpuFreqHandles == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No CPU frequency controllers found.\n", __func__));
     return EFI_UNSUPPORTED;
   }
 
@@ -108,6 +125,7 @@ GetDeviceHandle (
     // Multiple CPU frequency controllers found, find the one that matches the socket
     Status = MpCoreInfoGetProcessorLocation (Mpidr, &Socket, NULL, NULL);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get socket for CPU frequency controller.\n", __func__));
       return EFI_NOT_FOUND;
     }
 
@@ -139,43 +157,131 @@ GetDeviceHandle (
 }
 
 /**
- * This function retrieves the addresses of the CPU frequency registers for the specified core.
+ * This function retrieves the base address of the cpufreq controller for the
+ * specified cpu.
  *
  * @param[in]  Mpidr              MpIdr of the CPU to get info on.
- * @param[out] NdivAddress        If provided, returns the address of the NDIV register.
- * @param[out] RefClockAddress    If provided, returns the address of the reference clock register.
- * @param[out] CoreClockAddress   If provided, returns the address of the core clock register.
- * @param[out] RefClockFreq       If provided, returns the reference clock frequency.
- * @param[out] BpmpPhandle        If provided, returns the phandle of the BPMP node.
+ * @param[out] BaseAddress        Returns the base address of the desired frequency register.
  *
- * @retval EFI_SUCCESS             The addresses were returned.
+ * @retval EFI_SUCCESS             The address waS returned.
  * @retval EFI_NOT_FOUND           Mpidr is not valid for this platform.
  * @retval EFI_UNSUPPORTED         Cpu Frequency driver does not support this platform.
+ * @retval EFI_INVALID_PARAMETER   BaseAddress is NULL
  */
 STATIC
 EFI_STATUS
 EFIAPI
-GetCpuFreqAddresses (
+GetCpuFreqBaseAddress (
   IN UINT64                 Mpidr,
-  OUT EFI_PHYSICAL_ADDRESS  *NdivAddress OPTIONAL,
-  OUT EFI_PHYSICAL_ADDRESS  *RefClockAddress OPTIONAL,
-  OUT EFI_PHYSICAL_ADDRESS  *CoreClockAddress OPTIONAL,
-  OUT UINT64                *RefClockFreq OPTIONAL,
-  OUT UINT32                *BpmpPhandle OPTIONAL
+  OUT EFI_PHYSICAL_ADDRESS  *BaseAddress
+  )
+{
+  EFI_STATUS            Status;
+  EFI_HANDLE            Handle;
+  EFI_GUID              *DeviceGuid;
+  EFI_PHYSICAL_ADDRESS  RegionBase;
+  UINTN                 RegionSize;
+
+  if (BaseAddress == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get device handle for CPU frequency controller.\n", __func__));
+    return Status;
+  }
+
+  Status = DeviceDiscoveryGetMmioRegion (Handle, 0, &RegionBase, &RegionSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get MMIO region for CPU frequency controller.\n", __func__));
+    return Status;
+  }
+
+  *BaseAddress = RegionBase;
+  return EFI_SUCCESS;
+}
+
+/**
+ * This function retrieves the bpmp handle for the specified core.
+ *
+ * @param[in]  Mpidr              MpIdr of the CPU to get info on.
+ * @param[out] BpmpPhandle        Returns the phandle of the BPMP node.
+ *
+ * @retval EFI_SUCCESS             The handle was returned.
+ * @retval EFI_NOT_FOUND           Mpidr is not valid for this platform.
+ * @retval EFI_UNSUPPORTED         Cpu Frequency driver does not support this platform.
+ * @retval EFI_INVALID_PARAMETER   BpmpPhandle is NULL.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+GetCpuFreqBpmpHandle (
+  IN UINT64   Mpidr,
+  OUT UINT32  *BpmpPhandle
   )
 {
   EFI_STATUS                        Status;
   EFI_HANDLE                        Handle;
   EFI_GUID                          *DeviceGuid;
-  EFI_PHYSICAL_ADDRESS              RegionBase;
-  UINTN                             RegionSize;
-  UINT32                            Cluster;
-  UINT32                            Core;
   NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *Node;
-  EFI_PHYSICAL_ADDRESS              LocalNdivAddress;
-  EFI_PHYSICAL_ADDRESS              LocalRefClockAddress;
-  EFI_PHYSICAL_ADDRESS              LocalCoreClockAddress;
-  UINT64                            LocalRefClockFreq;
+
+  if (BpmpPhandle == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get device handle for CPU frequency controller.\n", __func__));
+    return Status;
+  }
+
+  Status = gBS->HandleProtocol (Handle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree node protocol.\n", __func__));
+    return Status;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (Node->NodeOffset, "nvidia,bpmp", BpmpPhandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get Bpmp node phandle.\n", __func__));
+  }
+
+  return Status;
+}
+
+/**
+ * This function retrieves the cppc offsets for the specified core.
+ *
+ * @param[in]  Mpidr              MpIdr of the CPU to get info on.
+ * @param[out] CppcOffsets        Returns the Cppc offsets structure.
+ *
+ * @retval EFI_SUCCESS             The offsets were returned.
+ * @retval EFI_NOT_FOUND           Mpidr is not valid for this platform.
+ * @retval EFI_UNSUPPORTED         Cpu Frequency driver does not support this platform.
+ * @retval EFI_INVALID_PARAMETER   CppcOffsets is NULL.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+GetCpuCppcOffsets (
+  IN UINT64                  Mpidr,
+  OUT CPPC_REGISTER_OFFSETS  *CppcOffsets
+  )
+{
+  EFI_STATUS  Status;
+  EFI_HANDLE  Handle;
+  EFI_GUID    *DeviceGuid;
+  UINT32      Cluster;
+  UINT32      Core;
+
+  if (CppcOffsets == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CppcOffsets is NULL.\n", __func__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Set all registers to MAX_UINTN to indicate they are not valid
+  SetMemN (CppcOffsets, sizeof (CPPC_REGISTER_OFFSETS), MAX_UINTN);
 
   Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
   if (EFI_ERROR (Status)) {
@@ -184,55 +290,62 @@ GetCpuFreqAddresses (
 
   Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Cluster, &Core);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get cluster and core for CPU frequency controller.\n", __func__));
     return EFI_NOT_FOUND;
   }
 
-  Status = gBS->HandleProtocol (Handle, &gNVIDIADeviceTreeNodeProtocolGuid, (VOID **)&Node);
+  if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT234)) {
+    CppcOffsets->DesiredPerformance          = T234_SCRATCH_FREQ_CORE_REG (Cluster, Core);
+    CppcOffsets->ReferencePerformanceCounter = T234_CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
+    CppcOffsets->DeliveredPerformanceCounter = T234_CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqTH500)) {
+    CppcOffsets->DesiredPerformance = TH500_SCRATCH_FREQ_CORE_REG (Cluster);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/** This functions returns the ref clock frequency
+ *
+ * @param[in]  Mpidr        The MpIdr of the CPU to get info on.
+ * @param[out] RefClockFreq  The reference clock frequency in Hz.
+ *
+ * @retval EFI_SUCCESS            The reference clock frequency was returned.
+ * @retval EFI_UNSUPPORTED        The CPU frequency driver does not support this platform.
+ * @retval EFI_INVALID_PARAMETER  RefClockFreq is NULL.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+GetRefClockFreq (
+  IN UINT64   Mpidr,
+  OUT UINT64  *RefClockFreq
+  )
+{
+  EFI_STATUS  Status;
+  EFI_HANDLE  Handle;
+  EFI_GUID    *DeviceGuid;
+
+  if (RefClockFreq == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get device handle for CPU frequency controller.\n", __func__));
     return Status;
   }
 
-  Status = DeviceDiscoveryGetMmioRegion (Handle, 0, &RegionBase, &RegionSize);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  LocalNdivAddress      = 0;
-  LocalRefClockAddress  = 0;
-  LocalCoreClockAddress = 0;
-  LocalRefClockFreq     = 0;
-
-  if (DeviceGuid == &gNVIDIACpuFreqT234) {
-    LocalNdivAddress      = RegionBase + T234_SCRATCH_FREQ_CORE_REG (Cluster, Core);
-    LocalRefClockAddress  = RegionBase + T234_CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
-    LocalCoreClockAddress = RegionBase + T234_CLUSTER_ACTMON_CORE_REG (Cluster, Core);
-    LocalRefClockFreq     = T234_REFCLK_FREQ;
-  } else if (DeviceGuid == &gNVIDIACpuFreqTH500) {
-    LocalNdivAddress  = RegionBase + TH500_SCRATCH_FREQ_CORE_REG (Cluster);
-    LocalRefClockFreq = TH500_REFCLK_FREQ;
-  }
-
-  if (NdivAddress != NULL) {
-    *NdivAddress = LocalNdivAddress;
-  }
-
-  if (RefClockAddress != NULL) {
-    *RefClockAddress = LocalRefClockAddress;
-  }
-
-  if (CoreClockAddress != NULL) {
-    *CoreClockAddress = LocalCoreClockAddress;
-  }
-
-  if (RefClockFreq != NULL) {
-    *RefClockFreq = LocalRefClockFreq;
-  }
-
-  if (BpmpPhandle != NULL) {
-    Status = DeviceTreeGetNodePropertyValue32 (Node->NodeOffset, "nvidia,bpmp", BpmpPhandle);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "Failed to get Bpmp node phandle.\n"));
-    }
+  if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT234)) {
+    *RefClockFreq = T234_REFCLK_FREQ;
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqTH500)) {
+    *RefClockFreq = TH500_REFCLK_FREQ;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
+    return EFI_UNSUPPORTED;
   }
 
   return EFI_SUCCESS;
@@ -304,8 +417,9 @@ TegraCpuGetNdivLimits (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetCpuFreqAddresses (Mpidr, NULL, NULL, NULL, NULL, &BpmpPhandle);
+  Status = GetCpuFreqBpmpHandle (Mpidr, &BpmpPhandle);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get BPMP handle for CPU frequency controller.\n", __func__));
     return Status;
   }
 
@@ -315,11 +429,13 @@ TegraCpuGetNdivLimits (
                   (VOID **)&BpmpIpcProtocol
                   );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate BPMP IPC protocol.\n", __func__));
     return Status;
   }
 
   Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Request.ClusterId, NULL);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get cluster id for CPU frequency controller.\n", __func__));
     return Status;
   }
 
@@ -335,7 +451,7 @@ TegraCpuGetNdivLimits (
                               &MessageError
                               );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to request NDIV - %r -%d\r\n", __FUNCTION__, Status, MessageError));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to request NDIV - %r -%d\r\n", __func__, Status, MessageError));
   }
 
   return Status;
@@ -370,21 +486,37 @@ TegraCpuFreqGetInfo (
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         CurrentNdiv;
-  EFI_PHYSICAL_ADDRESS           NdivAddress;
+  EFI_PHYSICAL_ADDRESS           BaseAddress;
+  CPPC_REGISTER_OFFSETS          CppcOffsets;
+  EFI_PHYSICAL_ADDRESS           DesiredAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get NDIV limits for CPU frequency controller.\n", __func__));
     return Status;
   }
 
   if (CurrentFrequency != NULL) {
-    Status = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
+    Status = GetCpuFreqBaseAddress (Mpidr, &BaseAddress);
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get base address for CPU frequency controller.\n", __func__));
       return Status;
     }
 
-    CurrentNdiv       = MmioRead32 (NdivAddress);
-    *CurrentFrequency = ConvertNdivToFreq (&Limits, CurrentNdiv);
+    Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
+      return Status;
+    }
+
+    if (CppcOffsets.DesiredPerformance != MAX_UINTN) {
+      DesiredAddress    = BaseAddress + CppcOffsets.DesiredPerformance;
+      CurrentNdiv       = MmioRead32 (DesiredAddress);
+      *CurrentFrequency = ConvertNdivToFreq (&Limits, CurrentNdiv);
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get current frequency for CPU frequency controller, no desired frequency supported.\n", __func__));
+      return EFI_UNSUPPORTED;
+    }
   }
 
   if (HighestFrequency != NULL) {
@@ -428,20 +560,36 @@ TegraCpuFreqSet (
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         DesiredNdiv;
-  EFI_PHYSICAL_ADDRESS           NdivAddress;
+  EFI_PHYSICAL_ADDRESS           BaseAddress;
+  CPPC_REGISTER_OFFSETS          CppcOffsets;
+  EFI_PHYSICAL_ADDRESS           DesiredAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get NDIV limits for CPU frequency controller.\n", __func__));
     return Status;
   }
 
   DesiredNdiv = ConvertFreqToNdiv (&Limits, DesiredFrequency);
-  Status      = GetCpuFreqAddresses (Mpidr, &NdivAddress, NULL, NULL, NULL, NULL);
+  if ((DesiredNdiv < Limits.ndiv_min) || (DesiredNdiv > Limits.ndiv_max)) {
+    DEBUG ((DEBUG_ERROR, "%a: Desired frequency is out of range. Request %u, Max %u, Min %u\n", __func__, DesiredNdiv, Limits.ndiv_max, Limits.ndiv_min));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetCpuFreqBaseAddress (Mpidr, &BaseAddress);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get base address for CPU frequency controller.\n", __func__));
     return Status;
   }
 
-  MmioWrite32 (NdivAddress, DesiredNdiv);
+  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
+    return Status;
+  }
+
+  DesiredAddress = BaseAddress + CppcOffsets.DesiredPerformance;
+  MmioWrite32 (DesiredAddress, DesiredNdiv);
   return EFI_SUCCESS;
 }
 
@@ -483,16 +631,15 @@ EFI_STATUS
 TegraCpuFreqGetCpcInfo (
   IN NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *This,
   IN UINT64                          Mpidr,
-  IN CM_ARCH_COMMON_CPC_INFO         *CpcInfo
+  OUT CM_ARCH_COMMON_CPC_INFO        *CpcInfo
   )
 {
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
-  EFI_PHYSICAL_ADDRESS           DesiredAddress;
-  EFI_PHYSICAL_ADDRESS           RefclkClockAddress;
-  EFI_PHYSICAL_ADDRESS           CoreClockAddress;
-  VOID                           *PerfLimited;
+  EFI_PHYSICAL_ADDRESS           BaseAddress;
+  CPPC_REGISTER_OFFSETS          CppcOffsets;
   UINT64                         RefClockFreq;
+  VOID                           *PerfLimited;
 
   if (CpcInfo == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -503,18 +650,35 @@ TegraCpuFreqGetCpcInfo (
     return Status;
   }
 
-  Status = GetCpuFreqAddresses (Mpidr, &DesiredAddress, &RefclkClockAddress, &CoreClockAddress, &RefClockFreq, NULL);
+  Status = GetCpuFreqBaseAddress (Mpidr, &BaseAddress);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get base address for CPU frequency controller.\n", __func__));
     return Status;
   }
 
-  Status = gBS->AllocatePool (EfiReservedMemoryType, sizeof (UINT32), &PerfLimited);
+  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to allocate buffer for PerfLimited\r\n"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
     return Status;
   }
 
-  ZeroMem (PerfLimited, sizeof (UINT32));
+  Status = GetRefClockFreq (Mpidr, &RefClockFreq);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get reference clock frequency for CPU frequency controller.\n", __func__));
+    return Status;
+  }
+
+  if (CppcOffsets.PerformanceLimited != MAX_UINTN) {
+    PerfLimited = (VOID *)(BaseAddress + CppcOffsets.PerformanceLimited);
+  } else {
+    Status = gBS->AllocatePool (EfiReservedMemoryType, sizeof (UINT32), &PerfLimited);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate buffer for PerfLimited\r\n", __func__));
+      return Status;
+    }
+
+    ZeroMem (PerfLimited, sizeof (UINT32));
+  }
 
   CpcInfo->Revision = 3;
   SetAddressStruct (&CpcInfo->HighestPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
@@ -526,42 +690,61 @@ TegraCpuFreqGetCpcInfo (
   SetAddressStruct (&CpcInfo->LowestPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   CpcInfo->LowestPerformanceInteger = Limits.ndiv_min;
   SetAddressStruct (&CpcInfo->GuaranteedPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, DesiredAddress);
-  SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+
+  // DesiredAddress is required
+  NV_ASSERT_RETURN (CppcOffsets.DesiredPerformance != MAX_UINTN, return EFI_UNSUPPORTED, "%a: DesiredPerformance register not found for CPU frequency controller.\n", __func__);
+
+  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DesiredPerformance);
+  if (CppcOffsets.MinimumPerformance != MAX_UINTN) {
+    SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MinimumPerformance);
+  } else {
+    SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  }
+
+  if (CppcOffsets.MaximumPerformance != MAX_UINTN) {
+    SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MaximumPerformance);
+  } else {
+    SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  }
+
   SetAddressStruct (&CpcInfo->PerformanceReductionToleranceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->TimeWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->CounterWraparoundTimeBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  if (CoreClockAddress == 0) {
+  if (CppcOffsets.ReferencePerformanceCounter == MAX_UINTN) {
     CpcInfo->CounterWraparoundTimeInteger = MAX_UINT64 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
   } else {
     CpcInfo->CounterWraparoundTimeInteger = MAX_UINT32 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
   }
 
-  if (RefclkClockAddress == 0) {
+  if (CppcOffsets.ReferencePerformanceCounter == MAX_UINTN) {
     CpcInfo->ReferencePerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitOffset = 0;
     CpcInfo->ReferencePerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
     CpcInfo->ReferencePerformanceCounterRegister.Address           = 0x1;
   } else {
-    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, RefclkClockAddress);
+    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.ReferencePerformanceCounter);
   }
 
-  if (CoreClockAddress == 0) {
+  if (CppcOffsets.DeliveredPerformanceCounter == MAX_UINTN) {
     CpcInfo->DeliveredPerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitOffset = 0;
     CpcInfo->DeliveredPerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
     CpcInfo->DeliveredPerformanceCounterRegister.Address           = 0x0;
   } else {
-    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, CoreClockAddress);
+    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DeliveredPerformanceCounter);
   }
 
   SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, 32, 0, EFI_ACPI_6_4_DWORD, (UINT64)PerfLimited);
   SetAddressStruct (&CpcInfo->CPPCEnableRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  CpcInfo->AutonomousSelectionEnableInteger = 0;
+  if (CppcOffsets.AutonomousSelectionEnable != MAX_UINTN) {
+    SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousSelectionEnable);
+  } else {
+    SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+    CpcInfo->AutonomousSelectionEnableInteger = 0;
+  }
+
   SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   SetAddressStruct (&CpcInfo->ReferencePerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
