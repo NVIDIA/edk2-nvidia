@@ -1174,9 +1174,11 @@ AndroidBootLoadFile (
   if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
      && (VendorImgData != NULL))
   {
-    BufSize               += VendorImgData->VendorRamdiskSize + BOOTCONFIG_RESERVED_SIZE;
-    BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
+    BufSize += VendorImgData->VendorRamdiskSize;
   }
+
+  BufSize               += BOOTCONFIG_RESERVED_SIZE;
+  BootConfigReservedSize = BOOTCONFIG_RESERVED_SIZE;
 
   // Allocate a buffer reserved in EfiBootServicesData
   // to make this buffer persist until the completion of kernel booting
