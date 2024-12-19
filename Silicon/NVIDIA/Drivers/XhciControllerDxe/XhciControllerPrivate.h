@@ -99,8 +99,6 @@ typedef struct {
   NVIDIA_USBFW_PROTOCOL             *mUsbFwProtocol;
   EFI_EVENT                         ExitBootServicesEvent;
   EFI_HANDLE                        ControllerHandle;
-  BOOLEAN                           T234Platform;
-  BOOLEAN                           T264Platform;
 } XHCICONTROLLER_DXE_PRIVATE;
 #define XHCICONTROLLER_PRIVATE_DATA_FROM_THIS(a)  CR(a, XHCICONTROLLER_DXE_PRIVATE, XhciControllerProtocol, XHCICONTROLLER_SIGNATURE)
 

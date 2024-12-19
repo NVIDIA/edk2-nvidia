@@ -220,37 +220,7 @@ DeviceDiscoveryNotify (
       Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
 
       /* Assign Platform Specific Parameters */
-      if (!EFI_ERROR (
-             DeviceTreeCheckNodeSingleCompatibility (
-               "nvidia,tegra186-*",
-               DeviceTreeNode->NodeOffset
-               )
-             ))
-      {
-        Private->XusbSoc = &Tegra186Soc;
-      } else if (!EFI_ERROR (
-                    DeviceTreeCheckNodeSingleCompatibility (
-                      "nvidia,tegra194-*",
-                      DeviceTreeNode->NodeOffset
-                      )
-                    ))
-      {
-        Private->XusbSoc = &Tegra194Soc;
-      } else {
-        // Only other supported platform is Tegra234 other targets will use this by default
-        Private->XusbSoc = &Tegra234Soc;
-        if (!EFI_ERROR (
-               DeviceTreeCheckNodeSingleCompatibility (
-                 "nvidia,tegra234-*",
-                 DeviceTreeNode->NodeOffset
-                 )
-               ))
-        {
-          Private->T234Platform = TRUE;
-        } else {
-          Private->T264Platform = TRUE;
-        }
-      }
+      Private->XusbSoc = &Tegra234Soc;
 
       Status = DeviceDiscoveryGetMmioRegion (
                  ControllerHandle,
@@ -286,26 +256,22 @@ DeviceDiscoveryNotify (
 
       Private->XusbSoc->CfgAddress = CfgAddress;
 
-      if (Private->T234Platform || Private->T264Platform) {
-        Status = DeviceDiscoveryGetMmioRegion (
-                   ControllerHandle,
-                   2,
-                   &BaseAddress,
-                   &RegionSize
-                   );
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Unable to locate Xhci Base 2 address range\n",
-            __FUNCTION__
-            ));
-          goto ErrorExit;
-        }
-
-        Private->XusbSoc->Base2Address = BaseAddress;
-      } else {
-        Private->XusbSoc->Base2Address = 0;
+      Status = DeviceDiscoveryGetMmioRegion (
+                 ControllerHandle,
+                 2,
+                 &BaseAddress,
+                 &RegionSize
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Unable to locate Xhci Base 2 address range\n",
+          __FUNCTION__
+          ));
+        goto ErrorExit;
       }
+
+      Private->XusbSoc->Base2Address = BaseAddress;
 
       Private->Signature                          = XHCICONTROLLER_SIGNATURE;
       Private->ImageHandle                        = DriverHandle;
@@ -384,9 +350,7 @@ DeviceDiscoveryNotify (
       FalconSetHostCfgAddr (CfgAddress);
 
       /* Set Base 2 adress, only valid in T234 & T264 */
-      if (Private->T234Platform || Private->T264Platform) {
-        FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
-      }
+      FalconSetHostBase2Addr (Private->XusbSoc->Base2Address);
 
       DEBUG ((DEBUG_INFO, "%a: before UsbPadCtl Init\n", __FUNCTION__));
       /* Initialize USB Pad Registers */
@@ -411,22 +375,20 @@ DeviceDiscoveryNotify (
 
       DeviceDiscoveryThreadMicroSecondDelay (200);
 
-      if (Private->T234Platform || Private->T264Platform) {
-        DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_7_0 Init\n", __FUNCTION__));
-        reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_7_0);
-        reg_val &= ~(Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
-        reg_val |= Private->XusbSoc->Base2Address &
-                   (Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
-        MmioWrite32 (CfgAddress + XUSB_CFG_7_0, reg_val);
+      DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_7_0 Init\n", __FUNCTION__));
+      reg_val  = MmioRead32 (CfgAddress + XUSB_CFG_7_0);
+      reg_val &= ~(Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
+      reg_val |= Private->XusbSoc->Base2Address &
+                 (Private->XusbSoc->Cfg7AddrMask << Private->XusbSoc->Cfg7AddrShift);
+      MmioWrite32 (CfgAddress + XUSB_CFG_7_0, reg_val);
 
-        DeviceDiscoveryThreadMicroSecondDelay (200);
+      DeviceDiscoveryThreadMicroSecondDelay (200);
 
-        reg_val = MmioRead32 (CfgAddress + XUSB_CFG_AXI_CFG_0);
-        reg_val = 0x5;
-        MmioWrite32 (CfgAddress + XUSB_CFG_AXI_CFG_0, reg_val);
+      reg_val = MmioRead32 (CfgAddress + XUSB_CFG_AXI_CFG_0);
+      reg_val = 0x5;
+      MmioWrite32 (CfgAddress + XUSB_CFG_AXI_CFG_0, reg_val);
 
-        DeviceDiscoveryThreadMicroSecondDelay (100);
-      }
+      DeviceDiscoveryThreadMicroSecondDelay (100);
 
       DEBUG ((DEBUG_INFO, "%a: before XUSB_CFG_1_0 Init\n", __FUNCTION__));
       reg_val = MmioRead32 (CfgAddress + XUSB_CFG_1_0);
@@ -437,18 +399,16 @@ DeviceDiscoveryNotify (
 
       BaseAddress = Private->XusbSoc->BaseAddress;
 
-      if (Private->T234Platform || Private->T264Platform) {
-        /* Check if HW/FW Clears Controller Not Ready Flag */
-        CapLength = MmioRead8 (BaseAddress);
+      /* Check if HW/FW Clears Controller Not Ready Flag */
+      CapLength = MmioRead8 (BaseAddress);
 
-        for (i = 0; i < 200; i++) {
-          StatusRegister = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
-          if (!(StatusRegister & USBSTS_CNR)) {
-            break;
-          }
-
-          DeviceDiscoveryThreadMicroSecondDelay (1000);
+      for (i = 0; i < 200; i++) {
+        StatusRegister = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
+        if (!(StatusRegister & USBSTS_CNR)) {
+          break;
         }
+
+        DeviceDiscoveryThreadMicroSecondDelay (1000);
       }
 
       /* Return Error if CNR is not cleared or Host Controller Error is set */
