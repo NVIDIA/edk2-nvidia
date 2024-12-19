@@ -744,23 +744,6 @@ menu  "Watchdog settings"
     help
       Use the ARM generic watchdog timer driver
 
-  config ARM_WATCHDOG_CONTROL_BASE
-    hex "Watchdog control base address"
-    depends on ARM_WATCHDOG
-    help
-      Base address of the ARM generic watchog control region
-
-  config ARM_WATCHDOG_REFRESH_BASE
-    hex "Watchdog refresh base address"
-    depends on ARM_WATCHDOG
-    help
-      Base address of the ARM generic watchog refresh region
-
-  config ARM_WATCHDOG_INTERRUPT
-    int "Watchdog interrupt"
-    depends on ARM_WATCHDOG
-    help
-      Interrupt number of the ARM generic watchdog
 endmenu
 
 menuconfig NETWORKING

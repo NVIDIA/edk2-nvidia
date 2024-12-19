@@ -41,15 +41,6 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !ifndef CONFIG_FIRMWARE_CAPSULE_SIZE
 CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !endif
-!ifndef CONFIG_ARM_WATCHDOG_CONTROL_BASE
-CONFIG_ARM_WATCHDOG_CONTROL_BASE=0
-!endif
-!ifndef CONFIG_ARM_WATCHDOG_REFRESH_BASE
-CONFIG_ARM_WATCHDOG_REFRESH_BASE=0
-!endif
-!ifndef CONFIG_ARM_WATCHDOG_INTERRUPT
-CONFIG_ARM_WATCHDOG_INTERRUPT=0
-!endif
 
   #
   # Define Image Type ID GUIDs for Firmware Management Protocol
@@ -993,11 +984,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gNVIDIATokenSpaceGuid.PcdNvGopSupported|TRUE
 !endif
 
-  # SBSA Watchdog - always override the ArmPkg.dec values
-  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|$(CONFIG_ARM_WATCHDOG_CONTROL_BASE)
-  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|$(CONFIG_ARM_WATCHDOG_REFRESH_BASE)
-  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|$(CONFIG_ARM_WATCHDOG_INTERRUPT)
-
 !ifdef CONFIG_SOC_JETSON
   gArmTokenSpaceGuid.PcdBaseBoardManufacturer|L"NVIDIA"
   gArmTokenSpaceGuid.PcdBaseBoardProductName|L"Jetson"
@@ -1126,12 +1112,19 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 !else
   gNVIDIATokenSpaceGuid.PcdDisablePhysicalPresence|FALSE
 !endif
-gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
+  gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 
   #
   # Hsp Doorbell Region Size
   #
   gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x100
+
+  #
+  # SBSA Watchdog - always override the ArmPkg.dec values
+  #
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|0
 
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
@@ -1293,9 +1286,6 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
 !endif
 
 !ifdef CONFIG_SOC_GRACE
-[PcdsDynamicDefault.common.TH500Presil]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
-
 [PcdsFixedAtBuild]
  !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
    ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
@@ -1351,6 +1341,11 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
+  # SBSA Watchdog
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x000000000c6ab000
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x000000000c6aa000
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|39
+
 [PcdsDynamicHii.common.TH500]
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0x0, 0x0, 0x0, 0x0 }|BS,NV
 
@@ -1358,6 +1353,7 @@ gUserAuthFeaturePkgTokenSpaceGuid.PcdPasswordCleared|FALSE
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
 
 [PcdsDynamicDefault.common.TH500Presil]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSrIovSupport|FALSE
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 !endif
 
