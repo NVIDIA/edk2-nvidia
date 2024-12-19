@@ -25,7 +25,9 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   BaseMemoryLib
+  CapsuleLib
   DebugLib
   MemoryAllocationLib
   SavedCapsuleLib

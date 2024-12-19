@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/CapsuleLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/SavedCapsuleLib.h>
@@ -77,11 +78,61 @@ NvidiaUpdateCapsule (
   EFI_STATUS          Status;
   EFI_CAPSULE_HEADER  *Header;
 
-  if (CapsuleCount != 1) {
+  //
+  // The capsule count must be 1; otherwise, return the appropriate error status.
+  //
+  if (CapsuleCount == 0) {
+    return EFI_INVALID_PARAMETER;
+  } else if (CapsuleCount > 1) {
     return EFI_UNSUPPORTED;
   }
 
   Header = CapsuleHeaderArray[0];
+
+  //
+  // A capsule which has the CAPSULE_FLAGS_POPULATE_SYSTEM_TABLE flag must have
+  // CAPSULE_FLAGS_PERSIST_ACROSS_RESET set in its header as well.
+  //
+  if ((Header->Flags & (CAPSULE_FLAGS_PERSIST_ACROSS_RESET | CAPSULE_FLAGS_POPULATE_SYSTEM_TABLE)) == CAPSULE_FLAGS_POPULATE_SYSTEM_TABLE) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // A capsule which has the CAPSULE_FLAGS_INITIATE_RESET flag must have
+  // CAPSULE_FLAGS_PERSIST_ACROSS_RESET set in its header as well.
+  //
+  if ((Header->Flags & (CAPSULE_FLAGS_PERSIST_ACROSS_RESET | CAPSULE_FLAGS_INITIATE_RESET)) == CAPSULE_FLAGS_INITIATE_RESET) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // A capsule which has the CAPSULE_FLAGS_PERSIST_ACROSS_RESET set in its
+  // header, ScatterGatherList can't be NULL.
+  //
+  if ((Header->Flags & CAPSULE_FLAGS_PERSIST_ACROSS_RESET) != 0) {
+    if (ScatterGatherList == (EFI_PHYSICAL_ADDRESS)(UINTN)NULL) {
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+
+  //
+  // Check FMP capsule flag
+  //
+  if (  CompareGuid (&Header->CapsuleGuid, &gEfiFmpCapsuleGuid)
+     && ((Header->Flags & CAPSULE_FLAGS_POPULATE_SYSTEM_TABLE) != 0))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Check Capsule image without populate flag by firmware support capsule function
+  //
+  if ((Header->Flags & CAPSULE_FLAGS_POPULATE_SYSTEM_TABLE) == 0) {
+    Status = SupportCapsuleImage (Header);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+  }
 
   DeleteCapsuleVariable ();
 
