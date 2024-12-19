@@ -2,7 +2,7 @@
 
   Falcon Register Access
 
-  Copyright (c) 2019-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -102,13 +102,6 @@ UINT32
 FalconWrite32 (
   IN  UINTN   Address,
   IN  UINT32  Value
-  );
-
-EFI_STATUS
-FalconFirmwareLoad (
-  IN  UINT8    *Firmware,
-  IN  UINT32   FirmwareSize,
-  IN  BOOLEAN  LoadIfrRom
   );
 
 #endif /* USB_FALCON_LIB_H_ */

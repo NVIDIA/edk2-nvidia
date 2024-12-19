@@ -262,7 +262,6 @@ T234AddBootloaderCarveouts (
       case CARVEOUT_OS:
       case CARVEOUT_GR:
       case CARVEOUT_PROFILING:
-      case CARVEOUT_XUSB:
         // Leave in memory map but marked as used
         if (  (  (Index == CARVEOUT_CCPLEX_INTERWORLD_SHMEM)
               && FixedPcdGetBool (PcdExposeCcplexInterworldShmem)

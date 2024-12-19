@@ -189,8 +189,6 @@ DeviceDiscoveryNotify (
   TEGRA_PLATFORM_TYPE              PlatformType;
   NVIDIA_POWER_GATE_NODE_PROTOCOL  *PgProtocol = NULL;
   UINT32                           Index;
-  VOID                             *Hob;
-  TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
   UINT32                           PgState;
   EFI_STATUS                       ErrorStatus;
   VOID                             *ErrorProtocol;
@@ -451,79 +449,8 @@ DeviceDiscoveryNotify (
 
           DeviceDiscoveryThreadMicroSecondDelay (1000);
         }
-
-        DEBUG ((DEBUG_INFO, "Xhci Status Register: 0x%x\n", StatusRegister));
-        if ((StatusRegister & USBSTS_CNR)) {
-          /* CNR still set, need to load FW to clear */
-          LoadIfrRom = TRUE;
-          DEBUG ((DEBUG_ERROR, "CNR is set, Failed to get MB2 FW load\n"));
-          if (Private->T264Platform) {
-            goto skipXusbFwLoad;
-          }
-        } else {
-          goto skipXusbFwLoad;
-        }
       }
 
-      Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-      if ((Hob != NULL) &&
-          (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-      {
-        PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-      } else {
-        DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
-        Status = EFI_UNSUPPORTED;
-        goto ErrorExit;
-      }
-
-      // In RCM boot, USB FW is already loaded.
-      if (PlatformResourceInfo->BootType == TegrablBootRcm) {
-        goto skipXusbFwLoad;
-      }
-
-      /* Load xusb Firmware */
-      Status = gBS->LocateProtocol (
-                      &gNVIDIAUsbFwProtocolGuid,
-                      NULL,
-                      (VOID **)&(Private->mUsbFwProtocol)
-                      );
-      if (EFI_ERROR (Status) || (Private->mUsbFwProtocol == NULL)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Couldn't find UsbFw Protocol Handle %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        goto ErrorExit;
-      }
-
-      Status = FalconFirmwareLoad (
-                 Private->mUsbFwProtocol->UsbFwBase,
-                 Private->mUsbFwProtocol->UsbFwSize,
-                 LoadIfrRom
-                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a, failed to load falcon firmware %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
-        goto ErrorExit;
-      }
-
-      /* Wait till HW/FW Clears Controller Not Ready Flag */
-      CapLength = MmioRead8 (BaseAddress);
-      for (i = 0; i < 200; i++) {
-        StatusRegister = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
-        if (!(StatusRegister & USBSTS_CNR)) {
-          break;
-        }
-
-        DeviceDiscoveryThreadMicroSecondDelay (1000);
-      }
-
-skipXusbFwLoad:
       /* Return Error if CNR is not cleared or Host Controller Error is set */
       if (StatusRegister & (USBSTS_CNR | USBSTS_HCE)) {
         DEBUG ((DEBUG_ERROR, "%a:%d %llx - %r\r\n", __func__, __LINE__, BaseAddress, Status));
