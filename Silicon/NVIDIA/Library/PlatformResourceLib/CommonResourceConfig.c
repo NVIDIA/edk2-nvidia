@@ -129,7 +129,11 @@ CommonConfigGetEnabledCoresBitMap (
     for (Index = 0; Index < ConfigInfo->MaxCoreDisableWords; Index++) {
       ScratchDisableReg[Index] |= ConfigInfo->CoreDisableScratchMask[Index];
       ScratchDisableReg[Index] &= ~ConfigInfo->CoreDisableScratchMask[Index];
-      EnaBitMap[Index]          = ~ScratchDisableReg[Index];
+      if (ConfigInfo->CoreDisableScratchShift != NULL) {
+        ScratchDisableReg[Index] >>= ConfigInfo->CoreDisableScratchShift[Index];
+      }
+
+      EnaBitMap[Index] = ~ScratchDisableReg[Index];
     }
 
     if (TegraGetPlatform () == TEGRA_PLATFORM_VSP) {

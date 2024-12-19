@@ -89,7 +89,7 @@ GetCacheId (
     // Server SW team also requests that L3 CacheId be Socket+1, so sanity check it here
     // TODO: Figure out how to handle Chips that don't have a single unified socket-level cache
     ChipId = TegraGetChipID ();
-    if (ChipId == TH500_CHIP_ID) {
+    if ((ChipId == TH500_CHIP_ID) || (ChipId == T410_CHIP_ID)) {
       ASSERT (CacheId == (Socket+1));
     }
   }

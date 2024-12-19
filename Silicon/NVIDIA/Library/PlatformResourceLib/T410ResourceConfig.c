@@ -25,35 +25,76 @@
 #include "PlatformResourceConfig.h"
 #include "T410ResourceConfigPrivate.h"
 
-#define MAX_CORE_DISABLE_WORDS  4
+#define T410_MAX_CORE_DISABLE_WORDS       4
+#define T410_MAX_SCF_CACHE_DISABLE_WORDS  4
 
 STATIC UINT64  T410SocketScratchBaseAddr[T410_MAX_SOCKETS] = {
   T410_SCRATCH_BASE_SOCKET_0,
   T410_SCRATCH_BASE_SOCKET_1,
 };
 
-STATIC UINT32  T410CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS] = {
+STATIC UINT32  T410CoreDisableScratchOffset[T410_MAX_CORE_DISABLE_WORDS] = {
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_3,
 };
 
-STATIC UINT32  T410CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
+STATIC UINT32  T410CoreDisableScratchMask[T410_MAX_CORE_DISABLE_WORDS] = {
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_0,
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_1,
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_2,
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_3,
 };
 
+STATIC UINT32  T410CoreDisableScratchShift[T410_MAX_CORE_DISABLE_WORDS] = {
+  T410_CPU_FLOORSWEEPING_DISABLE_SHFT_0,
+  T410_CPU_FLOORSWEEPING_DISABLE_SHFT_1,
+  T410_CPU_FLOORSWEEPING_DISABLE_SHFT_2,
+  T410_CPU_FLOORSWEEPING_DISABLE_SHFT_3,
+};
+
 STATIC COMMON_RESOURCE_CONFIG_INFO  T410CommonResourceConfigInfo = {
   T410_MAX_SOCKETS,
-  MAX_CORE_DISABLE_WORDS,
+  T410_MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,
   T410SocketScratchBaseAddr,
   T410CoreDisableScratchOffset,
   T410CoreDisableScratchMask,
+  T410CoreDisableScratchShift
+};
+
+STATIC UINT32  T410ScfCacheDisableScratchOffset[T410_MAX_SCF_CACHE_DISABLE_WORDS] = {
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_0,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_1,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_2,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_OFFSET_3,
+};
+
+STATIC UINT32  T410ScfCacheDisableScratchMask[T410_MAX_SCF_CACHE_DISABLE_WORDS] = {
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_0,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_1,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_2,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_MASK_3,
+};
+
+STATIC UINT32  T410ScfCacheDisableScratchShift[T410_MAX_SCF_CACHE_DISABLE_WORDS] = {
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_SHFT_0,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_SHFT_1,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_SHFT_2,
+  T410_SCF_CACHE_FLOORSWEEPING_DISABLE_SHFT_3,
+};
+
+STATIC TEGRA_FLOOR_SWEEPING_SCF_CACHE  T410ScfCacheInfo = {
+  .MaxScfCacheCountPerSocket = T410_SCF_CACHE_INSTANCES_PER_SOCKET,
+  .ScfDisableWords           = T410_MAX_SCF_CACHE_DISABLE_WORDS,
+  .ScfDisableSocketBase      = T410SocketScratchBaseAddr,
+  .ScfDisableOffset          = T410ScfCacheDisableScratchOffset,
+  .ScfDisableMask            = T410ScfCacheDisableScratchMask,
+  .ScfDisableShift           = T410ScfCacheDisableScratchShift,
+  .ScfSliceSize              = T410_SCF_CACHE_SLICE_SIZE,
+  .ScfSliceSets              = T410_SCF_CACHE_SLICE_SETS,
 };
 
 TEGRA_MMIO_INFO  T410MmioInfo[] = {
@@ -247,6 +288,7 @@ T410BuildDramRegions (
 
     Base = CpuBootloaderParams->SdramInfo[Socket].Base;
     Size = CpuBootloaderParams->SdramInfo[Socket].Size;
+
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
 
@@ -724,6 +766,61 @@ T410CpuC2cMode (
 }
 
 /**
+  Initialize floorsweeping info
+
+**/
+EFI_STATUS
+EFIAPI
+T410InitFloorSweepingInfo (
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  )
+{
+  TEGRA_FLOOR_SWEEPING_INFO  *Info;
+  EFI_STATUS                 Status;
+  TEGRA_PLATFORM_TYPE        Platform;
+  UINT32                     *PcieDisableRegArray;
+
+  Platform = TegraGetPlatform ();
+
+  // Get PCIe disable reg
+  PcieDisableRegArray = AllocateZeroPool (T410_MAX_SOCKETS * sizeof (*PcieDisableRegArray));
+  if (PcieDisableRegArray == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate PcieDisableRegArray\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Status = GetDisableRegArray (
+             PlatformResourceInfo->SocketMask,
+             (1ULL << T410_SOCKET_SHFT),
+             T410_SCRATCH_BASE_SOCKET_0 + T410_PCIE_FLOORSWEEPING_DISABLE_OFFSET,
+             ~T410_PCIE_FLOORSWEEPING_DISABLE_MASK,
+             T410_PCIE_FLOORSWEEPING_DISABLE_SHIFT,
+             PcieDisableRegArray
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: PcieDisableRegArray failed: %r\n", __FUNCTION__, Status));
+  }
+
+  Info = AllocateZeroPool (sizeof (TEGRA_FLOOR_SWEEPING_INFO));
+  if (Info == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate floor sweeping info\n", __FUNCTION__));
+    FreePool (PcieDisableRegArray);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Info->SocketAddressMask    = T410_SOCKET_MASK;
+  Info->AddressToSocketShift = T410_SOCKET_SHFT;
+  Info->PcieDisableRegArray  = PcieDisableRegArray;
+  Info->PcieParentNameFormat = "/socket@%u";
+  Info->PcieNumParentNodes   = T410_MAX_SOCKETS;
+  Info->ScfCacheInfo         = &T410ScfCacheInfo;
+
+  PlatformResourceInfo->FloorSweepingInfo = Info;
+
+  return EFI_SUCCESS;
+}
+
+/**
   Get Platform Resource Information
 
 **/
@@ -904,11 +1001,23 @@ SocUpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
+  EFI_STATUS  Status;
+
   if (PlatformResourceInfo == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  return T410CpuC2cMode (PlatformResourceInfo);
+  Status = T410CpuC2cMode (PlatformResourceInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = T410InitFloorSweepingInfo (PlatformResourceInfo);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return Status;
 }
 
 /**

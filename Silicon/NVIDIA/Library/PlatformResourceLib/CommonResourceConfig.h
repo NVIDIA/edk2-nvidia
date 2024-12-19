@@ -29,6 +29,7 @@ typedef struct {
   UINT64     *SocketScratchBaseAddr;
   UINT32     *CoreDisableScratchOffset;
   UINT32     *CoreDisableScratchMask;
+  UINT32     *CoreDisableScratchShift;
 } COMMON_RESOURCE_CONFIG_INFO;
 
 /**
