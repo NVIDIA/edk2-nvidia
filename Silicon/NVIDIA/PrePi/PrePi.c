@@ -25,6 +25,7 @@
 #include <Library/CpuExceptionHandlerLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/StatusRegLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
@@ -476,6 +477,12 @@ CEntryPoint (
   // Get info from platform
   Status = UpdatePlatformResourceInformation ();
   NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceInformation - %r!\r\n", Status);
+
+  // Print Chip ID
+  DEBUG ((DEBUG_ERROR, "ChipID: 0x%x\n", TegraGetChipID ()));
+
+  // Print Platform ID
+  DEBUG ((DEBUG_ERROR, "Platform ID: %d\n", TegraGetPlatform ()));
 
   // Print platform model info from UEFI DTB
   PrintModel ();
