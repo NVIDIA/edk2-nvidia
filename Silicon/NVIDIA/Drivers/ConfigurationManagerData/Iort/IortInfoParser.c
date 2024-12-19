@@ -1705,6 +1705,7 @@ STATIC CONST IORT_DEVICE_NODE_MAP  mIortDevTypeMap[] = {
   { EArmObjRootComplex,    "nvidia,tegra234-pcie",  SetupIortNodeForPciRc,    NULL,            NULL,          1 },
   { EArmObjRootComplex,    "nvidia,th500-pcie",     SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjRootComplex,    "nvidia,tegra264-pcie",  SetupIortNodeForPciRc,    NULL,            NULL,          0 },
+  { EArmObjRootComplex,    "nvidia,t410-pcie",      SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjRootComplex,    "pci-host-ecam-generic", SetupIortNodeForPciRc,    NULL,            NULL,          0 },
   { EArmObjNamedComponent, "nvidia,tegra234-nvdla", SetupIortNodeForNComp,    "nvdla0",        "\\_SB.DLA0",  1 },
   { EArmObjNamedComponent, "nvidia,tegra264-nvdla", SetupIortNodeForNComp,    NULL,            "\\_SB.DLA0",  0 },
@@ -1809,7 +1810,7 @@ IortInfoParser (
   ChipID = TegraGetChipID ();
 
   // T234 require enable variable
-  if ((ChipID == T234_CHIP_ID)) {
+  if (ChipID == T234_CHIP_ID) {
     DataSize = sizeof (EnableIortTableGen);
     Status   = gRT->GetVariable (IORT_TABLE_GEN, &gNVIDIATokenSpaceGuid, NULL, &DataSize, &EnableIortTableGen);
     if (EFI_ERROR (Status)) {

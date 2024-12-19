@@ -16,6 +16,26 @@ DefinitionBlock ("dsdt_t410.aml", "DSDT", 2, "NVIDIA", "T410", 0x00000001)
 {
   Scope(_SB)
   {
+    //---------------------------------------------------------------------
+    // SMMU0_CMDQV @ 0xfe1506000000
+    //---------------------------------------------------------------------
+    Device (SQ00) {
+      Name (_HID, "NVDA200C")
+      Name (_UID, 0xFFFFFFFF)
+      Name (_CCA, 1)
+
+      Name (_CRS, ResourceTemplate() {
+        QWordMemory (ResourceConsumer, , MinFixed, MaxFixed, Cacheable, ReadWrite,
+                     0x0,                              // Granularity
+                     0xfe1506000000,                   // Range Minimum
+                     0xfe150682ffff,                   // Range Maximum
+                     0x0,                              // Translation Offset
+                     0x830000                          // Length
+                     )
+        Interrupt (ResourceConsumer, Edge, ActiveHigh, Exclusive) { 276 }
+      })
+    }
+
     //-------------------------------------------------------------
     // _OSC(): Operating System Capabilities
     //   Arg0 - UUID (Buffer)
