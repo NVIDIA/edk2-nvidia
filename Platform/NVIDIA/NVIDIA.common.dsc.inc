@@ -1560,6 +1560,10 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 
 !ifdef CONFIG_SOC_T41X
 [PcdsDynamicDefault.common.T410]
+  # SBSA Watchdog
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x0000fe140363b000
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x0000fe140363a000
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|228
 
 [PcdsDynamicDefault.common.T410Presil]
 
