@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -20,16 +20,14 @@
 #
 ################################################################################
 [LibraryClasses]
-  StandaloneMmOpteeLib|Silicon/NVIDIA/Library/StandaloneMmOpteeLib/StandaloneMmOpteeLib.inf
-  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/Library/StandaloneMmCoreEntryPointOptee/StandaloneMmCoreEntryPointOptee.inf
-  CacheMaintenanceLib|MdePkg/Library/BaseCacheMaintenanceLibNull/BaseCacheMaintenanceLibNull.inf
-  PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
-  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraStandaloneMmCombinedSerialPortLib.inf
-  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
-  TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
-  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraStandaloneMmSerialPortLib.inf
-  DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
-  VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
+  BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
+  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
+  DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
+  ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
+  ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerVirtCounterLib/ArmGenericTimerVirtCounterLib.inf
+  SlabMemoryAllocationLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumSlabMemAllocLib/StandaloneMmHafniumSlabMemAllocLib.inf
+  StandaloneMmMmuLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumMmuLib/StandaloneMmHafniumMmuLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -39,17 +37,24 @@
 #
 ################################################################################
 [PcdsFixedAtBuild]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0xF000
   gArmTokenSpaceGuid.PcdMmBufferSize|65536
-  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
+  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
-  gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy|0x00000002
+  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
+
+  # DEBUG_ASSERT_ENABLED       0x01
+  # DEBUG_PRINT_ENABLED        0x02
+  # DEBUG_CODE_ENABLED         0x04
+  # CLEAR_MEMORY_ENABLED       0x08
+  # ASSERT_BREAKPOINT_ENABLED  0x10
+  # ASSERT_DEADLOOP_ENABLED    0x20
+  # ASSERT_RESET_ENABLED       0x40
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
+  gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
-  gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
-  gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|TRUE
 
 [PcdsPatchableInModule]
   #
@@ -81,7 +86,6 @@
 #
 ###################################################################################################
 [Components.common]
-
   #
   # MM Qspi Driver
   #
@@ -101,9 +105,9 @@
   }
 
   #
-  # OP-TEE RPMB driver
+  # MM FW Partition Driver
   #
-  Silicon/NVIDIA/Drivers/OpteeNvRpmb/OpTeeRpmbFvbNv.inf
+  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
 
   #
   # MM Fault Tolerant Write Driver
@@ -112,7 +116,6 @@
     <LibraryClasses>
       GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
       NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
-      NULL|Silicon/NVIDIA/Drivers/OpteeNvRpmb/FixupPcdRpmb.inf
   }
 
   #
@@ -126,29 +129,24 @@
       NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
       GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
       NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
-      NULL|Silicon/NVIDIA/Drivers/OpteeNvRpmb/FixupPcdRpmb.inf
   }
 
   #
-  # MM FW Partition Driver
+  # GPIO Driver
   #
-  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
-
-  #
-  # MM Dice Driver
-  #
-  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmDice.inf
+  Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
   #
   # MM User Authentication Driver
   #
   Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
+
 [Components.AARCH64]
   #
   # MM CPU Driver
   #
-  StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+  Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
 
 ###################################################################################################
 #
@@ -160,8 +158,7 @@
 #
 ###################################################################################################
 [BuildOptions.AARCH64]
-  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000 -march=armv8-a+nofp
-  GCC:*_*_*_CC_FLAGS = -mstrict-align
+  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000 -Wl,-z,text,-Bsymbolic,-pie
 
 [BuildOptions.AARCH64]
   # Avoid absolute symbols when linking, which will cause a failure in GenFw.
@@ -171,6 +168,12 @@
   GCC:*_*_*_DLINK_FLAGS = -Wl,-z,text,-Bsymbolic,-pie
   GCC:*_*_*_CC_FLAGS = -fPIE
 
-[BuildOptions.ARM]
-  GCC:*_*_*_DLINK_FLAGS = -Wl,-z,common-page-size=0x1000 -march=armv7-a
-  GCC:*_*_*_CC_FLAGS = -fno-stack-protector
+[BuildOptions]
+  RELEASE_*_*_CC_FLAGS  = -DMDEPKG_NDEBUG
+  *_*_*_CC_FLAGS  = -DDISABLE_NEW_DEPRECATED_INTERFACES -fpie
+
+  # Avoid absolute symbols when linking, which will cause a failure in GenFw.
+  # This happens in GCC toolchains not configured with --enable-default-pie,
+  # such as ubuntu's "gcc-aarch64-linux-gnu" toolchain.  By adding -fPIE here,
+  # we get the equivalent of "--enable-default-pie".
+  GCC:*_*_*_CC_FLAGS = -fPIE

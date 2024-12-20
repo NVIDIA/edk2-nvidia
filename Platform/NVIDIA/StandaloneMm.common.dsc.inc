@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -71,6 +71,11 @@
   NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
   MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
   ErotLib|Silicon/NVIDIA/Library/ErotLibNull/ErotLibNull.inf
+  HobPrintLib|MdeModulePkg/Library/HobPrintLib/HobPrintLib.inf
+  ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
+  PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
+  QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
+
 
 [LibraryClasses.common.MM_STANDALONE]
   HobLib|StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf

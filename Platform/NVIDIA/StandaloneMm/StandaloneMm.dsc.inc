@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -12,7 +12,7 @@
   SUPPORTED_ARCHITECTURES        = AARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
-!include Platform/NVIDIA/StandaloneMm.common.dsc.inc
+!include Platform/NVIDIA/StandaloneMmFfa.common.dsc.inc
 
 ################################################################################
 #
@@ -20,22 +20,10 @@
 #
 ################################################################################
 [LibraryClasses]
-  BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
-  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
-  DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
-  ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
-  QspiControllerLib|Silicon/NVIDIA/Library/QspiControllerLib/QspiControllerLib.inf
-  ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerVirtCounterLib/ArmGenericTimerVirtCounterLib.inf
   ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
-  PlatformPasswordLibMm|Silicon/NVIDIA/Library/PlatformPasswordLibMm/PlatformPasswordLibMm.inf
   PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
   ResetSystemLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumResetLib/StandaloneMmHafniumResetLib.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLib/DebugLogScratchRegLib.inf
-  ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
-  SlabMemoryAllocationLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumSlabMemAllocLib/StandaloneMmHafniumSlabMemAllocLib.inf
-  StandaloneMmMmuLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumMmuLib/StandaloneMmHafniumMmuLib.inf
-  HobPrintLib|MdeModulePkg/Library/HobPrintLib/HobPrintLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -48,13 +36,6 @@
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
 
-  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
-  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0xF000
-  gArmTokenSpaceGuid.PcdMmBufferSize|65536
-  gNVIDIATokenSpaceGuid.PcdSecureQspiUseFastRead|FALSE
-  gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
-  gNVIDIATokenSpaceGuid.PcdConfigMgrObjMax|0x400
   ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
   gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0000C3903DC
   ## Register 21(i = 21) is to log the FW image name.
@@ -98,15 +79,6 @@
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 
 [PcdsPatchableInModule]
-  #
-  # NV Storage PCDs.
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64|0x0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64|0x0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64|0x0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x0
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x0
 
 ###################################################################################################
 #
@@ -133,55 +105,11 @@
   #
   Silicon/NVIDIA/StandaloneMm/Manifest/Manifest.inf
 
-  # MM Qspi Driver
   #
-  Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
-
+  # MM NorFlash Blob Driver for ERoT Less updates.
   #
-  # MM NorFlash Driver
-  #
-  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
 
-  #
-  # MM NOR FvB driver
-  #
-  Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf {
-    <LibraryClasses>
-      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
-  }
-
-  #
-  # MM FW Partition Driver
-  #
-  Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
-
-  #
-  # MM Fault Tolerant Write Driver
-  #
-  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf {
-    <LibraryClasses>
-      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
-      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
-  }
-
-  #
-  # MM Variable Driver
-  #
-  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
-    <LibraryClasses>
-      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
-      VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
-      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
-      NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
-      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
-      NULL|Silicon/NVIDIA/Drivers/FvbNorFlashDxe/StandaloneMmFixupPcd.inf
-  }
-
-  #
-  # GPIO Driver
-  #
-  Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
   #
   # MM MCTP/ERoT Drivers
@@ -214,17 +142,7 @@
   #
   Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionMm.inf
 
-  #
-  # MM User Authentication Driver
-  #
-  Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
-
-
 [Components.AARCH64]
-  #
-  # MM CPU Driver
-  #
-  Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
 
 ###################################################################################################
 #

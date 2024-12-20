@@ -1,59 +1,21 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-  # MM QSPI Driver
-  #
-  INF Silicon/NVIDIA/Drivers/QspiControllerDxe/QspiControllerStandaloneMm.inf
+  !include Platform/NVIDIA/StandaloneMmFfa.common.fdf.inc
 
   #
-  # MM NorFlash Driver
+  # MM NorFlash Blob Driver for ERoT Less updates.
   #
-  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMm.inf
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
-
-  #
-  # MM NOR FvB driver
-  #
-  INF Silicon/NVIDIA/Drivers/FvbNorFlashDxe/FvbNorFlashStandaloneMm.inf
-
-  #
-  # MM FW Partition Driver
-  #
-  INF Silicon/NVIDIA/Drivers/FwPartitionMmDxe/FwPartitionStandaloneMm.inf
-
-  #
-  # FTW Driver
-  #
-  INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
-
-  #
-  # GPIO Driver
-  #
-  INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
   #
   # MM MCTP/ERoT Drivers
   #
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf
   INF Silicon/NVIDIA/Drivers/MctpMmDxe/MctpStandaloneMm.inf
-
-  #
-  # MM Core
-  #
-  INF StandaloneMmPkg/Core/StandaloneMmCore.inf
-
-  #
-  # MM CPU Driver
-  #
-  INF Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
-
-  #
-  # MM Variable Driver
-  #
-  INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
 
   #
   # Sequential Record Flash Driver
@@ -70,16 +32,10 @@
   #
   INF Silicon/NVIDIA/Drivers/SequentialRecordStMm/SequentialRecordComm.inf
 
-
   #
   # MM Error Serialization Driver
   #
   INF Silicon/NVIDIA/Server/TH500/Drivers/ErrorSerializationMmDxe/ErrorSerializationMm.inf
-
-  #
-  # MM User Authentication Driver
-  #
-  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
 ################################################################################
 #
