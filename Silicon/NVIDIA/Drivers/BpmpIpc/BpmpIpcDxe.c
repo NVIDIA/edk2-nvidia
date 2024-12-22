@@ -2,7 +2,7 @@
 
   BPMP IPC Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,6 @@
 #include <Protocol/BpmpIpc.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceDiscoveryLib.h>
-#include <Library/DtbUpdateLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include "BpmpIpcDxePrivate.h"
 

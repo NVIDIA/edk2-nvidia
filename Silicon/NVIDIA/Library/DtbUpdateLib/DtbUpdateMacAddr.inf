@@ -1,6 +1,6 @@
 ## @file
 #
-#  DTB update library
+#  DTB update for MAC addresses
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -10,14 +10,15 @@
 
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = DtbUpdateLib
-  FILE_GUID                      = 1640cfcf-e589-4ff1-bf00-f29671c78bae
+  BASE_NAME                      = DtbUpdateMacAddr
+  FILE_GUID                      = 25518f36-c584-4ec8-9cff-a446eb0ebf8c
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtbUpdateLib
+  LIBRARY_CLASS                  = DtbUpdateMacAddr
+  CONSTRUCTOR                    = DtbUpdateMacAddrInitialize
 
 [Sources.common]
-  DtbUpdateLib.c
+  DtbUpdateMacAddr.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
@@ -27,12 +28,15 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   DeviceTreeHelperLib
-  FdtLib
+  HobLib
+  PlatformResourceLib
   PrintLib
-  DtbUpdateBpmpIpc
-  DtbUpdateMacAddr
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE

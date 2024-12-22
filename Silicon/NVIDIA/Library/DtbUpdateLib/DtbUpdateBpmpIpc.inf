@@ -1,6 +1,6 @@
 ## @file
 #
-#  DTB update library
+#  DTB update for BpmpIpc
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -10,29 +10,35 @@
 
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = DtbUpdateLib
-  FILE_GUID                      = 1640cfcf-e589-4ff1-bf00-f29671c78bae
+  BASE_NAME                      = DtbUpdateBpmpIpc
+  FILE_GUID                      = 0f9f1781-1eb0-44c2-91f5-40d37e56c7e7
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtbUpdateLib
+  LIBRARY_CLASS                  = DtbUpdateBpmpIpc
+  CONSTRUCTOR                    = DtbUpdateBpmpIpcInitialize
 
 [Sources.common]
-  DtbUpdateLib.c
+  DtbUpdateBpmpIpc.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
-  NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   DeviceTreeHelperLib
-  FdtLib
+  HobLib
+  PlatformResourceLib
   PrintLib
-  DtbUpdateBpmpIpc
-  DtbUpdateMacAddr
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Depex]
   TRUE
