@@ -189,18 +189,19 @@ AddBootConfigFromDtb (
 
   Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &KernelDtb);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %r to get kernel dtb from sys table\n", __FUNCTION__, Status));
     return EFI_NOT_FOUND;
   }
 
   NodeOffset = fdt_path_offset (KernelDtb, "/chosen");
   if (NodeOffset < 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find /chosen in DTB\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find /chosen in DTB\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
   BootConfigEntry = (CHAR8 *)fdt_getprop (KernelDtb, NodeOffset, "bootconfig", &BootConfigLength);
   if (NULL == BootConfigEntry) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootargs\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find bootconfig node\n", __FUNCTION__));
     // Not a fatal issue as dtb bootconfig can be empty for some platforms
     *AppliedBytes = 0;
     return EFI_SUCCESS;

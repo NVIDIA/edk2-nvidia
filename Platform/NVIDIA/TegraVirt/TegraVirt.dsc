@@ -99,6 +99,7 @@
   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
   WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
+  BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
 
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoVirtLib/BootChainInfoVirtLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf

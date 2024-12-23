@@ -126,6 +126,8 @@
       HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
       ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
       ShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
+      BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
+      NetLib|NetworkPkg/Library/DxeNetLib/DxeNetLib.inf
   }
 
   #

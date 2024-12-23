@@ -46,6 +46,7 @@
   AndroidBcbLib
   SiblingPartitionLib
   DeviceTreeHelperLib
+  BootConfigProtocolLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid
@@ -55,6 +56,7 @@
   gEfiLoadFile2ProtocolGuid
   gEfiLoadedImageProtocolGuid
   gNVIDIALoadfileKernelArgsProtocol
+  gNVIDIABootConfigUpdateProtocol
   gAndroidBootImgProtocolGuid
 
 [Guids]

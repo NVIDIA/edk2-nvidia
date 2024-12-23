@@ -20,6 +20,7 @@
 #include <NVIDIAConfiguration.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/SiblingPartitionLib.h>
+#include <Library/BootConfigProtocolLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
 STATIC UINT64                     mInitRdSize            = 0;
@@ -383,24 +384,28 @@ AndroidBootDxeLoadDtb (
   IN ANDROID_BOOT_PRIVATE_DATA  *Private
   )
 {
-  EFI_STATUS             Status;
-  VOID                   *AcpiBase   = NULL;
-  VOID                   *CurrentDtb = NULL;
-  INT32                  UefiDtbNodeOffset;
-  INT32                  KernelDtbNodeOffset;
-  INT32                  PropOffset;
-  CONST CHAR8            *PropName;
-  CONST CHAR8            *PropStr;
-  INT32                  PropLen;
-  CHAR16                 DtbPartitionName[MAX_PARTITION_NAME_LEN];
-  EFI_HANDLE             DtbPartitionHandle;
-  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
-  UINT64                 Size;
-  VOID                   *KernelDtb = NULL;
-  VOID                   *Dtb;
-  VOID                   *DtbCopy;
-  UINTN                  Count;
-  BOOLEAN                KernelDtbMappingFound;
+  EFI_STATUS                         Status;
+  VOID                               *AcpiBase   = NULL;
+  VOID                               *CurrentDtb = NULL;
+  INT32                              UefiDtbNodeOffset;
+  INT32                              KernelDtbNodeOffset;
+  INT32                              PropOffset;
+  CONST CHAR8                        *PropName;
+  CONST CHAR8                        *PropStr;
+  INT32                              PropLen;
+  CHAR16                             DtbPartitionName[MAX_PARTITION_NAME_LEN];
+  EFI_HANDLE                         DtbPartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL              *BlockIo;
+  UINT64                             Size;
+  VOID                               *KernelDtb = NULL;
+  VOID                               *Dtb;
+  VOID                               *DtbCopy;
+  UINTN                              Count;
+  BOOLEAN                            KernelDtbMappingFound;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate = NULL;
+  CHAR8                              NewBootConfigStr[BOOTCONFIG_MAX_LEN];
+  CHAR8                              *BootConfigEntry = NULL;
+  INT32                              FdtErr;
 
   if (Private == NULL) {
     return;
@@ -495,16 +500,6 @@ AndroidBootDxeLoadDtb (
         (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
     {
       DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB from %s\r\n", __FUNCTION__, DtbPartitionName));
-      if (CurrentDtb != NULL) {
-        KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
-        UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
-        if (fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL)) {
-          fdt_for_each_property_offset (PropOffset, CurrentDtb, UefiDtbNodeOffset) {
-            PropStr = fdt_getprop_by_offset (CurrentDtb, PropOffset, &PropName, &PropLen);
-            fdt_setprop (DtbCopy, KernelDtbNodeOffset, PropName, PropStr, PropLen);
-          }
-        }
-      }
 
       Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
       if (EFI_ERROR (Status)) {
@@ -512,6 +507,54 @@ AndroidBootDxeLoadDtb (
         DtbCopy = NULL;
       } else {
         if (CurrentDtb != NULL) {
+          KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
+          UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
+          if (fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL)) {
+            fdt_for_each_property_offset (PropOffset, CurrentDtb, UefiDtbNodeOffset) {
+              PropStr = fdt_getprop_by_offset (CurrentDtb, PropOffset, &PropName, &PropLen);
+              fdt_setprop (DtbCopy, KernelDtbNodeOffset, PropName, PropStr, PropLen);
+            }
+          }
+
+          // Modify /chosen/bootconfig
+          Status = BootConfigAddSerialNumber (NULL);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add serial number to BootConfigProtocol\n", __FUNCTION__, Status));
+          }
+
+          Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
+          if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
+            BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
+            if (NULL == BootConfigEntry) {
+              // Not fatal
+              DEBUG ((DEBUG_ERROR, "%a: /chosen/bootconfig not found, creating..\n", __FUNCTION__));
+              AsciiSPrint (
+                NewBootConfigStr,
+                sizeof (NewBootConfigStr),
+                "%a",
+                BootConfigUpdate->BootConfigs
+                );
+            } else {
+              DEBUG ((DEBUG_ERROR, "%a: Updating /chosen/bootconfig\n", __FUNCTION__));
+              AsciiSPrint (
+                NewBootConfigStr,
+                sizeof (NewBootConfigStr),
+                "%a%a",
+                BootConfigEntry,
+                BootConfigUpdate->BootConfigs
+                );
+            }
+
+            PropLen = AsciiStrLen (NewBootConfigStr) + 1;
+            FdtErr  = fdt_setprop (DtbCopy, KernelDtbNodeOffset, "bootconfig", NewBootConfigStr, PropLen);
+            if (FdtErr < 0) {
+              // Not fatal
+              DEBUG ((DEBUG_ERROR, "%a: Got err=%d trying to set bootconfig\n", __FUNCTION__, FdtErr));
+            }
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
+          }
+
           gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
         }
       }

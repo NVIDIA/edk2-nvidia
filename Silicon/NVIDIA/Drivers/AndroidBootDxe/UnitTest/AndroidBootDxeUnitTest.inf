@@ -50,9 +50,11 @@
   AndroidBcbLib
   SiblingPartitionLib
   DeviceTreeHelperLib
+  BootConfigProtocolLib
 
 [Protocols]
   gNVIDIALoadfileKernelArgsProtocol
+  gNVIDIABootConfigUpdateProtocol
   gAndroidBootImgProtocolGuid
 
 [Guids]
