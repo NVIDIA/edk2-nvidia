@@ -1,6 +1,6 @@
 ## @file
 #
-#  DTB update library
+#  DTB update for VPR
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -10,30 +10,35 @@
 
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = DtbUpdateLib
-  FILE_GUID                      = 1640cfcf-e589-4ff1-bf00-f29671c78bae
+  BASE_NAME                      = DtbUpdateVpr
+  FILE_GUID                      = 450b578e-28a6-4e0c-a109-3a822330a47d
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtbUpdateLib
+  LIBRARY_CLASS                  = DtbUpdateVpr
+  CONSTRUCTOR                    = DtbUpdateVprInitialize
 
 [Sources.common]
-  DtbUpdateLib.c
+  DtbUpdateVpr.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
-  NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   DeviceTreeHelperLib
-  FdtLib
+  HobLib
+  PlatformResourceLib
   PrintLib
-  DtbUpdateBpmpIpc
-  DtbUpdateMacAddr
-  DtbUpdateVpr
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Depex]
   TRUE

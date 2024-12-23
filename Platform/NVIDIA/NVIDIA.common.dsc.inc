@@ -408,6 +408,11 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !else
   DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
 !endif
+!ifdef CONFIG_SOC_JETSON
+  DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateVpr.inf
+!else
+  DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
+!endif
 
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
 
@@ -1939,11 +1944,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   # Tegra PWM clock driver
   #
   Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
-
-  #
-  # VPR Support
-  #
-  Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
 
   #
   # Golden Register Support

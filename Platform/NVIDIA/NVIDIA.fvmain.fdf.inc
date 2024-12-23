@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -434,11 +434,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Tegra PWM clock driver
   #
   INF Silicon/NVIDIA/Drivers/TegraPwmDxe/TegraPwmDxe.inf
-
-  #
-  # VPR Support
-  #
-  INF Silicon/NVIDIA/Drivers/VPRDxe/VPRDxe.inf
 
   #
   # Golden Register Support
