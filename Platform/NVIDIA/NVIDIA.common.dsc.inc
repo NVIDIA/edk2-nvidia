@@ -409,8 +409,10 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
   DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
 !endif
 !ifdef CONFIG_SOC_JETSON
+  DtbUpdateFsi|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateFsi.inf
   DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateVpr.inf
 !else
+  DtbUpdateFsi|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
   DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
 !endif
 
@@ -1949,11 +1951,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   # Golden Register Support
   #
   Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
-
-  #
-  # FSI Support
-  #
-  Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
 
   #
   # BasicProfiler Support

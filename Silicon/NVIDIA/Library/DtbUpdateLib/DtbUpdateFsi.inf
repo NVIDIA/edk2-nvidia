@@ -1,6 +1,6 @@
 ## @file
 #
-#  DTB update library
+#  DTB update for FSI
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -10,31 +10,31 @@
 
 [Defines]
   INF_VERSION                    = 1.25
-  BASE_NAME                      = DtbUpdateLib
-  FILE_GUID                      = 1640cfcf-e589-4ff1-bf00-f29671c78bae
+  BASE_NAME                      = DtbUpdateFsi
+  FILE_GUID                      = 0ed139b8-3cad-4317-a928-7065239ebe6c
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = DtbUpdateLib
+  LIBRARY_CLASS                  = DtbUpdateFsi
+  CONSTRUCTOR                    = DtbUpdateFsiInitialize
 
 [Sources.common]
-  DtbUpdateLib.c
+  DtbUpdateFsi.c
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
-  NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   DebugLib
   DeviceTreeHelperLib
-  FdtLib
-  PrintLib
-  DtbUpdateBpmpIpc
-  DtbUpdateMacAddr
-  DtbUpdateVpr
-  DtbUpdateFsi
+  HobLib
+  PlatformResourceLib
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Depex]
   TRUE

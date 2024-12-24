@@ -441,11 +441,6 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/GoldenRegisterDxe/GoldenRegisterDxe.inf
 
   #
-  # FSI Support
-  #
-  INF Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
   # BasicProfiler Support
   #
   INF Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
