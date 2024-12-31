@@ -86,7 +86,7 @@ Tpm2Parser (
   //
   Status = NvAddSingleCmObj (
              ParserHandle,
-             CREATE_CM_ARM_OBJECT_ID (EArchCommonObjTpm2InterfaceInfo),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjTpm2InterfaceInfo),
              TpmInfo,
              sizeof (CM_ARCH_COMMON_TPM2_INTERFACE_INFO),
              NULL
