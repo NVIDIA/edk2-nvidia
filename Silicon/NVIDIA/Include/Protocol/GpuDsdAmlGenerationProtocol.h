@@ -2,7 +2,7 @@
 
   NVIDIA GPU DSD AML Generation Protocol interface declaration.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,6 +19,7 @@ typedef struct _NVIDIA_GPU_DSD_AML_GENERATION_PROTOCOL NVIDIA_GPU_DSD_AML_GENERA
 typedef enum {
   NVIDIA_GPU_HOPPER,
   NVIDIA_GPU_BLACKWELL,
+  NVIDIA_GPU_RUBIN,
   NVIDIA_GPU_UNKNOWN
 } NVIDIA_GPU_FAMILY;
 

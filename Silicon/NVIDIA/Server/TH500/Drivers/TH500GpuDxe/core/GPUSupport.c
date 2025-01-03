@@ -4,7 +4,7 @@
     Placeholder until PCD, post devinit scratch, fsp query
     or CXL information available
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -65,6 +65,7 @@
   0x2901 - 0x293f = GB100 products in endpoint mode
   0x2940 = reserved
   0x2941 - 0x297f = GB100 products in SH mode
+  0x3000 - 0x303f = GR100 products in endpoint mode
   0x31C0 = recovery mode and pre-silicon/unfused parts
   0x31C1 - 0x31FF = GB110 products in endpoint mode
   0x31A1 = GB110 product in endpoint mode
@@ -91,6 +92,8 @@
     ( ((vid)==0x10de) && ((((did)>=0x31C1) && ((did)<=0x31FF)) || ((did)==0x31A1)) )
 #define TH500_GB120_GPU_MODE_CHECK_SHH(vid, did) \
     ( ((vid)==0x10de) && (((did)>=0x3341) && ((did)<=0x337F)) )
+#define T410_GPU_MODE_CHECK_EH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x3000) && ((did)<=0x303f)) )
 #define TH500_GB180_GPU_MODE_CHECK_SHH(vid, did) \
     ( TH500_GB100_GPU_MODE_CHECK_SHH(vid, did) || \
       TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) || \
@@ -164,6 +167,9 @@ CheckGpuMode (
     } else if ( TH500_GB180_GPU_MODE_CHECK_EHH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EHH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
       *GpuMode = GPU_MODE_EHH;
+    } else if ( T410_GPU_MODE_CHECK_EH (Pci.Hdr.VendorId, Pci.Hdr.DeviceId)) {
+      DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] GPU Mode: 'EH'.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
+      *GpuMode = GPU_MODE_EH;
     } else {
       DEBUG ((DEBUG_INFO, "%a: [VID:0x%04x|DID:0x%04x] Unsupported GPU ID.\n", __FUNCTION__, Pci.Hdr.VendorId, Pci.Hdr.DeviceId));
       Status = EFI_UNSUPPORTED;

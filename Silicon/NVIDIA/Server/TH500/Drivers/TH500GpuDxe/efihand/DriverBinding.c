@@ -3,7 +3,7 @@
   Provides a driver binding protocol for supported NVIDIA GPUs
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -123,6 +123,14 @@ IdentifyControllerFamily (
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [EH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
     GpuFamily = NVIDIA_GPU_HOPPER;
+  }
+
+  /* GR100 products in endpoint mode */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x3000) && (ui16DeviceId <= 0x303f)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [EH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    GpuFamily = NVIDIA_GPU_RUBIN;
   }
 
   /* SHH */
