@@ -1,6 +1,6 @@
 /** @file
 
-SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -359,6 +359,7 @@ struct _NVIDIA_VAR_INT_PROTOCOL {
   UINT64                         BlockSize;
   UINT8                          *CurMeasurement;
   UINT32                         MeasurementSize;
+  VOID                           *PartitionData;
 };
 
 /*

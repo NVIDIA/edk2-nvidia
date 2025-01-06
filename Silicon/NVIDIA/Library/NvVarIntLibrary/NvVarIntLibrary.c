@@ -5,7 +5,7 @@
   The APIs can be called during a variable update (before the FVB Write) or
   at bootup to measure the variables on flash.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -362,8 +362,9 @@ MeasureSecureDbVars (
 
   PayloadPtr  = Data;
   PayloadSize = DataSize;
-  AppendWrite = FALSE;
+
   for (Index = 0; Index < (sizeof (SecureVars) / sizeof (SecureVars[0])); Index++) {
+    AppendWrite = FALSE;
     DEBUG ((
       DEBUG_INFO,
       "%a: First add %s VarName \n",
