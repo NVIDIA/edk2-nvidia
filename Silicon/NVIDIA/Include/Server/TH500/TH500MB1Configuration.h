@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -19,7 +19,7 @@
 #define TEGRABL_MAX_MPAM_PARTID           5
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  18
+#define TEGRABL_MB1_BCT_MINOR_VERSION  19
 
 #pragma pack(1)
 
@@ -95,8 +95,10 @@ typedef struct {
       UINT64    OsNativeAER            : 1;
       /* Disable PME transition during warm reset */
       UINT64    DisableL23AtWarmReset  : 1;
+      /* Disable DPC */
+      UINT64    DisableDPC             : 1;
       /* Reserved */
-      UINT64    FeaturesReserved       : 49;
+      UINT64    FeaturesReserved       : 48;
     };
   };
 

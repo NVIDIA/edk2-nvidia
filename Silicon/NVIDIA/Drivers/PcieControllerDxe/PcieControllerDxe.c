@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1086,8 +1086,8 @@ PcieEnableErrorReporting (
        * level and RP is saved from going into containment
        */
       if (ChipId == TH500_CHIP_ID) {
-        if ((Bus == 0) &&
-            Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP)
+        if ((Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPCAtRP && (Bus == 0)) ||
+            Mb1Config->Data.Mb1Data.PcieConfig[Socket][Ctrl].DisableDPC)
         {
           SkipDPCEnable = TRUE;
         }
