@@ -2,7 +2,7 @@
 
   Standalone MM Variable Integrity driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -219,6 +219,192 @@ GetMeasurementSize (
 }
 
 /*
+ * PartitionRead
+ * Util Function to read out of the Reserved Partition.
+ * The caller ensures that the read offset isn't stradling erase blocks.
+ *
+ * @param[in]     This    Variable Integrity Protocol Pointer.
+ * @param[in]     Offset  Partition Offset to read from.
+ * @param[in]     Size    Number of Bytes to read.
+ * @param[out]    Buffer  Output buffer to read to.
+ *
+ * @result  EFI_SUCCESS             Succesful read.
+ *          EFI_INVALID_PARAMETER   Invalid Partition Offset.
+ */
+STATIC
+EFI_STATUS
+PartitionRead (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  UINT32                   Offset,
+  IN  UINT32                   Size,
+  OUT UINT8                    *Buffer
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      PartitionStart;
+  UINT32      PartitionEnd;
+  UINT32      BufferOffset;
+
+  PartitionStart = This->PartitionByteOffset;
+  PartitionEnd   = PartitionStart + This->PartitionSize;
+
+  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionRead;
+  }
+
+  if ((Offset + Size) > PartitionEnd) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionRead;
+  }
+
+  BufferOffset = Offset - PartitionStart;
+  CopyMem (Buffer, (This->PartitionData + BufferOffset), Size);
+  Status = EFI_SUCCESS;
+ExitPartitionRead:
+  return Status;
+}
+
+/*
+ * PartitionWrite
+ * Util Function to write to the Reserved Partition.
+ * The caller of the function makes sure that the write isn't stradling erase
+ * blocks, so the checks here are minimal.
+ *
+ * @param[in]     This    Variable Integrity Protocol Pointer.
+ * @param[in]     Offset  Partition Offset to write to.
+ * @param[in]     Size    Number of Bytes to write.
+ * @param[in]     Buffer  Input buffer to copy from.
+ *
+ * @result  EFI_SUCCESS            Succesful write
+ *          EFI_INVALID_PARAMETER  Invalid Flash offset.
+ *          Other                  Failure to write to Flash.
+ */
+STATIC
+EFI_STATUS
+PartitionWrite (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  UINT32                   Offset,
+  IN  UINT32                   Size,
+  IN  UINT8                    *Buffer
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      PartitionStart;
+  UINT32      PartitionEnd;
+  UINT32      BufferOffset;
+
+  PartitionStart = This->PartitionByteOffset;
+  PartitionEnd   = PartitionStart + This->PartitionSize;
+
+  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionWrite;
+  }
+
+  if ((Offset + Size) > PartitionEnd) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionWrite;
+  }
+
+  BufferOffset = Offset - PartitionStart;
+
+  /* Update the Partition.*/
+  Status = This->NorFlashProtocol->Write (
+                                     This->NorFlashProtocol,
+                                     Offset,
+                                     Size,
+                                     Buffer
+                                     );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Write Failed(%r) at %lx Size %u\n",
+      __FUNCTION__,
+      Status,
+      Offset,
+      Size
+      ));
+    goto ExitPartitionWrite;
+  }
+
+  /* Update the Partition Data*/
+  CopyMem ((This->PartitionData + BufferOffset), Buffer, Size);
+
+ExitPartitionWrite:
+  return Status;
+}
+
+/*
+ * PartitionErase
+ * Util Function to Erase LBAs on the Reserved Partition.
+ *
+ * @param[in]     This      Variable Integrity Protocol Pointer.
+ * @param[in]     Lba       Starting LBA to start erasing.
+ * @param[in]     NumBlocks Number of LBAs to erase.
+
+ *
+ * @result  EFI_SUCCESS     Succesful write
+ *          Other           Failure to erase LBAs on Flash.
+ */
+STATIC
+EFI_STATUS
+PartitionErase (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  UINT32                   Lba,
+  IN  UINT32                   NumBlocks
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      PartitionStart;
+  UINT32      PartitionEnd;
+  UINT32      BufferOffset;
+  UINT32      Offset;
+  UINT32      Size;
+
+  PartitionStart = This->PartitionByteOffset;
+  PartitionEnd   = PartitionStart + This->PartitionSize;
+  Offset         = Lba * This->BlockSize;
+  Size           = NumBlocks * This->BlockSize;
+
+  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionErase;
+  }
+
+  if ((Offset + Size) > PartitionEnd) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitPartitionErase;
+  }
+
+  BufferOffset = Offset - PartitionStart;
+
+  /* Erase Partition Data*/
+  Status = This->NorFlashProtocol->Erase (
+                                     This->NorFlashProtocol,
+                                     Lba,
+                                     NumBlocks
+                                     );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Erase Failed(%r) at Block %u NumBlocks %u\n",
+      __FUNCTION__,
+      Status,
+      Lba,
+      NumBlocks
+      ));
+    goto ExitPartitionErase;
+  }
+
+  /* Update the Partition Data*/
+  SetMem ((This->PartitionData + BufferOffset), Size, FVB_ERASED_BYTE);
+
+ExitPartitionErase:
+  return Status;
+}
+
+/*
  * GetWriteOffset
  * Get the next byte offset in flash to write the next record to.
  * If there isn't an erased section of the flash to write to erase
@@ -237,26 +423,24 @@ GetWriteOffset (
   OUT UINT64                   *Offset
   )
 {
-  EFI_STATUS                 Status = EFI_SUCCESS;
-  UINT64                     StartOffset;
-  UINT64                     EndOffset;
-  UINT64                     CurOffset;
-  UINT64                     BlockOffset;
-  UINT64                     BlockEnd;
-  UINT64                     ValidRecord;
-  UINT8                      *ReadBuf;
-  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
-  BOOLEAN                    FoundOffset;
-  UINT32                     CurBlock;
-  UINT32                     StartBlock;
-  UINT32                     EndBlock;
-  UINT32                     NumPartitionBlocks;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  UINT64      StartOffset;
+  UINT64      EndOffset;
+  UINT64      CurOffset;
+  UINT64      BlockOffset;
+  UINT64      BlockEnd;
+  UINT64      ValidRecord;
+  UINT8       *ReadBuf;
+  BOOLEAN     FoundOffset;
+  UINT32      CurBlock;
+  UINT32      StartBlock;
+  UINT32      EndBlock;
+  UINT32      NumPartitionBlocks;
 
-  Status           = EFI_NOT_FOUND;
-  FoundOffset      = FALSE;
-  StartOffset      = This->PartitionByteOffset;
-  EndOffset        = StartOffset + This->PartitionSize;
-  NorFlashProtocol = This->NorFlashProtocol;
+  Status      = EFI_NOT_FOUND;
+  FoundOffset = FALSE;
+  StartOffset = This->PartitionByteOffset;
+  EndOffset   = StartOffset + This->PartitionSize;
 
   ReadBuf            = CurMeas;
   CurOffset          = StartOffset;
@@ -270,31 +454,31 @@ GetWriteOffset (
   /* Iterate over the partition (block at a time) */
   while ((CurOffset < EndOffset) && (FoundOffset == FALSE)) {
     while (BlockOffset < BlockEnd) {
-      Status = NorFlashProtocol->Read (
-                                   NorFlashProtocol,
-                                   BlockOffset,
-                                   This->MeasurementSize,
-                                   ReadBuf
-                                   );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Failed to read the working area\r\n", __FUNCTION__));
-        break;
-      }
+      if ((BlockOffset + This->MeasurementSize) < BlockEnd) {
+        Status = PartitionRead (
+                   This,
+                   BlockOffset,
+                   This->MeasurementSize,
+                   ReadBuf
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to read the working area\r\n", __FUNCTION__));
+          break;
+        }
 
-      if ((ReadBuf[0] == FVB_ERASED_BYTE) &&
-          ((BlockOffset + This->MeasurementSize) < BlockEnd))
-      {
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: Found a Valid Write Offset %lx\n",
-          __FUNCTION__,
-          BlockOffset
-          ));
-        FoundOffset = TRUE;
-        *Offset     = BlockOffset;
-        break;
-      } else if (ReadBuf[0] == VAR_INT_VALID) {
-        ValidRecord = BlockOffset;
+        if ((ReadBuf[0] == FVB_ERASED_BYTE)) {
+          DEBUG ((
+            DEBUG_INFO,
+            "%a: Found a Valid Write Offset %lx\n",
+            __FUNCTION__,
+            BlockOffset
+            ));
+          FoundOffset = TRUE;
+          *Offset     = BlockOffset;
+          break;
+        } else if (ReadBuf[0] == VAR_INT_VALID) {
+          ValidRecord = BlockOffset;
+        }
       }
 
       BlockOffset += This->MeasurementSize;
@@ -323,12 +507,12 @@ GetWriteOffset (
   }
 
   if ((*Offset % This->BlockSize) == 0) {
-    DEBUG ((DEBUG_INFO, "Erasing BLock %lu\n", *Offset));
-    Status = NorFlashProtocol->Erase (
-                                 NorFlashProtocol,
-                                 (*Offset / This->BlockSize),
-                                 1
-                                 );
+    DEBUG ((DEBUG_INFO, "Erasing Block %lu\n", *Offset));
+    Status = PartitionErase (
+               This,
+               (*Offset / This->BlockSize),
+               1
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to Erase block at %lu\n", __FUNCTION__, *Offset));
     }
@@ -427,11 +611,8 @@ VarIntWriteMeasurement (
   IN NVIDIA_VAR_INT_PROTOCOL  *This
   )
 {
-  EFI_STATUS                 Status = EFI_SUCCESS;
-  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
-  UINT64                     CurOffset;
-
-  NorFlashProtocol = This->NorFlashProtocol;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  UINT64      CurOffset;
 
   Status = GetWriteOffset (This, &CurOffset);
   if (EFI_ERROR (Status)) {
@@ -445,12 +626,12 @@ VarIntWriteMeasurement (
 
   DEBUG ((DEBUG_INFO, "%a: Write Offset %lu\n", __FUNCTION__, CurOffset));
   This->CurMeasurement[0] = VAR_INT_PENDING;
-  Status                  = NorFlashProtocol->Write (
-                                                NorFlashProtocol,
-                                                CurOffset,
-                                                This->MeasurementSize,
-                                                This->CurMeasurement
-                                                );
+  Status                  = PartitionWrite (
+                              This,
+                              CurOffset,
+                              This->MeasurementSize,
+                              This->CurMeasurement
+                              );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to Write measurement to %lu\n", CurOffset));
   }
@@ -508,42 +689,44 @@ GetLastValidMeasurements (
 
   while (CurOffset < EndOffset) {
     while (BlockOffset < BlockEnd) {
-      Status = NorFlash->Read (
-                           NorFlash,
-                           BlockOffset,
-                           VarInt->MeasurementSize,
-                           ReadBuf
-                           );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: NorFlash Read Failed at %lu offset %r\n",
-          __FUNCTION__,
-          BlockOffset,
-          Status
-          ));
-        goto ExitGetLastValidMeasuremets;
-      }
-
-      if ((ReadBuf[0] == VAR_INT_VALID) ||
-          (ReadBuf[0] == VAR_INT_PENDING))
-      {
-        NumValidRecords++;
-        if (NumValidRecords > MAX_VALID_RECORDS) {
+      if ((BlockOffset + VarInt->MeasurementSize) < BlockEnd) {
+        Status = PartitionRead (
+                   VarInt,
+                   BlockOffset,
+                   VarInt->MeasurementSize,
+                   ReadBuf
+                   );
+        if (EFI_ERROR (Status)) {
           DEBUG ((
             DEBUG_ERROR,
-            "%a: More than %d Valid measurements found %x\n",
+            "%a: NorFlash Read Failed at %lu offset %r\n",
             __FUNCTION__,
-            MAX_VALID_RECORDS,
-            ReadBuf[0]
+            BlockOffset,
+            Status
             ));
-          Status = EFI_DEVICE_ERROR;
           goto ExitGetLastValidMeasuremets;
-        } else {
-          DEBUG ((DEBUG_INFO, "Found Record at %lu Header %x\n", BlockOffset, ReadBuf[0]));
-          CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, VarInt->MeasurementSize);
-          *NumRecords                               += 1;
-          Records[(NumValidRecords - 1)]->ByteOffset = BlockOffset;
+        }
+
+        if ((ReadBuf[0] == VAR_INT_VALID) ||
+            (ReadBuf[0] == VAR_INT_PENDING))
+        {
+          NumValidRecords++;
+          if (NumValidRecords > MAX_VALID_RECORDS) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "%a: More than %d Valid measurements found %x\n",
+              __FUNCTION__,
+              MAX_VALID_RECORDS,
+              ReadBuf[0]
+              ));
+            Status = EFI_DEVICE_ERROR;
+            goto ExitGetLastValidMeasuremets;
+          } else {
+            DEBUG ((DEBUG_INFO, "Found Record at %lu Header %x\n", BlockOffset, ReadBuf[0]));
+            CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, VarInt->MeasurementSize);
+            *NumRecords                               += 1;
+            Records[(NumValidRecords - 1)]->ByteOffset = BlockOffset;
+          }
         }
       }
 
@@ -574,10 +757,10 @@ ExitGetLastValidMeasuremets:
 STATIC
 EFI_STATUS
 CommitMeasurements (
-  IN  UINT32                     NumValidRecords,
-  IN  MEASURE_REC_TYPE           **Measurements,
-  IN  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProto,
-  IN  EFI_STATUS                 PreviousResult
+  IN  UINT32                   NumValidRecords,
+  IN  MEASURE_REC_TYPE         **Measurements,
+  IN  NVIDIA_VAR_INT_PROTOCOL  *VarIntProto,
+  IN  EFI_STATUS               PreviousResult
   )
 {
   UINTN             Index;
@@ -615,12 +798,12 @@ CommitMeasurements (
       CurRec->ByteOffset,
       PreviousResult
       ));
-    Status = NorFlashProto->Write (
-                              NorFlashProto,
-                              CurRec->ByteOffset,
-                              1,
-                              &CurRec->Measurement[0]
-                              );
+    Status = PartitionWrite (
+               VarIntProto,
+               CurRec->ByteOffset,
+               1,
+               &CurRec->Measurement[0]
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -657,10 +840,9 @@ VarIntInvalidateLast (
   IN  EFI_STATUS               PrevResult
   )
 {
-  EFI_STATUS                 Status = EFI_SUCCESS;
-  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProto;
-  UINT32                     NumValidRecords;
-  UINTN                      Index;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  UINT32      NumValidRecords;
+  UINTN       Index;
 
   if ((IsSecureDbVar (VariableName, VendorGuid) == FALSE) &&
       (IsBootVar (VariableName, VendorGuid) == FALSE))
@@ -696,11 +878,10 @@ VarIntInvalidateLast (
   }
 
   This->CurMeasurement[0] = VAR_INT_VALID;
-  NorFlashProto           = This->NorFlashProtocol;
   Status                  = CommitMeasurements (
                               NumValidRecords,
                               LastMeasurements,
-                              NorFlashProto,
+                              This,
                               PrevResult
                               );
   if (EFI_ERROR (Status)) {
@@ -756,12 +937,12 @@ InitPartition (
     }
 
     DEBUG ((DEBUG_INFO, "%a: Write Offset %lu\n", __FUNCTION__, WriteOffset));
-    Status = VarInt->NorFlashProtocol->Write (
-                                         VarInt->NorFlashProtocol,
-                                         WriteOffset,
-                                         VarInt->MeasurementSize,
-                                         VarInt->CurMeasurement
-                                         );
+    Status = PartitionWrite (
+               VarInt,
+               WriteOffset,
+               VarInt->MeasurementSize,
+               VarInt->CurMeasurement
+               );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to Write measurement to %lu\n", WriteOffset));
       DEBUG ((
@@ -994,7 +1175,7 @@ VarIntValidate (
     Status = CommitMeasurements (
                NumValidRecords,
                LastMeasurements,
-               This->NorFlashProtocol,
+               This,
                EFI_SUCCESS
                );
     if (EFI_ERROR (Status)) {
@@ -1097,7 +1278,6 @@ VarIntInit (
   VarIntProto->NorFlashProtocol      = NorFlashProto;
   VarIntProto->MeasurementSize       = MeasSize + HEADER_SZ_BYTES;
   VarIntProto->CurMeasurement        = AllocateRuntimeZeroPool (MeasSize);
-
   if (VarIntProto->CurMeasurement == NULL) {
     DEBUG ((
       DEBUG_ERROR,
@@ -1107,6 +1287,25 @@ VarIntInit (
       ));
     Status = EFI_OUT_OF_RESOURCES;
     ASSERT_EFI_ERROR (Status);
+  }
+
+  VarIntProto->PartitionData = AllocateRuntimeZeroPool (VarIntProto->PartitionSize);
+  if (VarIntProto->PartitionData == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    ASSERT_EFI_ERROR (Status);
+    goto ExitVarIntInit;
+  }
+
+  Status = NorFlashProto->Read (
+                            NorFlashProto,
+                            VarIntProto->PartitionByteOffset,
+                            VarIntProto->PartitionSize,
+                            VarIntProto->PartitionData
+                            );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to Read from Reserved Partition %r", Status));
+    ASSERT_EFI_ERROR (Status);
+    goto ExitVarIntInit;
   }
 
   VarIntHandle = NULL;
@@ -1131,7 +1330,8 @@ VarIntInit (
     LastMeasurements[Index] = AllocateRuntimeZeroPool (sizeof (MEASURE_REC_TYPE));
     if (LastMeasurements[Index] == NULL) {
       DEBUG ((DEBUG_ERROR, "%a:%d  Failed to Allocate Memory\n", __FUNCTION__, __LINE__));
-      ASSERT (FALSE);
+      Status = EFI_OUT_OF_RESOURCES;
+      ASSERT_EFI_ERROR (Status);
     }
 
     LastMeasurements[Index]->Measurement = AllocateRuntimeZeroPool (
@@ -1139,7 +1339,8 @@ VarIntInit (
                                              );
     if (LastMeasurements[Index]->Measurement == NULL) {
       DEBUG ((DEBUG_ERROR, "%a Failed to allocate Measurements Buf \n", __FUNCTION__));
-      ASSERT (FALSE);
+      Status = EFI_OUT_OF_RESOURCES;
+      ASSERT_EFI_ERROR (Status);
     }
 
     LastMeasurements[Index]->ByteOffset = 0;
