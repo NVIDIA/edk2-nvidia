@@ -273,19 +273,7 @@ BpmpIpcInitialize (
   }
 
   if (!BpmpPresent) {
-    Status = gBS->InstallMultipleProtocolInterfaces (
-                    &ImageHandle,
-                    &gNVIDIABpmpIpcProtocolGuid,
-                    &mBpmpDummyProtocol,
-                    &gNVIDIADummyBpmpIpcProtocolGuid,
-                    NULL,
-                    NULL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a, Failed to install protocol: %r", __FUNCTION__, Status));
-    }
-
-    return Status;
+    goto Done;
   }
 
   // BPMP
