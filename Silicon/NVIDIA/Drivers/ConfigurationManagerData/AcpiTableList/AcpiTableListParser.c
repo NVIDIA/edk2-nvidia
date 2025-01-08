@@ -1,7 +1,7 @@
 /** @file
   Acpi Table List parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -221,6 +221,7 @@ AcpiTableListParser (
   UINTN                        ArraySize;
   VOID                         *DsdtTable;
   NVIDIA_AML_PATCH_PROTOCOL    *PatchProtocol;
+  UINT32                       MaxSocket;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
@@ -296,17 +297,16 @@ AcpiTableListParser (
     }
   }
 
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PlatformInfo\n", __FUNCTION__, Status));
+    goto CleanupAndReturn;
+  }
+
   // Add tables for additional sockets if needed
-  if (ChipID == TH500_CHIP_ID) {
-    UINT32                      MaxSocket;
+  if (MaxSocket > 0) {
     UINT32                      SocketId;
     CM_STD_OBJ_ACPI_TABLE_INFO  NewAcpiTable;
-
-    Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PlatformInfo\n", __FUNCTION__, Status));
-      goto CleanupAndReturn;
-    }
 
     NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
     NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
@@ -318,7 +318,7 @@ AcpiTableListParser (
     for (SocketId = 1; SocketId <= MaxSocket; SocketId++) {
       Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL);
       if (!EFI_ERROR (Status)) {
-        NewAcpiTable.AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)AcpiTableArray_TH500[SocketId];
+        NewAcpiTable.AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)AcpiTableArray[SocketId];
 
         Status = NvAddAcpiTableGenerator (ParserHandle, &NewAcpiTable);
         if (EFI_ERROR (Status)) {
