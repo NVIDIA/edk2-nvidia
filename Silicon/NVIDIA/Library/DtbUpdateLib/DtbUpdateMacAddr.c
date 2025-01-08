@@ -156,6 +156,11 @@ DtbUpdateNodeMacAddress (
     MacIndex = 0;
   }
 
+  if (MacIndex >= mNumMacAddresses) {
+    DEBUG ((DEBUG_ERROR, "%a: mac-addr-idx (%a) %u > max=%u, using base\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), MacIndex, mNumMacAddresses));
+    MacIndex = 0;
+  }
+
   MacFdt = DtbUpdateMacToBEValue (mMacValue + MacIndex);
   DEBUG ((DEBUG_INFO, "%a: mac=0x%llx index=%u fdt=0x%llx\n", __FUNCTION__, mMacValue, MacIndex, MacFdt));
 
