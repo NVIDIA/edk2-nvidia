@@ -3,7 +3,7 @@
   Provides a driver binding protocol for supported NVIDIA GPUs
   as well as providing the NVIDIA GPU DSD AML Generation Protoocol.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -804,8 +804,11 @@ NVIDIAGpuDriverStart (
       } else {
         DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] HbmRangeStart: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->HbmRangeStart));
         DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] HbmRangeSize: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->HbmRangeSize));
-        DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] ProximityDomainStart: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->ProximityDomainStart));
-        DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] NumProximityDomains: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->NumProximityDomains));
+        if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+          DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] ProximityDomainStart: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->ProximityDomainStart));
+          DEBUG ((DEBUG_INFO, "%a: [Controller:%p PciIo:%p] NumProximityDomains: '%p'\n", __FUNCTION__, ControllerHandle, PciIo, ATSRangeInfo->NumProximityDomains));
+        }
+
         HbmBasePa = ATSRangeInfo->HbmRangeStart;
       }
 

@@ -2,7 +2,7 @@
 
   NVIDIA GPU support structures and prototypes.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -16,17 +16,6 @@
 
 enum {
   MAX_GPU_MEMORY_INFO_PROPERTY_ENTRIES = 8
-};
-
-enum {
-  GPU_MEMORY_INFO_PROPERTY_INDEX_0 = 0,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_1 = 1,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_2 = 2,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_3 = 3,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_4 = 4,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_5 = 5,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_6 = 6,
-  GPU_MEMORY_INFO_PROPERTY_INDEX_7 = 7,
 };
 
 enum {

@@ -4,7 +4,7 @@
     Placeholder until PCD, post devinit scratch, fsp query
     or CXL information available
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -160,52 +160,11 @@ PatchLegacySimPlatformResourceHobData (
   return FixedPlatformResourceInfo;
 }
 
-STATIC
-NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL *
-EFIAPI
-PatchLegacySimPlatformPciRootBridgeConfiguration (
-  IN NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *Protocol
-  )
-{
-  EFI_PHYSICAL_ADDRESS                              HbmRangeStart = 0x10000000ULL;
-  UINTN                                             HbmRangeSize = 0x10000000ULL;
-  UINT8                                             ProximityDomainStart = 1;
-  UINT8                                             NumProximityDomains = 1;
-  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  StagingProtocol, *PatchedProtocol;
-  UINT32                                            OldStructSize;
-
-  //  NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL           *Protocol;
-
-  if (NULL == Protocol) {
-    return Protocol;
-  }
-
-  /* adjust size to remove the new Hbm sizes */
-  OldStructSize = (sizeof (NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL) -
-                   (sizeof (EFI_PHYSICAL_ADDRESS) + sizeof (UINTN) + (2 * sizeof (UINT8))));
-
-  CopyMem (&StagingProtocol, Protocol, OldStructSize);
-  StagingProtocol.HbmRangeStart        = HbmRangeStart;
-  StagingProtocol.HbmRangeSize         = HbmRangeSize;
-  StagingProtocol.ProximityDomainStart = ProximityDomainStart;
-  StagingProtocol.NumProximityDomains  = NumProximityDomains;
-
-  PatchedProtocol = AllocateCopyPool (sizeof (NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL), &StagingProtocol);
-
-  return PatchedProtocol;
-}
-
 /* Disable standard SHIM mapping to execute Patched version for testing on tarball TH500 Sim */
 #if 1
 #define SHIM_GET_GUID_HOB_DATA(Hob)  GET_GUID_HOB_DATA(Hob)
 #else
 #define SHIM_GET_GUID_HOB_DATA(Hob)  PatchLegacySimPlatformResourceHobData(Hob)
-#endif
-
-#if 1
-#define SHIM_PATCH_PCI_ROOT_BRIDGE_CONFIGURATION_IO(Protocol)  (Protocol)
-#else
-#define SHIM_PATCH_PCI_ROOT_BRIDGE_CONFIGURATION_IO(Protocol)  PatchLegacySimPlatformPciRootBridgeConfiguration(Protocol)
 #endif
 
 /** Allocate and configure GPU Memory Info structure
@@ -281,19 +240,28 @@ GetGPUMemoryInfo (
     if (EFI_ERROR (StatusLocal)) {
       DEBUG ((DEBUG_ERROR, "INFO: 'GetControllerATSRangeInfo' on Handle [%p]. Status = %r.\n", ControllerHandle, StatusLocal));
     } else {
-      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_BASE_PA].PropertyValue   = (UINT64)ATSRangeInfo.HbmRangeStart;
-      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_SIZE].PropertyValue      = (UINT64)ATSRangeInfo.HbmRangeSize;
-      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue = ATSRangeInfo.ProximityDomainStart;
-      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue = ATSRangeInfo.NumProximityDomains;
+      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_BASE_PA].PropertyValue = (UINT64)ATSRangeInfo.HbmRangeStart;
+      GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_SIZE].PropertyValue    = (UINT64)ATSRangeInfo.HbmRangeSize;
+      if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+        GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue = ATSRangeInfo.ProximityDomainStart;
+        GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue = ATSRangeInfo.NumProximityDomains;
+      }
+
       DEBUG_CODE_BEGIN ();
       DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.HbmRangeStart: '%lX'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.HbmRangeStart));
       DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.HbmRangeSize: '%lX'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.HbmRangeSize));
-      DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.ProximityDomainStart: '%d'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.ProximityDomainStart));
-      DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.NumProximityDomains: '%d'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.NumProximityDomains));
+      if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+        DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.ProximityDomainStart: '%d'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.ProximityDomainStart));
+        DEBUG ((DEBUG_INFO, "%a: [%p] ATSRangeInfo.NumProximityDomains: '%d'\n", __FUNCTION__, ControllerHandle, ATSRangeInfo.NumProximityDomains));
+      }
+
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_BASE_PA].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_BASE_PA].PropertyValue));
       DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %lX\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_SIZE].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_SIZE].PropertyValue));
-      DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue));
-      DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue));
+      if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+        DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue));
+        DEBUG ((DEBUG_INFO, "%a: [%p] '%a': %d\n", __FUNCTION__, ControllerHandle, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyName, GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue));
+      }
+
       DEBUG_CODE_END ();
     }
   }
@@ -435,17 +403,12 @@ GetControllerATSRangeInfo (
  #if 0 // These are not live on stock TH500 SIM tarball
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.HbmRangeStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->HbmRangeStart));
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.HbmRangeSize: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->HbmRangeSize));
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.ProximityDomainStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->ProximityDomainStart));
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.NumProximityDomains: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->NumProximityDomains));
- #endif
-  DEBUG_CODE_END ();
+  if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.ProximityDomainStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->ProximityDomainStart));
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.NumProximityDomains: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->NumProximityDomains));
+  }
 
-  /* Required sim patch - causes cpp check failure 'SeflAssignment' if left enabled for silicon build */
- #if 0
-  PciRootBridgeConfigurationIo = SHIM_PATCH_PCI_ROOT_BRIDGE_CONFIGURATION_IO (PciRootBridgeConfigurationIo);
  #endif
-
-  DEBUG_CODE_BEGIN ();
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.Read: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->Read));
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.Write: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->Write));
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.SegmentNumber: '%08x'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->SegmentNumber));
@@ -455,16 +418,21 @@ GetControllerATSRangeInfo (
  #if 1  // These are not live on stock TH500 SIM tarball, but should be patched by the above call if patching path is enabled.
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.HbmRangeStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->HbmRangeStart));
   DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.HbmRangeSize: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->HbmRangeSize));
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.ProximityDomainStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->ProximityDomainStart));
-  DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.NumProximityDomains: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->NumProximityDomains));
+  if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.ProximityDomainStart: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->ProximityDomainStart));
+    DEBUG ((DEBUG_INFO, "%a: [%p] PciRootBridgeConfigurationIo.NumProximityDomains: '%p'\n", __FUNCTION__, PciRootBridgeConfigurationIo, PciRootBridgeConfigurationIo->NumProximityDomains));
+  }
+
  #endif
   DEBUG_CODE_END ();
 
   // Retrieve HBM configuration data
-  ATSRangeInfoData->HbmRangeStart        = PciRootBridgeConfigurationIo->HbmRangeStart;
-  ATSRangeInfoData->HbmRangeSize         = PciRootBridgeConfigurationIo->HbmRangeSize;
-  ATSRangeInfoData->ProximityDomainStart = PciRootBridgeConfigurationIo->ProximityDomainStart;
-  ATSRangeInfoData->NumProximityDomains  = PciRootBridgeConfigurationIo->NumProximityDomains;
+  ATSRangeInfoData->HbmRangeStart = PciRootBridgeConfigurationIo->HbmRangeStart;
+  ATSRangeInfoData->HbmRangeSize  = PciRootBridgeConfigurationIo->HbmRangeSize;
+  if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+    ATSRangeInfoData->ProximityDomainStart = PciRootBridgeConfigurationIo->ProximityDomainStart;
+    ATSRangeInfoData->NumProximityDomains  = PciRootBridgeConfigurationIo->NumProximityDomains;
+  }
 
   return EFI_SUCCESS;
 }

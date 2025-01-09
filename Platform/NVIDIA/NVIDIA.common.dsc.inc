@@ -1347,6 +1347,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
+  gNVIDIATokenSpaceGuid.PcdGenerateGpuPxmInfoDsd|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 

@@ -2,7 +2,7 @@
 
   NVIDIA GPU DSD AML Generation Protocol Handler.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -177,31 +177,33 @@ GenerateGpuAmlDsdNode (
              );
   ASSERT_EFI_ERROR (Status);
 
-  //  ASL:
-  //      Package(2) { "nvda_gpu_mem_pxm_start", (16 + ((0) * 8)) },
+  if (PcdGetBool (PcdGenerateGpuPxmInfoDsd)) {
+    //  ASL:
+    //      Package(2) { "nvda_gpu_mem_pxm_start", (16 + ((0) * 8)) },
 
-  Name  = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyName;
-  Value = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue;
+    Name  = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyName;
+    Value = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_START].PropertyValue;
 
-  Status = AmlAddNameIntegerPackage (
-             Name,
-             Value,
-             PackageNode
-             );
-  ASSERT_EFI_ERROR (Status);
+    Status = AmlAddNameIntegerPackage (
+               Name,
+               Value,
+               PackageNode
+               );
+    ASSERT_EFI_ERROR (Status);
 
-  //  ASL:
-  //      Package(2) { "nvda_gpu_mem_pxm_count", 8 },
+    //  ASL:
+    //      Package(2) { "nvda_gpu_mem_pxm_count", 8 },
 
-  Name  = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyName;
-  Value = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue;
+    Name  = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyName;
+    Value = GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_MEM_PXM_COUNT].PropertyValue;
 
-  Status = AmlAddNameIntegerPackage (
-             Name,
-             Value,
-             PackageNode
-             );
-  ASSERT_EFI_ERROR (Status);
+    Status = AmlAddNameIntegerPackage (
+               Name,
+               Value,
+               PackageNode
+               );
+    ASSERT_EFI_ERROR (Status);
+  }
 
   //  ASL:
   //      Package(2) { "nvda_gpu_mem_size", 0x10000000 },
