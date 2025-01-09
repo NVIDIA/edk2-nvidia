@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -98,6 +98,10 @@ TEGRA_MMIO_INFO  TH500MmioInfo[] = {
   },
   {
     TH500_WDT_RFRSH_BASE,
+    SIZE_4KB
+  },
+  {
+    FixedPcdGet64 (PcdSbsaUartBaseTH500),
     SIZE_4KB
   },
   // Placeholder for memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM that would
@@ -276,48 +280,6 @@ TH500GetSocketMask (
   ASSERT (HighBitSet32 (SocketMask) < TH500_MAX_SOCKETS);
 
   return SocketMask;
-}
-
-/**
-  Retrieve UART Instance Info
-
-  This function retrieves the base address of that UART instance, and sets the known UART type
-  based on the UART instance number.
-
-  @param[in]  UARTInstanceNumber    UART instance number
-  @param[out] UARTInstanceType      UART instance type
-  @param[out] UARTInstanceAddress   UART instance address
-
-  @retval TRUE    UART instance info was successfullly retrieved
-  @retval FALSE   Retrieval of UART instance info failed
-
-**/
-BOOLEAN
-TH500UARTInstanceInfo (
-  IN  UINT32                UARTInstanceNumber,
-  OUT UINT32                *UARTInstanceType,
-  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-  )
-{
-  EFI_PHYSICAL_ADDRESS  UARTBaseAddress[] = {
-    0x0,
-    TEGRA_UART_ADDRESS_0,
-    TEGRA_UART_ADDRESS_1,
-  };
-
-  *UARTInstanceAddress = 0;
-  *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
-
-  if ((UARTInstanceNumber >= ARRAY_SIZE (UARTBaseAddress)) ||
-      ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_FLAG) == 0x0))
-  {
-    return FALSE;
-  }
-
-  *UARTInstanceType    = TEGRA_UART_TYPE_SBSA;
-  *UARTInstanceAddress = UARTBaseAddress[UARTInstanceNumber];
-
-  return TRUE;
 }
 
 /**

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -38,96 +38,6 @@ SetTegraUARTBaseAddress (
   )
 {
   TegraUARTBaseAddress = UartBaseAddress;
-}
-
-/**
-  Retrieve Tegra UART Base Address
-
-**/
-EFI_PHYSICAL_ADDRESS
-EFIAPI
-GetTegraUARTBaseAddress (
-  VOID
-  )
-{
-  UINTN  ChipID;
-
-  if (TegraUARTBaseAddress != 0x0) {
-    return TegraUARTBaseAddress;
-  }
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return FixedPcdGet64 (PcdTegra16550UartBaseT234);
-    case TH500_CHIP_ID:
-      return FixedPcdGet64 (PcdSbsaUartBaseTH500);
-    default:
-      return 0x0;
-  }
-}
-
-/**
-  It's to get the UART instance number that the trust-firmware hands over.
-  Currently that chain is broken so temporarily override the UART instance number
-  to the fixed known id based on the chip id.
-
-**/
-STATIC
-BOOLEAN
-GetSharedUARTInstanceId (
-  IN  UINTN   ChipID,
-  OUT UINT32  *UARTInstanceNumber
-  )
-{
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      *UARTInstanceNumber = 1; // UART_A
-      return TRUE;
-    case TH500_CHIP_ID:
-      *UARTInstanceNumber = 1; // UART_0
-      return TRUE;
-    default:
-      return FALSE;
-  }
-}
-
-/**
-  Retrieve the type and address of UART based on the instance Number
-
-**/
-EFI_STATUS
-EFIAPI
-GetUARTInstanceInfo (
-  OUT UINT32                *UARTInstanceType,
-  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-  )
-{
-  UINTN   ChipID;
-  UINT32  SharedUARTInstanceId;
-
-  *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
-  *UARTInstanceAddress = 0x0;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      if (!GetSharedUARTInstanceId (ChipID, &SharedUARTInstanceId)) {
-        return EFI_UNSUPPORTED;
-      }
-
-      return T234UARTInstanceInfo (SharedUARTInstanceId, UARTInstanceType, UARTInstanceAddress);
-    case TH500_CHIP_ID:
-      if (!GetSharedUARTInstanceId (ChipID, &SharedUARTInstanceId)) {
-        return EFI_UNSUPPORTED;
-      }
-
-      return TH500UARTInstanceInfo (SharedUARTInstanceId, UARTInstanceType, UARTInstanceAddress);
-    default:
-      return EFI_UNSUPPORTED;
-  }
 }
 
 /**

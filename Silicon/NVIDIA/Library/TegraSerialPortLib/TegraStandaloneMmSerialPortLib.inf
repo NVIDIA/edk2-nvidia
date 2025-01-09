@@ -2,7 +2,7 @@
 #
 #  Component description file for TegraSerialPortLib module for StandaloneMm
 #
-#  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -20,11 +20,7 @@
   TegraStandaloneMmSerialPortLib.c
 
 [LibraryClasses]
-  TegraSbsaSerialPortLib
-  Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
-  TegraPlatformInfoLib
-  PlatformResourceLib
   StandaloneMmOpteeLib
 
 [Packages]

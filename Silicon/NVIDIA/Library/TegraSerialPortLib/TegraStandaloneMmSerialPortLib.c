@@ -1,18 +1,16 @@
 /** @file
   Serial I/O Port wrapper library for StandaloneMm
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <Base.h>
-#include <Library/PlatformResourceLib.h>
-#include <Library/TegraPlatformInfoLib.h>
 #include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
+#include <Library/NVIDIADebugLib.h>
 
 STATIC
 TEGRA_UART_OBJ  *TegraUartObj = NULL;
@@ -30,53 +28,24 @@ SerialPortIdentify (
   SERIAL_MAPPING  **SerialMapping OPTIONAL
   )
 {
-  EFI_STATUS            Status;
-  UINT32                ChipID;
-  UINT32                UARTInstanceType;
-  EFI_PHYSICAL_ADDRESS  UARTInstanceAddress;
+  EFI_STATUS           Status;
+  EFI_VIRTUAL_ADDRESS  Base;
+  UINTN                Size;
 
   // Ensure the fallback resource ready
   SetTegraUARTBaseAddress (0);
 
-  /*
-   * In OP-TEE configurations StMM can't access an
-   */
-  if (IsOpteePresent ()) {
-    EFI_VIRTUAL_ADDRESS  Base;
-    UINTN                Size;
+  NV_ASSERT_RETURN (IsOpteePresent (), return , "%a: not OPTEE!", __FUNCTION__);
 
-    Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
-    if (!EFI_ERROR (Status)) {
-      TegraUartObj = TegraCombinedSerialPortGetObject ();
-    }
+  Status = GetDeviceRegion ("combuart-t234", &Base, &Size);
+  if (!EFI_ERROR (Status)) {
+    TegraUartObj = TegraCombinedSerialPortGetObject ();
+  }
 
-    if (TegraUartObj != NULL) {
-      SetTegraUARTBaseAddress (Base);
-      SerialBaseAddress = Base;
-      TegraUartObj->SerialPortInitialize (SerialBaseAddress);
-    }
-  } else {
-    // Retrieve the type and address based on UART instance
-    Status = GetUARTInstanceInfo (&UARTInstanceType, &UARTInstanceAddress);
-    if (EFI_ERROR (Status) || (UARTInstanceType == TEGRA_UART_TYPE_NONE)) {
-      // Try the legacy fallback mode to select the SerialPort
-      SerialBaseAddress = GetTegraUARTBaseAddress ();
-      ChipID            = TegraGetChipID ();
-      TegraUartObj      = Tegra16550SerialPortGetObject ();
-    }
-
-    // Select the SerialPort based on the retrieved UART instance info
-    SerialBaseAddress = UARTInstanceAddress;
-    SetTegraUARTBaseAddress (UARTInstanceAddress);
-    if (UARTInstanceType == TEGRA_UART_TYPE_16550) {
-      TegraUartObj = Tegra16550SerialPortGetObject ();
-    } else if (UARTInstanceType == TEGRA_UART_TYPE_TCU) {
-      TegraUartObj = TegraCombinedSerialPortGetObject ();
-    } else if (UARTInstanceType == TEGRA_UART_TYPE_SBSA) {
-      TegraUartObj = TegraSbsaSerialPortGetObject ();
-    } else {
-      TegraUartObj = Tegra16550SerialPortGetObject ();
-    }
+  if (TegraUartObj != NULL) {
+    SetTegraUARTBaseAddress (Base);
+    SerialBaseAddress = Base;
+    TegraUartObj->SerialPortInitialize (SerialBaseAddress);
   }
 }
 
@@ -92,22 +61,15 @@ SerialPortInitialize (
   VOID
   )
 {
+  NV_ASSERT_RETURN (IsOpteePresent (), return RETURN_UNSUPPORTED, "%a: not OPTEE!", __FUNCTION__);
+
   /* For OP-TEE configurations, return SUCCESS, since  this function is
    * called as part of the Library Constructors for Standalone Mm Entry
    * point at which point the Guided Hob list containing the device Mem
    * address mappings haven't been setup..
    */
-  if (IsOpteePresent ()) {
-    SerialPortInitialized = TRUE;
-    return RETURN_SUCCESS;
-  } else {
-    SerialPortIdentify (NULL);
-    if (TegraUartObj != NULL) {
-      return TegraUartObj->SerialPortInitialize (SerialBaseAddress);
-    } else {
-      return RETURN_SUCCESS;
-    }
-  }
+  SerialPortInitialized = TRUE;
+  return RETURN_SUCCESS;
 }
 
 /**

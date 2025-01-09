@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -215,27 +215,6 @@ VOID
 EFIAPI
 SetTegraUARTBaseAddress (
   IN EFI_PHYSICAL_ADDRESS  UartBaseAddress
-  );
-
-/**
-  Retrieve Tegra UART Base Address
-
-**/
-EFI_PHYSICAL_ADDRESS
-EFIAPI
-GetTegraUARTBaseAddress (
-  VOID
-  );
-
-/**
-  Retrieve the type and address of UART based on the instance Number
-
-**/
-EFI_STATUS
-EFIAPI
-GetUARTInstanceInfo (
-  OUT UINT32                *UARTInstanceType,
-  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
   );
 
 /**

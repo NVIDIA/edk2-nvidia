@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -60,6 +60,10 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     T234_SCRATCH_BASE,
     SIZE_64KB
   },
+  {
+    FixedPcdGet64 (PcdTegra16550UartBaseT234),
+    SIZE_4KB
+  },
   // Placeholder for memory in DRAM CO CARVEOUT_DISP_EARLY_BOOT_FB
   // that would be treated as MMIO memory.
   {
@@ -96,64 +100,6 @@ NVDA_MEMORY_REGION  T234DramPageBlacklistInfoAddress[] = {
 };
 
 STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo;
-
-/**
-  Retrieve UART Instance Info
-
-  This function retrieves the base address of that UART instance, and sets the known UART type
-  based on the UART instance number.
-
-  @param[in]  UARTInstanceNumber    UART instance number
-  @param[out] UARTInstanceType      UART instance type
-  @param[out] UARTInstanceAddress   UART instance address
-
-  @retval TRUE    UART instance info was successfullly retrieved
-  @retval FALSE   Retrieval of UART instance info failed
-
-**/
-BOOLEAN
-T234UARTInstanceInfo (
-  IN  UINT32                UARTInstanceNumber,
-  OUT UINT32                *UARTInstanceType,
-  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-  )
-{
-  EFI_PHYSICAL_ADDRESS  UARTBaseAddress[] = {
-    0x0,
-    TEGRA_UART_ADDRESS_A,
-    TEGRA_UART_ADDRESS_B,
-    TEGRA_UART_ADDRESS_C,
-    TEGRA_UART_ADDRESS_D,
-    TEGRA_UART_ADDRESS_E,
-    TEGRA_UART_ADDRESS_F,
-    0x0,
-    TEGRA_UART_ADDRESS_H,
-    TEGRA_UART_ADDRESS_I,
-    TEGRA_UART_ADDRESS_J,
-  };
-
-  *UARTInstanceAddress = 0;
-  *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
-
-  if (UARTInstanceNumber == TEGRA_UART_TYPE_TCU) {
-    *UARTInstanceType = TEGRA_UART_TYPE_TCU;
-    return TRUE;
-  }
-
-  if ((UARTInstanceNumber >= ARRAY_SIZE (UARTBaseAddress)) ||
-      ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_FLAG) == 0x0))
-  {
-    return FALSE;
-  }
-
-  *UARTInstanceAddress = UARTBaseAddress[UARTInstanceNumber];
-  *UARTInstanceType    = TEGRA_UART_TYPE_16550;
-  if ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_SBSA) != 0x0) {
-    *UARTInstanceType = TEGRA_UART_TYPE_SBSA;
-  }
-
-  return TRUE;
-}
 
 /**
    Builds a list of DRAM memory regions.
