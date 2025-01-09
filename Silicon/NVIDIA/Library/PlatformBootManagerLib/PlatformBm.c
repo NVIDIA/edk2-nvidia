@@ -1384,22 +1384,24 @@ IsPlatformConfigurationNeeded (
 
   if (!PlatformConfigurationNeeded) {
     AddlCmdLen = sizeof (AddlCmdLine);
-    Status     = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, &AddlCmdLineAttributes, &AddlCmdLen, &AddlCmdLine);
+    ZeroMem (&AddlCmdLine, AddlCmdLen);
+    Status = gRT->GetVariable (L"KernelCommandLine", &gNVIDIAPublicVariableGuid, &AddlCmdLineAttributes, &AddlCmdLen, &AddlCmdLine);
     if (EFI_ERROR (Status)) {
       AddlCmdLineAttributes = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS;
       ZeroMem (&AddlCmdLine, sizeof (AddlCmdLine));
     }
 
     AddlCmdLenLast = sizeof (AddlCmdLineLast);
-    Status         = gRT->GetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, NULL, &AddlCmdLenLast, &AddlCmdLineLast);
+    ZeroMem (&AddlCmdLineLast, AddlCmdLenLast);
+    Status = gRT->GetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, NULL, &AddlCmdLenLast, &AddlCmdLineLast);
     if (EFI_ERROR (Status)) {
-      ZeroMem (&AddlCmdLenLast, sizeof (AddlCmdLineLast));
+      ZeroMem (&AddlCmdLineLast, sizeof (AddlCmdLineLast));
     }
 
     if (CompareMem (&AddlCmdLine, &AddlCmdLineLast, sizeof (AddlCmdLine)) != 0) {
       PlatformConfigurationNeeded = TRUE;
-      AddlCmdLenLast              = sizeof (AddlCmdLineLast);
-      Status                      = gRT->SetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, AddlCmdLineAttributes, AddlCmdLenLast, &AddlCmdLineLast);
+
+      Status = gRT->SetVariable (L"KernelCommandLineLast", &gNVIDIATokenSpaceGuid, AddlCmdLineAttributes, AddlCmdLen, &AddlCmdLine);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to update stored command line %r\r\n", __FUNCTION__, Status));
       }
