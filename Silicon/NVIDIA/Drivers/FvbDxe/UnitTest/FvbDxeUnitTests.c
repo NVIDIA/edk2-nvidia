@@ -6,8 +6,7 @@
   Tests are run using a flash stub, including tests for both
   a working flash device and a faulty flash device.
 
-  Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -25,6 +24,7 @@
 
 // So that we can reference FvbPrivate declarations
 #include "../FvbPrivate.h"
+#include "Uefi/UefiBaseType.h"
 
 #define UNIT_TEST_APP_NAME     "FvbDxe Unit Test Application"
 #define UNIT_TEST_APP_VERSION  "0.1"
@@ -39,6 +39,7 @@ extern NVIDIA_FVB_PRIVATE_DATA  *Private;
 STATIC UINT8  *TestVariablePartition;
 STATIC UINT8  *TestFlashStorage;
 STATIC UINT8  *TestBuffer;
+STATIC UINT8  *FtwWriteBuf;
 
 STATIC GUID  ZeroGuid = {
   0, 0, 0, { 0, 0, 0, 0, 0, 0, 0, 0 }
@@ -188,6 +189,33 @@ STATIC RW_TEST_CONTEXT  BadLbaTest = {
   NUM_BLOCKS,
   0,
   1,
+  EFI_BAD_BUFFER_SIZE,
+  0
+};
+
+// FTW write to write entire partition.
+STATIC RW_TEST_CONTEXT  FtwWriteTestData_1 = {
+  0,
+  0,
+  (NUM_BLOCKS * BLOCK_SIZE),
+  EFI_SUCCESS,
+  0
+};
+
+// FTW Write starting at an offset and write the entire partition.
+STATIC RW_TEST_CONTEXT  FtwWriteTestData_2 = {
+  0,
+  72,
+  (NUM_BLOCKS * BLOCK_SIZE) - 72,
+  EFI_SUCCESS,
+  0
+};
+
+// FTW Write at a bad LBA
+STATIC RW_TEST_CONTEXT  FtwWriteTestData_3 = {
+  NUM_BLOCKS,
+  0,
+  BLOCK_SIZE - 72,
   EFI_BAD_BUFFER_SIZE,
   0
 };
@@ -1643,6 +1671,128 @@ FaultyFlashInitializeFvHeaderTest (
 }
 
 /**
+  Performs setup for tests that use the faulty flash mock.
+
+  Deallocates the working flash stub and allocates the faulty flash stub.
+**/
+STATIC
+VOID
+EFIAPI
+FtwSetup (
+  VOID
+  )
+{
+  Private->FtwInstance.GetMaxBlockSize = FtwGetMaxBlockSize;
+  Private->FtwInstance.Allocate        = FtwAllocate;
+  Private->FtwInstance.Write           = FtwWrite;
+  Private->FtwInstance.Restart         = FtwRestart;
+  Private->FtwInstance.Abort           = FtwAbort;
+  Private->FtwInstance.GetLastWrite    = FtwGetLastWrite;
+}
+
+/**
+  Setup for the FtwBasicWriteTest.
+
+  Allocate the write buffer.
+
+
+  @param Context                      Test Context
+
+  @retval UNIT_TEST_PASSED            Setup succeeded.
+  @retval UNIT_TEST_ERROR_TEST_FAILED Setup Failed.
+**/
+STATIC
+UNIT_TEST_STATUS
+EFIAPI
+FtwWriteBasicTestSetup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  RW_TEST_CONTEXT  *TestData;
+
+  TestData = (RW_TEST_CONTEXT *)Context;
+
+  FtwWriteBuf = AllocateZeroPool (TestData->NumBytes);
+  if (FtwWriteBuf == NULL) {
+    return UNIT_TEST_ERROR_PREREQUISITE_NOT_MET;
+  }
+
+  return UNIT_TEST_PASSED;
+}
+
+/**
+  Tests that InitializeFvAndVariableStoreHeaders
+  properly deals with a faulty flash device.
+
+  @param Context                      Not used by this function
+
+  @retval UNIT_TEST_PASSED            All assertions passed.
+  @retval UNIT_TEST_ERROR_TEST_FAILED An assertion failed.
+**/
+STATIC
+UNIT_TEST_STATUS
+EFIAPI
+FtwWriteBasicTest (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  EFI_STATUS       Status;
+  RW_TEST_CONTEXT  *TestData;
+
+  TestData = (RW_TEST_CONTEXT *)Context;
+
+  Status = Private->FtwInstance.Write (
+                                  &Private->FtwInstance,
+                                  TestData->Lba,
+                                  TestData->Offset,
+                                  TestData->NumBytes,
+                                  Private,
+                                  Private->FvbInstance.ParentHandle,
+                                  FtwWriteBuf
+                                  );
+  UT_ASSERT_STATUS_EQUAL (Status, TestData->ExpectedStatus);
+
+  return UNIT_TEST_PASSED;
+}
+
+/**
+  Setup for the FtwBasicWriteTest.
+
+  Allocate the write buffer.
+
+
+  @param Context                      Test Context
+
+  @retval UNIT_TEST_PASSED            Setup succeeded.
+  @retval UNIT_TEST_ERROR_TEST_FAILED Setup Failed.
+**/
+STATIC
+VOID
+EFIAPI
+FtwWriteBasicTestCleanup (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  if (FtwWriteBuf != NULL) {
+    FreePool (FtwWriteBuf);
+  }
+}
+
+/**
+  Performs cleanup for tests that use the faulty flash mock.
+
+  Deallocates the faulty flash stub and allocates the working flash stub.
+**/
+STATIC
+VOID
+EFIAPI
+FtwCleanup (
+  VOID
+  )
+{
+}
+
+/**
   Initializes data that will be used for the Fvb tests.
 
   Allocates space for flash storage, in-memory variable partition, and a buffer
@@ -1745,6 +1895,7 @@ UnitTestingEntry (
   UNIT_TEST_SUITE_HANDLE      FvbEraseBlocksTestSuite;
   UNIT_TEST_SUITE_HANDLE      FvbFvHeaderTestSuite;
   UNIT_TEST_SUITE_HANDLE      FvbFaultyFlashTestSuite;
+  UNIT_TEST_SUITE_HANDLE      FtwTestSuite;
 
   Fw = NULL;
 
@@ -2444,6 +2595,54 @@ UnitTestingEntry (
     NULL,
     NULL,
     NULL
+    );
+
+  // Populate the Fvb Faulty Flash Unit Test Suite.
+  Status = CreateUnitTestSuite (
+             &FtwTestSuite,
+             Fw,
+             "Fault Tolerant Write Tests",
+             "FvbDxe.FtwTestSuite",
+             FtwSetup,
+             FtwCleanup
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG (
+      (DEBUG_ERROR,
+       "Failed in CreateUnitTestSuite for FtwSuite\n")
+      );
+    Status = EFI_OUT_OF_RESOURCES;
+    goto EXIT;
+  }
+
+  AddTestCase (
+    FtwTestSuite,
+    "Ftw Write Test Write entire partition from offset 0",
+    "FtwWriteTest_1",
+    FtwWriteBasicTest,
+    FtwWriteBasicTestSetup,
+    FtwWriteBasicTestCleanup,
+    &FtwWriteTestData_1
+    );
+
+  AddTestCase (
+    FtwTestSuite,
+    "Ftw Write Test Write entire partition from non-zero offset ",
+    "FtwWriteTest_2",
+    FtwWriteBasicTest,
+    FtwWriteBasicTestSetup,
+    FtwWriteBasicTestCleanup,
+    &FtwWriteTestData_2
+    );
+
+  AddTestCase (
+    FtwTestSuite,
+    "Ftw Write Test Write entire partition from bad LBA ",
+    "FtwWriteTest_2",
+    FtwWriteBasicTest,
+    FtwWriteBasicTestSetup,
+    FtwWriteBasicTestCleanup,
+    &FtwWriteTestData_3
     );
 
   // Execute the tests.
