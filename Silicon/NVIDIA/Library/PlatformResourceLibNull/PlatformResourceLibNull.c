@@ -344,3 +344,11 @@ SetInactiveBootChainStatus (
 {
   return EFI_SUCCESS;
 }
+
+VOID
+EFIAPI
+ClearUpdateBrBctFlag (
+  VOID
+  )
+{
+}

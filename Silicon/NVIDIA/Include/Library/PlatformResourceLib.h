@@ -326,6 +326,18 @@ SetNextBootChain (
   );
 
 /**
+  Clear UpdateBrBct flag
+
+  @retval none
+
+**/
+VOID
+EFIAPI
+ClearUpdateBrBctFlag (
+  VOID
+  );
+
+/**
   Get Platform Resource Information
   Does not update the CPU info structures.
 
