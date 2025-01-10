@@ -2,9 +2,8 @@
 
   Fvb Driver
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
-
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -866,13 +865,71 @@ FtwWrite (
   IN VOID                               *Buffer
   )
 {
-  return Private->FvbInstance.Write (
-                                &Private->FvbInstance,
-                                Lba,
-                                Offset,
-                                &Length,
-                                Buffer
-                                );
+  EFI_STATUS  Status;
+  UINTN       BytesRemaining;
+  UINTN       CurOffset;
+  UINT32      BlockSize;
+  UINTN       WriteSize;
+  UINTN       ActualWriteSize;
+  EFI_LBA     CurLba;
+  VOID        *BufferPtr;
+
+  BlockSize = Private->BlockIo->Media->BlockSize;
+
+  if (Offset >= BlockSize) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Offset value %u BlockSize %u\n", __FUNCTION__, Offset, BlockSize));
+    return EFI_BAD_BUFFER_SIZE;
+  }
+
+  BytesRemaining = Length;
+  CurOffset      = Offset;
+  CurLba         = Lba;
+  BufferPtr      = Buffer;
+  Status         = EFI_SUCCESS;
+
+  while (BytesRemaining > 0) {
+    /* Ensure Writes don't cross Block boundaries.*/
+    if ((CurOffset + BytesRemaining) > BlockSize) {
+      WriteSize = (BlockSize - CurOffset);
+    } else {
+      WriteSize = BytesRemaining;
+    }
+
+    ActualWriteSize = WriteSize;
+    Status          = Private->FvbInstance.Write (
+                                             &Private->FvbInstance,
+                                             CurLba,
+                                             CurOffset,
+                                             &ActualWriteSize,
+                                             BufferPtr
+                                             );
+    if (EFI_ERROR (Status) || (ActualWriteSize != WriteSize)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: WriteFailed(%r): LBA %lu Offset %u Actual/Expected:%u/%u\n",
+        __FUNCTION__,
+        Status,
+        CurLba,
+        CurOffset,
+        ActualWriteSize,
+        WriteSize
+        ));
+
+      if (!EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Setting Return To BAD BUFFER SIZE\n"));
+        Status = EFI_BAD_BUFFER_SIZE;
+      }
+
+      break;
+    }
+
+    CurOffset       = 0;
+    BytesRemaining -= WriteSize;
+    CurLba++;
+    BufferPtr = ((UINT8 *)BufferPtr + WriteSize);
+  }
+
+  return Status;
 }
 
 /**
