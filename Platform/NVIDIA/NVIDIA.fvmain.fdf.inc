@@ -743,6 +743,13 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 !endif
 
+!ifdef CONFIG_CXL
+  #
+  # CXL Support
+  #
+  INF Silicon/NVIDIA/Drivers/CxlDxe/CxlDxe.inf
+!endif
+
 !ifdef CONFIG_TEGRA_VARIABLE_NON_SECURE_SUPPORTED
 !ifndef CONFIG_VARIABLE_EMULATED
   #

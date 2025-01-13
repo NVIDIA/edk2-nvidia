@@ -8,7 +8,7 @@
 
 **/
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <PiDxe.h>
 
 #include <IndustryStandard/Pci.h>
@@ -1713,7 +1713,7 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.EcamBase      = Private->EcamBase;
       Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
 
-      SegmentNumber = fdt_getprop (
+      SegmentNumber = FdtGetProp (
                         DeviceTreeNode->DeviceTreeBase,
                         DeviceTreeNode->NodeOffset,
                         "linux,pci-domain",
@@ -1729,7 +1729,7 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_INFO, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
       if (ChipId == T410_CHIP_ID) {
-        CtrlId = fdt_getprop (
+        CtrlId = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "nvidia,controller-id",
@@ -1742,7 +1742,7 @@ DeviceDiscoveryNotify (
           Private->CtrlId = SwapBytes32 (Private->CtrlId);
         }
 
-        SocketId = fdt_getprop (
+        SocketId = FdtGetProp (
                      DeviceTreeNode->DeviceTreeBase,
                      DeviceTreeNode->NodeOffset,
                      "nvidia,socket-id",
@@ -1765,12 +1765,12 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.SocketID = Private->SocketId;
       DEBUG ((DEBUG_INFO, "Socket-ID = 0x%x\n", Private->SocketId));
 
-      RPNodeOffset = fdt_first_subnode (
+      RPNodeOffset = FdtFirstSubnode (
                        DeviceTreeNode->DeviceTreeBase,
                        DeviceTreeNode->NodeOffset
                        );
       if (RPNodeOffset > 0) {
-        if (fdt_get_property (
+        if (FdtGetProperty (
               DeviceTreeNode->DeviceTreeBase,
               RPNodeOffset,
               "external-facing",
@@ -1794,7 +1794,7 @@ DeviceDiscoveryNotify (
       RootBridge->ResourceAssigned      = FALSE;
       RootBridge->AllocationAttributes  = EFI_PCI_HOST_BRIDGE_MEM64_DECODE;
 
-      BusProperty = fdt_getprop (
+      BusProperty = FdtGetProp (
                       DeviceTreeNode->DeviceTreeBase,
                       DeviceTreeNode->NodeOffset,
                       "bus-range",
@@ -1814,9 +1814,9 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.MinBusNumber = RootBridge->Bus.Base;
       Private->PcieRootBridgeConfigurationIo.MaxBusNumber = RootBridge->Bus.Limit;
 
-      AddressCells    = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
-      PciAddressCells = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-      SizeCells       = fdt_size_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
+      AddressCells    = FdtAddressCells (DeviceTreeNode->DeviceTreeBase, FdtParentOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
+      PciAddressCells = FdtAddressCells (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+      SizeCells       = FdtSizeCells (DeviceTreeNode->DeviceTreeBase, FdtParentOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
       RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
 
       if (PciAddressCells != 3) {
@@ -1825,7 +1825,7 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      RangesProperty = fdt_getprop (
+      RangesProperty = FdtGetProp (
                          DeviceTreeNode->DeviceTreeBase,
                          DeviceTreeNode->NodeOffset,
                          "ranges",
@@ -1985,7 +1985,7 @@ DeviceDiscoveryNotify (
 
       if ((ChipId == T410_CHIP_ID) && (PlatformType == TEGRA_PLATFORM_VDK)) {
         RangeSize         = (AddressCells + SizeCells) * sizeof (UINT32);
-        HbmRangesProperty = fdt_getprop (
+        HbmRangesProperty = FdtGetProp (
                               DeviceTreeNode->DeviceTreeBase,
                               DeviceTreeNode->NodeOffset,
                               "hbm-ranges",
@@ -2016,7 +2016,7 @@ DeviceDiscoveryNotify (
             break;
           }
 
-          PxmDmnStartProperty = fdt_getprop (
+          PxmDmnStartProperty = FdtGetProp (
                                   DeviceTreeNode->DeviceTreeBase,
                                   DeviceTreeNode->NodeOffset,
                                   "pxm-domain-start",
@@ -2026,7 +2026,7 @@ DeviceDiscoveryNotify (
             Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = SwapBytes32 (PxmDmnStartProperty[0]);
           }
 
-          NumPxmDmnProperty = fdt_getprop (
+          NumPxmDmnProperty = FdtGetProp (
                                 DeviceTreeNode->DeviceTreeBase,
                                 DeviceTreeNode->NodeOffset,
                                 "num-pxm-domain",

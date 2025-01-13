@@ -337,6 +337,16 @@ menu "Hardware support"
     help
       Support for NVMe drives on the system
 
+    config SUPPORTS_CXL
+    bool
+
+    config CXL
+    bool "CXL support"
+    depends on NVIDIA_PCIE
+    depends on SUPPORTS_CXL
+    help
+      Support for CXL
+
     config PCIE_IGNORE_IO_BAR
     bool "Ignore PCIe EP IO BAR Request"
     depends on NVIDIA_PCIE

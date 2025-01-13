@@ -1717,6 +1717,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashDxe.inf
 !endif
 
+!ifdef CONFIG_CXL
+  #
+  # CXL Support
+  #
+  Silicon/NVIDIA/Drivers/CxlDxe/CxlDxe.inf
+!endif
+
   Silicon/NVIDIA/Drivers/DefaultVariableDxe/DefaultVariableDxe.inf
 !ifdef CONFIG_VARIABLE_NON_SECURE_SUPPORTED
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
