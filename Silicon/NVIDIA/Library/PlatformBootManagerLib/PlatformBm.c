@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -102,6 +102,7 @@ STATIC PLATFORM_USB_KEYBOARD  mUsbKeyboard = {
 };
 
 STATIC PLATFORM_CONFIGURATION_DATA  CurrentPlatformConfigData;
+EFI_RSC_HANDLER_PROTOCOL            *mRscHandler = NULL;
 
 /**
   Check if the handle satisfies a particular condition.
@@ -1995,6 +1996,14 @@ SingleBootStatusCodeCallback (
     CpuDeadLoop ();
   }
 
+  if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) &&
+      (Value == (EFI_SOFTWARE_EFI_BOOT_SERVICE | EFI_SW_BS_PC_EXIT_BOOT_SERVICES)))
+  {
+    if (mRscHandler != NULL) {
+      mRscHandler->Unregister (SingleBootStatusCodeCallback);
+    }
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -2023,7 +2032,6 @@ PlatformBootManagerBeforeConsole (
   EFI_INPUT_KEY                 ShellKey;
   BOOLEAN                       SingleBoot;
   EFI_GUID                      *SingleBootAppGuid;
-  EFI_RSC_HANDLER_PROTOCOL      *RscHandler;
 
   if (FeaturePcdGet (PcdMemoryTestsSupported)) {
     // Attempt to delete variable to prevent forced allocation at targeted address.
@@ -2190,10 +2198,10 @@ PlatformBootManagerBeforeConsole (
       LoadOptionTypeBoot
       );
 
-    Status = gBS->LocateProtocol (&gEfiRscHandlerProtocolGuid, NULL, (VOID **)&RscHandler);
+    Status = gBS->LocateProtocol (&gEfiRscHandlerProtocolGuid, NULL, (VOID **)&mRscHandler);
     ASSERT_EFI_ERROR (Status);
     if (!EFI_ERROR (Status)) {
-      RscHandler->Register (SingleBootStatusCodeCallback, TPL_CALLBACK);
+      mRscHandler->Register (SingleBootStatusCodeCallback, TPL_CALLBACK);
     }
   }
 
