@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -52,13 +52,6 @@ EFIAPI
 CommonFloorSweepCpus (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
-  );
-
-EFI_STATUS
-EFIAPI
-CommonCheckAndRemapCpu (
-  IN UINT32      LogicalCore,
-  IN OUT UINT64  *Mpidr
   );
 
 /**

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -705,26 +705,6 @@ GetLinearCoreIDFromMpidr (
   return LinearCoreId;
 }
 
-EFI_STATUS
-EFIAPI
-CommonCheckAndRemapCpu (
-  IN UINT32      LogicalCore,
-  IN OUT UINT64  *Mpidr
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      LinearCoreId;
-
-  LinearCoreId = GetLinearCoreIDFromMpidr (*Mpidr);
-  if (IsCoreEnabled (LinearCoreId)) {
-    Status = EFI_SUCCESS;
-  } else {
-    Status = EFI_UNSUPPORTED;
-  }
-
-  return Status;
-}
-
 STATIC
 UINT8
 EFIAPI
@@ -864,4 +844,16 @@ CommonFloorSweepIps (
   }
 
   return EFI_SUCCESS;
+}
+
+BOOLEAN
+EFIAPI
+IsMpidrEnabled (
+  UINT64  Mpidr
+  )
+{
+  UINT32  LinearCoreId;
+
+  LinearCoreId = GetLinearCoreIDFromMpidr (Mpidr);
+  return IsCoreEnabled (LinearCoreId);
 }

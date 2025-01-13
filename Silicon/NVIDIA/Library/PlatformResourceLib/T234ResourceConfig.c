@@ -21,7 +21,6 @@
 #include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/Eeprom.h>
-#include <Library/MceAriLib.h>
 
 #include <T234/T234Definitions.h>
 

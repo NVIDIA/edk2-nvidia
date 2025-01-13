@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -193,33 +193,6 @@ GetMpidrFromLinearCoreID (
     ));
 
   return Mpidr;
-}
-
-EFI_STATUS
-EFIAPI
-CheckAndRemapCpu (
-  IN UINT32      LogicalCore,
-  IN OUT UINT64  *Mpidr
-  )
-{
-  UINTN       ChipId;
-  EFI_STATUS  Status;
-
-  ChipId = TegraGetChipID ();
-
-  switch (ChipId) {
-    case T234_CHIP_ID:
-      Status = MceAriCheckCoreEnabled (Mpidr);
-      break;
-
-    default:
-      Status = CommonCheckAndRemapCpu (LogicalCore, Mpidr);
-      break;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: ChipId=0x%x, Mpidr=0x%llx Status=%r\n", __FUNCTION__, ChipId, *Mpidr, Status));
-
-  return Status;
 }
 
 BOOLEAN
@@ -420,31 +393,25 @@ UpdateCpuFloorsweepingConfig (
   IN VOID    *Dtb
   )
 {
-  UINTN        Cpu;
-  UINT32       Cluster;
-  UINT64       Mpidr;
-  INT32        CpuMapOffset;
-  INT32        FdtErr;
-  UINT64       Tmp64;
-  UINT32       Tmp32;
-  CONST CHAR8  *CpuNodeStr;
-  CHAR8        ClusterNodeStr[] = "cluster10";
-  UINT32       AddressCells;
-  INT32        NodeOffset;
-  INT32        TmpOffset;
-  CHAR8        CoreNodeStr[] = "coreXX";
-  EFI_STATUS   Status;
-  CHAR8        SocketNodeStr[] = "socketXX";
-  INT32        CpuMapSocketOffset;
-  UINTN        Socket;
-  BOOLEAN      HasSocketNode;
-  UINT32       L2CachePhandle;
-  UINT32       L3CachePhandle;
+  UINTN       Cpu;
+  UINT32      Cluster;
+  UINT64      Mpidr;
+  INT32       CpuMapOffset;
+  INT32       FdtErr;
+  UINT64      Tmp64;
+  UINT32      Tmp32;
+  CHAR8       ClusterNodeStr[] = "cluster10";
+  INT32       NodeOffset;
+  INT32       TmpOffset;
+  CHAR8       CoreNodeStr[] = "coreXX";
+  EFI_STATUS  Status;
+  CHAR8       SocketNodeStr[] = "socketXX";
+  INT32       CpuMapSocketOffset;
+  UINTN       Socket;
+  BOOLEAN     HasSocketNode;
+  UINT32      L2CachePhandle;
+  UINT32      L3CachePhandle;
 
-  AddressCells = fdt_address_cells (Dtb, CpusOffset);
-
-  /* Update the correct MPIDR and enable the DT nodes of each enabled CPU;
-   * disable the DT nodes of the floorswept cores.*/
   Cpu        = 0;
   NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
   while (NodeOffset > 0) {
@@ -477,34 +444,7 @@ UpdateCpuFloorsweepingConfig (
       Mpidr = fdt32_to_cpu (Tmp32);
     }
 
-    Status = CheckAndRemapCpu (Cpu, &Mpidr);
-    if (!EFI_ERROR (Status)) {
-      CpuNodeStr = fdt_get_name (Dtb, NodeOffset, NULL);
-      if (CpuNodeStr == NULL) {
-        DEBUG ((DEBUG_ERROR, "Failed to get name of CPU node\r\n"));
-        return EFI_DEVICE_ERROR;
-      }
-
-      if (AddressCells == 2) {
-        Tmp64  = cpu_to_fdt64 ((UINT64)Mpidr);
-        FdtErr = fdt_setprop (Dtb, NodeOffset, "reg", &Tmp64, sizeof (Tmp64));
-      } else {
-        Tmp32  = cpu_to_fdt32 ((UINT32)Mpidr);
-        FdtErr = fdt_setprop (Dtb, NodeOffset, "reg", &Tmp32, sizeof (Tmp32));
-      }
-
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to add MPIDR to /cpus/%a/reg: %a\r\n", CpuNodeStr, fdt_strerror (FdtErr)));
-        return EFI_DEVICE_ERROR;
-      }
-
-      DEBUG ((
-        DEBUG_INFO,
-        "Enabled %a, index=%u, (mpidr: 0x%llx) node in FDT\r\n",
-        CpuNodeStr,
-        Cpu,
-        Mpidr
-        ));
+    if (IsMpidrEnabled (Mpidr)) {
       NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
     } else {
       Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
