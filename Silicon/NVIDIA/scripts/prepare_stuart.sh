@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -41,8 +41,7 @@ fi
 
 if [[ -z "${UEFI_SKIP_UPDATE}" ]]; then
   _msg "Updating build environment (${PLATFORM_BUILD})."
-  # Requires mono to be installed following the instructions here:
-  # - https://github.com/tianocore/edk2-pytool-extensions/blob/master/docs/usability/using_extdep.md
+  # Requires mono to be installed.
   stuart_update ${STUART_UPDATE_OPTIONS} -c ${PLATFORM_BUILD}
 fi
 
