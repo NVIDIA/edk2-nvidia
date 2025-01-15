@@ -1,13 +1,13 @@
 //
 //  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
 //  Copyright (c) 2015-2016, Linaro Limited. All rights reserved.
-//  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 //
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 
 ASM_FUNC(_ModuleEntryPoint)
 

@@ -1,12 +1,12 @@
 //
 //  Copyright (c) 2012-2014, ARM Limited. All rights reserved.
-//  Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+//  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 //
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 
 ASM_FUNC (StmmFfaSmc)
 // Push x0 on the stack - The stack must always be quad-word aligned

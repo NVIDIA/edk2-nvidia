@@ -1,7 +1,7 @@
 //
 // Copyright (c) 2011 - 2021, Arm Limited. All rights reserved.<BR>
 // Copyright (c) 2016 HP Development Company, L.P.
-// SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -14,7 +14,7 @@
 //------------------------------------------------------------------------------
 
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 
 #define GP_CONTEXT_SIZE    (32 *  8)
 #define FP_CONTEXT_SIZE    (32 * 16)

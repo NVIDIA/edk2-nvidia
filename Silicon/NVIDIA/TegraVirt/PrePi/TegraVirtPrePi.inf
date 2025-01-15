@@ -2,7 +2,7 @@
 #
 #  Copyright (c) 2011-2015, ARM Ltd. All rights reserved.<BR>
 #  Copyright (c) 2015, Linaro Ltd. All rights reserved.<BR>
-#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,7 +47,6 @@
   IoLib
   SerialPortLib
   ExtractGuidedSectionLib
-  LzmaDecompressLib
   PeCoffLib
   PrePiLib
   MemoryAllocationLib

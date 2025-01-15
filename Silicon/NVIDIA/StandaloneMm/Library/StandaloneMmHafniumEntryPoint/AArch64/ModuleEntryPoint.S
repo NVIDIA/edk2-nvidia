@@ -2,12 +2,12 @@
 * ModuleEntryPoint.S
 * Module Entry point for StMM in Hafnium based configurations.
 *
-* Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+* SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 * SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 #define STACK_SIZE            0x2000
 #define sizeof_sp_pkg_header  24
 #define DTB_MAGIC             0xEDFE0DD0

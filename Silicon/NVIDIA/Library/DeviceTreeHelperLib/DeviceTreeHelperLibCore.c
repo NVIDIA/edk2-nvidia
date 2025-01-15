@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -1163,7 +1163,7 @@ DeviceTreeSetNodeProperty (
     return EFI_DEVICE_ERROR;
   }
 
-  FdtErr = FdtSetProp (DeviceTree, NodeOffset, Property, PropertyData, PropertySize);
+  FdtErr = FdtSetProperty (DeviceTree, NodeOffset, Property, PropertyData, PropertySize);
   if (FdtErr != 0) {
     return EFI_DEVICE_ERROR;
   }

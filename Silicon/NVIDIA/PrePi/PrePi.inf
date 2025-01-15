@@ -39,7 +39,6 @@
   IoLib
   SerialPortLib
   ExtractGuidedSectionLib
-  LzmaDecompressLib
   DebugAgentLib
   PrePiLib
   MemoryAllocationLib

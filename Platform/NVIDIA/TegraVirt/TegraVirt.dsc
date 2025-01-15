@@ -183,10 +183,6 @@
 
   gArmPlatformTokenSpaceGuid.PcdCoreCount|1
 
-!if $(ARCH) == AARCH64
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-!endif
-
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x22000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxAuthVariableSize|0x2800
@@ -223,6 +219,9 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize|1
 
   gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+
+[PcdsFixedAtBuild.AARCH64]
+  gArmTokenSpaceGuid.PcdVFPEnabled|1
 
 [PcdsPatchableInModule.common]
   #
@@ -298,7 +297,7 @@
   Silicon/NVIDIA/TegraVirt/PrePi/TegraVirtPrePi.inf {
     <LibraryClasses>
       ExtractGuidedSectionLib|EmbeddedPkg/Library/PrePiExtractGuidedSectionLib/PrePiExtractGuidedSectionLib.inf
-      LzmaDecompressLib|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
+      NULL|MdeModulePkg/Library/LzmaCustomDecompressLib/LzmaCustomDecompressLib.inf
       PrePiLib|EmbeddedPkg/Library/PrePiLib/PrePiLib.inf
       HobLib|EmbeddedPkg/Library/PrePiHobLib/PrePiHobLib.inf
       PrePiHobListPointerLib|ArmPlatformPkg/Library/PrePiHobListPointerLib/PrePiHobListPointerLib.inf

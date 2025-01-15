@@ -1,15 +1,15 @@
 /** @file
 This module is a helper function to get the CPU Freq
 
-Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 #include <Library/ArmLib.h>
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 #include <Library/TegraCpuFreqHelper.h>
 
 ASM_FUNC(NvReadPmCntr)

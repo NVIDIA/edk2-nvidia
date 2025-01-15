@@ -4,7 +4,7 @@
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 
-#include <AsmMacroIoLibV8.h>
+#include <AsmMacroLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <T234/T234Definitions.h>
 #include <TH500/TH500Definitions.h>
