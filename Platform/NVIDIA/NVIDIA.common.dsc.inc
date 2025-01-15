@@ -2228,6 +2228,13 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   # Secure Boot Support
   #
   SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif
+
+
+!ifdef CONFIG_SECURITY_UEFI_SECURE_BOOT_BMC_EVENT_REPORT
+  #
+  # Secure Boot Event Reporting.
+  #
   Silicon/NVIDIA/Drivers/SecureBootBmcEvent/SecureBootBmcEvent.inf
 !endif
 

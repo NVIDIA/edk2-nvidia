@@ -2,7 +2,7 @@
 #
 #  Config file for NVIDIA UEFI builds
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -125,6 +125,12 @@ menu "Security options"
   default y
   help
     Support for UEFI Secure Boot verification of third party components.
+
+  config SECURITY_UEFI_SECURE_BOOT_BMC_EVENT_REPORT
+  bool "UEFI Report Secure Boot Events to BMC."
+  default n
+  help
+    Support to send POST codes related to UEFI secure boot to the BMC.
 
   choice SECURITY_RNG_TYPE
     prompt "UEFI RNG Type"
