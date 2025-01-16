@@ -1195,3 +1195,116 @@ DeviceTreeNodeIsEnabled (
 
   return Status;
 }
+
+/**
+  Get the first subnode of a node
+
+  @param [in]  NodeOffset       Node offset to start the search.
+  @param [out] SubNodeOffset    The offset of the first subnode.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_DEVICE_ERROR        Error getting Device Tree.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No subnbode found.
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetFirstSubnode (
+  IN            INT32  NodeOffset,
+  OUT           INT32  *SubNodeOffset
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+
+  if (SubNodeOffset == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  *SubNodeOffset = FdtFirstSubnode (DeviceTree, NodeOffset);
+  if (*SubNodeOffset >= 0) {
+    Status = EFI_SUCCESS;
+  } else {
+    Status = EFI_NOT_FOUND;
+  }
+
+  return Status;
+}
+
+/**
+  Get the next subnode
+
+  @param [in]  NodeOffset       Node offset to start the search.
+  @param [out] SubNodeOffset    The offset of the next subnode.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_DEVICE_ERROR        Error getting Device Tree.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No subnbode found.
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetNextSubnode (
+  IN            INT32  NodeOffset,
+  OUT           INT32  *SubNodeOffset
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *DeviceTree;
+
+  if (SubNodeOffset == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  *SubNodeOffset = FdtNextSubnode (DeviceTree, NodeOffset);
+  if (*SubNodeOffset >= 0) {
+    Status = EFI_SUCCESS;
+  } else {
+    Status = EFI_NOT_FOUND;
+  }
+
+  return Status;
+}
+
+/**
+  Deletes a node in the DTB
+
+  @param[in]      NodeOffset      Node offset
+
+  @retval EFI_SUCCESS             Operation successful
+  @retval Others                  An error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeDeleteNode (
+  IN  INT32  NodeOffset
+  )
+{
+  VOID        *DeviceTree;
+  INT32       FdtStatus;
+  EFI_STATUS  Status;
+
+  Status = GetDeviceTreePointer (&DeviceTree, NULL);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  FdtStatus = FdtDelNode (DeviceTree, NodeOffset);
+  if (FdtStatus < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: delete failed: %d", __FUNCTION__, FdtStatus));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}

@@ -40,7 +40,7 @@ CommonFloorSweepScfCache (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepCpus (
-  IN  VOID  *Dtb
+  VOID
   );
 
 /**
@@ -60,21 +60,19 @@ CommonFloorSweepIps (
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
-  IN  VOID                             *Dtb,
   OUT CONST TEGRA_FLOOR_SWEEPING_INFO  **FloorSweepingInfo
   );
 
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
-  IN INT32  CpusOffset,
-  IN VOID   *Dtb
+  IN INT32  CpusOffset
   );
 
 EFI_STATUS
 EFIAPI
 TH500FloorSweepCpus (
-  IN  VOID  *Dtb
+  VOID
   );
 
 #endif // __COMMON_FLOOR_SWEEPING_LIB_H__

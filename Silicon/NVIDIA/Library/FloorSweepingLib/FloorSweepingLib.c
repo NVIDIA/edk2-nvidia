@@ -22,6 +22,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PrintLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <libfdt.h>
 
 #include "CommonFloorSweepingLib.h"
@@ -301,9 +302,7 @@ STATIC
 EFI_STATUS
 EFIAPI
 NopCpuAndCacheNodes (
-  VOID   *Dtb,
   INT32  CpusOffset,
-  UINTN  Cpu,
   INT32  *NodeOffsetPtr
   )
 {
@@ -313,6 +312,14 @@ NopCpuAndCacheNodes (
   UINT32      L2CachePhandle;
   UINT32      L3CachePhandle;
   CONST VOID  *Property;
+  VOID        *Dtb;
+  EFI_STATUS  Status;
+
+  Status = GetDeviceTreePointer (&Dtb, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: no DTB\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
 
   NodeOffset = *NodeOffsetPtr;
 
@@ -326,11 +333,9 @@ NopCpuAndCacheNodes (
 
   FdtErr = fdt_nop_node (Dtb, TmpOffset);
   if (FdtErr < 0) {
-    DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+    DEBUG ((DEBUG_ERROR, "Failed to delete cpu node: %a\r\n", fdt_strerror (FdtErr)));
     return EFI_DEVICE_ERROR;
   }
-
-  DEBUG ((DEBUG_INFO, "Disabled cpu-%u node in FDT\r\n", Cpu));
 
   if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
     TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
@@ -344,7 +349,7 @@ NopCpuAndCacheNodes (
     // when cache nodes are subnodes of cpus node.
     if (TmpOffset == NodeOffset) {
       NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-      DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed disabled cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
+      DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed disabled cpu\r\n", __FUNCTION__, L2CachePhandle));
     }
 
     if (TmpOffset >= 0) {
@@ -362,7 +367,7 @@ NopCpuAndCacheNodes (
         // special case if l3 node to delete is node after deleted l2 node
         if (TmpOffset == NodeOffset) {
           NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-          DEBUG ((DEBUG_INFO, "%a: l3 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L3CachePhandle, Cpu));
+          DEBUG ((DEBUG_INFO, "%a: l3 cache phandle=0x%x followed deleted cpu\r\n", __FUNCTION__, L3CachePhandle));
         }
 
         if (TmpOffset >= 0) {
@@ -391,7 +396,6 @@ STATIC
 EFI_STATUS
 EFIAPI
 NopAndRenumberCpuMap (
-  VOID   *Dtb,
   INT32  CpusOffset
   )
 {
@@ -403,6 +407,13 @@ NopAndRenumberCpuMap (
   INT32       TmpOffset;
   CHAR8       CoreNodeStr[] = "coreXX";
   EFI_STATUS  Status;
+  VOID        *Dtb;
+
+  Status = GetDeviceTreePointer (&Dtb, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: no DTB\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
 
   CpuMapOffset = fdt_subnode_offset (Dtb, CpusOffset, "cpu-map");
 
@@ -485,74 +496,56 @@ NopAndRenumberCpuMap (
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
-  IN INT32  CpusOffset,
-  IN VOID   *Dtb
+  IN INT32  CpusOffset
   )
 {
-  UINTN       Cpu;
   UINT64      Mpidr;
-  INT32       FdtErr;
-  UINT64      Tmp64;
-  UINT32      Tmp32;
   INT32       NodeOffset;
   EFI_STATUS  Status;
+  CONST VOID  *Property;
+  BOOLEAN     CpuIsEnabled;
 
-  Cpu        = 0;
-  NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
-  while (NodeOffset > 0) {
-    CONST VOID  *Property;
-    INT32       Length;
+  Status = DeviceTreeGetFirstSubnode (CpusOffset, &NodeOffset);
+  while (!EFI_ERROR (Status)) {
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "device_type", &Property, NULL);
+    if (EFI_ERROR (Status) || (AsciiStrCmp (Property, "cpu") != 0)) {
+      Status = DeviceTreeGetNextSubnode (NodeOffset, &NodeOffset);
 
-    Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
-    if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       continue;
     }
 
     // retrieve mpidr for this cpu node
-    Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
-    if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "Failed to get MPIDR for /cpus/%a, len=%d\n",
-        fdt_get_name (Dtb, NodeOffset, NULL),
-        Length
-        ));
+    Status = DeviceTreeGetNodePropertyValue64 (NodeOffset, "reg", &Mpidr);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to get MPIDR for %a: %r\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), Status));
       return EFI_DEVICE_ERROR;
     }
 
-    if (Length == sizeof (Tmp64)) {
-      Tmp64 = *(CONST UINT64 *)Property;
-      Mpidr = fdt64_to_cpu (Tmp64);
-    } else {
-      Tmp32 = *(CONST UINT32 *)Property;
-      Mpidr = fdt32_to_cpu (Tmp32);
-    }
-
-    if (MpCoreInfoIsProcessorEnabled (Mpidr) != EFI_SUCCESS) {
+    CpuIsEnabled = (MpCoreInfoIsProcessorEnabled (Mpidr) == EFI_SUCCESS);
+    DEBUG ((DEBUG_INFO, "%a: CPU 0x%llx %a\n", __FUNCTION__, Mpidr, CpuIsEnabled ? "enabled" : "disabled"));
+    if (!CpuIsEnabled) {
       if (!PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-        FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
-        if (FdtErr < 0) {
-          DEBUG ((DEBUG_ERROR, "Failed to disable %a node: %a\r\n", fdt_get_name (Dtb, NodeOffset, NULL), fdt_strerror (FdtErr)));
+        Status = DeviceTreeSetNodeProperty (NodeOffset, "status", "fail", sizeof ("fail"));
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to disable %a node: %r\n", __FUNCTION__, DeviceTreeGetNodeName (NodeOffset), Status));
 
           return EFI_DEVICE_ERROR;
         }
       } else {
-        Status = NopCpuAndCacheNodes (Dtb, CpusOffset, Cpu, &NodeOffset);
+        Status = NopCpuAndCacheNodes (CpusOffset, &NodeOffset);
         if (EFI_ERROR (Status)) {
           return Status;
         }
 
-        Cpu++;
         continue;
       }
     }
 
-    NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+    Status = DeviceTreeGetNextSubnode (NodeOffset, &NodeOffset);
   }
 
   if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-    Status = NopAndRenumberCpuMap (Dtb, CpusOffset);
+    Status = NopAndRenumberCpuMap (CpusOffset);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -579,7 +572,7 @@ FloorSweepGlobalCpus (
     return EFI_DEVICE_ERROR;
   }
 
-  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (CpusOffset);
 }
 
 /**
@@ -710,42 +703,31 @@ FloorSweepGlobalThermals (
 EFI_STATUS
 EFIAPI
 TH500FloorSweepSockets (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  UINT32  SocketMask
   )
 {
-  CHAR8   SocketNodeStr[] = "/socket@xx";
-  UINT32  MaxSockets;
-  INT32   NodeOffset;
+  CHAR8       SocketNodeStr[] = "/socket@xx";
+  INT32       NodeOffset;
+  EFI_STATUS  Status;
+  UINT32      Socket;
 
-  MaxSockets = 0;
-
-  while (TRUE) {
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
-    NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
-    if (NodeOffset < 0) {
-      break;
-    } else {
-      MaxSockets++;
-    }
-
-    ASSERT (MaxSockets < 100);      // enforce socket@xx string max
-  }
-
-  if (MaxSockets == 0) {
-    MaxSockets = 1;
-  }
-
-  for (UINT32 Socket = 0; Socket < MaxSockets; Socket++) {
+  // delete socket nodes that are not in the socket mask
+  for (Socket = 0; Socket < MAX_SUPPORTED_SOCKETS; Socket++) {
     if (SocketMask & (1UL << Socket)) {
       continue;
     }
 
     AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
-    NodeOffset = fdt_path_offset (Dtb, SocketNodeStr);
-    if (NodeOffset >= 0) {
-      DEBUG ((DEBUG_INFO, "Deleting socket@%u node\n", Socket));
-      fdt_del_node (Dtb, NodeOffset);
+    Status = DeviceTreeGetNodeByPath (SocketNodeStr, &NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: no %a: %r\n", __FUNCTION__, SocketNodeStr, Status));
+      break;
+    }
+
+    DEBUG ((DEBUG_INFO, "%a: Deleting %a node\n", __FUNCTION__, SocketNodeStr));
+    Status = DeviceTreeDeleteNode (NodeOffset);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %a delete failed: %r", __FUNCTION__, SocketNodeStr, Status));
     }
   }
 
@@ -767,6 +749,8 @@ FloorSweepDtb (
   EFI_STATUS                       Status;
   CONST TEGRA_FLOOR_SWEEPING_INFO  *FloorSweepingInfo;
 
+  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+
   SocketMask = GetSocketMask (NULL);
   if (SocketMask == 0) {
     return EFI_DEVICE_ERROR;
@@ -775,7 +759,7 @@ FloorSweepDtb (
   ChipId = TegraGetChipID ();
 
   if (ChipId == T234_CHIP_ID) {
-    Status = FloorSweepGlobalCpus (Dtb);
+    Status = CommonFloorSweepCpus ();
     if (!EFI_ERROR (Status)) {
       Status = FloorSweepGlobalThermals (Dtb);
     }
@@ -784,16 +768,16 @@ FloorSweepDtb (
   }
 
   // common floorsweeping flow
-  Status = CommonInitializeGlobalStructures (Dtb, &FloorSweepingInfo);
+  Status = CommonInitializeGlobalStructures (&FloorSweepingInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   if (ChipId == TH500_CHIP_ID) {
-    TH500FloorSweepSockets (SocketMask, Dtb);
-    Status = TH500FloorSweepCpus (Dtb);
+    TH500FloorSweepSockets (SocketMask);
+    Status = TH500FloorSweepCpus ();
   } else {
-    Status = CommonFloorSweepCpus (Dtb);
+    Status = CommonFloorSweepCpus ();
   }
 
   if (!EFI_ERROR (Status)) {

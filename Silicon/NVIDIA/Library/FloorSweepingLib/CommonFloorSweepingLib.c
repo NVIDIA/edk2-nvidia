@@ -46,15 +46,12 @@ STATIC TEGRA_PLATFORM_RESOURCE_INFO  *mPlatformResourceInfo = NULL;
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
-  IN  VOID                             *Dtb,
   OUT CONST TEGRA_FLOOR_SWEEPING_INFO  **FloorSweepingInfo
   )
 {
   EFI_STATUS  Status;
   UINTN       ChipId;
   VOID        *Hob;
-
-  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   NV_ASSERT_RETURN (
@@ -592,25 +589,26 @@ CommonFloorSweepScfCache (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepCpus (
-  IN  VOID  *Dtb
+  VOID
   )
 {
-  CHAR8  CpusStr[] = "/cpus";
-  INT32  CpusOffset;
+  CHAR8       CpusStr[] = "/cpus";
+  INT32       CpusOffset;
+  EFI_STATUS  Status;
 
-  CpusOffset = fdt_path_offset (Dtb, CpusStr);
-  if (CpusOffset < 0) {
-    DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", CpusStr));
-    return EFI_DEVICE_ERROR;
+  Status = DeviceTreeGetNodeByPath (CpusStr, &CpusOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find %a: %r\n", __FUNCTION__, CpusStr, Status));
+    return Status;
   }
 
-  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (CpusOffset);
 }
 
 EFI_STATUS
 EFIAPI
 TH500FloorSweepCpus (
-  IN  VOID  *Dtb
+  VOID
   )
 {
   UINT32      Socket;
@@ -623,23 +621,23 @@ TH500FloorSweepCpus (
     INT32  CpusOffset;
 
     AsciiSPrint (SocketCpusStr, sizeof (SocketCpusStr), "/socket@%u/cpus", Socket);
-    CpusOffset = fdt_path_offset (Dtb, SocketCpusStr);
-    if (CpusOffset < 0) {
+    Status = DeviceTreeGetNodeByPath (SocketCpusStr, &CpusOffset);
+    if (EFI_ERROR (Status)) {
       if (Socket == 0) {
-        CpusOffset = fdt_path_offset (Dtb, CpusStr);
-        if (CpusOffset < 0) {
-          DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", CpusStr));
-          return EFI_DEVICE_ERROR;
+        Status = DeviceTreeGetNodeByPath (CpusStr, &CpusOffset);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Failed to find %a subnode: %r\n", __FUNCTION__, CpusStr, Status));
+          return Status;
         }
       } else {
-        DEBUG ((DEBUG_ERROR, "Failed to find %a subnode\n", SocketCpusStr));
-        return EFI_DEVICE_ERROR;
+        DEBUG ((DEBUG_ERROR, "%a: Failed to find %a subnode: %r\n", __FUNCTION__, SocketCpusStr, Status));
+        return Status;
       }
     } else {
-      DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
+      DEBUG ((DEBUG_INFO, "%a: Floorsweeping cpus in %a\n", __FUNCTION__, SocketCpusStr));
     }
 
-    Status = UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
+    Status = UpdateCpuFloorsweepingConfig (CpusOffset);
     if (EFI_ERROR (Status)) {
       break;
     }

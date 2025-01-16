@@ -1074,4 +1074,55 @@ DeviceTreeNodeIsEnabled (
   IN            INT32  NodeOffset
   );
 
+/**
+  Get the first subnode of a node
+
+  @param [in]  NodeOffset       Node offset to start the search.
+  @param [out] SubNodeOffset    The offset of the first subnode.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_DEVICE_ERROR        Error getting Device Tree.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No subnbode found.
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetFirstSubnode (
+  IN            INT32  NodeOffset,
+  OUT           INT32  *SubNodeOffset
+  );
+
+/**
+  Get the next subnode
+
+  @param [in]  NodeOffset       Node offset to start the search.
+  @param [out] SubNodeOffset    The offset of the next subnode.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_DEVICE_ERROR        Error getting Device Tree.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+  @retval EFI_NOT_FOUND           No subnbode found.
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeGetNextSubnode (
+  IN            INT32  NodeOffset,
+  OUT           INT32  *SubNodeOffset
+  );
+
+/**
+  Deletes a node in the DTB
+
+  @param[in]      NodeOffset      Node offset
+
+  @retval EFI_SUCCESS             Operation successful
+  @retval Others                  An error occurred
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeDeleteNode (
+  IN  INT32  NodeOffset
+  );
+
 #endif //__DEVICE_TREE_HELPER_LIB_H__
