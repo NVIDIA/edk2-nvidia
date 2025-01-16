@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -59,11 +59,14 @@ typedef struct {
   UINTN    GuaranteedPerformance;
   UINTN    MinimumPerformance;
   UINTN    MaximumPerformance;
+  UINTN    TimeWindow;
   UINTN    ReferencePerformanceCounter;
   UINTN    DeliveredPerformanceCounter;
   UINTN    PerformanceLimited;
   UINTN    AutonomousSelectionEnable;
-} CPPC_REGISTER_OFFSETS;
+  UINTN    AutonomousActivityWindowRegister;
+  UINTN    EnergyPerformancePreference;
+} CPPC_REGISTER_VALUES;
 
 /**
  * Returns the device handle of the contoller that relates to the given MpIdr.
@@ -255,6 +258,8 @@ GetCpuFreqBpmpHandle (
  *
  * @param[in]  Mpidr              MpIdr of the CPU to get info on.
  * @param[out] CppcOffsets        Returns the Cppc offsets structure.
+ * @param[out] CppcBitWidths      Returns the Cppc bit widths structure.
+                                  Values of 0 indicate the register is not valid.
  *
  * @retval EFI_SUCCESS             The offsets were returned.
  * @retval EFI_NOT_FOUND           Mpidr is not valid for this platform.
@@ -265,8 +270,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetCpuCppcOffsets (
-  IN UINT64                  Mpidr,
-  OUT CPPC_REGISTER_OFFSETS  *CppcOffsets
+  IN UINT64                 Mpidr,
+  OUT CPPC_REGISTER_VALUES  *CppcOffsets,
+  OUT CPPC_REGISTER_VALUES  *CppcBitWidths
   )
 {
   EFI_STATUS  Status;
@@ -280,8 +286,14 @@ GetCpuCppcOffsets (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Set all registers to MAX_UINTN to indicate they are not valid
-  SetMemN (CppcOffsets, sizeof (CPPC_REGISTER_OFFSETS), MAX_UINTN);
+  if (CppcBitWidths == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CppcBitWidths is NULL.\n", __func__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ZeroMem (CppcOffsets, sizeof (CPPC_REGISTER_VALUES));
+  // Set all widths to 0 to indicate they are not valid
+  ZeroMem (CppcBitWidths, sizeof (CPPC_REGISTER_VALUES));
 
   Status = GetDeviceHandle (Mpidr, &Handle, &DeviceGuid);
   if (EFI_ERROR (Status)) {
@@ -295,11 +307,15 @@ GetCpuCppcOffsets (
   }
 
   if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT234)) {
-    CppcOffsets->DesiredPerformance          = T234_SCRATCH_FREQ_CORE_REG (Cluster, Core);
-    CppcOffsets->ReferencePerformanceCounter = T234_CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
-    CppcOffsets->DeliveredPerformanceCounter = T234_CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+    CppcOffsets->DesiredPerformance            = T234_SCRATCH_FREQ_CORE_REG (Cluster, Core);
+    CppcBitWidths->DesiredPerformance          = 32;
+    CppcOffsets->ReferencePerformanceCounter   = T234_CLUSTER_ACTMON_REFCLK_REG (Cluster, Core);
+    CppcBitWidths->ReferencePerformanceCounter = 32;
+    CppcOffsets->DeliveredPerformanceCounter   = T234_CLUSTER_ACTMON_CORE_REG (Cluster, Core);
+    CppcBitWidths->DeliveredPerformanceCounter = 32;
   } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqTH500)) {
-    CppcOffsets->DesiredPerformance = TH500_SCRATCH_FREQ_CORE_REG (Cluster);
+    CppcOffsets->DesiredPerformance   = TH500_SCRATCH_FREQ_CORE_REG (Cluster);
+    CppcBitWidths->DesiredPerformance = 32;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
     return EFI_UNSUPPORTED;
@@ -487,7 +503,8 @@ TegraCpuFreqGetInfo (
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         CurrentNdiv;
   EFI_PHYSICAL_ADDRESS           BaseAddress;
-  CPPC_REGISTER_OFFSETS          CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcBitWidths;
   EFI_PHYSICAL_ADDRESS           DesiredAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
@@ -503,15 +520,15 @@ TegraCpuFreqGetInfo (
       return Status;
     }
 
-    Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
+    Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets, &CppcBitWidths);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
       return Status;
     }
 
-    if (CppcOffsets.DesiredPerformance != MAX_UINTN) {
+    if (CppcBitWidths.DesiredPerformance != 0) {
       DesiredAddress    = BaseAddress + CppcOffsets.DesiredPerformance;
-      CurrentNdiv       = MmioRead32 (DesiredAddress);
+      CurrentNdiv       = MmioBitFieldRead32 (DesiredAddress, 0, CppcBitWidths.DesiredPerformance-1);
       *CurrentFrequency = ConvertNdivToFreq (&Limits, CurrentNdiv);
     } else {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get current frequency for CPU frequency controller, no desired frequency supported.\n", __func__));
@@ -561,7 +578,8 @@ TegraCpuFreqSet (
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   UINT16                         DesiredNdiv;
   EFI_PHYSICAL_ADDRESS           BaseAddress;
-  CPPC_REGISTER_OFFSETS          CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcBitWidths;
   EFI_PHYSICAL_ADDRESS           DesiredAddress;
 
   Status = TegraCpuGetNdivLimits (Mpidr, &Limits);
@@ -582,14 +600,19 @@ TegraCpuFreqSet (
     return Status;
   }
 
-  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
+  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets, &CppcBitWidths);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
     return Status;
   }
 
+  if (CppcBitWidths.DesiredPerformance == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: DesiredPerformance register not found for CPU frequency controller.\n", __func__));
+    return EFI_UNSUPPORTED;
+  }
+
   DesiredAddress = BaseAddress + CppcOffsets.DesiredPerformance;
-  MmioWrite32 (DesiredAddress, DesiredNdiv);
+  MmioBitFieldWrite32 (DesiredAddress, 0, CppcBitWidths.DesiredPerformance-1, DesiredNdiv);
   return EFI_SUCCESS;
 }
 
@@ -611,8 +634,13 @@ SetAddressStruct (
   AddressStruct->AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY;
   AddressStruct->RegisterBitWidth  = RegisterBitWidth;
   AddressStruct->RegisterBitOffset = RegisterBitOffset;
-  AddressStruct->AccessSize        = AccessSize;
-  AddressStruct->Address           = Address;
+  if (RegisterBitWidth == 0) {
+    AddressStruct->AccessSize = EFI_ACPI_6_4_UNDEFINED;
+    AddressStruct->Address    = 0;
+  } else {
+    AddressStruct->AccessSize = AccessSize;
+    AddressStruct->Address    = Address;
+  }
 }
 
 /**
@@ -637,7 +665,8 @@ TegraCpuFreqGetCpcInfo (
   EFI_STATUS                     Status;
   BPMP_CPU_NDIV_LIMITS_RESPONSE  Limits;
   EFI_PHYSICAL_ADDRESS           BaseAddress;
-  CPPC_REGISTER_OFFSETS          CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcOffsets;
+  CPPC_REGISTER_VALUES           CppcBitWidths;
   UINT64                         RefClockFreq;
   VOID                           *PerfLimited;
 
@@ -656,7 +685,7 @@ TegraCpuFreqGetCpcInfo (
     return Status;
   }
 
-  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets);
+  Status = GetCpuCppcOffsets (Mpidr, &CppcOffsets, &CppcBitWidths);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get CPPC offsets for CPU frequency controller.\n", __func__));
     return Status;
@@ -668,7 +697,7 @@ TegraCpuFreqGetCpcInfo (
     return Status;
   }
 
-  if (CppcOffsets.PerformanceLimited != MAX_UINTN) {
+  if (CppcBitWidths.PerformanceLimited != 0) {
     PerfLimited = (VOID *)(BaseAddress + CppcOffsets.PerformanceLimited);
   } else {
     Status = gBS->AllocatePool (EfiReservedMemoryType, sizeof (UINT32), &PerfLimited);
@@ -677,6 +706,7 @@ TegraCpuFreqGetCpcInfo (
       return Status;
     }
 
+    CppcBitWidths.PerformanceLimited = 32;
     ZeroMem (PerfLimited, sizeof (UINT32));
   }
 
@@ -689,64 +719,50 @@ TegraCpuFreqGetCpcInfo (
   CpcInfo->LowestNonlinearPerformanceInteger = Limits.ndiv_min;
   SetAddressStruct (&CpcInfo->LowestPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   CpcInfo->LowestPerformanceInteger = Limits.ndiv_min;
-  SetAddressStruct (&CpcInfo->GuaranteedPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-
+  SetAddressStruct (&CpcInfo->GuaranteedPerformanceRegister, CppcBitWidths.GuaranteedPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.GuaranteedPerformance);
   // DesiredAddress is required
-  NV_ASSERT_RETURN (CppcOffsets.DesiredPerformance != MAX_UINTN, return EFI_UNSUPPORTED, "%a: DesiredPerformance register not found for CPU frequency controller.\n", __func__);
+  NV_ASSERT_RETURN (CppcBitWidths.DesiredPerformance != 0, return EFI_UNSUPPORTED, "%a: DesiredPerformance register not found for CPU frequency controller.\n", __func__);
 
-  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DesiredPerformance);
-  if (CppcOffsets.MinimumPerformance != MAX_UINTN) {
-    SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MinimumPerformance);
-  } else {
-    SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  }
-
-  if (CppcOffsets.MaximumPerformance != MAX_UINTN) {
-    SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MaximumPerformance);
-  } else {
-    SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  }
-
+  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, CppcBitWidths.DesiredPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DesiredPerformance);
+  SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, CppcBitWidths.MinimumPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MinimumPerformance);
+  SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, CppcBitWidths.MaximumPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MaximumPerformance);
   SetAddressStruct (&CpcInfo->PerformanceReductionToleranceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->TimeWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->TimeWindowRegister, CppcBitWidths.TimeWindow, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.TimeWindow);
   SetAddressStruct (&CpcInfo->CounterWraparoundTimeBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  if (CppcOffsets.ReferencePerformanceCounter == MAX_UINTN) {
+
+  // ReferencePerformanceCounter register indicating that it is not support uses FFH register which is 64bits by specification.
+  if (CppcBitWidths.ReferencePerformanceCounter == 0) {
     CpcInfo->CounterWraparoundTimeInteger = MAX_UINT64 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
   } else {
     CpcInfo->CounterWraparoundTimeInteger = MAX_UINT32 / ConvertNdivToFreq (&Limits, Limits.ndiv_max);
   }
 
-  if (CppcOffsets.ReferencePerformanceCounter == MAX_UINTN) {
+  if (CppcBitWidths.ReferencePerformanceCounter == 0) {
     CpcInfo->ReferencePerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitOffset = 0;
     CpcInfo->ReferencePerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
     CpcInfo->ReferencePerformanceCounterRegister.Address           = 0x1;
   } else {
-    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.ReferencePerformanceCounter);
+    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, CppcBitWidths.ReferencePerformanceCounter, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.ReferencePerformanceCounter);
   }
 
-  if (CppcOffsets.DeliveredPerformanceCounter == MAX_UINTN) {
+  if (CppcBitWidths.DeliveredPerformanceCounter == 0) {
     CpcInfo->DeliveredPerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitOffset = 0;
     CpcInfo->DeliveredPerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
     CpcInfo->DeliveredPerformanceCounterRegister.Address           = 0x0;
   } else {
-    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DeliveredPerformanceCounter);
+    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, CppcBitWidths.DeliveredPerformanceCounter, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DeliveredPerformanceCounter);
   }
 
-  SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, 32, 0, EFI_ACPI_6_4_DWORD, (UINT64)PerfLimited);
+  SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, CppcBitWidths.PerformanceLimited, 0, EFI_ACPI_6_4_DWORD, (UINT64)PerfLimited);
   SetAddressStruct (&CpcInfo->CPPCEnableRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  if (CppcOffsets.AutonomousSelectionEnable != MAX_UINTN) {
-    SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 32, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousSelectionEnable);
-  } else {
-    SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-    CpcInfo->AutonomousSelectionEnableInteger = 0;
-  }
-
-  SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, CppcBitWidths.AutonomousSelectionEnable, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousSelectionEnable);
+  CpcInfo->AutonomousSelectionEnableInteger = 0;
+  SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, CppcBitWidths.AutonomousActivityWindowRegister, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousActivityWindowRegister);
+  SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, CppcBitWidths.EnergyPerformancePreference, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.EnergyPerformancePreference);
   SetAddressStruct (&CpcInfo->ReferencePerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
   CpcInfo->ReferencePerformanceInteger = ConvertFreqToNdiv (&Limits, RefClockFreq);
   SetAddressStruct (&CpcInfo->LowestFrequencyBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
