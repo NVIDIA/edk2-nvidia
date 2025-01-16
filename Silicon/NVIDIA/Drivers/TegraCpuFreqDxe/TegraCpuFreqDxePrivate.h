@@ -40,6 +40,10 @@
 #define T410_CPPC_PERF_LIMITED_BITS  2
 #define T410_CPPC_DESIRED_PERF_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x38 + (core * 4))
 #define T410_CPPC_DESIRED_PERF_BITS  9
+#define T410_DUMMY_PDIV              1
+#define T410_DUMMY_MDIV              111
+#define T410_DUMMY_NDIV_MAX          350
+#define T410_DUMMY_NDIV_MIN          9
 #define HZ_TO_MHZ(x)  (x/1000000)
 
 #pragma pack (1)

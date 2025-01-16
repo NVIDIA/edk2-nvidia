@@ -460,7 +460,13 @@ TegraCpuGetNdivLimits (
   Status = GetCpuFreqBpmpHandle (Mpidr, &BpmpPhandle);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get BPMP handle for CPU frequency controller.\n", __func__));
-    return Status;
+    DEBUG ((DEBUG_ERROR, "%a: faking limits\n", __func__));
+    Limits->ref_clk_hz = T410_REFCLK_FREQ;
+    Limits->pdiv       = T410_DUMMY_PDIV;
+    Limits->mdiv       = T410_DUMMY_MDIV;
+    Limits->ndiv_max   = T410_DUMMY_NDIV_MAX;
+    Limits->ndiv_min   = T410_DUMMY_NDIV_MIN;
+    return EFI_SUCCESS;
   }
 
   Status = gBS->LocateProtocol (
