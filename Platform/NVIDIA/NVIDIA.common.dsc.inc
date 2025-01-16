@@ -369,6 +369,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   IpmiCommandLib|ManageabilityPkg/Library/IpmiCommandLib/IpmiCommandLib.inf
 !else
   IpmiBaseLib|IpmiFeaturePkg/Library/IpmiBaseLibNull/IpmiBaseLibNull.inf
+  IpmiCommandLib|MdeModulePkg/Library/BaseIpmiCommandLibNull/BaseIpmiCommandLibNull.inf
 !endif
   MctpBaseLib|Silicon/NVIDIA/Library/MctpBaseLib/MctpBaseLib.inf
   MctpNvVdmLib|Silicon/NVIDIA/Library/MctpNvVdmLib/MctpNvVdmLib.inf
@@ -2219,7 +2220,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiRawLib/AcpiRawLib.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiSpcrLib/AcpiSpcrLib.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiSratLib/AcpiSratLib.inf
-      NULL|DynamicTablesPkg/Library/Acpi/Arm/AcpiSpmiLibArm/AcpiSpmiLibArm.inf
+      NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiSpmiLib/AcpiSpmiLib.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiTpm2Lib/AcpiTpm2Lib.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiSsdtCpuTopologyLib/SsdtCpuTopologyLib.inf
       NULL|DynamicTablesPkg/Library/Acpi/Common/AcpiSsdtPcieLib/SsdtPcieLib.inf

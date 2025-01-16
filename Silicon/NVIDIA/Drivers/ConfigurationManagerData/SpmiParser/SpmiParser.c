@@ -2,7 +2,7 @@
 
   Service Processor Management Interface Table (SPMI) Parser
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -32,7 +32,7 @@ SpmiParser (
   }
 
   AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SERVER_PLATFORM_MANAGEMENT_INTERFACE_TABLE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_SERVICE_PROCESSOR_MANAGEMENT_INTERFACE_TABLE_REVISION;
+  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_SERVICE_PROCESSOR_MANAGEMENT_INTERFACE_5_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpmi);
   AcpiTableHeader.AcpiTableData      = NULL;
   AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
