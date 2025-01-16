@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver Private header.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,22 @@
 #define T234_REFCLK_FREQ   408000000
 #define T264_REFCLK_FREQ   1000000000
 #define TH500_REFCLK_FREQ  1000000000
+#define T410_REFCLK_FREQ   1000000000
+#define T410_SW_FREQ_BASE_REG(cluster)         (0x900000 + (cluster * 0x1000))
+#define T410_CPPC_MAX_PERF_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + (core * 4))
+#define T410_CPPC_MAX_PERF_BITS  9
+#define T410_CPPC_MIN_PERF_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x8 + (core * 4))
+#define T410_CPPC_MIN_PERF_BITS  9
+#define T410_CPPC_EPP_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x18 + (core * 4))
+#define T410_CPPC_EPP_BITS  8
+#define T410_CPPC_AUTONOMOUS_SELECT_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x20 + (core * 4))
+#define T410_CPPC_AUTONOMOUS_SELECT_BITS  1
+#define T410_CPPC_TIME_WINDOW_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x28 + (core * 4))
+#define T410_CPPC_TIME_WINDOW_BITS  10
+#define T410_CPPC_PERF_LIMITED_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x30 + (core * 4))
+#define T410_CPPC_PERF_LIMITED_BITS  2
+#define T410_CPPC_DESIRED_PERF_REG(cluster, core)  (T410_SW_FREQ_BASE_REG(cluster) + 0x38 + (core * 4))
+#define T410_CPPC_DESIRED_PERF_BITS  9
 #define HZ_TO_MHZ(x)  (x/1000000)
 
 #pragma pack (1)

@@ -38,6 +38,7 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra234-ccplex-cluster", &gNVIDIACpuFreqT234  },
   { "nvidia,th500-cpufreq",           &gNVIDIACpuFreqTH500 },
   { "nvidia,tegra264-ccplex-cluster", &gNVIDIACpuFreqT264  },
+  { "nvidia,t410-ccplex",             &gNVIDIACpuFreqT410  },
   { NULL,                             NULL                 }
 };
 
@@ -320,6 +321,21 @@ GetCpuCppcOffsets (
   } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT264)) {
     CppcOffsets->DesiredPerformance   = T264_SCRATCH_FREQ_CORE_REG (Cluster);
     CppcBitWidths->DesiredPerformance = 32;
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT410)) {
+    CppcOffsets->MaximumPerformance                 = T410_CPPC_MAX_PERF_REG (Cluster, Core);
+    CppcBitWidths->MaximumPerformance               = T410_CPPC_MAX_PERF_BITS;
+    CppcOffsets->MinimumPerformance                 = T410_CPPC_MIN_PERF_REG (Cluster, Core);
+    CppcBitWidths->MinimumPerformance               = T410_CPPC_MIN_PERF_BITS;
+    CppcOffsets->EnergyPerformancePreference        = T410_CPPC_EPP_REG (Cluster, Core);
+    CppcBitWidths->EnergyPerformancePreference      = T410_CPPC_EPP_BITS;
+    CppcOffsets->AutonomousSelectionEnable          = T410_CPPC_AUTONOMOUS_SELECT_REG (Cluster, Core);
+    CppcBitWidths->AutonomousSelectionEnable        = T410_CPPC_AUTONOMOUS_SELECT_BITS;
+    CppcOffsets->AutonomousActivityWindowRegister   = T410_CPPC_TIME_WINDOW_REG (Cluster, Core);
+    CppcBitWidths->AutonomousActivityWindowRegister = T410_CPPC_TIME_WINDOW_BITS;
+    CppcOffsets->PerformanceLimited                 = T410_CPPC_PERF_LIMITED_REG (Cluster, Core);
+    CppcBitWidths->PerformanceLimited               = T410_CPPC_PERF_LIMITED_BITS;
+    CppcOffsets->DesiredPerformance                 = T410_CPPC_DESIRED_PERF_REG (Cluster, Core);
+    CppcBitWidths->DesiredPerformance               = T410_CPPC_DESIRED_PERF_BITS;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
     return EFI_UNSUPPORTED;
@@ -365,6 +381,8 @@ GetRefClockFreq (
     *RefClockFreq = TH500_REFCLK_FREQ;
   } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT264)) {
     *RefClockFreq = T264_REFCLK_FREQ;
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT410)) {
+    *RefClockFreq = T410_REFCLK_FREQ;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
     return EFI_UNSUPPORTED;
