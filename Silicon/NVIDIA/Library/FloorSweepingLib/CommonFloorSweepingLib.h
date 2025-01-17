@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -12,6 +12,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
+#include <T410/T410Definitions.h>
 
 /**
   Floorsweep PCIe

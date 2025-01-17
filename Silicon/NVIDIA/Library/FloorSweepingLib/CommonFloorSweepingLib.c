@@ -419,18 +419,51 @@ CommonFloorSweepPcie (
         }
       }
 
-      Property = FdtGetProp (Dtb, NodeOffset, "linux,pci-domain", &Length);
-      if ((Property == NULL) || (Length != sizeof (Tmp32))) {
-        DEBUG ((DEBUG_ERROR, "Invalid pci-domain for %a, skipping\n", FdtGetName (Dtb, NodeOffset, NULL)));
-        continue;
+      switch (ChipId) {
+        case TH500_CHIP_ID:
+        case T264_CHIP_ID:
+          Property = FdtGetProp (Dtb, NodeOffset, "linux,pci-domain", &Length);
+          if ((Property == NULL) || (Length != sizeof (Tmp32))) {
+            DEBUG ((DEBUG_ERROR, "Invalid pci-domain for %a, skipping\n", FdtGetName (Dtb, NodeOffset, NULL)));
+            continue;
+          }
+
+          Tmp32  = *(CONST UINT32 *)Property;
+          PcieId = Fdt32ToCpu (Tmp32);
+          DEBUG ((DEBUG_INFO, "Found pcie 0x%x (%a)\n", PcieId, FdtGetName (Dtb, NodeOffset, NULL)));
+
+          InterfaceSocket = PcieIdToSocket (PcieId);
+          CtrlId          = PcieIdToInterface (PcieId);
+          break;
+        case T410_CHIP_ID:
+          Property = FdtGetProp (Dtb, NodeOffset, "nvidia,controller-id", &Length);
+          if ((Property == NULL) || (Length != sizeof (Tmp32))) {
+            DEBUG ((DEBUG_ERROR, "Invalid nvidia,controller-id for %a, skipping\n", FdtGetName (Dtb, NodeOffset, NULL)));
+            continue;
+          }
+
+          Tmp32  = *(CONST UINT32 *)Property;
+          CtrlId = Fdt32ToCpu (Tmp32);
+          DEBUG ((DEBUG_INFO, "PCIe Controller-ID: 0x%X\n", CtrlId));
+
+          Property = FdtGetProp (Dtb, NodeOffset, "nvidia,socket-id", &Length);
+          if ((Property == NULL) || (Length != sizeof (Tmp32))) {
+            DEBUG ((DEBUG_ERROR, "Invalid nvidia,socket-id for %a, skipping\n", FdtGetName (Dtb, NodeOffset, NULL)));
+            continue;
+          }
+
+          Tmp32           = *(CONST UINT32 *)Property;
+          InterfaceSocket = Fdt32ToCpu (Tmp32);
+          DEBUG ((DEBUG_INFO, "PCIe Socket-ID: 0x%X\n", InterfaceSocket));
+
+          PcieId = (InterfaceSocket << T410_PCIE_ID_TO_SOCKET_SHIFT) | CtrlId;
+          DEBUG ((DEBUG_VERBOSE, "PCIe Pcie-ID: 0x%X\n", PcieId));
+
+          break;
+
+        default:
+          return EFI_UNSUPPORTED;
       }
-
-      Tmp32  = *(CONST UINT32 *)Property;
-      PcieId = Fdt32ToCpu (Tmp32);
-      DEBUG ((DEBUG_INFO, "Found pcie 0x%x (%a)\n", PcieId, FdtGetName (Dtb, NodeOffset, NULL)));
-
-      InterfaceSocket = PcieIdToSocket (PcieId);
-      CtrlId          = PcieIdToInterface (PcieId);
 
       if (!IsSocketEnabled (InterfaceSocket) ||
           ((PcieDisableRegArray[InterfaceSocket] & (1UL << CtrlId)) != 0))
