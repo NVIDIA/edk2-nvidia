@@ -197,11 +197,11 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         from kconfiglib import Kconfig
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
-        self.config_out = ws_dir / "nvidia-config" / self.settings.GetName() / ".config"
-        self.defconfig_out = ws_dir / "nvidia-config" / self.settings.GetName() / "defconfig"
-        config_out_dsc = (
-            ws_dir / "nvidia-config" / self.settings.GetName() / "config.dsc.inc"
-        )
+        config_fullpath = ws_dir / self.settings.GetNvidiaConfigDir()
+
+        self.config_out = config_fullpath / ".config"
+        self.defconfig_out = config_fullpath / "defconfig"
+        config_out_dsc = config_fullpath / "config.dsc.inc"
 
         kconf_file = self.settings.GetKConfigFile()
         if (kconf_file == None):

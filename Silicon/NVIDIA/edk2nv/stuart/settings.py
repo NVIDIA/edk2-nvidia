@@ -76,6 +76,22 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         return Path(__file__).parent.parent.parent.parent.parent.name + "/"
 
+    def GetNvidiaConfigRoot(self):
+        ''' Return the root, relative to the workspace root, where
+            we'll store NVIDIA config data.
+
+            This implementation will return "nvidia-config"
+        '''
+        return "nvidia-config"
+
+    def GetNvidiaConfigDir(self):
+        ''' Return the directory, relative to the workspace root, where
+            we'll store NVIDIA config data for the current image.
+
+            This implementation will return "nvidia-config/<name>"
+        '''
+        return str(Path(self.GetNvidiaConfigRoot()) / self.GetName())
+
     def GetPackagesPath(self):
         ''' Return paths that should be mapped as edk2 PACKAGE_PATH.
 
@@ -104,7 +120,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
 
         if self.GetConfigFiles ():
             ws_dir = Path(self.GetWorkspaceRoot())
-            config_path = "nvidia-config/" + self.GetName()
+            config_path = self.GetNvidiaConfigDir()
             config_fullpath = ws_dir / config_path
             config_fullpath.mkdir(parents=True, exist_ok=True)
             packages_paths.extend([
@@ -462,10 +478,12 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Kconfig"
 
     def GetDefconfigHeader(self):
-        ''' Return the header to use when generating defconfig
+        ''' Return the header to use when regenerating defconfig
 
-            This string will be added to the top of the defconfig generated
-            under nvidia-config/.  defconfig is generated as a convenience.
+            This string will be added to the top of the defconfig when it is
+            regenerated.
+
+            The default implementation adds NVIDIA's copyright header.
         '''
         year= time.strftime("%Y")
         return defconfig_header_template.format(year=year)
