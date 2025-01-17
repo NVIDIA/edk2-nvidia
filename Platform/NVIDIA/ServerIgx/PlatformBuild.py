@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,9 +21,6 @@ class ServerIgxSettingsManager(NVIDIASettingsManager):
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
-
-    def GetDscName(self):
-        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"

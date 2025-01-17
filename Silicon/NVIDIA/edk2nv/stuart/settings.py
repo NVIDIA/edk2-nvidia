@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -307,7 +307,9 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
         return str(Path("images") / f"uefi_{platform_name}_{target}.bin")
 
     def GetDscName(self):
-        ''' Optionally return the path to the platform's DSC file.
+        ''' Return the path to the platform's DSC file.
+
+            This default implementation will return NVIDIA.common.dsc.
 
             If `None`, the value is taken from target.txt.  Otherwise, this
             will override target.txt
@@ -316,7 +318,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
 
             This will be used to set ACTIVE_PLATFORM.
         '''
-        return None
+        return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
 
     def GetToolchainTag(self):
         ''' Optionally return the toolchain identifier.
