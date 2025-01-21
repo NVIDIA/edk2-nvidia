@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -45,21 +45,21 @@ STATIC
 VOID
 SetupNotificationStructure (
   IN EFI_APEI_ERROR_SOURCE                                   *ErrorSource,
-  IN OUT EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_STRUCTURE  *NotificationStructure
+  IN OUT EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_STRUCTURE  *NotificationStructure
   )
 {
   NotificationStructure->Type = ErrorSource->NotificationType;
 
   switch (NotificationStructure->Type) {
-    case EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_SOFTWARE_DELEGATED_EXCEPTION:
+    case EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_SOFTWARE_DELEGATED_EXCEPTION:
       NotificationStructure->Vector = ErrorSource->SourceIdSdei;
       break;
 
-    case EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_GSIV:
+    case EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_GSIV:
       NotificationStructure->Vector = TH500_SW_IO2_INTR;
       break;
 
-    case EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_POLLED:
+    case EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_POLLED:
       if (ErrorSource->PollInterval < MINIMUM_POLLING_INTERVAL) {
         NotificationStructure->PollInterval = MINIMUM_POLLING_INTERVAL;
       } else {
@@ -84,12 +84,12 @@ HESTCreateAcpiTable (
   EFI_APEI_ERROR_SOURCE_INFO  *ErrorSourceInfo
   )
 {
-  EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER                 *HestTable;
+  EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_HEADER                 *HestTable;
   UINTN                                                           HestTableSize;
   UINT8                                                           Checksum;
   UINTN                                                           AcpiTableHandle;
   UINTN                                                           i;
-  EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE  GHESv2Instance;
+  EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE  GHESv2Instance;
   UINT8                                                           *ErrorSourceStructure;
   EFI_APEI_ERROR_SOURCE                                           *ErrorSource;
   EFI_STATUS                                                      Status              = EFI_SUCCESS;
@@ -104,13 +104,13 @@ HESTCreateAcpiTable (
                   (VOID **)&AcpiTableProtocol
                   );
 
-  HestTableSize = sizeof (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER);
+  HestTableSize = sizeof (EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_HEADER);
 
   for (i = 0; i < TotalNumErrorSource; i++) {
-    if (ErrorSource[i].GhesType == EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_VERSION_2) {
+    if (ErrorSource[i].GhesType == EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_VERSION_2) {
       if (ErrorSource[i].EventId != BERT_EVENT_ID) {
         /* Each error source can lead to 2 entries to support dynamic GSIV/SDEI */
-        HestTableSize += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) * 2;
+        HestTableSize += sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) * 2;
       }
     } else {
       DEBUG ((DEBUG_ERROR, "%a: Unsupported type=%d\n", __FUNCTION__, ErrorSource[i].GhesType));
@@ -120,11 +120,11 @@ HESTCreateAcpiTable (
   /* Allocate enough space for the header and error sources */
   HestTable = AllocateReservedZeroPool (HestTableSize);
 
-  *HestTable = (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER) {
+  *HestTable = (EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_HEADER) {
     .Header = {
-      .Signature       = EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_SIGNATURE,
-      .Length          = sizeof (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER),
-      .Revision        = EFI_ACPI_OEM_REVISION,
+      .Signature       = EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_SIGNATURE,
+      .Length          = sizeof (EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_HEADER),
+      .Revision        = EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_REVISION,
       .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
@@ -136,10 +136,10 @@ HESTCreateAcpiTable (
 
   /* Assume all error sources are GHESv2 compliant for now */
   HestTable->ErrorSourceCount = 0;
-  ErrorSourceStructure        = ((UINT8 *)HestTable + sizeof (EFI_ACPI_6_4_HARDWARE_ERROR_SOURCE_TABLE_HEADER));
+  ErrorSourceStructure        = ((UINT8 *)HestTable + sizeof (EFI_ACPI_6_5_HARDWARE_ERROR_SOURCE_TABLE_HEADER));
 
   for (i = 0; i < TotalNumErrorSource; i++) {
-    if (ErrorSource[i].GhesType != EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_VERSION_2) {
+    if (ErrorSource[i].GhesType != EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_VERSION_2) {
       continue;
     }
 
@@ -147,9 +147,9 @@ HESTCreateAcpiTable (
       continue;
     }
 
-    ZeroMem (&GHESv2Instance, sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE));
+    ZeroMem (&GHESv2Instance, sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE));
 
-    GHESv2Instance = (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) {
+    GHESv2Instance = (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE) {
       .Type            = ErrorSource[i].GhesType,
       .SourceId        = ErrorSource[i].SourceId,
       .RelatedSourceId = 0xFFFF,
@@ -187,11 +187,11 @@ HESTCreateAcpiTable (
     CopyMem (
       ErrorSourceStructure,
       (UINT8 *)&GHESv2Instance,
-      sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE)
+      sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE)
       );
 
-    ErrorSourceStructure     += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
-    HestTable->Header.Length += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
+    ErrorSourceStructure     += sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
+    HestTable->Header.Length += sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
     HestTable->ErrorSourceCount++;
 
     DEBUG ((
@@ -208,10 +208,10 @@ HESTCreateAcpiTable (
      * For each GSIV error source, create a duplicate SDEI entry. When an error needs to be reported,
      * system firmware will attempt to assert SDEI, and in case of failure, will fallback to GSIV.
      */
-    if ((ErrorSource[i].NotificationType == EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_GSIV) &&
+    if ((ErrorSource[i].NotificationType == EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_GSIV) &&
         (ErrorSource[i].SourceIdSdei != 0))
     {
-      ErrorSource[i].NotificationType = EFI_ACPI_6_4_HARDWARE_ERROR_NOTIFICATION_SOFTWARE_DELEGATED_EXCEPTION;
+      ErrorSource[i].NotificationType = EFI_ACPI_6_5_HARDWARE_ERROR_NOTIFICATION_SOFTWARE_DELEGATED_EXCEPTION;
       GHESv2Instance.SourceId         = ErrorSource[i].SourceIdSdei;
 
       SetupNotificationStructure (&(ErrorSource[i]), &(GHESv2Instance.NotificationStructure));
@@ -219,11 +219,11 @@ HESTCreateAcpiTable (
       CopyMem (
         ErrorSourceStructure,
         (UINT8 *)&GHESv2Instance,
-        sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE)
+        sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE)
         );
 
-      ErrorSourceStructure     += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
-      HestTable->Header.Length += sizeof (EFI_ACPI_6_4_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
+      ErrorSourceStructure     += sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
+      HestTable->Header.Length += sizeof (EFI_ACPI_6_5_GENERIC_HARDWARE_ERROR_SOURCE_VERSION_2_STRUCTURE);
       HestTable->ErrorSourceCount++;
 
       DEBUG ((
@@ -264,13 +264,13 @@ BERTCreateAcpiTable (
   )
 {
   EFI_STATUS                                   Status = EFI_SUCCESS;
-  EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER  *BertTable;
+  EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_HEADER  *BertTable;
   UINTN                                        BertSize;
   UINT8                                        Checksum;
   UINTN                                        AcpiTableHandle;
   UINTN                                        i;
   UINT32                                       TotalNumErrorSource;
-  EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE  *Gess;
+  EFI_ACPI_6_5_GENERIC_ERROR_STATUS_STRUCTURE  *Gess;
   EFI_ACPI_TABLE_PROTOCOL                      *AcpiTableProtocol   = NULL;
   EFI_APEI_ERROR_SOURCE                        *ErrorSource         = NULL;
   EFI_APEI_ERROR_SOURCE                        *BERTErrorSourceInfo = NULL;
@@ -299,24 +299,24 @@ BERTCreateAcpiTable (
   }
 
   BootErrorRegionRegister = (UINTN *)BERTErrorSourceInfo->ErrorStatusAddress.Address;
-  Gess                    = (EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE *)*BootErrorRegionRegister;
+  Gess                    = (EFI_ACPI_6_5_GENERIC_ERROR_STATUS_STRUCTURE *)*BootErrorRegionRegister;
 
   /* Allocate enough space for the header and error sources */
-  BertSize  = sizeof (EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER);
+  BertSize  = sizeof (EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_HEADER);
   BertTable = AllocateReservedZeroPool (BertSize);
 
-  *BertTable = (EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER) {
+  *BertTable = (EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_HEADER) {
     .Header = {
-      .Signature       = EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_SIGNATURE,
-      .Length          = sizeof (EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_HEADER),
-      .Revision        = EFI_ACPI_6_4_BOOT_ERROR_RECORD_TABLE_REVISION,
+      .Signature       = EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_SIGNATURE,
+      .Length          = sizeof (EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_HEADER),
+      .Revision        = EFI_ACPI_6_5_BOOT_ERROR_RECORD_TABLE_REVISION,
       .OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId),
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
     },
     .BootErrorRegion       = (UINTN)Gess,
-    .BootErrorRegionLength = Gess->DataLength + sizeof (EFI_ACPI_6_4_GENERIC_ERROR_STATUS_STRUCTURE)
+    .BootErrorRegionLength = Gess->DataLength + sizeof (EFI_ACPI_6_5_GENERIC_ERROR_STATUS_STRUCTURE)
   };
   CopyMem (BertTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (BertTable->Header.OemId));
 

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -10,22 +10,22 @@
 #include <LicSwIo.h>
 
 typedef struct {
-  EFI_ACPI_6_4_ERROR_INJECTION_TABLE_HEADER        Header;
-  EFI_ACPI_6_4_EINJ_INJECTION_INSTRUCTION_ENTRY    Entries[EINJ_ENTRIES_COUNT];
+  EFI_ACPI_6_5_ERROR_INJECTION_TABLE_HEADER        Header;
+  EFI_ACPI_6_5_EINJ_INJECTION_INSTRUCTION_ENTRY    Entries[EINJ_ENTRIES_COUNT];
 } EINJ_WITH_ENTRIES;
 
 STATIC EINJ_WITH_ENTRIES  EinjTable = {
   .Header                                                    = {
     .Header                                                  = {
-      .Signature       = EFI_ACPI_6_4_ERROR_INJECTION_TABLE_SIGNATURE,
+      .Signature       = EFI_ACPI_6_5_ERROR_INJECTION_TABLE_SIGNATURE,
       .Length          = sizeof (EINJ_WITH_ENTRIES),
-      .Revision        = EFI_ACPI_OEM_REVISION,
+      .Revision        = EFI_ACPI_6_5_ERROR_INJECTION_TABLE_REVISION,
       .OemTableId      = MAX_UINT64,
       .OemRevision     = EFI_ACPI_OEM_REVISION,
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
     },
-    .InjectionHeaderSize                                     = sizeof (EFI_ACPI_6_4_ERROR_INJECTION_TABLE_HEADER) -
+    .InjectionHeaderSize                                     = sizeof (EFI_ACPI_6_5_ERROR_INJECTION_TABLE_HEADER) -
                                                                sizeof (EFI_ACPI_DESCRIPTION_HEADER),
     .InjectionFlags      = 0,
     .InjectionEntryCount = EINJ_ENTRIES_COUNT
@@ -35,9 +35,9 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Entry 0: indicates the beginning of an error injection.
    * Implementation: No-op.
    */
-  .Entries[EFI_ACPI_6_4_EINJ_BEGIN_INJECTION_OPERATION] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_BEGIN_INJECTION_OPERATION,
-    .Instruction     = EFI_ACPI_6_4_EINJ_NOOP
+  .Entries[EFI_ACPI_6_5_EINJ_BEGIN_INJECTION_OPERATION] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_BEGIN_INJECTION_OPERATION,
+    .Instruction     = EFI_ACPI_6_5_EINJ_NOOP
   },
 
   /*
@@ -45,14 +45,14 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Implementation: Read register pointing to TriggerActionTablePtr in
    * RAS_FW_EINJ_COMM_STRUCT.
    */
-  .Entries[EFI_ACPI_6_4_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE,
-    .Instruction     = EFI_ACPI_6_4_EINJ_READ_REGISTER,
+  .Entries[EFI_ACPI_6_5_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE,
+    .Instruction     = EFI_ACPI_6_5_EINJ_READ_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -62,9 +62,9 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Entry 2: Set error type for the error to inject.
    * Implementation: No-op (entry not used in ACPI5+)
    */
-  .Entries[EFI_ACPI_6_4_EINJ_SET_ERROR_TYPE] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_SET_ERROR_TYPE,
-    .Instruction     = EFI_ACPI_6_4_EINJ_NOOP
+  .Entries[EFI_ACPI_6_5_EINJ_SET_ERROR_TYPE] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_SET_ERROR_TYPE,
+    .Instruction     = EFI_ACPI_6_5_EINJ_NOOP
   },
 
   /*
@@ -72,14 +72,14 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Implementation: Read register pointing to SupportedTypes in
    * RAS_FW_EINJ_COMM_STRUCT.
    */
-  .Entries[EFI_ACPI_6_4_EINJ_GET_ERROR_TYPE] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_GET_ERROR_TYPE,
-    .Instruction     = EFI_ACPI_6_4_EINJ_READ_REGISTER,
+  .Entries[EFI_ACPI_6_5_EINJ_GET_ERROR_TYPE] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_GET_ERROR_TYPE,
+    .Instruction     = EFI_ACPI_6_5_EINJ_READ_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -89,9 +89,9 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Entry 4: End of injection operation.
    * Implementation: No-op
    */
-  .Entries[EFI_ACPI_6_4_EINJ_END_OPERATION] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_END_OPERATION,
-    .Instruction     = EFI_ACPI_6_4_EINJ_NOOP
+  .Entries[EFI_ACPI_6_5_EINJ_END_OPERATION] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_END_OPERATION,
+    .Instruction     = EFI_ACPI_6_5_EINJ_NOOP
   },
 
   /*
@@ -99,9 +99,9 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Implementation: No-op (operation execution is carried out by the Trigger
    * Action table)
    */
-  .Entries[EFI_ACPI_6_4_EINJ_EXECUTE_OPERATION] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_EXECUTE_OPERATION,
-    .Instruction     = EFI_ACPI_6_4_EINJ_NOOP
+  .Entries[EFI_ACPI_6_5_EINJ_EXECUTE_OPERATION] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_EXECUTE_OPERATION,
+    .Instruction     = EFI_ACPI_6_5_EINJ_NOOP
   },
 
   /*
@@ -109,14 +109,14 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Implementation: Read register pointing to Busy in
    * RAS_FW_EINJ_COMM_STRUCT.
    */
-  .Entries[EFI_ACPI_6_4_EINJ_CHECK_BUSY_STATUS] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_CHECK_BUSY_STATUS,
-    .Instruction     = EFI_ACPI_6_4_EINJ_READ_REGISTER,
+  .Entries[EFI_ACPI_6_5_EINJ_CHECK_BUSY_STATUS] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_CHECK_BUSY_STATUS,
+    .Instruction     = EFI_ACPI_6_5_EINJ_READ_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -127,14 +127,14 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    * Implementation: Read register pointing to Status in
    * RAS_FW_EINJ_COMM_STRUCT.
    */
-  .Entries[EFI_ACPI_6_4_EINJ_GET_COMMAND_STATUS] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_GET_COMMAND_STATUS,
-    .Instruction     = EFI_ACPI_6_4_EINJ_READ_REGISTER,
+  .Entries[EFI_ACPI_6_5_EINJ_GET_COMMAND_STATUS] = {
+    .InjectionAction = EFI_ACPI_6_5_EINJ_GET_COMMAND_STATUS,
+    .Instruction     = EFI_ACPI_6_5_EINJ_READ_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -147,12 +147,12 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    */
   .Entries[EFI_ACPI_6_X_EINJ_SET_ERROR_TYPE_WITH_ADDRESS] = {
     .InjectionAction = EFI_ACPI_6_X_EINJ_SET_ERROR_TYPE_WITH_ADDRESS,
-    .Instruction     = EFI_ACPI_6_4_EINJ_WRITE_REGISTER,
+    .Instruction     = EFI_ACPI_6_5_EINJ_WRITE_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -165,12 +165,12 @@ STATIC EINJ_WITH_ENTRIES  EinjTable = {
    */
   .Entries[EFI_ACPI_6_X_EINJ_GET_EXECUTE_OPERATION_TIMINGS] = {
     .InjectionAction = EFI_ACPI_6_X_EINJ_GET_EXECUTE_OPERATION_TIMINGS,
-    .Instruction     = EFI_ACPI_6_4_EINJ_READ_REGISTER,
+    .Instruction     = EFI_ACPI_6_5_EINJ_READ_REGISTER,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_5_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                                                    = EINJ_DEFAULT_MASK
@@ -181,19 +181,19 @@ STATIC
 EFI_ACPI_6_X_EINJ_TRIGGER_ERROR_ACTION_TABLE
   TriggerErrorActionTable = {
   .Header                = {
-    .HeaderSize = sizeof (EFI_ACPI_6_4_EINJ_TRIGGER_ACTION_TABLE),
+    .HeaderSize = sizeof (EFI_ACPI_6_5_EINJ_TRIGGER_ACTION_TABLE),
     .Revision   = 1,
     .TableSize  = sizeof (EFI_ACPI_6_X_EINJ_TRIGGER_ERROR_ACTION_TABLE),
     .EntryCount = EINJ_TRIGGER_ACTION_COUNT
   },
   .TriggerActions[0] = {
-    .InjectionAction = EFI_ACPI_6_4_EINJ_TRIGGER_ERROR,
-    .Instruction     = EFI_ACPI_6_4_EINJ_WRITE_REGISTER_VALUE,
+    .InjectionAction = EFI_ACPI_6_5_EINJ_TRIGGER_ERROR,
+    .Instruction     = EFI_ACPI_6_5_EINJ_WRITE_REGISTER_VALUE,
     .RegisterRegion  = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_5_SYSTEM_MEMORY,
       .RegisterBitWidth  = 32,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_DWORD,
+      .AccessSize        = EFI_ACPI_6_5_DWORD,
       .Address           = TH500_SW_IO0_BASE + INTR_CTLR_SW_IO_N_INTR_STATUS_SET_0_OFFSET
     },
     .Value = 0x1,
@@ -207,7 +207,7 @@ EINJCreateAcpiTable (
   )
 {
   UINTN                                          TableHandle;
-  EFI_ACPI_6_4_EINJ_INJECTION_INSTRUCTION_ENTRY  *Entry;
+  EFI_ACPI_6_5_EINJ_INJECTION_INSTRUCTION_ENTRY  *Entry;
   EFI_ACPI_TABLE_PROTOCOL                        *AcpiTableProtocol;
   EFI_STATUS                                     Status = EFI_SUCCESS;
 
@@ -234,16 +234,16 @@ EINJCreateAcpiTable (
   EinjComm->SetErrorTypeWithAddressPtr = (UINT64)&(EinjComm->SetErrorTypeWithAddress);
 
   /* Fill all the needed register addresses in the table */
-  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_4_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE]);
+  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_5_EINJ_GET_TRIGGER_ERROR_ACTION_TABLE]);
   Entry->RegisterRegion.Address = EinjComm->TriggerActionTableRegister;
 
-  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_4_EINJ_GET_ERROR_TYPE]);
+  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_5_EINJ_GET_ERROR_TYPE]);
   Entry->RegisterRegion.Address = (UINT64)&(EinjComm->SupportedTypes);
 
-  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_4_EINJ_CHECK_BUSY_STATUS]);
+  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_5_EINJ_CHECK_BUSY_STATUS]);
   Entry->RegisterRegion.Address = (UINT64)&(EinjComm->Busy);
 
-  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_4_EINJ_GET_COMMAND_STATUS]);
+  Entry                         = &(EinjTable.Entries[EFI_ACPI_6_5_EINJ_GET_COMMAND_STATUS]);
   Entry->RegisterRegion.Address = (UINT64)&(EinjComm->Status);
 
   Entry                         = &(EinjTable.Entries[EFI_ACPI_6_X_EINJ_SET_ERROR_TYPE_WITH_ADDRESS]);
@@ -282,7 +282,7 @@ EinjSetupTable (
   if (EinjComm->Signature == EINJ_DISABLED_SIGNATURE) {
     DEBUG ((DEBUG_ERROR, "%a: EINJ is disabled\n", __FUNCTION__));
     return EFI_SUCCESS;
-  } else if (EinjComm->Signature != EFI_ACPI_6_4_ERROR_INJECTION_TABLE_SIGNATURE) {
+  } else if (EinjComm->Signature != EFI_ACPI_6_5_ERROR_INJECTION_TABLE_SIGNATURE) {
     DEBUG ((DEBUG_ERROR, "%a: EINJComm not initialized\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
