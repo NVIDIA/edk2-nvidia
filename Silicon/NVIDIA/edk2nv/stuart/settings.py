@@ -282,15 +282,12 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
     def GetFirmwareVolume(self):
         ''' Return the flash volume to use when generating the firmware image.
 
-            Must match a flash volume in the platform's FDF file.
+            This default implementation will return FV/UEFI_NS.Fv.
 
             The return must be a string and identify a path relative to the
             platform's build output directory.
         '''
-        raise NotImplementedError(
-            "GetFirmwareVolume() must be implemented in "
-            "NVIDIASettingsManager subclasses."
-        )
+        return "FV/UEFI_NS.Fv"
 
     def GetFirmwareImageFile(self):
         ''' Return the name of the firmware image.

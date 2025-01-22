@@ -19,9 +19,6 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetGuid(self):
         return "9aef2e52-dead-4f63-b895-3a504a3e63c4"
 
-    def GetFirmwareVolume(self):
-        return "FV/UEFI_NS.Fv"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Server/Server.defconfig"

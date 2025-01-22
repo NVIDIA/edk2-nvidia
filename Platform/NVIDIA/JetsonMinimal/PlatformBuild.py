@@ -22,9 +22,6 @@ class JetsonMinimalSettingsManager(NVIDIASettingsManager):
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["jetson"]
 
-    def GetFirmwareVolume(self):
-        return "FV/UEFI_NS.Fv"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/JetsonMinimal/Jetson.defconfig"

@@ -19,9 +19,6 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetGuid(self):
         return "49a79a15-8f69-4be7-a30c-a172f44abce7"
 
-    def GetFirmwareVolume(self):
-        return "FV/UEFI_NS.Fv"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Jetson/Jetson.defconfig"
