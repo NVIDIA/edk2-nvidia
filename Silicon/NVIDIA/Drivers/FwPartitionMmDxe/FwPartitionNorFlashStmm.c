@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -38,6 +38,7 @@ typedef struct {
   NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
   FW_PARTITION_DEVICE_INFO     DeviceInfo;
   UINTN                        UnalignedGptStart;
+  UINT32                       SocketId;
 } FW_PARTITION_NOR_FLASH_INFO;
 
 STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo   = NULL;
@@ -325,13 +326,16 @@ FPNorFlashInitDevices (
     NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
     FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo;
     FW_PARTITION_DEVICE_INFO     *DeviceInfo;
+    UINT32                       *SocketIdProtocol;
+    UINT32                       SocketId;
 
-    Handle = HandleBuffer[Index];
-    Status = gMmst->MmHandleProtocol (
-                      Handle,
-                      &gNVIDIANorFlashProtocolGuid,
-                      (VOID **)&NorFlash
-                      );
+    NorFlash = NULL;
+    Handle   = HandleBuffer[Index];
+    Status   = gMmst->MmHandleProtocol (
+                        Handle,
+                        &gNVIDIANorFlashProtocolGuid,
+                        (VOID **)&NorFlash
+                        );
     if (EFI_ERROR (Status) || (NorFlash == NULL)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -370,12 +374,25 @@ FPNorFlashInitDevices (
       break;
     }
 
+    SocketIdProtocol = NULL;
+    Status           = gMmst->MmHandleProtocol (
+                                Handle,
+                                &gNVIDIASocketIdProtocolGuid,
+                                (VOID **)&SocketIdProtocol
+                                );
+    if (EFI_ERROR (Status) || (SocketIdProtocol == NULL)) {
+      SocketId = 0xFFFF;
+    } else {
+      SocketId = (UINT8)(*SocketIdProtocol);
+    }
+
     NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
     NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
     NorFlashInfo->Bytes             = Attributes.MemoryDensity;
     NorFlashInfo->Attributes        = Attributes;
     NorFlashInfo->NorFlash          = NorFlash;
     NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
+    NorFlashInfo->SocketId          = SocketId;
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = L"MM-NorFlash";
@@ -430,13 +447,16 @@ FPNorFlashInitDevicesBlob (
     NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
     FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo;
     FW_PARTITION_DEVICE_INFO     *DeviceInfo;
+    UINT32                       *SocketIdProtocol;
+    UINT32                       SocketId;
 
-    Handle = HandleBuffer[Index];
-    Status = gMmst->MmHandleProtocol (
-                      Handle,
-                      &gNVIDIANorFlash2ProtocolGuid,
-                      (VOID **)&NorFlash
-                      );
+    NorFlash = NULL;
+    Handle   = HandleBuffer[Index];
+    Status   = gMmst->MmHandleProtocol (
+                        Handle,
+                        &gNVIDIANorFlash2ProtocolGuid,
+                        (VOID **)&NorFlash
+                        );
     if (EFI_ERROR (Status) || (NorFlash == NULL)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -473,6 +493,18 @@ FPNorFlashInitDevicesBlob (
         MAX_NOR_FLASH_DEVICES
         ));
       break;
+    }
+
+    SocketIdProtocol = NULL;
+    Status           = gMmst->MmHandleProtocol (
+                                Handle,
+                                &gNVIDIASocketIdProtocolGuid,
+                                (VOID **)&SocketIdProtocol
+                                );
+    if (EFI_ERROR (Status) || (SocketIdProtocol == NULL)) {
+      SocketId = 0xFFFF;
+    } else {
+      SocketId = (UINT8)(*SocketIdProtocol);
     }
 
     NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
@@ -518,7 +550,7 @@ FwPartitionNorFlashStmmInitialize (
 
   Status = StmmGetActiveBootChain (&mActiveBootChain);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: error getting boot chain, using %u: %r\n", __FUNCTION__, ActiveBootChain, Status));
+    DEBUG ((DEBUG_INFO, "%a: error getting boot chain, using %u: %r\n", __FUNCTION__, ActiveBootChain, Status));
     mActiveBootChain = ActiveBootChain;
   }
 
@@ -553,20 +585,23 @@ FwPartitionNorFlashStmmInitialize (
     goto Done;
   }
 
-  // add FwPartition structs for all partitions in GPT on each device
-  for (Index = 0; Index < mNumDevices; Index++) {
-    FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
-    FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
+  // Skip GPT check for TH500
+  if (ChipId != TH500_CHIP_ID) {
+    // add FwPartition structs for all partitions in GPT on each device
+    for (Index = 0; Index < mNumDevices; Index++) {
+      FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
+      FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
 
-    Status = FwPartitionAddFromDeviceGpt (DeviceInfo, NorFlashInfo->Bytes);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Error adding partitions from FW device=%s: %r\n",
-        __FUNCTION__,
-        DeviceInfo->DeviceName,
-        Status
-        ));
+      Status = FwPartitionAddFromDeviceGpt (DeviceInfo, NorFlashInfo->Bytes);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Error adding partitions from FW device=%s: %r\n",
+          __FUNCTION__,
+          DeviceInfo->DeviceName,
+          Status
+          ));
+      }
     }
   }
 
@@ -584,6 +619,11 @@ FwPartitionNorFlashStmmInitialize (
     for (Index = 0; Index < mNumDevices; Index++) {
       FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
       FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
+
+      // Skip the flash if it's not on socket 0
+      if (NorFlashInfo->SocketId != 0) {
+        continue;
+      }
 
       Status = FwDeviceAddAsPartition (
                  DeviceInfo->DeviceName,

@@ -1254,12 +1254,14 @@ TH500GetPartitionInfo (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  if (PcdGetBool (PcdCapsulePartitionEnabled)) {
-    if (PartitionIndex == TEGRAUEFI_CAPSULE) {
+  if (PartitionIndex == TEGRAUEFI_CAPSULE) {
+    if (PcdGetBool (PcdCapsulePartitionEnabled)) {
       *PartitionSizeBytes =  PcdGet64 (PcdCapsulePartitionSize);
       PartitionDesc       = &CpuBootloaderParams->PartitionInfo[TEGRABL_RAS_ERROR_LOGS][PRIMARY_COPY];
       *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
       return EFI_SUCCESS;
+    } else {
+      return EFI_UNSUPPORTED;
     }
   }
 

@@ -704,7 +704,7 @@ FwPartitionAdd (
 
   if (FwPartitionFindByName (Name) != NULL) {
     DEBUG ((
-      DEBUG_ERROR,
+      DEBUG_INFO,
       "%a: Partition %s already added\n",
       __FUNCTION__,
       Name
