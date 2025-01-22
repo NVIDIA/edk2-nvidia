@@ -2097,6 +2097,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
       IpmiParser|Silicon/NVIDIA/Drivers/ConfigurationManagerData/IpmiParser/IpmiParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SpmiParser/SpmiParser.inf
 !endif
+!ifdef CONFIG_SOC_T41X
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/LfaInfo/LfaInfo.inf
+!endif
 
 !ifdef CONFIG_SECURITY_MM_SUPPORT
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/WsmtParser/WsmtParser.inf
