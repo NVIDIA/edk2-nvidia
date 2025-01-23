@@ -1,0 +1,27 @@
+#
+#  SPDX-FileCopyrightText:  Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CxlLib
+  FILE_GUID                      = 7986e3ab-6679-449f-aaa2-c65a6d4dc02a
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = CxlLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  PcieLib
+
+[Sources.common]
+  CxlLib.c
+
+[Protocols]
+  gEfiPciIoProtocolGuid

@@ -278,6 +278,8 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
   ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
+  PcieLib|Silicon/NVIDIA/Library/PcieLib/PcieLib.inf
+  CxlLib|Silicon/NVIDIA/Library/CxlLib/CxlLib.inf
   SmmuLib|Silicon/NVIDIA/Library/SmmuLib/SmmuLib.inf
 
   OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
@@ -1725,7 +1727,15 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   # CXL Support
   #
-  Silicon/NVIDIA/Drivers/CxlDxe/CxlDxe.inf
+  Silicon/NVIDIA/Drivers/CxlDxe/CxlDxe.inf {
+    <LibraryClasses>
+    !ifdef CONFIG_CXL_TYPE_3
+      NULL|Silicon/NVIDIA/Drivers/CxlDxe/CxlType3Parser/CxlType3Parser.inf
+    !endif
+    !ifdef CONFIG_CXL_TYPE_2
+      NULL|Silicon/NVIDIA/Drivers/CxlDxe/CxlType2Parser/CxlType2Parser.inf
+    !endif
+  }
 !endif
 
   Silicon/NVIDIA/Drivers/DefaultVariableDxe/DefaultVariableDxe.inf

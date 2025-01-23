@@ -1,0 +1,34 @@
+## @file
+#  Cxl Type 2 Parser
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = CxlType2Parser
+  FILE_GUID      = 2c970ece-c881-4c3f-acf9-a18e3307a58e
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterCxlType2Parser
+
+[Sources]
+  CxlType2Parser.c
+  CxlType2Parser.h
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+
+[Pcd]
+
+[Guids]
+
+[Protocols]

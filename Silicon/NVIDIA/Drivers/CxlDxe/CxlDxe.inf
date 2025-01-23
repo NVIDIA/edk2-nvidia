@@ -26,7 +26,9 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  CxlLib
   DebugLib
+  DeviceTreeHelperLib
   UefiLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint

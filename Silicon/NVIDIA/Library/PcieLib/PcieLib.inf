@@ -1,0 +1,26 @@
+#
+#  SPDX-FileCopyrightText:  Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PcieLib
+  FILE_GUID                      = 42271101-37a5-4ace-aab9-6b7a66a6130e
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PcieLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+
+[Sources.common]
+  PcieLib.c
+
+[Protocols]
+  gEfiPciIoProtocolGuid

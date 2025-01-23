@@ -8,7 +8,23 @@
 
 **/
 
-#include <CxlPrivate.h>
+#include "CxlDxe.h"
+
+#include <IndustryStandard/Pci.h>
+#include <IndustryStandard/Cxl.h>
+
+#include <Library/BaseMemoryLib.h>
+#include <Library/CxlLib.h>
+#include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+
+/**
+ * A list of all the CXL type parsers that have been registered.
+ **/
+CXL_PARSER_INFO  *mCxlTypeParsers    = NULL;
+UINT32           mCxlTypeParserCount = 0;
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -63,7 +79,17 @@ CxlDriverBindingSupported (
   EFI_STATUS                Status;
   EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath;
   EFI_PCI_IO_PROTOCOL       *PciIo;
-  UINT8                     ClassCode[3];
+  UINTN                     Segment;
+  UINTN                     Bus;
+  UINTN                     Device;
+  UINTN                     Function;
+  UINTN                     ParserIndex;
+  UINT32                    ExtCapOffset;
+
+  if (mCxlTypeParserCount == 0) {
+    DEBUG ((DEBUG_WARN, "%a: No CXL type parsers registered\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
 
   // Add RemainingDevicePath path logic here
 
@@ -116,26 +142,69 @@ CxlDriverBindingSupported (
   }
 
   //
-  // Now further check the PCI header: Base class (offset 0x05) and Sub Class (offset 0x02).
+  // Read Segment, Bus, Device and Function of the CXL device
   //
-  Status = PciIo->Pci.Read (
-                        PciIo,
-                        EfiPciIoWidthUint8,
-                        PCI_CLASSCODE_OFFSET,
-                        sizeof (ClassCode),
-                        ClassCode
-                        );
+  Status = PciIo->GetLocation (
+                    PciIo,
+                    &Segment,
+                    &Bus,
+                    &Device,
+                    &Function
+                    );
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GetLocation failed with error %r\n", __FUNCTION__, Status));
     goto Done;
   }
 
-  //
-  // Examine controllers and devices configuration table fields
-  //
-
-  // Base Class Code (Memory controller 0x05), Sub Class Code (CXL memory device 0x02) and Programming Interface (0x10)
-  if ((ClassCode[0] != PCI_CXL_PI) || (ClassCode[1] != PCI_CLASS_MEMORY_CONTROLLER_CXL) || (ClassCode[2] != PCI_CLASS_MEMORY_CONTROLLER)) {
+  // Look for any CXL DVSEC Capability
+  ExtCapOffset = 0;
+  Status       = CxlLibLocateCxlDvsec (PciIo, &ExtCapOffset, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_VERBOSE,
+      "%a: Segment: %02x\t Bus: 0x%02x\t Device: 0x%02x\t Function: 0x%02x - No CXL DVSEC found\n",
+      __FUNCTION__,
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
     Status = EFI_UNSUPPORTED;
+    goto Done;
+  }
+
+  // Attempt to find a parser that knows how to parse this CXL entity
+  Status = EFI_UNSUPPORTED;
+  for (ParserIndex = 0; ParserIndex < mCxlTypeParserCount; ParserIndex++) {
+    if (EFI_ERROR (mCxlTypeParsers[ParserIndex].Parser (Controller, PciIo))) {
+      continue;
+    }
+
+    DEBUG ((DEBUG_ERROR, "%a: %a device found\n", __FUNCTION__, mCxlTypeParsers[ParserIndex].ParserName));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Segment: %02x\t Bus: 0x%02x\t Device: 0x%02x\t Function: 0x%02x\n",
+      __FUNCTION__,
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    Status = EFI_SUCCESS;
+    break;
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Segment: %02x\t Bus: 0x%02x\t Device: 0x%02x\t Function: 0x%02x - No suitable CXL parser found, it will be ignored\n",
+      __FUNCTION__,
+      Segment,
+      Bus,
+      Device,
+      Function
+      ));
+    goto Done;
   }
 
 Done:
@@ -264,4 +333,61 @@ InitializeCxlDxe (
            &gCxlDriverBinding,
            ImageHandle
            );
+}
+
+/**
+  Function to register a parser for use by the CXL Driver.
+
+  @param  [in]  Parser            The CXL parser library to register.
+  @param  [in]  ParserSkipString  The DTB property to check to see if
+                                  the parser should be skipped.
+
+  @retval EFI_SUCCESS             The function completed successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid parameter.
+**/
+EFI_STATUS
+EFIAPI
+CxlDxeRegisterTypeParser (
+  CXL_PARSER_INFO  *Parser,
+  CHAR8            *ParserSkipString
+  )
+{
+  EFI_STATUS       Status;
+  INT32            NodeOffset;
+  CXL_PARSER_INFO  *NewParserList;
+
+  DEBUG ((DEBUG_VERBOSE, "%a: Called, mCxlTypeParserCount = %u\n", __FUNCTION__, mCxlTypeParserCount));
+
+  if (Parser == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (ParserSkipString != NULL) {
+    Status = DeviceTreeGetNodeByPath ("/firmware/uefi", &NodeOffset);
+    if (Status == EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_WARN, "%a: Can't find /firmware/uefi to check for %a\n", __FUNCTION__, ParserSkipString));
+    } else if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to check for %a\n", __FUNCTION__, Status, ParserSkipString));
+      return Status;
+    } else if (NodeOffset >= 0) {
+      Status = DeviceTreeGetNodeProperty (NodeOffset, ParserSkipString, NULL, NULL);
+      if (Status == EFI_SUCCESS) {
+        DEBUG ((DEBUG_ERROR, "%a: Skipping %a due to seeing %a\n", __FUNCTION__, Parser->ParserName, ParserSkipString));
+        return EFI_SUCCESS;
+      }
+    }
+  }
+
+  NewParserList = ReallocatePool ((mCxlTypeParserCount) * sizeof (CXL_PARSER_INFO), (mCxlTypeParserCount+1) * sizeof (CXL_PARSER_INFO), mCxlTypeParsers);
+  if (NewParserList == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: No resources to add parser for %a to the parser list\n", __FUNCTION__, Parser->ParserName));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  mCxlTypeParsers = NewParserList;
+
+  CopyMem (&mCxlTypeParsers[mCxlTypeParserCount], Parser, sizeof (CXL_PARSER_INFO));
+  mCxlTypeParserCount++;
+
+  return EFI_SUCCESS;
 }

@@ -347,6 +347,20 @@ menu "Hardware support"
     help
       Support for CXL
 
+    config CXL_TYPE_2
+    bool "CXL TYPE 2 device support"
+    depends on CXL
+    default y
+    help
+      Enables CXL TYPE 2 if CXL is enabled
+
+    config CXL_TYPE_3
+    bool "CXL TYPE 3 device support"
+    depends on CXL
+    default y
+    help
+      Enables CXL TYPE 3 if CXL is enabled
+
     config PCIE_IGNORE_IO_BAR
     bool "Ignore PCIe EP IO BAR Request"
     depends on NVIDIA_PCIE
