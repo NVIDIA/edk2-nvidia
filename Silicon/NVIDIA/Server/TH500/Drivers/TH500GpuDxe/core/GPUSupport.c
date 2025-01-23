@@ -4,7 +4,7 @@
     Placeholder until PCD, post devinit scratch, fsp query
     or CXL information available
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -65,6 +65,10 @@
   0x2901 - 0x293f = GB100 products in endpoint mode
   0x2940 = reserved
   0x2941 - 0x297f = GB100 products in SH mode
+  0x31C0 = recovery mode and pre-silicon/unfused parts
+  0x31C1 - 0x31FF = GB110 products in endpoint mode
+  0x3340 = recovery mode and pre-silicon/unfused parts
+  0x3341 - 0x337F = GB120 products in endpoint mode
 */
 #define TH500_GPU_MODE_CHECK_EHH(vid, did) \
     ( ((vid)==0x10de) && ((did)==0x2300) )
@@ -82,9 +86,15 @@
     ( ((vid)==0x10de) && (((did)>=0x2941) && ((did)<=0x297f)) )
 #define TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) \
     ( ((vid)==0x10de) && (((did)>=0x29C1) && ((did)<=0x29ff)) )
+#define TH500_GB110_GPU_MODE_CHECK_SHH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x31C1) && ((did)<=0x31FF)) )
+#define TH500_GB120_GPU_MODE_CHECK_SHH(vid, did) \
+    ( ((vid)==0x10de) && (((did)>=0x3341) && ((did)<=0x337F)) )
 #define TH500_GB180_GPU_MODE_CHECK_SHH(vid, did) \
     ( TH500_GB100_GPU_MODE_CHECK_SHH(vid, did) || \
-      TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) )
+      TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) || \
+      TH500_GB110_GPU_MODE_CHECK_SHH(vid, did) || \
+      TH500_GB120_GPU_MODE_CHECK_SHH(vid, did) )
 
 ///
 /// GPU Mode check and Firmware complete poll

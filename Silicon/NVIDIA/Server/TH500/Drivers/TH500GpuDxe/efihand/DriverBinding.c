@@ -164,6 +164,24 @@ IdentifyControllerFamily (
     GpuFamily = NVIDIA_GPU_BLACKWELL;
   }
 
+  /* SH */
+  /* TH500+GB110 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
+  }
+
+  /* SH */
+  /* TH500+GB120 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x3341) && (ui16DeviceId <= 0x337F)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    GpuFamily = NVIDIA_GPU_BLACKWELL;
+  }
+
   return GpuFamily;
 }
 
@@ -212,6 +230,24 @@ IsControllerC2CInitCheckSupported (
   if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x29C1) && (ui16DeviceId <= 0x29ff)) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_ERROR, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* SH */
+  /* TH500+GB110 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
+    DEBUG_CODE_END ();
+    bResult = TRUE;
+  }
+
+  /* SH */
+  /* TH500+GB120 ranges */
+  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x3341) && (ui16DeviceId <= 0x337F)) {
+    DEBUG_CODE_BEGIN ();
+    DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
     bResult = TRUE;
   }
