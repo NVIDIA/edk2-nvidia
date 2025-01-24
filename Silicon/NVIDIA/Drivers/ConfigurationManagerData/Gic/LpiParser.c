@@ -1,7 +1,7 @@
 /** @file
   Lpi parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -11,6 +11,11 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
+
+#define LPI_ARCH_FLAG_CORE_CONTEXT_LOST   BIT0
+#define LPI_ARCH_FLAG_TRACE_CONTEXT_LOST  BIT1
+#define LPI_ARCH_FLAG_GICR                BIT2
+#define LPI_ARCH_FLAG_GICD                BIT3
 
 /** Lpi parser function.
 
@@ -173,10 +178,19 @@ LpiParser (
       WakeupLatencyUs += ExitLatencyUs;
     }
 
-    LpiInfo[NumberOfLpiStates].WorstCaseWakeLatency                  = WakeupLatencyUs;
-    LpiInfo[NumberOfLpiStates].Flags                                 = 1;
-    LpiInfo[NumberOfLpiStates].ArchFlags                             = 1;
-    LpiInfo[NumberOfLpiStates].EnableParentState                     = TRUE;
+    LpiInfo[NumberOfLpiStates].WorstCaseWakeLatency = WakeupLatencyUs;
+    LpiInfo[NumberOfLpiStates].Flags                = 1;
+    Status                                          = DeviceTreeGetNodeProperty (NodeOffset, "local-timer-stop", NULL, NULL);
+    if (Status == EFI_NOT_FOUND) {
+      LpiInfo[NumberOfLpiStates].ArchFlags = 0;
+    } else {
+      LpiInfo[NumberOfLpiStates].ArchFlags = (LPI_ARCH_FLAG_CORE_CONTEXT_LOST |
+                                              LPI_ARCH_FLAG_TRACE_CONTEXT_LOST |
+                                              LPI_ARCH_FLAG_GICR |
+                                              LPI_ARCH_FLAG_GICD);
+    }
+
+    LpiInfo[NumberOfLpiStates].EnableParentState                     = 0;
     LpiInfo[NumberOfLpiStates].IsInteger                             = FALSE;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize        = 3;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
