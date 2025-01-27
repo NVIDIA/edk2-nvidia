@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Repo Lib
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -94,22 +94,7 @@ InitializePlatformRepository (
   )
 {
   EFI_STATUS                      Status;
-  UINTN                           ChipID;
   EDKII_PLATFORM_REPOSITORY_INFO  *Repo;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-    case T264_CHIP_ID:
-    case TH500_CHIP_ID:
-    case T410_CHIP_ID:
-      break;
-
-    default:
-      DEBUG ((DEBUG_WARN, "%a: New Config Manager not running because ChipId 0x%x isn't supported yet\n", __FUNCTION__, ChipID));
-      return EFI_UNSUPPORTED;
-  }
 
   // Allocate and initialize the data store
   Status = ConfigurationManagerDataInit (PcdGet32 (PcdConfigMgrObjMax), &mNVIDIAPlatformRepositoryInfo);
