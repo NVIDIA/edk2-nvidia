@@ -16,9 +16,6 @@ class ServerSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "Server"
 
-    def GetGuid(self):
-        return "9aef2e52-dead-4f63-b895-3a504a3e63c4"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Server/Server.defconfig"

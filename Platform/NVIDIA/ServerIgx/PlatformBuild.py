@@ -16,9 +16,6 @@ class ServerIgxSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "ServerIgx"
 
-    def GetGuid(self):
-        return "0927650c-5959-4dfb-a40f-0f05a3cefbd6"
-
     def GetDtbPath(self):
         return "AARCH64/Silicon/NVIDIA/Tegra/DeviceTree/DeviceTree/OUTPUT"
 

@@ -16,9 +16,6 @@ class JetsonMinimalSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "JetsonMinimal"
 
-    def GetGuid(self):
-        return "f98bcf32-fd20-4ba9-ada4-e0406947ca3c"
-
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["jetson"]
 

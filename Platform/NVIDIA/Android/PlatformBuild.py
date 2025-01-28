@@ -16,9 +16,6 @@ class AndroidSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "Android"
 
-    def GetGuid(self):
-        return "c193fdd8-7109-47a7-bf0e-02a94962d787"
-
     def GetActiveScopes(self):
         return super().GetActiveScopes() + ["jetson"]
 

@@ -147,6 +147,13 @@ menu "General"
   default ""
   help
     Optional string appended to platform names.
+
+  config PLATFORM_GUID
+  string "Platform GUID"
+  default "2666d385-b27b-40ec-8ecb-d665f40fd365"
+  help
+    The GUID value to identify the platform image.  This rarely needs to be
+    changed.
 endmenu
 
 menu "Security options"

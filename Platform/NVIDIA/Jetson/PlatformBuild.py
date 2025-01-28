@@ -16,9 +16,6 @@ class JetsonSettingsManager(NVIDIASettingsManager):
     def GetName(self):
         return "Jetson"
 
-    def GetGuid(self):
-        return "49a79a15-8f69-4be7-a30c-a172f44abce7"
-
     def GetConfigFiles(self):
         return [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/Jetson/Jetson.defconfig"

@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -37,6 +37,7 @@ class NVIDIAPlatformBuilder(UefiBuilder):
     def __init__(self):
         super().__init__()
         self.config_out = None
+        self.kconf_syms = {}
 
         # Create an instance of our SettingsManager to use.
         # - stuart's invokeables framework finds the SettingsManager and uses
@@ -234,6 +235,9 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         kconf.write_config(os.devnull)
 
+        # Keep the config values
+        self.kconf_syms.update(kconf.syms)
+
         if kconf.warnings:
             # Put a blank line between warnings to make them easier to read
             for warning in kconf.warnings:
@@ -320,6 +324,13 @@ class NVIDIAPlatformBuilder(UefiBuilder):
 
         logging.debug("Setting env from SettingsManager")
 
+        # Generate .config file.
+        # - Do this early so we can use kconfig to set build values.
+        if not self._skipconfig:
+            defconf = self.settings.GetConfigFiles()
+            if defconf:
+                self.BuildConfigFile ()
+
         # Preempt the contents of target.txt.
         #
         # If we don't provide a target.txt for a platform, which is normally
@@ -366,11 +377,24 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         if toolchain_tag:
             self.env.SetValue("TOOL_CHAIN_TAG", toolchain_tag, reason_setman)
 
-        # Common build info
+        # Set the build name
         self.env.SetValue("BLD_*_BUILD_NAME",
                     self.settings.GetName(), reason_dynamic)
-        self.env.SetValue("BLD_*_BUILD_GUID",
-                    self.settings.GetGuid(), reason_dynamic)
+
+        # Set the build guid.  Use the kconfig value, if we have one, but allow
+        # GetGuid() to override.
+        build_guid = self.settings.GetGuid()
+        if not build_guid and "PLATFORM_GUID" in self.kconf_syms:
+            build_guid = self.kconf_syms["PLATFORM_GUID"].str_value
+        if not build_guid:
+            if self.settings.GetConfigFiles():
+                raise ValueError("PLATFORM_GUID must be provided.")
+            else:
+                raise NotImplementedError(
+                    "GetGuid() must be implemented in NVIDIASettingsManager "
+                    "subclasses."
+                )
+        self.env.SetValue("BLD_*_BUILD_GUID", build_guid, reason_setman)
 
         # Set additional build variables
         cur_time = datetime.datetime.now()
@@ -401,11 +425,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         confdir_path = ws_dir / self.settings.GetConfDirName()
         shell_environment.GetEnvironment().set_shell_var(
             "CONF_PATH", str(confdir_path))
-
-        if not self._skipconfig:
-            defconf = self.settings.GetConfigFiles()
-            if defconf:
-                self.BuildConfigFile ()
 
         # Must return 0 to indicate success.
         return 0
