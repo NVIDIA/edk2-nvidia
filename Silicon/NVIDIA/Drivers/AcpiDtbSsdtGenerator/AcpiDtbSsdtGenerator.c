@@ -340,7 +340,7 @@ AcpiProtocolReady (
 
   Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID **)&AcpiTableProtocol);
   if (EFI_ERROR (Status)) {
-    goto Cleanup;
+    return;
   }
 
   gBS->CloseEvent (Event);
