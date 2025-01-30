@@ -2,7 +2,7 @@
 #
 #  Tegra GPIO Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -55,6 +55,8 @@
   gNVIDIANonDiscoverableT264GpioUphyDeviceGuid
   gNVIDIANonDiscoverableTH500GpioDeviceGuid
   gNVIDIANonDiscoverableTH500GpioAonDeviceGuid
+  gNVIDIANonDiscoverableT410ComputeGpioDeviceGuid
+  gNVIDIANonDiscoverableT410SystemGpioDeviceGuid
 
 [Depex]
   gNVIDIAI2cExpanderGpioProtocolGuid

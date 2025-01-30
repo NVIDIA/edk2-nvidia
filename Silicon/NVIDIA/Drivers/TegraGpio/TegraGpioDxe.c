@@ -181,17 +181,45 @@ STATIC CONST GPIO_CONTROLLER  Th500GpioAonControllers[] = {
   TEGRA_GPIO_ENTRY (1, 0, 0, 4)
 };
 
+STATIC CONST GPIO_CONTROLLER  T410ComputeGpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0, 0, 0, 3),
+  TEGRA_GPIO_ENTRY (1, 1, 0, 8),
+  TEGRA_GPIO_ENTRY (2, 1, 1, 3),
+  TEGRA_GPIO_ENTRY (3, 2, 0, 8),
+  TEGRA_GPIO_ENTRY (4, 2, 1, 8)
+};
+
+STATIC CONST GPIO_CONTROLLER  T410SystemGpioControllers[] = {
+  TEGRA_GPIO_ENTRY (0,  0, 0, 7),
+  TEGRA_GPIO_ENTRY (1,  0, 1, 8),
+  TEGRA_GPIO_ENTRY (2,  0, 2, 8),
+  TEGRA_GPIO_ENTRY (3,  0, 3, 8),
+  TEGRA_GPIO_ENTRY (4,  0, 4, 6),
+  TEGRA_GPIO_ENTRY (5,  1, 0, 8),
+  TEGRA_GPIO_ENTRY (6,  1, 1, 7),
+  TEGRA_GPIO_ENTRY (7,  1, 2, 7),
+  TEGRA_GPIO_ENTRY (8,  1, 3, 7),
+  TEGRA_GPIO_ENTRY (9,  2, 0, 7),
+  TEGRA_GPIO_ENTRY (10, 2, 1, 6),
+  TEGRA_GPIO_ENTRY (11, 2, 2, 8),
+  TEGRA_GPIO_ENTRY (12, 2, 3, 3),
+  TEGRA_GPIO_ENTRY (13, 2, 4, 2),
+  TEGRA_GPIO_ENTRY (14, 1, 4, 2)
+};
+
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,tegra234-gpio",      &gNVIDIANonDiscoverableT234GpioDeviceGuid     },
-  { "nvidia,tegra234-gpio-aon",  &gNVIDIANonDiscoverableT234GpioAonDeviceGuid  },
-  { "nvidia,tegra23x-gpio",      &gNVIDIANonDiscoverableT23xGpioDeviceGuid     },
-  { "nvidia,tegra264-gpio",      &gNVIDIANonDiscoverableT264GpioMainDeviceGuid },
-  { "nvidia,tegra264-gpio-main", &gNVIDIANonDiscoverableT264GpioMainDeviceGuid }, // deprecated
-  { "nvidia,tegra264-gpio-aon",  &gNVIDIANonDiscoverableT264GpioAonDeviceGuid  },
-  { "nvidia,tegra26*-gpio-uphy", &gNVIDIANonDiscoverableT264GpioUphyDeviceGuid },
-  { "nvidia,th500-gpio",         &gNVIDIANonDiscoverableTH500GpioDeviceGuid    },
-  { "nvidia,th500-gpio-aon",     &gNVIDIANonDiscoverableTH500GpioAonDeviceGuid },
-  { NULL,                        NULL                                          }
+  { "nvidia,tegra234-gpio",      &gNVIDIANonDiscoverableT234GpioDeviceGuid        },
+  { "nvidia,tegra234-gpio-aon",  &gNVIDIANonDiscoverableT234GpioAonDeviceGuid     },
+  { "nvidia,tegra23x-gpio",      &gNVIDIANonDiscoverableT23xGpioDeviceGuid        },
+  { "nvidia,tegra264-gpio",      &gNVIDIANonDiscoverableT264GpioMainDeviceGuid    },
+  { "nvidia,tegra264-gpio-main", &gNVIDIANonDiscoverableT264GpioMainDeviceGuid    }, // deprecated
+  { "nvidia,tegra264-gpio-aon",  &gNVIDIANonDiscoverableT264GpioAonDeviceGuid     },
+  { "nvidia,tegra26*-gpio-uphy", &gNVIDIANonDiscoverableT264GpioUphyDeviceGuid    },
+  { "nvidia,th500-gpio",         &gNVIDIANonDiscoverableTH500GpioDeviceGuid       },
+  { "nvidia,th500-gpio-aon",     &gNVIDIANonDiscoverableTH500GpioAonDeviceGuid    },
+  { "nvidia,t410-gpio-compute",  &gNVIDIANonDiscoverableT410ComputeGpioDeviceGuid },
+  { "nvidia,t410-gpio-system",   &gNVIDIANonDiscoverableT410SystemGpioDeviceGuid  },
+  { NULL,                        NULL                                             }
 };
 
 NVIDIA_GPIO_CONTROLLER_ENTRY  *mControllerArray = NULL;
@@ -600,6 +628,12 @@ DeviceDiscoveryNotify (
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableTH500GpioAonDeviceGuid)) {
         mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (Th500GpioAonControllers);
         mControllerArray[mControllerCount].ControllerDefault = Th500GpioAonControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT410ComputeGpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (T410ComputeGpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = T410ComputeGpioControllers;
+      } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT410SystemGpioDeviceGuid)) {
+        mControllerArray[mControllerCount].ControllerCount   = ARRAY_SIZE (T410SystemGpioControllers);
+        mControllerArray[mControllerCount].ControllerDefault = T410SystemGpioControllers;
       } else {
         return EFI_UNSUPPORTED;
       }
