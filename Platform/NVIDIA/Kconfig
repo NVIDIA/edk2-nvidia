@@ -133,11 +133,6 @@ endchoice
 # Add support for hardware features that are common between some SOC families
 orsource "KconfigIncludes/Common*.conf"
 
-config FIRMWARE_MANAGEMENT_FMP_ESRT_GUID
-string "ESRT System GUID"
-help
-  GUID used for ESRT table
-
 if !BUILD_NONE
 menu "Build Configuration"
 
@@ -1073,6 +1068,12 @@ depends on FIRMWARE_MANAGEMENT
   depends on FIRMWARE_CAPSULE_SUPPORTED
   help
     Size of the firmware capsule to use
+
+  config FMP_SYSTEM_IMAGE_TYPE_ID
+  string "Platform ESRT System FW GUID"
+  help
+    System FW GUID for ESRT table and capsules.
+    Must be unique for each platform.
 endmenu
 
 menu  "Watchdog settings"

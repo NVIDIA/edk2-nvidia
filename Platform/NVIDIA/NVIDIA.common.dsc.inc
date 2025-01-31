@@ -41,19 +41,12 @@ CONFIG_MEMORY_TEST_BIT_FADE_WAIT=0
 !ifndef CONFIG_FIRMWARE_CAPSULE_SIZE
 CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !endif
+!ifndef CONFIG_FIRMWARE_MANAGEMENT
+FMP_SYSTEM_IMAGE_TYPE_ID=0
+!endif
 
-  #
-  # Define Image Type ID GUIDs for Firmware Management Protocol
-  #
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234 = bf0d4599-20d4-414e-b2c5-3595b1cda402
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T264 = 3c834404-d2d7-4912-8c1c-6e850b5f2824
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA = 8655e5cf-297b-4213-84d5-b6817203a432
-  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500        = $(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
-  DEFINE SYSTEM_FMP_ESRT_GUID = $(CONFIG_FIRMWARE_MANAGEMENT_FMP_ESRT_GUID)
-!else
-  # Should never be used only defined to resolve parsing issues.
-  DEFINE SYSTEM_FMP_ESRT_GUID = 004ad128-93d8-43a7-9fad-4ac77a931035
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID = $(CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID)
 !endif
 
 [SkuIds]
@@ -1143,6 +1136,18 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0
   gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|0
 
+  #
+  #  NVIDIA system firmware image GUIDs
+  #  Customers should use non-NVIDIA CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID
+  #
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_NVIDIA         = bf0d4599-20d4-414e-b2c5-3595b1cda402
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_SERVER_NVIDIA  = db21ea33-80c8-4906-971a-49c0b3f7d1d0
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_ANDROID_NVIDIA = bee27e77-d09c-47fe-a87d-f61a34b7e0b0
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T24X_NVIDIA         = 8655e5cf-297b-4213-84d5-b6817203a432
+  DEFINE FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T26X_NVIDIA         = 3c834404-d2d7-4912-8c1c-6e850b5f2824
+
+  gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_SERVER_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_ANDROID_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T24X_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T26X_NVIDIA)")}
+
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)
@@ -1241,7 +1246,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid|{GUID("$(SYSTEM_FMP_ESRT_GUID)")}
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID)")}
   !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
     gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
     gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
@@ -1254,7 +1259,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA234'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T234)")}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
@@ -1281,7 +1285,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x8146000000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x8146080000
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA264'
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T264)")}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
@@ -1333,8 +1336,6 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 
 [PcdsDynamicDefault.common.TH500]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500)")}
-  gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_TH500_NVIDIA)")}
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gArmTokenSpaceGuid.PcdPciBusMin|0
   gArmTokenSpaceGuid.PcdPciBusMax|1
@@ -2127,7 +2128,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
       #
       # FILE_GUID is used as ESRT GUID
       #
-      FILE_GUID = $(SYSTEM_FMP_ESRT_GUID)
+      FILE_GUID = $(FMP_SYSTEM_IMAGE_TYPE_ID)
   }
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT

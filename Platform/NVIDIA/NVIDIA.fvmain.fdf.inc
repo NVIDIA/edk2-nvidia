@@ -124,7 +124,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # Fmp
   #
-  INF FILE_GUID = $(SYSTEM_FMP_ESRT_GUID) FmpDevicePkg/FmpDxe/FmpDxe.inf
+  INF FILE_GUID = $(FMP_SYSTEM_IMAGE_TYPE_ID) FmpDevicePkg/FmpDxe/FmpDxe.inf
 !endif
 
 !ifdef CONFIG_ACPI
