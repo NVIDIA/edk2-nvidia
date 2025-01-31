@@ -23,6 +23,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/AcpiTable.h>
@@ -357,7 +358,11 @@ GeneratePciSlots (
   UINTN                                   CurrentHandle;
   UINT32                                  SocketID     = 0xFFFFFFFF;
   UINT32                                  ControllerID = 0xFFFFFFFF;
+  UINT32                                  RpID         = 0xFFFFFFFF;
+  UINTN                                   ChipId;
   CHAR8                                   PCIeAslName[AML_NAME_SEG_SIZE + 1];
+
+  ChipId = TegraGetChipID ();
 
   ASSERT (
     PciNode !=  NULL
@@ -431,31 +436,74 @@ GeneratePciSlots (
       goto error_handler;
     }
 
-    if (PciInfo->PciSegmentGroupNumber == RootBridgeCfgIo->SegmentNumber) {
-      SocketID     = RootBridgeCfgIo->SocketID;
-      ControllerID = RootBridgeCfgIo->ControllerID;
-      break;
+    if (ChipId == T410_CHIP_ID) {
+      if ((PciInfo->PciSegmentGroupNumber == RootBridgeCfgIo->SegmentNumber) &&
+          (PciInfo->StartBusNumber == RootBridgeCfgIo->MinBusNumber) &&
+          (PciInfo->EndBusNumber == RootBridgeCfgIo->MaxBusNumber))
+      {
+        SocketID     = RootBridgeCfgIo->SocketID;
+        ControllerID = RootBridgeCfgIo->ControllerID;
+        RpID         = RootBridgeCfgIo->RpID;
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: Match found Skt = 0x%X, Ctrl = 0x%X, Rp = 0x%X\r\n",
+          __FUNCTION__,
+          SocketID,
+          ControllerID,
+          RpID
+          ));
+        break;
+      }
+    } else {
+      if (PciInfo->PciSegmentGroupNumber == RootBridgeCfgIo->SegmentNumber) {
+        SocketID     = RootBridgeCfgIo->SocketID;
+        ControllerID = RootBridgeCfgIo->ControllerID;
+        break;
+      }
     }
   }
 
-  if ((SocketID == 0xFFFFFFFF) && (ControllerID == 0xFFFFFFFF)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get SocketID & ControllerID for the Segment %x.\r\n",
-      __FUNCTION__,
-      PciInfo->PciSegmentGroupNumber
-      ));
-    goto error_handler;
+  if (ChipId == T410_CHIP_ID) {
+    if ((SocketID == 0xFFFFFFFF) && (ControllerID == 0xFFFFFFFF) && (RpID == 0xFFFFFFFF)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get SocketID & ControllerID for the Segment %x.\r\n",
+        __FUNCTION__,
+        PciInfo->PciSegmentGroupNumber
+        ));
+      goto error_handler;
+    }
+  } else {
+    if ((SocketID == 0xFFFFFFFF) && (ControllerID == 0xFFFFFFFF)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get SocketID & ControllerID for the Segment %x.\r\n",
+        __FUNCTION__,
+        PciInfo->PciSegmentGroupNumber
+        ));
+      goto error_handler;
+    }
   }
 
-  /*
-   * Change the name of the PCIe SSDT node to the following format
-   * PCxy where x=Socket ID and y=Controller ID
-   */
-  CopyMem (PCIeAslName, "PCIx", AML_NAME_SEG_SIZE + 1);
-  PCIeAslName[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (ControllerID & 0xF);
-  if (SocketID > 0) {
-    PCIeAslName[AML_NAME_SEG_SIZE - 2] = AsciiFromHex (SocketID & 0xF);
+  if (ChipId == T410_CHIP_ID) {
+    /*
+     * Change the name of the PCIe SSDT node to the following format
+     * Pxyz where x=Socket ID, y=Controller ID, z=Rootport ID
+     */
+    CopyMem (PCIeAslName, "Pxyz", AML_NAME_SEG_SIZE + 1);
+    PCIeAslName[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (RpID & 0xF);
+    PCIeAslName[AML_NAME_SEG_SIZE - 2] = AsciiFromHex (ControllerID & 0xF);
+    PCIeAslName[AML_NAME_SEG_SIZE - 3] = AsciiFromHex (SocketID & 0xF);
+  } else {
+    /*
+     * Change the name of the PCIe SSDT node to the following format
+     * PCxy where x=Socket ID and y=Controller ID
+     */
+    CopyMem (PCIeAslName, "PCIx", AML_NAME_SEG_SIZE + 1);
+    PCIeAslName[AML_NAME_SEG_SIZE - 1] = AsciiFromHex (ControllerID & 0xF);
+    if (SocketID > 0) {
+      PCIeAslName[AML_NAME_SEG_SIZE - 2] = AsciiFromHex (SocketID & 0xF);
+    }
   }
 
   Status = AmlDeviceOpUpdateName (PciNode, PCIeAslName);

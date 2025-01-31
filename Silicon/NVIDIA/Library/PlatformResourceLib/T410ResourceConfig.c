@@ -194,6 +194,61 @@ TEGRA_MMIO_INFO  T410SocketMcfSmmuMmioInfo[] = {
   },
 };
 
+TEGRA_MMIO_INFO  T410SocketCxlBrgMmioInfo[][T410_MAX_SEGMENT_CTLR_PER_SOCKET] = {
+  {
+    {
+      T410_CXL_BRG_0_SOCKET_0,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_1_SOCKET_0,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_2_SOCKET_0,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_3_SOCKET_0,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_4_SOCKET_0,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_5_SOCKET_0,
+      SIZE_256KB
+    },
+  },
+  {
+    {
+      T410_CXL_BRG_0_SOCKET_1,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_1_SOCKET_1,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_2_SOCKET_1,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_3_SOCKET_1,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_4_SOCKET_1,
+      SIZE_256KB
+    },
+    {
+      T410_CXL_BRG_5_SOCKET_1,
+      SIZE_256KB
+    },
+  },
+};
+
 NVDA_MEMORY_REGION  T410DramPageBlacklistInfoAddress[] = {
   {
     0,
@@ -620,10 +675,11 @@ T410GetMmioBaseAndSize (
   TEGRA_MMIO_INFO  *MmioInfo;
   TEGRA_MMIO_INFO  *MmioInfoEnd;
   UINTN            Socket;
+  UINTN            SegmentCtlr;
 
   MmioInfo = AllocateZeroPool (
                sizeof (T410MmioInfo) +
-               (T410_MAX_SOCKETS * 6 * sizeof (TEGRA_MMIO_INFO))
+               (T410_MAX_SOCKETS * (6 + T410_MAX_SEGMENT_CTLR_PER_SOCKET) * sizeof (TEGRA_MMIO_INFO))
                );
   CopyMem (MmioInfo, T410MmioInfo, sizeof (T410MmioInfo));
 
@@ -641,6 +697,9 @@ T410GetMmioBaseAndSize (
     CopyMem (MmioInfoEnd++, &T410SocketCbbMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &T410SocketMssMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
     CopyMem (MmioInfoEnd++, &T410SocketMcfSmmuMmioInfo[Socket], sizeof (TEGRA_MMIO_INFO));
+    for (SegmentCtlr = 0; SegmentCtlr < T410_MAX_SEGMENT_CTLR_PER_SOCKET; SegmentCtlr++) {
+      CopyMem (MmioInfoEnd++, &T410SocketCxlBrgMmioInfo[Socket][SegmentCtlr], sizeof (TEGRA_MMIO_INFO));
+    }
   }
 
   return MmioInfo;

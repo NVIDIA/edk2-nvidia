@@ -4,7 +4,7 @@
   PCI Root Bridge Configuration I/O protocol is used by PCI Bus Driver to perform
   PCI Configuration cycles on a PCI Root Bridge.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.<BR>
   Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -81,6 +81,7 @@ struct _NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL {
 
   UINT8                                                      SocketID;
   UINT8                                                      ControllerID;
+  UINT8                                                      RpID;
 
   UINT32                                                     OSCCtrl;
   UINT64                                                     EcamBase;

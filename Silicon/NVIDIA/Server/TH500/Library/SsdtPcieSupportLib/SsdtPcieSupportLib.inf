@@ -1,7 +1,7 @@
 ## @file
 # Ssdt Serial Port Table Support Library
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2021-2022, Arm Limited. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -30,6 +30,7 @@
   AmlLib
   BaseLib
   PrintLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
