@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of IO Remapping Table
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1105,7 +1105,7 @@ ErrorExit:
 }
 
 /**
-  patch SMMUv3 _UID info in dsdt/ssdt table to SMMUv3 iort identifier
+  patch SMMUv3 _UID info in TH500 SMMU CMDQ-V nodes
 
   @param[in] IortNode       Pointer to the CM_ARM_SMMUV3_NODE
 
@@ -1115,7 +1115,7 @@ ErrorExit:
 **/
 STATIC
 EFI_STATUS
-UpdateSmmuV3UidInfo (
+UpdateTH500SmmuV3CmdqvUidInfo (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN  CM_ARM_SMMUV3_NODE           *IortNode
   )
@@ -1231,12 +1231,13 @@ SetupIortNodeForSmmuV3 (
   IortNode->Identifier      = UniqueIdentifier++;
   ASSERT (UniqueIdentifier < 0xFFFFFFFF);
 
-  // TODO: temporary WAR for missing t264 asl elements for SmmuV3
   ChipID = TegraGetChipID ();
-  if (ChipID != T264_CHIP_ID) {
-    UpdateSmmuV3UidInfo (ParserHandle, IortNode);
-  } else {
-    DEBUG ((DEBUG_ERROR, "%a: skipping UpdateSmmuV3UidInfo for T264\n", __FUNCTION__));
+  switch (ChipID) {
+    case TH500_CHIP_ID:
+      UpdateTH500SmmuV3CmdqvUidInfo (ParserHandle, IortNode);
+      break;
+    default:
+      break;
   }
 
   Status = DeviceTreeGetNodeProperty (PropNode->NodeOffset, "dma-coherent", NULL, NULL);
