@@ -713,10 +713,6 @@ TH500GetResourceConfig (
   PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
   PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionCount;
 
-  if (CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
-    CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
-  }
-
   return EFI_SUCCESS;
 }
 
@@ -1089,13 +1085,14 @@ TH500GetPlatformResourceInformation (
   IN BOOLEAN                       InMm
   )
 {
-  EFI_STATUS               Status;
-  TEGRA_CPUBL_PARAMS       *CpuBootloaderParams;
-  UINT32                   SocketMask;
-  UINTN                    Index;
-  UINTN                    Count;
-  EFI_PHYSICAL_ADDRESS     *RetiredDramPageList;
-  TH500_EGM_RETIRED_PAGES  *EgmRetiredPages;
+  EFI_STATUS                    Status;
+  TEGRA_CPUBL_PARAMS            *CpuBootloaderParams;
+  UINT32                        SocketMask;
+  UINTN                         Index;
+  UINTN                         Count;
+  EFI_PHYSICAL_ADDRESS          *RetiredDramPageList;
+  TH500_EGM_RETIRED_PAGES       *EgmRetiredPages;
+  TEGRABL_EARLY_BOOT_VARIABLES  *EarlyBootVariables;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -1219,8 +1216,15 @@ TH500GetPlatformResourceInformation (
     }
   }
 
-  BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
-  BuildGuidDataHob (&gNVIDIATH500MB1DefaultDataGuid, &CpuBootloaderParams->EarlyBootVariablesDefaults, sizeof (CpuBootloaderParams->EarlyBootVariablesDefaults));
+  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
+  if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
+    EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+  }
+
+  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DefaultDataGuid, &CpuBootloaderParams->EarlyBootVariablesDefaults, sizeof (CpuBootloaderParams->EarlyBootVariablesDefaults));
+  if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
+    EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+  }
 
   Status = TH500BuildTcgEventHob ((UINTN)&CpuBootloaderParams->EarlyTpmCommitLog);
   if (EFI_ERROR (Status)) {
