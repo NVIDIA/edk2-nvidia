@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 16/17/19 tables.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -46,7 +46,7 @@ CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType19 = {
 };
 
 /**
-  Install CM object for SMBIOS Type 17 and Type 19
+  Install CM object for SMBIOS Type 17
    @param [in]  ParserHandle A handle to the parser instance.
    @param[in, out] Private   Pointer to the private data of SMBIOS creators
 
@@ -57,75 +57,59 @@ CM_STD_OBJ_SMBIOS_TABLE_INFO  CmSmbiosType19 = {
 STATIC
 EFI_STATUS
 EFIAPI
-InstallSmbiosType17Type19Cm (
+InstallSmbiosType17Cm (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN OUT CM_SMBIOS_PRIVATE_DATA    *Private
   )
 {
-  EFI_STATUS                             Status;
-  VOID                                   *Hob;
-  TEGRA_DRAM_DEVICE_INFO                 *DramInfo;
-  TEGRA_RESOURCE_INFO                    *ResourceInfo;
-  VOID                                   *DtbBase;
-  CM_SMBIOS_MEMORY_DEVICE_INFO           *CmMemDevicesInfo;
-  CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS  *CmMemArrayMappedAddress;
-  UINTN                                  DramDevicesCount;
-  UINTN                                  Index;
-  CM_OBJ_DESCRIPTOR                      Desc;
-  CM_OBJECT_TOKEN                        *TokenMapType17;
-  CM_OBJECT_TOKEN                        *TokenMapType19;
-  FRU_DEVICE_INFO                        *FruInfo;
-  CHAR8                                  *FruDesc;
-  INT32                                  NodeOffset;
-  CONST VOID                             *Property;
-  CHAR8                                  Type4NodeStr[] = "/firmware/smbios/type4@xx";
+  EFI_STATUS                    Status;
+  VOID                          *Hob;
+  TEGRA_DRAM_DEVICE_INFO        *DramInfo;
+  VOID                          *DtbBase;
+  CM_SMBIOS_MEMORY_DEVICE_INFO  *CmMemDevicesInfo;
+  UINTN                         DramDevicesCount;
+  UINTN                         Index;
+  CM_OBJ_DESCRIPTOR             Desc;
+  CM_OBJECT_TOKEN               *TokenMapType17;
+  FRU_DEVICE_INFO               *FruInfo;
+  CHAR8                         *FruDesc;
+  INT32                         NodeOffset;
+  CONST VOID                    *Property;
+  CHAR8                         Type4NodeStr[] = "/firmware/smbios/type4@xx";
 
-  TokenMapType17          = NULL;
-  TokenMapType19          = NULL;
-  CmMemDevicesInfo        = NULL;
-  CmMemArrayMappedAddress = NULL;
-  Status                  = EFI_SUCCESS;
-  DtbBase                 = Private->DtbBase;
+  TokenMapType17   = NULL;
+  CmMemDevicesInfo = NULL;
+  Status           = EFI_SUCCESS;
+  DtbBase          = Private->DtbBase;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
-    DramInfo     = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
-    ResourceInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo;
+    DramInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
   } else {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to get Platform Resource Info\n",
+      "%a: Failed to get Platform Resource Info for Type 17 table\n",
       __FUNCTION__
       ));
     Status = EFI_NOT_FOUND;
-    goto ExitInstallSmbiosType17Type19Cm;
+    goto ExitInstallSmbiosType17Cm;
   }
 
   DramDevicesCount = CmMemPhysMemArray->NumMemDevices;
 
   if (DramDevicesCount == 0) {
     Status = EFI_UNSUPPORTED;
-    DEBUG ((DEBUG_ERROR, "%a: DramDeviceCount is 0 - skipping Type 17 and 19 tables\n", __FUNCTION__));
-    goto ExitInstallSmbiosType17Type19Cm;
+    DEBUG ((DEBUG_ERROR, "%a: DramDeviceCount is 0 - skipping Type 17 table\n", __FUNCTION__));
+    goto ExitInstallSmbiosType17Cm;
   }
 
   CmMemDevicesInfo = AllocateZeroPool (sizeof (CM_SMBIOS_MEMORY_DEVICE_INFO) * DramDevicesCount);
   if (CmMemDevicesInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate 0x%llx bytes for DramDevices\n", __FUNCTION__, sizeof (CM_SMBIOS_MEMORY_DEVICE_INFO) * DramDevicesCount));
-    goto ExitInstallSmbiosType17Type19Cm;
-  }
-
-  CmMemArrayMappedAddress = AllocateZeroPool (
-                              sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS)
-                              * DramDevicesCount
-                              );
-  if (CmMemArrayMappedAddress == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate 0x%llx bytes for CmMemArrayMappedAddress\n", __FUNCTION__, sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS) * DramDevicesCount));
-    goto ExitInstallSmbiosType17Type19Cm;
+    goto ExitInstallSmbiosType17Cm;
   }
 
   for (Index = 0; Index < DramDevicesCount; Index++) {
@@ -212,30 +196,17 @@ InstallSmbiosType17Type19Cm (
     CmMemDevicesInfo[Index].MemoryErrorInformationHandle                      = 0xFFFE;
     CmMemDevicesInfo[Index].ConfiguredMemorySpeed                             = CmMemDevicesInfo[Index].Speed;
     CmMemDevicesInfo[Index].MemoryOperatingModeCapability.Bits.VolatileMemory = 1;
-
-    CmMemArrayMappedAddress[Index].StartingAddress = ResourceInfo->DramRegions[Index].MemoryBaseAddress;
-    CmMemArrayMappedAddress[Index].EndingAddress   =
-      (ResourceInfo->DramRegions[Index].MemoryBaseAddress + ResourceInfo->DramRegions[Index].MemoryLength);
-    CmMemArrayMappedAddress[Index].PhysMemArrayToken = PhysMemArrayToken;
   }
 
   // Allocate Token Map for Type 17
   Status = NvAllocateCmTokens (ParserHandle, DramDevicesCount, &TokenMapType17);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to allocate a token for SMBIOS Type 17: %r\n", __FUNCTION__, Status));
-    goto ExitInstallSmbiosType17Type19Cm;
-  }
-
-  // Allocate Token Map for Type 19
-  Status = NvAllocateCmTokens (ParserHandle, DramDevicesCount, &TokenMapType19);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate a token for SMBIOS Type 19: %r\n", __FUNCTION__, Status));
-    goto ExitInstallSmbiosType17Type19Cm;
+    goto ExitInstallSmbiosType17Cm;
   }
 
   for (Index = 0; Index < DramDevicesCount; Index++) {
-    CmMemDevicesInfo[Index].MemoryDeviceInfoToken                = TokenMapType17[Index];
-    CmMemArrayMappedAddress[Index].MemoryArrayMappedAddressToken = TokenMapType19[Index];
+    CmMemDevicesInfo[Index].MemoryDeviceInfoToken = TokenMapType17[Index];
   }
 
   //
@@ -248,20 +219,7 @@ InstallSmbiosType17Type19Cm (
   Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMapType17, CM_NULL_TOKEN);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to add Smbios Type 17 to ConfigManager: %r\n", __FUNCTION__, Status));
-    goto ExitInstallSmbiosType17Type19Cm;
-  }
-
-  //
-  // Install CM object for type 19
-  //
-  Desc.ObjectId = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjMemoryArrayMappedAddress);
-  Desc.Size     = DramDevicesCount * sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS);
-  Desc.Count    = DramDevicesCount;
-  Desc.Data     = CmMemArrayMappedAddress;
-  Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMapType19, CM_NULL_TOKEN);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to add Smbios Type 19 to ConfigManager: %r\n", __FUNCTION__, Status));
-    goto ExitInstallSmbiosType17Type19Cm;
+    goto ExitInstallSmbiosType17Cm;
   }
 
   //
@@ -274,6 +232,116 @@ InstallSmbiosType17Type19Cm (
     );
   Private->CmSmbiosTableCount++;
 
+ExitInstallSmbiosType17Cm:
+  FREE_NON_NULL (TokenMapType17);
+  FREE_NON_NULL (CmMemDevicesInfo); // Note: Don't free the subfield allocations, because CM may be pointing to them
+  return Status;
+}
+
+/**
+  Install CM object for SMBIOS Type 19
+   @param [in]  ParserHandle A handle to the parser instance.
+   @param[in, out] Private   Pointer to the private data of SMBIOS creators
+
+   @return EFI_SUCCESS       Successful installation
+   @retval !(EFI_SUCCESS)    Other errors
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+InstallSmbiosType19Cm (
+  IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
+  IN OUT CM_SMBIOS_PRIVATE_DATA    *Private
+  )
+{
+  EFI_STATUS                             Status;
+  VOID                                   *Hob;
+  TEGRA_RESOURCE_INFO                    *ResourceInfo;
+  VOID                                   *DtbBase;
+  CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS  *CmMemArrayMappedAddress;
+  UINTN                                  SocketCount;
+  UINTN                                  Index;
+  UINT32                                 SocketMask;
+  CM_OBJ_DESCRIPTOR                      Desc;
+  CM_OBJECT_TOKEN                        *TokenMapType19;
+
+  TokenMapType19          = NULL;
+  CmMemArrayMappedAddress = NULL;
+  Status                  = EFI_SUCCESS;
+  DtbBase                 = Private->DtbBase;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    SocketMask   = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
+    ResourceInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ResourceInfo;
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Platform Resource Info\n",
+      __FUNCTION__
+      ));
+    Status = EFI_NOT_FOUND;
+    goto ExitInstallSmbiosType19Cm;
+  }
+
+  for (Index = 0, SocketCount = 0; Index < PLATFORM_MAX_SOCKETS; Index++) {
+    if (!(SocketMask & (1UL << Index))) {
+      continue;
+    }
+
+    SocketCount++;
+  }
+
+  if (SocketCount == 0) {
+    Status = EFI_UNSUPPORTED;
+    DEBUG ((DEBUG_ERROR, "%a: DramDeviceCount is 0 - skipping Type 19 tables\n", __FUNCTION__));
+    goto ExitInstallSmbiosType19Cm;
+  }
+
+  CmMemArrayMappedAddress = AllocateZeroPool (
+                              sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS)
+                              * SocketCount
+                              );
+  if (CmMemArrayMappedAddress == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate 0x%llx bytes for CmMemArrayMappedAddress\n", __FUNCTION__, sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS) * SocketCount));
+    goto ExitInstallSmbiosType19Cm;
+  }
+
+  for (Index = 0; Index < SocketCount; Index++) {
+    CmMemArrayMappedAddress[Index].StartingAddress = ResourceInfo->DramRegions[Index].MemoryBaseAddress;
+    CmMemArrayMappedAddress[Index].EndingAddress   =
+      (ResourceInfo->DramRegions[Index].MemoryBaseAddress + ResourceInfo->DramRegions[Index].MemoryLength);
+    CmMemArrayMappedAddress[Index].PhysMemArrayToken = PhysMemArrayToken;
+  }
+
+  // Allocate Token Map for Type 19
+  Status = NvAllocateCmTokens (ParserHandle, SocketCount, &TokenMapType19);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate a token for SMBIOS Type 19: %r\n", __FUNCTION__, Status));
+    goto ExitInstallSmbiosType19Cm;
+  }
+
+  for (Index = 0; Index < SocketCount; Index++) {
+    CmMemArrayMappedAddress[Index].MemoryArrayMappedAddressToken = TokenMapType19[Index];
+  }
+
+  //
+  // Install CM object for type 19
+  //
+  Desc.ObjectId = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjMemoryArrayMappedAddress);
+  Desc.Size     = SocketCount * sizeof (CM_SMBIOS_MEMORY_ARRAY_MAPPED_ADDRESS);
+  Desc.Count    = SocketCount;
+  Desc.Data     = CmMemArrayMappedAddress;
+  Status        = NvAddMultipleCmObjWithTokens (ParserHandle, &Desc, TokenMapType19, CM_NULL_TOKEN);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to add Smbios Type 19 to ConfigManager: %r\n", __FUNCTION__, Status));
+    goto ExitInstallSmbiosType19Cm;
+  }
+
   //
   // Add type 19 to SMBIOS table list
   //
@@ -284,10 +352,8 @@ InstallSmbiosType17Type19Cm (
     );
   Private->CmSmbiosTableCount++;
 
-ExitInstallSmbiosType17Type19Cm:
-  FREE_NON_NULL (TokenMapType17);
+ExitInstallSmbiosType19Cm:
   FREE_NON_NULL (TokenMapType19);
-  FREE_NON_NULL (CmMemDevicesInfo); // Note: Don't free the subfield allocations, because CM may be pointing to them
   FREE_NON_NULL (CmMemArrayMappedAddress);
   return Status;
 }
@@ -358,7 +424,7 @@ InstallSmbiosType16Cm (
       continue;
     }
 
-    CmMemPhysMemArray->NumMemDevices++;
+    CmMemPhysMemArray->NumMemDevices += ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumModules[Index];
   }
 
   CmMemPhysMemArray->Location                     = MemoryArrayLocationSystemBoard;
@@ -424,11 +490,22 @@ InstallSmbiosTypeMemCm (
     goto ExitInstallSmbiosTypeMem;
   }
 
-  Status = InstallSmbiosType17Type19Cm (ParserHandle, Private);
+  Status = InstallSmbiosType17Cm (ParserHandle, Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: Failed to install Type 17/19 %r\n",
+      "%a: Failed to install Type 17 %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitInstallSmbiosTypeMem;
+  }
+
+  Status = InstallSmbiosType19Cm (ParserHandle, Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to install Type 19 %r\n",
       __FUNCTION__,
       Status
       ));

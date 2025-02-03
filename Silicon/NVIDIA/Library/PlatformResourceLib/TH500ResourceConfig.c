@@ -255,10 +255,10 @@ NVDA_MEMORY_REGION  TH500DramPageBlacklistInfoAddress[] = {
   }
 };
 
-TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]   = { };
-TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS]  = { };
-UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]         = { };
-TEGRA_BASE_AND_SIZE_INFO  TH500EgmRetiredPages[TH500_MAX_SOCKETS] = { };
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmMemoryInfo[TH500_MAX_SOCKETS]                         = { };
+TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS * MAX_DIMMS_PER_SOCKET] = { };
+UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]                               = { };
+TEGRA_BASE_AND_SIZE_INFO  TH500EgmRetiredPages[TH500_MAX_SOCKETS]                       = { };
 
 /**
   Get Socket Mask
@@ -275,7 +275,7 @@ TH500GetSocketMask (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  SocketMask = CpuBootloaderParams->SocketMask;
+  SocketMask = CPUBL_PARAMS (CpuBootloaderParams, SocketMask);
   ASSERT (SocketMask != 0);
   ASSERT (HighBitSet32 (SocketMask) < TH500_MAX_SOCKETS);
 
@@ -304,11 +304,11 @@ TH500GetMemoryMode (
     return EFI_INVALID_PARAMETER;
   }
 
-  EgmBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base;
-  EgmSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size;
+  EgmBase = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base);
+  EgmSize = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size);
 
-  HvBase = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base;
-  HvSize = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size;
+  HvBase = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base);
+  HvSize = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size);
 
   if ((EgmBase == 0) || (EgmSize == 0)) {
     *MemoryMode = Th500MemoryModeNormal;
@@ -350,18 +350,18 @@ TH500GetMemoryInfo (
     return EFI_INVALID_PARAMETER;
   }
 
-  EgmBase = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
-  EgmSize = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
+  EgmBase = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Socket][CARVEOUT_EGM].Base);
+  EgmSize = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Socket][CARVEOUT_EGM].Size);
 
   if (MemoryMode == Th500MemoryModeNormal) {
-    *MemoryBase = CpuBootloaderParams->SdramInfo[Socket].Base;
-    *MemorySize = CpuBootloaderParams->SdramInfo[Socket].Size;
+    *MemoryBase = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Base);
+    *MemorySize = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Size);
   } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
     *MemoryBase = EgmBase;
     *MemorySize = EgmSize;
   } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
-    *MemoryBase = CpuBootloaderParams->SdramInfo[Socket].Base + EgmSize;
-    *MemorySize = CpuBootloaderParams->SdramInfo[Socket].Size - EgmSize;
+    *MemoryBase = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Base) + EgmSize;
+    *MemorySize = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Size) - EgmSize;
   } else {
     return EFI_DEVICE_ERROR;
   }
@@ -450,16 +450,16 @@ TH500BuildDramRegions (
   }
 
   if (MemoryMode == Th500MemoryModeEgmNoHv) {
-    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base;
-    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size;
+    Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base);
+    Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size);
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
 
-    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base;
-    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size;
+    Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base);
+    Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size);
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
 
-    Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-    Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+    Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base);
+    Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size);
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
 
@@ -630,7 +630,7 @@ TH500BuildCarveoutRegions (
         &UsableRegionCount,
         MemoryMode,
         Socket,
-        CpuBootloaderParams->CarveoutInfo[Socket],
+        CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Socket]),
         CARVEOUT_OEM_COUNT
         );
     }
@@ -638,7 +638,7 @@ TH500BuildCarveoutRegions (
 
   for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
     if ((SocketMask & (1 << Socket)) != 0) {
-      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->RetiredDramPageListAddr[Socket];
+      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CPUBL_PARAMS (CpuBootloaderParams, RetiredDramPageListAddr[Socket]);
 
       if (RetiredDramPageList != NULL) {
         PlatformResourceAddRetiredDramPages (
@@ -739,8 +739,8 @@ TH500GetDramPageBlacklistInfoAddress (
       continue;
     }
 
-    if (CpuBootloaderParams->RetiredDramPageListAddr[Socket] != 0) {
-      TH500DramPageBlacklistInfoAddress[Index].MemoryBaseAddress = CpuBootloaderParams->RetiredDramPageListAddr[Socket] & ~EFI_PAGE_MASK;
+    if (CPUBL_PARAMS (CpuBootloaderParams, RetiredDramPageListAddr[Socket]) != 0) {
+      TH500DramPageBlacklistInfoAddress[Index].MemoryBaseAddress = CPUBL_PARAMS (CpuBootloaderParams, RetiredDramPageListAddr[Socket]) & ~EFI_PAGE_MASK;
       TH500DramPageBlacklistInfoAddress[Index].MemoryLength      = SIZE_64KB;
       Index++;
     }
@@ -766,8 +766,8 @@ TH500GetDTBBaseAddress (
   UINT64                      FvSize;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase          = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-  MemorySize          = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+  MemoryBase          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base);
+  MemorySize          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size);
   FvHeader            = NULL;
   FvOffset            = 0;
 
@@ -1090,6 +1090,7 @@ TH500GetPlatformResourceInformation (
   UINT32                        SocketMask;
   UINTN                         Index;
   UINTN                         Count;
+  UINTN                         Dimm;
   EFI_PHYSICAL_ADDRESS          *RetiredDramPageList;
   TH500_EGM_RETIRED_PAGES       *EgmRetiredPages;
   TEGRABL_EARLY_BOOT_VARIABLES  *EarlyBootVariables;
@@ -1115,14 +1116,14 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->MmioInfo = TH500GetMmioBaseAndSize (SocketMask);
   }
 
-  PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base;
-  PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size;
+  PlatformResourceInfo->RamdiskOSInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Base);
+  PlatformResourceInfo->RamdiskOSInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_OS].Size);
 
-  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base;
-  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size;
+  PlatformResourceInfo->RcmBlobInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base);
+  PlatformResourceInfo->RcmBlobInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size);
 
-  PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-  PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+  PlatformResourceInfo->CpublCoInfo.Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base);
+  PlatformResourceInfo->CpublCoInfo.Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Size);
 
   if ((PlatformResourceInfo->RcmBlobInfo.Base != 0) &&
       (PlatformResourceInfo->RcmBlobInfo.Size != 0))
@@ -1132,11 +1133,11 @@ TH500GetPlatformResourceInformation (
     PlatformResourceInfo->BootType = TegrablBootColdBoot;
   }
 
-  if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base != 0) &&
-      (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size != 0))
+  if ((CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Base) != 0) &&
+      (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_EGM].Size) != 0))
   {
-    if ((CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base != 0) &&
-        (CpuBootloaderParams->CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size != 0))
+    if ((CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Base) != 0) &&
+        (CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size) != 0))
     {
       PlatformResourceInfo->HypervisorMode = TRUE;
     }
@@ -1144,31 +1145,71 @@ TH500GetPlatformResourceInformation (
 
   PlatformResourceInfo->EgmMemoryInfo = TH500EgmMemoryInfo;
   for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
-    PlatformResourceInfo->EgmMemoryInfo[Index].Base = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Base;
-    PlatformResourceInfo->EgmMemoryInfo[Index].Size = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Size;
+    PlatformResourceInfo->EgmMemoryInfo[Index].Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index][CARVEOUT_EGM].Base);
+    PlatformResourceInfo->EgmMemoryInfo[Index].Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Index][CARVEOUT_EGM].Size);
   }
 
   PlatformResourceInfo->PhysicalDramSize = 0;
   PlatformResourceInfo->DramDeviceInfo   = TH500DramDeviceInfo;
-  // Populate Total Memory.
-  for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
-    if (!(SocketMask & (1UL << Index))) {
-      continue;
-    }
 
-    PlatformResourceInfo->PhysicalDramSize   += CpuBootloaderParams->SdramInfo[Index].Size;
-    TH500DramDeviceInfo[Index].DataWidth      = CpuBootloaderParams->DramInfo[Index].DataWidth;
-    TH500DramDeviceInfo[Index].ManufacturerId = CpuBootloaderParams->DramInfo[Index].ManufacturerId;
-    TH500DramDeviceInfo[Index].Rank           = CpuBootloaderParams->DramInfo[Index].Rank;
-    TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->DramInfo[Index].SerialNumber;
-    TH500DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
-    TH500DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
-    TH500DramDeviceInfo[Index].SpeedKhz       = 0;
-    CopyMem (
-      TH500DramDeviceInfo[Index].PartNumber,
-      CpuBootloaderParams->DramInfo[Index].PartNumber,
-      sizeof (CpuBootloaderParams->DramInfo[Index].PartNumber)
-      );
+  // Populate Total Memory.
+  if (CPUBL_VERSION (CpuBootloaderParams) == 0) {
+    for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
+      if (!(SocketMask & (1UL << Index))) {
+        continue;
+      }
+
+      PlatformResourceInfo->PhysicalDramSize   += CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+      PlatformResourceInfo->NumModules[Index]   = 1;
+      TH500DramDeviceInfo[Index].Socket         = Index;
+      TH500DramDeviceInfo[Index].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
+      TH500DramDeviceInfo[Index].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
+      TH500DramDeviceInfo[Index].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
+      TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->v0.DramInfo[Index].SerialNumber;
+      TH500DramDeviceInfo[Index].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
+      TH500DramDeviceInfo[Index].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+      TH500DramDeviceInfo[Index].SpeedKhz       = 0;
+
+      CopyMem (
+        TH500DramDeviceInfo[Index].PartNumber,
+        CpuBootloaderParams->v0.DramInfo[Index].PartNumber,
+        sizeof (CpuBootloaderParams->v0.DramInfo[Index].PartNumber)
+        );
+    }
+  } else if (CPUBL_VERSION (CpuBootloaderParams) == 1) {
+    Dimm = 0;
+    for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
+      if (!(SocketMask & (1UL << Index))) {
+        continue;
+      }
+
+      PlatformResourceInfo->NumModules[Index] = CpuBootloaderParams->v1.DramInfo[Index].NumModules;
+      PlatformResourceInfo->PhysicalDramSize += CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+      // The Dram device Info array is meant to be a contiguous array, iresspective of certain sockets being not present.
+      // Socket field in the array specifies the socket number present.
+      for (Count = 0; Count < MAX_DIMMS_PER_SOCKET; Count++) {
+        TH500DramDeviceInfo[Dimm].Socket         = Index;
+        TH500DramDeviceInfo[Dimm].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
+        TH500DramDeviceInfo[Dimm].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
+        TH500DramDeviceInfo[Dimm].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
+        TH500DramDeviceInfo[Dimm].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
+        TH500DramDeviceInfo[Dimm].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+        TH500DramDeviceInfo[Dimm].SpeedKhz       = 0;
+
+        // Populate per Memory module Information.
+        TH500DramDeviceInfo[Dimm].SerialNumber = CpuBootloaderParams->v1.DramInfo[Index].SerialNumber[Count];
+        TH500DramDeviceInfo[Dimm].Attribute    = CpuBootloaderParams->v1.DramInfo[Index].Attribute[Count];
+        CopyMem (
+          TH500DramDeviceInfo[Dimm].PartNumber,
+          CpuBootloaderParams->v1.DramInfo[Index].PartNumber[Count],
+          sizeof (CpuBootloaderParams->v1.DramInfo[Index].PartNumber[Count])
+          );
+        Dimm++;
+      }
+    }
+  } else {
+    // incorrect CPUBL params version
+    DEBUG ((DEBUG_ERROR, " incorrect CPUBL params version\n"));
   }
 
   for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
@@ -1177,7 +1218,7 @@ TH500GetPlatformResourceInformation (
     }
 
     for (Count = 0; Count < UID_NUM_DWORDS; Count++) {
-      PlatformResourceInfo->UniqueId[Index][Count] += CpuBootloaderParams->UniqueId[Index][Count];
+      PlatformResourceInfo->UniqueId[Index][Count] += CPUBL_PARAMS (CpuBootloaderParams, UniqueId[Index][Count]);
     }
   }
 
@@ -1192,7 +1233,7 @@ TH500GetPlatformResourceInformation (
         continue;
       }
 
-      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->RetiredDramPageListAddr[Index];
+      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CPUBL_PARAMS (CpuBootloaderParams, RetiredDramPageListAddr[Index]);
       if (RetiredDramPageList == NULL) {
         continue;
       }
@@ -1216,17 +1257,17 @@ TH500GetPlatformResourceInformation (
     }
   }
 
-  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
+  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DataGuid, ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariables), SIZE_OF_CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariables));
   if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
     EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
   }
 
-  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DefaultDataGuid, &CpuBootloaderParams->EarlyBootVariablesDefaults, sizeof (CpuBootloaderParams->EarlyBootVariablesDefaults));
+  EarlyBootVariables = BuildGuidDataHob (&gNVIDIATH500MB1DefaultDataGuid, ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariablesDefaults), SIZE_OF_CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariablesDefaults));
   if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
     EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
   }
 
-  Status = TH500BuildTcgEventHob ((UINTN)&CpuBootloaderParams->EarlyTpmCommitLog);
+  Status = TH500BuildTcgEventHob ((UINTN)ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, EarlyTpmCommitLog));
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1257,7 +1298,7 @@ TH500GetPartitionInfo (
   if (PartitionIndex == TEGRAUEFI_CAPSULE) {
     if (PcdGetBool (PcdCapsulePartitionEnabled)) {
       *PartitionSizeBytes =  PcdGet64 (PcdCapsulePartitionSize);
-      PartitionDesc       = &CpuBootloaderParams->PartitionInfo[TEGRABL_RAS_ERROR_LOGS][PRIMARY_COPY];
+      PartitionDesc       = ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, PartitionInfo[TEGRABL_RAS_ERROR_LOGS][PRIMARY_COPY]);
       *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
       return EFI_SUCCESS;
     } else {
@@ -1276,7 +1317,7 @@ TH500GetPartitionInfo (
     return EFI_INVALID_PARAMETER;
   }
 
-  PartitionDesc       = &CpuBootloaderParams->PartitionInfo[PartitionIndex][PRIMARY_COPY];
+  PartitionDesc       = ADDR_OF_CPUBL_PARAMS (CpuBootloaderParams, PartitionInfo[PartitionIndex][PRIMARY_COPY]);
   *DeviceInstance     = PartitionDesc->DeviceInstance;
   *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
   *PartitionSizeBytes = PartitionDesc->Size;
@@ -1306,7 +1347,7 @@ TH500IsTpmToBeEnabled (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  return CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable;
+  return CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable);
 }
 
 EFI_STATUS
@@ -1346,7 +1387,7 @@ TH500TegraGetMaxCoreCount (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  return CpuBootloaderParams->EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket];
+  return CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket]);
 }
 
 UINT32

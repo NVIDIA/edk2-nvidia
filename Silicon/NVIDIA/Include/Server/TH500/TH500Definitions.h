@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,6 +16,7 @@
 #define TH500_MAX_SOCKETS     4
 #define TH500_SOCKET_SHFT     44
 #define TH500_SOCKET_MASK     0x3
+#define MAX_DIMMS_PER_SOCKET  4
 
 // SBSA ACS
 #define ARMARCH_TMR_HYPVIRT_PPI  28

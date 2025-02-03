@@ -41,8 +41,7 @@
 #define MAX_SUPPORTED_SOCKETS         4
 #define MAX_SUPPORTED_PG_PER_SOCKET   25
 #define MAX_SUPPORTED_PG              (MAX_SUPPORTED_SOCKETS * MAX_SUPPORTED_PG_PER_SOCKET)
-
-#define UID_NUM_DWORDS  4
+#define UID_NUM_DWORDS                4
 
 typedef enum {
   TegrablBootInvalid,
@@ -78,6 +77,7 @@ typedef struct {
 } TEGRA_FUSE_INFO;
 
 typedef struct {
+  UINT8     Socket;
   UINT64    SerialNumber;
   UINT16    TotalWidth;
   UINT16    DataWidth;
@@ -85,6 +85,7 @@ typedef struct {
   UINT8     Rank;
   UINT64    Size;
   UINT32    SpeedKhz;
+  UINT8     Attribute;
   UINT8     PartNumber[30];
 } TEGRA_DRAM_DEVICE_INFO;
 
@@ -186,6 +187,7 @@ typedef struct {
   BOOLEAN                       HypervisorMode;
   TEGRA_BASE_AND_SIZE_INFO      *EgmMemoryInfo;
   UINT64                        PhysicalDramSize;
+  UINT8                         NumModules[MAX_SUPPORTED_SOCKETS];
   TEGRA_DRAM_DEVICE_INFO        *DramDeviceInfo;
   UINT8                         *C2cMode;
   UINT32                        UniqueId[MAX_SUPPORTED_SOCKETS][UID_NUM_DWORDS];

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -175,13 +175,23 @@ typedef struct {
   UINT8     Rank;
   UINT8     PartNumber[30];
   UINT8     Reserved[3];
-} TEGRABL_DRAM_INFO;
+} TEGRABL_DRAM_INFO_V0;
+
+typedef struct {
+  UINT8     NumModules;
+  UINT8     Rank;
+  UINT16    TotalWidth;
+  UINT16    DataWidth;
+  UINT16    ManufacturerId;
+  UINT64    SerialNumber[MAX_DIMMS_PER_SOCKET];
+  UINT64    ChannelMap[MAX_DIMMS_PER_SOCKET];
+  UINT8     Attribute[MAX_DIMMS_PER_SOCKET];
+  UINT8     PartNumber[MAX_DIMMS_PER_SOCKET][30];
+  UINT8     Reserved[4];
+} TEGRABL_DRAM_INFO_V1;
 
 #pragma pack()
 typedef struct {
-  /**< version */
-  UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
-
   /**< Uart instance */
   UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
 
@@ -242,11 +252,105 @@ typedef struct {
 
   UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
 
-  UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO DramInfo[TH500_MAX_SOCKETS], 8);
+  UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO_V0 DramInfo[TH500_MAX_SOCKETS], 8);
 
   UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariablesDefaults[TH500_MAX_SOCKETS], 8);
 
   UEFI_DECLARE_ALIGNED (UINT32 UniqueId[TH500_MAX_SOCKETS][UID_NUM_DWORDS], 8);
+} TEGRA_CPUBL_PARAMS_V0;
+
+typedef struct {
+  /**< Uart instance */
+  UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
+
+  /**< CVM EEPROM data */
+  UEFI_DECLARE_ALIGNED (TEGRABL_FRU_EEPROM_DATA CvmEeprom[TH500_MAX_SOCKETS], 8);
+
+  /**< CVB EEPROM data */
+  UEFI_DECLARE_ALIGNED (TEGRABL_FRU_EEPROM_DATA CvbEeprom, 8);
+
+  /**< Address of list of physical addresses of retired pages */
+  UEFI_DECLARE_ALIGNED (UINT64 RetiredDramPageListAddr[TH500_MAX_SOCKETS], 8);
+
+  /**< Bit mask to specify which sockets are enabled */
+  UEFI_DECLARE_ALIGNED (UINT32 SocketMask, 8);
+
+  /**< Base and size information of DRAMs connected to each socket */
+  UEFI_DECLARE_ALIGNED (TEGRABL_SDRAM_INFO_DATA SdramInfo[TH500_MAX_SOCKETS], 8);
+
+  /**
+   * physical address and size of the carveouts allocated on each socket.
+   * If carveout is not allocated on a particular socket then base and size
+   * would be set to zero.
+   */
+  UEFI_DECLARE_ALIGNED (TEGRABL_CARVEOUT_INFO CarveoutInfo[TH500_MAX_SOCKETS][CARVEOUT_OEM_COUNT], 8);
+
+  /**< Feature flags */
+  UEFI_DECLARE_ALIGNED (
+    struct {
+    union {
+      UINT64 FeatureFlagRaw1;
+      struct {
+        /**
+         * Boot chain selection mode
+         * 0: BCT Marker Mode
+         * 1: GPIO Mode
+         */
+        UINT64 BootChainSelectionMode: 1;
+        UINT64 FeatureFlagRaw1Reserved: 63;
+      };
+    };
+
+    UINT64 FeatureFlagRaw2;
+  },
+    8
+    );
+
+  /**
+   * Uphy link checksum status bit mask from each socket.
+   * There are 6 uphy controllers per socket. A bit is set when
+   * checksum verification is failed for corresponding uphy controller,
+   * otherwise checksum verification is passed.
+   */
+  UEFI_DECLARE_ALIGNED (UINT8 UphyLinkChecksumStatusp[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_PARTITION_DESC PartitionInfo[TEGRABL_BINARY_MAX][TEGRABL_BINARY_COPY_MAX], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariables[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_TPM_COMMIT_LOG EarlyTpmCommitLog, 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_DRAM_INFO_V1 DramInfo[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (TEGRABL_EARLY_BOOT_VARIABLES EarlyBootVariablesDefaults[TH500_MAX_SOCKETS], 8);
+
+  UEFI_DECLARE_ALIGNED (UINT32 UniqueId[TH500_MAX_SOCKETS][UID_NUM_DWORDS], 8);
+} TEGRA_CPUBL_PARAMS_V1;
+
+typedef struct {
+  union {
+    TEGRA_CPUBL_PARAMS_V0    v0;
+    TEGRA_CPUBL_PARAMS_V1    v1;
+    struct {
+      UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
+    } common;
+  };
 } TEGRA_CPUBL_PARAMS;
 
+#define CPUBL_VERSION(PARAMS)                (((TEGRA_CPUBL_PARAMS *)PARAMS)->common.Version)
+#define CPUBL_PARAMS(PARAMS, FIELD)          (((CPUBL_VERSION(PARAMS)) == 0)? \
+                                              ((TEGRA_CPUBL_PARAMS *)PARAMS)->v0.FIELD:\
+                                              ((CPUBL_VERSION(PARAMS)) == 1)? \
+                                              ((TEGRA_CPUBL_PARAMS *)PARAMS)->v1.FIELD:\
+                                               0)
+#define ADDR_OF_CPUBL_PARAMS(PARAMS, FIELD)  (((CPUBL_VERSION(PARAMS)) == 0)? \
+                                               &((TEGRA_CPUBL_PARAMS *)PARAMS)->v0.FIELD:\
+                                              ((CPUBL_VERSION(PARAMS)) == 1)? \
+                                               &((TEGRA_CPUBL_PARAMS *)PARAMS)->v1.FIELD:\
+                                               NULL)
+#define SIZE_OF_CPUBL_PARAMS(PARAMS, FIELD)  (((CPUBL_VERSION(PARAMS)) == 0)? \
+                                               sizeof(((TEGRA_CPUBL_PARAMS *)PARAMS)->v0.FIELD):\
+                                              ((CPUBL_VERSION(PARAMS)) == 1)? \
+                                               sizeof(((TEGRA_CPUBL_PARAMS *)PARAMS)->v1.FIELD):\
+                                               0)
 #endif //__TH500_RESOURCE_CONFIG_PRIVATE_H__
