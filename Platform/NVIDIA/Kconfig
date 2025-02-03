@@ -344,8 +344,12 @@ menu "Hardware support"
   depends on SUPPORTS_NVIDIA_SDHCI
   default y if SDHCI
 
+  config SUPPORTS_EMMC
+  bool
+
   config EMMC
   bool "eMMC support"
+  depends on SUPPORTS_EMMC
   imply SDHCI
   help
     eMMC support
@@ -627,8 +631,12 @@ menu "Hardware support"
       Exposes API to pull RW SPI flash data from OS via PRM ACPI method
   endif
 
+  config SUPPORTS_BOOTLOADER_RAMDISK
+  bool
+
   config BOOTLOADER_RAMDISK
   bool "Early bootloader ramdisk support"
+  depends on SUPPORTS_BOOTLOADER_RAMDISK
   help
     Support for ramdisk loaded prior to UEFI Start
 endmenu
