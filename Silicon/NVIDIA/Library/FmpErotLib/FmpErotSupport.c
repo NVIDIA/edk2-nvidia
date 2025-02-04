@@ -2,7 +2,7 @@
 
   FMP erot support functions
 
-  SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -400,7 +400,6 @@ FmpErotGetVersionInfo (
   CONST PLDM_FW_DESCRIPTOR                       *Desc;
   UINTN                                          Index;
   UINTN                                          VersionStrLen;
-  UINT64                                         Version64;
   CONST PLDM_FW_COMPONENT_PARAMETER_TABLE_ENTRY  *ComponentEntry;
   CHAR16                                         ReleaseDate[9] = { L'\0' };
   BOOLEAN                                        ErotComponentFound;
@@ -475,10 +474,12 @@ FmpErotGetVersionInfo (
       (mActiveBootChain == 0))
   {
     // pending string follows active string
+    mVersion                     = ComponentEntry->PendingComparisonStamp;
     ComponentVersionString       = (CHAR8 *)&ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength];
     ComponentVersionStringLength = ComponentEntry->PendingVersionStringLength;
     ComponentReleaseDate         = ComponentEntry->PendingReleaseDate;
   } else {
+    mVersion                     = ComponentEntry->ActiveComparisonStamp;
     ComponentVersionString       = (CHAR8 *)ComponentEntry->ActiveVersionString;
     ComponentVersionStringLength = ComponentEntry->ActiveVersionStringLength;
     ComponentReleaseDate         = ComponentEntry->ActiveReleaseDate;
@@ -499,7 +500,8 @@ FmpErotGetVersionInfo (
     ComponentVersionStringLength,
     ComponentVersionString
     );
-  Status = PcdSetPtrS (PcdFirmwareVersionString, &VersionStrLen, mVersionString);
+  mVersionStatus = EFI_SUCCESS;
+  Status         = PcdSetPtrS (PcdFirmwareVersionString, &VersionStrLen, mVersionString);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: failed to set version pcd to %s: %r\n", __FUNCTION__, mVersionString, Status));
   }
@@ -518,16 +520,6 @@ FmpErotGetVersionInfo (
     DEBUG ((DEBUG_ERROR, "%a: failed to set date pcd to %s: %r\n", __FUNCTION__, ReleaseDate, Status));
   }
 
-  // erot only returns version string, convert it to 4-byte hex version value
-  Status = StrHexToUint64S (mVersionString, NULL, &Version64);
-  if (EFI_ERROR (Status) || (Version64 > MAX_UINT32)) {
-    DEBUG ((DEBUG_ERROR, "%a: error converting %s 0x%llx: %r\n", __FUNCTION__, mVersionString, Version64, Status));
-    return EFI_UNSUPPORTED;
-  }
-
-  mVersion       = (UINT32)Version64;
-  mVersionStatus = EFI_SUCCESS;
-
   DEBUG ((
     DEBUG_INFO,
     "%a: got version=0x%x str=%s date=%s chain=%u\n",
@@ -539,12 +531,14 @@ FmpErotGetVersionInfo (
     ));
   DEBUG ((
     DEBUG_INFO,
-    "%a: Active=%.*a Pending=%.*a\n",
+    "%a: Active=%.*a %u Pending=%.*a %u\n",
     __FUNCTION__,
     ComponentEntry->ActiveVersionStringLength,
     ComponentEntry->ActiveVersionString,
+    ComponentEntry->ActiveComparisonStamp,
     ComponentEntry->PendingVersionStringLength,
-    &ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength]
+    &ComponentEntry->ActiveVersionString[ComponentEntry->ActiveVersionStringLength],
+    ComponentEntry->PendingComparisonStamp
     ));
 
   return EFI_SUCCESS;
