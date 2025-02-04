@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -178,6 +178,7 @@
 #define EFI_NV_FW_UEFI_EC_TPM_PPI_EXECUTE                          (EFI_NV_FIRMWARE_UEFI | 0x00000015)
 #define EFI_NV_FW_UEFI_EC_TPM_CLEAR_FAILED                         (EFI_NV_FIRMWARE_UEFI | 0x00000016)
 #define EFI_NV_FW_UEFI_EC_SECURE_BOOT_FAILED                       (EFI_NV_FIRMWARE_UEFI | 0x00000017)
+#define EFI_NV_FW_UEFI_EC_C2C_INIT_FAILED                          (EFI_NV_FIRMWARE_UEFI | 0x00000018)
 ///@}
 
 ///

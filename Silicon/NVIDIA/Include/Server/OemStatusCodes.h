@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -100,6 +100,9 @@
 
 #define OEM_EC_DESC_SECURE_BOOT_FAILURE \
         "Secure boot failure "
+
+#define OEM_EC_DESC_C2C_INIT_FAILULE \
+        "S%uC%u C2C init failed - 0x%02X"
 
 ///@}
 

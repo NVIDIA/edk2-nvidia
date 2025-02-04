@@ -28,7 +28,9 @@
 #include <Library/PcdLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/ReportStatusCodeLib.h>
 #include <Library/SortLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -44,6 +46,9 @@
 
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
+
+#include <NVIDIAStatusCodes.h>
+#include <OemStatusCodes.h>
 
 #include "PcieControllerConfigGPU.h"
 #include "PcieControllerPrivate.h"
@@ -534,6 +539,7 @@ InitializeController (
   PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
   UINT8                  C2cStatus;
   VOID                   *Hob;
+  CHAR8                  OemDesc[sizeof (OEM_EC_DESC_C2C_INIT_FAILULE)];
 
   TEGRABL_EARLY_BOOT_VARIABLES  *Mb1Config = NULL;
   UINTN                         ChipId;
@@ -638,6 +644,20 @@ InitializeController (
           Private->C2cInitSuccessful = TRUE;
         } else {
           DEBUG ((DEBUG_ERROR, "%a: C2C link training failed with error code: 0x%x\r\n", __FUNCTION__, C2cStatus));
+          AsciiSPrint (
+            OemDesc,
+            sizeof (OemDesc),
+            OEM_EC_DESC_C2C_INIT_FAILULE,
+            Private->SocketId,
+            Private->CtrlId,
+            C2cStatus
+            );
+          REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+            EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+            EFI_CLASS_NV_FIRMWARE | EFI_NV_FW_UEFI_EC_C2C_INIT_FAILED,
+            OemDesc,
+            AsciiStrSize (OemDesc)
+            );
         }
       }
 
