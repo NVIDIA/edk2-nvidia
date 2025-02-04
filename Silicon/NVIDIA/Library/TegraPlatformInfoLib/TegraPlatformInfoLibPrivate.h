@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library's Private Structures.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,7 +18,7 @@
 
 #define HIDREV_OFFSET                     0x4
 #define SOC_ID_VERSION_CHIPID_SHIFT       4
-#define SOC_ID_VERSION_CHIPID_MASK        0xff
+#define SOC_ID_VERSION_CHIPID_MASK        0xfff
 #define SOC_ID_VERSION_MAJORVER_SHIFT     0
 #define SOC_ID_VERSION_MAJORVER_MASK      0xf
 #define SOC_ID_REVISION_MINORVER_SHIFT    4
