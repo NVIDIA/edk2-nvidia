@@ -217,7 +217,7 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             The return from this method will be used as the prefix when setting
             BUILDID_STRING, unless the FIRMWARE_VERSION_BASE env is set.
         '''
-        return "202402.1"
+        return "202402.2"
 
     def GetFirmwareVersion(self):
         ''' Return the firmware version as a string.
