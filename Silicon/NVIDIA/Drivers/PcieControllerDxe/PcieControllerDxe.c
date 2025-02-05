@@ -2033,13 +2033,6 @@ DeviceDiscoveryNotify (
   switch (Phase) {
     case DeviceDiscoveryDriverBindingStart:
 
-      // TODO: Remove once option ROM on T264 C0 is fixed
-      if ((ChipId == T264_CHIP_ID) &&
-          (PlatformType != TEGRA_PLATFORM_SILICON))
-      {
-        mPcieDisableOptionRom = TRUE;
-      }
-
       Status = gBS->LocateProtocol (&gNVIDIAConfigurationManagerTokenProtocolGuid, NULL, (VOID **)&CMTokenProtocol);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to fird ConfigurationManagerTokenProtocol\n", __FUNCTION__));
