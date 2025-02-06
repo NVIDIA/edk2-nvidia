@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -489,7 +489,7 @@ T194GetPlatformResourceInformation (
   PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
   PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
 
-  PlatformResourceInfo->BootType = TegrablBootColdBoot;
+  PlatformResourceInfo->BootType = CpuBootloaderParams->BootType;
 
   return EFI_SUCCESS;
 }
