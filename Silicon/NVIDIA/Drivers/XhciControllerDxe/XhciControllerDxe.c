@@ -183,6 +183,7 @@ DeviceDiscoveryNotify (
   UINT32                           Index;
   VOID                             *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO     *PlatformResourceInfo;
+  UINTN                            ChipId;
 
   T234Platform = FALSE;
   LoadIfrRom   = FALSE;
@@ -190,8 +191,27 @@ DeviceDiscoveryNotify (
   PlatformType = TegraGetPlatform ();
 
   switch (Phase) {
-    case DeviceDiscoveryDriverBindingStart:
+    case DeviceDiscoveryDriverBindingSupported:
+      ChipId = TegraGetChipID ();
+      if (ChipId == T194_CHIP_ID) {
+        Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+        if ((Hob != NULL) &&
+            (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+        {
+          PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+        } else {
+          DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+          return EFI_UNSUPPORTED;
+        }
 
+        if (PlatformResourceInfo->BootType == TegrablBootRcm) {
+          return EFI_UNSUPPORTED;
+        }
+      }
+
+      break;
+
+    case DeviceDiscoveryDriverBindingStart:
       Private = AllocatePool (sizeof (XHCICONTROLLER_DXE_PRIVATE));
       if (NULL == Private) {
         DEBUG ((EFI_D_ERROR, "%a: Failed to allocate memory\r\n", __FUNCTION__));
@@ -526,6 +546,7 @@ skipXusbFwLoad:
       }
 
       break;
+
     default:
       break;
   }

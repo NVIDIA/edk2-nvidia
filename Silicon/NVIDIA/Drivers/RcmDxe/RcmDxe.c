@@ -1,7 +1,7 @@
 /** @file
 *  RCM Boot Dxe
 *
-*  Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,6 +14,7 @@
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 /**
   Install rcm driver.
@@ -33,6 +34,7 @@ RcmDxeInitialize (
   )
 {
   TEGRABL_BLOBHEADER            *RcmBlobHeader;
+  T194_TEGRABL_BLOBHEADER       *T194RcmBlobHeader;
   UINTN                         RcmBlobBase;
   UINTN                         RcmBlobSize;
   UINTN                         OsCarveoutBase;
@@ -40,6 +42,8 @@ RcmDxeInitialize (
   UINT8                         BlobMagic[4] = { 'b', 'l', 'o', 'b' };
   UINTN                         Count;
   VOID                          *Hob;
+  UINTN                         ChipId;
+  UINTN                         KernelImageId;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
@@ -64,25 +68,54 @@ RcmDxeInitialize (
     return EFI_NOT_FOUND;
   }
 
-  RcmBlobHeader = (TEGRABL_BLOBHEADER *)RcmBlobBase;
-  if (CompareMem (RcmBlobHeader->BlobMagic, BlobMagic, sizeof (BlobMagic)) != 0) {
-    DEBUG ((DEBUG_ERROR, "%a: RCM blob corrupt\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
-  }
-
-  for (Count = 0; Count < RcmBlobHeader->BlobEntries; Count++) {
-    if (RcmBlobHeader->BlobInfo[Count].ImgType == IMAGE_TYPE_KERNEL) {
-      break;
+  ChipId = TegraGetChipID ();
+  if (ChipId == T194_CHIP_ID) {
+    T194RcmBlobHeader = (T194_TEGRABL_BLOBHEADER *)RcmBlobBase;
+    if (CompareMem (T194RcmBlobHeader->BlobMagic, BlobMagic, sizeof (BlobMagic)) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: T194 RCM blob corrupt\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
     }
-  }
 
-  if (Count == RcmBlobHeader->BlobEntries) {
-    DEBUG ((DEBUG_ERROR, "%a: OS image not found in RCM blob\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
-  }
+    KernelImageId = T194_IMAGE_TYPE_KERNEL;
 
-  PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
-  PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
+    for (Count = 0; Count < T194RcmBlobHeader->BlobEntries; Count++) {
+      if (T194RcmBlobHeader->BlobInfo[Count].ImgType == KernelImageId) {
+        DEBUG ((DEBUG_ERROR, "%a: ID: %d 0x%lx 0x%lx\n", __FUNCTION__, T194RcmBlobHeader->BlobInfo[Count].ImgType, T194RcmBlobHeader->BlobInfo[Count].Offset, T194RcmBlobHeader->BlobInfo[Count].Size));
+        break;
+      }
+    }
+
+    if (Count == T194RcmBlobHeader->BlobEntries) {
+      DEBUG ((DEBUG_ERROR, "%a: OS image not found in RCM blob\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
+    }
+
+    PcdSet64S (PcdRcmKernelBase, (UINT64)T194RcmBlobHeader + T194RcmBlobHeader->BlobInfo[Count].Offset);
+    PcdSet64S (PcdRcmKernelSize, T194RcmBlobHeader->BlobInfo[Count].Size);
+  } else {
+    RcmBlobHeader = (TEGRABL_BLOBHEADER *)RcmBlobBase;
+    if (CompareMem (RcmBlobHeader->BlobMagic, BlobMagic, sizeof (BlobMagic)) != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: RCM blob corrupt\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
+    }
+
+    KernelImageId = IMAGE_TYPE_KERNEL;
+
+    for (Count = 0; Count < RcmBlobHeader->BlobEntries; Count++) {
+      if (RcmBlobHeader->BlobInfo[Count].ImgType == KernelImageId) {
+        DEBUG ((DEBUG_ERROR, "%a: ID: %d 0x%lx 0x%lx\n", __FUNCTION__, RcmBlobHeader->BlobInfo[Count].ImgType, RcmBlobHeader->BlobInfo[Count].Offset, RcmBlobHeader->BlobInfo[Count].Size));
+        break;
+      }
+    }
+
+    if (Count == RcmBlobHeader->BlobEntries) {
+      DEBUG ((DEBUG_ERROR, "%a: OS image not found in RCM blob\n", __FUNCTION__));
+      return EFI_NOT_FOUND;
+    }
+
+    PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
+    PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
+  }
 
   OsCarveoutBase = PlatformResourceInfo->RamdiskOSInfo.Base;
   OsCarveoutSize = PlatformResourceInfo->RamdiskOSInfo.Size;
