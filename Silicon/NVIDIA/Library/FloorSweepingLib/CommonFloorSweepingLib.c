@@ -20,8 +20,6 @@
 
 #include "CommonFloorSweepingLib.h"
 
-#define TH500_MAX_SOCKETS  4
-
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
