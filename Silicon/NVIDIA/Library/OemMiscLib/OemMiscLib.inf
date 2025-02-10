@@ -1,7 +1,7 @@
 #/** @file
 #    OemMiscLib.inf
 #
-#    SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #    Copyright (c) 2021, NUVIA Inc. All rights reserved.
 #    Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 #    Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -30,8 +30,10 @@
   NetworkPkg/NetworkPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   DynamicTablesPkg/DynamicTablesPkg.dec
+  CryptoPkg/CryptoPkg.dec
 
 [LibraryClasses]
+  BaseCryptLib
   BaseMemoryLib
   DebugLib
   HobLib
@@ -67,6 +69,7 @@
 [Guids]
   gNVIDIAPlatformResourceDataGuid
   gZeroGuid
+  gNVIDIASerialNumberNamespaceGuid
 
 [Protocols]
   gNVIDIATegraCpuFrequencyProtocolGuid

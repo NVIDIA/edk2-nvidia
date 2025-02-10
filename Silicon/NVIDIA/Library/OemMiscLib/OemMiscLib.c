@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 
 #include <Library/BaseMemoryLib.h>
+#include <Library/BaseCryptLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HiiLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -926,8 +927,60 @@ OemGetChassisNumPowerCords (
 }
 
 /**
+  CreateUuid5
+
+  Creates a version 5 UUID per RFC 9562
+
+  @param [in]  Namespace
+  @param [in]  Serial Number
+  @param[out] Uuid
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+**/
+STATIC
+EFI_STATUS
+CreateUuid5 (
+  IN CONST EFI_GUID  *Namespace,
+  IN CONST CHAR8     *Name,
+  OUT GUID           *Uuid
+  )
+{
+  VOID   *Sha1Ctx;
+  UINTN  CtxSize;
+  UINT8  Digest[SHA1_DIGEST_SIZE];
+
+  if ((Namespace == NULL) || (Name == NULL) || (Uuid == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  CtxSize = Sha1GetContextSize ();
+  Sha1Ctx = AllocatePool (CtxSize);
+  if (Sha1Ctx == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for SHA1 context\n", __func__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Sha1Init (Sha1Ctx);
+  Sha1Update (Sha1Ctx, Namespace, sizeof (GUID));
+  Sha1Update (Sha1Ctx, Name, AsciiStrLen (Name));
+  Sha1Final (Sha1Ctx, Digest);
+
+  // Construct the UUID from the hash
+  CopyMem (Uuid, Digest, sizeof (GUID));
+  Uuid->Data3    = (Uuid->Data3 & 0x0FFF) | (5 << 12); // Set the version to 5
+  Uuid->Data4[0] = (Uuid->Data4[0] & 0x3F) | 0x80;     // Set the variant to 0b10 per RFC 9562
+  FreePool (Sha1Ctx);
+
+  return EFI_SUCCESS;
+}
+
+/**
   OemGetSystemUuid
-  Fetches the system UUID.
+  Generate the Uuid for SMBIOS Type 1 table. The DynamicTables Pkg SMBIOS generator
+  will try to fetch the System UUID from BMC for Server systems first before trying
+  to generate a UUID.
+  But the OemMiscLib implementation will always generate the UUID.
 
   @param[out] SystemUuid     The pointer to the buffer to store the System UUID.
 
@@ -938,7 +991,29 @@ OemGetSystemUuid (
   OUT GUID  *SystemUuid
   )
 {
-  CopyGuid (SystemUuid, &gZeroGuid);
+  EFI_STATUS  Status;
+  CHAR8       *SerialNum;
+
+  if (SmEepromData == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a:%d: EepromData is NULL. Can't generate UUID",
+      __FUNCTION__,
+      __LINE__
+      ));
+    return;
+  }
+
+  SerialNum = SmEepromData->SerialNumber;
+
+  Status = CreateUuid5 (
+             &gNVIDIASerialNumberNamespaceGuid,
+             SerialNum,
+             SystemUuid
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a %d: Failed to generate UUID %r  \n", __FUNCTION__, __LINE__, Status));
+  }
 }
 
 /**
