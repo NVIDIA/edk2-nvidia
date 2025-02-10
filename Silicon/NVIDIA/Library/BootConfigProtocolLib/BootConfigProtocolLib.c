@@ -1,7 +1,7 @@
 /** @file
   BootConfig Protocol Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -13,6 +13,9 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
+
+#define BOOTCONFIG_DUMMY_SERIALNO    "DummySN"
+#define BOOTCONFIG_DEFAULT_SERIALNO  "0123456789ABCDEF"
 
 /**
  * Appends androidboot.newArgs=newValue to the bootconfig string.
@@ -177,6 +180,10 @@ BootConfigAddSerialNumber (
     }
 
     NewValue = CvmBoardInfo->SerialNumber;
+  }
+
+  if (AsciiStrCmp (NewValue, BOOTCONFIG_DUMMY_SERIALNO) == 0) {
+    NewValue = BOOTCONFIG_DEFAULT_SERIALNO;
   }
 
   Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "serialno", NewValue);
