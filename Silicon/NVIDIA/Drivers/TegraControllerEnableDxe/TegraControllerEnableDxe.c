@@ -2,7 +2,7 @@
 
   Tegra Controller Enable Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,15 +16,14 @@
 #define HWPM_LA_MAX_CLOCK   625000000
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,gv11b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,*-hda",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,ga10b",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,*-soc-hwpm",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,*-nvdla",         &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,tegra264-host1x", NULL                                        },
-  { "nvidia,*-host1x",        &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { "nvidia,*-rce",           &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
-  { NULL,                     NULL                                        }
+  { "nvidia,gv11b",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-hda",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,ga10b",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-soc-hwpm", &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-nvdla",    &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-host1x",   &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { "nvidia,*-rce",      &gNVIDIANonDiscoverableEnableOnlyDeviceGuid },
+  { NULL,                NULL                                        }
 };
 
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
