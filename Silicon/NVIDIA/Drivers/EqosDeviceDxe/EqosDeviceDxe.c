@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -176,7 +176,6 @@ DeviceDiscoveryNotify (
   )
 {
   EFI_STATUS                   Status;
-  UINTN                        ChipID;
   UINTN                        RegionSize;
   SIMPLE_NETWORK_DRIVER        *Snp;
   EFI_SIMPLE_NETWORK_PROTOCOL  *SnpProtocol;
@@ -451,14 +450,6 @@ DeviceDiscoveryNotify (
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "Failed to register for ACPI installation\r\n"));
         return Status;
-      }
-
-      // If booting Android on T234, skip ethernet initialization in UEFI
-      ChipID = TegraGetChipID ();
-      if ((ChipID == T234_CHIP_ID) &&
-          (PcdGetBool (PcdBootAndroidImage)))
-      {
-        return EFI_UNSUPPORTED;
       }
 
       Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);

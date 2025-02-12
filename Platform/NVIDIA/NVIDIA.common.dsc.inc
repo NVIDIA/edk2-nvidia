@@ -396,15 +396,12 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
 
   DtbUpdateLib|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateLib.inf
   DtbUpdateBpmpIpc|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateBpmpIpc.inf
-!ifdef CONFIG_NETWORKING_DEVICE_NVIDIA
-  DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateMacAddr.inf
-!else
-  DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
-!endif
 !ifdef CONFIG_SOC_JETSON
+  DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateMacAddr.inf
   DtbUpdateFsi|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateFsi.inf
   DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateVpr.inf
 !else
+  DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
   DtbUpdateFsi|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
   DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateNull.inf
 !endif

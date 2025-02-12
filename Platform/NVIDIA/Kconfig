@@ -385,13 +385,10 @@ menu "Hardware support"
   bool
 
   config NETWORKING_DEVICE_NVIDIA
-  bool
+  bool "SOC Network Interface support"
   depends on SUPPORTS_NETWORKING_DEVICE_NVIDIA
   help
     Support for internal SoC NIC
-  default y
-  #Note: always enabled to make sure NIC works on OS. Can still be disabled via .defconfig if needed
-  #      Without this the ethernet MAC address won't be correct
 
   config SUPPORTS_SOC_USB
   bool
