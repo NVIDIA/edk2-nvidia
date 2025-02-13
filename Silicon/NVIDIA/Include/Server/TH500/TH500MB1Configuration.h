@@ -66,13 +66,13 @@ typedef struct {
     UINT64    Features;
     struct {
       /* ASPM L1 support */
-      UINT64    EnableAspmL1           : 1;
+      UINT64    AdvertiseAspmL1        : 1;
       /* ASPM L1.1 support */
-      UINT64    EnableAspmL1_1         : 1;
+      UINT64    AdvertiseAspmL1_1      : 1;
       /* ASPM L1.2 support */
-      UINT64    EnableAspmL1_2         : 1;
+      UINT64    AdvertiseAspmL1_2      : 1;
       /* PCI-PM L1.2 support */
-      UINT64    EnablePciPmL1_2        : 1;
+      UINT64    AdvertisePciPmL1_2     : 1;
       /* Availability of CLKREQ signal from RP to EP */
       UINT64    SupportsClkReq         : 1;
       /* Disable DLFE */
