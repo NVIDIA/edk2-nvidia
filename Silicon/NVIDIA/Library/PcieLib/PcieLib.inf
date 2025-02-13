@@ -17,7 +17,9 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseMemoryLib
   DebugLib
+  IoLib
 
 [Sources.common]
   PcieLib.c

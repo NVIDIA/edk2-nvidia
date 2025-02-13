@@ -12,6 +12,7 @@
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/IoLib.h>
 #include <Library/PcieLib.h>
 
 //
@@ -220,7 +221,6 @@ PcieLibCapabilitySupport (
 }
 
 /**
- * Adapted from PciCommand.c
   Get the offset of the next PCI capability matching the given capability ID.
 
   When searching for multiple capabilities of the same ID, pass in the NextCap
@@ -297,15 +297,92 @@ PcieLibLocatePciCapability (
       return EFI_SUCCESS;
     }
 
-    //
-    // Certain PCI device may incorrectly have capability pointing to itself,
-    // break to avoid dead loop.
-    //
+    /*
+     * Certain PCI device may incorrectly have capability pointing to itself,
+     * break to avoid dead loop.
+     */
     if (CapabilityOffset == CapabilityEntry.NextItemPtr) {
       break;
     }
 
     CapabilityOffset = CapabilityEntry.NextItemPtr;
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+/**
+  Get the offset of the next PCI capability matching the given capability ID,
+  using Cfg space MMIO rather than PciIo protocol.
+
+  When searching for multiple capabilities of the same ID, pass in the NextCap
+  offset from the previous call as the starting offset.
+
+  @param[in] CfgBase       Config space base address.
+  @param[in] CapId         The capability ID to locate.
+  @param[inout] Offset     Starting offset on entry, found offset on success.
+  @param[out] NextCap      Offset to the next capability.
+
+  @retval EFI_SUCCESS      Successfully located capability register block.
+  @retval EFI_UNSUPPORTED  Pci device does not support capability.
+  @retval EFI_INVALID_PARAMETER CfgBase is 0 or Offset is NULL
+  @retval EFI_NOT_FOUND    Pci device support but can not find capability register block.
+
+**/
+EFI_STATUS
+PcieLibLocatePciCapabilityViaConfig (
+  IN UINT64     CfgBase,
+  IN UINT8      CapId,
+  IN OUT UINT8  *Offset,
+  OUT UINT8     *NextCap OPTIONAL
+  )
+{
+  UINT8  CapabilityOffset;
+  volatile union {
+    EFI_PCI_CAPABILITY_HDR    Entry;
+    UINT16                    Entry16;
+  } Capability;
+
+  if (CfgBase == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: CfgBase is 0\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Offset == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Offset is NULL\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DEBUG ((DEBUG_VERBOSE, "%a: CfgBase 0x%lx, Offset 0x%x\n", __FUNCTION__, CfgBase, *Offset));
+  if (*Offset != 0) {
+    CapabilityOffset = *Offset;
+  } else {
+    CapabilityOffset = MmioRead16 (CfgBase + PCI_CAPBILITY_POINTER_OFFSET) & 0x00FF;
+  }
+
+  Capability.Entry16 = 0;
+  while ((CapabilityOffset >= 0x40) && ((CapabilityOffset & 0x03) == 0x00)) {
+    Capability.Entry16 = MmioRead16 (CfgBase + CapabilityOffset);
+    DEBUG ((DEBUG_VERBOSE, "%a: Offset 0x%x Capability %02x: ID 0x%x Next 0x%x\n", __FUNCTION__, CapabilityOffset, Capability.Entry16, Capability.Entry.CapabilityID, Capability.Entry.NextItemPtr));
+
+    if (Capability.Entry.CapabilityID == CapId) {
+      *Offset = CapabilityOffset;
+      if (NextCap != NULL) {
+        *NextCap = Capability.Entry.NextItemPtr;
+      }
+
+      return EFI_SUCCESS;
+    }
+
+    /*
+     * Certain PCI device may incorrectly have capability pointing to itself,
+     * break to avoid dead loop.
+     */
+    if (CapabilityOffset == Capability.Entry.NextItemPtr) {
+      break;
+    }
+
+    CapabilityOffset = Capability.Entry.NextItemPtr;
   }
 
   return EFI_NOT_FOUND;
@@ -375,7 +452,6 @@ PcieLibGetDevicePortType (
 //
 
 /**
- * Adapted from PciCommand.c
   Get the offset of the next PCIE capability matching the given capability ID.
 
   When searching for multiple capabilities of the same ID, pass in the NextCap
@@ -404,6 +480,7 @@ PcieLibLocatePciExpressCapability (
   EFI_STATUS                                Status;
   UINT32                                    CapabilityOffset;
   PCI_EXPRESS_EXTENDED_CAPABILITIES_HEADER  CapabilityEntry;
+  UINTN                                     Segment, Bus, Device, Function;
 
   if (PciIo == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -420,9 +497,7 @@ PcieLibLocatePciExpressCapability (
   }
 
   while (CapabilityOffset != 0) {
-    //
-    // Mask it to DWORD alignment per PCI spec
-    //
+    /* Mask it to DWORD alignment per PCI spec */
     CapabilityOffset &= 0xFFC;
     Status            = PciIo->Pci.Read (
                                      PciIo,
@@ -436,10 +511,16 @@ PcieLibLocatePciExpressCapability (
     }
 
     if (*(UINT32 *)(&CapabilityEntry) == MAX_UINT32) {
+      Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
+      ASSERT_EFI_ERROR (Status);
       DEBUG ((
         DEBUG_WARN,
-        "%a: failed to access config space at offset 0x%x\n",
-        __func__,
+        "%a: [%04x:%02x:%02x.%x] failed to access config space at offset 0x%x\n",
+        __FUNCTION__,
+        Segment,
+        Bus,
+        Device,
+        Function,
         CapabilityOffset
         ));
       break;

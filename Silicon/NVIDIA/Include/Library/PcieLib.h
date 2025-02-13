@@ -102,7 +102,6 @@ PcieLibCapabilitySupport (
   );
 
 /**
- * Adapted from PciCommand.c
   Get the offset of the next PCI capability matching the given capability ID.
 
   When searching for multiple capabilities of the same ID, pass in the NextCap
@@ -125,6 +124,32 @@ PcieLibLocatePciCapability (
   IN UINT8                CapId,
   IN OUT UINT8            *Offset,
   OUT UINT8               *NextCap OPTIONAL
+  );
+
+/**
+  Get the offset of the next PCI capability matching the given capability ID,
+  using Cfg space MMIO rather than PciIo protocol.
+
+  When searching for multiple capabilities of the same ID, pass in the NextCap
+  offset from the previous call as the starting offset.
+
+  @param[in] CfgBase       Config space base address.
+  @param[in] CapId         The capability ID to locate.
+  @param[inout] Offset     Starting offset on entry, found offset on success.
+  @param[out] NextCap      Offset to the next capability.
+
+  @retval EFI_SUCCESS      Successfully located capability register block.
+  @retval EFI_UNSUPPORTED  Pci device does not support capability.
+  @retval EFI_INVALID_PARAMETER CfgBase is 0 or Offset is NULL
+  @retval EFI_NOT_FOUND    Pci device support but can not find capability register block.
+
+**/
+EFI_STATUS
+PcieLibLocatePciCapabilityViaConfig (
+  IN UINT64     CfgBase,
+  IN UINT8      CapId,
+  IN OUT UINT8  *Offset,
+  OUT UINT8     *NextCap OPTIONAL
   );
 
 /**
@@ -151,7 +176,6 @@ PcieLibGetDevicePortType (
 //
 
 /**
- * Adapted from PciCommand.c
   Get the offset of the next PCIE capability matching the given capability ID.
 
   When searching for multiple capabilities of the same ID, pass in the NextCap
