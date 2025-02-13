@@ -1,6 +1,6 @@
 #/** @file
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,6 +17,7 @@
 
 [Sources.common]
   NumaInfoLib.c
+  SimTransferInfoTemplateT41X.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
@@ -42,37 +43,43 @@
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuDistance
   gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmDistance
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmDistance
+
   gNVIDIATokenSpaceGuid.PcdHbmToLocalCpuDistance
   gNVIDIATokenSpaceGuid.PcdHbmToRemoteCpuDistance
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmDistance
 
-#CPU GPU domain bandwidth and latency information
+  #CPU domain bandwidth and latency information
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuWriteLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalCpuAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuWriteLatency
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteCpuAccessBandwidth
+
   gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmReadLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdCpuToLocalHbmAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmReadLatency
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmWriteLatency
   gNVIDIATokenSpaceGuid.PcdCpuToRemoteHbmAccessBandwidth
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
+
+  #GPU domain bandwidth and latency information
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuWriteLatency
   gNVIDIATokenSpaceGuid.PcdGpuToLocalCpuAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
+
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmReadLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmWriteLatency
+  gNVIDIATokenSpaceGuid.PcdGpuToLocalHbmAccessBandwidth
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmReadLatency
   gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmWriteLatency
-  gNVIDIATokenSpaceGuid.PcdGpuToRemoteCpuAccessBandwidth
+  gNVIDIATokenSpaceGuid.PcdGpuToRemoteHbmAccessBandwidth
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
   gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid
   gEfiPciIoProtocolGuid
+  gNVIDIACxlEntityProtocolGuid

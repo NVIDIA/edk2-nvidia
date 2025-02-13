@@ -74,7 +74,7 @@ SlitParser (
                  NULL,
                  NULL
                  );
-      if (EFI_ERROR (Status)) {
+      if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
         DEBUG ((
           DEBUG_ERROR,
           "%a: NumaInfoGetDistances(%u, %u) failed: %r\n",

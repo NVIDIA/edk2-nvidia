@@ -132,4 +132,7 @@
 #define RAS_HSP_UEFI_MAILBOX_MB2_OFFSET       0x50
 #define RAS_HSP_UEFI_MAILBOX_MB3_OFFSET       0x54
 
+// Proximity domains
+#define T410_CXL_NUMA_DOMAIN_START  72
+
 #endif //__T410_DEFINES_H__
