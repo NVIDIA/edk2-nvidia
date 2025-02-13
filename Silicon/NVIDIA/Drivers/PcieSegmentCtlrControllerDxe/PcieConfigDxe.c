@@ -15,6 +15,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcieLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -23,12 +24,6 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PciIo.h>
-
-UINT8
-PCIeFindCap (
-  UINT64  CfgBase,
-  UINT8   cap
-  );
 
 /**
   Walk root port and downstream devices for min of max payload size settings
@@ -50,13 +45,14 @@ PciTreeTraverseGetMaxpayload (
   UINT8   *NextBus
   )
 {
-  UINT64   CfgBase;
-  UINT32   Data32;
-  UINT32   PcieOff = 0;
-  UINT8    PcieDev;
-  UINT8    PcieFunc;
-  UINT8    SecBus;
-  BOOLEAN  DeviceFound = FALSE;
+  EFI_STATUS  Status;
+  UINT64      CfgBase;
+  UINT32      Data32;
+  UINT32      PcieOff = 0;
+  UINT8       PcieDev;
+  UINT8       PcieFunc;
+  UINT8       SecBus;
+  BOOLEAN     DeviceFound = FALSE;
 
   PCI_REG_PCIE_DEVICE_CAPABILITY  DeviceCap;
 
@@ -69,9 +65,9 @@ PciTreeTraverseGetMaxpayload (
   }
 
   // read root port maxpayload capability and use as a base
-  PcieOff = PCIeFindCap (CfgBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  Status = PcieLibLocatePciCapabilityViaConfig (CfgBase, EFI_PCI_CAPABILITY_ID_PCIEXP, (UINT8 *)&PcieOff, NULL);
   // Not a PCIe device, return
-  if (!PcieOff) {
+  if (EFI_ERROR (Status) || !PcieOff) {
     return;
   }
 
@@ -148,12 +144,13 @@ PciTreeTraverseSetMaxpayload (
   UINT8   MaxPayload
   )
 {
-  UINT8   SecBus;
-  UINT32  Data32;
-  UINT64  CfgBase;
-  UINT32  PcieOff;
-  UINT8   PcieDev;
-  UINT8   PcieFunc;
+  EFI_STATUS  Status;
+  UINT8       SecBus;
+  UINT32      Data32;
+  UINT64      CfgBase;
+  UINT32      PcieOff = 0;
+  UINT8       PcieDev;
+  UINT8       PcieFunc;
 
   PCI_REG_PCIE_DEVICE_CONTROL  DeviceControl;
 
@@ -166,9 +163,9 @@ PciTreeTraverseSetMaxpayload (
   }
 
   // read root port maxpayload capability and use as a base
-  PcieOff = PCIeFindCap (CfgBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  Status = PcieLibLocatePciCapabilityViaConfig (CfgBase, EFI_PCI_CAPABILITY_ID_PCIEXP, (UINT8 *)&PcieOff, NULL);
   // Not a PCIe device, return
-  if (!PcieOff) {
+  if (EFI_ERROR (Status) || !PcieOff) {
     return;
   }
 

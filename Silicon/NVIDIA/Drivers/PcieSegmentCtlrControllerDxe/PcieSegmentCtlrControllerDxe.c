@@ -26,6 +26,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PcieLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/SortLib.h>
@@ -267,52 +268,6 @@ PcieConfigurationWrite (
 }
 
 STATIC
-UINT8
-PCIeFindNextCap (
-  UINT64  CfgBase,
-  UINT8   cap_ptr,
-  UINT8   cap
-  )
-{
-  UINT8   cap_id, next_cap_ptr;
-  UINT16  reg;
-
-  if (!cap_ptr) {
-    return 0;
-  }
-
-  reg    = MmioRead16 (CfgBase + cap_ptr);
-  cap_id = (reg & 0x00ff);
-
-  if (cap_id > 0x14) {
-    return 0;
-  }
-
-  if (cap_id == cap) {
-    return cap_ptr;
-  }
-
-  next_cap_ptr = (reg & 0xff00) >> 8;
-
-  return PCIeFindNextCap (CfgBase, next_cap_ptr, cap);
-}
-
-UINT8
-PCIeFindCap (
-  UINT64  CfgBase,
-  UINT8   cap
-  )
-{
-  UINT8   next_cap_ptr;
-  UINT16  reg;
-
-  reg          = MmioRead16 (CfgBase + PCI_CAPBILITY_POINTER_OFFSET);
-  next_cap_ptr = (reg & 0x00ff);
-
-  return PCIeFindNextCap (CfgBase, next_cap_ptr, cap);
-}
-
-STATIC
 BOOLEAN
 WaitForBit16 (
   PCIE_CONTROLLER_PRIVATE  *Private,
@@ -345,6 +300,7 @@ InitializeController (
   IN  EFI_HANDLE           ControllerHandle
   )
 {
+  EFI_STATUS             Status;
   PCI_CAPABILITY_PCIEXP  *PciExpCap = NULL;
 
   /* Setup bus numbers */
@@ -360,8 +316,14 @@ InitializeController (
     EFI_PCI_COMMAND_SERR
     );
 
-  Private->PCIeCapOff = PCIeFindCap (Private->EcamBase, EFI_PCI_CAPABILITY_ID_PCIEXP);
-  if (!Private->PCIeCapOff) {
+  Private->PCIeCapOff = 0;
+  Status              = PcieLibLocatePciCapabilityViaConfig (
+                          Private->EcamBase,
+                          EFI_PCI_CAPABILITY_ID_PCIEXP,
+                          (UINT8 *)&Private->PCIeCapOff,
+                          NULL
+                          );
+  if (EFI_ERROR (Status) || !Private->PCIeCapOff) {
     DEBUG ((DEBUG_VERBOSE, "Failed to find PCIe capability registers\r\n"));
     return EFI_NOT_FOUND;
   }
@@ -425,112 +387,6 @@ OnExitBootServices (
   )
 {
   UninitializeController ((EFI_HANDLE)Context);
-}
-
-STATIC
-UINT8
-PcieFindCap (
-  IN EFI_PCI_IO_PROTOCOL  *PciIo,
-  IN UINT8                CapId
-  )
-{
-  UINT16  CapabilityEntry;
-  UINT8   CapabilityPtr;
-  UINT8   CapabilityID;
-
-  CapabilityPtr = 0;
-  PciIo->Pci.Read (
-               PciIo,
-               EfiPciIoWidthUint8,
-               PCI_CAPBILITY_POINTER_OFFSET,
-               1,
-               &CapabilityPtr
-               );
-
-  while ((CapabilityPtr >= 0x40) && ((CapabilityPtr & 0x03) == 0x00)) {
-    PciIo->Pci.Read (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 CapabilityPtr,
-                 1,
-                 &CapabilityEntry
-                 );
-
-    CapabilityID = (UINT8)CapabilityEntry;
-
-    if (CapabilityID == CapId) {
-      return CapabilityPtr;
-    }
-
-    /*
-     * Certain PCI device may incorrectly have capability pointing to itself,
-     * break to avoid dead loop.
-     */
-    if (CapabilityPtr == (UINT8)(CapabilityEntry >> 8)) {
-      return 0;
-    }
-
-    CapabilityPtr = (UINT8)(CapabilityEntry >> 8);
-  }
-
-  return 0;
-}
-
-STATIC
-UINT16
-PcieFindExtCap (
-  IN EFI_PCI_IO_PROTOCOL  *PciIo,
-  IN UINT16               CapId
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      CapabilityPtr;
-  UINT32      CapabilityEntry;
-  UINT16      CapabilityID;
-  UINTN       Segment, Bus, Device, Function;
-
-  CapabilityPtr = EFI_PCIE_CAPABILITY_BASE_OFFSET;
-
-  while (CapabilityPtr != 0) {
-    /* Mask it to DWORD alignment per PCI spec */
-    CapabilityPtr &= 0xFFC;
-    Status         = PciIo->Pci.Read (
-                                  PciIo,
-                                  EfiPciIoWidthUint32,
-                                  CapabilityPtr,
-                                  1,
-                                  &CapabilityEntry
-                                  );
-    if (EFI_ERROR (Status)) {
-      break;
-    }
-
-    if (CapabilityEntry == MAX_UINT32) {
-      Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
-      ASSERT_EFI_ERROR (Status);
-      DEBUG ((
-        DEBUG_WARN,
-        "%a: [%04x:%02x:%02x.%x] failed to access config space at offset 0x%x\n",
-        __FUNCTION__,
-        Segment,
-        Bus,
-        Device,
-        Function,
-        CapabilityPtr
-        ));
-      break;
-    }
-
-    CapabilityID = (UINT16)CapabilityEntry;
-
-    if (CapabilityID == CapId) {
-      return CapabilityPtr;
-    }
-
-    CapabilityPtr = (CapabilityEntry >> 20) & 0xFFF;
-  }
-
-  return 0;
 }
 
 typedef
@@ -659,9 +515,15 @@ PcieEnableErrorReporting (
   Socket = (Segment >> 4) & 0xF;
   Ctrl   = (Segment) & 0xF;
 
-  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
+  PciExpCapOffset = 0;
+  Status          = PcieLibLocatePciCapability (
+                      PciIo,
+                      EFI_PCI_CAPABILITY_ID_PCIEXP,
+                      (UINT8 *)&PciExpCapOffset,
+                      NULL
+                      );
 
-  if (!PciExpCapOffset) {
+  if (EFI_ERROR (Status) || !PciExpCapOffset) {
     DEBUG ((
       DEBUG_WARN,
       "Device [%04x:%02x:%02x.%x] Doesn't have PCIe Express capability...!\n",
@@ -673,8 +535,15 @@ PcieEnableErrorReporting (
     return EFI_UNSUPPORTED;
   }
 
-  AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
-  if (AerCapOffset) {
+  AerCapOffset = 0;
+  Status       = PcieLibLocatePciExpressCapability (
+                   PciIo,
+                   PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID,
+                   &AerCapOffset,
+                   NULL
+                   );
+
+  if (!EFI_ERROR (Status) && AerCapOffset) {
     // Clear AER Correctable Errror Status
     Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, CorrectableErrorStatus);
     Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint32, Offset, 1, &Val_32);
@@ -784,8 +653,15 @@ PcieEnableErrorReporting (
     case PCIE_DEVICE_PORT_TYPE_DOWNSTREAM_PORT:
       /* Enable DPC which is applicable only for Root Ports and Switch Downstream ports */
 
-      Offset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
-      if (Offset) {
+      Offset = 0;
+      Status = PcieLibLocatePciExpressCapability (
+                 PciIo,
+                 PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID,
+                 &Offset,
+                 NULL
+                 );
+
+      if (!EFI_ERROR (Status) && Offset) {
         /* First clear the stale status */
         Val_16 = (PCIE_DPC_STS_TRIGGER_STATUS | PCIE_DPC_STS_SIG_SFW_STATUS);
         Status = PciIo->Pci.Write (
@@ -858,8 +734,15 @@ PcieEnableErrorReporting (
           EFI_PCI_IO_PROTOCOL  *RPPciIo;
 
           RPPciIo        = GetRPDev (PciIo);
-          RpDpcCapOffset = PcieFindExtCap (RPPciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
-          if (RpDpcCapOffset) {
+          RpDpcCapOffset = 0;
+          Status         = PcieLibLocatePciExpressCapability (
+                             PciIo,
+                             PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID,
+                             &RpDpcCapOffset,
+                             NULL
+                             );
+
+          if (!EFI_ERROR (Status) && RpDpcCapOffset) {
             Status = RPPciIo->Pci.Read (
                                     RPPciIo,
                                     EfiPciIoWidthUint16,
@@ -1082,8 +965,15 @@ PcieEnableECRC (
   Socket = (Segment >> 4) & 0xF;
   Ctrl   = (Segment) & 0xF;
 
-  AerCapOffset = PcieFindExtCap (PciIo, PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID);
-  if (AerCapOffset) {
+  AerCapOffset = 0;
+  Status       = PcieLibLocatePciExpressCapability (
+                   PciIo,
+                   PCI_EXPRESS_EXTENDED_CAPABILITY_ADVANCED_ERROR_REPORTING_ID,
+                   &AerCapOffset,
+                   NULL
+                   );
+
+  if (!EFI_ERROR (Status) && AerCapOffset) {
     Offset = AerCapOffset + OFFSET_OF (PCI_EXPRESS_EXTENDED_CAPABILITIES_ADVANCED_ERROR_REPORTING, AdvancedErrorCapabilitiesAndControl);
     Status = PciIo->Pci.Read (
                           PciIo,
@@ -1239,8 +1129,15 @@ Recursive10BitTagCompleterCheck (
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
-  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
-  if (PciExpCapOffset == 0) {
+  PciExpCapOffset = 0;
+  Status          = PcieLibLocatePciCapability (
+                      PciIo,
+                      EFI_PCI_CAPABILITY_ID_PCIEXP,
+                      (UINT8 *)&PciExpCapOffset,
+                      NULL
+                      );
+
+  if (EFI_ERROR (Status) || (PciExpCapOffset == 0)) {
     DEBUG ((
       DEBUG_INFO,
       "Device [%04x:%02x:%02x.%x] doesn't support ExtendedTag. \
@@ -1352,19 +1249,17 @@ Recursive10BitTagRequestSet (
   ASSERT_EFI_ERROR (Status);
 
   /* Enable Extended Tag */
-  PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
-  Offset          = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl);
-  Status          = PciIo->Pci.Read (
-                                 PciIo,
-                                 EfiPciIoWidthUint16,
-                                 Offset,
-                                 1,
-                                 &DeviceControl.Uint16
-                                 );
+  PciExpCapOffset = 0;
+  Status          = PcieLibLocatePciCapability (
+                      PciIo,
+                      EFI_PCI_CAPABILITY_ID_PCIEXP,
+                      (UINT8 *)&PciExpCapOffset,
+                      NULL
+                      );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
+      "Device [%04x:%02x:%02x.%x] : Enable ExtendedTagField failed\n",
       Segment,
       Bus,
       Device,
@@ -1372,34 +1267,59 @@ Recursive10BitTagRequestSet (
       ));
   }
 
-  DeviceControl.Bits.ExtendedTagField = 1;
-
-  Status = PciIo->Pci.Write (
-                        PciIo,
-                        EfiPciIoWidthUint16,
-                        Offset,
-                        1,
-                        &DeviceControl.Uint16
-                        );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
-      Segment,
-      Bus,
-      Device,
-      Function
-      ));
+  if (!EFI_ERROR (Status)) {
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint16,
+                          Offset,
+                          1,
+                          &DeviceControl.Uint16
+                          );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+    }
   }
 
-  Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability2);
-  Status = PciIo->Pci.Read (
-                        PciIo,
-                        EfiPciIoWidthUint32,
-                        Offset,
-                        1,
-                        &DeviceCapability2.Uint32
-                        );
+  if (!EFI_ERROR (Status)) {
+    DeviceControl.Bits.ExtendedTagField = 1;
+
+    Status = PciIo->Pci.Write (
+                          PciIo,
+                          EfiPciIoWidthUint16,
+                          Offset,
+                          1,
+                          &DeviceControl.Uint16
+                          );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Device [%04x:%02x:%02x.%x] : Enabled ExtendedTagField failed\n",
+        Segment,
+        Bus,
+        Device,
+        Function
+        ));
+    }
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability2);
+    Status = PciIo->Pci.Read (
+                          PciIo,
+                          EfiPciIoWidthUint32,
+                          Offset,
+                          1,
+                          &DeviceCapability2.Uint32
+                          );
+  }
 
   if (!EFI_ERROR (Status) && (DeviceCapability2.Bits.TenBitTagRequesterSupported == TRUE)) {
     Offset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceControl2);
