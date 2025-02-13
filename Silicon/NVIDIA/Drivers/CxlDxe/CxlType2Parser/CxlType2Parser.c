@@ -14,7 +14,11 @@
 
 #include <Library/CxlLib.h>
 #include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PcieLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+
+#include <Protocol/CxlEntityProtocol.h>
 
 typedef enum {
   // Mandatory IDs
@@ -60,6 +64,7 @@ CxlType2 (
   UINTN                               OffsetIndex;
   CXL_3_2_DVSEC_FLEX_BUS_PORT_STATUS  PortStatus;
   UINT8                               DevicePortType;
+  CXL_ENTITY_PROTOCOL                 *CxlEntityProtocol;
 
   // Make sure PCIE header says this is a device
   if (!PcieLibIsHeaderType (PciIo, HEADER_TYPE_DEVICE)) {
@@ -111,6 +116,34 @@ CxlType2 (
   }
 
   DEBUG ((DEBUG_ERROR, "TODO: %a Parser still needs to be implemented\n", __FUNCTION__));
+
+  // Register the protocol for this entity
+  CxlEntityProtocol = AllocateZeroPool (sizeof (CXL_ENTITY_PROTOCOL));
+  if (CxlEntityProtocol == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CxlEntity protocol\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  CxlEntityProtocol->Handle                       = Controller;
+  CxlEntityProtocol->Type                         = CXL_TYPE2_DEVICE;
+  CxlEntityProtocol->PciIo                        = PciIo;
+  CxlEntityProtocol->DvsecOffsets.Devices         = DvsecOffsets[DVSEC_CXL_DEVICE];
+  CxlEntityProtocol->DvsecOffsets.FlexBus         = DvsecOffsets[DVSEC_FLEX_BUS_PORT];
+  CxlEntityProtocol->DvsecOffsets.RegisterLocator = DvsecOffsets[DVSEC_REGISTER_LOCATOR];
+  CxlEntityProtocol->DvsecOffsets.GpfForDevices   = DvsecOffsets[DVSEC_GPF_CXL_DEVICE];
+
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Controller,
+                  &gNVIDIACxlEntityProtocolGuid,
+                  CxlEntityProtocol,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r installing CxlEntity protocol\n", __FUNCTION__, Status));
+    FreePool (CxlEntityProtocol);
+    return Status;
+  }
+
   return EFI_SUCCESS;
 }
 

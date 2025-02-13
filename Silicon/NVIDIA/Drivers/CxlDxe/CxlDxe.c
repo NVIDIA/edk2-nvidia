@@ -85,10 +85,21 @@ CxlDriverBindingSupported (
   UINTN                     Function;
   UINTN                     ParserIndex;
   UINT32                    ExtCapOffset;
+  VOID                      *Interface;
 
   if (mCxlTypeParserCount == 0) {
     DEBUG ((DEBUG_WARN, "%a: No CXL type parsers registered\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
+  }
+
+  // If we've already installed the protocol we must have determined we support it
+  Status = gBS->HandleProtocol (
+                  Controller,
+                  &gNVIDIACxlEntityProtocolGuid,
+                  (VOID **)&Interface
+                  );
+  if (!EFI_ERROR (Status)) {
+    return EFI_SUCCESS;
   }
 
   // Add RemainingDevicePath path logic here

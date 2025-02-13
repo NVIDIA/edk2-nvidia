@@ -26,9 +26,15 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  CxlLib
+  DebugLib
+  MemoryAllocationLib
+  PcieLib
+  UefiBootServicesTableLib
 
 [Pcd]
 
 [Guids]
 
 [Protocols]
+  gNVIDIACxlEntityProtocolGuid
