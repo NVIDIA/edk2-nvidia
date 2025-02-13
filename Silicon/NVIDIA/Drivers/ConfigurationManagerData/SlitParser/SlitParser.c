@@ -14,7 +14,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/NumaInfoLib.h>
-#include <TH500/TH500Definitions.h>
 
 EFI_STATUS
 EFIAPI

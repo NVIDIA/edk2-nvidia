@@ -18,8 +18,6 @@
 #include <Library/NumaInfoLib.h>
 #include <Library/PcdLib.h>
 
-#include <TH500/TH500Definitions.h>
-
 STATIC UINT16  InfoDataType[] = {
   READ_LATENCY_DATATYPE,
   WRITE_LATENCY_DATATYPE,
@@ -80,6 +78,7 @@ HmatParser (
   ReadIndex                    = MAX_UINT32;
   WriteIndex                   = MAX_UINT32;
   AccessBandwidthIndex         = MAX_UINT32;
+  HmatTable                    = NULL;
   TargetProximityDomainList    = NULL;
   InitiatorProximityDomainList = NULL;
 
