@@ -2,7 +2,7 @@
 *
 *  NVIDIA Config formset.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -386,6 +386,7 @@ formset
 
     subtitle text = STRING_TOKEN(STR_NULL);
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.MemoryTestsSupported == 0;
     oneof varid = MemoryTestControl.TestLevel,
         questionid = KEY_MEMORY_TEST_LEVEL,
         prompt = STRING_TOKEN(STR_MEMORY_TEST_LEVEL_PROMPT),
@@ -489,6 +490,7 @@ formset
           default = 60000,
       endnumeric;
     endif;
+    endif; //suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.MemoryTestsSupported == 0;
   endform;
 
   //
