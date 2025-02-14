@@ -139,8 +139,26 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         return skipped_dirs
 
     def GetActiveScopes(self):
-        ''' List of scopes we need for this platform. '''
-        return ['edk2-build','nvidia']
+        ''' List of scopes we need for this platform.
+
+        Subclasses should not override this to add scopes, but should instead
+        implement GetAdditionalScopes().
+        '''
+        if self._skip_verify:
+            # Implement "--skip-verify" by removing all scopes.
+            return []
+        else:
+            # Verify our base scopes, plus any additional scopes added by a
+            # subclass.
+            return ['edk2-build','nvidia'] + self.GetAdditionalScopes()
+
+    def GetAdditionalScopes(self):
+        ''' List of additional scopes we need for this platform.
+
+        Subclasses should implement this to add scopes.  Best practice is to
+        call the super class and append to the returned list.
+        '''
+        return []
 
     def AddCommandLineOptions(self, parserObj):
         ''' Add command line options to the argparser '''
@@ -160,6 +178,10 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             '--require-submodule', dest='nvidia_submodules', type=str,
             help='Add a required submodule.',
             action="append", default=[])
+        parserObj.add_argument(
+            '--skip-verify', dest='skip_verify',
+            help='Skip verification of dependencies.',
+            action='store_true', default=False)
 
     def RetrieveCommandLineOptions(self, args):
         ''' Retrieve command line options from the argparser namespace '''
@@ -168,6 +190,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         self._insert_pkgs_paths = args.nvidia_pkgs_paths
         self._skipped_dirs = args.nvidia_skipped_dirs
         self._added_submodules = args.nvidia_submodules
+        self._skip_verify = args.skip_verify
 
     #######################################
     # MultiPkgAwareSettingsInterface
@@ -533,10 +556,10 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
         ''' return iterable of edk2 target tags supported by this build '''
         return ("NOOPT",)
 
-    def GetActiveScopes(self):
+    def GetAdditionalScopes(self):
         # Add the "host-based-test" scope, which will trigger the plugin that
         # runs the unittests after the build.
-        return super().GetActiveScopes() + ["cibuild", "host-based-test"]
+        return super().GetAdditionalScopes() + ["cibuild", "host-based-test"]
 
     #######################################
     # NVIDIA settings

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,7 +31,7 @@ find_venv_activate
 STUART_BUILD_OPTIONS=${STUART_BUILD_OPTIONS:---verbose}
 
 if [[ "${UEFI_SKIP_UPDATE}" ]]; then
-  STUART_BUILD_OPTIONS+=" --noverify"
+  STUART_BUILD_OPTIONS+=" --skip-verify"
 fi
 
 if [[ -z "${UEFI_RELEASE_ONLY}" ]]; then
