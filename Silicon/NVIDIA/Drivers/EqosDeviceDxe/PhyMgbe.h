@@ -9,7 +9,8 @@
 #ifndef _PHY_MGBE_H__
 #define _PHY_MGBE_H__
 
-#define PHY_MGBE_OUI  0x31C31C12
+#define PHY_AQR113C_OUI   0x31C31C12
+#define PHY_AQR113_OUI    0x31C31C42
 
 /*
  * @brief Configure MGBE PHY
