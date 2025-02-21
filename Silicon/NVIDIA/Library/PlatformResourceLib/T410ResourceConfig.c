@@ -896,6 +896,8 @@ SocGetPlatformResourceInformation (
     T410DramDeviceInfo[Index].SpeedKhz       = 0;
   }
 
+  PlatformResourceInfo->IsSMTAvailable = CpuBootloaderParams->IsSMT2Enabled;
+
   for (Index = 0; Index < T410_MAX_SOCKETS; Index++) {
     if (!(SocketMask & (1UL << Index))) {
       continue;

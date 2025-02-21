@@ -197,7 +197,8 @@ typedef struct {
          * 1: GPIO Mode
          */
         UINT64 BootChainSelectionMode: 1;
-        UINT64 FeatureFlagRaw1Reserved: 63;
+        UINT64 IsSMT2Enabled: 1;
+        UINT64 FeatureFlagRaw1Reserved: 62;
       };
     };
 

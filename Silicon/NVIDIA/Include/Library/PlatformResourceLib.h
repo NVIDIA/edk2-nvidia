@@ -208,6 +208,7 @@ typedef struct {
   TEGRA_FLOOR_SWEEPING_INFO     *FloorSweepingInfo;
   UINT8                         CpuSlcSnoopOutstandingLocal;
   UINT8                         CpuSlcSnoopOutstandingRemote;
+  BOOLEAN                       IsSMTAvailable;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**
