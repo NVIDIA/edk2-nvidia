@@ -18,9 +18,7 @@
 #include <Library/PrintLib.h>
 #include <Guid/ArmMpCoreInfo.h>
 #include <libfdt.h>
-#include "T234ResourceConfig.h"
-#include "TH500ResourceConfig.h"
-#include <Library/FloorSweepingLib.h>
+#include "SocResourceConfig.h"
 
 #define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
   (((UINT64)(Aff3) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
@@ -38,38 +36,6 @@ SetTegraUARTBaseAddress (
   )
 {
   TegraUARTBaseAddress = UartBaseAddress;
-}
-
-/**
-  Retrieve chip specific info for GIC
-
-**/
-BOOLEAN
-EFIAPI
-GetGicInfo (
-  OUT TEGRA_GIC_INFO  *GicInfo
-  )
-{
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      GicInfo->GicCompatString = "arm,gic-v3";
-      GicInfo->ItsCompatString = "arm,gic-v3-its";
-      GicInfo->Version         = 3;
-      break;
-    case TH500_CHIP_ID:
-      GicInfo->GicCompatString = "arm,gic-v3";
-      GicInfo->ItsCompatString = "arm,gic-v3-its";
-      GicInfo->Version         = 4;
-      break;
-    default:
-      return FALSE;
-  }
-
-  return TRUE;
 }
 
 /**
@@ -94,161 +60,6 @@ GetCPUBLBaseAddress (
   CpuBootloaderAddress   = (CpuBootloaderAddressHi << 32) | CpuBootloaderAddressLo;
 
   return CpuBootloaderAddress;
-}
-
-/**
-  Retrieve Dram Page Blacklist Info Address
-
-**/
-NVDA_MEMORY_REGION *
-EFIAPI
-GetDramPageBlacklistInfoAddress (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
-    case TH500_CHIP_ID:
-      return TH500GetDramPageBlacklistInfoAddress (CpuBootloaderAddress);
-    default:
-      return 0x0;
-  }
-}
-
-/**
-  Retrieve DTB Address
-
-**/
-UINT64
-EFIAPI
-GetDTBBaseAddress (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetDTBBaseAddress (CpuBootloaderAddress);
-    case TH500_CHIP_ID:
-      return TH500GetDTBBaseAddress (CpuBootloaderAddress);
-    default:
-      return 0x0;
-  }
-}
-
-/**
-  Retrieve GR Blob Address
-
-**/
-UINT64
-EFIAPI
-GetGRBlobBaseAddress (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetGRBlobBaseAddress (CpuBootloaderAddress);
-    default:
-      return 0x0;
-  }
-}
-
-/**
-  InValidate Active Boot Chain
-
-**/
-EFI_STATUS
-EFIAPI
-InValidateActiveBootChain (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case TH500_CHIP_ID:
-      return TH500InValidateActiveBootChain (CpuBootloaderAddress);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
-  Validate Active Boot Chain
-
-**/
-EFI_STATUS
-EFIAPI
-ValidateActiveBootChain (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234ValidateActiveBootChain (CpuBootloaderAddress);
-    case TH500_CHIP_ID:
-      return TH500ValidateActiveBootChain (CpuBootloaderAddress);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
-  Set next boot chain
-
-**/
-EFI_STATUS
-EFIAPI
-SetNextBootChain (
-  IN  UINT32  BootChain
-  )
-{
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234SetNextBootChain (BootChain);
-      break;
-    default:
-      return EFI_UNSUPPORTED;
-      break;
-  }
 }
 
 /**
@@ -455,7 +266,6 @@ GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
-  UINTN  ChipID;
   UINTN  CpuBootloaderAddress;
 
   PlatformResourceInfo->ResourceInfo = AllocateZeroPool (sizeof (TEGRA_RESOURCE_INFO));
@@ -468,18 +278,9 @@ GetPlatformResourceInformation (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  ChipID = TegraGetChipID ();
-
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo);
-    case TH500_CHIP_ID:
-      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, FALSE);
-    default:
-      return EFI_UNSUPPORTED;
-  }
+  return SocGetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, FALSE);
 }
 
 /**
@@ -495,7 +296,6 @@ UpdatePlatformResourceInformation (
   EFI_STATUS                    Status;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  UINTN                         ChipID;
   UINTN                         CoreIndex;
   UINTN                         CoreInfoIndex;
   ARM_CORE_INFO                 *ArmCoreInfo;
@@ -519,19 +319,7 @@ UpdatePlatformResourceInformation (
 
   DEBUG ((DEBUG_ERROR, "DTB maximums: sockets=%u clusters=%u cores=%u\n", PlatformResourceInfo->MaxPossibleSockets, PlatformResourceInfo->MaxPossibleClusters, PlatformResourceInfo->MaxPossibleCores));
 
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      Status = T234GetEnabledCoresBitMap (PlatformResourceInfo);
-      break;
-    case TH500_CHIP_ID:
-      Status = TH500GetEnabledCoresBitMap (PlatformResourceInfo);
-      break;
-    default:
-      return EFI_UNSUPPORTED;
-  }
-
+  Status = SocGetEnabledCoresBitMap (PlatformResourceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -550,17 +338,7 @@ UpdatePlatformResourceInformation (
 
   DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, PlatformResourceInfo->NumberOfEnabledCores));
 
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      Status = T234UpdatePlatformResourceInformation (PlatformResourceInfo);
-      break;
-    case TH500_CHIP_ID:
-      Status = TH500UpdatePlatformResourceInformation (PlatformResourceInfo);
-      break;
-    default:
-      return EFI_UNSUPPORTED;
-  }
-
+  Status = SocUpdatePlatformResourceInformation (PlatformResourceInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -581,42 +359,6 @@ UpdatePlatformResourceInformation (
   return EFI_SUCCESS;
 }
 
-EFI_STATUS
-EFIAPI
-GetRootfsStatusReg (
-  IN UINT32  *RegisterValue
-  )
-{
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234GetRootfsStatusReg (RegisterValue);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-EFI_STATUS
-EFIAPI
-SetRootfsStatusReg (
-  IN UINT32  RegisterValue
-  )
-{
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      return T234SetRootfsStatusReg (RegisterValue);
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
 /**
   Get Platform Resource Information
 
@@ -628,94 +370,7 @@ GetPlatformResourceInformationStandaloneMm (
   IN PHYSICAL_ADDRESS              CpuBootloaderAddress
   )
 {
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-  switch (ChipID) {
-    case TH500_CHIP_ID:
-      return TH500GetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
-    default:
-      DEBUG ((DEBUG_ERROR, "%a Invalid ChipId 0x%x\n", __FUNCTION__, ChipID));
-      break;
-  }
-
-  return EFI_UNSUPPORTED;
-}
-
-/**
- * Get Partition Info in Dxe.
- *
- * @param[in] PartitionIndex        Index into the Partition info array, usually
- *                                  defined by the early BLs..
- * @param[out] DeviceInstance       Value that conveys the device/CS for the
- *                                  partition..
- * @param[out] PartitionStartByte   Start byte offset for the partition..
- * @param[out] PartitionSizeBytes   Size of the partition in bytes.
- *
- * @retval  EFI_SUCCESS             Success in looking up partition.
- * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
-**/
-EFI_STATUS
-EFIAPI
-GetPartitionInfo (
-  IN  UINT32  PartitionIndex,
-  OUT UINT16  *DeviceInstance,
-  OUT UINT64  *PartitionStartByte,
-  OUT UINT64  *PartitionSizeBytes
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID = TegraGetChipID ();
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case TH500_CHIP_ID:
-      return TH500GetPartitionInfo (
-               CpuBootloaderAddress,
-               PartitionIndex,
-               DeviceInstance,
-               PartitionStartByte,
-               PartitionSizeBytes
-               );
-    default:
-      return EFI_UNSUPPORTED;
-  }
-}
-
-/**
- * Get Partition Info in Standalone MM image.
- *
- * @param[in] CpuBlAddress          Address of the CPU BL params.
- * @param[in] PartitionIndex        Index into the Partition info array, usually
- *                                  defined by the early BLs..
- * @param[out] DeviceInstance       Value that conveys the device/CS for the
- *                                  partition..
- * @param[out] PartitionStartByte   Start byte offset for the partition..
- * @param[out] PartitionSizeBytes   Size of the partition in bytes.
- *
- * @retval  EFI_SUCCESS             Success in looking up partition.
- * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
-**/
-EFI_STATUS
-EFIAPI
-GetPartitionInfoStMm (
-  IN  UINTN   CpuBlAddress,
-  IN  UINT32  PartitionIndex,
-  OUT UINT16  *DeviceInstance,
-  OUT UINT64  *PartitionStartByte,
-  OUT UINT64  *PartitionSizeBytes
-  )
-{
-  return TH500GetPartitionInfo (
-           CpuBlAddress,
-           PartitionIndex,
-           DeviceInstance,
-           PartitionStartByte,
-           PartitionSizeBytes
-           );
+  return SocGetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, TRUE);
 }
 
 /**
@@ -732,22 +387,11 @@ GetSocketMaskStMm (
   )
 {
   UINT32  SocketMask;
-  UINTN   ChipID;
-
-  ChipID     = TegraGetChipID ();
-  SocketMask = 0;
 
   if (CpuBlAddress == 0) {
     SocketMask = 0x1;
   } else {
-    switch (ChipID) {
-      case TH500_CHIP_ID:
-        SocketMask = TH500GetSocketMask (CpuBlAddress);
-        break;
-      default:
-        DEBUG ((DEBUG_ERROR, "%a Unsupported Chip %u\n", __FUNCTION__, ChipID));
-        break;
-    }
+    SocketMask = SocGetSocketMask (CpuBlAddress);
   }
 
   return SocketMask;
@@ -777,157 +421,4 @@ IsSocketEnabledStMm (
 
   SocketEnabled = ((SocketMask & (1U << SocketNum)) ? TRUE : FALSE);
   return SocketEnabled;
-}
-
-/**
- * Check if TPM is requested to be enabled.
- *
- * @retval  TRUE      TPM is enabled.
- * @retval  FALSE     TPM is disabled.
-**/
-BOOLEAN
-EFIAPI
-IsTpmToBeEnabled (
-  VOID
-  )
-{
-  UINTN  ChipID;
-  UINTN  CpuBootloaderAddress;
-
-  ChipID               = TegraGetChipID ();
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-
-  switch (ChipID) {
-    case TH500_CHIP_ID:
-      return TH500IsTpmToBeEnabled (CpuBootloaderAddress);
-    default:
-      return FALSE;
-  }
-}
-
-/**
-  Set next boot recovery
-
-**/
-VOID
-EFIAPI
-SetNextBootRecovery (
-  VOID
-  )
-{
-  UINTN  ChipID;
-
-  ChipID = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      T234SetNextBootRecovery ();
-      break;
-    default:
-      break;
-  }
-}
-
-EFI_STATUS
-EFIAPI
-GetActiveBootChainStMm (
-  IN  UINTN   ChipID,
-  IN  UINTN   ScratchBase,
-  OUT UINT32  *BootChain
-  )
-{
-  EFI_STATUS  Status;
-
-  switch (ChipID) {
-    case T234_CHIP_ID:
-      Status = T234GetActiveBootChainStMm (ScratchBase, BootChain);
-      break;
-    default:
-      Status = EFI_UNSUPPORTED;
-      break;
-  }
-
-  return Status;
-}
-
-UINTN
-TegraGetMaxCoreCount (
-  IN UINTN  Socket
-  )
-{
-  UINTN       ChipID;
-  UINTN       CoreCount;
-  EFI_STATUS  Status;
-
-  CoreCount = 0;
-  ChipID    = TegraGetChipID ();
-
-  switch (ChipID) {
-    case TH500_CHIP_ID:
-      CoreCount = TH500TegraGetMaxCoreCount (Socket);
-      break;
-    default:
-      Status = GetNumEnabledCoresOnSocket (Socket, &CoreCount);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a:Failed to get Enabled Core Count for Socket %u %r\n",
-          __FUNCTION__,
-          Socket,
-          Status
-          ));
-      }
-
-      break;
-  }
-
-  return CoreCount;
-}
-
-UINT32
-EFIAPI
-PcieIdToInterface (
-  IN UINTN   ChipId,
-  IN UINT32  PcieId
-  )
-{
-  UINT32  Interface;
-
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      Interface = TH500PcieIdToInterface (PcieId);
-      break;
-
-    default:
-      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
-      ASSERT (0);
-      Interface = PcieId;
-      break;
-  }
-
-  return Interface;
-}
-
-UINT32
-EFIAPI
-PcieIdToSocket (
-  IN UINTN   ChipId,
-  IN UINT32  PcieId
-  )
-{
-  UINT32  Socket;
-
-  switch (ChipId) {
-    case TH500_CHIP_ID:
-      Socket = TH500PcieIdToSocket (PcieId);
-      break;
-
-    default:
-      DEBUG ((DEBUG_ERROR, "%a: ChipId 0x%x not supported\n", __FUNCTION__, ChipId));
-      ASSERT (0);
-      Socket = PcieId;
-      break;
-  }
-
-  return Socket;
 }

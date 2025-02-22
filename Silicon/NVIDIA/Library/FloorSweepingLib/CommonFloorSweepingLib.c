@@ -130,8 +130,8 @@ TH500UpdatePcieNode (
     return EFI_SUCCESS;
   }
 
-  CtrlId         = PcieIdToInterface (TH500_CHIP_ID, PcieId);
-  CbbCtlOffset   = CbbFabricBase + 0x20 * PcieIdToInterface (TH500_CHIP_ID, PcieId);
+  CtrlId         = PcieIdToInterface (PcieId);
+  CbbCtlOffset   = CbbFabricBase + 0x20 * PcieIdToInterface (PcieId);
   Aperture64Base = (((UINT64)MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_HIGH)) << 32) |
                    MmioRead32 (CbbCtlOffset + TH500_CBB_FABRIC_64BIT_LOW);
 
@@ -256,7 +256,7 @@ TH500UpdatePcieNode (
   }
 
   /* Patch 'external-facing' property only for C8 controller */
-  if ((SocketMssBaseAddr != NULL) && (PcieIdToInterface (TH500_CHIP_ID, PcieId) == 8)) {
+  if ((SocketMssBaseAddr != NULL) && (PcieIdToInterface (PcieId) == 8)) {
     MSSBase  = SocketMssBaseAddr[Socket];
     C2CMode  = MmioRead32 (MSSBase + TH500_MSS_C2C_MODE);
     C2CMode &= 0x3;
@@ -273,13 +273,13 @@ TH500UpdatePcieNode (
           DEBUG ((
             DEBUG_ERROR,
             "Failed to delete 'external-facing' property for Ctrl = %d\n",
-            PcieIdToInterface (TH500_CHIP_ID, PcieId)
+            PcieIdToInterface (PcieId)
             ));
         } else {
           DEBUG ((
             DEBUG_INFO,
             "Deleted 'external-facing' property for Ctrl = %d\n",
-            PcieIdToInterface (TH500_CHIP_ID, PcieId)
+            PcieIdToInterface (PcieId)
             ));
         }
       }
@@ -430,9 +430,9 @@ CommonFloorSweepPcie (
       PcieId = fdt32_to_cpu (Tmp32);
       DEBUG ((DEBUG_INFO, "Found pcie 0x%x (%a)\n", PcieId, fdt_get_name (Dtb, NodeOffset, NULL)));
 
-      InterfaceSocket = PcieIdToSocket (ChipId, PcieId);
+      InterfaceSocket = PcieIdToSocket (PcieId);
       if (!(SocketMask & (1UL << InterfaceSocket)) ||
-          ((PcieDisableRegArray[InterfaceSocket] & (1UL << PcieIdToInterface (ChipId, PcieId))) != 0))
+          ((PcieDisableRegArray[InterfaceSocket] & (1UL << PcieIdToInterface (PcieId))) != 0))
       {
         FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "disabled", sizeof ("disabled"));
         if (FdtErr < 0) {

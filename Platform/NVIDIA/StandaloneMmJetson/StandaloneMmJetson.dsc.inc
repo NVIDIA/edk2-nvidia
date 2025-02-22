@@ -22,7 +22,7 @@
 [LibraryClasses]
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLibNull/DebugLogScratchRegLibNull.inf
-
+  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T26xPlatformResourceLib.inf
 [LibraryClasses.common.MM_STANDALONE]
 
 ################################################################################

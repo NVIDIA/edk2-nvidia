@@ -955,8 +955,8 @@ PcieEnableErrorReporting (
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
-  Socket = PcieIdToSocket (ChipId, Segment);
-  Ctrl   = PcieIdToInterface (ChipId, Segment);
+  Socket = PcieIdToSocket (Segment);
+  Ctrl   = PcieIdToInterface (Segment);
 
   PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
 
@@ -1416,8 +1416,8 @@ PcieEnableECRC (
   Status = PciIo->GetLocation (PciIo, &Segment, &Bus, &Device, &Function);
   ASSERT_EFI_ERROR (Status);
 
-  Socket = PcieIdToSocket (ChipId, Segment);
-  Ctrl   = PcieIdToInterface (ChipId, Segment);
+  Socket = PcieIdToSocket (Segment);
+  Ctrl   = PcieIdToInterface (Segment);
 
   if (ChipId == TH500_CHIP_ID) {
     Hob = GetFirstGuidHob (&gNVIDIATH500MB1DataGuid);
@@ -2159,8 +2159,8 @@ DeviceDiscoveryNotify (
           Private->SocketId = SwapBytes32 (Private->SocketId);
         }
       } else if (ChipId == T264_CHIP_ID) {
-        Private->CtrlId   = PcieIdToInterface (T264_CHIP_ID, Private->PcieRootBridgeConfigurationIo.SegmentNumber);
-        Private->SocketId = PcieIdToSocket (T264_CHIP_ID, Private->PcieRootBridgeConfigurationIo.SegmentNumber);
+        Private->CtrlId   = PcieIdToInterface (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
+        Private->SocketId = PcieIdToSocket (Private->PcieRootBridgeConfigurationIo.SegmentNumber);
       } else {
         DEBUG ((DEBUG_ERROR, "%a: unsupported chip=0x%x\n", __FUNCTION__, ChipId));
         ASSERT (FALSE);

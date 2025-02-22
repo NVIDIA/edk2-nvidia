@@ -1,0 +1,51 @@
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformResourceLib
+  FILE_GUID                      = d5900042-56f0-4669-9cd5-04c083edb3da
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformResourceLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  CryptoPkg/CryptoPkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  BaseMemoryLib
+  GoldenRegisterLib
+  HobLib
+  ErotLib
+  BaseLib
+
+[Sources.common]
+  PlatformResourceConfig.c
+  PlatformResourceLib.c
+  TH500ResourceConfig.c
+  TH500Tcg2EventLog.c
+  TH500ResourceConfigPrivate.h
+  CommonResourceConfig.c
+
+[Guids]
+  gNVIDIATH500MB1DataGuid
+  gNVIDIATH500MB1DefaultDataGuid
+  gTcgEvent2EntryHobGuid
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize

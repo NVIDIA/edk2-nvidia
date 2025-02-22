@@ -22,9 +22,7 @@
 
 #include <TH500/TH500Definitions.h>
 #include "CommonResourceConfig.h"
-
 #include "PlatformResourceConfig.h"
-#include "TH500ResourceConfig.h"
 #include "TH500ResourceConfigPrivate.h"
 #include "Uefi/UefiBaseType.h"
 
@@ -260,13 +258,19 @@ TEGRA_DRAM_DEVICE_INFO    TH500DramDeviceInfo[TH500_MAX_SOCKETS * MAX_DIMMS_PER_
 UINT8                     TH500C2cMode[TH500_MAX_SOCKETS]                               = { };
 TEGRA_BASE_AND_SIZE_INFO  TH500EgmRetiredPages[TH500_MAX_SOCKETS]                       = { };
 
+EFI_STATUS
+EFIAPI
+TH500BuildTcgEventHob (
+  IN UINTN  TpmLogAddress
+  );
+
 /**
   Get Socket Mask
 
 **/
 UINT32
 EFIAPI
-TH500GetSocketMask (
+SocGetSocketMask (
   IN UINTN  CpuBootloaderAddress
   )
 {
@@ -395,7 +399,7 @@ TH500BuildDramRegions (
   UINT64                Size;
   EFI_PHYSICAL_ADDRESS  MemoryBase;
   UINT64                MemorySize;
-  CONST UINT32          SocketMask = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          SocketMask = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
   TH500_MEMORY_MODE     MemoryMode;
   CONST UINT32          MaxSocket = HighBitSet32 (SocketMask);
 
@@ -586,7 +590,7 @@ TH500BuildCarveoutRegions (
   UINTN                 RegionCount, UsableRegionCount;
   UINTN                 Socket;
   EFI_PHYSICAL_ADDRESS  *RetiredDramPageList;
-  CONST UINT32          SocketMask            = TH500GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          SocketMask            = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
   CONST UINT32          MaxSocket             = HighBitSet32 (SocketMask);
   CONST UINTN           RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
   CONST UINTN           RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
@@ -704,7 +708,7 @@ TH500GetResourceConfig (
     return Status;
   }
 
-  PlatformInfo->DtbLoadAddress             = TH500GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+  PlatformInfo->DtbLoadAddress             = GetDTBBaseAddress ();
   PlatformInfo->DramRegions                = DramRegions;
   PlatformInfo->DramRegionsCount           = DramRegionCount;
   PlatformInfo->UefiDramRegionIndex        = 0;
@@ -721,17 +725,20 @@ TH500GetResourceConfig (
 
 **/
 NVDA_MEMORY_REGION *
-TH500GetDramPageBlacklistInfoAddress (
-  IN  UINTN  CpuBootloaderAddress
+GetDramPageBlacklistInfoAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
   UINT32              SocketMask;
   UINTN               Socket;
   UINTN               Index;
+  UINTN               CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  SocketMask          = TH500GetSocketMask (CpuBootloaderAddress);
+  SocketMask          = SocGetSocketMask (CpuBootloaderAddress);
 
   Index = 0;
   for (Socket = TH500_PRIMARY_SOCKET; Socket < TH500_MAX_SOCKETS; Socket++) {
@@ -754,8 +761,8 @@ TH500GetDramPageBlacklistInfoAddress (
 
 **/
 UINT64
-TH500GetDTBBaseAddress (
-  IN UINTN  CpuBootloaderAddress
+GetDTBBaseAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS          *CpuBootloaderParams;
@@ -764,6 +771,9 @@ TH500GetDTBBaseAddress (
   EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
   UINT64                      FvOffset;
   UINT64                      FvSize;
+  UINTN                       CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   MemoryBase          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_UEFI].Base);
@@ -874,7 +884,7 @@ TH500SetBootChainState (
   EFI_STATUS  Status;
   UINT32      BootChain;
 
-  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  SocketMask = SocGetSocketMask (CpuBootloaderAddress);
   for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
@@ -905,14 +915,17 @@ TH500SetBootChainState (
 **/
 EFI_STATUS
 EFIAPI
-TH500ValidateActiveBootChain (
-  IN  UINTN  CpuBootloaderAddress
+ValidateActiveBootChain (
+  VOID
   )
 {
   UINT32      SocketMask;
   UINTN       Socket;
   EFI_STATUS  Status;
   UINT32      BootChain;
+  UINTN       CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   Status = TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_GOOD);
   if (EFI_ERROR (Status)) {
@@ -931,7 +944,7 @@ TH500ValidateActiveBootChain (
     return Status;
   }
 
-  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  SocketMask = SocGetSocketMask (CpuBootloaderAddress);
   for (Socket = 0; Socket < TH500_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
@@ -954,10 +967,14 @@ TH500ValidateActiveBootChain (
 **/
 EFI_STATUS
 EFIAPI
-TH500InValidateActiveBootChain (
-  IN  UINTN  CpuBootloaderAddress
+InValidateActiveBootChain (
+  VOID
   )
 {
+  UINTN  CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
   return TH500SetBootChainState (CpuBootloaderAddress, BOOT_CHAIN_BAD);
 }
 
@@ -967,7 +984,7 @@ TH500InValidateActiveBootChain (
 **/
 EFI_STATUS
 EFIAPI
-TH500GetEnabledCoresBitMap (
+SocGetEnabledCoresBitMap (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
@@ -1079,7 +1096,7 @@ TH500InitFloorSweepingInfo (
 **/
 EFI_STATUS
 EFIAPI
-TH500GetPlatformResourceInformation (
+SocGetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
   IN BOOLEAN                       InMm
@@ -1097,7 +1114,7 @@ TH500GetPlatformResourceInformation (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  SocketMask = TH500GetSocketMask (CpuBootloaderAddress);
+  SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
   PlatformResourceInfo->SocketMask = SocketMask;
 
@@ -1335,24 +1352,94 @@ TH500GetPartitionInfo (
 }
 
 /**
+ * Get Partition Info in Dxe.
+ *
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  UINTN  CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  return TH500GetPartitionInfo (
+           CpuBootloaderAddress,
+           PartitionIndex,
+           DeviceInstance,
+           PartitionStartByte,
+           PartitionSizeBytes
+           );
+}
+
+/**
+ * Get Partition Info in Standalone MM image.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return TH500GetPartitionInfo (
+           CpuBlAddress,
+           PartitionIndex,
+           DeviceInstance,
+           PartitionStartByte,
+           PartitionSizeBytes
+           );
+}
+
+/**
  * Check if TPM is requested to be enabled.
 **/
 BOOLEAN
 EFIAPI
-TH500IsTpmToBeEnabled (
-  IN  UINTN  CpuBootloaderAddress
+IsTpmToBeEnabled (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   return CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable);
 }
 
 EFI_STATUS
 EFIAPI
-TH500UpdatePlatformResourceInformation (
+SocUpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
@@ -1376,7 +1463,8 @@ TH500UpdatePlatformResourceInformation (
 }
 
 UINTN
-TH500TegraGetMaxCoreCount (
+EFIAPI
+TegraGetMaxCoreCount (
   IN UINTN  Socket
   )
 {
@@ -1392,7 +1480,7 @@ TH500TegraGetMaxCoreCount (
 
 UINT32
 EFIAPI
-TH500PcieIdToInterface (
+PcieIdToInterface (
   IN UINT32  PcieId
   )
 {
@@ -1401,9 +1489,59 @@ TH500PcieIdToInterface (
 
 UINT32
 EFIAPI
-TH500PcieIdToSocket (
+PcieIdToSocket (
   IN UINT32  PcieId
   )
 {
   return (PcieId >> TH500_PCIE_ID_TO_SOCKET_SHIFT) & TH500_SOCKET_MASK;
+}
+
+BOOLEAN
+EFIAPI
+GetGicInfo (
+  OUT TEGRA_GIC_INFO  *GicInfo
+  )
+{
+  GicInfo->GicCompatString = "arm,gic-v3";
+  GicInfo->ItsCompatString = "arm,gic-v3-its";
+  GicInfo->Version         = 4;
+
+  return TRUE;
+}
+
+EFI_STATUS
+EFIAPI
+SetNextBootChain (
+  IN  UINT32  BootChain
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+VOID
+EFIAPI
+SetNextBootRecovery (
+  IN  VOID
+  )
+{
+  return;
+}
+
+UINT64
+EFIAPI
+GetGRBlobBaseAddress (
+  VOID
+  )
+{
+  return 0;
+}
+
+EFI_STATUS
+EFIAPI
+GetActiveBootChainStMm (
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  )
+{
+  return EFI_UNSUPPORTED;
 }

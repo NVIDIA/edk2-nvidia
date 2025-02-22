@@ -447,7 +447,6 @@ SetNextBootRecovery (
 /**
   Retrieve Active Boot Chain Information for StMm.
 
-  @param[in]  ChipID                Chip ID
   @param[in]  ScratchBase           Base address of scratch register space.
   @param[out] BootChain             Active boot chain (0=A, 1=B).
  *
@@ -457,7 +456,6 @@ SetNextBootRecovery (
 EFI_STATUS
 EFIAPI
 GetActiveBootChainStMm (
-  IN  UINTN   ChipID,
   IN  UINTN   ScratchBase,
   OUT UINT32  *BootChain
   );
@@ -470,6 +468,7 @@ GetActiveBootChainStMm (
  * @retval  Returns max core count.
 **/
 UINTN
+EFIAPI
 TegraGetMaxCoreCount (
   IN UINTN  Socket
   );
@@ -477,7 +476,6 @@ TegraGetMaxCoreCount (
 /**
   Return PCIe interface number from ID
 
-  @param[in]  ChipId                Chip ID
   @param[in]  PcieId                PCIe ID
 
   @retval  UINT32                  PCIe interface number
@@ -486,14 +484,12 @@ TegraGetMaxCoreCount (
 UINT32
 EFIAPI
 PcieIdToInterface (
-  IN UINTN   ChipId,
   IN UINT32  PcieId
   );
 
 /**
   Return socket from PCIe ID
 
-  @param[in]  ChipId                Chip ID
   @param[in]  PcieId                Pcie ID
 
   @retval  UINT32                   Socket of PCIe interface
@@ -502,7 +498,6 @@ PcieIdToInterface (
 UINT32
 EFIAPI
 PcieIdToSocket (
-  IN UINTN   ChipId,
   IN UINT32  PcieId
   );
 

@@ -30,6 +30,7 @@
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraStandaloneMmSerialPortLib.inf
   DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
+  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T23xPlatformResourceLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 

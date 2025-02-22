@@ -19,13 +19,13 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/FloorSweepingLib.h>
 
 #include <Protocol/Eeprom.h>
 
 #include <T234/T234Definitions.h>
 
 #include "PlatformResourceConfig.h"
-#include "T234ResourceConfig.h"
 #include "T234ResourceConfigPrivate.h"
 
 #define T234_MAX_CPUS  12
@@ -350,6 +350,7 @@ T234BuildCarveoutRegions (
   @retval EFI_DEVICE_ERROR      Error setting up memory
 
 **/
+STATIC
 EFI_STATUS
 T234GetResourceConfig (
   IN UINTN                 CpuBootloaderAddress,
@@ -383,7 +384,7 @@ T234GetResourceConfig (
     return Status;
   }
 
-  PlatformInfo->DtbLoadAddress             = T234GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+  PlatformInfo->DtbLoadAddress             = GetDTBBaseAddress ();
   PlatformInfo->DramRegions                = DramRegions;
   PlatformInfo->DramRegionsCount           = DramRegionCount;
   PlatformInfo->UefiDramRegionIndex        = 0;
@@ -400,11 +401,14 @@ T234GetResourceConfig (
 
 **/
 NVDA_MEMORY_REGION *
-T234GetDramPageBlacklistInfoAddress (
-  IN  UINTN  CpuBootloaderAddress
+GetDramPageBlacklistInfoAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
@@ -419,13 +423,13 @@ T234GetDramPageBlacklistInfoAddress (
 
 **/
 UINT64
-T234GetDTBBaseAddress (
-  IN UINTN  CpuBootloaderAddress
+GetDTBBaseAddress (
+  VOID
   )
 {
   UINT64  GrBlobBase;
 
-  GrBlobBase = T234GetGRBlobBaseAddress (CpuBootloaderAddress);
+  GrBlobBase = GetGRBlobBaseAddress ();
 
   if (ValidateGrBlobHeader (GrBlobBase) == EFI_SUCCESS) {
     return GrBlobBase + GrBlobBinarySize (GrBlobBase);
@@ -439,8 +443,8 @@ T234GetDTBBaseAddress (
 
 **/
 UINT64
-T234GetGRBlobBaseAddress (
-  IN UINTN  CpuBootloaderAddress
+GetGRBlobBaseAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS          *CpuBootloaderParams;
@@ -449,6 +453,9 @@ T234GetGRBlobBaseAddress (
   EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
   UINT64                      FvOffset;
   UINT64                      FvSize;
+  UINTN                       CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
   MemoryBase          = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_UEFI].Base);
@@ -478,6 +485,7 @@ T234GetGRBlobBaseAddress (
   Retrieve MMIO Base and Size
 
 **/
+STATIC
 TEGRA_MMIO_INFO *
 EFIAPI
 T234GetMmioBaseAndSize (
@@ -491,6 +499,7 @@ T234GetMmioBaseAndSize (
   Retrieve EEPROM Data
 
 **/
+STATIC
 TEGRABL_EEPROM_DATA *
 EFIAPI
 T234GetEepromData (
@@ -508,6 +517,7 @@ T234GetEepromData (
   Retrieve Board Information
 
 **/
+STATIC
 BOOLEAN
 T234GetBoardInfo (
   IN  UINTN             CpuBootloaderAddress,
@@ -546,6 +556,7 @@ T234GetBoardInfo (
   Retrieve Active Boot Chain Information
 
 **/
+STATIC
 EFI_STATUS
 T234GetActiveBootChain (
   IN  UINTN   CpuBootloaderAddress,
@@ -570,12 +581,15 @@ T234GetActiveBootChain (
 
 **/
 EFI_STATUS
-T234ValidateActiveBootChain (
-  IN  UINTN  CpuBootloaderAddress
+ValidateActiveBootChain (
+  VOID
   )
 {
   EFI_STATUS  Status;
   UINT32      BootChain;
+  UINTN       CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
 
   Status = T234GetActiveBootChain (CpuBootloaderAddress, &BootChain);
   if (EFI_ERROR (Status)) {
@@ -596,6 +610,7 @@ T234ValidateActiveBootChain (
   Get UpdateBrBct flag
 
 **/
+STATIC
 BOOLEAN
 T234GetUpdateBrBct (
   IN UINTN  CpuBootloaderAddress
@@ -636,7 +651,7 @@ T234GetUpdateBrBct (
 **/
 EFI_STATUS
 EFIAPI
-T234GetEnabledCoresBitMap (
+SocGetEnabledCoresBitMap (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
@@ -650,9 +665,10 @@ T234GetEnabledCoresBitMap (
 **/
 EFI_STATUS
 EFIAPI
-T234GetPlatformResourceInformation (
+SocGetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  IN BOOLEAN                       InMm
   )
 {
   EFI_STATUS          Status;
@@ -729,7 +745,7 @@ T234GetPlatformResourceInformation (
 **/
 EFI_STATUS
 EFIAPI
-T234GetRootfsStatusReg (
+GetRootfsStatusReg (
   OUT UINT32  *RegisterValue
   )
 {
@@ -744,7 +760,7 @@ T234GetRootfsStatusReg (
 **/
 EFI_STATUS
 EFIAPI
-T234SetRootfsStatusReg (
+SetRootfsStatusReg (
   IN  UINT32  RegisterValue
   )
 {
@@ -759,7 +775,7 @@ T234SetRootfsStatusReg (
 **/
 EFI_STATUS
 EFIAPI
-T234SetNextBootChain (
+SetNextBootChain (
   IN  UINT32  BootChain
   )
 {
@@ -790,7 +806,7 @@ T234SetNextBootChain (
 **/
 VOID
 EFIAPI
-T234SetNextBootRecovery (
+SetNextBootRecovery (
   IN  VOID
   )
 {
@@ -804,7 +820,7 @@ T234SetNextBootRecovery (
 
 EFI_STATUS
 EFIAPI
-T234UpdatePlatformResourceInformation (
+SocUpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
@@ -824,7 +840,7 @@ T234UpdatePlatformResourceInformation (
 
 EFI_STATUS
 EFIAPI
-T234GetActiveBootChainStMm (
+GetActiveBootChainStMm (
   IN  UINTN   ScratchBase,
   OUT UINT32  *BootChain
   )
@@ -842,4 +858,106 @@ T234GetActiveBootChainStMm (
   }
 
   return EFI_SUCCESS;
+}
+
+BOOLEAN
+EFIAPI
+GetGicInfo (
+  OUT TEGRA_GIC_INFO  *GicInfo
+  )
+{
+  GicInfo->GicCompatString = "arm,gic-v3";
+  GicInfo->ItsCompatString = "arm,gic-v3-its";
+  GicInfo->Version         = 3;
+
+  return TRUE;
+}
+
+UINTN
+EFIAPI
+TegraGetMaxCoreCount (
+  IN UINTN  Socket
+  )
+{
+  UINTN       CoreCount;
+  EFI_STATUS  Status;
+
+  Status = GetNumEnabledCoresOnSocket (Socket, &CoreCount);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a:Failed to get Enabled Core Count for Socket %u %r\n", __FUNCTION__, Socket, Status));
+  }
+
+  return CoreCount;
+}
+
+UINT32
+EFIAPI
+SocGetSocketMask (
+  IN UINTN  CpuBootloaderAddress
+  )
+{
+  return 0x1;
+}
+
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+EFI_STATUS
+EFIAPI
+InValidateActiveBootChain (
+  VOID
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+UINT32
+EFIAPI
+PcieIdToInterface (
+  IN UINT32  PcieId
+  )
+{
+  NV_ASSERT_RETURN (FALSE, return 0, "%a: not implemented!!!\n", __FUNCTION__);
+  return 0;
+}
+
+UINT32
+EFIAPI
+PcieIdToSocket (
+  IN UINT32  PcieId
+  )
+{
+  NV_ASSERT_RETURN (FALSE, return 0, "%a: not implemented!!!\n", __FUNCTION__);
+  return 0;
+}
+
+BOOLEAN
+EFIAPI
+IsTpmToBeEnabled (
+  VOID
+  )
+{
+  return FALSE;
 }

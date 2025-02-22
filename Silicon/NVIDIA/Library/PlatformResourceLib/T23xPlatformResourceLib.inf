@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -7,7 +7,7 @@
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = PlatformResourceLib
-  FILE_GUID                      = 5f0725e2-8394-4654-9fe7-b15d790f92fc
+  FILE_GUID                      = 77880c50-5787-4f93-8837-6ff0dcb6aa9a
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = PlatformResourceLib
@@ -27,31 +27,21 @@
   GoldenRegisterLib
   HobLib
   MceAriLib
-  NvgLib
-  ErotLib
   BaseLib
 
 [Sources.common]
   PlatformResourceConfig.c
   PlatformResourceLib.c
   T234ResourceConfig.c
-  TH500ResourceConfig.c
-  TH500Tcg2EventLog.c
-  TH500ResourceConfig.h
-  TH500ResourceConfigPrivate.h
   CommonResourceConfig.c
 
 [Guids]
-  gNVIDIATH500MB1DataGuid
-  gNVIDIATH500MB1DefaultDataGuid
-  gTcgEvent2EntryHobGuid
   gArmMpCoreInfoGuid
   gNVIDIAPlatformResourceDataGuid
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
-  gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
   gNVIDIATokenSpaceGuid.PcdBootChainRegisterBaseAddressT234
