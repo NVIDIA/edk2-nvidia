@@ -100,6 +100,7 @@
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
   WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
   BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
+  NctLib|Silicon/NVIDIA/Library/NctLib/NctLib.inf
 
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoVirtLib/BootChainInfoVirtLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf

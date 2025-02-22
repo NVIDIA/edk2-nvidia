@@ -11,11 +11,13 @@
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/NctLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
 
 #define BOOTCONFIG_DUMMY_SERIALNO    "DummySN"
 #define BOOTCONFIG_DEFAULT_SERIALNO  "0123456789ABCDEF"
+#define MAX_NCT_SN_LEN               30
 
 /**
  * Appends androidboot.newArgs=newValue to the bootconfig string.
@@ -165,6 +167,7 @@ BootConfigAddSerialNumber (
   EFI_STATUS                         Status;
   NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
   TEGRA_EEPROM_BOARD_INFO            *CvmBoardInfo = NULL;
+  CHAR8                              NctSn[MAX_NCT_SN_LEN];
 
   Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
   if (EFI_ERROR (Status)) {
@@ -183,7 +186,13 @@ BootConfigAddSerialNumber (
   }
 
   if (AsciiStrCmp (NewValue, BOOTCONFIG_DUMMY_SERIALNO) == 0) {
-    NewValue = BOOTCONFIG_DEFAULT_SERIALNO;
+    Status = NctGetSerialNumber (NctSn);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get NCT Serial Number\n", __FUNCTION__, Status));
+      NewValue = BOOTCONFIG_DEFAULT_SERIALNO;
+    } else {
+      NewValue = NctSn;
+    }
   }
 
   Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "serialno", NewValue);

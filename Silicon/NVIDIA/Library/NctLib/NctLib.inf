@@ -1,0 +1,38 @@
+## @file
+#
+# NctLib functions
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = NctLib
+  FILE_GUID                      = 961ac9ad-795c-4f77-b45c-35a036176e76
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NctLib
+
+[Sources.common]
+  NctLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  UefiLib
+  PrintLib
+  HandleParsingLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid

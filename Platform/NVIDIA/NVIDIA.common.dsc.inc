@@ -475,6 +475,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
 
   BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
+  NctLib|Silicon/NVIDIA/Library/NctLib/NctLib.inf
 
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
