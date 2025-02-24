@@ -377,8 +377,8 @@ GicCParser (
       goto CleanupAndReturn;
     }
 
-    // This value must be contiguous from 0-(N-1)
-    GicCInfo[CoreIndex].CPUInterfaceNumber = CoreIndex;
+    // This value must be 0
+    GicCInfo[CoreIndex].CPUInterfaceNumber = 0;
     // This value must be globally unique, including across sockets
     GicCInfo[CoreIndex].AcpiProcessorUid         = (SocketId * MaxCoresPerSocket) + (ClusterId * MaxCoresPerCluster) + CoreId;
     GicCInfo[CoreIndex].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
