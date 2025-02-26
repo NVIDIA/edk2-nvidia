@@ -16,6 +16,12 @@
 #define SMCCC_ARCH_SOC_ID_GET_SOC_VERSION   0
 #define SMCCC_ARCH_SOC_ID_GET_SOC_REVISION  1
 
+#define SIP_MISC_MAGIC_OFFSET               0
+#define SIP_MISC_MAGIC_VAL                  0x11150C1D
+#define SIP_MISC_FEATURE_OFFSET             0x8
+#define SIP_MISC_FEATURE_PRE_SI_PLAT_SHIFT  0
+#define SIP_MISC_FEATURE_PRE_SI_PLAT_MASK   0xff
+
 #define HIDREV_OFFSET                     0x4
 #define SOC_ID_VERSION_CHIPID_SHIFT       4
 #define SOC_ID_VERSION_CHIPID_MASK        0xfff

@@ -209,7 +209,7 @@ MapCorePlatformMemory (
   UINTN               ChipID;
   NVDA_MEMORY_REGION  *DramPageBlacklistInfo;
 
-  ArmSetMemoryAttributes (FixedPcdGet64 (PcdMiscRegBaseAddress), SIZE_4KB, EFI_MEMORY_UC, 0);
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdSipMiscRegBaseAddress), SIZE_4KB, EFI_MEMORY_UC, 0);
   ChipID = TegraGetChipID ();
   ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), SIZE_4KB, EFI_MEMORY_UC, 0);
   ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);

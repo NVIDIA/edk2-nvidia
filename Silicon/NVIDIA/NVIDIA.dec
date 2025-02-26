@@ -371,8 +371,8 @@
 #Size of optional signed image header
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize|0x2000|UINT32|0x0000000B
 
-#Base address of MISCREG aperture.
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
+#Base address of SIP/MISCREG aperture.
+  gNVIDIATokenSpaceGuid.PcdSipMiscRegBaseAddress|0x00100000|UINT64|0x0000000F
 
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016

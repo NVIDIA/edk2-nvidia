@@ -76,26 +76,37 @@ TegraGetPlatform (
   )
 {
   UINT32  Hidrev;
+  UINT32  Feature;
   UINT32  PlatType;
-  UINT64  MiscRegBaseAddr;
+  UINT64  SipMiscRegBaseAddr;
 
   if (FixedPcdGetBool (PcdTegraForceSiliconPlatform)) {
     return TEGRA_PLATFORM_SILICON;
   }
 
-  MiscRegBaseAddr = FixedPcdGet64 (PcdMiscRegBaseAddress);
-
-  if (MiscRegBaseAddr == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to read HIDREV register\n", __FUNCTION__));
+  SipMiscRegBaseAddr = FixedPcdGet64 (PcdSipMiscRegBaseAddress);
+  if (SipMiscRegBaseAddr == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read SIP / HIDREV register\n", __FUNCTION__));
     return MAX_UINT32;
   }
 
-  Hidrev   = MmioRead32 (MiscRegBaseAddr + HIDREV_OFFSET);
-  PlatType = ((Hidrev >> HIDREV_PRE_SI_PLAT_SHIFT) & HIDREV_PRE_SI_PLAT_MASK);
-  if (PlatType >= TEGRA_PLATFORM_UNKNOWN) {
-    return TEGRA_PLATFORM_UNKNOWN;
+  // Check if SIP is present.
+  if (MmioRead32 (SipMiscRegBaseAddr + SIP_MISC_MAGIC_OFFSET) == SIP_MISC_MAGIC_VAL) {
+    Feature  = MmioRead32 (SipMiscRegBaseAddr + SIP_MISC_FEATURE_OFFSET);
+    PlatType = ((Feature >> SIP_MISC_FEATURE_PRE_SI_PLAT_SHIFT) & SIP_MISC_FEATURE_PRE_SI_PLAT_MASK);
+    if (PlatType >= TEGRA_PLATFORM_UNKNOWN) {
+      return TEGRA_PLATFORM_UNKNOWN;
+    } else {
+      return PlatType;
+    }
   } else {
-    return PlatType;
+    Hidrev   = MmioRead32 (SipMiscRegBaseAddr + HIDREV_OFFSET);
+    PlatType = ((Hidrev >> HIDREV_PRE_SI_PLAT_SHIFT) & HIDREV_PRE_SI_PLAT_MASK);
+    if (PlatType >= TEGRA_PLATFORM_UNKNOWN) {
+      return TEGRA_PLATFORM_UNKNOWN;
+    } else {
+      return PlatType;
+    }
   }
 }
 

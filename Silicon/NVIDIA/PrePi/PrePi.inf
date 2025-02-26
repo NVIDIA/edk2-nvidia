@@ -90,7 +90,7 @@
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdSipMiscRegBaseAddress
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraUtcUartAddress

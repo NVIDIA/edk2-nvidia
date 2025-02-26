@@ -31,6 +31,6 @@
   AArch64/TegraPlatformInfo.S
 
 [FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdSipMiscRegBaseAddress
   gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount
   gNVIDIATokenSpaceGuid.PcdTegraForceSiliconPlatform
