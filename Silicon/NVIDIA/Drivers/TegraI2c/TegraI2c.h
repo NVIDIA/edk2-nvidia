@@ -2,7 +2,7 @@
 
   Tegra I2c Controller Driver private structures
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,8 +18,9 @@
 
 #define TEGRA_I2C_SIGNATURE  SIGNATURE_32('T','I','2','C')
 
+// Currently only support 32 controller per platform
+#define MAX_I2C_MASTERS  32
 // Currently only support enumerating 16 device per controller
-#define MAX_I2C_MASTERS        16
 #define MAX_I2C_DEVICES        16
 #define MAX_SLAVES_PER_DEVICE  1
 
