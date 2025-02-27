@@ -25,7 +25,6 @@
 #include <libfdt.h>
 
 #include "CommonFloorSweepingLib.h"
-#include "Uefi/UefiBaseType.h"
 
 #define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
 
@@ -55,24 +54,6 @@ EFIAPI
 TH500FloorSweepCpus (
   IN  UINT32  SocketMask,
   IN  VOID    *Dtb
-  );
-
-STATIC
-EFI_STATUS
-EFIAPI
-NopAndRenumberCpuMap (
-  VOID   *Dtb,
-  INT32  CpusOffset
-  );
-
-STATIC
-EFI_STATUS
-EFIAPI
-NopCpuAndCacheNodes (
-  VOID   *Dtb,
-  INT32  CpusOffset,
-  UINTN  Cpu,
-  INT32  *NodeOffsetPtr
   );
 
 /**
@@ -413,12 +394,23 @@ UpdateCpuFloorsweepingConfig (
   )
 {
   UINTN       Cpu;
+  UINT32      Cluster;
   UINT64      Mpidr;
+  INT32       CpuMapOffset;
   INT32       FdtErr;
   UINT64      Tmp64;
   UINT32      Tmp32;
+  CHAR8       ClusterNodeStr[] = "cluster10";
   INT32       NodeOffset;
+  INT32       TmpOffset;
+  CHAR8       CoreNodeStr[] = "coreXX";
   EFI_STATUS  Status;
+  CHAR8       SocketNodeStr[] = "socketXX";
+  INT32       CpuMapSocketOffset;
+  UINTN       Socket;
+  BOOLEAN     HasSocketNode;
+  UINT32      L2CachePhandle;
+  UINT32      L3CachePhandle;
 
   Cpu        = 0;
   NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
@@ -452,145 +444,89 @@ UpdateCpuFloorsweepingConfig (
       Mpidr = fdt32_to_cpu (Tmp32);
     }
 
-    if (!IsMpidrEnabled (Mpidr)) {
-      if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-        Status = NopCpuAndCacheNodes (Dtb, CpusOffset, Cpu, &NodeOffset);
-        if (EFI_ERROR (Status)) {
-          return Status;
-        }
+    if (IsMpidrEnabled (Mpidr)) {
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+    } else {
+      Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
+      if (Property != NULL) {
+        L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+      }
 
-        Cpu++;
-        continue;
+      if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
+        TmpOffset  = NodeOffset;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+
+        FdtErr = fdt_nop_node (Dtb, TmpOffset);
+        if (FdtErr < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
+          return EFI_DEVICE_ERROR;
+        }
       } else {
         FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
         if (FdtErr < 0) {
-          DEBUG ((DEBUG_ERROR, "Failed to disable %a node: %a\r\n", fdt_get_name (Dtb, NodeOffset, NULL), fdt_strerror (FdtErr)));
+          DEBUG ((DEBUG_ERROR, "Failed to disable /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
 
           return EFI_DEVICE_ERROR;
         }
-      }
-    }
 
-    NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-  }
-
-  if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-    Status = NopAndRenumberCpuMap (Dtb, CpusOffset);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-  }
-
-  return EFI_SUCCESS;
-}
-
-STATIC
-EFI_STATUS
-EFIAPI
-NopCpuAndCacheNodes (
-  VOID   *Dtb,
-  INT32  CpusOffset,
-  UINTN  Cpu,
-  INT32  *NodeOffsetPtr
-  )
-{
-  INT32       FdtErr;
-  INT32       NodeOffset;
-  INT32       TmpOffset;
-  UINT32      L2CachePhandle;
-  UINT32      L3CachePhandle;
-  CONST VOID  *Property;
-
-  NodeOffset = *NodeOffsetPtr;
-
-  Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
-  if (Property != NULL) {
-    L2CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
-  }
-
-  TmpOffset  = NodeOffset;
-  NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-
-  FdtErr = fdt_nop_node (Dtb, TmpOffset);
-  if (FdtErr < 0) {
-    DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu@%u node: %a\r\n", Cpu, fdt_strerror (FdtErr)));
-    return EFI_DEVICE_ERROR;
-  }
-
-  DEBUG ((DEBUG_INFO, "Disabled cpu-%u node in FDT\r\n", Cpu));
-
-  if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
-    TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
-
-    Property = fdt_getprop (Dtb, TmpOffset, "next-level-cache", NULL);
-    if (Property != NULL) {
-      L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
-    }
-
-    // special case if cache node to delete is node after disabled cpu node
-    // when cache nodes are subnodes of cpus node.
-    if (TmpOffset == NodeOffset) {
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-      DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed disabled cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
-    }
-
-    if (TmpOffset >= 0) {
-      FdtErr = fdt_nop_node (Dtb, TmpOffset);
-      if (FdtErr < 0) {
-        DEBUG ((DEBUG_ERROR, "Failed to delete l2 cache node 0x%x: %a\r\n", L2CachePhandle, fdt_strerror (FdtErr)));
-        return EFI_DEVICE_ERROR;
+        NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
       }
 
-      DEBUG ((DEBUG_INFO, "Deleted l2 cache node 0x%x\r\n", L2CachePhandle));
+      DEBUG ((DEBUG_INFO, "Disabled cpu-%u node in FDT\r\n", Cpu));
 
-      if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L3CachePhandle, 3)) {
-        TmpOffset = fdt_node_offset_by_phandle (Dtb, L3CachePhandle);
+      if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L2CachePhandle, 2)) {
+        TmpOffset = fdt_node_offset_by_phandle (Dtb, L2CachePhandle);
 
-        // special case if l3 node to delete is node after deleted l2 node
+        Property = fdt_getprop (Dtb, TmpOffset, "next-level-cache", NULL);
+        if (Property != NULL) {
+          L3CachePhandle = fdt32_to_cpu (*(UINT32 *)Property);
+        }
+
+        // special case if cache node to delete is node after disabled cpu node
+        // when cache nodes are subnodes of cpus node.
         if (TmpOffset == NodeOffset) {
           NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-          DEBUG ((DEBUG_INFO, "%a: l3 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L3CachePhandle, Cpu));
+          DEBUG ((DEBUG_INFO, "%a: l2 cache phandle=0x%x followed disabled cpu %u\r\n", __FUNCTION__, L2CachePhandle, Cpu));
         }
 
         if (TmpOffset >= 0) {
           FdtErr = fdt_nop_node (Dtb, TmpOffset);
           if (FdtErr < 0) {
-            DEBUG ((DEBUG_ERROR, "Failed to delete l3 cache node 0x%x: %a\r\n", L3CachePhandle, fdt_strerror (FdtErr)));
+            DEBUG ((DEBUG_ERROR, "Failed to delete l2 cache node 0x%x: %a\r\n", L2CachePhandle, fdt_strerror (FdtErr)));
             return EFI_DEVICE_ERROR;
           }
 
-          DEBUG ((DEBUG_INFO, "Deleted l3 cache node 0x%x\r\n", L3CachePhandle));
+          DEBUG ((DEBUG_INFO, "Deleted l2 cache node 0x%x\r\n", L2CachePhandle));
+
+          if ((Property != NULL) && !PhandleIsNextLevelCache (Dtb, CpusOffset, L3CachePhandle, 3)) {
+            TmpOffset = fdt_node_offset_by_phandle (Dtb, L3CachePhandle);
+
+            // special case if l3 node to delete is node after deleted l2 node
+            if (TmpOffset == NodeOffset) {
+              NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+              DEBUG ((DEBUG_INFO, "%a: l3 cache phandle=0x%x followed deleted cpu %u\r\n", __FUNCTION__, L3CachePhandle, Cpu));
+            }
+
+            if (TmpOffset >= 0) {
+              FdtErr = fdt_nop_node (Dtb, TmpOffset);
+              if (FdtErr < 0) {
+                DEBUG ((DEBUG_ERROR, "Failed to delete l3 cache node 0x%x: %a\r\n", L3CachePhandle, fdt_strerror (FdtErr)));
+                return EFI_DEVICE_ERROR;
+              }
+
+              DEBUG ((DEBUG_INFO, "Deleted l3 cache node 0x%x\r\n", L3CachePhandle));
+            } else {
+              DEBUG ((DEBUG_ERROR, "%a: Missing l3 cache phandle=0x%x\r\n", __FUNCTION__, L3CachePhandle));
+            }
+          }
         } else {
-          DEBUG ((DEBUG_ERROR, "%a: Missing l3 cache phandle=0x%x\r\n", __FUNCTION__, L3CachePhandle));
+          DEBUG ((DEBUG_ERROR, "%a: Missing l2 cache phandle=0x%x\r\n", __FUNCTION__, L2CachePhandle));
         }
       }
-    } else {
-      DEBUG ((DEBUG_ERROR, "%a: Missing l2 cache phandle=0x%x\r\n", __FUNCTION__, L2CachePhandle));
     }
+
+    Cpu++;
   }
-
-  *NodeOffsetPtr = NodeOffset;
-
-  return EFI_SUCCESS;
-}
-
-STATIC
-EFI_STATUS
-EFIAPI
-NopAndRenumberCpuMap (
-  VOID   *Dtb,
-  INT32  CpusOffset
-  )
-{
-  UINT32      Cluster;
-  INT32       CpuMapOffset;
-  INT32       FdtErr;
-  CHAR8       ClusterNodeStr[] = "cluster10";
-  INT32       NodeOffset;
-  INT32       TmpOffset;
-  CHAR8       CoreNodeStr[] = "coreXX";
-  EFI_STATUS  Status;
-  UINTN       Socket;
 
   CpuMapOffset = fdt_subnode_offset (Dtb, CpusOffset, "cpu-map");
 
@@ -599,68 +535,92 @@ NopAndRenumberCpuMap (
     return EFI_DEVICE_ERROR;
   }
 
-  NV_ASSERT_RETURN ((PLATFORM_MAX_SOCKETS == 1), return EFI_UNSUPPORTED, "%a: not supported for multisocket\n", __FUNCTION__);
-  Socket  = 0;
-  Cluster = 0;
-  while (TRUE) {
-    AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
-    NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
-    if (NodeOffset >= 0) {
-      if (!ClusterIsPresent (Socket, Cluster)) {
-        FdtErr = fdt_del_node (Dtb, NodeOffset);
-        if (FdtErr < 0) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
-            ClusterNodeStr,
-            fdt_strerror (FdtErr)
-            ));
-          return EFI_DEVICE_ERROR;
-        }
+  HasSocketNode = TRUE;
+  for (Socket = 0; (Socket < PLATFORM_MAX_SOCKETS) && HasSocketNode; Socket++) {
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "socket%u", Socket);
+    CpuMapSocketOffset = fdt_subnode_offset (Dtb, CpuMapOffset, SocketNodeStr);
+    if (CpuMapSocketOffset < 0) {
+      HasSocketNode      = FALSE;
+      CpuMapSocketOffset = CpuMapOffset;
+    } else if (!(SocketMask & (1UL << Socket))) {
+      FdtErr = fdt_del_node (Dtb, CpuMapSocketOffset);
+      if (FdtErr < 0) {
+        DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a node: %a\n", SocketNodeStr, fdt_strerror (FdtErr)));
+        return EFI_DEVICE_ERROR;
+      }
 
-        DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
-      } else {
-        INT32       ClusterCpuNodeOffset;
-        CONST VOID  *Property;
+      DEBUG ((DEBUG_INFO, "Deleted socket%u node\n", Socket));
+      continue;
+    }
 
-        ClusterCpuNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
-        while (ClusterCpuNodeOffset > 0) {
-          Property = fdt_getprop (Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+    Cluster = 0;
+    while (TRUE) {
+      AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
+      NodeOffset = fdt_subnode_offset (Dtb, CpuMapSocketOffset, ClusterNodeStr);
+      if (NodeOffset >= 0) {
+        if (!ClusterIsPresent (Socket, Cluster)) {
+          FdtErr = fdt_del_node (Dtb, NodeOffset);
+          if (FdtErr < 0) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "Failed to delete /cpus/cpu-map/%a node: %a\r\n",
+              ClusterNodeStr,
+              fdt_strerror (FdtErr)
+              ));
+            return EFI_DEVICE_ERROR;
+          }
 
-          TmpOffset            = ClusterCpuNodeOffset;
-          ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
+          DEBUG ((DEBUG_INFO, "Deleted cluster%u node in FDT\r\n", Cluster));
+        } else {
+          INT32       ClusterCpuNodeOffset;
+          CONST VOID  *Property;
 
-          if (Property != NULL) {
-            if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
-              FdtErr = fdt_nop_node (Dtb, TmpOffset);
-              if (FdtErr < 0) {
-                DEBUG ((
-                  DEBUG_ERROR,
-                  "Failed to delete /cpus/cpu-map/%a cpu node: %a\r\n",
-                  ClusterNodeStr,
-                  fdt_strerror (FdtErr)
-                  ));
-                return EFI_DEVICE_ERROR;
+          ClusterCpuNodeOffset = fdt_first_subnode (Dtb, NodeOffset);
+          while (ClusterCpuNodeOffset > 0) {
+            Property = fdt_getprop (Dtb, ClusterCpuNodeOffset, "cpu", NULL);
+
+            TmpOffset            = ClusterCpuNodeOffset;
+            ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
+
+            if (Property != NULL) {
+              if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
+                FdtErr = fdt_nop_node (Dtb, TmpOffset);
+                if (FdtErr < 0) {
+                  DEBUG ((
+                    DEBUG_ERROR,
+                    "Failed to delete /cpus/cpu-map/%a cpu node: %a\r\n",
+                    ClusterNodeStr,
+                    fdt_strerror (FdtErr)
+                    ));
+                  return EFI_DEVICE_ERROR;
+                }
               }
             }
           }
+
+          Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
+          if (EFI_ERROR (Status)) {
+            return Status;
+          }
         }
 
-        Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
-        if (EFI_ERROR (Status)) {
-          return Status;
-        }
+        Cluster++;
+      } else {
+        break;
       }
+    }
 
-      Cluster++;
-    } else {
-      break;
+    Status = RenameChildNodesSequentially (Dtb, CpuMapSocketOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
+    if (EFI_ERROR (Status)) {
+      return Status;
     }
   }
 
-  Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  if (HasSocketNode) {
+    Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "socket%u", SocketNodeStr, sizeof (SocketNodeStr), 100);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;

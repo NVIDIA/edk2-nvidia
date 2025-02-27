@@ -1,7 +1,7 @@
 /** @file
   Cache info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -902,7 +902,6 @@ FixupSocketClusterCoreFields (
   UINT32      Index;
   CACHE_NODE  *Node;
   CACHE_NODE  *Next;
-  UINT32      ValidNodes;
 
   if (CacheTracker == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -963,21 +962,6 @@ FixupSocketClusterCoreFields (
       Next = FindpHandleInTracker (Next->CacheData.NextLevelCache, CacheTracker);
     }
   }
-
-  // re-write the cache node array, skipping nodes unconnected to enabled CPUs
-  ValidNodes = 0;
-  Next       = Node = CacheTracker->CacheNodes;
-  for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++, Node++) {
-    if (Node->Socket != UNDEFINED_SOCKET) {
-      *Next++ = *Node;
-      ValidNodes++;
-    } else {
-      DEBUG ((DEBUG_INFO, "%a: skipping cache tracker node %u, type=%d\n", __FUNCTION__, Index, Node->CacheData.Type));
-      continue;
-    }
-  }
-
-  CacheTracker->CacheNodeCount = ValidNodes;
 
   // JDS TODO - do we want to sanity-check the result?
   return EFI_SUCCESS;
