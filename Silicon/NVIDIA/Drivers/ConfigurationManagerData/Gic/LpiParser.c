@@ -180,8 +180,7 @@ LpiParser (
 
     LpiInfo[NumberOfLpiStates].WorstCaseWakeLatency = WakeupLatencyUs;
     LpiInfo[NumberOfLpiStates].Flags                = 1;
-    Status                                          = DeviceTreeGetNodeProperty (NodeOffset, "local-timer-stop", NULL, NULL);
-    if (Status == EFI_NOT_FOUND) {
+    if ((SuspendAddr & BIT30) == 0) {
       LpiInfo[NumberOfLpiStates].ArchFlags = 0;
     } else {
       LpiInfo[NumberOfLpiStates].ArchFlags = (LPI_ARCH_FLAG_CORE_CONTEXT_LOST |
