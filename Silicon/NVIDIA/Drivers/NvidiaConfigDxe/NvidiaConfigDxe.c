@@ -97,6 +97,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_DISABLE_CHANNEL_SPARING_HELP),
   STRING_TOKEN (STR_ECC_ALGORITHM_PROMPT),
   STRING_TOKEN (STR_ECC_ALGORITHM_HELP),
+  STRING_TOKEN (STR_MAX_ALLOWED_NUM_SPARES_PROMPT),
+  STRING_TOKEN (STR_MAX_ALLOWED_NUM_SPARES_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
@@ -1760,6 +1762,7 @@ SyncHiiSettings (
 
     mHiiControlSettings.EInjEnable            = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
     mHiiControlSettings.DisableChannelSparing = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
+    mHiiControlSettings.MaxAllowedNumSpares   = mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
     mHiiControlSettings.PerfVersion           = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel        = mMb1Config.Data.Mb1Data.UefiDebugLevel;
     if (mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm > ECC_ALGORITHM_RS) {
@@ -1889,6 +1892,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EInjEnable            = mHiiControlSettings.EInjEnable;
     mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing = mHiiControlSettings.DisableChannelSparing;
     mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm          = mHiiControlSettings.EccAlgorithm;
+    mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares   = mHiiControlSettings.MaxAllowedNumSpares;
     mMb1Config.Data.Mb1Data.PerfVersion                       = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                    = mHiiControlSettings.UefiDebugLevel;
 
@@ -2311,6 +2315,11 @@ InitializeSettings (
       }
     }
 
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 20) {
+      mHiiControlSettings.MaxAllowedNumSparesSupported         = TRUE;
+      mHiiControlSettings.DisplayAllMaxAllowedNumSparesOptions = mMb1Config.Data.Mb1Data.FeatureData.DisplayAllSpareOptions;
+    }
+
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 18) {
       mHiiControlSettings.HvEgmSizeSupported = TRUE;
     }
@@ -2323,7 +2332,9 @@ InitializeSettings (
       mHiiControlSettings.PCIeOSNativeAERSupported = TRUE;
     }
 
-    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 14) {
+    if ((mMb1Config.Data.Mb1Data.Header.MinorVersion >= 14) &&
+        (mMb1Config.Data.Mb1Data.Header.MinorVersion <= 19))
+    {
       mHiiControlSettings.DisableChannelSparingSupported = TRUE;
     }
 
@@ -2750,6 +2761,9 @@ GetDefaultValue (
       break;
     case KEY_ECC_ALGORITHM:
       Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.EccAlgorithm;
+      break;
+    case KEY_MAX_ALLOWED_NUM_SPARES:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

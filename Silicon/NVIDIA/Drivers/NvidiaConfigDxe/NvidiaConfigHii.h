@@ -121,6 +121,7 @@
 #define KEY_EGM_HV_MIN_EGM_SIZE_MB     0x1027
 #define KEY_EGM_HV_VIRT_UEFI_SIZE_MB   0x1028
 #define KEY_ECC_ALGORITHM              0x1029
+#define KEY_MAX_ALLOWED_NUM_SPARES     0x102A
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -1048,6 +1049,10 @@
 #define ECC_ALGORITHM_HSIAO  0
 #define ECC_ALGORITHM_RS     1
 
+#define MAX_ALLOWED_0_SPARES  0
+#define MAX_ALLOWED_1_SPARES  1
+#define MAX_ALLOWED_2_SPARES  2
+
 typedef struct {
   UINT32     L4TSupported;
   BOOLEAN    QuickBootSupported;
@@ -1061,6 +1066,8 @@ typedef struct {
   BOOLEAN    EInjEnableSupported;
   BOOLEAN    DisableChannelSparingSupported;
   BOOLEAN    EccAlgorithmSupported;
+  BOOLEAN    MaxAllowedNumSparesSupported;
+  BOOLEAN    DisplayAllMaxAllowedNumSparesOptions;
   BOOLEAN    PCIeASPML1SSConfigSupported;
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
@@ -1097,6 +1104,7 @@ typedef struct {
   BOOLEAN    EInjEnable;
   BOOLEAN    DisableChannelSparing;
   UINT8      EccAlgorithm;
+  UINT8      MaxAllowedNumSpares;
   UINT32     ActiveCores;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

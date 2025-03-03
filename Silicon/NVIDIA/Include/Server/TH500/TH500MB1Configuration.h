@@ -19,7 +19,7 @@
 #define TEGRABL_MAX_MPAM_PARTID           5
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  19
+#define TEGRABL_MB1_BCT_MINOR_VERSION  20
 
 #pragma pack(1)
 
@@ -43,16 +43,18 @@ typedef struct {
   union {
     UINT64    FeatureFields;
     struct {
-      UINT64    EgmEnable             : 1;
-      UINT64    SpreadSpecEnable      : 1;
-      UINT64    ModsSpEnable          : 1;
-      UINT64    TpmEnable             : 1;
-      UINT64    GpuSmmuBypassEnable   : 1;
-      UINT64    UartBaudRate          : 4;
-      UINT64    EInjEnable            : 1;
-      UINT64    DisableChannelSparing : 1;
-      UINT64    EccAlgorithm          : 2;
-      UINT64    FeatureFieldsUnused   : 51;
+      UINT64    EgmEnable              : 1;
+      UINT64    SpreadSpecEnable       : 1;
+      UINT64    ModsSpEnable           : 1;
+      UINT64    TpmEnable              : 1;
+      UINT64    GpuSmmuBypassEnable    : 1;
+      UINT64    UartBaudRate           : 4;
+      UINT64    EInjEnable             : 1;
+      UINT64    DisableChannelSparing  : 1;
+      UINT64    EccAlgorithm           : 2;
+      UINT64    MaxAllowedNumSpares    : 2;
+      UINT64    DisplayAllSpareOptions : 1;
+      UINT64    FeatureFieldsUnused    : 48;
     };
   };
 } TEGRABL_FEATURE_DATA;

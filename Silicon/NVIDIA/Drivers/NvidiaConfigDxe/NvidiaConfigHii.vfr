@@ -701,6 +701,20 @@ formset
     endoneof;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.MaxAllowedNumSparesSupported == 0;
+    oneof varid = NVIDIA_CONFIG_HII_CONTROL.MaxAllowedNumSpares,
+        questionid = KEY_MAX_ALLOWED_NUM_SPARES,
+        prompt = STRING_TOKEN(STR_MAX_ALLOWED_NUM_SPARES_PROMPT),
+        help   = STRING_TOKEN(STR_MAX_ALLOWED_NUM_SPARES_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_MAX_ALLOWED_0_SPARES), value = MAX_ALLOWED_0_SPARES, flags = 0;
+        option text = STRING_TOKEN(STR_MAX_ALLOWED_1_SPARES), value = MAX_ALLOWED_1_SPARES, flags = 0;
+        suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DisplayAllMaxAllowedNumSparesOptions == 0;
+            option text = STRING_TOKEN(STR_MAX_ALLOWED_2_SPARES), value = MAX_ALLOWED_2_SPARES, flags = 0;
+        endif;
+    endoneof;
+    endif;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
         questionid = KEY_MAX_CORES,
