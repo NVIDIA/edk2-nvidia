@@ -2,7 +2,7 @@
 
   Status code Driver via debug lib
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -119,6 +119,6 @@ DebugStatusCodeDxeDriverEntryPoint (
     return Status;
   }
 
-  Status = RscHandler->Register (DebugStatusCodeCallback, TPL_CALLBACK);
+  Status = RscHandler->Register (DebugStatusCodeCallback, TPL_HIGH_LEVEL);
   return Status;
 }
