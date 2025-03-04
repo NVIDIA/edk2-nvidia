@@ -258,6 +258,7 @@ NctGetSpec (
  * Get a serial number from Nvidia Configrature Table.
  *
  * @param[out] SerialNumber Output buffer to store SN
+ * @param[in]  BufferSize   Output buffer size to store SN
  *
  * @retval EFI_SUCCESS            The serial number was gotten successfully.
  * @retval EFI_INVALID_PARAMETER  "SerialNumber" buffer is NULL.
@@ -265,7 +266,8 @@ NctGetSpec (
 EFI_STATUS
 EFIAPI
 NctGetSerialNumber (
-  OUT CHAR8  *SerialNumber
+  OUT CHAR8   *SerialNumber,
+  IN  UINT32  BufferSize
   );
 
 #endif /* _NCT_LIB_H_ */

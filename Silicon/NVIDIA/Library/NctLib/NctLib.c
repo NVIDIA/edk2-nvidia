@@ -323,6 +323,7 @@ Exit:
  * Get a serial number from Nvidia Configrature Table.
  *
  * @param[out] SerialNumber  Output buffer to store SN
+ * @param[in]  BufferSize    Output buffer size to store SN
  *
  * @retval EFI_SUCCESS            The serial number was gotten successfully.
  * @retval EFI_INVALID_PARAMETER  "SerialNumber" buffer is NULL.
@@ -330,12 +331,12 @@ Exit:
 EFI_STATUS
 EFIAPI
 NctGetSerialNumber (
-  OUT CHAR8  *SerialNumber
+  OUT CHAR8   *SerialNumber,
+  IN  UINT32  BufferSize
   )
 {
   EFI_STATUS  Status = EFI_SUCCESS;
   NCT_ITEM    Item;
-  UINT32      Len;
 
   if (IsNctInitialized == FALSE) {
     Status = NctInit (NULL);
@@ -356,8 +357,12 @@ NctGetSerialNumber (
     return Status;
   }
 
-  Len = AsciiStrLen (Item.SerialNumber.Sn);
-  CopyMem (SerialNumber, Item.SerialNumber.Sn, Len);
+  if (AsciiStrLen (Item.SerialNumber.Sn) == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: NCT SerialNumber is empty\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
 
-  return Status;
+  AsciiStrCpyS (SerialNumber, BufferSize, Item.SerialNumber.Sn);
+
+  return EFI_SUCCESS;
 }

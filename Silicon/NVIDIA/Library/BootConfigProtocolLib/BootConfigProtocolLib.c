@@ -186,7 +186,7 @@ BootConfigAddSerialNumber (
   }
 
   if (AsciiStrCmp (NewValue, BOOTCONFIG_DUMMY_SERIALNO) == 0) {
-    Status = NctGetSerialNumber (NctSn);
+    Status = NctGetSerialNumber (NctSn, MAX_NCT_SN_LEN);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get NCT Serial Number\n", __FUNCTION__, Status));
       NewValue = BOOTCONFIG_DEFAULT_SERIALNO;
