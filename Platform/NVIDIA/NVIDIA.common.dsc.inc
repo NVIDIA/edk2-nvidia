@@ -2545,6 +2545,13 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 !endif
 !endif
 
+  #
+  # SMMUv3 support
+  #
+!ifdef CONFIG_SMMU_V3
+  Silicon/NVIDIA/Drivers/SmmuV3Dxe/SmmuV3Dxe.inf
+!endif
+
 [Components.AARCH64]
   #
   # EBC

@@ -328,6 +328,12 @@ menu "Hardware support"
       Support for NVMe drives on the system
   endif
 
+  config SMMU_V3
+  bool "SMMUv3 support"
+  default y if BUILD_DATACENTER
+  help
+    Support for SMMUv3
+
   config SDHCI
   bool
 

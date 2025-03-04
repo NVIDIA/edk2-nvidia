@@ -1,0 +1,43 @@
+#/** @file
+#
+#  SMMUv3 Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = SmmuV3Dxe
+  FILE_GUID                      = 857331fa-5f25-407d-876a-63916a7c59cc
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  SmmuV3Dxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  FdtLib
+  UefiDriverEntryPoint
+  DeviceDiscoveryDriverLib
+
+[Guids]
+  gNVIDIANonDiscoverableSmmuV3DeviceGuid
+
+[Protocols]
+  gNVIDIASmmuV3ProtocolGuid
+
+[Depex]
+  TRUE

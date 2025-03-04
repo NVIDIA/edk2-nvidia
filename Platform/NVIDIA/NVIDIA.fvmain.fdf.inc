@@ -946,3 +946,10 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/PrmRasModule/PrmRasModule.inf
 !endif
 !endif
+
+  #
+  # SMMUv3 support
+  #
+!ifdef CONFIG_SMMU_V3
+  INF Silicon/NVIDIA/Drivers/SmmuV3Dxe/SmmuV3Dxe.inf
+!endif
