@@ -14,8 +14,7 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-
-#include <libfdt.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #include "SmmuV3DxePrivate.h"
 
@@ -56,13 +55,24 @@ DeviceDiscoveryNotify (
   EFI_PHYSICAL_ADDRESS             BaseAddress;
   UINTN                            RegionSize;
   SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private;
+  UINT32                           NodeHandle;
 
   Status      = EFI_SUCCESS;
   BaseAddress = 0;
   RegionSize  = 0;
   Private     = NULL;
+  NodeHandle  = 0;
 
   switch (Phase) {
+    case DeviceDiscoveryDriverBindingSupported:
+      Status = DeviceTreeGetNodePHandle (DeviceTreeNode->NodeOffset, &NodeHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to get phandle for node\n", __FUNCTION__));
+        goto Exit;
+      }
+
+      break;
+
     case DeviceDiscoveryDriverBindingStart:
       Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
       if (EFI_ERROR (Status)) {
@@ -79,7 +89,12 @@ DeviceDiscoveryNotify (
       Private->BaseAddress    = BaseAddress;
       Private->DeviceTreeBase = DeviceTreeNode->DeviceTreeBase;
       Private->NodeOffset     = DeviceTreeNode->NodeOffset;
-      Private->PHandle        = fdt_get_phandle (Private->DeviceTreeBase, Private->NodeOffset);
+
+      Status = DeviceTreeGetNodePHandle (DeviceTreeNode->NodeOffset, &Private->PHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to get phandle for node\n", __FUNCTION__));
+        goto Exit;
+      }
 
       DEBUG ((DEBUG_ERROR, "%a: Base Addr 0x%lx\n", __FUNCTION__, Private->BaseAddress));
       DEBUG ((DEBUG_ERROR, "%a: PHandle 0x%lx\n", __FUNCTION__, Private->PHandle));
@@ -91,5 +106,9 @@ DeviceDiscoveryNotify (
   }
 
 Exit:
+  if (Private != NULL) {
+    FreePool (Private);
+  }
+
   return Status;
 }

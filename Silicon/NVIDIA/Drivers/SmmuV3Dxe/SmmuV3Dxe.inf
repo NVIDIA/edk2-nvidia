@@ -29,7 +29,7 @@
   BaseLib
   DebugLib
   MemoryAllocationLib
-  FdtLib
+  DeviceTreeHelperLib
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
 
