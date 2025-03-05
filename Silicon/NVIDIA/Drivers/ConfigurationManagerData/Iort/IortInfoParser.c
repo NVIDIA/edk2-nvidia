@@ -44,95 +44,6 @@ STATIC IORT_PRIVATE_DATA  mIortPrivate = {
 
 UINT32  UniqueIdentifier;
 
-// JDS TODO - need to refactor to base on the new DeviceTreeHelperLib
-
-/**
-  Function map region into GCD and MMU
-
-  @param[in]  BaseAddress     Base address of region
-  @param[in]  Size            Size of region
-
-  @return EFI_SUCCESS         GCD/MMU Updated
-
-**/
-STATIC
-EFI_STATUS
-AddIortMemoryRegion (
-  IN  UINT64  BaseAddress,
-  IN  UINT64  Size
-  )
-{
-  EFI_STATUS  Status;
-  UINT64      AlignedBaseAddress;
-  UINT64      AlignedSize;
-  UINT64      AlignedEnd;
-  UINT64      ScanLocation;
-
-  AlignedBaseAddress = BaseAddress & ~(SIZE_4KB-1);
-  AlignedSize        = ALIGN_VALUE (Size, SIZE_4KB);
-  AlignedEnd         = AlignedBaseAddress + AlignedSize;
-
-  ScanLocation = AlignedBaseAddress;
-  while (ScanLocation < AlignedEnd) {
-    EFI_GCD_MEMORY_SPACE_DESCRIPTOR  MemorySpace;
-    UINT64                           OverlapSize;
-
-    Status = gDS->GetMemorySpaceDescriptor (ScanLocation, &MemorySpace);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: Failed to GetMemorySpaceDescriptor (0x%llx): %r.\r\n",
-        __FUNCTION__,
-        ScanLocation,
-        Status
-        ));
-      return Status;
-    }
-
-    OverlapSize = MIN (MemorySpace.BaseAddress + MemorySpace.Length, AlignedEnd) - ScanLocation;
-    if (MemorySpace.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
-      Status = gDS->AddMemorySpace (
-                      EfiGcdMemoryTypeMemoryMappedIo,
-                      ScanLocation,
-                      OverlapSize,
-                      EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: Failed to AddMemorySpace: (0x%llx, 0x%llx) %r.\r\n",
-          __FUNCTION__,
-          ScanLocation,
-          OverlapSize,
-          Status
-          ));
-        return Status;
-      }
-
-      Status = gDS->SetMemorySpaceAttributes (
-                      ScanLocation,
-                      OverlapSize,
-                      EFI_MEMORY_UC
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_INFO,
-          "%a: Failed to SetMemorySpaceAttributes: (0x%llx, 0x%llx) %r.\r\n",
-          __FUNCTION__,
-          ScanLocation,
-          OverlapSize,
-          Status
-          ));
-        return Status;
-      }
-    }
-
-    ScanLocation += OverlapSize;
-  }
-
-  return EFI_SUCCESS;
-}
-
 /**
   Clean all IORT property nodes built in the list
 
@@ -1092,12 +1003,6 @@ SetupIortNodeForSmmuV1V2 (
     goto ErrorExit;
   }
 
-  // Map SMMU base address in MMU to support SBSA-ACS
-  Status = AddIortMemoryRegion (IortNode->BaseAddress, SIZE_4KB);
-  if (EFI_ERROR (Status)) {
-    goto ErrorExit;
-  }
-
   return SetupIortIdMappingForSmmuV1V2 (ParserHandle, Private, PropNode);
 
 ErrorExit:
@@ -1301,12 +1206,6 @@ SetupIortNodeForSmmuV3 (
   } else {
     DEBUG ((DEBUG_ERROR, "%a: NumInterrupts was %u, but must be between %d and %d\r\n", __FUNCTION__, NumberOfInterrupts, MIN_NUM_IRQS_OF_SMMU_V3, MAX_NUM_IRQS_OF_SMMU_V3));
     return EFI_NOT_FOUND;
-  }
-
-  // Map SMMU base address in MMU to support SBSA-ACS
-  Status = AddIortMemoryRegion (IortNode->BaseAddress, SIZE_4KB);
-  if (EFI_ERROR (Status)) {
-    return Status;
   }
 
   return SetupIortIdMappingForSmmuV3 (ParserHandle, Private, PropNode);
