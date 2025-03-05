@@ -32,9 +32,11 @@
   DeviceTreeHelperLib
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
+  UefiBootServicesTableLib
 
 [Guids]
   gNVIDIANonDiscoverableSmmuV3DeviceGuid
+  gEfiEventExitBootServicesGuid
 
 [Protocols]
   gNVIDIASmmuV3ProtocolGuid
