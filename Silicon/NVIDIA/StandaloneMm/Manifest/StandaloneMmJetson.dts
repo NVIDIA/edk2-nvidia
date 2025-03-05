@@ -30,9 +30,9 @@
 	execution-ctx-count = <1>;
 	exception-level = <2>; /* S-EL1 */
 	execution-state = <0>; /* AARCH64 */
-	load-address = <0x00000000 0x89B00000>;
+	load-address = <0x00000000 0x8B000000>;
 	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
-	reserved-pages-count = <0>; 
+	reserved-pages-count = <0>;
 	xlat-granule = <0>; /* 4KiB */
 	boot-order = <1>;
 	messaging-method = <3>; /* Direct messaging with managed exit */
@@ -73,27 +73,27 @@
 		stmmns-memory {
 			description = "stmmns-memory";
 			pages-count = <512>;
-			base-address = <0x00000000 0x8B590000>;
+			base-address = <0x00000000 0x8B5F0000>;
 			attributes = <NON_SECURE_RW>; /* read-write */
 			nv-non-secure-memory = <0x1>;
 		};
 		txbuffer: tx-buffer {
 			description = "tx-buffer";
 			pages-count = <1>;
-			base-address = <0x00000000 0x8B790000>;
+			base-address = <0x00000000 0x8B7FF000>;
 			attributes = <SECURE_RW>; /* read-write */
 		};
 		stmmprm-0-memory {
 			description = "stmmprm-0-memory";
 			pages-count = <17>;
-			base-address = <0x00000000 0x8B791000>;
+			base-address = <0x00000000 0x8B800000>;
 			attributes = <NON_SECURE_RW>; /* read-write */
 			nv-non-secure-memory = <0x1>;
 		};
 		cpubl-params {
 			description  = "cpubl-params";
 			pages-count  = <0x4>;
-			base-address = <0x00000000 0x8B7A8000>;
+			base-address = < 0x00000000 0x9C000000 >;
 			attributes   = <NON_SECURE_RO>; /* read-only */
 		};
 	};
