@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -26,6 +27,51 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName = L"NVIDIA Smmu V3 Controller Driver"
 };
+
+STATIC
+EFI_STATUS
+EFIAPI
+ResetSmmuV3Controller (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  GbpSetting;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Set the controller in global bypass mode
+  GbpSetting = FIELD_PREP (1U, SMMU_V3_GBPA_UPDATE_MASK, SMMU_V3_GBPA_UPDATE_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_ABORT_MASK, SMMU_V3_GBPA_ABORT_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_INSTCFG_MASK, SMMU_V3_GBPA_INSTCFG_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_PRIVCFG_MASK, SMMU_V3_GBPA_PRIVCFG_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (1, SMMU_V3_GBPA_SHCFG_MASK, SMMU_V3_GBPA_SHCFG_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_ALLOCFG_MASK, SMMU_V3_GBPA_ALLOCFG_SHIFT);
+  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_MTCFG_MASK, SMMU_V3_GBPA_MTCFG_SHIFT);
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_GBPA_OFFSET, GbpSetting);
+
+  // Wait for the controller to enter global bypass mode
+  gBS->Stall (10000);
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_GBPA_OFFSET) >> SMMU_V3_GBPA_UPDATE_SHIFT) & SMMU_V3_GBPA_UPDATE_MASK) == 1) {
+    return EFI_TIMEOUT;
+  }
+
+  MmioBitFieldWrite32 (
+    Private->BaseAddress + SMMU_V3_CR0_OFFSET,
+    SMMU_V3_CR0_SMMUEN_BIT,
+    SMMU_V3_CR0_SMMUEN_BIT,
+    0
+    );
+
+  // Wait for the controller to disable SMMU operation
+  gBS->Stall (10000);
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0_SMMUEN_SHIFT) & SMMU_V3_CR0_SMMUEN_MASK) != 0) {
+    return EFI_TIMEOUT;
+  }
+
+  return EFI_SUCCESS;
+}
 
 /**
   Initialize the SMMUv3 controller.
@@ -42,11 +88,19 @@ InitializeSmmuV3 (
   IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
   )
 {
+  EFI_STATUS  Status;
+
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
   DEBUG ((DEBUG_INFO, "%a: Initializing SMMUv3 at 0x%lx\n", __FUNCTION__, Private->BaseAddress));
+
+  Status = ResetSmmuV3Controller (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to reset SMMUv3\n", __FUNCTION__));
+    return Status;
+  }
 
   // TODO: Implement SMMUv3 initialization steps:
   // 1. Check hardware status
