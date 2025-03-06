@@ -3,7 +3,7 @@
   This file defines unit tests to verify various return response scenearios
   of OEM IPMI commands for Redfish Interface.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -253,7 +253,7 @@ UINT8  MacSize    = sizeof (ValidResponseMacAddr);
 UINT8  VlanIdSize = sizeof (ValidResponseVLanId);
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription function code
+  A simple unit test to test the GetRfhiUsbDescription function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -282,7 +282,7 @@ UsbDescVendor_IpmiFailure (
   CopyMem (ResponseResultsUsbDesc, &DeviceFailureUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIUSBDescription (&UsbVendorId, TYPE_VENDOR_ID);
+  Status = GetRfhiUsbDescription (&UsbVendorId, TYPE_VENDOR_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -290,8 +290,8 @@ UsbDescVendor_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription_Vendor function code
-  path when an IPMI command returns a bad completion code.
+  A simple unit test to test the GetRfhiUsbDescription_Vendor function code
+  path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -319,7 +319,7 @@ UsbDescVendor_BadCompletion (
   CopyMem (ResponseResultsUsbDesc, &InvalidCompletionUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBDescription (&UsbVendorId, TYPE_VENDOR_ID);
+  Status = GetRfhiUsbDescription (&UsbVendorId, TYPE_VENDOR_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -327,8 +327,8 @@ UsbDescVendor_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription_Vendor function code
-  path when an IPMI returns valid data.
+  A simple unit test to test the GetRfhiUsbDescription_Vendor function code
+  path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -356,7 +356,7 @@ UsbDescVendor_ValidData (
   CopyMem (ResponseResultsUsbDesc, &ValidResponseUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBDescription (&UsbVendorId, TYPE_VENDOR_ID);
+  Status = GetRfhiUsbDescription (&UsbVendorId, TYPE_VENDOR_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -364,7 +364,7 @@ UsbDescVendor_ValidData (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription_Product function code
+  A simple unit test to test the GetRfhiUsbDescription_Product function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -393,7 +393,7 @@ UsbDescProduct_IpmiFailure (
   CopyMem (ResponseResultsUsbDesc, &DeviceFailureUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIUSBDescription (&UsbProductId, TYPE_PRODUCT_ID);
+  Status = GetRfhiUsbDescription (&UsbProductId, TYPE_PRODUCT_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -401,8 +401,8 @@ UsbDescProduct_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription_Product function code
-  path when an IPMI command returns a bad completion code.
+  A simple unit test to test the GetRfhiUsbDescription_Product function code
+  path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -430,7 +430,7 @@ UsbDescProduct_BadCompletion (
   CopyMem (ResponseResultsUsbDesc, &InvalidCompletionUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBDescription (&UsbProductId, TYPE_PRODUCT_ID);
+  Status = GetRfhiUsbDescription (&UsbProductId, TYPE_PRODUCT_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -438,8 +438,8 @@ UsbDescProduct_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBDescription_Product function code
-  path when an IPMI returns valid data.
+  A simple unit test to test the GetRfhiUsbDescription_Product function code
+  path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -467,7 +467,7 @@ UsbDescProduct_ValidData (
   CopyMem (ResponseResultsUsbDesc, &ValidResponseUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUsbDesc, sizeof (IPMI_GET_USB_DESCRIPTION_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBDescription (&UsbProductId, TYPE_PRODUCT_ID);
+  Status = GetRfhiUsbDescription (&UsbProductId, TYPE_PRODUCT_ID);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -475,7 +475,7 @@ UsbDescProduct_ValidData (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBVirtualSerialNumber function code
+  A simple unit test to test the GetRfhiUsbVirtualSerialNumber function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -504,7 +504,7 @@ SerialNum_IpmiFailure (
   CopyMem (ResponseResultsSerNum, &DeviceFailureSerialNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsSerNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIUSBVirtualSerialNumber (&SerialNum[0]);
+  Status = GetRfhiUsbVirtualSerialNumber (&SerialNum[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -512,8 +512,8 @@ SerialNum_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBVirtualSerialNumber function code
-  path when an IPMI command returns a bad completion code.
+  A simple unit test to test the GetRfhiUsbVirtualSerialNumber function code
+  path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -541,7 +541,7 @@ SerialNum_BadCompletion (
   CopyMem (ResponseResultsSerNum, &InvalidCompletionSerialNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsSerNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBVirtualSerialNumber (&SerialNum[0]);
+  Status = GetRfhiUsbVirtualSerialNumber (&SerialNum[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -549,8 +549,8 @@ SerialNum_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetUSBVirtualSerialNumber function
-  code path when an IPMI returns valid data.
+  A simple unit test to test the GetRfhiUsbVirtualSerialNumber function
+  code path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -578,7 +578,7 @@ SerialNum_ValidData (
   CopyMem (ResponseResultsSerNum, &ValidResponseSerialNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsSerNum, sizeof (IPMI_GET_USB_SERIAL_NUMBER_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUSBVirtualSerialNumber (&SerialNum[0]);
+  Status = GetRfhiUsbVirtualSerialNumber (&SerialNum[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -586,7 +586,7 @@ SerialNum_ValidData (
 }
 
 /**
-  A simple unit test to test the RFHIGetHostname function code
+  A simple unit test to test the GetRfhiHostname function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -598,8 +598,7 @@ SerialNum_ValidData (
                          consume it.
 
   @retval  UNIT_TEST_PASSED             The Unit test has completed and the test
-
-     case was successful.
+                                        case was successful.
   @retval  UNIT_TEST_ERROR_TEST_FAILED  A test case assertion has failed.
 **/
 UNIT_TEST_STATUS
@@ -616,7 +615,7 @@ Hostname_IpmiFailure (
   CopyMem (ResponseResultsHostname, &DeviceFailureHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIHostname (&Hostname[0]);
+  Status = GetRfhiHostname (&Hostname[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -624,7 +623,7 @@ Hostname_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetHostname function code
+  A simple unit test to test the GetRfhiHostname function code
   path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -653,7 +652,7 @@ Hostname_BadCompletion (
   CopyMem (ResponseResultsHostname, &InvalidCompletionHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIHostname (&Hostname[0]);
+  Status = GetRfhiHostname (&Hostname[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -661,7 +660,7 @@ Hostname_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetHostname function code
+  A simple unit test to test the GetRfhiHostname function code
   path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -690,7 +689,7 @@ Hostname_ValidData (
   CopyMem (ResponseResultsHostname, &ValidResponseHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsHostname, sizeof (IPMI_GET_REDFISH_SERVICE_HOSTNAME_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIHostname (&Hostname[0]);
+  Status = GetRfhiHostname (&Hostname[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -698,7 +697,7 @@ Hostname_ValidData (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpmiChannelNumber function code
+  A simple unit test to test the GetRfhiIpmiChannelNumber function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -727,7 +726,7 @@ ChnlNum_IpmiFailure (
   CopyMem (ResponseResultsChnlNum, &DeviceFailureChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpmiChannelNumber (&ChnlNum);
+  Status = GetRfhiIpmiChannelNumber (&ChnlNum);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -735,7 +734,7 @@ ChnlNum_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpmiChannelNumber function code
+  A simple unit test to test the GetRfhiIpmiChannelNumber function code
   path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -764,7 +763,7 @@ ChnlNum_BadCompletion (
   CopyMem (ResponseResultsChnlNum, &InvalidCompletionChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIIpmiChannelNumber (&ChnlNum);
+  Status = GetRfhiIpmiChannelNumber (&ChnlNum);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -772,7 +771,7 @@ ChnlNum_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpmiChannelNumber function code
+  A simple unit test to test the GetRfhiIpmiChannelNumber function code
   path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -801,14 +800,14 @@ ChnlNum_ValidData (
   CopyMem (ResponseResultsChnlNum, &ValidResponseChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsChnlNum, sizeof (IPMI_GET_IPMI_CHANNEL_NUMBER_RFHI_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIIpmiChannelNumber (&ChnlNum);
+  Status = GetRfhiIpmiChannelNumber (&ChnlNum);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
 
 /**
-  A simple unit test to test the RFHIGetMACAddress function code
+  A simple unit test to test the GetRfhiMacAddress function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -837,7 +836,7 @@ MacAddr_IpmiFailure (
   CopyMem (ResponseResultsMacAddr, &DeviceFailureMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
+  Status = GetRfhiMacAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -845,7 +844,7 @@ MacAddr_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the RFHIGetMACAddress function code
+  A simple unit test to test the GetRfhiMacAddress function code
   path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -874,7 +873,7 @@ MacAddr_BadCompletion (
   CopyMem (ResponseResultsMacAddr, &InvalidCompletionMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_SUCCESS);
 
-  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
+  Status = GetRfhiMacAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -882,7 +881,7 @@ MacAddr_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetMACAddress function code
+  A simple unit test to test the GetRfhiMacAddress function code
   path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -911,7 +910,7 @@ MacAddr_ValidData (
   CopyMem (ResponseResultsMacAddr, &ValidResponseMacAddr, MacSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsMacAddr, MacSize, EFI_SUCCESS);
 
-  Status = GetRFHIMACAddress (TestChannel, &MacAddr[0]);
+  Status = GetRfhiMacAddress (TestChannel, &MacAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -919,8 +918,8 @@ MacAddr_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpDiscoveryType function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiIpDiscoveryType function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -948,7 +947,7 @@ IpDiscoveryType_IpmiFailure (
   CopyMem (ResponseResultsIpDiscType, &DeviceFailureIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
+  Status = GetRfhiIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -956,8 +955,8 @@ IpDiscoveryType_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpDiscoveryType function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiIpDiscoveryType function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -985,7 +984,7 @@ IpDiscoveryType_BadCompletion (
   CopyMem (ResponseResultsIpDiscType, &InvalidCompletionIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
+  Status = GetRfhiIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -993,8 +992,8 @@ IpDiscoveryType_BadCompletion (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpDiscoveryType function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiIpDiscoveryType function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1022,7 +1021,7 @@ IpDiscoveryType_ValidData (
   CopyMem (ResponseResultsIpDiscType, &ValidResponseIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpDiscType, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = GetRFHIIpDiscoveryType (TestChannel, &IpDiscType);
+  Status = GetRfhiIpDiscoveryType (TestChannel, &IpDiscType);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1030,8 +1029,8 @@ IpDiscoveryType_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpAddress function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiIpAddress function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1059,7 +1058,7 @@ IPAddress_IpmiFailure (
   CopyMem (ResponseResultsIpAddr, &DeviceFailureIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
+  Status = GetRfhiIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1067,8 +1066,8 @@ IPAddress_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpAddress function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiIpAddress function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1096,7 +1095,7 @@ IPAddress_BadCompletion (
   CopyMem (ResponseResultsIpAddr, &InvalidCompletionIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
+  Status = GetRfhiIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1104,8 +1103,8 @@ IPAddress_BadCompletion (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpAddress function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiIpAddress function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1133,7 +1132,7 @@ IpAddress_ValidData (
   CopyMem (ResponseResultsIpAddr, &ValidResponseIPAddr, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddr, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpAddress (TestChannel, &IpAddr[0]);
+  Status = GetRfhiIpAddress (TestChannel, &IpAddr[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1141,8 +1140,8 @@ IpAddress_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpMask function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiIpMask function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1170,7 +1169,7 @@ IPMask_IpmiFailure (
   CopyMem (ResponseResultsIpMask, &DeviceFailureIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
+  Status = GetRfhiIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1178,8 +1177,8 @@ IPMask_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the  GetRFHIIpMask function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiIpMask function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1207,7 +1206,7 @@ IPMask_BadCompletion (
   CopyMem (ResponseResultsIpMask, &InvalidCompletionIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
+  Status = GetRfhiIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1215,8 +1214,8 @@ IPMask_BadCompletion (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpMask function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiIpMask function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1244,7 +1243,7 @@ IPMask_ValidData (
   CopyMem (ResponseResultsIpMask, &ValidResponseIPMask, IpSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpMask, IpSize, EFI_SUCCESS);
 
-  Status = GetRFHIIpMask (TestChannel, &IpMask[0]);
+  Status = GetRfhiIpMask (TestChannel, &IpMask[0]);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1252,8 +1251,8 @@ IPMask_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIVlanId function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiVlanId function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1281,7 +1280,7 @@ VLanId_IpmiFailure (
   CopyMem (ResponseResultsVlanId, &DeviceFailureVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_DEVICE_ERROR);
 
-  Status = GetRFHIVlanId (TestChannel, &VlanId);
+  Status = GetRfhiVlanId (TestChannel, &VlanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1289,8 +1288,8 @@ VLanId_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the  GetRFHIVlanId function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiVlanId function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1318,7 +1317,7 @@ VLanId_BadCompletion (
   CopyMem (ResponseResultsVlanId, &InvalidCompletionVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_SUCCESS);
 
-  Status = GetRFHIVlanId (TestChannel, &VLanId);
+  Status = GetRfhiVlanId (TestChannel, &VLanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1326,8 +1325,8 @@ VLanId_BadCompletion (
 }
 
 /**
-  A simple unit test to test the GetRFHIVlanId function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiVlanId function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1355,7 +1354,7 @@ VLanId_ValidData (
   CopyMem (ResponseResultsVlanId, &ValidResponseVLanId, VlanIdSize);
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsVlanId, VlanIdSize, EFI_SUCCESS);
 
-  Status = GetRFHIVlanId (TestChannel, &VLanId);
+  Status = GetRfhiVlanId (TestChannel, &VLanId);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1363,8 +1362,8 @@ VLanId_ValidData (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpAddFormat function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiIpAddFormat function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1392,7 +1391,7 @@ IpAddrFormat_IpmiFailure (
   CopyMem (ResponseResultsIpAddrFormat, &DeviceFailureIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_DEVICE_ERROR);
 
-  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
+  Status = GetRfhiIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1400,8 +1399,8 @@ IpAddrFormat_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the  RFHIGetIpAddFormat function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiIpAddFormat function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1429,7 +1428,7 @@ IpAddrFormat_BadCompletion (
   CopyMem (ResponseResultsIpAddrFormat, &InvalidCompletionIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
+  Status = GetRfhiIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1437,8 +1436,8 @@ IpAddrFormat_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpAddFormat function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiIpAddFormat function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1466,7 +1465,7 @@ IpAddrFormat_ValidData (
   CopyMem (ResponseResultsIpAddrFormat, &ValidResponseVLanId, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpAddrFormat, sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE), EFI_SUCCESS);
 
-  Status = RFHIGetIpAddFormat (TestChannel, &IpAddrFormat);
+  Status = GetRfhiIpAddFormat (TestChannel, &IpAddrFormat);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1474,8 +1473,8 @@ IpAddrFormat_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIIpPort function code
-  path when an IPMI failure occurs.
+  A simple unit test to test the GetRfhiIpPort function code
+  with IPMI failure.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1503,7 +1502,7 @@ IpPort_IpmiFailure (
   CopyMem (ResponseResultsIpPort, &DeviceFailureIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIIpPort (&IpPort);
+  Status = GetRfhiIpPort (&IpPort);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1511,8 +1510,8 @@ IpPort_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the  RFHIGetIpPort function code
-  path when an IPMI command returns bad completion data.
+  A simple unit test to test the GetRfhiIpPort function code
+  with bad completion code.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1540,7 +1539,7 @@ IpPort_BadCompletion (
   CopyMem (ResponseResultsIpPort, &InvalidCompletionIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIIpPort (&IpPort);
+  Status = GetRfhiIpPort (&IpPort);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1548,8 +1547,8 @@ IpPort_BadCompletion (
 }
 
 /**
-  A simple unit test to test the RFHIGetIpPort function code
-  path when an IPMI command returns valid data.
+  A simple unit test to test the GetRfhiIpPort function code
+  with valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
                          1) test-case reuse with varied parameters and
@@ -1577,7 +1576,7 @@ IpPort_ValidData (
   CopyMem (ResponseResultsIpPort, &ValidResponseIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsIpPort, sizeof (IPMI_GET_REDFISH_SERVICE_IP_PORT_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIIpPort (&IpPort);
+  Status = GetRfhiIpPort (&IpPort);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
@@ -1585,7 +1584,7 @@ IpPort_ValidData (
 }
 
 /**
-  A simple unit test to test the GetRFHIUUID function code
+  A simple unit test to test the GetRfhiUuid function code
   path when an IPMI failure occurs.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -1614,7 +1613,7 @@ Uuid_IpmiFailure (
   CopyMem (ResponseResultsUuid, &DeviceFailureUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA), EFI_DEVICE_ERROR);
 
-  Status = GetRFHIUUID (&Uuid);
+  Status = GetRfhiUuid (&Uuid);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
@@ -1622,7 +1621,7 @@ Uuid_IpmiFailure (
 }
 
 /**
-  A simple unit test to test the GetRFHIUUID function code
+  A simple unit test to test the GetRfhiUuid function code
   path when an IPMI command returns bad completion data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -1651,7 +1650,7 @@ Uuid_BadCompletion (
   CopyMem (ResponseResultsUuid, &InvalidCompletionUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUUID (&Uuid);
+  Status = GetRfhiUuid (&Uuid);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_PROTOCOL_ERROR);
 
@@ -1659,7 +1658,7 @@ Uuid_BadCompletion (
 }
 
 /**
-  A simple unit test to test the GetRFHIUUID function code
+  A simple unit test to test the GetRfhiUuid function code
   path when an IPMI command returns valid data.
 
   @param[in]  Context    [Optional] An optional parameter that enables:
@@ -1688,7 +1687,7 @@ Uuid_ValidData (
   CopyMem (ResponseResultsUuid, &ValidResponseUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA));
   MockIpmiSubmitCommand ((UINT8 *)ResponseResultsUuid, sizeof (IPMI_GET_REDFISH_SERVICE_UUID_RESPONSE_DATA), EFI_SUCCESS);
 
-  Status = GetRFHIUUID (&Uuid);
+  Status = GetRfhiUuid (&Uuid);
 
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
 
