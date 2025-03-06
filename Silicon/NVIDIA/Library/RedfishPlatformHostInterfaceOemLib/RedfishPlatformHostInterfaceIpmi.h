@@ -2,7 +2,7 @@
 
   This file defines the OEM IPMI commands for Redfish Interface.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -92,7 +92,7 @@ typedef struct {
   @retval EFI_DEVICE_ERROR   An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUSBDescription (
+GetRfhiUsbDescription (
   OUT UINT16  *UsbId,
   IN  UINT8   Type
   );
@@ -107,7 +107,7 @@ GetRFHIUSBDescription (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUSBVirtualSerialNumber (
+GetRfhiUsbVirtualSerialNumber (
   OUT CHAR8  *SerialNum
   );
 
@@ -121,7 +121,7 @@ GetRFHIUSBVirtualSerialNumber (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIHostname (
+GetRfhiHostname (
   OUT CHAR8  *Hostname
   );
 
@@ -135,7 +135,7 @@ GetRFHIHostname (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpmiChannelNumber (
+GetRfhiIpmiChannelNumber (
   OUT UINT8  *ChannelNum
   );
 
@@ -151,7 +151,7 @@ GetRFHIIpmiChannelNumber (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIMACAddress (
+GetRfhiMacAddress (
   IN   UINT8  Channel,
   OUT  UINT8  *MacAddress
   );
@@ -168,7 +168,7 @@ GetRFHIMACAddress (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpDiscoveryType (
+GetRfhiIpDiscoveryType (
   IN  UINT8  Channel,
   OUT UINT8  *IpDiscoveryType
   );
@@ -184,7 +184,7 @@ GetRFHIIpDiscoveryType (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpAddress (
+GetRfhiIpAddress (
   IN  UINT8  Channel,
   OUT UINT8  *IpAdd
   );
@@ -200,7 +200,7 @@ GetRFHIIpAddress (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpMask (
+GetRfhiIpMask (
   IN  UINT8  Channel,
   OUT UINT8  *IpAddMask
   );
@@ -216,7 +216,7 @@ GetRFHIIpMask (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIVlanId (
+GetRfhiVlanId (
   IN  UINT8   Channel,
   OUT UINT16  *VlanId
   );
@@ -231,7 +231,7 @@ GetRFHIVlanId (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpPort (
+GetRfhiIpPort (
   OUT UINT16  *IpPort
   );
 
@@ -246,7 +246,7 @@ GetRFHIIpPort (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-RFHIGetIpAddFormat (
+GetRfhiIpAddFormat (
   IN  UINT8  Channel,
   OUT UINT8  *IpAddformat
   );
@@ -261,7 +261,7 @@ RFHIGetIpAddFormat (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUUID (
+GetRfhiUuid (
   OUT EFI_GUID  *Uuid
   );
 

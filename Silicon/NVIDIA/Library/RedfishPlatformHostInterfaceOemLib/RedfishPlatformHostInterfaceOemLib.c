@@ -5,7 +5,7 @@
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -346,9 +346,12 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
   DeviceDesc         = (USB_INTERFACE_DEVICE_DESCRIPTOR_V2 *)((UINT8 *)RedfishInterfaceData + 1);
   DeviceDesc->Length = sizeof (USB_INTERFACE_DEVICE_DESCRIPTOR_V2) + 1;
 
-  // Fetch Vendor ID and Product ID
-  GetRFHIUSBDescription (&VendorID, TYPE_VENDOR_ID);
-  GetRFHIUSBDescription (&ProductID, TYPE_PRODUCT_ID);
+  // Get USB Vendor ID and Product ID
+  VendorID  = 0;
+  ProductID = 0;
+  GetRfhiUsbDescription (&VendorID, TYPE_VENDOR_ID);
+  GetRfhiUsbDescription (&ProductID, TYPE_PRODUCT_ID);
+
   CopyMem ((VOID *)&DeviceDesc->IdVendor, (VOID *)&VendorID, sizeof (DeviceDesc->IdVendor));
   CopyMem ((VOID *)&DeviceDesc->IdProduct, (VOID *)&ProductID, sizeof (DeviceDesc->IdProduct));
 
@@ -356,7 +359,7 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
   // Bit  0    - Credential bootstrapping via IPMI commands is supported.
   // Bits 1-15 - Reserved
   DeviceDesc->Characteristics = 0x1;
-  Status                      = GetRFHIIpmiChannelNumber (&Channel);
+  Status                      = GetRfhiIpmiChannelNumber (&Channel);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Channel Number Retrieval failed\n", __FUNCTION__));
     return Status;
@@ -537,7 +540,7 @@ RedfishPlatformHostInterfaceProtocolData (
     // Return the first Redfish protocol data to caller. Currently We only support
     // one protocol record.
     //
-    Status = GetRFHIUUID (&ServiceUuid);
+    Status = GetRfhiUuid (&ServiceUuid);
     if (Status != EFI_SUCCESS) {
       // IPMI command failed, initialize Redfish service UUID to zeroes.
       ServiceUuid.Data1 = 0;
@@ -548,7 +551,7 @@ RedfishPlatformHostInterfaceProtocolData (
       }
     }
 
-    Status = GetRFHIIpDiscoveryType (Channel, &RfSIpDiscoveryType);
+    Status = GetRfhiIpDiscoveryType (Channel, &RfSIpDiscoveryType);
     if (Status != EFI_SUCCESS) {
       // Set it to 00h -unknown
       RfSIpDiscoveryType = 0;
@@ -561,10 +564,13 @@ RedfishPlatformHostInterfaceProtocolData (
     // 01h = Enable IPv6 addressing only. IPv4 addressing is disabled - IPMI_RESPONSE_IPV6_SUPPORTED
     // 02h = Enable IPv6 and IPv4 addressing simultaneously - IPMI_RESPONSE_BOTH_IPV4_IPV6_SUPPORTED
 
-    Status = RFHIGetIpAddFormat (Channel, &IpAddFormat);
-    if (Status != EFI_SUCCESS) {
-      // Set it to 03h -unknown
+    // Get IP Address Format
+    IpAddFormat = 0;
+    Status      = GetRfhiIpAddFormat (Channel, &IpAddFormat);
+    if (EFI_ERROR (Status)) {
+      // Set it to 03h - unknown
       IpAddFormat = IPMI_RESPONSE_IP_ADDRESS_FORMAT_UNKNOWN;
+      DEBUG ((DEBUG_ERROR, "%a: Fail to get IP address format.\n", __FUNCTION__));
     }
 
     if (IpAddFormat == IPMI_RESPONSE_IPV4_SUPPORTED) {
@@ -582,32 +588,35 @@ RedfishPlatformHostInterfaceProtocolData (
       RfSIpAddressFormat = REDFISH_HOST_INTERFACE_HOST_IP_ADDRESS_FORMAT_UNKNOWN;
     }
 
-    Status = GetRFHIIpAddress (Channel, RfSIpAddress);
+    Status = GetRfhiIpAddress (Channel, RfSIpAddress);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: failed to get IP address: %r\n", __FUNCTION__, Status));
-    } else {
-      // Host IP and Redfish IP are of same subnet, with same network id, differ the host id by 1.
-      for (Index = 0; Index < sizeof (RfSIpAddress); Index++) {
-        HostIpAddress[Index] =   RfSIpAddress[Index];
-      }
-
-      // First 4 bytes contains IPV4 address, byte 4 is host id
-      HostIpAddress[3] += 1;
+      DEBUG ((DEBUG_ERROR, "%a: Fail to get Redfish service IP address.\n", __FUNCTION__));
+      return Status;
     }
 
-    Status = GetRFHIIpMask (Channel, RfSIpMask);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: failed to get IP mask: %r\n", __FUNCTION__, Status));
+    // Host IP and Redfish IP are of same subnet, with same network id, differ the host id by 1.
+    for (Index = 0; Index < sizeof (RfSIpAddress); Index++) {
+      HostIpAddress[Index] =   RfSIpAddress[Index];
     }
 
-    Status =   GetRFHIIpPort (&RfSIpPort);
-    if (Status != EFI_SUCCESS) {
+    // First 4 bytes contains IPV4 address, byte 4 is host id
+    HostIpAddress[3] += 1;
+
+    Status = GetRfhiIpMask (Channel, RfSIpMask);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to get Redfish service IP mask.\n", __FUNCTION__));
+    }
+
+    Status =   GetRfhiIpPort (&RfSIpPort);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to get Redfish service IP port.\n", __FUNCTION__));
       // IPMI command failed,  RfsIpPort is not set, initialize it to the default port.
       RfSIpPort = DEFAULT_REDFISH_IP_PORT;     // https
     }
 
-    Status = GetRFHIVlanId (Channel, &RfSVlanId);
-    if (Status != EFI_SUCCESS) {
+    Status = GetRfhiVlanId (Channel, &RfSVlanId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Fail to get Redfish service VLAN ID.\n", __FUNCTION__));
       RfSVlanId = 0;
     }
 
@@ -616,7 +625,7 @@ RedfishPlatformHostInterfaceProtocolData (
 
     RfSHostname = (CHAR8 *)AllocateZeroPool (HOSTNAME_MAX_LENGTH + 1);
     if (RfSHostname != NULL) {
-      Status = GetRFHIHostname (RfSHostname);
+      Status = GetRfhiHostname (RfSHostname);
       if (Status == EFI_SUCCESS) {
         RfSHostnameLength  = AsciiStrLen (RfSHostname) + 1;
         ProtocolRecordSize = sizeof (REDFISH_OVER_IP_PROTOCOL_DATA) + RfSHostnameLength - 1;
@@ -666,7 +675,7 @@ RedfishPlatformHostInterfaceProtocolData (
 }
 
 /**
-  Get USB Virtual Serial Number.
+  Get USB device Serial Number.
 
   @param[out] SerialNumber    Pointer to retrieve complete serial number.
                               It is the responsibility of the caller to free the allocated memory for serial number.
@@ -674,7 +683,7 @@ RedfishPlatformHostInterfaceProtocolData (
   @retval Others              Failed to get the serial number
 **/
 EFI_STATUS
-RedfishPlatformHostInterfaceUSBSerialNumber (
+RedfishPlatformHostInterfaceSerialNumber (
   OUT CHAR8  **SerialNumber
   )
 {
@@ -687,7 +696,7 @@ RedfishPlatformHostInterfaceUSBSerialNumber (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = GetRFHIUSBVirtualSerialNumber (SerialNum);
+  Status = GetRfhiUsbVirtualSerialNumber (SerialNum);
 
   if (Status != EFI_SUCCESS) {
     DEBUG ((DEBUG_ERROR, "%a: Fail to retrieve serial number.\n", __FUNCTION__));

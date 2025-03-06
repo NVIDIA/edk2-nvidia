@@ -3,7 +3,7 @@
 *  Ipmi function calls to support population of type42 smbios record by
 *  RedfishPlatformHostInterfaceOemLib.
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent.
 *
@@ -34,7 +34,7 @@
   @retval EFI_DEVICE_ERROR   An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUSBDescription (
+GetRfhiUsbDescription (
   OUT UINT16  *UsbId,
   IN  UINT8   Type
   )
@@ -86,7 +86,7 @@ GetRFHIUSBDescription (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUSBVirtualSerialNumber (
+GetRfhiUsbVirtualSerialNumber (
   OUT CHAR8  *SerialNum
   )
 {
@@ -137,7 +137,7 @@ GetRFHIUSBVirtualSerialNumber (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIHostname (
+GetRfhiHostname (
   OUT CHAR8  *Hostname
   )
 {
@@ -187,7 +187,7 @@ GetRFHIHostname (
   @retval EFI_DEVICE_ERROR An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpmiChannelNumber (
+GetRfhiIpmiChannelNumber (
   OUT UINT8  *ChannelNum
   )
 {
@@ -236,7 +236,7 @@ GetRFHIIpmiChannelNumber (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIMACAddress (
+GetRfhiMacAddress (
   IN   UINT8  Channel,
   OUT  UINT8  *MacAddress
   )
@@ -284,14 +284,14 @@ GetRFHIMACAddress (
   IP Discovery Type is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
   @param[IN]  Channel            Channel number for USB network interface.
-  @param[OUT] *IpDiscoveryType   Pointer to hold IP Discovery Type of USB
+  @param[OUT] *IpDiscoveryType   Pointer to hold Ip Discovery Type of USB
                                  NIC for Redfish over Ip Protocol.
 
   @retval EFI_SUCCESS       IpDiscoveryType is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpDiscoveryType (
+GetRfhiIpDiscoveryType (
   IN  UINT8  Channel,
   OUT UINT8  *IpDiscoveryType
   )
@@ -339,14 +339,14 @@ GetRFHIIpDiscoveryType (
   Function to retireve IP Address for Redfish Host Interface - RFHI.
   IP Address is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
-  @param[IN]  Channel       Channel number for USB network interface.
-  @param[OUT] *IpAddress    Pointer to hold IP Address of USB NIC for Redfish over Ip Protocol.
+  @param[IN]  Channel            Channel number for USB network interface.
+  @param[OUT] *IpAdd             Pointer to hold IP Address of USB NIC for Redfish over Ip Protocol.
 
   @retval EFI_SUCCESS       IpAddress is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpAddress (
+GetRfhiIpAddress (
   IN  UINT8  Channel,
   OUT UINT8  *IpAdd
   )
@@ -394,14 +394,14 @@ GetRFHIIpAddress (
   Function to retireve IP Mask for Redfish Host Interface - RFHI.
   IP Mask is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
-  @param[IN]  Channel       Channel number for USB network interface.
-  @param[OUT] *IpAddMask    Pointer to hold Ip Mask of USB NIC for Redfish over Ip Protocol.
+  @param[IN]  Channel            Channel number for USB network interface.
+  @param[OUT] *IpAddMask         Pointer to hold Ip Mask of USB NIC for Redfish over Ip Protocol.
 
   @retval EFI_SUCCESS       IpAddMask is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpMask (
+GetRfhiIpMask (
   IN  UINT8  Channel,
   OUT UINT8  *IpAddMask
   )
@@ -449,14 +449,14 @@ GetRFHIIpMask (
   Function to retireve VLAN ID for Redfish Host Interface - RFHI.
   VLAN ID is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
-  @param[IN]  Channel       Channel number for USB network interface.
-  @param[OUT] *VlanId       Pointer to hold VLAN ID of USB NIC for Redfish over Ip Protocol.
+  @param[IN]  Channel         Channel number for USB network interface.
+  @param[OUT] *VlanId         Pointer to hold VLAN ID of USB NIC for Redfish Over IP Protocol.
 
   @retval EFI_SUCCESS       VLanId is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIVlanId (
+GetRfhiVlanId (
   IN  UINT8   Channel,
   OUT UINT16  *VlanId
   )
@@ -502,14 +502,14 @@ GetRFHIVlanId (
   Function to retireve IP Address format for Redfish Host Interface - RFHI.
   IP Address Format is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
-  @param[IN]  Channel       Channel number for USB network interface.
-  @param[OUT] *IpAddFormat  Pointer to hold IP Address Format of USB NIC for Redfish over Ip Protocol.
+  @param[IN]  Channel         Channel number for USB network interface.
+  @param[OUT] *IpAddFormat    Pointer to hold IP Address Format of USB NIC for Redfish over Ip Protocol.
 
   @retval EFI_SUCCESS       IpAddFormat is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-RFHIGetIpAddFormat (
+GetRfhiIpAddFormat (
   IN  UINT8  Channel,
   OUT UINT8  *IpAddformat
   )
@@ -555,13 +555,13 @@ RFHIGetIpAddFormat (
   Function to retireve IP Port for Redfish Host Interface - RFHI.
   IP Port is fetched through a standard OEM IPMI COMMAND - Get Lan Configuration Parameters.
 
-  @param[OUT] *IpPort       Pointer to hold Ip port of USB NIC for Redfish over Ip Protocol.
+  @param[OUT] *IpPort         Pointer to hold Ip port of USB NIC for Redfish over Ip Protocol.
 
   @retval EFI_SUCCESS       IpPort is successfully fetched.
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIIpPort (
+GetRfhiIpPort (
   OUT UINT16  *IpPort
   )
 {
@@ -608,7 +608,7 @@ GetRFHIIpPort (
   @retval EFI_DEVICE_ERROR  An IPMI failure occured.
 **/
 EFI_STATUS
-GetRFHIUUID (
+GetRfhiUuid (
   OUT EFI_GUID  *Uuid
   )
 {
