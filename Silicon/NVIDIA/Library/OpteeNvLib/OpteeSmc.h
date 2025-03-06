@@ -1,7 +1,7 @@
 /** @file
   OP-TEE SMC header file.
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -66,6 +66,7 @@ typedef struct {
   UINT64    PBase;
   UINT64    VBase;
   UINTN     Size;
+  UINT64    Cookie;
 } OPTEE_SHARED_MEMORY_INFORMATION;
 
 //

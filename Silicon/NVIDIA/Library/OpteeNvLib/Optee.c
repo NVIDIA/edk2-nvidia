@@ -2,7 +2,7 @@
   Api's to communicate with OP-TEE OS (Trusted OS based on ARM TrustZone) via
   secure monitor calls.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -84,22 +84,6 @@ OpteeExchangeCapabilities (
   }
 }
 
-/*
- * OpteeRegisterShm
- * Register a Buffer with OP-TEE if it supports Dynamic Shared Memory
- *
- * @param[in]   PageList         Optional PageList to be sent to OP-TEE, this
-                                 should be aligned to a 4k boundary.
- * @param[in]   UserBuf          User buffer to be shared with OP-TEE, this
- *                               should also be aliged to a 4k boundary.
- * @param[in]   BufSize          Size of the buffer
- * @param[out]  RetPtr           The return pointer contains a pointer to a
- *                               Page list that is passed to OP-TEE
- *
- * @return      TRUE             On successful call to OP-TEE secure OS.
- *              FALSE            If OP-TEE returns a failure.
- *
- */
 STATIC
 EFI_STATUS
 OpteeSetupPageList (
@@ -332,7 +316,7 @@ HandleCmdFree (
   }
 
   Cookie = (OPTEE_SHM_COOKIE *)((UINT64)Msg->Params[0].Union.Value.B);
-  FreeAlignedPages (Cookie->Addr, EFI_SIZE_TO_PAGES (Cookie->Size));
+  FreePages (Cookie->Addr, EFI_SIZE_TO_PAGES (Cookie->Size));
   Msg->Return = OPTEE_SUCCESS;
 Error:
   return Ret;
@@ -430,7 +414,17 @@ HandleRpcCmd (
   ARM_SMC_ARGS  *Regs
   )
 {
-  OPTEE_MESSAGE_ARG  *Msg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
+  OPTEE_SHM_COOKIE   *Cookie;
+  OPTEE_MESSAGE_ARG  *Msg;
+
+  Cookie = (OPTEE_SHM_COOKIE *)(((UINT64)Regs->Arg1 << 32)
+                                | (UINT64)Regs->Arg2);
+
+  if (!Cookie) {
+    Msg = (OPTEE_MESSAGE_ARG *)OpteeSharedMemoryInformation.VBase;
+  } else {
+    Msg = (OPTEE_MESSAGE_ARG *)Cookie->Addr;
+  }
 
   switch (Msg->Command) {
     case OPTEE_MSG_RPC_CMD_SHM_ALLOC:
@@ -444,6 +438,9 @@ HandleRpcCmd (
         HandleCmdFree (Msg);
       }
 
+      break;
+    case OPTEE_MSG_RPC_CMD_RPMB:
+      HandleCmdRpmb (Msg);
       break;
     case OPTEE_MSG_RPC_CMD_NOTIFICATION:
       HandleCmdNotification (Msg);
@@ -482,11 +479,11 @@ HandleRpcAlloc (
   return Cookie;
 Error:
   if (Buf != NULL) {
-    FreePool (Buf);
+    FreePages (Buf, EFI_SIZE_TO_PAGES (Size));
   }
 
   if (Cookie != NULL) {
-    FreePool (Cookie);
+    FreePages (Cookie, EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_COOKIE)));
   }
 
   return NULL;
@@ -555,6 +552,13 @@ OpteeCallWithArg (
           HandleRpcCmd (&ArmSmcArgs);
           break;
         case OPTEE_SMC_RETURN_RPC_FUNC_FREE:
+          Cookie = (OPTEE_SHM_COOKIE *)(((UINT64)ArmSmcArgs.Arg1 << 32)
+                                        | (UINT64)ArmSmcArgs.Arg2);
+          if (Cookie != NULL) {
+            FreePages (Cookie, EFI_SIZE_TO_PAGES (sizeof (OPTEE_SHM_COOKIE)));
+          }
+
+          break;
         default:
           DEBUG ((
             DEBUG_WARN,
@@ -722,8 +726,16 @@ OpteeToMessageParam (
           (VOID *)(UINTN)InParam->Union.Memory.BufferAddress,
           InParam->Union.Memory.Size
           );
+
         MessageParam->Union.Memory.BufferAddress = (UINT64)ParamSharedMemoryAddress;
         MessageParam->Union.Memory.Size          = InParam->Union.Memory.Size;
+
+        if (OpteeSharedMemoryInformation.Cookie != 0) {
+          MessageParam->Union.Memory.SharedMemoryReference =
+            OpteeSharedMemoryInformation.Cookie;
+          MessageParam->Union.Memory.BufferAddress -=
+            OpteeSharedMemoryInformation.VBase;
+        }
 
         Size = (InParam->Union.Memory.Size + sizeof (UINT64) - 1) &
                ~(sizeof (UINT64) - 1);
@@ -782,11 +794,21 @@ OpteeFromMessageParam (
           return EFI_BAD_BUFFER_SIZE;
         }
 
-        CopyMem (
-          (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
-          (VOID *)(UINTN)MessageParam->Union.Memory.BufferAddress,
-          MessageParam->Union.Memory.Size
-          );
+        if (OpteeSharedMemoryInformation.Cookie != 0) {
+          CopyMem (
+            (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
+            (VOID *)((UINTN)MessageParam->Union.Memory.BufferAddress +
+                     OpteeSharedMemoryInformation.VBase),
+            MessageParam->Union.Memory.Size
+            );
+        } else {
+          CopyMem (
+            (VOID *)(UINTN)OutParam->Union.Memory.BufferAddress,
+            (VOID *)(UINTN)MessageParam->Union.Memory.BufferAddress,
+            MessageParam->Union.Memory.Size
+            );
+        }
+
         OutParam->Union.Memory.Size = MessageParam->Union.Memory.Size;
         break;
 
@@ -864,6 +886,16 @@ OpteeSetProperties (
   OpteeSharedMemoryInformation.PBase = PBuf;
   OpteeSharedMemoryInformation.VBase = VBuf;
   OpteeSharedMemoryInformation.Size  = Size;
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+OpteeSetShmCookie (
+  UINT64  Cookie
+  )
+{
+  OpteeSharedMemoryInformation.Cookie = Cookie;
   return EFI_SUCCESS;
 }
 

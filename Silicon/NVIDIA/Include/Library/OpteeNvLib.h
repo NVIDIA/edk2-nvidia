@@ -1,7 +1,7 @@
 /** @file
   OP-TEE specific header file.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -189,6 +189,12 @@ OpteeSetProperties (
   UINT64  PBuf,
   UINT64  VBuf,
   UINT64  Size
+  );
+
+EFI_STATUS
+EFIAPI
+OpteeSetShmCookie (
+  UINT64  Cookie
   );
 
 EFI_STATUS
