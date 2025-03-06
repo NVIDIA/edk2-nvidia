@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -111,6 +111,10 @@ AddBoardProperties (
   NodeOffset = fdt_path_offset (Dtb, "/chosen");
   if (NodeOffset >= 0) {
     fdt_appendprop (Dtb, NodeOffset, "ids", "\n", 1);
+  }
+
+  if (Handles != NULL) {
+    FreePool (Handles);
   }
 }
 

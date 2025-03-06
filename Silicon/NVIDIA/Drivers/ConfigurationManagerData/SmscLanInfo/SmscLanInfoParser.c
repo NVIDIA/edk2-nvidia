@@ -1,7 +1,7 @@
 /** @file
   Smsc Lan info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -59,8 +59,8 @@ SmscLanInfoParser (
   EFI_STATUS                      Status;
   INT32                           NodeOffset;
   CM_ARM_GENERIC_DEVICE_INFO      DeviceInfo;
-  CM_OBJ_DESCRIPTOR               *CmObjDesc;
-  CM_OBJ_DESCRIPTOR               *Dbg2CmObjDesc;
+  CM_OBJ_DESCRIPTOR               *CmObjDesc     = NULL;
+  CM_OBJ_DESCRIPTOR               *Dbg2CmObjDesc = NULL;
   CM_ARM_DBG2_DEVICE_INFO         Dbg2DeviceInfo;
   CM_ARM_MEMORY_RANGE_DESCRIPTOR  *MemoryRanges;
   CM_STD_OBJ_ACPI_TABLE_INFO      AcpiTableHeader;
@@ -92,7 +92,7 @@ SmscLanInfoParser (
              &Dbg2CmObjDesc
              );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto CleanupAndReturn;
   }
 
   do {
@@ -181,10 +181,13 @@ SmscLanInfoParser (
 
     Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto CleanupAndReturn;
     }
   }
 
+CleanupAndReturn:
+  FREE_NON_NULL (CmObjDesc);
+  FREE_NON_NULL (Dbg2CmObjDesc);
   return Status;
 }
 

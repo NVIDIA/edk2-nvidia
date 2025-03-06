@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -77,7 +77,8 @@ ReadBoardInfo (
                     );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_WARN, "Failed to get Eeprom protocol\r\n"));
-      return EFI_NOT_FOUND;
+      Status = EFI_NOT_FOUND;
+      goto CleanupAndReturn;
     }
 
     CopyMem ((VOID *)(&BoardInfo->ProductIds[i]), (VOID *)&Eeprom->ProductId, TEGRA_PRODUCT_ID_LEN);
@@ -85,7 +86,8 @@ ReadBoardInfo (
 
   if (BoardInfo->IdCount == 0) {
     DEBUG ((DEBUG_WARN, "%a: Failed to get board id from EEPROM\n.", __FUNCTION__));
-    return EFI_NOT_FOUND;
+    Status = EFI_NOT_FOUND;
+    goto CleanupAndReturn;
   }
 
   DEBUG ((DEBUG_INFO, "Eeprom product Ids: \n"));
@@ -93,7 +95,14 @@ ReadBoardInfo (
     DEBUG ((DEBUG_INFO, "%d. %a \n", i+1, BoardInfo->ProductIds[i]));
   }
 
-  return EFI_SUCCESS;
+  Status = EFI_SUCCESS;
+
+CleanupAndReturn:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
+  return Status;
 }
 
 EFI_STATUS

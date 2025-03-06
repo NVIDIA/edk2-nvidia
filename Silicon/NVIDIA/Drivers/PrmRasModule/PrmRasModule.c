@@ -16,7 +16,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/PlatformResourceLib.h>
-
+#include <Library/MemoryAllocationLib.h>
 #include <Protocol/FwPartitionProtocol.h>
 #include "PrmRasModule.h"
 
@@ -166,7 +166,7 @@ PrmRasModuleInit (
   )
 {
   EFI_STATUS                    Status;
-  EFI_HANDLE                    *Handles;
+  EFI_HANDLE                    *Handles = NULL;
   UINTN                         HandleCount;
   NVIDIA_FW_PARTITION_PROTOCOL  *FwPartitionProtocol;
 
@@ -215,7 +215,8 @@ PrmRasModuleInit (
 
   if (MmRasFwPartition == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Cannot find MM-RAS FW Partition.\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+    Status = EFI_NOT_FOUND;
+    goto CleanupAndReturn;
   }
 
   Status = gBS->CreateEventEx (
@@ -228,8 +229,12 @@ PrmRasModuleInit (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error creating address change event: %r\n", __FUNCTION__, Status));
-    return Status;
   }
 
-  return EFI_SUCCESS;
+CleanupAndReturn:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
+  return Status;
 }

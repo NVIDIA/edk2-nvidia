@@ -2,7 +2,7 @@
   Api's to communicate with RPMB partition on the eMMC device via RPC calls
   from OP-TEE.
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+    SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -60,7 +60,7 @@ GetEmmcDevice (
   )
 {
   UINTN                          PassThruNumHandles;
-  EFI_HANDLE                     *PassThruHandleBuffer;
+  EFI_HANDLE                     *PassThruHandleBuffer = NULL;
   EFI_STATUS                     Status;
   UINTN                          Index;
   BOOLEAN                        EmmcFound;
@@ -123,6 +123,10 @@ GetEmmcDevice (
         break;
       }
     }
+  }
+
+  if (PassThruHandleBuffer != NULL) {
+    FreePool (PassThruHandleBuffer);
   }
 
   return Status;

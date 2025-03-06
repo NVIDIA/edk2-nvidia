@@ -527,7 +527,7 @@ FindProtocolInSocket (
   OUT VOID      **ProtocolInterface
   )
 {
-  EFI_HANDLE  *HandleBuffer;
+  EFI_HANDLE  *HandleBuffer = NULL;
   UINTN       HandleCount;
   UINTN       Index;
   EFI_STATUS  Status;
@@ -597,6 +597,11 @@ FindProtocolInSocket (
   }
 
 ExitFindProtocolInSocket:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+    HandleBuffer = NULL;
+  }
+
   return Status;
 }
 

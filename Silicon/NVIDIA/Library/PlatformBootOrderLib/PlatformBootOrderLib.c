@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -606,6 +606,7 @@ GetDevicePriority (
   EFI_BOOT_MANAGER_LOAD_OPTION  Option;
   NVIDIA_BOOT_ORDER_PRIORITY    *BootPriorityClass;
   INT32                         DevicePriority;
+  EFI_STRING                    DevicePathText = NULL;
 
   UnicodeSPrint (OptionName, sizeof (OptionName), L"Boot%04x", BootOption);
   Status = EfiBootManagerVariableToLoadOption (OptionName, &Option);
@@ -621,7 +622,13 @@ GetDevicePriority (
     DevicePriority = BootPriorityClass->PriorityOrder;
   }
 
-  DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", ConvertDevicePathToText (Option.FilePath, TRUE, FALSE), DevicePriority));
+  DevicePathText = ConvertDevicePathToText (Option.FilePath, TRUE, FALSE);
+
+  DEBUG ((DEBUG_VERBOSE, "Found %s priority to be %d\r\n", DevicePathText, DevicePriority));
+  if (DevicePathText != NULL) {
+    FreePool (DevicePathText);
+  }
+
   EfiBootManagerFreeLoadOption (&Option);
   return DevicePriority;
 }

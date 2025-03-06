@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 41 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -125,6 +125,7 @@ InstallSmbiosType41Cm (
   OnboardDeviceExInfo     = NULL;
   DeviceTypeInstances     = NULL;
   DeviceTypeInstanceCount = 0;
+  HandleBuf               = NULL;
 
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
@@ -274,5 +275,6 @@ InstallSmbiosType41Cm (
 CleanupAndReturn:
   FREE_NON_NULL (TokenMap);
   FREE_NON_NULL (OnboardDeviceExInfo);
+  FREE_NON_NULL (HandleBuf);
   return Status;
 }

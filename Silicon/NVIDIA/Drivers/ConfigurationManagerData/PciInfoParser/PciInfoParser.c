@@ -1,7 +1,7 @@
 /** @file
   PCI info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -76,7 +76,7 @@ PciInfoParser (
   CM_OBJ_DESCRIPTOR                     Desc;
   UINTN                                 Index;
   UINTN                                 NumberOfHandles;
-  EFI_HANDLE                            *HandleBuffer;
+  EFI_HANDLE                            *HandleBuffer = NULL;
   CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfo;
   CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *ConfigSpaceInfoArray;
   UINTN                                 ConfigSpaceInfoSize;
@@ -160,6 +160,7 @@ PciInfoParser (
 
 CleanupAndReturn:
   FREE_NON_NULL (ConfigSpaceInfoArray);
+  FREE_NON_NULL (HandleBuffer);
   return Status;
 }
 

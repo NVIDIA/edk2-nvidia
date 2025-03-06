@@ -406,7 +406,7 @@ GetBpmpPhandle (
   RootBridgeBuffer = (PCI_ROOT_BRIDGE *)AllocatePool (sizeof (PCI_ROOT_BRIDGE) * NoHandles);
   if (RootBridgeBuffer == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    return Status;
+    goto CleanupAndReturn;
   }
 
   for (Index = 0; Index < NoHandles; Index++) {
@@ -418,9 +418,8 @@ GetBpmpPhandle (
                         (VOID **)&RootBridge
                         );
     if (EFI_ERROR (Status)) {
-      FreePool (RootBridgeBuffer);
       Status = EFI_UNSUPPORTED;
-      return Status;
+      goto CleanupAndReturn;
     }
 
     if (RootBridge->Segment != Segment) {
@@ -436,9 +435,9 @@ GetBpmpPhandle (
                              );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: error getting RootBridgeCfgIo protocol: %r\n", __FUNCTION__, Status));
-      FreePool (RootBridgeBuffer);
+
       Status = EFI_UNSUPPORTED;
-      return Status;
+      goto CleanupAndReturn;
     }
 
     *Phandle = RootBridgeCfgIo->BpmpPhandle;
@@ -446,8 +445,13 @@ GetBpmpPhandle (
     break;
   }
 
+CleanupAndReturn:
   if (RootBridgeBuffer != NULL) {
     FreePool (RootBridgeBuffer);
+  }
+
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
   }
 
   return Status;

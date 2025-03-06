@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -2408,7 +2408,7 @@ GetDeviceHandleForFvBoot (
 {
   EFI_STATUS                Status;
   UINTN                     NumberOfBlockIo;
-  EFI_HANDLE                *BlockIoHandles;
+  EFI_HANDLE                *BlockIoHandles = NULL;
   UINTN                     BlockIoIndex;
   EFI_BLOCK_IO_PROTOCOL     *BlockIo;
   UINTN                     ChildCount;
@@ -2483,12 +2483,17 @@ GetDeviceHandleForFvBoot (
         FreePool (DefaultBootOrder);
       }
 
+      FreePool (BlockIoHandles);
       return ChildHandles[0];
     }
   }
 
   if (DefaultBootOrder != NULL) {
     FreePool (DefaultBootOrder);
+  }
+
+  if (BlockIoHandles != NULL) {
+    FreePool (BlockIoHandles);
   }
 
   DEBUG ((DEBUG_ERROR, "Device specified type not found, check on this disk\r\n"));

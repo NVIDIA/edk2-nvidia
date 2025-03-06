@@ -1,7 +1,7 @@
 /** @file
   Parser to create network based pci devices for DBG2 creation.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -34,7 +34,7 @@ Dbg2NetworkParser (
   EFI_STATUS                         Status;
   UINT32                             Data;
   UINTN                              DataSize;
-  EFI_HANDLE                         *HandleBuffer;
+  EFI_HANDLE                         *HandleBuffer = NULL;
   UINTN                              NumberOfHandles;
   UINT32                             Index;
   UINT32                             BarIndex;
@@ -169,6 +169,7 @@ Dbg2NetworkParser (
 
 CleanupAndReturn:
   FREE_NON_NULL (Dbg2CmObjDesc);
+  FREE_NON_NULL (HandleBuffer);
   return Status;
 }
 

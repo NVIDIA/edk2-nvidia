@@ -2,7 +2,7 @@
 
   OEM Status code handler to log addtional data as string
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -93,8 +93,8 @@ OemDescStatusCodeCallback (
   UINT8                        *DataPtr        = (UINT8 *)(Data + 1);
   UINT16                       DataSize        = Data->Size;
   UINTN                        ErrorLevel      = 0;
-  CHAR16                       *Str;
-  CHAR8                        *DevicePathStr = NULL;
+  CHAR16                       *Str            = NULL;
+  CHAR8                        *DevicePathStr  = NULL;
   INT32                        NumRetries;
 
   if (!mEnableOemDesc) {
@@ -161,7 +161,8 @@ OemDescStatusCodeCallback (
     DevicePathStr = AllocatePool (IPMI_OEM_DESC_MAX_LEN);
     if (DevicePathStr == NULL) {
       ASSERT (FALSE);
-      return EFI_OUT_OF_RESOURCES;
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
     }
 
     Status = UnicodeStrToAsciiStrS (Str, DevicePathStr, IPMI_OEM_DESC_MAX_LEN);
@@ -227,6 +228,11 @@ OemDescStatusCodeCallback (
   Status = OemDescSend (RequestData, RequestDataSize, NumRetries);
 
 Exit:
+
+  if (Str != NULL) {
+    FreePool (Str);
+  }
+
   if (DevicePathStr != NULL) {
     FreePool (DevicePathStr);
   }

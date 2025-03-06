@@ -2,7 +2,7 @@
 
   NOR Flash Standalone MM Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1323,11 +1323,11 @@ NorFlashInitialise (
   )
 {
   EFI_STATUS                       Status;
-  NOR_FLASH_PRIVATE_DATA           *Private;
+  NOR_FLASH_PRIVATE_DATA           *Private = NULL;
   NVIDIA_QSPI_CONTROLLER_PROTOCOL  *QspiProtocol;
   UINTN                            Index;
   UINTN                            NumHandles;
-  EFI_HANDLE                       *HandleBuffer;
+  EFI_HANDLE                       *HandleBuffer = NULL;
   UINT32                           *QspiSocket;
   UINT32                           *Socket;
 
@@ -1391,6 +1391,8 @@ NorFlashInitialise (
     Status = ReadNorFlashSFDP (Private);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: SFDP Read Failed\n", __FUNCTION__));
+      FreePool (Private);
+      Private = NULL;
       continue;
     }
 
@@ -1503,6 +1505,10 @@ ErrorExit:
 
       FreePool (Private);
     }
+  }
+
+  if (HandleBuffer !=  NULL) {
+    FreePool (HandleBuffer);
   }
 
   return Status;

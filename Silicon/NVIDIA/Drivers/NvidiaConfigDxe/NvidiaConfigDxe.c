@@ -3346,8 +3346,8 @@ UpdateDbg2Table (
   VOID                               *EndOpCodeHandle;
   EFI_IFR_GUID_LABEL                 *StartGuidLabel;
   EFI_IFR_GUID_LABEL                 *EndGuidLabel;
-  EFI_GUID                           FormsetGuid = NVIDIA_CONFIG_FORMSET_GUID;
-  EFI_HANDLE                         *HandleBuffer;
+  EFI_GUID                           FormsetGuid   = NVIDIA_CONFIG_FORMSET_GUID;
+  EFI_HANDLE                         *HandleBuffer = NULL;
   UINTN                              NumberOfHandles;
   VOID                               *OptionsOpCodeHandle;
   UINT32                             Index;
@@ -3540,6 +3540,10 @@ UpdateDbg2Table (
     );
 
 CleanupAndReturn:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
   HiiFreeOpCodeHandle (OptionsOpCodeHandle);
   HiiFreeOpCodeHandle (StartOpCodeHandle);
   HiiFreeOpCodeHandle (EndOpCodeHandle);

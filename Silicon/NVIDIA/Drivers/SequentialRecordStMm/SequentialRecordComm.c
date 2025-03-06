@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -44,7 +44,7 @@ GetSeqProto (
 {
   EFI_STATUS                  Status;
   UINT32                      Index;
-  EFI_HANDLE                  *HandleBuffer;
+  EFI_HANDLE                  *HandleBuffer = NULL;
   UINTN                       NumHandles;
   NVIDIA_SEQ_RECORD_PROTOCOL  *SeqProto;
   NVIDIA_SEQ_RECORD_PROTOCOL  *ReturnProto;
@@ -90,6 +90,10 @@ GetSeqProto (
   }
 
 ExitGetSeqProto:
+  if (HandleBuffer !=  NULL) {
+    FreePool (HandleBuffer);
+  }
+
   return ReturnProto;
 }
 

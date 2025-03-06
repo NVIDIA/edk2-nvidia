@@ -1546,6 +1546,7 @@ PciOpRomDisabled (
   UINTN                Segment, Bus, Device, Function;
   UINT64               OpRomDis;
   UINTN                VarSize;
+  CHAR16               *DevicePathText = NULL;
 
   Status = gBS->LocateDevicePath (&gEfiPciIoProtocolGuid, &DevicePath, &Handle);
   if (EFI_ERROR (Status) || (Handle == NULL)) {
@@ -1573,12 +1574,16 @@ PciOpRomDisabled (
     return FALSE;
   }
 
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: Skip Loading Deferred Image - %s\n",
-    __FUNCTION__,
-    ConvertDevicePathToText (DevicePath, FALSE, FALSE)
-    ));
+  DevicePathText = ConvertDevicePathToText (DevicePath, FALSE, FALSE);
+  if (DevicePathText != NULL) {
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Skip Loading Deferred Image - %s\n",
+      __FUNCTION__,
+      DevicePathText
+      ));
+    FreePool (DevicePathText);
+  }
 
   return TRUE;
 }
@@ -1837,6 +1842,10 @@ WaitForAsyncDrivers (
 
   if (Handles != 0) {
     gDS->Dispatch ();
+  }
+
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
   }
 
   PERF_END (&gEfiCallerIdGuid, "AsyncDriverWait", NULL, 0);

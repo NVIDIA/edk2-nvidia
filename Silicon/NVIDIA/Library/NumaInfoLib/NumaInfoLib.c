@@ -2,7 +2,7 @@
 
   Numa Information Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -288,8 +288,8 @@ NumaInfoLibConstructor (
   UINTN                                             Index2;
   UINTN                                             NumaIndex;
   UINTN                                             DomainIndex;
-  EFI_HANDLE                                        *RootBridgeHandles;
-  EFI_HANDLE                                        *HandleBuffer;
+  EFI_HANDLE                                        *RootBridgeHandles = NULL;
+  EFI_HANDLE                                        *HandleBuffer      = NULL;
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo;
   EFI_PCI_IO_PROTOCOL                               *PciIo;
   UINTN                                             SegmentNumber;
@@ -545,6 +545,14 @@ NumaInfoLibConstructor (
       mMemoryTransferBandwidth[Index],
       mMemoryTransferNormalizedDistance[Index]
       ));
+  }
+
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
+  if (RootBridgeHandles != NULL) {
+    FreePool (RootBridgeHandles);
   }
 
   return EFI_SUCCESS;

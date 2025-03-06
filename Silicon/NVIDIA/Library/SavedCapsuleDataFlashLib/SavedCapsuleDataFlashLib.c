@@ -2,7 +2,7 @@
 
   Saved capsule data flash library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -167,7 +167,7 @@ SavedCapsuleLibInitialize (
   )
 {
   EFI_STATUS                    Status;
-  EFI_HANDLE                    *Handles;
+  EFI_HANDLE                    *Handles = NULL;
   UINTN                         HandleCount;
   NVIDIA_FW_PARTITION_PROTOCOL  *FwPartitionProtocol;
   BOOLEAN                       IsProtocolFound;
@@ -211,7 +211,8 @@ SavedCapsuleLibInitialize (
 
   if (!IsProtocolFound) {
     DEBUG ((DEBUG_ERROR, "%a: Cannot find FW Partition.\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
+    Status = EFI_NOT_FOUND;
+    goto CleanupAndReturn;
   }
 
   Status = gBS->CreateEventEx (
@@ -224,11 +225,17 @@ SavedCapsuleLibInitialize (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error creating address change event: %r\n", __FUNCTION__, Status));
-    return Status;
+    goto CleanupAndReturn;
   }
 
   mFwPartitionProtocol = FwPartitionProtocol;
   mInitialized         = TRUE;
 
-  return EFI_SUCCESS;
+  Status = EFI_SUCCESS;
+CleanupAndReturn:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
+  return Status;
 }

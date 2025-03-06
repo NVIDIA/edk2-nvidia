@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -292,9 +292,9 @@ FPNorFlashInitDevices (
 {
   EFI_STATUS            Status;
   UINTN                 NumHandles;
-  EFI_HANDLE            *HandleBuffer;
+  EFI_HANDLE            *HandleBuffer = NULL;
   UINTN                 Index;
-  CHAR16                *DeviceName;
+  CHAR16                *DeviceName = NULL;
   NOR_FLASH_ATTRIBUTES  Attributes;
 
   DEBUG ((DEBUG_INFO, "%a: Entry\n", __FUNCTION__));
@@ -368,6 +368,10 @@ FPNorFlashInitDevices (
       Attributes.BlockSize,
       Attributes.MemoryDensity
       ));
+    if (DeviceName != NULL) {
+      FreePool (DeviceName);
+      DeviceName = NULL;
+    }
 
     if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
       DEBUG ((
@@ -395,7 +399,9 @@ FPNorFlashInitDevices (
     mNumDevices++;
   }
 
-  FreePool (HandleBuffer);
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
 
   return EFI_SUCCESS;
 }

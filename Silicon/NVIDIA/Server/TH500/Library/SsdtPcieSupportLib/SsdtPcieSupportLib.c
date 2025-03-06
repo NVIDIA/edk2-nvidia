@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -104,7 +104,8 @@ GeneratePciDSDForExtPort (
   }
 
   if (!IsExternalFacingPort) {
-    return EFI_SUCCESS;
+    Status = EFI_SUCCESS;
+    goto exit_handler;
   }
 
   Status = AmlCodeGenNamePackage ("_DSD", NULL, &DsdNode);
@@ -336,7 +337,7 @@ GeneratePciSlots (
   AML_OBJECT_NODE_HANDLE                  GpuNode;
   AML_OBJECT_NODE_HANDLE                  DsdNode;
   AML_OBJECT_NODE_HANDLE                  RpNode;
-  EFI_HANDLE                              *HandleBuffer;
+  EFI_HANDLE                              *HandleBuffer = NULL;
   UINTN                                   NumberOfHandles;
   UINTN                                   HandleIndex;
   EFI_PCI_IO_PROTOCOL                     *PciIo;
@@ -656,12 +657,21 @@ GeneratePciSlots (
     }
 
     FreePool (HandleBuffer);
+    HandleBuffer = NULL;
   }
 
 error_handler:
   // Cleanup
   if (GpuNodeIsDetached) {
     AmlDeleteTree (GpuNode);
+  }
+
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
+  if (Handles != NULL) {
+    FreePool (Handles);
   }
 
   Status1 = AmlDeleteTree (TemplateRoot);
@@ -805,6 +815,10 @@ error_handler:
 
 cleanup:
   // Cleanup
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
   Status1 = AmlDeleteTree (OscTemplateRoot);
   if (EFI_ERROR (Status1)) {
     DEBUG ((

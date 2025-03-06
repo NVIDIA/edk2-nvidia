@@ -1,7 +1,7 @@
 /** @file
   Nvdla info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -58,7 +58,7 @@ NvdlaInfoParser (
   EFI_STATUS                  Status;
   INT32                       NodeOffset;
   CM_ARM_GENERIC_DEVICE_INFO  DeviceInfo;
-  CM_OBJ_DESCRIPTOR           *CmObjDesc;
+  CM_OBJ_DESCRIPTOR           *CmObjDesc = NULL;
   CM_STD_OBJ_ACPI_TABLE_INFO  AcpiTableHeader;
 
   NodeOffset = -1;
@@ -139,10 +139,13 @@ NvdlaInfoParser (
 
     Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
     if (EFI_ERROR (Status)) {
-      return Status;
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add the Nvdla SSDT table\n", __FUNCTION__, Status));
+      goto CleanupAndReturn;
     }
   }
 
+CleanupAndReturn:
+  FREE_NON_NULL (CmObjDesc);
   return Status;
 }
 

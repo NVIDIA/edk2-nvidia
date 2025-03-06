@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -16,7 +16,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <libfdt.h>
-
+#include <Library/MemoryAllocationLib.h>
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/KernelCmdLineUpdate.h>
@@ -470,10 +470,10 @@ UpdateKernelCommandLine (
   EFI_STATUS                              Status;
   UINTN                                   Length;
   UINTN                                   NumOfHandles;
-  EFI_HANDLE                              *HandleBuffer;
+  EFI_HANDLE                              *HandleBuffer = NULL;
   UINTN                                   Count;
   NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  *Interface;
-  CHAR16                                  *CmdLine;
+  CHAR16                                  *CmdLine = NULL;
   NVIDIA_KERNEL_COMMAND_LINE              AddlCmdLine;
   UINTN                                   AddlCmdLen;
   VOID                                    *AcpiBase;
@@ -505,7 +505,7 @@ UpdateKernelCommandLine (
                     (VOID **)&Interface
                     );
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto CleanupAndReturn;
     }
 
     if (Interface->NewCommandLineArgument != NULL) {
@@ -519,7 +519,7 @@ UpdateKernelCommandLine (
                   (VOID **)&CmdLine
                   );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto CleanupAndReturn;
   }
 
   gBS->SetMem (CmdLine, Length, 0);
@@ -533,7 +533,7 @@ UpdateKernelCommandLine (
                     (VOID **)&Interface
                     );
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto CleanupAndReturn;
     }
 
     if (Interface->ExistingCommandLineArgument != NULL) {
@@ -548,7 +548,7 @@ UpdateKernelCommandLine (
                     (VOID **)&Interface
                     );
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto CleanupAndReturn;
     }
 
     if (Interface->NewCommandLineArgument != NULL) {
@@ -566,7 +566,18 @@ UpdateKernelCommandLine (
   }
 
   *OutCmdLine = CmdLine;
-  return EFI_SUCCESS;
+  Status      = EFI_SUCCESS;
+
+CleanupAndReturn:
+  if (HandleBuffer != NULL) {
+    FreePool (HandleBuffer);
+  }
+
+  if ((CmdLine != NULL) && (EFI_ERROR (Status))) {
+    FreePool (CmdLine);
+  }
+
+  return Status;
 }
 
 // Append platform specific commands

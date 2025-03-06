@@ -2,7 +2,7 @@
 
   FMP Blob support functions
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -298,7 +298,7 @@ FmpBlobSetImage (
   )
 {
   EFI_STATUS                    Status;
-  EFI_HANDLE                    *Handles;
+  EFI_HANDLE                    *Handles = NULL;
   UINTN                         HandleCount;
   NVIDIA_FW_PARTITION_PROTOCOL  *FwPartitionProtocol;
   FW_PARTITION_PRIVATE_DATA     *Private;
@@ -361,7 +361,8 @@ FmpBlobSetImage (
   if (!IsProtocolFound) {
     DEBUG ((DEBUG_ERROR, "%a: Cannot find FW Partition.\n", __FUNCTION__));
     *LastAttemptStatus = LAS_ERROR_NO_BLOB_PARTITION;
-    return EFI_ABORTED;
+    Status             = EFI_ABORTED;
+    goto CleanupAndReturn;
   }
 
   Private = CR (
@@ -376,19 +377,28 @@ FmpBlobSetImage (
   Status = WriteImageFromBuffer (FwPartitionProtocol, ImageSize, Image);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_BLOB_WRITE_FAILED;
-    return EFI_ABORTED;
+    Status             = EFI_ABORTED;
+    goto CleanupAndReturn;
   }
 
   Status = VerifyImageFromBuffer (FwPartitionProtocol, ImageSize, Image);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_BLOB_VERIFY_FAILED;
-    return EFI_ABORTED;
+    Status             = EFI_ABORTED;
+    goto CleanupAndReturn;
   }
 
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
   DEBUG ((DEBUG_ERROR, "\n%a: exit success\n", __FUNCTION__));
 
-  return EFI_SUCCESS;
+  Status = EFI_SUCCESS;
+
+CleanupAndReturn:
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+
+  return Status;
 }
 
 /**

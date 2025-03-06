@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
 
@@ -131,7 +131,8 @@ TegraFastbootPlatformFlashPartition (
   }
 
   if (Index >= NumOfHandles) {
-    return EFI_NOT_FOUND;
+    Status = EFI_NOT_FOUND;
+    goto NoFlashExit;
   }
 
   BlockIo = NULL;
