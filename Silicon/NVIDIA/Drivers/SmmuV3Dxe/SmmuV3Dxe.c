@@ -12,6 +12,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
@@ -389,6 +390,64 @@ ConfigureSmmuV3ControllerSettings (
 }
 
 /**
+  Configure SMMUv3 command queue in SMMU_V3_QUEUE structure. Also, update command queue register
+  with queue base address and initialize command queue consumer and producer registers.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller command queue was configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_OUT_OF_RESOURCES     Failed to allocate memory for command queue.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+SetupSmmuV3Cmdq (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32                CmdqSize;
+  UINT64                CmdqBaseReg;
+  EFI_PHYSICAL_ADDRESS  QBase;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  CmdqSize = (1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE;
+  DEBUG ((DEBUG_INFO, "%a: Total CMDQ entries: %d\n", __FUNCTION__, (1 << Private->Features.CmdqEntriesLog2)));
+
+  QBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (CmdqSize), CmdqSize);
+  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CmdqSize)));
+
+  if (!QBase) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for CMDQ\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for CMDQ\n", __FUNCTION__, QBase));
+  Private->CmdQueue.QBase = QBase;
+
+  CmdqBaseReg = QBase & (SMMU_V3_CMDQ_BASE_ADDR_MASK << SMMU_V3_CMDQ_BASE_ADDR_SHIFT);
+  CmdqBaseReg = CmdqBaseReg | (1ULL << SMMU_V3_RA_HINT_SHIFT);
+  CmdqBaseReg = CmdqBaseReg | Private->Features.CmdqEntriesLog2;
+
+  Private->CmdQueue.ConsRegBase = Private->BaseAddress + SMMU_V3_CMDQ_CONS_OFFSET;
+  Private->CmdQueue.ProdRegBase = Private->BaseAddress + SMMU_V3_CMDQ_PROD_OFFSET;
+
+  // Initialize command queue base register
+  DEBUG ((DEBUG_INFO, "%a: Write to CMDQ_BASE 0x%llx CMDQ_BASE Addr 0x%p\n", __FUNCTION__, CmdqBaseReg, Private->BaseAddress + SMMU_V3_CMDQ_BASE_OFFSET));
+  MmioWrite64 (Private->BaseAddress + SMMU_V3_CMDQ_BASE_OFFSET, CmdqBaseReg);
+
+  // Initialize command queue producer and consumer registers
+  MmioWrite32 (Private->CmdQueue.ConsRegBase, 0);
+  MmioWrite32 (Private->CmdQueue.ProdRegBase, 0);
+
+  return EFI_SUCCESS;
+}
+
+/**
   Initialize the SMMUv3 controller.
 
   @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
@@ -426,6 +485,12 @@ InitializeSmmuV3 (
   Status = ConfigureSmmuV3ControllerSettings (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to configure SMMUv3 settings\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = SetupSmmuV3Cmdq (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 command queue\n", __FUNCTION__));
     return Status;
   }
 
@@ -476,6 +541,10 @@ Smmuv3Cleanup (
 {
   if (Private == NULL) {
     return;
+  }
+
+  if (Private->CmdQueue.QBase != 0) {
+    FreePages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
   }
 
   if (Private->ExitBootServicesEvent != NULL) {

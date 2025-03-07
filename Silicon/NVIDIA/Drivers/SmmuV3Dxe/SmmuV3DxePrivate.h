@@ -90,6 +90,13 @@
 #define SMMU_V3_GBPA_MTCFG_SHIFT    4
 #define SMMU_V3_GBPA_MTCFG_MASK     0x1
 
+#define SMMU_V3_CMDQ_BASE_OFFSET      0x90      // Command Queue Base Address Register
+#define SMMU_V3_CMDQ_BASE_ADDR_SHIFT  5
+#define SMMU_V3_CMDQ_BASE_ADDR_MASK   0x7FFFFFFFFFFFFULL
+
+#define SMMU_V3_CMDQ_PROD_OFFSET  0x98
+#define SMMU_V3_CMDQ_CONS_OFFSET  0x9C
+
 #define SMMU_V3_LINEAR_STR_TABLE   0
 #define SMMU_V3_TWO_LVL_STR_TABLE  1
 
@@ -117,6 +124,20 @@
 #define SMMU_V3_SUB_SID_SIZE_MAX  20
 #define SMMU_V3_SID_SIZE_MAX      32
 
+#define SMMU_V3_CMD_SIZE     16
+#define SMMU_V3_CMD_SIZE_DW  ((SMMU_V3_CMD_SIZE) / (sizeof (UINT64)))
+
+#define SMMU_V3_RA_HINT_SHIFT  (62)
+
+typedef struct {
+  EFI_PHYSICAL_ADDRESS    QBase;
+  UINT32                  RdIdx;
+  UINT32                  WrIdx;
+  UINT32                  QEntries;
+  EFI_PHYSICAL_ADDRESS    ConsRegBase;
+  EFI_PHYSICAL_ADDRESS    ProdRegBase;
+} SMMU_V3_QUEUE;
+
 typedef struct {
   BOOLEAN    LinearStrTable;
   UINT32     Endian;
@@ -137,6 +158,7 @@ typedef struct {
   UINT32                               Signature;
   EFI_PHYSICAL_ADDRESS                 BaseAddress;
   SMMU_V3_CONTROLLER_FEATURES          Features;
+  SMMU_V3_QUEUE                        CmdQueue;
   VOID                                 *DeviceTreeBase;
   INT32                                NodeOffset;
   EFI_EVENT                            ExitBootServicesEvent;
