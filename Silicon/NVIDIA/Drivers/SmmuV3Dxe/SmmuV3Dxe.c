@@ -10,6 +10,7 @@
 
 #include <PiDxe.h>
 
+#include <Library/ArmLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -506,6 +507,163 @@ SetupSmmuV3Evtq (
 }
 
 /**
+  Clear stream table entry (STE)
+
+  @param[in, out]      SteData       Pointer to STE Data
+
+ **/
+STATIC
+VOID
+ClearSte (
+  IN OUT UINT64  *SteData
+  )
+{
+  UINT32  Index;
+
+  for (Index = 0; Index < SMMU_V3_STRTAB_ENTRY_SIZE_DW; Index++) {
+    SteData[Index] = 0;
+  }
+}
+
+/**
+  Write stream table entry (STE)
+
+  @param[in, out]      StEntry      Pointer to STE Entry
+  @param[in]           SteData      Pointer to STE Data
+
+ **/
+STATIC
+VOID
+WriteSte (
+  IN OUT UINT64    *StEntry,
+  IN CONST UINT64  *SteData
+  )
+{
+  INT32  Index;
+
+  /*
+    Invalidate Stream Table Entry by clearing the Valid bit
+    Sets STE.Valid to 0 (bit[0] of first 64-bit word)
+  */
+  StEntry[0] = 0;
+
+  /*
+    Update Stream Table Entry by writing the upper 64-bit word first,
+    followed by the lower 64-bit word containing STE.Valid bit,
+    ensuring proper memory ordering
+   */
+  for (Index = SMMU_V3_STRTAB_ENTRY_SIZE_DW - 1; Index >= 0; Index--) {
+    StEntry[Index] = SteData[Index];
+  }
+
+  // Ensure written data (STE) is observable to SMMU controller by performing DSB
+  ArmDataSynchronizationBarrier ();
+}
+
+/**
+  Invalidate all Stream Table Entries (STE) in the SMMUv3 controller.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller STEs were invalidated successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+
+ **/
+STATIC
+EFI_STATUS
+InvalidateStes (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  Index;
+  UINT32  SteCount;
+  UINT64  SteData[SMMU_V3_STRTAB_ENTRY_SIZE_DW];
+  UINT64  *SteAddr;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ClearSte (SteData);
+  SteAddr  = (UINT64 *)Private->SteBase;
+  SteCount = 1 << Private->Features.StreamNBits;
+
+  for (Index = 0; Index < SteCount; Index++) {
+    WriteSte (SteAddr, SteData);
+    SteAddr += SMMU_V3_STRTAB_ENTRY_SIZE_DW;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Setup SMMUv3 Stream Table (STRTAB) in SMMU_V3_STREAM_TABLE_COFIG structure.
+  Update stream table configuration register with linear format and stream
+  table base register with stream table base. Invalidate all stream table
+  entries (STE).
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller event queue was configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_OUT_OF_RESOURCES     Failed to allocate memory for event queue.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+SetupSmmuV3StrTable (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                StrtabSize;
+  UINT32                StrtabCfgSetting;
+  UINT64                StrtabBaseReg;
+  EFI_PHYSICAL_ADDRESS  TblBase;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  StrtabSize = (1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE;
+  DEBUG ((DEBUG_INFO, "%a: Total STRTAB entries: %d\n", __FUNCTION__, (1 << Private->Features.StreamNBits)));
+
+  TblBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (StrtabSize), StrtabSize);
+  ZeroMem ((VOID *)TblBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (StrtabSize)));
+
+  if (!TblBase) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for STRTAB\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for STRTAB\n", __FUNCTION__, TblBase));
+
+  Private->SteBase = TblBase;
+  StrtabBaseReg    = (UINT64)TblBase & (SMMU_V3_STRTAB_BASE_ADDR_MASK << SMMU_V3_STRTAB_BASE_ADDR_SHIFT);
+  StrtabBaseReg    = StrtabBaseReg | (1ULL << SMMU_V3_RA_HINT_SHIFT);
+
+  // Assume linear format for stream table
+  StrtabCfgSetting = SMMU_V3_LINEAR_STR_TABLE << SMMU_V3_STR_FMT_SHIFT;
+  StrtabCfgSetting = StrtabCfgSetting | Private->Features.StreamNBits;
+
+  DEBUG ((DEBUG_INFO, "%a: Write to STRTAB_BASE_CFG 0x%x STRTAB_BASE_CFG reg 0x%p\n", __FUNCTION__, StrtabCfgSetting, Private->BaseAddress + SMMU_V3_STRTAB_BASE_CFG_OFFSET));
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_CFG_OFFSET, StrtabCfgSetting);
+
+  DEBUG ((DEBUG_INFO, "%a: Write to STRTAB_BASE 0x%llx STRTAB_BASE reg 0x%p\n", __FUNCTION__, StrtabBaseReg, Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET));
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET, StrtabBaseReg);
+
+  // Mark STE as invalid
+  Status = InvalidateStes (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to invalidate STEs\n", __FUNCTION__));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Initialize the SMMUv3 controller.
 
   @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
@@ -555,6 +713,12 @@ InitializeSmmuV3 (
   Status = SetupSmmuV3Evtq (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 event queue\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = SetupSmmuV3StrTable (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 stream table\n", __FUNCTION__));
     return Status;
   }
 
@@ -613,6 +777,10 @@ Smmuv3Cleanup (
 
   if (Private->EvtQueue.QBase != 0) {
     FreePages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
+  }
+
+  if (Private->SteBase != 0) {
+    FreePages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
   }
 
   if (Private->ExitBootServicesEvent != NULL) {

@@ -26,6 +26,7 @@
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  ArmLib
   BaseLib
   DebugLib
   BaseMemoryLib

@@ -90,6 +90,12 @@
 #define SMMU_V3_GBPA_MTCFG_SHIFT    4
 #define SMMU_V3_GBPA_MTCFG_MASK     0x1
 
+#define SMMU_V3_STRTAB_BASE_OFFSET      0x80
+#define SMMU_V3_STRTAB_BASE_ADDR_SHIFT  6
+#define SMMU_V3_STRTAB_BASE_ADDR_MASK   0x3FFFFFFFFFFFFULL
+
+#define SMMU_V3_STRTAB_BASE_CFG_OFFSET  0x88
+
 #define SMMU_V3_CMDQ_BASE_OFFSET      0x90      // Command Queue Base Address Register
 #define SMMU_V3_CMDQ_BASE_ADDR_SHIFT  5
 #define SMMU_V3_CMDQ_BASE_ADDR_MASK   0x7FFFFFFFFFFFFULL
@@ -135,8 +141,12 @@
 #define SMMU_V3_CMD_SIZE_DW      ((SMMU_V3_CMD_SIZE) / (sizeof (UINT64)))
 #define SMMU_V3_EVT_RECORD_SIZE  32
 
+#define SMMU_V3_STRTAB_ENTRY_SIZE     64
+#define SMMU_V3_STRTAB_ENTRY_SIZE_DW  ((SMMU_V3_STRTAB_ENTRY_SIZE) / (sizeof (UINT64)))
+
 #define SMMU_V3_RA_HINT_SHIFT  (62)
 #define SMMU_V3_WA_HINT_SHIFT  (62)
+#define SMMU_V3_STR_FMT_SHIFT  (16)
 
 typedef struct {
   EFI_PHYSICAL_ADDRESS    QBase;
@@ -169,6 +179,7 @@ typedef struct {
   SMMU_V3_CONTROLLER_FEATURES          Features;
   SMMU_V3_QUEUE                        CmdQueue;
   SMMU_V3_QUEUE                        EvtQueue;
+  EFI_PHYSICAL_ADDRESS                 SteBase;
   VOID                                 *DeviceTreeBase;
   INT32                                NodeOffset;
   EFI_EVENT                            ExitBootServicesEvent;
