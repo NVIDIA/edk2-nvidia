@@ -42,13 +42,13 @@ ResetSmmuV3Controller (
   }
 
   // Set the controller in global bypass mode
-  GbpSetting = FIELD_PREP (1U, SMMU_V3_GBPA_UPDATE_MASK, SMMU_V3_GBPA_UPDATE_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_ABORT_MASK, SMMU_V3_GBPA_ABORT_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_INSTCFG_MASK, SMMU_V3_GBPA_INSTCFG_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_PRIVCFG_MASK, SMMU_V3_GBPA_PRIVCFG_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (1, SMMU_V3_GBPA_SHCFG_MASK, SMMU_V3_GBPA_SHCFG_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_ALLOCFG_MASK, SMMU_V3_GBPA_ALLOCFG_SHIFT);
-  GbpSetting = GbpSetting | FIELD_PREP (0, SMMU_V3_GBPA_MTCFG_MASK, SMMU_V3_GBPA_MTCFG_SHIFT);
+  GbpSetting = BIT_FIELD_SET (1U, SMMU_V3_GBPA_UPDATE_MASK, SMMU_V3_GBPA_UPDATE_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_ABORT_MASK, SMMU_V3_GBPA_ABORT_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_INSTCFG_MASK, SMMU_V3_GBPA_INSTCFG_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_PRIVCFG_MASK, SMMU_V3_GBPA_PRIVCFG_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (1, SMMU_V3_GBPA_SHCFG_MASK, SMMU_V3_GBPA_SHCFG_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_ALLOCFG_MASK, SMMU_V3_GBPA_ALLOCFG_SHIFT);
+  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_MTCFG_MASK, SMMU_V3_GBPA_MTCFG_SHIFT);
   MmioWrite32 (Private->BaseAddress + SMMU_V3_GBPA_OFFSET, GbpSetting);
 
   // Wait for the controller to enter global bypass mode
@@ -68,6 +68,321 @@ ResetSmmuV3Controller (
   gBS->Stall (10000);
   if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0_SMMUEN_SHIFT) & SMMU_V3_CR0_SMMUEN_MASK) != 0) {
     return EFI_TIMEOUT;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Identify SMMUv3 controller features from registers and populate values in the
+  SMMU_V3_CONTROLLER_FEATURES structure.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 features were identified successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_DEVICE_ERROR         The SMMUv3 hardware features identification failed.
+  @retval EFI_UNSUPPORTED          The SMMUv3 driver does not support this feature.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+IdentifySmmuV3ControllerFeatures (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  Idr0;
+  UINT32  ArchVersion;
+  UINT32  XlatFormat;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ArchVersion = MmioRead32 (Private->BaseAddress + SMMU_V3_AIDR_OFFSET);
+  ArchVersion = BIT_FIELD_GET (ArchVersion, SMMU_V3_AIDR_ARCH_REV_MASK, SMMU_V3_AIDR_ARCH_REV_SHIFT);
+
+  if (ArchVersion > 2) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid architecture version\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.MinorVersion = ArchVersion;
+
+  Idr0 = MmioRead32 (Private->BaseAddress + SMMU_V3_IDR0_OFFSET);
+  if ((BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_ST_LEVEL_MASK, SMMU_V3_IDR0_ST_LEVEL_SHIFT) == SMMU_V3_LINEAR_STR_TABLE) ||
+      (BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_ST_LEVEL_MASK, SMMU_V3_IDR0_ST_LEVEL_SHIFT) == SMMU_V3_TWO_LVL_STR_TABLE))
+  {
+    Private->Features.LinearStrTable = TRUE;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid value for Multi-level Stream table support\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.Endian = BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_TTENDIAN_MASK, SMMU_V3_IDR0_TTENDIAN_SHIFT);
+  if (Private->Features.Endian == SMMU_V3_RES_ENDIAN) {
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported endianness for translation table walks\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  if (BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_BTM_MASK, SMMU_V3_IDR0_BTM_SHIFT)) {
+    Private->Features.BroadcastTlb = TRUE;
+  } else {
+    Private->Features.BroadcastTlb = FALSE;
+    DEBUG ((DEBUG_INFO, "%a: Broadcast TLB maintenance not supported in hardware\n", __FUNCTION__));
+  }
+
+  XlatFormat = BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_TTF_MASK, SMMU_V3_IDR0_TTF_SHIFT);
+  switch (XlatFormat) {
+    case SMMU_V3_AARCH32_TTF:
+      DEBUG ((DEBUG_ERROR, "%a: AArch32 translation table format not supported\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+    case SMMU_V3_AARCH64_TTF:
+    case SMMU_V3_AARCH32_64_TTF:
+      break;
+    case SMMU_V3_RES_TTF:
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported translation table format\n", __FUNCTION__));
+      return EFI_UNSUPPORTED;
+  }
+
+  Private->Features.XlatFormat = XlatFormat;
+  Private->Features.XlatStages = BIT_FIELD_GET (Idr0, SMMU_V3_IDR0_XLAT_STG_MASK, SMMU_V3_IDR0_XLAT_STG_SHIFT);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Configure SMMUv3 controller translation address bits values in the
+  SMMU_V3_CONTROLLER_FEATURES structure. This function also set cacheability
+  and shareability attributes for Table and Queue access.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller translation support configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_DEVICE_ERROR         The SMMUv3 controller translation support configuration failed.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+ConfigureSmmuV3ControllerXlatSupport (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32   Idr5;
+  UINT32   Cr1Setting;
+  UINT32   Cr2Setting;
+  UINT64   Oas;
+  UINT64   OasBits;
+  UINT64   IasAarch32;
+  UINT64   IasAarch64;
+  BOOLEAN  TtfAarch32;
+  BOOLEAN  TtfAarch64;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Idr5    = MmioRead32 (Private->BaseAddress + SMMU_V3_IDR5_OFFSET);
+  OasBits = BIT_FIELD_GET (Idr5, SMMU_V3_IDR5_OAS_MASK, SMMU_V3_IDR5_OAS_SHIFT);
+
+  IasAarch32 = 0;
+  IasAarch64 = 0;
+
+  TtfAarch32 = FALSE;
+  TtfAarch64 = TRUE;
+
+  if (Private->Features.XlatFormat == SMMU_V3_AARCH32_64_TTF) {
+    TtfAarch32 = TRUE;
+  }
+
+  switch (OasBits) {
+    case SMMU_V3_OAS_32BITS:
+      Oas = 32;
+      break;
+
+    case SMMU_V3_OAS_36BITS:
+      Oas = 36;
+      break;
+
+    case SMMU_V3_OAS_40BITS:
+      Oas = 40;
+      break;
+
+    case SMMU_V3_OAS_42BITS:
+      Oas = 42;
+      break;
+
+    case SMMU_V3_OAS_44BITS:
+      Oas = 44;
+      break;
+
+    case SMMU_V3_OAS_48BITS:
+      Oas = 48;
+      break;
+
+    case SMMU_V3_OAS_52BITS:
+      if (Private->Features.MinorVersion == 0) {
+        DEBUG ((DEBUG_ERROR, "%a: 52 bit Output address size not supported for SMMUv3.0\n", __FUNCTION__));
+        return EFI_DEVICE_ERROR;
+      }
+
+      Oas = 52;
+      break;
+
+    case SMMU_V3_OAS_RES:
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: Output address size unknown\n", __FUNCTION__));
+      return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.Oas         = Oas;
+  Private->Features.OasEncoding = OasBits;
+  IasAarch32                    = TtfAarch32 ? 40 : 0;
+  IasAarch64                    = TtfAarch64 ? Private->Features.Oas : 0;
+  Private->Features.Ias         = IasAarch64;
+
+  if (IasAarch32 > IasAarch64) {
+    Private->Features.Ias = IasAarch32;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Input Addr: %d-bits, Output Addr: %d-bits\n", __FUNCTION__, Private->Features.Ias, Private->Features.Oas));
+
+  // Set cachebiity and shareability attributes for Table and Queue access
+  Cr1Setting = BIT_FIELD_SET (SMMU_V3_CR1_INSH, SMMU_V3_CR1_SH_MASK, SMMU_V3_CR1_TAB_SH_SHIFT);
+  Cr1Setting = Cr1Setting | BIT_FIELD_SET (SMMU_V3_CR1_WBCACHE, SMMU_V3_CR1_OC_MASK, SMMU_V3_CR1_TAB_OC_SHIFT);
+  Cr1Setting = Cr1Setting | BIT_FIELD_SET (SMMU_V3_CR1_WBCACHE, SMMU_V3_CR1_IC_MASK, SMMU_V3_CR1_TAB_IC_SHIFT);
+  Cr1Setting = Cr1Setting | BIT_FIELD_SET (SMMU_V3_CR1_INSH, SMMU_V3_CR1_SH_MASK, SMMU_V3_CR1_QUE_SH_SHIFT);
+  Cr1Setting = Cr1Setting | BIT_FIELD_SET (SMMU_V3_CR1_WBCACHE, SMMU_V3_CR1_OC_MASK, SMMU_V3_CR1_QUE_OC_SHIFT);
+  Cr1Setting = Cr1Setting | BIT_FIELD_SET (SMMU_V3_CR1_WBCACHE, SMMU_V3_CR1_IC_MASK, SMMU_V3_CR1_QUE_IC_SHIFT);
+
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_CR1_OFFSET, Cr1Setting);
+
+  Cr2Setting = MmioRead32 (Private->BaseAddress + SMMU_V3_CR2_OFFSET);
+
+  // Clear and program Private TLB maintenance bit
+  Cr2Setting = Cr2Setting & ~(BIT_FIELD_SET (1, SMMU_V3_CR2_PTM_MASK, SMMU_V3_CR2_PTM_SHIFT));
+  Cr2Setting = Cr2Setting | BIT_FIELD_SET (SMMU_V3_CR2_PTM_ENABLE, SMMU_V3_CR2_PTM_MASK, SMMU_V3_CR2_PTM_SHIFT);
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_CR2_OFFSET, Cr2Setting);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Configure SMMUv3 controller command and event queue sizes, stream and sub stream bits in
+  SMMU_V3_CONTROLLER_FEATURES structure.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller queue sizes were configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_DEVICE_ERROR         The SMMUv3 controller queue sizes configuration failed.
+  @retval EFI_UNSUPPORTED          The SMMUv3 driver does not support this feature.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+ConfigureSmmuV3ControllerQueueSizes (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  Idr1;
+  UINT32  Size;
+  UINT32  Preset;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Idr1   = MmioRead32 (Private->BaseAddress + SMMU_V3_IDR1_OFFSET);
+  Preset = BIT_FIELD_GET (Idr1, SMMU_V3_IDR1_PRESET_MASK, SMMU_V3_IDR1_PRESET_SHIFT);
+
+  // SMMUv3 driver does not support fixed address Table or Queue base
+  if (Preset != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Driver does not support TABLES_PRESET, QUEUES_PRESET\n", __FUNCTION__));
+    return EFI_UNSUPPORTED;
+  }
+
+  Size = BIT_FIELD_GET (Idr1, SMMU_V3_IDR1_CMDQS_MASK, SMMU_V3_IDR1_CMDQS_SHIFT);
+  if (Size > SMMU_V3_CMDQS_MAX) {
+    DEBUG ((DEBUG_ERROR, "%a: Command queue entries(log2) cannot exceed %d\n", __FUNCTION__, SMMU_V3_CMDQS_MAX));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.CmdqEntriesLog2 = Size;
+
+  Size = BIT_FIELD_GET (Idr1, SMMU_V3_IDR1_EVTQS_MASK, SMMU_V3_IDR1_EVTQS_SHIFT);
+  if (Size > SMMU_V3_EVTQS_MAX) {
+    DEBUG ((DEBUG_ERROR, "%a: Event queue entries(log2) cannot exceed %d\n", __FUNCTION__, SMMU_V3_EVTQS_MAX));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.EvtqEntriesLog2 = Size;
+
+  Size = BIT_FIELD_GET (Idr1, SMMU_V3_IDR1_SUB_SID_MASK, SMMU_V3_IDR1_SUB_SID_SHIFT);
+  if (Size > SMMU_V3_SUB_SID_SIZE_MAX) {
+    DEBUG ((DEBUG_ERROR, "%a: Max bits of SubStreamID cannot exceed %d\n", __FUNCTION__, SMMU_V3_SUB_SID_SIZE_MAX));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.SubStreamNBits = Size;
+
+  Size = BIT_FIELD_GET (Idr1, SMMU_V3_IDR1_SID_MASK, SMMU_V3_IDR1_SID_SHIFT);
+  if (Size > SMMU_V3_SID_SIZE_MAX) {
+    DEBUG ((DEBUG_ERROR, "%a: Max bits of StreamID cannot exceed %d\n", __FUNCTION__, SMMU_V3_SID_SIZE_MAX));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Private->Features.StreamNBits = Size;
+
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_IDR1_OFFSET, Idr1);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Configure SMMUv3 controller global setting in SMMU_V3_CONTROLLER_FEATURES structure.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller global settings were configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval other                    The SMMUv3 controller global settings configuration failed.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+ConfigureSmmuV3ControllerSettings (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = IdentifySmmuV3ControllerFeatures (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to identify SMMUv3 features\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = ConfigureSmmuV3ControllerXlatSupport (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to configure SMMUv3 translation support\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = ConfigureSmmuV3ControllerQueueSizes (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to configure SMMUv3 queue sizes\n", __FUNCTION__));
+    return Status;
   }
 
   return EFI_SUCCESS;
@@ -108,6 +423,11 @@ InitializeSmmuV3 (
   // 3. Setup command queue
   // 4. Setup event queue
   // 5. Enable SMMU operation
+  Status = ConfigureSmmuV3ControllerSettings (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to configure SMMUv3 settings\n", __FUNCTION__));
+    return Status;
+  }
 
   // Temporary placeholder - just return success
   return EFI_SUCCESS;
@@ -140,6 +460,29 @@ OnExitBootServices (
   // 4. Disable SMMU operation
 
   DEBUG ((DEBUG_ERROR, "%a: Put SMMU at 0x%lx back in global bypass\n", __FUNCTION__, Private->BaseAddress));
+}
+
+/**
+  Clean up SMMUv3 controller resources.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+ **/
+STATIC
+VOID
+Smmuv3Cleanup (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  if (Private == NULL) {
+    return;
+  }
+
+  if (Private->ExitBootServicesEvent != NULL) {
+    gBS->CloseEvent (Private->ExitBootServicesEvent);
+  }
+
+  FreePool (Private);
 }
 
 /**
@@ -252,10 +595,8 @@ DeviceDiscoveryNotify (
   }
 
 Exit:
-  if (EFI_ERROR (Status)) {
-    if (Private != NULL) {
-      FreePool (Private);
-    }
+  if (EFI_ERROR (Status) && (Private != NULL)) {
+    Smmuv3Cleanup (Private);
   }
 
   return Status;
