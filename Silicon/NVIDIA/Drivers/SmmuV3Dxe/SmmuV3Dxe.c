@@ -448,6 +448,64 @@ SetupSmmuV3Cmdq (
 }
 
 /**
+  Configure SMMUv3 event queue in SMMU_V3_QUEUE structure. Also, update event queue register
+  with queue base address and initialize event queue consumer and producer registers.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller event queue was configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_OUT_OF_RESOURCES     Failed to allocate memory for event queue.
+
+ **/
+STATIC
+EFI_STATUS
+EFIAPI
+SetupSmmuV3Evtq (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32                EvtqSize;
+  UINT64                EvtqBaseReg;
+  EFI_PHYSICAL_ADDRESS  QBase;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  EvtqSize = (1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE;
+  DEBUG ((DEBUG_INFO, "%a: Total EVTQ entries: %d\n", __FUNCTION__, (1 << Private->Features.EvtqEntriesLog2)));
+
+  QBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (EvtqSize), EvtqSize);
+  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (EvtqSize)));
+
+  if (!QBase) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for EVTQ\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for EVTQ\n", __FUNCTION__, QBase));
+  Private->EvtQueue.QBase = QBase;
+
+  EvtqBaseReg = QBase & (SMMU_V3_EVTQ_BASE_ADDR_MASK << SMMU_V3_EVTQ_BASE_ADDR_SHIFT);
+  EvtqBaseReg = EvtqBaseReg | (1ULL << SMMU_V3_WA_HINT_SHIFT);
+  EvtqBaseReg = EvtqBaseReg | Private->Features.EvtqEntriesLog2;
+
+  Private->EvtQueue.ConsRegBase = Private->BaseAddress + SMMU_V3_EVTQ_CONS_OFFSET;
+  Private->EvtQueue.ProdRegBase = Private->BaseAddress + SMMU_V3_EVTQ_PROD_OFFSET;
+
+  // Initialize event queue base register
+  DEBUG ((DEBUG_INFO, "%a: Write to EVTQ_BASE 0x%llx EVTQ_BASE Addr 0x%p\n", __FUNCTION__, EvtqBaseReg, Private->BaseAddress + SMMU_V3_EVTQ_BASE_OFFSET));
+  MmioWrite64 (Private->BaseAddress + SMMU_V3_EVTQ_BASE_OFFSET, EvtqBaseReg);
+
+  // Initialize event queue producer and consumer registers
+  MmioWrite32 (Private->EvtQueue.ConsRegBase, 0);
+  MmioWrite32 (Private->EvtQueue.ProdRegBase, 0);
+
+  return EFI_SUCCESS;
+}
+
+/**
   Initialize the SMMUv3 controller.
 
   @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
@@ -491,6 +549,12 @@ InitializeSmmuV3 (
   Status = SetupSmmuV3Cmdq (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 command queue\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = SetupSmmuV3Evtq (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 event queue\n", __FUNCTION__));
     return Status;
   }
 
@@ -545,6 +609,10 @@ Smmuv3Cleanup (
 
   if (Private->CmdQueue.QBase != 0) {
     FreePages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
+  }
+
+  if (Private->EvtQueue.QBase != 0) {
+    FreePages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
   }
 
   if (Private->ExitBootServicesEvent != NULL) {
