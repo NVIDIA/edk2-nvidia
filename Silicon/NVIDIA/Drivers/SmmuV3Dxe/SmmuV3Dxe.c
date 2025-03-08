@@ -63,12 +63,12 @@ ResetSmmuV3Controller (
     Private->BaseAddress + SMMU_V3_CR0_OFFSET,
     SMMU_V3_CR0_SMMUEN_BIT,
     SMMU_V3_CR0_SMMUEN_BIT,
-    0
+    SMMU_V3_DISABLE
     );
 
   // Wait for the controller to disable SMMU operation
   gBS->Stall (10000);
-  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0_SMMUEN_SHIFT) & SMMU_V3_CR0_SMMUEN_MASK) != 0) {
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_SMMUEN_SHIFT) & SMMU_V3_CR0ACK_SMMUEN_MASK) != SMMU_V3_DISABLE) {
     return EFI_TIMEOUT;
   }
 
@@ -664,6 +664,790 @@ SetupSmmuV3StrTable (
 }
 
 /**
+  Track CMDQ producer and consumer indexes
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+ **/
+STATIC
+VOID
+TrackCmdqIdx (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  if (Private == NULL) {
+    return;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Track CMDQ consumer_idx: %x; producer_idx: %x\n",
+    __FUNCTION__,
+    MmioRead32 (Private->CmdQueue.ConsRegBase),
+    MmioRead32 (Private->CmdQueue.ProdRegBase)
+    ));
+}
+
+/**
+  Construct command CMD_CFGI_ALL
+
+  This command invalidates all information cached in the SMMUv3 controller.
+
+  @param[in, out]      Cmd        Pointer to Command
+
+ **/
+STATIC
+VOID
+ConstructInvAllCfg (
+  IN OUT UINT64  *Cmd
+  )
+{
+  UINT32  Stream;
+
+  Stream = SMMU_V3_NS_STREAM;
+
+  Cmd[0]  = BIT_FIELD_SET (SMMU_V3_OP_CFGI_ALL, SMMU_V3_OP_MASK, SMMU_V3_OP_SHIFT);
+  Cmd[0] |= BIT_FIELD_SET (Stream, SMMU_V3_SSEC_MASK, SMMU_V3_SSEC_SHIFT);
+  Cmd[1]  = BIT_FIELD_SET (SMMU_V3_SID_ALL, SMMU_V3_SID_RANGE_MASK, SMMU_V3_SID_RANGE_SHIFT);
+}
+
+/**
+  Display Command Queue error status and handle error conditions.
+
+  This function reads GERROR and GERRORN registers to check for command queue errors,
+  displays appropriate error messages, and acknowledges errors by toggling bits in GERRORN.
+
+  @param[in] Private          Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval None
+
+ **/
+STATIC
+VOID
+DisplayCmdqErr (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  ConsReg;
+  UINT32  GerrorReg;
+  UINT32  GerrorNReg;
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter Private\n", __FUNCTION__));
+    return;
+  }
+
+  // Check global error conditions
+  GerrorReg  = MmioRead32 (Private->BaseAddress + SMMU_V3_GERROR_OFFSET);
+  GerrorNReg = MmioRead32 (Private->BaseAddress + SMMU_V3_GERRORN_OFFSET);
+
+  // Check if the bits differ between GERROR and GERRORN
+  if (BIT_FIELD_GET (GerrorReg, SMMU_V3_GERROR_SFM_ERR_MASK, SMMU_V3_GERROR_SFM_ERR_SHIFT) !=
+      BIT_FIELD_GET (GerrorNReg, SMMU_V3_GERRORN_SFM_ERR_MASK, SMMU_V3_GERRORN_SFM_ERR_SHIFT))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: Entered service failure mode\n", __FUNCTION__));
+  }
+
+  // Return if no command queue errors
+  if (BIT_FIELD_GET (GerrorReg, SMMU_V3_GERROR_CMDQ_ERR_MASK, SMMU_V3_GERROR_CMDQ_ERR_SHIFT) ==
+      BIT_FIELD_GET (GerrorNReg, SMMU_V3_GERRORN_CMDQ_ERR_MASK, SMMU_V3_GERRORN_CMDQ_ERR_SHIFT))
+  {
+    return;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: SMMU cannot process commands\n", __FUNCTION__));
+  DEBUG ((DEBUG_ERROR, "%a: GERROR: 0x%08x GERRORN: 0x%08x\n", __FUNCTION__, GerrorReg, GerrorNReg));
+
+  ConsReg = MmioRead32 (Private->CmdQueue.ConsRegBase);
+
+  switch (BIT_FIELD_GET (ConsReg, SMMU_V3_CMDQ_ERRORCODE_MASK, SMMU_V3_CMDQ_ERRORCODE_SHIFT)) {
+    case SMMU_V3_CMDQ_CERROR_NONE:
+      break;
+    case SMMU_V3_CMDQ_CERROR_ILL:
+      DEBUG ((DEBUG_ERROR, "%a: CMDQ error - Invalid command\n", __FUNCTION__));
+      break;
+    case SMMU_V3_CMDQ_CERROR_ABT:
+      DEBUG ((DEBUG_ERROR, "%a: CMDQ error - Command abort\n", __FUNCTION__));
+      break;
+    case SMMU_V3_CMDQ_CERROR_ATC_INV_SYNC:
+      DEBUG ((DEBUG_ERROR, "%a: CMDQ error - ATC invalidation sync\n", __FUNCTION__));
+      break;
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: CMDQ error - Unknown CMDQ CONS REG 0x%x\n", __FUNCTION__, ConsReg));
+      break;
+  }
+
+  // Acknowledge error
+  DEBUG ((DEBUG_ERROR, "%a: Acknowledging error by toggling GERRORN[CMD_ERR]\n", __FUNCTION__));
+  GerrorNReg = GerrorNReg ^ (SMMU_V3_GERRORN_CMDQ_ERR_MASK << SMMU_V3_GERRORN_CMDQ_ERR_SHIFT);
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_GERRORN_OFFSET, GerrorNReg);
+}
+
+/**
+  Writes a command to the SMMUv3 Command Queue.
+
+  This function copies the command data to the specified command queue entry and
+  ensures the data is observable to SMMU through a data synchronization barrier.
+
+  @param[in]  CmdqEntry    Pointer to command queue entry.
+  @param[in]  CmdDword     Pointer to command data to write.
+
+  @retval None
+**/
+STATIC
+VOID
+PushEntryToCmdq (
+  IN UINT64        *CmdqEntry,
+  IN CONST UINT64  *CmdDword
+  )
+{
+  UINT32  Index;
+
+  if ((CmdqEntry == NULL) || (CmdDword == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  DEBUG ((
+    DEBUG_VERBOSE,
+    "%a: Writing command to address: 0x%p\n",
+    __FUNCTION__,
+    (VOID *)CmdqEntry
+    ));
+
+  for (Index = 0; Index < SMMU_V3_CMD_SIZE_DW; Index++) {
+    CmdqEntry[Index] = CmdDword[Index];
+  }
+
+  // Ensure data is observable to SMMU
+  ArmDataSynchronizationBarrier ();
+}
+
+/**
+  Calculates the next write index for the command queue.
+
+  This function handles index wraparound and wrap bit toggling when the current index
+  reaches the maximum value.
+
+  @param[in]  Private     Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[out] NextWrIdx   Pointer to the next produce index
+  @param[in]  CurrentIdx  Current producer index.
+  @param[in]  ProdWrap    Current producer wrap bit value.
+
+  @retval     Returns next write index with appropriate wrap bit.
+**/
+STATIC
+EFI_STATUS
+FindOffsetNextWrIdx (
+  IN SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN UINT32                           *NextWrIdx,
+  IN UINT32                           CurrentIdx,
+  IN UINT32                           ProdWrap
+  )
+{
+  UINT32  NextIdx;
+  UINT32  MaxIdx;
+  UINT32  WrapBitSet;
+
+  if ((Private == NULL) || (NextWrIdx == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MaxIdx = (1 << Private->Features.CmdqEntriesLog2) - 1;
+  if (CurrentIdx > MaxIdx) {
+    DEBUG ((DEBUG_ERROR, "%a: Producer index overflow: 0x%x\n", __FUNCTION__, CurrentIdx));
+    ASSERT (FALSE);
+  }
+
+  if (CurrentIdx < MaxIdx) {
+    NextIdx    = CurrentIdx + 1;
+    *NextWrIdx = NextIdx | ProdWrap;
+    return EFI_SUCCESS;
+  }
+
+  // Handle index wraparound - reset index to 0 and toggle wrap bit
+  NextIdx    = 0;
+  WrapBitSet = 1 << Private->Features.CmdqEntriesLog2;
+
+  if (ProdWrap == 0) {
+    *NextWrIdx = NextIdx | WrapBitSet;
+    return EFI_SUCCESS;
+  }
+
+  *NextWrIdx = NextIdx;
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Updates the SMMUv3 Command Queue producer register with new index.
+
+  @param[in]  Private   Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[in]  Idx       New producer index value to write.
+
+  @retval None
+**/
+STATIC
+VOID
+UpdateCmdqProd (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN UINT32                            Idx
+  )
+{
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Updating CMDQ-PRODBASE Idx:%u\n", __FUNCTION__, Idx));
+  MmioWrite32 (Private->CmdQueue.ProdRegBase, Idx);
+
+  // Verify write was successful
+  if (MmioRead32 (Private->CmdQueue.ProdRegBase) != Idx) {
+    DEBUG ((DEBUG_ERROR, "%a: Hardware not updated with write index\n", __FUNCTION__));
+    ASSERT (FALSE);
+  }
+}
+
+/**
+  Issues a command to the SMMUv3 command queue.
+
+  This function:
+  1. Checks command queue space availability
+  2. Adds command to queue if space available
+  3. Updates producer index after queuing
+
+  @param[in]  Private     Pointer to SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[in]  Cmd         Pointer to command to be queued.
+
+  @retval EFI_SUCCESS           Command queued successfully.
+  @retval EFI_INVALID_PARAMETER Private or Cmd is NULL.
+  @retval EFI_OUT_OF_RESOURCES  Command queue is full.
+  @retval EFI_DEVICE_ERROR      Error calculating next write index.
+**/
+STATIC
+EFI_STATUS
+IssueCmdToSmmuV3Controller (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN  UINT64                           *Cmd
+  )
+{
+  EFI_STATUS            Status;
+  UINT32                ProdIdx;
+  UINT32                ConsIdx;
+  UINT32                ProdWrap;
+  UINT32                ConsWrap;
+  UINT32                ProdReg;
+  UINT32                ConsReg;
+  UINT32                IndexMask;
+  UINT32                QMaxEntries;
+  UINT32                QEmptySlots;
+  EFI_PHYSICAL_ADDRESS  CmdTarget;
+  UINT32                NextWrIdx;
+  UINT32                CurrentWrIdx;
+
+  if ((Private == NULL) || (Cmd == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  QMaxEntries = 1 << Private->Features.CmdqEntriesLog2;
+  IndexMask   = SMMUV3_ALL_ONES (Private->Features.CmdqEntriesLog2);
+  ProdReg     = MmioRead32 (Private->CmdQueue.ProdRegBase);
+  ProdWrap    = BIT_FIELD_GET (ProdReg, SMMU_V3_WRAP_MASK, Private->Features.CmdqEntriesLog2);
+  ProdIdx     = ProdReg & IndexMask;
+
+  ConsReg  = MmioRead32 (Private->CmdQueue.ConsRegBase);
+  ConsWrap = BIT_FIELD_GET (ConsReg, SMMU_V3_WRAP_MASK, Private->Features.CmdqEntriesLog2);
+  ConsIdx  = ConsReg & IndexMask;
+
+  DisplayCmdqErr (Private);
+
+  // Calculate empty slots in queue
+  if (ProdWrap == ConsWrap) {
+    QEmptySlots = QMaxEntries - (ProdIdx - ConsIdx);
+  } else {
+    QEmptySlots = ConsIdx - ProdIdx;
+  }
+
+  if (QEmptySlots == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Command queue full; No new cmd can be issued\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Add command to queue
+  CurrentWrIdx = ProdIdx;
+  CmdTarget    = Private->CmdQueue.QBase + CurrentWrIdx * SMMU_V3_CMD_SIZE;
+  PushEntryToCmdq ((UINT64 *)CmdTarget, (UINT64 *)Cmd);
+
+  Status = FindOffsetNextWrIdx (Private, &NextWrIdx, CurrentWrIdx, (ProdWrap << Private->Features.CmdqEntriesLog2));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to find next write index\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  TrackCmdqIdx (Private);
+  DEBUG ((DEBUG_INFO, "%a: CurrentWrIdx: %x; NextWrIdx: %x\n", __FUNCTION__, CurrentWrIdx, NextWrIdx));
+
+  // Update producer register with next write index
+  UpdateCmdqProd (Private, NextWrIdx);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Constructs a CMD_SYNC command for SMMUv3 command queue.
+
+  CMD_SYNC provides synchronization for preceding commands issued to the same
+  command queue. It ensures commands are completed before proceeding.
+
+  @param[out] Cmd     Pointer to command buffer to store the constructed CMD_SYNC.
+                      Must be at least 2 UINT64s in size.
+
+  @retval None
+**/
+STATIC
+VOID
+ConstructCmdSync (
+  OUT UINT64  *Cmd
+  )
+{
+  if (Cmd == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    ASSERT (FALSE);
+    return;
+  }
+
+  //
+  // Construct CMD_SYNC command
+  //
+  Cmd[0]  = BIT_FIELD_SET (SMMU_V3_OP_CMD_SYNC, SMMU_V3_OP_MASK, SMMU_V3_OP_SHIFT);
+  Cmd[0] |= BIT_FIELD_SET (SMMU_V3_CSIGNAL_NONE, SMMU_V3_CSIGNAL_MASK, SMMU_V3_CSIGNAL_SHIFT);
+  Cmd[1]  = 0;
+}
+
+/**
+  Checks if command queue read index has caught up with write index.
+
+  This function polls the command queue consumer register to check if SMMU
+  has processed all commands up to the current producer index.
+
+    @param[in]  Private       Pointer to SMMUv3 controller private data structure.
+
+  @retval EFI_SUCCESS           Read index matches write index.
+  @retval EFI_TIMEOUT           Timeout waiting for indices to match.
+  @retval EFI_INVALID_PARAMETER Private pointer is NULL.
+**/
+STATIC
+EFI_STATUS
+RdIdxMeetsWrIdx (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  UINT32  Attempts;
+  UINT32  ProdReg;
+  UINT32  ConsReg;
+  UINT32  ProdIdx;
+  UINT32  ConsIdx;
+  UINT32  ProdWrap;
+  UINT32  ConsWrap;
+  UINT32  IndexMask;
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  IndexMask = SMMUV3_ALL_ONES (Private->Features.CmdqEntriesLog2);
+  ProdReg   = MmioRead32 (Private->CmdQueue.ProdRegBase);
+  ProdWrap  = BIT_FIELD_GET (ProdReg, SMMU_V3_WRAP_MASK, Private->Features.CmdqEntriesLog2);
+  ProdIdx   = ProdReg & IndexMask;
+
+  ConsReg  = MmioRead32 (Private->CmdQueue.ConsRegBase);
+  ConsWrap = BIT_FIELD_GET (ConsReg, SMMU_V3_WRAP_MASK, Private->Features.CmdqEntriesLog2);
+  ConsIdx  = ConsReg & IndexMask;
+
+  Attempts = 0;
+  while (Attempts++ < SMMU_V3_POLL_ATTEMPTS) {
+    if ((ConsWrap == ProdWrap) && (ProdIdx == ConsIdx)) {
+      return EFI_SUCCESS;
+    }
+
+    ConsReg  = MmioRead32 (Private->CmdQueue.ConsRegBase);
+    ConsWrap = BIT_FIELD_GET (ConsReg, SMMU_V3_WRAP_MASK, Private->Features.CmdqEntriesLog2);
+    ConsIdx  = ConsReg & IndexMask;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Timeout - CONS_REG: 0x%x PROD_REG: 0x%x\n",
+    __FUNCTION__,
+    ConsReg,
+    ProdReg
+    ));
+
+  return EFI_TIMEOUT;
+}
+
+/**
+  Synchronizes the SMMUv3 command queue by issuing a CMD_SYNC command.
+
+  The CMD_SYNC command ensures completion of all prior commands and
+  observability of related transactions through the SMMU. This function
+  waits for the command queue read index to catch up with the write index.
+
+  @param[in]  Private       Pointer to SMMUv3 controller private data structure.
+
+  @retval EFI_SUCCESS       Command queue synchronized successfully.
+  @retval EFI_TIMEOUT       Timeout waiting for command completion.
+  @retval EFI_DEVICE_ERROR  Error issuing sync command.
+**/
+STATIC
+EFI_STATUS
+SynchronizeCmdq (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      Cmd[SMMU_V3_CMD_SIZE_DW];
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Issue CMD_SYNC command
+  ConstructCmdSync (Cmd);
+  Status = IssueCmdToSmmuV3Controller (Private, Cmd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to issue CMD_SYNC command to CMDQ\n", __FUNCTION__));
+    return Status;
+  }
+
+  // Track command queue indices for verification
+  TrackCmdqIdx (Private);
+
+  // Wait for read index to catch up with write index
+  Status = RdIdxMeetsWrIdx (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Timeout: CMDQ populated by PE not consumed by SMMU\n", __FUNCTION__));
+    return Status;
+  }
+
+  // Track final command queue state
+  TrackCmdqIdx (Private);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Invalidates all cached configurations in the SMMUv3 controller.
+
+  This function issues a CFGI_ALL command to invalidate configuration caches and
+  synchronizes the command queue to ensure completion.
+
+  @param[in]  Private       Pointer to SMMUv3 controller private data structure.
+
+  @retval EFI_SUCCESS           Configurations were invalidated successfully.
+  @retval EFI_INVALID_PARAMETER Private pointer is NULL.
+  @retval EFI_DEVICE_ERROR      Failed to issue or synchronize invalidation command.
+**/
+STATIC
+EFI_STATUS
+InvalCachedCfgs (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      Cmd[SMMU_V3_CMD_SIZE_DW];
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Invalidate configuration caches
+  ConstructInvAllCfg (Cmd);
+
+  Status = IssueCmdToSmmuV3Controller (Private, Cmd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to issue CFGI_ALL command to CMDQ\n", __FUNCTION__));
+    return Status;
+  }
+
+  // Issue CMD_SYNC to ensure completion of prior commands used for invalidation
+  Status = SynchronizeCmdq (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to synchronize command queue\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Constructs a TLB invalidation command for SMMUv3.
+
+  This function builds a command to invalidate TLB entries based on the
+  provided command format.
+
+  @param[out] Cmd         Pointer to command buffer to store the constructed command.
+                          Must be at least 2 UINT64s in size.
+  @param[in]  CmdOpcode   TLB invalidation opcode.
+
+  @retval None
+**/
+STATIC
+VOID
+EFIAPI
+ConstructTlbiCmd (
+  OUT     UINT64  *Cmd,
+  IN      UINT8   CmdOpcode
+  )
+{
+  if (Cmd == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  // Construct TLB invalidation command
+  Cmd[0] = BIT_FIELD_SET (CmdOpcode, SMMU_V3_OP_MASK, SMMU_V3_OP_SHIFT);
+  Cmd[1] = 0;
+}
+
+/**
+  Configure SMMUv3 controller to invalidate all TLBs and cached configuration.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              The SMMUv3 controller event queue was configured successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_DEVICE_ERROR         Failed to invalidate all caches and TLBs.
+
+ **/
+STATIC
+EFI_STATUS
+InvalidateCachedCfgsTlbs (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      Cmd[SMMU_V3_CMD_SIZE_DW];
+  UINT8       CmdOpcode;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Invalidate cached configuration
+  Status = InvalCachedCfgs (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate cached configurations\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Invalidate EL2 TLB entries
+  CmdOpcode = SMMU_V3_OP_TLBI_EL2_ALL;
+  ConstructTlbiCmd (Cmd, CmdOpcode);
+
+  Status = IssueCmdToSmmuV3Controller (Private, Cmd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate EL2 TLB entries\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Invalidate Non-secure Non-Hypervisor TLB entries
+  CmdOpcode = SMMU_V3_OP_TLBI_NSNH_ALL;
+  ConstructTlbiCmd (Cmd, CmdOpcode);
+
+  Status = IssueCmdToSmmuV3Controller (Private, Cmd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate NSNH TLB entries\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Creates a stream table entry (STE) configured for bypass mode.
+
+  This function configures an STE to bypass translation and use incoming
+  transaction attributes for:
+  - Memory attributes (MTCFG)
+  - Allocation hints (ALLOCCFG)
+  - Shareability (SHCFG)
+  - Security state (NSCFG)
+  - Privilege (PRIVCFG)
+  - Instruction fetch (INSTCFG)
+
+  @param[out] Ste    Pointer to STE buffer to populate.
+                     Must be 8 UINT64s in size.
+
+  @retval None
+**/
+STATIC
+VOID
+CreateBypassSte (
+  OUT UINT64  *Ste
+  )
+{
+  if (Ste == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  // Set STE to bypass mode
+  Ste[0] = SMMU_V3_STE_VALID;
+  Ste[0] = Ste[0] | BIT_FIELD_SET (SMMU_V3_STE_CFG_BYPASS, SMMU_V3_STE_CFG_MASK, SMMU_V3_STE_CFG_SHIFT);
+  Ste[1] = BIT_FIELD_SET (SMMU_V3_USE_INCOMING_ATTR, SMMU_V3_STE_MTCFG_MASK, SMMU_V3_STE_MTCFG_SHIFT);
+  Ste[1] = Ste[1] | BIT_FIELD_SET (SMMU_V3_USE_INCOMING_ATTR, SMMU_V3_STE_ALLOCCFG_MASK, SMMU_V3_STE_ALLOCCFG_SHIFT);
+  Ste[1] = Ste[1] | BIT_FIELD_SET (SMMU_V3_USE_INCOMING_SH_ATTR, SMMU_V3_STE_SHCFG_MASK, SMMU_V3_STE_SHCFG_SHIFT);
+  Ste[1] = Ste[1] | BIT_FIELD_SET (SMMU_V3_USE_INCOMING_ATTR, SMMU_V3_STE_NSCFG_MASK, SMMU_V3_STE_NSCFG_SHIFT);
+  Ste[1] = Ste[1] | BIT_FIELD_SET (SMMU_V3_USE_INCOMING_ATTR, SMMU_V3_STE_PRIVCFG_MASK, SMMU_V3_STE_PRIVCFG_SHIFT);
+  Ste[1] = Ste[1] | BIT_FIELD_SET (SMMU_V3_USE_INCOMING_ATTR, SMMU_V3_STE_INSTCFG_MASK, SMMU_V3_STE_INSTCFG_SHIFT);
+  Ste[2] = 0;
+  Ste[3] = 0;
+  Ste[4] = 0;
+  Ste[5] = 0;
+  Ste[6] = 0;
+  Ste[7] = 0;
+}
+
+/**
+  Sets up default translation behavior for SMMUv3 streams.
+
+  This function configures all stream table entries (STEs) to bypass translation
+  and use incoming attributes. After configuration, it invalidates cached entries.
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval None
+**/
+STATIC
+VOID
+Smmuv3DefaultTranslation (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      Index;
+  UINT32      SteCount;
+  UINT64      SteData[SMMU_V3_STRTAB_ENTRY_SIZE_DW];
+  UINT64      *SteAddr;
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  SteCount = (1 << Private->Features.StreamNBits);
+  CreateBypassSte (SteData);
+  SteAddr = (UINT64 *)Private->SteBase;
+
+  // Populate all stream table entries
+  for (Index = 0; Index < SteCount; Index++) {
+    WriteSte (SteAddr, SteData);
+    SteAddr += SMMU_V3_STRTAB_ENTRY_SIZE_DW;
+  }
+
+  /* After an SMMU configuration structure, such as STE, is altered in any way, an invalidation command
+   * must be issued to ensure any cached copies of stale configuration are discarded.
+   */
+  Status = InvalCachedCfgs (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate config caches - %r\n", __FUNCTION__, Status));
+    ASSERT_EFI_ERROR (Status);
+  }
+}
+
+/**
+  Enables the SMMUv3 controller.
+
+  This function:
+  1. Enables Command Queue
+  2. Enables Event Queue
+  3. Invalidates configuration caches and TLBs
+  4. Sets up default translation behavior
+  5. Enables SMMU translation
+
+  @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+
+  @retval EFI_SUCCESS              SMMUv3 controller enabled successfully.
+  @retval EFI_INVALID_PARAMETER    Private is NULL.
+  @retval EFI_TIMEOUT             Timeout waiting for queue/SMMU enable.
+  @retval EFI_DEVICE_ERROR        Failed to invalidate caches/TLBs.
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+EnableSmmuV3 (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private
+  )
+{
+  EFI_STATUS  Status;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  TrackCmdqIdx (Private);
+
+  // Enable Command Queue
+  MmioBitFieldWrite32 (
+    Private->BaseAddress + SMMU_V3_CR0_OFFSET,
+    SMMU_V3_CMDQEN_BIT,
+    SMMU_V3_CMDQEN_BIT,
+    SMMU_V3_Q_ENABLE
+    );
+
+  // Wait for the controller to enable command queue
+  gBS->Stall (10000);
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_CMDQEN_SHIFT) & SMMU_V3_CR0ACK_CMDQEN_MASK) != SMMU_V3_Q_ENABLE) {
+    return EFI_TIMEOUT;
+  }
+
+  // Enable Event Queue
+  MmioBitFieldWrite32 (
+    Private->BaseAddress + SMMU_V3_CR0_OFFSET,
+    SMMU_V3_EVTQEN_BIT,
+    SMMU_V3_EVTQEN_BIT,
+    SMMU_V3_Q_ENABLE
+    );
+
+  // Wait for the controller to enable event queue
+  gBS->Stall (10000);
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_EVTQEN_SHIFT) & SMMU_V3_CR0ACK_EVTQEN_MASK) != SMMU_V3_Q_ENABLE) {
+    return EFI_TIMEOUT;
+  }
+
+  // Invalidate cached configurations and TLBs
+  Status = InvalidateCachedCfgsTlbs (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate cached configurations and TLBs\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  Smmuv3DefaultTranslation (Private);
+
+  // Enable SMMUv3 translation
+  MmioBitFieldWrite32 (
+    Private->BaseAddress + SMMU_V3_CR0_OFFSET,
+    SMMU_V3_CR0_SMMUEN_BIT,
+    SMMU_V3_CR0_SMMUEN_BIT,
+    SMMU_V3_ENABLE
+    );
+
+  // Wait for smmu to enable
+  gBS->Stall (10000);
+  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_SMMUEN_SHIFT) & SMMU_V3_CR0ACK_SMMUEN_MASK) != SMMU_V3_ENABLE) {
+    return EFI_TIMEOUT;
+  }
+
+  TrackCmdqIdx (Private);
+  return EFI_SUCCESS;
+}
+
+/**
   Initialize the SMMUv3 controller.
 
   @param[in]  Private       Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
@@ -719,6 +1503,12 @@ InitializeSmmuV3 (
   Status = SetupSmmuV3StrTable (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to setup SMMUv3 stream table\n", __FUNCTION__));
+    return Status;
+  }
+
+  Status = EnableSmmuV3 (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to enable SMMUv3\n", __FUNCTION__));
     return Status;
   }
 
