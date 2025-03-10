@@ -178,16 +178,16 @@ typedef struct {
 } TEGRABL_DRAM_INFO_V0;
 
 typedef struct {
-  UINT8     NumModules;
-  UINT8     Rank;
+  UINT64    SerialNumber[MAX_DIMMS_PER_SOCKET];
+  UINT64    ChannelMap[MAX_DIMMS_PER_SOCKET];
   UINT16    TotalWidth;
   UINT16    DataWidth;
   UINT16    ManufacturerId;
-  UINT64    SerialNumber[MAX_DIMMS_PER_SOCKET];
-  UINT64    ChannelMap[MAX_DIMMS_PER_SOCKET];
+  UINT8     Rank;
   UINT8     Attribute[MAX_DIMMS_PER_SOCKET];
   UINT8     PartNumber[MAX_DIMMS_PER_SOCKET][30];
-  UINT8     Reserved[4];
+  UINT8     NumModules;
+  UINT8     Reserved[36];
 } TEGRABL_DRAM_INFO_V1;
 
 #pragma pack()
