@@ -39,7 +39,7 @@
 
 [Guids]
   gNVIDIANonDiscoverableSmmuV3DeviceGuid
-  gEfiEventExitBootServicesGuid
+  gEfiEventReadyToBootGuid
 
 [Protocols]
   gNVIDIASmmuV3ProtocolGuid

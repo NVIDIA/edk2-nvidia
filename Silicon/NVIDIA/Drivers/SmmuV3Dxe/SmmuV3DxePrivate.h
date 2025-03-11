@@ -182,7 +182,7 @@ typedef struct {
   EFI_PHYSICAL_ADDRESS                 SteBase;
   VOID                                 *DeviceTreeBase;
   INT32                                NodeOffset;
-  EFI_EVENT                            ExitBootServicesEvent;
+  EFI_EVENT                            ReadyToBootEvent;
   NVIDIA_SMMUV3_CONTROLLER_PROTOCOL    SmmuV3ControllerProtocol;
 } SMMU_V3_CONTROLLER_PRIVATE_DATA;
 

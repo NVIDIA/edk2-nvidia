@@ -10,6 +10,8 @@
 #ifndef __NVIDIA_SMMU_V3_PROTOCOL_H__
 #define __NVIDIA_SMMU_V3_PROTOCOL_H__
 
+#include <Protocol/IoMmu.h>
+
 #define NVIDIA_SMMUV3_CONTROLLER_PROTOCOL_GUID \
   { \
   0xF6C64F84, 0x702C, 0x4BE7, { 0xA4, 0x1B, 0x64, 0xD5, 0xB5, 0x5F, 0x10, 0x1C } \
@@ -22,7 +24,10 @@ typedef struct _NVIDIA_SMMUV3_CONTROLLER_PROTOCOL NVIDIA_SMMUV3_CONTROLLER_PROTO
 
 /// NVIDIA_SMMUV3_CONTROLLER_PROTOCOL protocol structure.
 struct _NVIDIA_SMMUV3_CONTROLLER_PROTOCOL {
-  UINT32    PHandle;
+  UINT32                       PHandle;
+  EDKII_IOMMU_SET_ATTRIBUTE    SetAttribute;
+  EDKII_IOMMU_MAP              Map;
+  EDKII_IOMMU_UNMAP            Unmap;
 };
 
 extern EFI_GUID  gNVIDIASmmuV3ProtocolGuid;
