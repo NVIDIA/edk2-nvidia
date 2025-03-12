@@ -11,6 +11,7 @@
 #define __AVB_VERIFIED_BOOT__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/OpteeNvLib.h>
 
 typedef enum {
   VERIFIED_BOOT_UNKNOWN_STATE,
@@ -20,6 +21,60 @@ typedef enum {
   VERIFIED_BOOT_ORANGE_STATE,
   VERIFIED_BOOT_RED_STATE_EIO,
 } AVB_BOOT_STATE;
+
+#define TA_AVB_MAX_ROLLBACK_LOCATIONS  256
+
+/*
+ * Gets the rollback index corresponding to the given rollback index slot.
+ *
+ * in   Params[0].Union.Value.A:      rollback index slot
+ * out  Params[1].Union.Value.A:      upper 32 bits of rollback index
+ * out  Params[1].Union.Value.B:      lower 32 bits of rollback index
+ */
+#define TA_AVB_CMD_READ_ROLLBACK_INDEX  0
+
+/*
+ * Updates the rollback index corresponding to the given rollback index slot.
+ *
+ * Will refuse to update a slot with a lower value.
+ *
+ * in   Params[0].Union.Value.A:      rollback index slot
+ * in   Params[1].Union.Value.A:      upper 32 bits of rollback index
+ * in   Params[1].Union.Value.B:      lower 32 bits of rollback index
+ */
+#define TA_AVB_CMD_WRITE_ROLLBACK_INDEX  1
+
+/*
+ * Gets the lock state of the device.
+ *
+ * out  Params[0].Union.Value.A:      lock state
+ */
+#define TA_AVB_CMD_READ_LOCK_STATE  2
+
+/*
+ * Sets the lock state of the device.
+ *
+ * If the lock state is changed all rollback slots will be reset to 0
+ *
+ * in   Params[0].Union.Value.A:      lock state
+ */
+#define TA_AVB_CMD_WRITE_LOCK_STATE  3
+
+/*
+ * Reads a persistent value corresponding to the given name.
+ *
+ * in    Params[0].Union.Memory:       persistent value name
+ * inout Params[1].Union.Memory:       read persistent value buffer
+ */
+#define TA_AVB_CMD_READ_PERSIST_VALUE  4
+
+/*
+ * Writes a persistent value corresponding to the given name.
+ *
+ * in   Params[0].Union.Memory:       persistent value name
+ * in   Params[1].Union.Memory:       persistent value buffer to write
+ */
+#define TA_AVB_CMD_WRITE_PERSIST_VALUE  5
 
 /**
  * Process all verified boot related issues aka verify boot.img
@@ -37,6 +92,29 @@ AvbVerifyBoot (
   IN BOOLEAN     IsRecovery,
   IN EFI_HANDLE  ControllerHandle,
   OUT CHAR8      **AvbCmdline
+  );
+
+/**
+  Init the optee interface for AVB
+
+  @retval EFI_SUCCESS  Init Optee interface successfully.
+**/
+EFI_STATUS
+AvbOpteeInterfaceInit (
+  VOID
+  );
+
+/**
+  Invoke an AVB TA cmd request
+
+  @param[inout] AvbTaArg  OPTEE_INVOKE_FUNCTION_ARG for AVB TA cmd
+
+  @retval EFI_SUCCESS     The operation completed successfully.
+
+**/
+EFI_STATUS
+AvbOpteeInvoke (
+  IN OUT OPTEE_INVOKE_FUNCTION_ARG  *InvokeFunctionArg
   );
 
 #endif

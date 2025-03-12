@@ -106,6 +106,7 @@
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
   AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
+  OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
 
   DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/StatusRegLibNull/StatusRegLibNull.inf
@@ -361,7 +362,10 @@
   MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
   # Boot support for mkbootimg partitions
-  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
+  Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf {
+    <LibraryClasses>
+      AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceFfa/AvbOpteeInterfaceFfa.inf
+  }
 
   #
   # Bds

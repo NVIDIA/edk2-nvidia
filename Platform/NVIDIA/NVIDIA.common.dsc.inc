@@ -2469,6 +2469,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf {
     <LibraryClasses>
       AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
+!ifdef CONFIG_SOC_T26X
+      AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceFfa/AvbOpteeInterfaceFfa.inf
+!else
+      AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceSmc/AvbOpteeInterfaceSmc.inf
+!endif
   }
 !endif
 

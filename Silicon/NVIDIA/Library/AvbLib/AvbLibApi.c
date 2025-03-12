@@ -22,6 +22,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/BaseCryptLib.h>
 #include <Library/BootConfigProtocolLib.h>
+#include <Library/OpteeNvLib.h>
 
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
@@ -29,6 +30,9 @@
 
 #include "libavb/libavb/libavb.h"
 #include "Library/AvbLib.h"
+
+#define UPPER_32_BITS(n)  ((UINT32)((n) >> 32))
+#define LOWER_32_BITS(n)  ((UINT32)(n))
 
 STATIC EFI_HANDLE  mControllerHandle;
 
@@ -392,8 +396,26 @@ WriteRollbackIndex (
   IN uint64_t  RollbackIndex
   )
 {
-  // To implement with AVB TA
-  return AVB_IO_RESULT_OK;
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+
+  InvokeFunctionArg.Function                = TA_AVB_CMD_WRITE_ROLLBACK_INDEX;
+  InvokeFunctionArg.Params[0].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
+  InvokeFunctionArg.Params[0].Union.Value.A = (UINT64)RollbackIndexLocation;
+  InvokeFunctionArg.Params[1].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
+  InvokeFunctionArg.Params[1].Union.Value.A = UPPER_32_BITS (RollbackIndex);
+  InvokeFunctionArg.Params[1].Union.Value.B = LOWER_32_BITS (RollbackIndex);
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write rollback index 0x%lx to 0x%lx\r\n", __FUNCTION__, Status, RollbackIndex, RollbackIndexLocation));
+    AvbResult = AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+Exit:
+  return AvbResult;
 }
 
 /**
@@ -414,14 +436,33 @@ ReadRollbackIndex (
   OUT uint64_t  *OutRollbackIndex
   )
 {
-  // To implement with AVB TA
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+
   if (OutRollbackIndex == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: OutRollbackIndex == NULL\n", __FUNCTION__));
-    return AVB_IO_RESULT_ERROR_NO_SUCH_VALUE;
+    AvbResult = AVB_IO_RESULT_ERROR_NO_SUCH_VALUE;
+    goto Exit;
   }
 
-  *OutRollbackIndex = 0;
-  return AVB_IO_RESULT_OK;
+  InvokeFunctionArg.Function                = TA_AVB_CMD_READ_ROLLBACK_INDEX;
+  InvokeFunctionArg.Params[0].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
+  InvokeFunctionArg.Params[0].Union.Value.A = (UINT64)RollbackIndexLocation;
+  InvokeFunctionArg.Params[1].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read rolback index from 0x%lx\r\n", __FUNCTION__, Status, RollbackIndexLocation));
+    AvbResult = (Status == EFI_NOT_FOUND) ? AVB_IO_RESULT_ERROR_NO_SUCH_VALUE : AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+  *OutRollbackIndex = (InvokeFunctionArg.Params[1].Union.Value.A << 32)
+                      + InvokeFunctionArg.Params[1].Union.Value.B;
+
+Exit:
+  return AvbResult;
 }
 
 /**
@@ -485,15 +526,43 @@ ReadPersistentValue (
   OUT size_t              *OutNumBytesRead
   )
 {
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+  VOID                       *NameBuffer       = NULL;
+  UINT32                     NameLength;
+
   if ((OutBuffer == NULL) || (OutNumBytesRead == NULL)) {
     DEBUG ((DEBUG_ERROR, "%a: OutBuffer or OutNumBytesRead == NULL\n", __FUNCTION__));
     return AVB_IO_RESULT_ERROR_NO_SUCH_VALUE;
   }
 
-  // To implement with AVB TA
-  *OutNumBytesRead = 0;
+  NameLength = AsciiStrLen (Name);
+  NameBuffer = AllocateCopyPool (NameLength, Name);
 
-  return AVB_IO_RESULT_OK;
+  InvokeFunctionArg.Function                             = TA_AVB_CMD_READ_PERSIST_VALUE;
+  InvokeFunctionArg.Params[0].Attribute                  = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT;
+  InvokeFunctionArg.Params[0].Union.Memory.BufferAddress = (UINT64)NameBuffer;
+  InvokeFunctionArg.Params[0].Union.Memory.Size          = NameLength;
+  InvokeFunctionArg.Params[1].Attribute                  = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INOUT;
+  InvokeFunctionArg.Params[1].Union.Memory.BufferAddress = (UINT64)OutBuffer;
+  InvokeFunctionArg.Params[1].Union.Memory.Size          = BufferSize;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read persist value - %a\n", __FUNCTION__, Status, Name));
+    AvbResult = (Status == EFI_NOT_FOUND) ? AVB_IO_RESULT_ERROR_NO_SUCH_VALUE : AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+  *OutNumBytesRead = InvokeFunctionArg.Params[1].Union.Memory.Size;
+
+Exit:
+  if (NameBuffer != NULL) {
+    FreePool (NameBuffer);
+  }
+
+  return AvbResult;
 }
 
 /**
@@ -516,8 +585,36 @@ WritePersistentValue (
   IN const uint8_t  *Value
   )
 {
-  // To implement with AVB TA
-  return AVB_IO_RESULT_OK;
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+  VOID                       *NameBuffer       = NULL;
+  UINT32                     NameLength;
+
+  NameLength = AsciiStrLen (Name);
+  NameBuffer = AllocateCopyPool (NameLength, Name);
+
+  InvokeFunctionArg.Function                             = TA_AVB_CMD_WRITE_PERSIST_VALUE;
+  InvokeFunctionArg.Params[0].Attribute                  = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT;
+  InvokeFunctionArg.Params[0].Union.Memory.BufferAddress = (UINT64)NameBuffer;
+  InvokeFunctionArg.Params[0].Union.Memory.Size          = NameLength;
+  InvokeFunctionArg.Params[1].Attribute                  = OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_INPUT;
+  InvokeFunctionArg.Params[1].Union.Memory.BufferAddress = (UINT64)Value;
+  InvokeFunctionArg.Params[1].Union.Memory.Size          = BufferSize;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write persist value - %a\n", __FUNCTION__, Status, Name));
+    AvbResult = AVB_IO_RESULT_ERROR_IO;
+    goto Exit;
+  }
+
+Exit:
+  if (NameBuffer != NULL) {
+    FreePool (NameBuffer);
+  }
+
+  return AvbResult;
 }
 
 /**
@@ -614,6 +711,12 @@ AvbVerifyBoot (
   CHAR8                              *BootStateStr = NULL;
 
   mControllerHandle = ControllerHandle;
+
+  Status = AvbOpteeInterfaceInit ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a:Avb OP-TEE initialization failed with %r\n", __func__, Status));
+    goto Exit;
+  }
 
   Status = VerifiedBootGetBootState (IsRecovery, &BootState, &SlotData);
   if (EFI_ERROR (Status)) {
