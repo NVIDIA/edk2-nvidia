@@ -93,19 +93,21 @@ jobs:
       - name: Build
         run: |
           cd ${{ github.workspace }}/workspace
-          edk2-nvidia/Platform/NVIDIA/Jetson/build.sh
+          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_general.defconfig
+          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_embedded.defconfig
+          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_android.defconfig
+          ([ -d edk2-redfish-client ] && edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t24x_datacenter.defconfig) || true
           edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/build.sh
           edk2-nvidia/Platform/NVIDIA/StandaloneMm/build.sh
+          edk2-nvidia/Platform/NVIDIA/StandaloneMmJetson/build.sh
           edk2-nvidia/Platform/NVIDIA/DeviceTree/build.sh
-          edk2-nvidia/Platform/NVIDIA/Android/build.sh
           edk2-nvidia/Platform/NVIDIA/L4TLauncher/build.sh
-          ([ -d edk2-redfish-client ] && edk2-nvidia/Platform/NVIDIA/Server/build.sh) || true
       - name: Package
         id: package
         run: |
           mkdir package
           # Extract details about the build (BUILDID, sha, etc.)
-          grep -m 1 BUILDID_STRING= workspace/Build/BUILDLOG_Jetson.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
+          grep -m 1 BUILDID_STRING= workspace/Build/BUILDLOG_t23x_general.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
           BUILDID=$(cat package/buildid)
           echo "version=${BUILDID}"
           echo "version=${BUILDID}" >> $GITHUB_OUTPUT
