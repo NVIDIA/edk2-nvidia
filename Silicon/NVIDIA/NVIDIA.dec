@@ -860,3 +860,8 @@
 
 #HSP Doorbell Region Size
   gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x0|UINT32|0x00000150
+
+# Ethernet Base, Size and Intr Id
+  gNVIDIATokenSpaceGuid.PcdEthernetBaseAddr|0x03B40000|UINT32|0x00000160
+  gNVIDIATokenSpaceGuid.PcdEthernetSize|0x00000100|UINT32|0x00000161
+  gNVIDIATokenSpaceGuid.PcdEthernetIntrId|0x00|UINT32|0x00000162

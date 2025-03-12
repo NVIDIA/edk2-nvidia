@@ -1,14 +1,12 @@
 /** @file
-  SSDT for TH500 Ethernet
+  SSDT for Ethernet
 
-  SPDX-FileCopyrightText: Copyright (c) 2019 - 2024, NVIDIA Corporation. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019 - 2025, NVIDIA Corporation. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include <TH500/TH500Definitions.h>
-
-DefinitionBlock("SsdtEth_th500.aml", "SSDT", 2, "NVIDIA", "TH500", 0x00000001) {
+DefinitionBlock("SsdtEth.aml", "SSDT", 2, "NVIDIA", "LNRO ", 0x00000001) {
   Scope(_SB) {
     //---------------------------------------------------------------------
     // ethernet @ 0x03B40000
@@ -20,8 +18,8 @@ DefinitionBlock("SsdtEth_th500.aml", "SSDT", 2, "NVIDIA", "TH500", 0x00000001) {
       Name (_CCA, 0) /* Non-Coherent DMA */
 
       Name(_CRS, ResourceTemplate() {
-        Memory32Fixed(ReadWrite, TH500_ETHERNET_BASE_ADDR, TH500_ETHERNET_CAR_SIZE)
-        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { TH500_ETHERNET_INTR } /* SPI[218] == 250 */
+        Memory32Fixed(ReadWrite, FixedPcdGet32(PcdEthernetBaseAddr), FixedPcdGet32(PcdEthernetSize))
+        Interrupt(ResourceConsumer, Level, ActiveHigh, Exclusive) { FixedPcdGet32(PcdEthernetIntrId) }
       })
 
       Name (_DSD, Package () {

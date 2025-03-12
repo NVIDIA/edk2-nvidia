@@ -1312,6 +1312,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 
 !ifdef CONFIG_SOC_T24X
 [PcdsFixedAtBuild]
+  gNVIDIATokenSpaceGuid.PcdEthernetIntrId|0xFA
  !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
    ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
    gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0000C3903DC

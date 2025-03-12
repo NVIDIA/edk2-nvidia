@@ -1,7 +1,7 @@
 ## @file
 #  Platform ASL Tables
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -27,7 +27,7 @@
   Dsdt_T264.asl
   SsdtHda.asl
   Dsdt_TH500.asl
-  SsdtEth_TH500.asl
+  SsdtEth.asl
   SsdtSocket1_TH500.asl
   SsdtSocket2_TH500.asl
   SsdtSocket3_TH500.asl
@@ -44,3 +44,6 @@
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs
+  gNVIDIATokenSpaceGuid.PcdEthernetBaseAddr
+  gNVIDIATokenSpaceGuid.PcdEthernetSize
+  gNVIDIATokenSpaceGuid.PcdEthernetIntrId

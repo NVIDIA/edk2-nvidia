@@ -1,7 +1,7 @@
 /** @file
   Ethernet info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -13,8 +13,8 @@
 #include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-// #include "SsdtEth_TH500.hex"
-extern unsigned char  ssdteth_th500_aml_code[];
+// #include "SsdtEth.hex"
+extern unsigned char  ssdteth_aml_code[];
 
 /** Ethernet info parser function.
 
@@ -59,7 +59,7 @@ EthernetInfoParser (
   NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
   NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
   NewAcpiTable.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
-  NewAcpiTable.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdteth_th500_aml_code;
+  NewAcpiTable.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdteth_aml_code;
   NewAcpiTable.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
   NewAcpiTable.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
   NewAcpiTable.MinorRevision      = 0;
