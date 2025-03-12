@@ -1,5 +1,5 @@
 //
-//  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -51,8 +51,14 @@ _T234Carveout_V0:
 
 _TH500Carveout:
   cmp w1, #TH500_CHIP_ID
-  bne _DefaultCarveout
+  bne _T264Carveout
   MOV64 (x0, TH500_BL_CARVEOUT_OFFSET)
+  b _ReturnCarveout
+
+_T264Carveout:
+  cmp w1, #T264_CHIP_ID
+  bne _DefaultCarveout
+  bl ASM_PFX (GetT264BlCarveoutOffset)
   b _ReturnCarveout
 
 _DefaultCarveout:
@@ -63,6 +69,12 @@ _ReturnCarveout:
   ret
 
 ASM_FUNC(TegraGetBLInfoLocationAddress)
+  cmp w0, #T264_CHIP_ID
+  bne _DefaultBLInfoAddr
+  MOV64 (x0, T264_BLINFO_LOCATION_ADDRESS)
+  ret
+
+_DefaultBLInfoAddr:
   MOV64 (x0, DEFAULT_BLINFO_LOCATION_ADDRESS)
   ret
 

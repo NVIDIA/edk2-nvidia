@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,7 +17,16 @@
 #include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include "TegraPlatformInfoLibPrivate.h"
+#include <T264/T264Definitions.h>
 #include "Uefi/UefiBaseType.h"
+
+UINT64
+GetT264BlCarveoutOffset (
+  VOID
+  )
+{
+  return T264_BL_CARVEOUT_OFFSET;
+}
 
 #define MAX_REV_SIZE    (5)
 #define MAX_OPT_SUBREV  (4)

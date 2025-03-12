@@ -1,0 +1,45 @@
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PlatformResourceLib
+  FILE_GUID                      = 38a419fc-034f-42d2-ae47-3a76ec37f66b
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = PlatformResourceLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  CryptoPkg/CryptoPkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  TegraPlatformInfoLib
+  BaseMemoryLib
+  GoldenRegisterLib
+  HobLib
+  BaseLib
+
+[Sources.common]
+  PlatformResourceConfig.c
+  PlatformResourceLib.c
+  T264ResourceConfig.c
+  CommonResourceConfig.c
+
+[Guids]
+  gArmMpCoreInfoGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
+  gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize
