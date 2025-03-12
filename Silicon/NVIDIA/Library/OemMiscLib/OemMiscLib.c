@@ -33,6 +33,15 @@
 #define HZ_TO_MHZ(x)   (x/1000000)
 #define GENMASK_32(n)  (~(0U) >> (32 - n))
 
+#define FUSE_OPT_VENDOR_CODE_0   (0x200)
+#define FUSE_OPT_FAB_CODE_0      (0x204)
+#define FUSE_OPT_LOT_CODE_0_0    (0x208)
+#define FUSE_OPT_LOT_CODE_1_0    (0x20C)
+#define FUSE_OPT_WAFER_ID_0      (0x210)
+#define FUSE_OPT_X_COORDINATE_0  (0x214)
+#define FUSE_OPT_Y_COORDINATE_0  (0x218)
+#define FUSE_OPT_OPS_RESERVED_0  (0x220)
+
 #define CPUSNMAXSTR   (320)
 #define CPUVERSTATIC  (15)
 
@@ -927,6 +936,142 @@ OemGetChassisNumPowerCords (
 }
 
 /**
+ * Get the EFuse protocol for a given ProcessorIndex.
+ *
+ * @param[in] ProcessorIdx Socket Num to get Efuse protocol.
+ *
+ * @return Pointer to Efuse Protocol on Success.
+ *         NULL on failure.
+ **/
+STATIC
+NVIDIA_EFUSE_PROTOCOL *
+GetEfuseProtocol (
+  IN UINT8  ProcessorIdx
+  )
+{
+  UINTN                  EfuseHandles;
+  EFI_HANDLE             *EfuseHandleBuffer;
+  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
+  NVIDIA_EFUSE_PROTOCOL  *Iter;
+  EFI_STATUS             Status;
+  UINTN                  Index;
+
+  EfuseProtocol = NULL;
+  Status        = gBS->LocateHandleBuffer (
+                         ByProtocol,
+                         &gNVIDIAEFuseProtocolGuid,
+                         NULL,
+                         &EfuseHandles,
+                         &EfuseHandleBuffer
+                         );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "Error locating Efuse handles: %r\n", Status));
+    goto ExitGetEfuseProtocol;
+  }
+
+  Iter = NULL;
+
+  for (Index = 0; Index < EfuseHandles; Index++) {
+    Status = gBS->HandleProtocol (
+                    EfuseHandleBuffer[Index],
+                    &gNVIDIAEFuseProtocolGuid,
+                    (VOID **)&Iter
+                    );
+    if (EFI_ERROR (Status) || (Iter == NULL)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "Failed to get EfuseProtocol for handle index %u: %r\n",
+        Index,
+        Status
+        ));
+      continue;
+    }
+
+    if (Iter->Socket == ProcessorIdx) {
+      DEBUG ((DEBUG_ERROR, "Found EFuse Proto %u\n", ProcessorIdx));
+      EfuseProtocol = Iter;
+      break;
+    } else {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a:%d ProcessorIdx %u Socket %u\n",
+        __FUNCTION__,
+        __LINE__,
+        ProcessorIdx,
+        Iter->Socket
+        ));
+    }
+  }
+
+ExitGetEfuseProtocol:
+  return EfuseProtocol;
+}
+
+/**
+  ExtendEfuseRegisters
+
+  Extend the SHA1 context with the EFUSE registers. This is used for the UUID generation and is only valid for Jetson platforms.
+
+  @param [in]  ProcessorIndex  The socket number to extend the EFUSE registers.
+  @param[out] Sha1Ctx          The SHA1 context to update.
+
+  @return EFI_SUCCESS       Successful installation
+  @retval !(EFI_SUCCESS)    Other errors
+**/
+STATIC
+EFI_STATUS
+ExtendEfuseRegisters (
+  UINT8  ProcessorIndex,
+  VOID   *Sha1Ctx
+  )
+{
+  NVIDIA_EFUSE_PROTOCOL  *EfuseProtocol;
+  UINT32                 Vendor;
+  UINT32                 Fab;
+  UINT32                 Lot0;
+  UINT32                 Lot1;
+  UINT32                 Wafer;
+  UINT32                 XValue;
+  UINT32                 YValue;
+  UINT32                 Reserved;
+  EFI_STATUS             Status;
+
+  Status = EFI_SUCCESS;
+
+  if (Sha1Ctx == NULL) {
+    Status = EFI_INVALID_PARAMETER;
+    goto exitGetEcidJetson;
+  }
+
+  EfuseProtocol = GetEfuseProtocol (ProcessorIndex);
+  if (EfuseProtocol == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get EfuseProtocol\n", __FUNCTION__));
+    Status = EFI_INVALID_PARAMETER;
+    goto exitGetEcidJetson;
+  }
+
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_VENDOR_CODE_0, &Vendor);
+  Sha1Update (Sha1Ctx, &Vendor, sizeof (Vendor));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_FAB_CODE_0, &Fab);
+  Sha1Update (Sha1Ctx, &Fab, sizeof (Fab));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_0_0, &Lot0);
+  Sha1Update (Sha1Ctx, &Lot0, sizeof (Lot0));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_LOT_CODE_1_0, &Lot1);
+  Sha1Update (Sha1Ctx, &Lot1, sizeof (Lot1));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_WAFER_ID_0, &Wafer);
+  Sha1Update (Sha1Ctx, &Wafer, sizeof (Wafer));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_X_COORDINATE_0, &XValue);
+  Sha1Update (Sha1Ctx, &XValue, sizeof (XValue));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_Y_COORDINATE_0, &YValue);
+  Sha1Update (Sha1Ctx, &YValue, sizeof (YValue));
+  EfuseProtocol->ReadReg (EfuseProtocol, FUSE_OPT_OPS_RESERVED_0, &Reserved);
+  Sha1Update (Sha1Ctx, &Reserved, sizeof (Reserved));
+
+exitGetEcidJetson:
+  return Status;
+}
+
+/**
   CreateUuid5
 
   Creates a version 5 UUID per RFC 9562
@@ -955,6 +1100,7 @@ CreateUuid5 (
   }
 
   CtxSize = Sha1GetContextSize ();
+
   Sha1Ctx = AllocatePool (CtxSize);
   if (Sha1Ctx == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for SHA1 context\n", __func__));
@@ -964,6 +1110,12 @@ CreateUuid5 (
   Sha1Init (Sha1Ctx);
   Sha1Update (Sha1Ctx, Namespace, sizeof (GUID));
   Sha1Update (Sha1Ctx, Name, AsciiStrLen (Name));
+  if (ExtendEfuseRegisters (0, Sha1Ctx) != EFI_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to extend EFUSE registers\n", __func__));
+    FreePool (Sha1Ctx);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
   Sha1Final (Sha1Ctx, Digest);
 
   // Construct the UUID from the hash
@@ -994,6 +1146,7 @@ OemGetSystemUuid (
   EFI_STATUS  Status;
   CHAR8       *SerialNum;
 
+  DEBUG ((DEBUG_ERROR, "%a %d: Started\n", __FUNCTION__, __LINE__));
   if (SmEepromData == NULL) {
     DEBUG ((
       DEBUG_ERROR,
@@ -1014,6 +1167,8 @@ OemGetSystemUuid (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a %d: Failed to generate UUID %r  \n", __FUNCTION__, __LINE__, Status));
   }
+
+  DEBUG ((DEBUG_VERBOSE, "%a %d: UUID = %g\n", __FUNCTION__, __LINE__, SystemUuid));
 }
 
 /**
