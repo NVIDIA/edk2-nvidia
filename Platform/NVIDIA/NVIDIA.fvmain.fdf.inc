@@ -478,6 +478,12 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
 !endif
 
+!ifdef CONFIG_SOC_T41X
+  #
+  # GH100 GPU Driver
+  #
+  INF Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
+!endif
 
 !ifdef CONFIG_SOC_T24X
   #

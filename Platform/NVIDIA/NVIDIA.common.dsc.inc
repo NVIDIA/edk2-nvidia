@@ -1600,6 +1600,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gArmTokenSpaceGuid.PcdGenericWatchdogControlBase|0x0000fe140363b000
   gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase|0x0000fe140363a000
   gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum|228
+  # Firmware version
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
 [PcdsDynamicDefault.common.T410Presil]
 
@@ -2453,6 +2456,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   # BasicProfiler Support
   #
   Silicon/NVIDIA/Drivers/BasicProfilerDxe/BasicProfilerDxe.inf
+!endif
+
+!ifdef CONFIG_SOC_T41X
+  #
+  # GH100 GPU Driver
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/TH500GpuDxe/TH500GpuDxe.inf
 !endif
 
 !ifdef CONFIG_SOC_T24X
