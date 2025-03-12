@@ -461,7 +461,7 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 
 
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_T24X
   #
   # GH100 GPU Driver
   #
@@ -472,7 +472,9 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Sample driver only not included in firmware image
   #
   # INF Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
+!endif
 
+!ifdef CONFIG_SOC_DATACENTER
   #
   # FPGA I2C Support
   #
@@ -605,7 +607,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # Inject Assert
   #
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
   INF Silicon/NVIDIA/Application/TestInjectAssert/TestInjectAssert.inf
 !endif
 !endif

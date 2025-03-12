@@ -111,10 +111,6 @@ config SOC_T264
 bool
 default y if SOC_T26X
 
-config SOC_GRACE
-bool
-default y if SOC_T24X
-
 config SOC_JETSON
 bool
 default y if SOC_GENERAL

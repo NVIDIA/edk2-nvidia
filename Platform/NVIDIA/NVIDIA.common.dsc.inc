@@ -58,7 +58,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
 !ifdef CONFIG_SOC_T264
   4|T264
 !endif
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_T24X
   5|TH500
   253|TH500Presil|TH500
 !endif
@@ -1310,7 +1310,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|0
 !endif
 
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_T24X
 [PcdsFixedAtBuild]
  !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
    ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
@@ -1511,14 +1511,14 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/BootArchInfo/BootArchInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/FixedFeatureFlags/FixedFeatureFlags.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericTimer/GenericTimer.inf
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericWatchdog/GenericWatchdog.inf
 !endif
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/PowerManagementProfile/PowerManagementProfile.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SerialPortInfo/SerialPortInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProcHierarchyInfo/ProcHierarchyInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/DsdtPatcher/DsdtPatcher.inf
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/EthernetInfo/EthernetInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TelemetryInfo/TelemetryInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TpmInfo/TpmInfo.inf
@@ -1532,7 +1532,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Iort/Iort.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/PciInfoParser/PciInfoParser.inf
 
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ApmtParser/ApmtParser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Tpm2Parser/Tpm2Parser.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/MpamParser/MpamParser.inf
@@ -1550,7 +1550,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
 !endif
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/Dbg2NetworkParser/Dbg2NetworkParser.inf
 
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SmbiosParser/SmbiosParser.inf
 !endif
 
@@ -1982,7 +1982,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   Silicon/NVIDIA/Drivers/RamDiskOS/RamDiskOS.inf
 !endif
 
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_T24X
   #
   # GH100 GPU Driver
   #
@@ -1992,7 +1992,9 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   # Oem Partition Sample Driver.
   #
   Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionDxe.inf
+!endif
 
+!ifdef CONFIG_SOC_DATACENTER
   #
   # FPGA I2C Support
   #
@@ -2098,7 +2100,7 @@ gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{ GUID("7c04a583-9e3e-4f1c-ad65-
   #
   # Inject Assert
   #
-!ifdef CONFIG_SOC_GRACE
+!ifdef CONFIG_SOC_DATACENTER
   Silicon/NVIDIA/Application/TestInjectAssert/TestInjectAssert.inf
 !endif
 !endif
