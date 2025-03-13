@@ -350,8 +350,10 @@ GetVarStoreCs (
   UINT16                DeviceInstance;
   EFI_PHYSICAL_ADDRESS  CpuBlAddr;
   TEGRA_PLATFORM_TYPE   Platform;
+  UINTN                 ChipId;
 
-  if (IsOpteePresent ()) {
+  ChipId = TegraGetChipID ();
+  if (IsOpteePresent () || (ChipId == T264_CHIP_ID)) {
     /* For Jetson we always use CS 0 */
     *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
     Status = EFI_SUCCESS;
