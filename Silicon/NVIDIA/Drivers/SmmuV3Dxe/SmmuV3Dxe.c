@@ -268,6 +268,8 @@ ConfigureSmmuV3ControllerXlatSupport (
   // Clear and program Private TLB maintenance bit
   Cr2Setting = Cr2Setting & ~(BIT_FIELD_SET (1, SMMU_V3_CR2_PTM_MASK, SMMU_V3_CR2_PTM_SHIFT));
   Cr2Setting = Cr2Setting | BIT_FIELD_SET (SMMU_V3_CR2_PTM_ENABLE, SMMU_V3_CR2_PTM_MASK, SMMU_V3_CR2_PTM_SHIFT);
+  Cr2Setting = Cr2Setting | BIT_FIELD_SET (SMMU_V3_CR2_RECINVSID_ENABLE, SMMU_V3_CR2_RECINVSID_MASK, SMMU_V3_CR2_RECINVSID_SHIFT);
+
   MmioWrite32 (Private->BaseAddress + SMMU_V3_CR2_OFFSET, Cr2Setting);
 
   return EFI_SUCCESS;

@@ -77,10 +77,14 @@
 #define SMMU_V3_CR1_OC_MASK       (0x3)
 #define SMMU_V3_CR1_IC_MASK       (0x3)
 
-#define SMMU_V3_CR2_OFFSET      (0x2C)             // Control Register 2
-#define SMMU_V3_CR2_PTM_SHIFT   (2)
-#define SMMU_V3_CR2_PTM_MASK    (0x1)
-#define SMMU_V3_CR2_PTM_ENABLE  (0)
+#define SMMU_V3_CR2_OFFSET             (0x2C)     // Control Register 2
+#define SMMU_V3_CR2_RECINVSID_SHIFT    (1)
+#define SMMU_V3_CR2_RECINVSID_MASK     (0x1)
+#define SMMU_V3_CR2_RECINVSID_DISABLE  (0)
+#define SMMU_V3_CR2_RECINVSID_ENABLE   (1)
+#define SMMU_V3_CR2_PTM_SHIFT          (2)
+#define SMMU_V3_CR2_PTM_MASK           (0x1)
+#define SMMU_V3_CR2_PTM_ENABLE         (0)
 
 #define SMMU_V3_GBPA_OFFSET         (0x44)         // Global Bypass
 #define SMMU_V3_GBPA_UPDATE_SHIFT   (31)
