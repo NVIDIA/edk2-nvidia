@@ -329,6 +329,84 @@ GetCpuBlParamsAddrStMm (
 }
 
 /**
+ * Look up the CS to be used for the Variable partition in the CPUBL Params.
+ * This function is used when the Variable partition is not found in the GPT.
+ *
+ * @param[in, out] VarCs  Chipselect for the Variable partition.
+ *
+ * @retval  EFI_SUCCESS    Succesfully looked up the CS  value.
+ *          EFI_NOT_FOUND  Couldn't lookup the CPUBL Params OR
+ *                         the partition info for the Variable partition
+ *                         isn't valid.
+**/
+STATIC
+EFI_STATUS
+GetVarStoreCsBlParams (
+  IN OUT UINT8  *VarCs
+  )
+{
+  EFI_STATUS            Status;
+  UINT64                VarOffset;
+  UINT64                VarSize;
+  UINT16                DeviceInstance;
+  EFI_PHYSICAL_ADDRESS  CpuBlAddr;
+  TEGRA_PLATFORM_TYPE   Platform;
+
+  Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get CPUBL Addr %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitGetVarStoreCsBlParams;
+  }
+
+  Status = GetPartitionInfoStMm (
+             (UINTN)CpuBlAddr,
+             TEGRABL_VARIABLE_IMAGE_INDEX,
+             &DeviceInstance,
+             &VarOffset,
+             &VarSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Variable partition Info %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitGetVarStoreCsBlParams;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a:PartitionIndex[%u] VarOffset %lu VarSize %lu"
+    "Device Instance %x\n",
+    __FUNCTION__,
+    TEGRABL_VARIABLE_IMAGE_INDEX,
+    VarOffset,
+    VarSize,
+    DeviceInstance
+    ));
+  if (VarSize != 0) {
+    *VarCs = ((DeviceInstance & DEVICE_CS_MASK) >> DEVICE_CS_SHIFT);
+  } else {
+    Platform = GetPlatformTypeMm ();
+    /* Unable to get the CS information from CPU BL Params */
+    if (Platform == TEGRA_PLATFORM_SILICON) {
+      *VarCs = NOR_FLASH_CHIP_SELECT_TH500_SIL;
+    } else {
+      *VarCs = NOR_FLASH_CHIP_SELECT_TH500_PRESIL;
+    }
+  }
+
+ExitGetVarStoreCsBlParams:
+  return Status;
+}
+
+/**
  * Look up the CS to be used for the Variable partition.
  *
  * @param[out] VarCs  Chipselect for the Variable partition.
@@ -344,72 +422,32 @@ GetVarStoreCs (
   UINT8  *VarCs
   )
 {
-  EFI_STATUS            Status;
-  UINT64                VarOffset;
-  UINT64                VarSize;
-  UINT16                DeviceInstance;
-  EFI_PHYSICAL_ADDRESS  CpuBlAddr;
-  TEGRA_PLATFORM_TYPE   Platform;
-  UINTN                 ChipId;
+  EFI_STATUS  Status;
+  UINTN       ChipId;
 
-  ChipId = TegraGetChipID ();
-  if (IsOpteePresent () || (ChipId == T264_CHIP_ID)) {
+  if (IsOpteePresent ()) {
     /* For Jetson we always use CS 0 */
     *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
     Status = EFI_SUCCESS;
   } else {
-    Status = GetCpuBlParamsAddrStMm (&CpuBlAddr);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to get CPUBL Addr %r\n",
-        __FUNCTION__,
-        Status
-        ));
-      goto ExitVarStoreCs;
-    }
+    ChipId = TegraGetChipID ();
 
-    Status = GetPartitionInfoStMm (
-               (UINTN)CpuBlAddr,
-               TEGRABL_VARIABLE_IMAGE_INDEX,
-               &DeviceInstance,
-               &VarOffset,
-               &VarSize
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to get Variable partition Info %r\n",
-        __FUNCTION__,
-        Status
-        ));
-      goto ExitVarStoreCs;
-    }
-
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:PartitionIndex[%u] VarOffset %lu VarSize %lu"
-      "Device Instance %x\n",
-      __FUNCTION__,
-      TEGRABL_VARIABLE_IMAGE_INDEX,
-      VarOffset,
-      VarSize,
-      DeviceInstance
-      ));
-    if (VarSize != 0) {
-      *VarCs = ((DeviceInstance & DEVICE_CS_MASK) >> DEVICE_CS_SHIFT);
-    } else {
-      Platform = GetPlatformTypeMm ();
-      /* Unable to get the CS information from CPU BL Params */
-      if (Platform == TEGRA_PLATFORM_SILICON) {
-        *VarCs = NOR_FLASH_CHIP_SELECT_TH500_SIL;
-      } else {
-        *VarCs = NOR_FLASH_CHIP_SELECT_TH500_PRESIL;
-      }
+    /* Branch here for non-OPTEE based platforms
+       As the GetChipID() is not available for OPTEE based platforms.
+       For Non-OPTEE based platforms, Jetson SOCs will be using CS 0.
+       For other platforms, we will use the CPUBL Params to get the CS value.
+    */
+    switch (ChipId) {
+      case T264_CHIP_ID:
+        *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
+        Status = EFI_SUCCESS;
+        break;
+      default:
+        Status = GetVarStoreCsBlParams (VarCs);
+        break;
     }
   }
 
-ExitVarStoreCs:
   return Status;
 }
 
