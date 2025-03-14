@@ -236,6 +236,19 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         return None
 
+    def GetToolchainTag(self):
+        ''' Optionally return the toolchain identifier.
+
+            Defaults to GCC.  If `None`, the value is taken from target.txt.
+            Otherwise, this will override target.txt
+
+            This will be used to set TOOL_CHAIN_TAG.
+        '''
+        tool_chain_tag = os.getenv("TOOL_CHAIN_TAG")
+        if not tool_chain_tag:
+            tool_chain_tag = "GCC"
+        return tool_chain_tag
+
 
 class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
                             PrEvalSettingsManager, BuildSettingsManager,
@@ -356,19 +369,6 @@ class NVIDIASettingsManager(AbstractNVIDIASettingsManager,
             This will be used to set ACTIVE_PLATFORM.
         '''
         return self.GetEdk2NvidiaDir() + "Platform/NVIDIA/NVIDIA.common.dsc"
-
-    def GetToolchainTag(self):
-        ''' Optionally return the toolchain identifier.
-
-            Defaults to GCC5.  If `None`, the value is taken from target.txt.
-            Otherwise, this will override target.txt
-
-            This will be used to set TOOL_CHAIN_TAG.
-        '''
-        tool_chain_tag = os.getenv("TOOL_CHAIN_TAG")
-        if not tool_chain_tag:
-            tool_chain_tag = "GCC5"
-        return tool_chain_tag
 
     def GetReportTypes(self):
         ''' Return the build report types.
@@ -563,19 +563,6 @@ class NVIDIACiSettingsManager(AbstractNVIDIASettingsManager,
 
     #######################################
     # NVIDIA settings
-
-    def GetToolchainTag(self):
-        ''' Return the toolchain identifier.
-
-            At this time, we only support CI runs with the GCC5 toolchain.
-
-            This will be used to set TOOL_CHAIN_TAG.
-        '''
-        tool_chain_tag = os.getenv("TOOL_CHAIN_TAG")
-        if not tool_chain_tag:
-            tool_chain_tag = "GCC5"
-        return tool_chain_tag
-
     def GetReportTypes(self):
         ''' Return the build report types.
 

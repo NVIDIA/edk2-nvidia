@@ -46,4 +46,4 @@ if [[ -z "${UEFI_SKIP_UPDATE}" ]]; then
 fi
 
 _msg "Building basetools."
-python edk2/BaseTools/Edk2ToolsBuild.py -t GCC5
+python edk2/BaseTools/Edk2ToolsBuild.py -t GCC

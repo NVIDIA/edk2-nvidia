@@ -92,5 +92,5 @@
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
 
 [BuildOptions]
-  *_GCC5_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds
+  *_GCC_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds
   *_CLANGDWARF_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE-clang.lds
