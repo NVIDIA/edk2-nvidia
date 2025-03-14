@@ -40,7 +40,7 @@
 #define SMMU_V3_IDR1_SUB_SID_SHIFT  6
 #define SMMU_V3_IDR1_SUB_SID_MASK   0x1F
 #define SMMU_V3_IDR1_SID_SHIFT      0
-#define SMMU_V3_IDR1_SID_MASK       0x1F
+#define SMMU_V3_IDR1_SID_MASK       0x3F
 
 #define SMMU_V3_IDR5_OFFSET     0x14              // Identification Register 5
 #define SMMU_V3_IDR5_OAS_SHIFT  0

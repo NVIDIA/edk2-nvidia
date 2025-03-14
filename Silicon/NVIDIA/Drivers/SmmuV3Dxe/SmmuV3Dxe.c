@@ -651,7 +651,7 @@ SetupSmmuV3StrTable (
   MmioWrite32 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_CFG_OFFSET, StrtabCfgSetting);
 
   DEBUG ((DEBUG_INFO, "%a: Write to STRTAB_BASE 0x%llx STRTAB_BASE reg 0x%p\n", __FUNCTION__, StrtabBaseReg, Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET));
-  MmioWrite32 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET, StrtabBaseReg);
+  MmioWrite64 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET, StrtabBaseReg);
 
   // Mark STE as invalid
   Status = InvalidateStes (Private);
