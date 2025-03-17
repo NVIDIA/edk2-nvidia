@@ -275,7 +275,7 @@ RasLogMsgHandler (
   RasHeader  = (RAS_MM_COMMUNICATE_PAYLOAD *)CommBuffer;
   RasPayload = RasHeader->Data;
 
-  RasPayloadSize = *CommBufferSize - sizeof (RasHeader);
+  RasPayloadSize = *CommBufferSize - sizeof (RAS_MM_COMMUNICATE_PAYLOAD);
 
   if (RasSeqProto == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: No Storage support for RASLog\n", __FUNCTION__));
