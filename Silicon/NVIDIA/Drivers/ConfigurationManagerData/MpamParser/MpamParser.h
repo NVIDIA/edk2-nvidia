@@ -1,7 +1,7 @@
 /** @file
   Memory System Resource Partitioning and Monitoring Table Parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -12,7 +12,8 @@
 #include <Library/NvCmObjectDescUtility.h>
 
 // Generate socket Id from Phy addr. Max 4 sockets supported
-#define SOCKETID_FROM_PHYS_ADDR(phys)  (((phys) >> 43) & 0x3)
+#define MPAM_HWID_SOCKET_SHIFT  (PcdGet8 (PcdMpamSocketShift))
+#define SOCKETID_FROM_PHYS_ADDR(phys)  (((phys) >> MPAM_HWID_SOCKET_SHIFT) & 0x3)
 
 EFI_STATUS
 EFIAPI
