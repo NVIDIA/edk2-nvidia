@@ -2,7 +2,7 @@
 
   Private Sequential record protocol/header definitions.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,11 +21,12 @@
 #include <TH500/TH500MB1Configuration.h>
 #include <Guid/NVIDIAMmMb1Record.h>
 
-#define READ_LAST_RECORD     (0)
-#define WRITE_NEXT_RECORD    (1)
-#define ERASE_PARTITION      (2)
-#define CLEAR_EFI_NSVARS     (3)
-#define CLEAR_EFI_VARIABLES  (4)
+#define READ_LAST_RECORD          (0)
+#define WRITE_NEXT_RECORD         (1)
+#define ERASE_PARTITION           (2)
+#define CLEAR_EFI_NSVARS          (3)
+#define CLEAR_EFI_VARIABLES       (4)
+#define READ_NTH_RECORD_FROM_END  (5)
 
 typedef struct {
   /* Operation to perform */
@@ -36,6 +37,8 @@ typedef struct {
   UINTN         Socket;
   /* Flag. To be used mostly in CMET record storage.*/
   UINTN         Flag;
+  /* Nth record from end to read */
+  UINTN         NthFromEnd;
   /* Extra data (ie data to write when RAS_FW requests a write, or read data from MM when returning a read request */
   UINT8         Data[]; /* Flexible array member */
 } RAS_MM_COMMUNICATE_PAYLOAD;

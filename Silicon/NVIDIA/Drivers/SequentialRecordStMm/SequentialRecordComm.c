@@ -312,6 +312,15 @@ RasLogMsgHandler (
                               );
       RasHeader->Flag = RasLogOverrideTargets (RasPayload, RasHeader->Flag);
       break;
+    case READ_NTH_RECORD_FROM_END:
+      Status = RasSeqProto->ReadNthRecordFromEnd (
+                              RasSeqProto,
+                              RasHeader->Socket,
+                              RasHeader->NthFromEnd,
+                              (VOID *)RasPayload,
+                              RasPayloadSize
+                              );
+      break;
     default:
       DEBUG ((
         DEBUG_ERROR,

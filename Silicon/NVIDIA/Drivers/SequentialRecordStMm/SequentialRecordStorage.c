@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash.
   This file handles the storage portions.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -571,6 +571,263 @@ GetReadLastOffset (
     *ReadLastOffset,
     *RecSize
     ));
+  return EFI_SUCCESS;
+}
+
+/**
+  Get the nth record from the end of a sequential storage block.
+
+  @param[in]  Partition           Information about the storage partition
+  @param[in]  NorFlashProtocol    Protocol to interact with NOR flash
+  @param[in]  SocketNum           Socket number for the flash device
+  @param[in]  BlockNum            Block number to search in
+  @param[in]  NthFromEnd          Index of record to read from the end (1-based)
+  @param[out] ReadOffset          Offset of the nth record from end
+  @param[out] RecSize             Size of the nth record from end
+
+  @retval EFI_SUCCESS             The function completed successfully
+  @retval EFI_NOT_FOUND           No valid records found or nth record doesn't exist
+  @retval EFI_INVALID_PARAMETER   Invalid parameters
+**/
+EFI_STATUS
+GetNthRecordFromEnd (
+  IN  PARTITION_INFO             *Partition,
+  IN  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol,
+  IN  UINTN                      SocketNum,
+  IN  UINTN                      BlockNum,
+  IN  UINT32                     NthFromEnd,
+  OUT UINT32                     *ReadOffset,
+  OUT UINT32                     *RecSize
+  )
+{
+  UINT32  StartOffset;
+  UINT32  EndOffset;
+  UINT32  CurOffset;
+  UINT32  CurSize;
+  UINT32  RecordCount;
+  UINT32  TargetIndex;
+
+  // Input validation
+  if ((Partition == NULL) || (NorFlashProtocol == NULL) ||
+      (ReadOffset == NULL) || (RecSize == NULL) ||
+      (NthFromEnd == 0))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Reading %u-th record from end in Block %u\n",
+    __FUNCTION__,
+    NthFromEnd,
+    BlockNum
+    ));
+
+  // Initialize block boundaries
+  StartOffset = BlockNum * SEQ_BLOCK_SIZE;
+  EndOffset   = StartOffset + SEQ_BLOCK_SIZE;
+  CurOffset   = StartOffset;
+  RecordCount = 0;
+
+  // Count total valid records
+  while (CurOffset < EndOffset) {
+    if (IsValidRecord (CurOffset, NorFlashProtocol, &CurSize) == TRUE) {
+      RecordCount++;
+      CurOffset += CurSize;
+    } else {
+      break;
+    }
+  }
+
+  // Check if we have enough records
+  if (RecordCount < NthFromEnd) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Only %u records found, requested %u-th from end\n",
+      __FUNCTION__,
+      RecordCount,
+      NthFromEnd
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  // Calculate target index from end
+  TargetIndex = RecordCount - NthFromEnd;
+
+  // Find the target record
+  CurOffset   = StartOffset;
+  RecordCount = 0;
+  while (CurOffset < EndOffset) {
+    if (IsValidRecord (CurOffset, NorFlashProtocol, &CurSize) == TRUE) {
+      if (RecordCount == TargetIndex) {
+        *ReadOffset = CurOffset;
+        *RecSize    = CurSize;
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: Found %u-th record from end at offset %u, size %u\n",
+          __FUNCTION__,
+          NthFromEnd,
+          *ReadOffset,
+          *RecSize
+          ));
+        return EFI_SUCCESS;
+      }
+
+      RecordCount++;
+      CurOffset += CurSize;
+    } else {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Header isn't valid %u\n",
+        __FUNCTION__,
+        CurOffset
+        ));
+      break;
+    }
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+/**
+  Read the nth record from the end of the partition.
+  Find the nth valid record from the end with a valid header (magic/checksum)
+  and return that to the client.
+
+  @param[in]   This          Pointer to Sequential Record Proto.
+  @param[in]   SocketNum     Specify which SPI-NOR to write to.
+  @param[in]   NthFromEnd    Index of record to read from the end (1-based)
+  @param[out]  Buf           Buffer to read into.
+  @param[in]   BufSize       Size of read buffer.
+
+  @retval      EFI_SUCCESS               Read back nth record from end.
+  @retval      EFI_INVALID_PARAMETER     Invalid buffer size or parameters
+  @retval      EFI_NOT_FOUND             No valid records found or nth record doesn't exist
+  @retval      EFI_DEVICE_ERROR          Can't find the NOR Flash device or invalid record found
+  @retval      EFI_BUFFER_TOO_SMALL      Buffer size is too small for the record
+  @retval      Other                     NOR Flash Transaction fail.
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+ReadNthRecordFromEnd (
+  IN  NVIDIA_SEQ_RECORD_PROTOCOL  *This,
+  IN  UINTN                       SocketNum,
+  IN  UINT32                      NthFromEnd,
+  OUT VOID                        *Buf,
+  IN  UINTN                       BufSize
+  )
+{
+  EFI_STATUS                 Status;
+  UINT32                     ReadOffset;
+  UINT32                     RecSize;
+  UINT32                     ActiveBlock;
+  NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProtocol;
+
+  // Input validation
+  if (BufSize < sizeof (DATA_HDR)) {
+    DEBUG ((DEBUG_ERROR, "%a: Buffer too small\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (SocketNum >= MAX_SOCKETS) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid SocketNumber %u\n", __FUNCTION__, SocketNum));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (NthFromEnd == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid NthFromEnd value %u\n", __FUNCTION__, NthFromEnd));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Get NOR Flash protocol
+  NorFlashProtocol = This->NorFlashProtocol[SocketNum];
+  if (NorFlashProtocol == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get NorFlashProtocol for %u\n",
+      __FUNCTION__,
+      SocketNum
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Get active block
+  Status = GetActiveBlock (
+             &This->PartitionInfo,
+             NorFlashProtocol,
+             SocketNum,
+             &ActiveBlock
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get ActiveBlock %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  // Get the nth record from end
+  Status = GetNthRecordFromEnd (
+             &This->PartitionInfo,
+             NorFlashProtocol,
+             SocketNum,
+             ActiveBlock,
+             NthFromEnd,
+             &ReadOffset,
+             &RecSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to get Nth record from end %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  // Check buffer size
+  if (BufSize < (RecSize - sizeof (DATA_HDR))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: BufSize = %u not big enough RecSize %u\n",
+      __FUNCTION__,
+      BufSize,
+      RecSize
+      ));
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  // Read the record data
+  Status = NorFlashProtocol->Read (
+                               NorFlashProtocol,
+                               ReadOffset + sizeof (DATA_HDR),
+                               BufSize,
+                               Buf
+                               );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to read record at offset %u %r\n",
+      __FUNCTION__,
+      ReadOffset,
+      Status
+      ));
+    return Status;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Read %u-th record from end at offset %u Socket %u\n",
+    __FUNCTION__,
+    NthFromEnd,
+    ReadOffset,
+    SocketNum
+    ));
+
   return EFI_SUCCESS;
 }
 
@@ -1257,9 +1514,10 @@ SequentialStorageInit (
       continue;
     }
 
-    SeqProtocol->ReadLast       = ReadLastRecord;
-    SeqProtocol->WriteNext      = WriteNextRecord;
-    SeqProtocol->ErasePartition = ErasePartition;
+    SeqProtocol->ReadLast             = ReadLastRecord;
+    SeqProtocol->ReadNthRecordFromEnd = ReadNthRecordFromEnd;
+    SeqProtocol->WriteNext            = WriteNextRecord;
+    SeqProtocol->ErasePartition       = ErasePartition;
     CopyMem (
       SeqProtocol->NorFlashProtocol,
       NorFlashProtocolArr,
