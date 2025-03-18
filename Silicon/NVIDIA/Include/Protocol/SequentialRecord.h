@@ -2,7 +2,7 @@
 
   Sequential record protocol/header definitions
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -76,12 +76,23 @@ EFI_STATUS
   IN  UINTN                       PrimaryRecord
   );
 
+typedef
+EFI_STATUS
+(EFIAPI *SEQ_REC_READ_NTH_RECORD_FROM_END)(
+  IN  NVIDIA_SEQ_RECORD_PROTOCOL *This,
+  IN  UINTN                      SocketNum,
+  IN  UINT32                     NthFromEnd,
+  IN  VOID                       *Buf,
+  IN  UINTN                      BufSize
+  );
+
 struct _NVIDIA_SEQ_RECORD_PROTOCOL {
-  SEQ_REC_READ_LAST            ReadLast;
-  SEQ_REC_WRITE_NEXT           WriteNext;
-  SEQ_REC_ERASE_PARTITION      ErasePartition;
-  PARTITION_INFO               PartitionInfo;
-  NVIDIA_NOR_FLASH_PROTOCOL    *NorFlashProtocol[MAX_SOCKETS];
+  SEQ_REC_READ_LAST                   ReadLast;
+  SEQ_REC_WRITE_NEXT                  WriteNext;
+  SEQ_REC_ERASE_PARTITION             ErasePartition;
+  SEQ_REC_READ_NTH_RECORD_FROM_END    ReadNthRecordFromEnd;
+  PARTITION_INFO                      PartitionInfo;
+  NVIDIA_NOR_FLASH_PROTOCOL           *NorFlashProtocol[MAX_SOCKETS];
 };
 
 struct _NVIDIA_CMET_RECORD_PROTOCOL {
