@@ -192,6 +192,9 @@ typedef struct {
 
 #pragma pack()
 typedef struct {
+  /**< version */
+  UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
+
   /**< Uart instance */
   UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
 
@@ -260,6 +263,9 @@ typedef struct {
 } TEGRA_CPUBL_PARAMS_V0;
 
 typedef struct {
+  /**< version */
+  UEFI_DECLARE_ALIGNED (UINT32 Version, 4);
+
   /**< Uart instance */
   UEFI_DECLARE_ALIGNED (UINT32 Uart_Instance, 4);
 
