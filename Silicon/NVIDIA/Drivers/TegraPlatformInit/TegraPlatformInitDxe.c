@@ -2,7 +2,7 @@
 
   Tegra Platform Init Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,6 +26,7 @@
 #include <Library/FloorSweepingLib.h>
 #include <libfdt.h>
 #include <Guid/ImageAuthentication.h>
+#include <Guid/RtPropertiesTable.h>
 #include <UefiSecureBoot.h>
 #include <Library/SecureBootVariableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -39,7 +40,8 @@ UseEmulatedVariableStore (
   IN EFI_HANDLE  ImageHandle
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS               Status;
+  EFI_RT_PROPERTIES_TABLE  *RtProperties;
 
   PcdSetBoolS (PcdEmuVariableNvModeEnable, TRUE);
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -51,6 +53,18 @@ UseEmulatedVariableStore (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error installing EmuVariableNvModeEnableProtocol\n", __FUNCTION__));
   }
+
+  RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocateRuntimePool (sizeof (EFI_RT_PROPERTIES_TABLE));
+  if (RtProperties == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n", __FUNCTION__));
+    Status = EFI_OUT_OF_RESOURCES;
+    return Status;
+  }
+
+  RtProperties->Version                  = EFI_RT_PROPERTIES_TABLE_VERSION;
+  RtProperties->Length                   = sizeof (EFI_RT_PROPERTIES_TABLE);
+  RtProperties->RuntimeServicesSupported = PcdGet32 (PcdNoVariableRtProperties);
+  gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
 
   return Status;
 }
