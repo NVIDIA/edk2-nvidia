@@ -39,6 +39,7 @@
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+  gNVIDIATokenSpaceGuid.PcdBpmpContainedInSocket
 
 [Depex]
   TRUE

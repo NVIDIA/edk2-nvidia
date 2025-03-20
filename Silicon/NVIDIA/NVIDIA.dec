@@ -482,6 +482,9 @@
   ## Use to determine if the internal nvidia GOP driver is supported.
   gNVIDIATokenSpaceGuid.PcdNvGopSupported|FALSE|BOOLEAN|0x00000132
 
+#CCPLEX NS INITIATOR ID
+  gNVIDIATokenSpaceGuid.PcdCcplexNsInitiatorId|17|UINT32|0x00000164
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
@@ -865,3 +868,6 @@
   gNVIDIATokenSpaceGuid.PcdEthernetBaseAddr|0x03B40000|UINT32|0x00000160
   gNVIDIATokenSpaceGuid.PcdEthernetSize|0x00000100|UINT32|0x00000161
   gNVIDIATokenSpaceGuid.PcdEthernetIntrId|0x00|UINT32|0x00000162
+
+#BPMP Contained Inside Socket
+  gNVIDIATokenSpaceGuid.PcdBpmpContainedInSocket|FALSE|BOOLEAN|0x00000163

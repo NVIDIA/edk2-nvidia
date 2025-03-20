@@ -2,7 +2,7 @@
 
   HspDoorbell private structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,7 +23,7 @@
 #define HSP_COMMON_REGION_SIZE  SIZE_64KB
 
 #define HSP_MASTER_SECURE_CCPLEX  1
-#define HSP_MASTER_CCPLEX         17
+#define HSP_MASTER_CCPLEX         FixedPcdGet32 (PcdCcplexNsInitiatorId)
 #define HSP_MASTER_DPMU           18
 #define HSP_MASTER_BPMP           19
 #define HSP_MASTER_SPE            20

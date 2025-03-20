@@ -68,10 +68,14 @@ DtbUpdateBpmpIpcRegions (
       continue;
     }
 
-    if (Socket == 0) {
-      BpmpPathFormat = "/bpmp";
+    if (PcdGetBool (PcdBpmpContainedInSocket)) {
+      BpmpPathFormat = "/socket@%u/bpmp";
     } else {
-      BpmpPathFormat = "/bpmp_s%u";
+      if (Socket == 0) {
+        BpmpPathFormat = "/bpmp";
+      } else {
+        BpmpPathFormat = "/bpmp_s%u";
+      }
     }
 
     if (BpmpIpcRegions[Socket].MemoryLength == 0) {
