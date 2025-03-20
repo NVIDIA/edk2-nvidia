@@ -39,6 +39,7 @@
   # ASSERT_DEADLOOP_ENABLED    0x20
   # ASSERT_RESET_ENABLED       0x40
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x23
+  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
 
 [PcdsFeatureFlag]
 

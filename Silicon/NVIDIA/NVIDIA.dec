@@ -871,3 +871,7 @@
 
 #BPMP Contained Inside Socket
   gNVIDIATokenSpaceGuid.PcdBpmpContainedInSocket|FALSE|BOOLEAN|0x00000163
+
+#Flash options
+  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|FALSE|BOOLEAN|0x000000B3
+  gNVIDIATokenSpaceGuid.PcdDataOnlyFlashIsSupported|FALSE|BOOLEAN|0x000000B4

@@ -1013,6 +1013,9 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gNVIDIATokenSpaceGuid.PcdVariableRtProperties|0x27F0
   gNVIDIATokenSpaceGuid.PcdExposeRtcI2cToOs|TRUE
 !endif
+!ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
+  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
+!endif
 
 [PcdsDynamicDefault]
   #
@@ -1339,6 +1342,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
    ## Limit of registers for each Frame.
    gNVIDIATokenSpaceGuid.PcdPerFpLimit|7
  !endif
+  gNVIDIATokenSpaceGuid.PcdDataOnlyFlashIsSupported|TRUE
 
 [PcdsDynamicDefault.common.TH500]
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TH500   '

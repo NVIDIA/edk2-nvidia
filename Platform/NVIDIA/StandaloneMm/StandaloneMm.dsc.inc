@@ -74,6 +74,8 @@
   # ASSERT_RESET_ENABLED       0x40
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
+  gNVIDIATokenSpaceGuid.PcdDataOnlyFlashIsSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
 
 [PcdsFeatureFlag]
   gArmTokenSpaceGuid.PcdFfaEnable|TRUE

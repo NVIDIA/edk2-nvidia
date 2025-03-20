@@ -27,8 +27,14 @@
 #include <Protocol/NorFlash.h>
 #include <Library/FwPartitionDeviceLib.h>
 
-#define MAX_NOR_FLASH_DEVICES                  2
+#define MAX_NOR_FLASH_DEVICES                  16
 #define FW_PARTITION_NOR_FLASH_INFO_SIGNATURE  SIGNATURE_32 ('F','W','N','S')
+
+typedef enum {
+  NOR_FLASH_TYPE_FW_AND_DATA,
+  NOR_FLASH_TYPE_DATA_ONLY,
+  NOR_FLASH_TYPE_FW_ONLY,
+} NOR_FLASH_TYPE;
 
 // private device data structure
 typedef struct {
@@ -39,11 +45,11 @@ typedef struct {
   FW_PARTITION_DEVICE_INFO     DeviceInfo;
   UINTN                        UnalignedGptStart;
   UINT32                       SocketId;
+  NOR_FLASH_TYPE               FlashType;
 } FW_PARTITION_NOR_FLASH_INFO;
 
 STATIC FW_PARTITION_NOR_FLASH_INFO  *mNorFlashInfo   = NULL;
 STATIC UINTN                        mNumDevices      = 0;
-STATIC UINTN                        mNumDevicesBlob  = 0;
 STATIC UINT32                       mActiveBootChain = 0;
 
 /**
@@ -296,7 +302,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 FPNorFlashInitDevices (
-  VOID
+  EFI_GUID        *ProtocolGuid,
+  NOR_FLASH_TYPE  FlashType
   )
 {
   EFI_STATUS            Status;
@@ -309,7 +316,7 @@ FPNorFlashInitDevices (
   HandleBufferSize = sizeof (HandleBuffer);
   Status           = gMmst->MmLocateHandle (
                               ByProtocol,
-                              &gNVIDIANorFlashProtocolGuid,
+                              ProtocolGuid,
                               NULL,
                               &HandleBufferSize,
                               HandleBuffer
@@ -333,7 +340,7 @@ FPNorFlashInitDevices (
     Handle   = HandleBuffer[Index];
     Status   = gMmst->MmHandleProtocol (
                         Handle,
-                        &gNVIDIANorFlashProtocolGuid,
+                        ProtocolGuid,
                         (VOID **)&NorFlash
                         );
     if (EFI_ERROR (Status) || (NorFlash == NULL)) {
@@ -357,23 +364,6 @@ FPNorFlashInitDevices (
       continue;
     }
 
-    DEBUG ((
-      DEBUG_INFO,
-      "Found MM-NorFlash BlockSize=%u, MemoryDensity=%llu\n",
-      Attributes.BlockSize,
-      Attributes.MemoryDensity
-      ));
-
-    if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Max devices=%d exceeded\n",
-        __FUNCTION__,
-        MAX_NOR_FLASH_DEVICES
-        ));
-      break;
-    }
-
     SocketIdProtocol = NULL;
     Status           = gMmst->MmHandleProtocol (
                                 Handle,
@@ -381,9 +371,23 @@ FPNorFlashInitDevices (
                                 (VOID **)&SocketIdProtocol
                                 );
     if (EFI_ERROR (Status) || (SocketIdProtocol == NULL)) {
-      SocketId = 0xFFFF;
+      DEBUG ((DEBUG_ERROR, "SocketId protocol not found for handle %u\n", Index));
+      continue;
     } else {
       SocketId = (UINT8)(*SocketIdProtocol);
+    }
+
+    DEBUG ((
+      DEBUG_INFO,
+      "Found MM-NorFlash Socket=%u BlockSize=%u, MemoryDensity=%llu\n",
+      SocketId,
+      Attributes.BlockSize,
+      Attributes.MemoryDensity
+      ));
+
+    if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
+      DEBUG ((DEBUG_ERROR, "%a: Max devices=%d exceeded\n", __FUNCTION__, MAX_NOR_FLASH_DEVICES));
+      break;
     }
 
     NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
@@ -393,6 +397,7 @@ FPNorFlashInitDevices (
     NorFlashInfo->NorFlash          = NorFlash;
     NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
     NorFlashInfo->SocketId          = SocketId;
+    NorFlashInfo->FlashType         = FlashType;
 
     DeviceInfo              = &NorFlashInfo->DeviceInfo;
     DeviceInfo->DeviceName  = L"MM-NorFlash";
@@ -401,127 +406,6 @@ FPNorFlashInitDevices (
     DeviceInfo->BlockSize   = Attributes.BlockSize;
 
     mNumDevices++;
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
-  Find NorFlash devices and initialize private data structures.
-
-  @retval EFI_SUCCESS           Operation successful
-  @retval others                Error occurred
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-FPNorFlashInitDevicesBlob (
-  VOID
-  )
-{
-  EFI_STATUS            Status;
-  UINTN                 HandleBufferSize;
-  EFI_HANDLE            HandleBuffer[MAX_NOR_FLASH_DEVICES];
-  UINTN                 NumHandles;
-  UINTN                 Index;
-  NOR_FLASH_ATTRIBUTES  Attributes;
-
-  HandleBufferSize = sizeof (HandleBuffer);
-  Status           = gMmst->MmLocateHandle (
-                              ByProtocol,
-                              &gNVIDIANorFlash2ProtocolGuid,
-                              NULL,
-                              &HandleBufferSize,
-                              HandleBuffer
-                              );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "Error locating MM-NorFlash handles: %r\n", Status));
-    return Status;
-  }
-
-  NumHandles = HandleBufferSize / sizeof (EFI_HANDLE);
-
-  for (Index = 0; Index < NumHandles; Index++) {
-    EFI_HANDLE                   Handle;
-    NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
-    FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo;
-    FW_PARTITION_DEVICE_INFO     *DeviceInfo;
-    UINT32                       *SocketIdProtocol;
-    UINT32                       SocketId;
-
-    NorFlash = NULL;
-    Handle   = HandleBuffer[Index];
-    Status   = gMmst->MmHandleProtocol (
-                        Handle,
-                        &gNVIDIANorFlash2ProtocolGuid,
-                        (VOID **)&NorFlash
-                        );
-    if (EFI_ERROR (Status) || (NorFlash == NULL)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "Failed to get MM-NorFlash for handle index %u: %r\n",
-        Index,
-        Status
-        ));
-      continue;
-    }
-
-    Status = NorFlash->GetAttributes (NorFlash, &Attributes);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "MM-NorFlash attributes for handle %u failed: %r\n",
-        Index,
-        Status
-        ));
-      continue;
-    }
-
-    DEBUG ((
-      DEBUG_ERROR,
-      "Found NorFlash BlockSize=%u, MemoryDensity=%llu\n",
-      Attributes.BlockSize,
-      Attributes.MemoryDensity
-      ));
-
-    if (mNumDevices >= MAX_NOR_FLASH_DEVICES) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Max devices=%d exceeded\n",
-        __FUNCTION__,
-        MAX_NOR_FLASH_DEVICES
-        ));
-      break;
-    }
-
-    SocketIdProtocol = NULL;
-    Status           = gMmst->MmHandleProtocol (
-                                Handle,
-                                &gNVIDIASocketIdProtocolGuid,
-                                (VOID **)&SocketIdProtocol
-                                );
-    if (EFI_ERROR (Status) || (SocketIdProtocol == NULL)) {
-      SocketId = 0xFFFF;
-    } else {
-      SocketId = (UINT8)(*SocketIdProtocol);
-    }
-
-    NorFlashInfo                    = &mNorFlashInfo[mNumDevices];
-    NorFlashInfo->Signature         = FW_PARTITION_NOR_FLASH_INFO_SIGNATURE;
-    NorFlashInfo->Bytes             = Attributes.MemoryDensity;
-    NorFlashInfo->Attributes        = Attributes;
-    NorFlashInfo->NorFlash          = NorFlash;
-    NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
-
-    DeviceInfo              = &NorFlashInfo->DeviceInfo;
-    DeviceInfo->DeviceName  = L"NorFlash-Blob";
-    DeviceInfo->DeviceRead  = FPNorFlashRead;
-    DeviceInfo->DeviceWrite = FPNorFlashWrite;
-    DeviceInfo->BlockSize   = Attributes.BlockSize;
-
-    mNumDevices++;
-    mNumDevicesBlob++;
   }
 
   return EFI_SUCCESS;
@@ -574,7 +458,26 @@ FwPartitionNorFlashStmmInitialize (
     goto Done;
   }
 
-  Status = FPNorFlashInitDevices ();
+  // when PcdDataOnlyFlashIsSupported, the FW flash is gNVIDIANorFlash2ProtocolGuid
+  if (PcdGetBool (PcdDataOnlyFlashIsSupported) &&
+      PcdGetBool (PcdFwBlobIsSupported))
+  {
+    Status = FPNorFlashInitDevices (&gNVIDIANorFlash2ProtocolGuid, NOR_FLASH_TYPE_FW_ONLY);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Error initializing NorFlash devices: %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto Done;
+    }
+  }
+
+  Status = FPNorFlashInitDevices (
+             &gNVIDIANorFlashProtocolGuid,
+             (PcdGetBool (PcdDataOnlyFlashIsSupported)) ? NOR_FLASH_TYPE_DATA_ONLY : NOR_FLASH_TYPE_FW_AND_DATA
+             );
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_INFO,
@@ -585,13 +488,15 @@ FwPartitionNorFlashStmmInitialize (
     goto Done;
   }
 
-  // Skip GPT check for TH500
-  if (ChipId != TH500_CHIP_ID) {
-    // add FwPartition structs for all partitions in GPT on each device
-    for (Index = 0; Index < mNumDevices; Index++) {
-      FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
-      FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
+  for (Index = 0; Index < mNumDevices; Index++) {
+    FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
+    FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
 
+    if (NorFlashInfo->SocketId != 0) {
+      continue;
+    }
+
+    if (NorFlashInfo->FlashType == NOR_FLASH_TYPE_FW_AND_DATA) {
       Status = FwPartitionAddFromDeviceGpt (DeviceInfo, NorFlashInfo->Bytes);
       if (EFI_ERROR (Status)) {
         DEBUG ((
@@ -603,30 +508,10 @@ FwPartitionNorFlashStmmInitialize (
           ));
       }
     }
-  }
 
-  if (ChipId == TH500_CHIP_ID) {
-    Status = FPNorFlashInitDevicesBlob ();
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Error initializing NorFlash-Blob devices: %r\n",
-        __FUNCTION__,
-        Status
-        ));
-    }
-
-    for (Index = 0; Index < mNumDevices; Index++) {
-      FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo = &mNorFlashInfo[Index];
-      FW_PARTITION_DEVICE_INFO     *DeviceInfo   = &NorFlashInfo->DeviceInfo;
-
-      // Skip the flash if it's not on socket 0
-      if (NorFlashInfo->SocketId != 0) {
-        continue;
-      }
-
+    if (NorFlashInfo->FlashType == NOR_FLASH_TYPE_DATA_ONLY) {
       Status = FwDeviceAddAsPartition (
-                 DeviceInfo->DeviceName,
+                 L"MM-NorFlash",
                  DeviceInfo,
                  0,
                  NorFlashInfo->Bytes
@@ -634,7 +519,28 @@ FwPartitionNorFlashStmmInitialize (
       if (EFI_ERROR (Status)) {
         DEBUG ((
           DEBUG_ERROR,
-          "%a: Error adding FW device %s as a partition: %r\n",
+          "%a: Error adding FW device %s as NorFlashpartition: %r\n",
+          __FUNCTION__,
+          DeviceInfo->DeviceName,
+          Status
+          ));
+      }
+    }
+
+    if (PcdGetBool (PcdFwBlobIsSupported) &&
+        ((NorFlashInfo->FlashType == NOR_FLASH_TYPE_FW_ONLY) ||
+         (NorFlashInfo->FlashType == NOR_FLASH_TYPE_FW_AND_DATA)))
+    {
+      Status = FwDeviceAddAsPartition (
+                 L"NorFlash-Blob",
+                 DeviceInfo,
+                 0,
+                 NorFlashInfo->Bytes
+                 );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Error adding FW device %s as blob partition: %r\n",
           __FUNCTION__,
           DeviceInfo->DeviceName,
           Status
