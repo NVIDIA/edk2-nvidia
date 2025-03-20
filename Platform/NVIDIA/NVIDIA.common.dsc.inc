@@ -1306,6 +1306,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
+  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
 
 [PcdsDynamicDefault.common.T264Presil]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
