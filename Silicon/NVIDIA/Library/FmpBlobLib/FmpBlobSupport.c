@@ -51,17 +51,14 @@ enum {
   LAS_ERROR_BAD_BLOB_TYPE,
   LAS_ERROR_BLOB_WRITE_FAILED,
   LAS_ERROR_BLOB_VERIFY_FAILED,
+  LAS_ERROR_BAD_IMAGE_SIZE,
 };
 
-STATIC BOOLEAN     mInitialized     = FALSE;
-STATIC EFI_STATUS  mVersionStatus   = EFI_UNSUPPORTED;
-STATIC UINT32      mVersion         = 0;
-STATIC CHAR16      *mVersionString  = NULL;
 STATIC UINT32      mActiveBootChain = MAX_UINT32;
-STATIC EFI_EVENT   mEndOfDxeEvent   = NULL;
 STATIC EFI_HANDLE  mImageHandle     = NULL;
 
-FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller = NULL;
+FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller   = NULL;
+BOOLEAN                                mInitialized = FALSE;
 
 EFI_STATUS
 EFIAPI
@@ -188,45 +185,6 @@ VerifyImageFromBuffer (
 
 EFI_STATUS
 EFIAPI
-FmpBlobGetVersion (
-  OUT UINT32 *Version, OPTIONAL
-  OUT CHAR16  **VersionString   OPTIONAL
-  )
-{
-  UINTN  VersionStringSize;
-
-  if (!mInitialized) {
-    return EFI_UNSUPPORTED;
-  }
-
-  if (EFI_ERROR (mVersionStatus)) {
-    DEBUG ((DEBUG_ERROR, "%a: bad status: %r\n", __FUNCTION__, mVersionStatus));
-    return mVersionStatus;
-  }
-
-  if (Version != NULL) {
-    *Version = mVersion;
-  }
-
-  if (VersionString != NULL) {
-    // version string must be in allocated pool memory that caller frees
-    VersionStringSize = StrSize (mVersionString);
-    *VersionString    = (CHAR16 *)AllocateRuntimeCopyPool (
-                                    VersionStringSize,
-                                    mVersionString
-                                    );
-    if (*VersionString == NULL) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: version 0x%08x (%s)\n", __FUNCTION__, mVersion, mVersionString));
-
-  return EFI_SUCCESS;
-}
-
-EFI_STATUS
-EFIAPI
 FmpBlobCheckImage (
   IN  CONST VOID  *Image,
   IN  UINTN       ImageSize,
@@ -237,7 +195,7 @@ FmpBlobCheckImage (
   FMP_BLOB_HEADER  *BlobHeader;
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "%a: Image=0x%p ImageSize=%x\n",
     __FUNCTION__,
     Image,
@@ -260,8 +218,15 @@ FmpBlobCheckImage (
     return EFI_NOT_READY;
   }
 
+  if ((ImageSize < sizeof (FMP_BLOB_HEADER))) {
+    DEBUG ((DEBUG_ERROR, "%a: bad image size=%u\n", __FUNCTION__, ImageSize));
+    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
+    *LastAttemptStatus = LAS_ERROR_BAD_IMAGE_SIZE;
+    return EFI_ABORTED;
+  }
+
   BlobHeader = (FMP_BLOB_HEADER *)Image;
-  if (BlobHeader->HeaderSize >= ImageSize) {
+  if ((BlobHeader->HeaderSize >= ImageSize) || (BlobHeader->HeaderSize != sizeof (FMP_BLOB_HEADER))) {
     DEBUG ((DEBUG_ERROR, "%a: bad header size=%u\n", __FUNCTION__, BlobHeader->HeaderSize));
     *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_BAD_HEADER_SIZE;
@@ -350,7 +315,7 @@ FmpBlobSetImage (
                     (VOID **)&FwPartitionProtocol
                     );
     if (!EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: PartitionName = %s\n", __FUNCTION__, FwPartitionProtocol->PartitionName));
+      DEBUG ((DEBUG_INFO, "%a: PartitionName = %s\n", __FUNCTION__, FwPartitionProtocol->PartitionName));
       if (StrCmp (FwPartitionProtocol->PartitionName, L"NorFlash-Blob") == 0) {
         IsProtocolFound = TRUE;
         break;
@@ -389,7 +354,7 @@ FmpBlobSetImage (
   }
 
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-  DEBUG ((DEBUG_ERROR, "\n%a: exit success\n", __FUNCTION__));
+  DEBUG ((DEBUG_INFO, "\n%a: exit success\n", __FUNCTION__));
 
   Status = EFI_SUCCESS;
 
@@ -402,68 +367,9 @@ CleanupAndReturn:
 }
 
 /**
-  Get system firmware version info.
+  Handle version ready callback and install FMP protocol.
 
-  @retval EFI_SUCCESS               No errors found.
-  @retval Others                    Error detected.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-FmpBlobGetVersionInfo (
-  VOID
-  )
-{
-  EFI_STATUS  Status;
-  UINTN       VersionStrLen;
-  UINT64      Version64;
-  CHAR16      *VersionStr;
-
-  VersionStrLen  = StrSize ((CHAR16 *)PcdGetPtr (PcdUefiVersionString));
-  mVersionString = (CHAR16 *)AllocateRuntimePool (VersionStrLen);
-  if (mVersionString == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: string alloc failed\n", __FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  StrCpyS (mVersionString, VersionStrLen / sizeof (CHAR16), (CHAR16 *)PcdGetPtr (PcdUefiVersionString));
-
-  VersionStr = (CHAR16 *)PcdGetPtr (PcdUefiHexVersionNumber);
-  if (VersionStr == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Version data doesn't exist\n", __FUNCTION__));
-    return EFI_UNSUPPORTED;
-  }
-
-  if (VersionStr[0] == 0x0) {
-    Version64 = 0;
-  } else {
-    Status = StrHexToUint64S (VersionStr, NULL, &Version64);
-    if (EFI_ERROR (Status) || (Version64 > MAX_UINT32)) {
-      DEBUG ((DEBUG_ERROR, "%a: Version data invalid\n", __FUNCTION__));
-      return EFI_UNSUPPORTED;
-    }
-  }
-
-  mVersion       = Version64;
-  mVersionStatus = EFI_SUCCESS;
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "%a: got version=0x%x (%s)\n",
-    __FUNCTION__,
-    mVersion,
-    mVersionString
-    ));
-
-  return EFI_SUCCESS;
-}
-
-/**
-  Handle EndOfDxe event - send BootComplete and install FMP protocol.
-
-  @param[in]  Event         Event pointer.
-  @param[in]  Context       Event notification context.
+  @param[in]  Status        Status of FMP version.
 
   @retval None
 
@@ -471,31 +377,26 @@ FmpBlobGetVersionInfo (
 STATIC
 VOID
 EFIAPI
-FmpBlobEndOfDxeNotify (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+FmpBlobVersionReadyCallback (
+  EFI_STATUS  Status
   )
 {
-  EFI_STATUS  Status;
-
-  Status = FmpBlobGetVersionInfo ();
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: FMP blob get version information %r\n", __FUNCTION__, Status));
-  }
-
-  if (mInstaller == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: installer not registered!\n", __FUNCTION__));
-    return;
+    DEBUG ((DEBUG_ERROR, "%a: FMP version lib init failed: %r\n", __FUNCTION__, Status));
   }
 
   mInitialized = TRUE;
-  Status       = mInstaller (mImageHandle);
+
+  if (mInstaller == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: installer not registered\n", __FUNCTION__));
+    return;
+  }
+
+  Status = mInstaller (mImageHandle);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FMP installer failed: %r\n", __FUNCTION__, Status));
     mInitialized = FALSE;
   }
-
-  return;
 }
 
 /**
@@ -534,24 +435,15 @@ FmpBlobLibConstructor (
   }
 
   FmpParamLibInit ();
-
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  FmpBlobEndOfDxeNotify,
-                  NULL,
-                  &gEfiEndOfDxeEventGroupGuid,
-                  &mEndOfDxeEvent
-                  );
+  Status = FmpVersionLibInit (mActiveBootChain, FmpBlobVersionReadyCallback);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP version lib init failed: %r\n", __FUNCTION__, Status));
+    goto Done;
+  }
 
 Done:
   // must exit with good status, API disabled if errors occurred above
   if (EFI_ERROR (Status)) {
-    if (mEndOfDxeEvent != NULL) {
-      gBS->CloseEvent (mEndOfDxeEvent);
-      mEndOfDxeEvent = NULL;
-    }
-
     mImageHandle     = NULL;
     mActiveBootChain = MAX_UINT32;
   }

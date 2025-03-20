@@ -306,6 +306,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   FmpParamLib|Silicon/NVIDIA/Library/FmpParamLib/FmpParamLib.inf
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_DIRECT
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpDeviceLib/FmpDeviceLib.inf
+  FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPartition.inf
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpErotLib/FmpErotLib.inf
@@ -321,6 +322,11 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpBlobLib/FmpBlobLib.inf
+  !ifdef CONFIG_SOC_JETSON
+    FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPartition.inf
+  !else
+    FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPcd.inf
+  !endif
 !endif
 
   AmlLib|DynamicTablesPkg/Library/Common/AmlLib/AmlLib.inf

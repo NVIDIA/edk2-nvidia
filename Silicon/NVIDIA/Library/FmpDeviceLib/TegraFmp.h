@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,25 +13,9 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/FmpParamLib.h>
+#include <Library/FmpVersionLib.h>
 #include <Library/FmpDeviceLib.h>
 #include <Protocol/FirmwareManagement.h>
-
-/**
-  Get Tegra version number and/or string
-
-  @param[out] Version               Pointer to store version number or NULL
-  @param[out] VersionString         Pointer to store version string or NULL
-
-  @retval EFI_SUCCESS               Valid version information returned.
-  @retval Others                    An error occurred
-
-**/
-EFI_STATUS
-EFIAPI
-FmpTegraGetVersion (
-  OUT UINT32  *Version,
-  OUT CHAR16  **VersionString
-  );
 
 /**
   Check if a given capsule image is suitable to perform a FW update.
@@ -93,13 +77,29 @@ FmpTegraSetImage (
 
   @param[in]  Function              Installer function pointer.
 
-  @retval None
-
+  @retval EFI_SUCCESS               The installer was registered successfully.
+  @retval EFI_UNSUPPORTED           The FMP library is already initialized, FmpDxe
+                                    should continue without installer callback.
 **/
-VOID
+EFI_STATUS
 EFIAPI
 FmpTegraRegisterInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
+  );
+
+/**
+  Register FmpDxe uninstaller function.
+
+  @param[in]  Function              Uninstaller function pointer.
+
+  @retval EFI_SUCCESS               The uninstaller was registered successfully.
+  @retval EFI_UNSUPPORTED           The FMP library is already initialized, FmpDxe
+                                    should continue without uninstaller callback.
+**/
+EFI_STATUS
+EFIAPI
+FmpTegraRegisterUninstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
   );
 
 #endif

@@ -1,0 +1,43 @@
+## @file
+#
+#  FMP version library using version partition
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 1.25
+  BASE_NAME       = FmpVersionLib
+  FILE_GUID       = b074e866-60ce-4d55-bd85-43417b049937
+  MODULE_TYPE     = BASE
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = FmpVersionLib
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64
+#
+
+[Sources]
+  FmpVersionLib.c
+  FmpVersionLibPartition.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  FwImageLib
+  MemoryAllocationLib
+  UefiRuntimeServicesTableLib
+  VerPartitionLib
+
+[Guids]
+  gNVIDIAPublicVariableGuid

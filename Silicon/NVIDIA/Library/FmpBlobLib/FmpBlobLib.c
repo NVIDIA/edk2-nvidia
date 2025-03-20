@@ -2,7 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
@@ -40,6 +40,10 @@ RegisterFmpInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   )
 {
+  if (mInitialized) {
+    return EFI_UNSUPPORTED;
+  }
+
   mInstaller = Function;
   return EFI_SUCCESS;
 }
@@ -69,6 +73,10 @@ RegisterFmpUninstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
   )
 {
+  if (mInitialized) {
+    return EFI_UNSUPPORTED;
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -277,7 +285,7 @@ FmpDeviceGetVersionString (
     return EFI_INVALID_PARAMETER;
   }
 
-  return FmpBlobGetVersion (NULL, VersionString);
+  return FmpVersionGet (NULL, VersionString);
 }
 
 /**
@@ -316,7 +324,7 @@ FmpDeviceGetVersion (
     return EFI_INVALID_PARAMETER;
   }
 
-  return FmpBlobGetVersion (Version, NULL);
+  return FmpVersionGet (Version, NULL);
 }
 
 /**

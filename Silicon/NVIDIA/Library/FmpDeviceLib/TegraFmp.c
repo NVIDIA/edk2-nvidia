@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,7 +24,6 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/VerPartitionLib.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/FirmwareManagementProgress.h>
 #include <Protocol/FwImageProtocol.h>
@@ -109,9 +108,6 @@ STATIC CHAR8         *mPlatformCompatSpec     = NULL;
 STATIC CHAR8         *mPlatformSpec           = NULL;
 STATIC BOOLEAN       mIsProductionFused       = FALSE;
 STATIC UINT32        mActiveBootChain         = MAX_UINT32;
-STATIC UINT32        mTegraVersion            = 0;
-STATIC CHAR16        *mTegraVersionString     = NULL;
-STATIC EFI_STATUS    mTegraVersionStatus      = EFI_UNSUPPORTED;
 STATIC CONST CHAR16  **mFwImagesRequired      = NULL;
 STATIC UINTN         mFwImagesRequiredCount   = 0;
 
@@ -316,185 +312,6 @@ Done:
     ));
 
   return EFI_SUCCESS;
-}
-
-/**
-  Set system FW version UEFI variable.
-
-  @param[in]  ActiveVersion         Version of active FW.
-  @param[in]  InactiveVersion       Version of inactive FW.
-
-  @retval     None
-
-**/
-STATIC
-VOID
-EFIAPI
-SetFwVersionVariable (
-  UINT32  ActiveVersion,
-  UINT32  InactiveVersion
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      VersionArray[BOOT_CHAIN_COUNT];
-
-  VersionArray[BOOT_CHAIN_A] = (mActiveBootChain == BOOT_CHAIN_A) ? ActiveVersion : InactiveVersion;
-  VersionArray[BOOT_CHAIN_B] = (mActiveBootChain == BOOT_CHAIN_B) ? ActiveVersion : InactiveVersion;
-
-  Status = gRT->SetVariable (
-                  L"SystemFwVersions",
-                  &gNVIDIAPublicVariableGuid,
-                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-                  sizeof (VersionArray),
-                  VersionArray
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error setting fw versions: %r\n", __FUNCTION__, Status));
-  }
-}
-
-/**
-  Get version info.
-
-  @retval EFI_SUCCESS                   Operation completed successfully
-  @retval EFI_NOT_FOUND                 The VER partition wasn't found
-  @retval Others                        An error occurred
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-GetVersionInfo (
-  VOID
-  )
-{
-  EFI_STATUS                Status;
-  CHAR8                     *VerStr;
-  UINTN                     VerStrSize;
-  NVIDIA_FW_IMAGE_PROTOCOL  *Image;
-  FW_IMAGE_ATTRIBUTES       Attributes;
-  UINTN                     BufferSize;
-  EFI_STATUS                InactiveStatus  = EFI_NOT_FOUND;
-  UINT32                    InactiveVersion = MAX_UINT32;
-
-  VerStr = NULL;
-  Image  = FwImageFindProtocol (VER_PARTITION_NAME);
-  if (Image == NULL) {
-    return EFI_NOT_FOUND;
-  }
-
-  Status = Image->GetAttributes (Image, &Attributes);
-  if (EFI_ERROR (Status)) {
-    goto Done;
-  }
-
-  BufferSize = MIN (Attributes.ReadBytes, mFmpDataBufferSize);
-  Status     = Image->Read (
-                        Image,
-                        0,
-                        BufferSize,
-                        mFmpDataBuffer,
-                        FW_IMAGE_RW_FLAG_NONE
-                        );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: VER read failed: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
-  ((CHAR8 *)mFmpDataBuffer)[BufferSize - 1] = '\0';
-
-  Status = VerPartitionGetVersion (mFmpDataBuffer, BufferSize, &mTegraVersion, &VerStr);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to parse version info: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Done;
-  }
-
-  VerStrSize          = AsciiStrSize (VerStr);
-  mTegraVersionString = (CHAR16 *)
-                        AllocateRuntimeZeroPool (VerStrSize * sizeof (CHAR16));
-  if (mTegraVersionString == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Done;
-  }
-
-  Status = AsciiStrToUnicodeStrS (
-             VerStr,
-             mTegraVersionString,
-             VerStrSize
-             );
-  if (EFI_ERROR (Status)) {
-    goto Done;
-  }
-
-  mTegraVersionStatus = Status;
-
-  // read inactive version number
-  if (VerStr != NULL) {
-    FreePool (VerStr);
-    VerStr = NULL;
-  }
-
-  InactiveStatus = Image->Read (
-                            Image,
-                            0,
-                            BufferSize,
-                            mFmpDataBuffer,
-                            FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE
-                            );
-  if (EFI_ERROR (InactiveStatus)) {
-    DEBUG ((DEBUG_ERROR, "%a: inactive VER read failed: %r\n", __FUNCTION__, InactiveStatus));
-    goto Done;
-  }
-
-  ((CHAR8 *)mFmpDataBuffer)[BufferSize - 1] = '\0';
-
-  InactiveStatus = VerPartitionGetVersion (mFmpDataBuffer, BufferSize, &InactiveVersion, &VerStr);
-  if (EFI_ERROR (InactiveStatus)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to parse inactive version info: %r\n", __FUNCTION__, InactiveStatus));
-    goto Done;
-  }
-
-Done:
-  if (VerStr != NULL) {
-    FreePool (VerStr);
-  }
-
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: Version=0x%x, Str=(%s), Status=%r, InactiveVersion=0x%x\n",
-    __FUNCTION__,
-    mTegraVersion,
-    mTegraVersionString,
-    Status,
-    InactiveVersion
-    ));
-
-  if (EFI_ERROR (Status)) {
-    if (mTegraVersionString != NULL) {
-      FreePool (mTegraVersionString);
-      mTegraVersionString = NULL;
-    }
-
-    mTegraVersion       = 0;
-    mTegraVersionStatus = EFI_UNSUPPORTED;
-  }
-
-  SetFwVersionVariable (
-    (mTegraVersionStatus == EFI_SUCCESS) ? mTegraVersion : MAX_UINT32,
-    InactiveVersion
-    );
-
-  return mTegraVersionStatus;
 }
 
 /**
@@ -1282,38 +1099,6 @@ FmpTegraGetTotalBytesToFlash (
 
 EFI_STATUS
 EFIAPI
-FmpTegraGetVersion (
-  OUT UINT32  *Version,
-  OUT CHAR16  **VersionString
-  )
-{
-  if (EFI_ERROR (mTegraVersionStatus)) {
-    return mTegraVersionStatus;
-  }
-
-  if (Version != NULL) {
-    *Version = mTegraVersion;
-  }
-
-  if (VersionString != NULL) {
-    UINTN  VersionStringSize;
-
-    // version string must be in allocated pool memory that caller frees
-    VersionStringSize = StrSize (mTegraVersionString) * sizeof (CHAR16);
-    *VersionString    = (CHAR16 *)AllocateRuntimeCopyPool (
-                                    VersionStringSize,
-                                    mTegraVersionString
-                                    );
-    if (*VersionString == NULL) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-  }
-
-  return EFI_SUCCESS;
-}
-
-EFI_STATUS
-EFIAPI
 FmpTegraCheckImage (
   IN  CONST VOID  *Image,
   IN  UINTN       ImageSize,
@@ -1702,7 +1487,7 @@ Done:
 **/
 VOID
 EFIAPI
-FwImageInstallFmp (
+FmpDeviceInstallFmp (
   VOID
   )
 {
@@ -1724,47 +1509,55 @@ FwImageInstallFmp (
 }
 
 /**
-  Function to handle new FwImage found or FmpDxe registers installer function.
+  Callback when FMP version is ready.
+
+  @param[in]  Status  Status of FMP version
 
   @return None
 
 **/
 VOID
 EFIAPI
-FmpDeviceFwImageCallback (
-  VOID
+FmpDeviceVersionCallback (
+  EFI_STATUS  Status
   )
 {
-  EFI_STATUS  Status;
-
-  if (mTegraVersionStatus == EFI_UNSUPPORTED) {
-    Status = GetVersionInfo ();
-    if (!EFI_ERROR (Status)) {
-      mFmpLibInitialized = TRUE;
-    } else if (Status == EFI_NOT_FOUND) {
-      return;
-    }
+  if (EFI_ERROR (Status)) {
+    mFmpLibInitializeFailed = TRUE;
+  } else {
+    mFmpLibInitialized = TRUE;
   }
 
-  FwImageInstallFmp ();
-  FwImageRegisterImageAddedCallback (NULL);
+  FmpDeviceInstallFmp ();
 }
 
-VOID
+EFI_STATUS
 EFIAPI
 FmpTegraRegisterInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   )
 {
-  mInstaller = Function;
-
-  if (mFmpLibInitializeFailed) {
-    DEBUG ((DEBUG_ERROR, "%a: init failed\n", __FUNCTION__));
-    FwImageInstallFmp ();
-    return;
+  if (mFmpLibInitializeFailed || mFmpLibInitialized) {
+    DEBUG ((DEBUG_INFO, "%a: init fail=%u complete=%u\n", __FUNCTION__, mFmpLibInitializeFailed, mFmpLibInitialized));
+    return EFI_UNSUPPORTED;
   }
 
-  FmpDeviceFwImageCallback ();
+  DEBUG ((DEBUG_INFO, "%a: uninitialized, waiting\n", __FUNCTION__));
+  mInstaller = Function;
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+FmpTegraRegisterUninstaller (
+  IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
+  )
+{
+  if (mFmpLibInitializeFailed || mFmpLibInitialized) {
+    return EFI_UNSUPPORTED;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1870,7 +1663,12 @@ FmpDeviceLibConstructor (
   }
 
   mFwImagesRequired = FwImageGetRequiredList (TegraGetChipID (), &mFwImagesRequiredCount);
-  FwImageRegisterImageAddedCallback (FmpDeviceFwImageCallback);
+  Status            = FmpVersionLibInit (mActiveBootChain, FmpDeviceVersionCallback);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP version lib init failed: %r\n", __FUNCTION__, Status));
+    goto Done;
+  }
+
   Status = EFI_SUCCESS;
 
 Done:

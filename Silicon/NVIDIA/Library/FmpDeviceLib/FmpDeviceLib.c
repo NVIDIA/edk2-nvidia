@@ -2,7 +2,7 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) Microsoft Corporation.<BR>
   Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 
@@ -42,9 +42,7 @@ RegisterFmpInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
   )
 {
-  FmpTegraRegisterInstaller (Function);
-
-  return EFI_SUCCESS;
+  return FmpTegraRegisterInstaller (Function);
 }
 
 /**
@@ -72,7 +70,7 @@ RegisterFmpUninstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
   )
 {
-  return EFI_SUCCESS;
+  return FmpTegraRegisterUninstaller (Function);
 }
 
 /**
@@ -280,7 +278,7 @@ FmpDeviceGetVersionString (
     return EFI_INVALID_PARAMETER;
   }
 
-  return FmpTegraGetVersion (NULL, VersionString);
+  return FmpVersionGet (NULL, VersionString);
 }
 
 /**
@@ -319,7 +317,7 @@ FmpDeviceGetVersion (
     return EFI_INVALID_PARAMETER;
   }
 
-  return FmpTegraGetVersion (Version, NULL);
+  return FmpVersionGet (Version, NULL);
 }
 
 /**

@@ -2,7 +2,7 @@
 
   VerPartitionLib - VER partition library
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -97,8 +97,13 @@ VerPartitionGetVersion (
   if (AsciiStrnCmp (VerData, VERSION_STR_ID, AsciiStrLen (VERSION_STR_ID)) != 0) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: version id is not %a\n",
+      "%a: version id %.*a [0x%x 0x%x 0x%x] is not %a\n",
       __FUNCTION__,
+      AsciiStrLen (VERSION_STR_ID),
+      VerData,
+      VerData[0],
+      VerData[1],
+      VerData[2],
       VERSION_STR_ID
       ));
     return EFI_UNSUPPORTED;

@@ -2,7 +2,7 @@
 
   FMP Blob library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,26 +13,11 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/FmpParamLib.h>
+#include <Library/FmpVersionLib.h>
 #include <Protocol/FirmwareManagement.h>
 
 extern FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller;
-
-/**
-  Get system firmware version and/or version string.
-
-  @param[out] Version               Pointer to return version number. OPTIONAL
-  @param[out] VersionString         Pointer to return version string. OPTIONAL
-
-  @retval EFI_SUCCESS               No errors found.
-  @retval Others                    Error detected.
-
-**/
-EFI_STATUS
-EFIAPI
-FmpBlobGetVersion (
-  OUT UINT32 *Version, OPTIONAL
-  OUT CHAR16  **VersionString       OPTIONAL
-  );
+extern BOOLEAN                                mInitialized;
 
 /**
   Check if a given capsule image is suitable to perform a FW update.

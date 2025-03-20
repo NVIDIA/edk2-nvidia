@@ -1,0 +1,43 @@
+## @file
+#
+#  FMP version library using PCD versions
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 1.25
+  BASE_NAME       = FmpVersionLib
+  FILE_GUID       = dc3c87dd-0cc3-41f4-b4c1-0697bba59c4e
+  MODULE_TYPE     = BASE
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = FmpVersionLib
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 ARM AARCH64
+#
+
+[Sources]
+  FmpVersionLib.c
+  FmpVersionLibPcd.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  UefiBootServicesTableLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiHexVersionNumber

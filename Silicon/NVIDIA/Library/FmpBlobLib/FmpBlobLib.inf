@@ -2,7 +2,7 @@
 #  Provides firmware device specific services to support updates of a firmware
 #  image stored in a firmware device.
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
 #  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 #
@@ -41,6 +41,7 @@
   BaseMemoryLib
   DisplayUpdateProgressLib
   FmpParamLib
+  FmpVersionLib
   MemoryAllocationLib
   PcdLib
   PrintLib
@@ -50,14 +51,11 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSupported
   gNVIDIATokenSpaceGuid.PcdFmpImageAttributesSetting
-  gNVIDIATokenSpaceGuid.PcdUefiVersionString
-  gNVIDIATokenSpaceGuid.PcdUefiHexVersionNumber
 
 [Protocols]
   gNVIDIAFwPartitionProtocolGuid
 
 [Guids]
-  gEfiEndOfDxeEventGroupGuid
   gNVIDIAPlatformResourceDataGuid
 
 [Depex]
