@@ -1184,6 +1184,7 @@ SocGetPlatformResourceInformation (
       TH500DramDeviceInfo[Index].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
       TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->v0.DramInfo[Index].SerialNumber;
       TH500DramDeviceInfo[Index].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
+      TH500DramDeviceInfo[Index].FormFactor     = 0;
       TH500DramDeviceInfo[Index].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
       TH500DramDeviceInfo[Index].SpeedKhz       = 0;
 
@@ -1210,7 +1211,8 @@ SocGetPlatformResourceInformation (
         TH500DramDeviceInfo[Dimm].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
         TH500DramDeviceInfo[Dimm].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
         TH500DramDeviceInfo[Dimm].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
-        TH500DramDeviceInfo[Dimm].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+        TH500DramDeviceInfo[Dimm].FormFactor     = CpuBootloaderParams->v1.DramInfo[Index].FormFactor;
+        TH500DramDeviceInfo[Dimm].Size           = CpuBootloaderParams->v1.DramInfo[Index].Size;
         TH500DramDeviceInfo[Dimm].SpeedKhz       = 0;
 
         // Populate per Memory module Information.

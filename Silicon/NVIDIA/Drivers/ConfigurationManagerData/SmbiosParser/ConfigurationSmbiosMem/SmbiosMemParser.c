@@ -192,10 +192,17 @@ InstallSmbiosType17Cm (
     CmMemDevicesInfo[Index].TypeDetail.Synchronous                            = 1;
     CmMemDevicesInfo[Index].TypeDetail.Unbuffered                             = 1;
     CmMemDevicesInfo[Index].DeviceTechnology                                  = MemoryTechnologyDram;
-    CmMemDevicesInfo[Index].FormFactor                                        = MemoryFormFactorDie;
     CmMemDevicesInfo[Index].MemoryErrorInformationHandle                      = 0xFFFE;
     CmMemDevicesInfo[Index].ConfiguredMemorySpeed                             = CmMemDevicesInfo[Index].Speed;
     CmMemDevicesInfo[Index].MemoryOperatingModeCapability.Bits.VolatileMemory = 1;
+
+    if (DramInfo[Index].FormFactor == 0) {
+      CmMemDevicesInfo[Index].FormFactor = MemoryFormFactorDie;
+    } else if (DramInfo[Index].FormFactor == 1) {
+      CmMemDevicesInfo[Index].FormFactor = MemoryFormFactorCamm;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported form factor for SMBIOS Type 17\n", __FUNCTION__));
+    }
   }
 
   // Allocate Token Map for Type 17

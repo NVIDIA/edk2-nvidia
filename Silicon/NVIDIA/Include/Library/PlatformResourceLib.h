@@ -82,6 +82,7 @@ typedef struct {
   UINT16    TotalWidth;
   UINT16    DataWidth;
   UINT16    ManufacturerId;
+  UINT8     FormFactor;
   UINT8     Rank;
   UINT64    Size;
   UINT32    SpeedKhz;
