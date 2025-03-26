@@ -1,0 +1,45 @@
+#/** @file
+#
+# Send IPMI command to notify BMC upon reset
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = ResetNotifyRuntimeDxe
+  FILE_GUID                 = a86ce4b8-0a79-11f0-b03d-93822efcd76a
+  MODULE_TYPE               = DXE_RUNTIME_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = ResetNotifyRuntimeDxeDriverEntryPoint
+
+[Sources]
+  ResetNotifyRuntimeDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+  UefiRuntimeLib
+
+[Guids]
+  gNVIDIAI2cBmcSSIF
+  gEfiEventVirtualAddressChangeGuid
+
+[Protocols]
+  gEfiI2cEnumerateProtocolGuid           ## CONSUMES
+  gEfiI2cMasterProtocolGuid              ## CONSUMES
+  gEfiRscHandlerProtocolGuid             ## CONSUMES
+
+[Depex]
+  gEfiRscHandlerProtocolGuid

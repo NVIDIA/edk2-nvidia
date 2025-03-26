@@ -208,6 +208,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   INF Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
   INF Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
+  INF Silicon/NVIDIA/Drivers/ResetNotifyRuntimeDxe/ResetNotifyRuntimeDxe.inf
   INF IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
