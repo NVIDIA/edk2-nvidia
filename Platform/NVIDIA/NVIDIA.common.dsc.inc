@@ -1604,6 +1604,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
   Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
+  Silicon/NVIDIA/Drivers/ResetNotifyRuntimeDxe/ResetNotifyRuntimeDxe.inf
   IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
