@@ -23,6 +23,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <Library/TimerLib.h>
 #include <Library/HobLib.h>
 #include <Protocol/Eeprom.h>
@@ -58,7 +59,7 @@ STATIC UINT32                   SocketMask;
   GetCpuFreqHz
   Get the Current and Max frequencies for a given socket.
 
-  @param[in]  ProcessorId   SocketId to compute Frequency for.
+  @param[in]  SocketId   SocketId to compute Frequency for.
   @param[out] CurFreqHz     Current Frequency in Hz.
   @param[out] MaxFreqHz     Max Frequency in Hz.
 
@@ -69,13 +70,12 @@ STATIC UINT32                   SocketMask;
 STATIC
 EFI_STATUS
 GetCpuFreqHz (
-  UINT8   ProcessorId,
+  UINT8   SocketId,
   UINT64  *CurFreqHz,
   UINT64  *MaxFreqHz
   )
 {
   NVIDIA_TEGRA_CPU_FREQ_PROTOCOL  *CpuFreq;
-  UINTN                           LinearCoreId;
   UINT64                          MpIdr;
   EFI_STATUS                      Status;
 
@@ -94,13 +94,12 @@ GetCpuFreqHz (
     goto exitGetFreqMhz;
   }
 
-  Status = GetFirstEnabledCoreOnSocket (ProcessorId, &LinearCoreId);
+  Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL, &MpIdr);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get First Enabled core in Socket %u\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get First Enabled core in Socket %u\n", __FUNCTION__, SocketId));
     goto exitGetFreqMhz;
   }
 
-  MpIdr  = GetMpidrFromLinearCoreID (LinearCoreId);
   Status = CpuFreq->GetInfo (
                       CpuFreq,
                       MpIdr,
@@ -134,10 +133,10 @@ GetCpuEnabledCores (
   UINT8  ProcessorIndex
   )
 {
-  UINTN       EnabledCoreCount = 0;
+  UINT32      EnabledCoreCount = 0;
   EFI_STATUS  Status;
 
-  Status = GetNumEnabledCoresOnSocket (ProcessorIndex, &EnabledCoreCount);
+  Status = MpCoreInfoGetSocketInfo (ProcessorIndex, &EnabledCoreCount, NULL, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -156,7 +155,7 @@ GetCpuEnabledCores (
   Helper Function to get CPU/Core data.The Enabled Cores count
   is obtained using the Floorsweeping Library.
 
-  @param ProcessorIndex         Index of the processor to get the CpuData for.
+  @param SocketId               SocketId to get the CpuData for.
   @param MiscProcessorData      Pointer to the Processor Data structure which
                                 is used by the Smbios drivers.
                                 it should be ignored by device driver.
@@ -167,18 +166,20 @@ GetCpuEnabledCores (
 STATIC
 VOID
 PopulateCpuData (
-  IN UINT8                 ProcessorIndex,
+  IN UINT8                 SocketId,
   OEM_MISC_PROCESSOR_DATA  *MiscProcessorData
   )
 {
-  UINTN   CoresEnabled;
+  UINT32  CoresEnabled;
   UINT64  CurFreqHz = 0;
   UINT64  MaxFreqHz = 0;
+  UINT32  MaxThreadId;
+  UINT32  ThreadsEnabled;
   UINTN   ChipId;
 
   EFI_STATUS  Status;
 
-  Status = GetCpuFreqHz (ProcessorIndex, &CurFreqHz, &MaxFreqHz);
+  Status = GetCpuFreqHz (SocketId, &CurFreqHz, &MaxFreqHz);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get CPUFreq %r\n", __FUNCTION__, Status));
     CurFreqHz = 0;
@@ -196,9 +197,17 @@ PopulateCpuData (
   }
 
   MiscProcessorData->CurrentSpeed = HZ_TO_MHZ (CurFreqHz);
-  CoresEnabled                    = GetCpuEnabledCores (ProcessorIndex);
-  MiscProcessorData->CoreCount    = CoresEnabled;
-  MiscProcessorData->CoresEnabled = CoresEnabled;
+  Status                          = MpCoreInfoGetSocketInfo (SocketId, &CoresEnabled, NULL, NULL, &MaxThreadId, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get SocketInfo %r\n", __FUNCTION__, Status));
+    CoresEnabled = 0;
+    MaxThreadId  = 0;
+  }
+
+  // Increment due to 0 based index
+  ThreadsEnabled                  = MaxThreadId + 1;
+  MiscProcessorData->CoreCount    = CoresEnabled / ThreadsEnabled;
+  MiscProcessorData->CoresEnabled = CoresEnabled / ThreadsEnabled;
   MiscProcessorData->ThreadCount  = CoresEnabled;
 }
 
@@ -280,9 +289,13 @@ OemGetProcessorInformation (
   IN OUT OEM_MISC_PROCESSOR_DATA         *MiscProcessorData
   )
 {
+  EFI_STATUS  Status;
+
   DEBUG ((DEBUG_INFO, "%a: ProcessorIndex %x ", __FUNCTION__, ProcessorIndex));
 
-  if ((SocketMask & (1UL << ProcessorIndex)) != 0) {
+  // ProcessorIndex is the socket index in this context
+  Status = MpCoreInfoGetSocketInfo (ProcessorIndex, NULL, NULL, NULL, NULL, NULL);
+  if (!EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "is enabled\n"));
     ProcessorStatus->Bits.CpuStatus       = 1; // CPU enabled
     ProcessorStatus->Bits.Reserved1       = 0;

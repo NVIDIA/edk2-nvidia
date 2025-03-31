@@ -13,14 +13,6 @@
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 
-// Platform CPU configuration
-#define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
-#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
-#define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
-#define PLATFORM_MAX_CORES_PER_SOCKET   ((PLATFORM_MAX_CLUSTERS /   \
-                                          PLATFORM_MAX_SOCKETS) *   \
-                                         PLATFORM_MAX_CORES_PER_CLUSTER)
-
 /**
   Floorsweep PCIe
 
@@ -28,8 +20,7 @@
 EFI_STATUS
 EFIAPI
 CommonFloorSweepPcie (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   );
 
 /**
@@ -39,8 +30,7 @@ CommonFloorSweepPcie (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepScfCache (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   );
 
 /**
@@ -50,8 +40,7 @@ CommonFloorSweepScfCache (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepCpus (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   );
 
 /**
@@ -61,7 +50,7 @@ CommonFloorSweepCpus (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepIps (
-  IN  UINT32  SocketMask
+  VOID
   );
 
 /**
@@ -71,6 +60,19 @@ CommonFloorSweepIps (
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
+  IN  VOID  *Dtb
+  );
+
+EFI_STATUS
+EFIAPI
+UpdateCpuFloorsweepingConfig (
+  IN INT32  CpusOffset,
+  IN VOID   *Dtb
+  );
+
+EFI_STATUS
+EFIAPI
+TH500FloorSweepCpus (
   IN  VOID  *Dtb
   );
 

@@ -11,8 +11,10 @@
 
 #include <Uefi/UefiBaseType.h>
 #include <Library/PlatformResourceLib.h>
+#include "SocResourceConfig.h"
 
 typedef struct {
+  UINT32     SocketMask;
   UINTN      MaxCoreDisableWords;
   BOOLEAN    SatMcSupported;
 
@@ -30,7 +32,7 @@ EFI_STATUS
 EFIAPI
 CommonConfigGetEnabledCoresBitMap (
   IN CONST COMMON_RESOURCE_CONFIG_INFO  *ConfigInfo,
-  IN TEGRA_PLATFORM_RESOURCE_INFO       *PlatformResourceInfo
+  IN OUT SOC_CORE_BITMAP_INFO           *SocCoreBitmapInfo
   );
 
 /**

@@ -164,12 +164,6 @@ typedef struct {
 typedef struct {
   UINT32                        SocketMask;
   UINT32                        MaxPossibleSockets;
-  UINT32                        MaxPossibleClusters;
-  UINT32                        MaxPossibleCoresPerCluster;
-  UINT32                        MaxPossibleCores;
-  UINT64                        EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
-  BOOLEAN                       AffinityMpIdrSupported;
-  UINT32                        NumberOfEnabledCores;
   UINT32                        ActiveBootChain;
   BOOLEAN                       BrBctUpdateFlag;
   TEGRA_RESOURCE_INFO           *ResourceInfo;
@@ -505,16 +499,21 @@ GetActiveBootChainStMm (
   );
 
 /**
- * Retrieves the Core Count of Socket
+ * Retrieves if the systems supports software core disable
  *
- * @param[in]  Socket        Socket Index
+ * @param[in]  Socket           Socket Id
+ * @param[out] TotalCoreCount   Total Core Count
  *
- * @retval  Returns max core count.
+ * @retval  EFI_SUCCESS             System supports software core disable and returns the total core count
+ * @retval  EFI_INVALID_PARAMETER   Invalid socket id.
+ * @retval  EFI_INVALID_PARAMETER   TotalCoreCount is NULL
+ * @retval  EFI_UNSUPPORTED         Unsupported feature
 **/
-UINTN
+EFI_STATUS
 EFIAPI
-TegraGetMaxCoreCount (
-  IN UINTN  Socket
+SupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
   );
 
 /**

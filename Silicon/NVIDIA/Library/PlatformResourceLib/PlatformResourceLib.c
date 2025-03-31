@@ -70,7 +70,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 UpdateCoreInfoFromDtb (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
+  OUT SOC_CORE_BITMAP_INFO         *SocCoreBitmapInfo
   )
 {
   CONST VOID  *Dtb;
@@ -91,10 +92,11 @@ UpdateCoreInfoFromDtb (
   CONST VOID  *Property;
   INT32       Length;
   UINT32      NumaNodeId;
-  UINTN       MaxSocketsInCpuMap;
+  UINT32      CpuMapSocketScanCount;
 
-  Dtb        = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
-  MaxSockets = 0;
+  Dtb              = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
+  MaxSockets       = 0;
+  CpuMapPathFormat = NULL;
 
   // find highest numa-node-id, if present
   CpusOffset = fdt_path_offset (Dtb, "/cpus");
@@ -121,13 +123,9 @@ UpdateCoreInfoFromDtb (
     }
   }
 
-  if (MaxSockets != 0) {
-    MaxSocketsInCpuMap = 1;
-    CpuMapPathFormat   = "/cpus/cpu-map";
-  }
-
-  // check for socket nodes, 100 limit due to socket@xx string
+  // No sockets found in cpu-map, checking with /socket@xx nodes
   if (MaxSockets == 0) {
+    // check for socket nodes, 100 limit due to socket@xx string
     for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
       AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
       SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
@@ -136,36 +134,42 @@ UpdateCoreInfoFromDtb (
       }
     }
 
-    MaxSocketsInCpuMap = MaxSockets;
-    CpuMapPathFormat   = "/socket@%u/cpus/cpu-map";
+    if (MaxSockets != 0) {
+      CpuMapPathFormat = "/socket@%u/cpus/cpu-map";
+    }
   }
 
-  // override when no socket info detected
+  if (CpuMapPathFormat == NULL) {
+    CpuMapPathFormat      = "/cpus/cpu-map";
+    CpuMapSocketScanCount = 1;
+  } else {
+    CpuMapSocketScanCount = MaxSockets;
+  }
+
+  // If no socket info detected, set to 1
   if (MaxSockets == 0) {
-    MaxSockets         = 1;
-    MaxSocketsInCpuMap = 1;
-    CpuMapPathFormat   = "/cpus/cpu-map";
+    MaxSockets = 1;
   }
 
-  PlatformResourceInfo->MaxPossibleSockets = MaxSockets;
+  SocCoreBitmapInfo->MaxPossibleSockets = MaxSockets;
 
   // count clusters across all sockets
   MaxClusters = 0;
-  for (Socket = 0; Socket < MaxSocketsInCpuMap; Socket++) {
+  for (Socket = 0; Socket < CpuMapSocketScanCount; Socket++) {
     UINTN  Cluster;
 
     AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
     CpuMapOffset = fdt_path_offset (Dtb, CpuMapPathStr);
     if (CpuMapOffset < 0) {
-      PlatformResourceInfo->MaxPossibleClusters        = 1;
-      PlatformResourceInfo->MaxPossibleCoresPerCluster = 1;
+      SocCoreBitmapInfo->MaxPossibleClustersPerSystem = 1;
+      SocCoreBitmapInfo->MaxPossibleCoresPerCluster   = 1;
       DEBUG ((
         DEBUG_ERROR,
         "%a: %a missing in DTB, using Clusters=%u, CoresPerCluster=%u\n",
         __FUNCTION__,
         CpuMapPathStr,
-        PlatformResourceInfo->MaxPossibleClusters,
-        PlatformResourceInfo->MaxPossibleCoresPerCluster
+        SocCoreBitmapInfo->MaxPossibleClustersPerSystem,
+        SocCoreBitmapInfo->MaxPossibleCoresPerCluster
         ));
       return EFI_SUCCESS;
     }
@@ -186,17 +190,17 @@ UpdateCoreInfoFromDtb (
     DEBUG ((DEBUG_INFO, "Socket=%u MaxClusters=%u\n", Socket, MaxClusters));
   }
 
-  PlatformResourceInfo->MaxPossibleClusters = MaxClusters;
+  SocCoreBitmapInfo->MaxPossibleClustersPerSystem = MaxClusters;
 
   // Use cluster0 node to find max core subnode
   Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
   if (Cluster0Offset < 0) {
-    PlatformResourceInfo->MaxPossibleCoresPerCluster = 1;
+    SocCoreBitmapInfo->MaxPossibleCoresPerCluster = 1;
     DEBUG ((
       DEBUG_ERROR,
       "No cluster0 in %a, using CoresPerCluster=%u\n",
       CpuMapPathStr,
-      PlatformResourceInfo->MaxPossibleCoresPerCluster
+      SocCoreBitmapInfo->MaxPossibleCoresPerCluster
       ));
     return EFI_SUCCESS;
   }
@@ -214,7 +218,9 @@ UpdateCoreInfoFromDtb (
     NV_ASSERT_RETURN (MaxCoresPerCluster < 100, return EFI_DEVICE_ERROR, "Too many cores seen\r\n");
   }
 
-  PlatformResourceInfo->MaxPossibleCoresPerCluster = MaxCoresPerCluster;
+  SocCoreBitmapInfo->MaxPossibleCoresPerCluster = MaxCoresPerCluster;
+  SocCoreBitmapInfo->MaxPossibleCoresPerSystem  = SocCoreBitmapInfo->MaxPossibleCoresPerCluster * SocCoreBitmapInfo->MaxPossibleClustersPerSystem;
+  PlatformResourceInfo->MaxPossibleSockets      = SocCoreBitmapInfo->MaxPossibleSockets;
 
   return EFI_SUCCESS;
 }
@@ -227,25 +233,26 @@ STATIC
 BOOLEAN
 EFIAPI
 PlatformResourceIsCoreEnabled (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
-  IN  UINT32                       CpuIndex
+  IN SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo,
+  IN  UINT32               CpuIndex
   )
 {
   UINTN  Index;
   UINTN  Bit;
 
-  Index = CpuIndex /  (8*sizeof (PlatformResourceInfo->EnabledCoresBitMap[0]));
-  Bit   = CpuIndex %  (8*sizeof (PlatformResourceInfo->EnabledCoresBitMap[0]));
+  Index = CpuIndex /  (8*sizeof (SocCoreBitmapInfo->EnabledCoresBitMap[0]));
+  Bit   = CpuIndex %  (8*sizeof (SocCoreBitmapInfo->EnabledCoresBitMap[0]));
 
-  return ((PlatformResourceInfo->EnabledCoresBitMap[Index] & (1ULL << Bit)) != 0);
+  return ((SocCoreBitmapInfo->EnabledCoresBitMap[Index] & (1ULL << Bit)) != 0);
 }
 
 STATIC
 UINT64
 EFIAPI
 GetMpidrFromCoreIndex (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
-  IN UINT32                        CpuIndex
+  IN SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo,
+  IN UINT32                CpuIndex,
+  IN UINT32                ThreadId
   )
 {
   UINTN   Socket;
@@ -255,44 +262,38 @@ GetMpidrFromCoreIndex (
   UINT32  SocketCoreId;
   UINTN   MaxCoresPerSocket;
 
-  MaxCoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+  MaxCoresPerSocket = SocCoreBitmapInfo->MaxPossibleCoresPerSystem / SocCoreBitmapInfo->MaxPossibleSockets;
 
   Socket = CpuIndex / MaxCoresPerSocket;
   NV_ASSERT_RETURN (
-    Socket < PlatformResourceInfo->MaxPossibleSockets,
+    Socket < SocCoreBitmapInfo->MaxPossibleSockets,
     return 0,
     "Invalid Socket %u >= %u \r\n",
     Socket,
-    PlatformResourceInfo->MaxPossibleSockets
+    SocCoreBitmapInfo->MaxPossibleSockets
     );
 
   SocketCoreId = CpuIndex - (Socket * MaxCoresPerSocket);
 
-  Cluster = SocketCoreId / PlatformResourceInfo->MaxPossibleCoresPerCluster;
+  Cluster = SocketCoreId / SocCoreBitmapInfo->MaxPossibleCoresPerCluster;
   NV_ASSERT_RETURN (
-    Cluster < PlatformResourceInfo->MaxPossibleClusters,
+    Cluster < SocCoreBitmapInfo->MaxPossibleClustersPerSystem,
     return 0,
     "Invalid Cluster %u >= %u \r\n",
     Cluster,
-    PlatformResourceInfo->MaxPossibleClusters
+    SocCoreBitmapInfo->MaxPossibleClustersPerSystem
     );
 
-  Core = SocketCoreId % PlatformResourceInfo->MaxPossibleCoresPerCluster;
+  Core = SocketCoreId % SocCoreBitmapInfo->MaxPossibleCoresPerCluster;
   NV_ASSERT_RETURN (
-    Core < PlatformResourceInfo->MaxPossibleCoresPerCluster,
+    Core < SocCoreBitmapInfo->MaxPossibleCoresPerCluster,
     return 0,
     "Invalid Core %u >= %u \r\n",
     Core,
-    PlatformResourceInfo->MaxPossibleCoresPerCluster
+    SocCoreBitmapInfo->MaxPossibleCoresPerCluster
     );
 
-  // Check the Pcd and modify MPIDR generation if required
-  if (!PlatformResourceInfo->AffinityMpIdrSupported) {
-    ASSERT (Socket == 0);
-    Mpidr = (UINT64)GET_MPID (Cluster, Core);
-  } else {
-    Mpidr = (UINT64)GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, 0);
-  }
+  Mpidr = (UINT64)GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, ThreadId);
 
   return Mpidr;
 }
@@ -344,8 +345,12 @@ UpdatePlatformResourceInformation (
   UINTN                         Index;
   UINTN                         EnabledCoresWordCount;
   UINTN                         EnabledCoresWordIndex;
-  UINTN                         PrintedWords = 0;
-  UINTN                         WordsPerLine = 3;
+  UINTN                         PrintedWords      = 0;
+  UINTN                         WordsPerLine      = 3;
+  SOC_CORE_BITMAP_INFO          SocCoreBitmapInfo = { 0 };
+  UINT32                        NumberOfEnabledCores;
+  UINT32                        ThreadId;
+  UINTN                         CpuBootloaderAddress;
 
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   NV_ASSERT_RETURN (
@@ -357,39 +362,39 @@ UpdatePlatformResourceInformation (
 
   PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
 
-  Status = UpdateCoreInfoFromDtb (PlatformResourceInfo);
+  Status = UpdateCoreInfoFromDtb (PlatformResourceInfo, &SocCoreBitmapInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  PlatformResourceInfo->MaxPossibleCores = PlatformResourceInfo->MaxPossibleCoresPerCluster * PlatformResourceInfo->MaxPossibleClusters;
+  DEBUG ((DEBUG_ERROR, "DTB maximums: sockets=%u clusters=%u cores=%u\n", SocCoreBitmapInfo.MaxPossibleSockets, SocCoreBitmapInfo.MaxPossibleClustersPerSystem, SocCoreBitmapInfo.MaxPossibleCoresPerSystem));
 
-  DEBUG ((DEBUG_ERROR, "DTB maximums: sockets=%u clusters=%u cores=%u\n", PlatformResourceInfo->MaxPossibleSockets, PlatformResourceInfo->MaxPossibleClusters, PlatformResourceInfo->MaxPossibleCores));
-
-  Status = SocGetEnabledCoresBitMap (PlatformResourceInfo);
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  Status               = SocGetEnabledCoresBitMap (CpuBootloaderAddress, &SocCoreBitmapInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  for (CoreIndex = 0; CoreIndex < PlatformResourceInfo->MaxPossibleCores; CoreIndex++) {
-    if (PlatformResourceIsCoreEnabled (PlatformResourceInfo, CoreIndex)) {
-      PlatformResourceInfo->NumberOfEnabledCores++;
+  NumberOfEnabledCores = 0;
+  for (CoreIndex = 0; CoreIndex < SocCoreBitmapInfo.MaxPossibleCoresPerSystem; CoreIndex++) {
+    if (PlatformResourceIsCoreEnabled (&SocCoreBitmapInfo, CoreIndex)) {
+      NumberOfEnabledCores++;
     }
   }
 
   // No CPUs detected assume single core pre-silicon targets
-  if (PlatformResourceInfo->NumberOfEnabledCores == 0) {
-    PlatformResourceInfo->EnabledCoresBitMap[0] = 1;
-    PlatformResourceInfo->NumberOfEnabledCores++;
+  if (NumberOfEnabledCores == 0) {
+    SocCoreBitmapInfo.EnabledCoresBitMap[0] = 1;
+    NumberOfEnabledCores++;
   }
 
-  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, PlatformResourceInfo->NumberOfEnabledCores));
+  DEBUG ((DEBUG_ERROR, "SocketMask=0x%x NumberOfEnabledCores=%u\n", PlatformResourceInfo->SocketMask, NumberOfEnabledCores));
 
-  EnabledCoresWordCount = ALIGN_VALUE (PlatformResourceInfo->MaxPossibleCores, 64) / 64;
+  EnabledCoresWordCount = ALIGN_VALUE (SocCoreBitmapInfo.MaxPossibleCoresPerSystem, 64) / 64;
   for (Index = 0; Index < EnabledCoresWordCount; Index++) {
     EnabledCoresWordIndex = EnabledCoresWordCount - Index - 1;
     if ((PrintedWords == 0) &&
-        (PlatformResourceInfo->EnabledCoresBitMap[EnabledCoresWordIndex] == 0))
+        (SocCoreBitmapInfo.EnabledCoresBitMap[EnabledCoresWordIndex] == 0))
     {
       continue;
     }
@@ -398,7 +403,7 @@ UpdatePlatformResourceInformation (
       DEBUG ((DEBUG_ERROR, "EnabledCores"));
     }
 
-    DEBUG ((DEBUG_ERROR, "[%u]=0x%016llx ", EnabledCoresWordIndex, PlatformResourceInfo->EnabledCoresBitMap[EnabledCoresWordIndex]));
+    DEBUG ((DEBUG_ERROR, "[%u]=0x%016llx ", EnabledCoresWordIndex, SocCoreBitmapInfo.EnabledCoresBitMap[EnabledCoresWordIndex]));
 
     if (((PrintedWords % WordsPerLine) == 0) || (Index == (EnabledCoresWordCount - 1))) {
       DEBUG ((DEBUG_ERROR, "\n"));
@@ -410,16 +415,18 @@ UpdatePlatformResourceInformation (
     return Status;
   }
 
-  ArmCoreInfo = (ARM_CORE_INFO *)BuildGuidHob (&gArmMpCoreInfoGuid, sizeof (ARM_CORE_INFO) * PlatformResourceInfo->NumberOfEnabledCores);
+  ArmCoreInfo = (ARM_CORE_INFO *)BuildGuidHob (&gArmMpCoreInfoGuid, sizeof (ARM_CORE_INFO) * NumberOfEnabledCores * SocCoreBitmapInfo.ThreadsPerCore);
   if (ArmCoreInfo == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
   CoreInfoIndex = 0;
-  for (CoreIndex = 0; CoreIndex < PlatformResourceInfo->MaxPossibleCores; CoreIndex++) {
-    if (PlatformResourceIsCoreEnabled (PlatformResourceInfo, CoreIndex)) {
-      ArmCoreInfo[CoreInfoIndex].Mpidr = GetMpidrFromCoreIndex (PlatformResourceInfo, CoreIndex);
-      CoreInfoIndex++;
+  for (CoreIndex = 0; CoreIndex < SocCoreBitmapInfo.MaxPossibleCoresPerSystem; CoreIndex++) {
+    if (PlatformResourceIsCoreEnabled (&SocCoreBitmapInfo, CoreIndex)) {
+      for (ThreadId = 0; ThreadId < SocCoreBitmapInfo.ThreadsPerCore; ThreadId++) {
+        ArmCoreInfo[CoreInfoIndex].Mpidr = GetMpidrFromCoreIndex (&SocCoreBitmapInfo, CoreIndex, ThreadId);
+        CoreInfoIndex++;
+      }
     }
   }
 
@@ -488,4 +495,29 @@ IsSocketEnabledStMm (
 
   SocketEnabled = ((SocketMask & (1U << SocketNum)) ? TRUE : FALSE);
   return SocketEnabled;
+}
+
+/**
+ * Retrieves if the systems supports software core disable
+ *
+ * @param[in]  Socket           Socket Id
+ * @param[out] TotalCoreCount   Total Core Count
+ *
+ * @retval  EFI_SUCCESS             System supports software core disable and returns the total core count
+ * @retval  EFI_INVALID_PARAMETER   Invalid socket id.
+ * @retval  EFI_INVALID_PARAMETER   TotalCoreCount is NULL
+ * @retval  EFI_UNSUPPORTED         Unsupported feature
+**/
+EFI_STATUS
+EFIAPI
+SupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
+  )
+{
+  if (TotalCoreCount == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return SocSupportsSoftwareCoreDisable (Socket, TotalCoreCount);
 }

@@ -26,6 +26,7 @@
 #include <T234/T234Definitions.h>
 
 #include "PlatformResourceConfig.h"
+#include "SocResourceConfig.h"
 #include "T234ResourceConfigPrivate.h"
 
 #define T234_MAX_CPUS  12
@@ -652,11 +653,12 @@ T234GetUpdateBrBct (
 EFI_STATUS
 EFIAPI
 SocGetEnabledCoresBitMap (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN UINTN                     CpuBootloaderAddress,
+  IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-  return MceAriGetEnabledCoresBitMap (PlatformResourceInfo->EnabledCoresBitMap);
+  SocCoreBitmapInfo->ThreadsPerCore = 1;
+  return MceAriGetEnabledCoresBitMap (SocCoreBitmapInfo->EnabledCoresBitMap, SocCoreBitmapInfo->MaxPossibleCoresPerCluster);
 }
 
 /**
@@ -873,21 +875,25 @@ GetGicInfo (
   return TRUE;
 }
 
-UINTN
+/**
+  Get Total Core Count in case system supports software core disable
+
+  @param[in]  Socket              Socket Id
+  @param[out] TotalCoreCount      Total Core Count
+
+  @retval  EFI_SUCCESS             Max Core Count retrieved successfully.
+  @retval  EFI_INVALID_PARAMETER   Invalid socket id.
+  @retval  EFI_INVALID_PARAMETER   TotalCoreCount is NULL
+  @retval  EFI_UNSUPPORTED         Unsupported feature
+**/
+EFI_STATUS
 EFIAPI
-TegraGetMaxCoreCount (
-  IN UINTN  Socket
+SocSupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
   )
 {
-  UINTN       CoreCount;
-  EFI_STATUS  Status;
-
-  Status = GetNumEnabledCoresOnSocket (Socket, &CoreCount);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a:Failed to get Enabled Core Count for Socket %u %r\n", __FUNCTION__, Socket, Status));
-  }
-
-  return CoreCount;
+  return EFI_UNSUPPORTED;
 }
 
 UINT32

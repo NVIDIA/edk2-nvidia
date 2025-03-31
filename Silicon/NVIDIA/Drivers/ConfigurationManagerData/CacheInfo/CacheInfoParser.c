@@ -257,7 +257,7 @@ AllocateCacheHierarchyInfo (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, &MaxCore);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, &MaxCore, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     *HierarchyInfoPtr = NULL;
@@ -311,7 +311,7 @@ FreeCacheHierarchyInfo (
   UINT32      MaxSocket;
   UINT32      MaxCluster;
 
-  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, NULL);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     return;
@@ -445,7 +445,7 @@ GenerateHierarchyInfo (
 
   // The CacheTracker nodes all have hierarchy info set
 
-  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, &MaxCore);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, &MaxCore, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     return Status;
@@ -630,20 +630,27 @@ GetCacheNodeData (
   TokenMap   = NULL;
 
   if (CacheTracker == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CacheTracker is NULL\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
   // Get the count of "cache" nodes
   NodeCount = 0;
   Status    = DeviceTreeGetCompatibleNodeCount (CacheCompatibleInfo, &NodeCount);
-  if (EFI_ERROR (Status) || (NodeCount == 0)) {
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetCompatibleNodeCount failed: %r\n", __FUNCTION__, Status));
     return Status;
+  }
+
+  if (NodeCount == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: No cache nodes found in device tree\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
   }
 
   // Allocate space for the nodes
   CacheNodes = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE) * NodeCount);
   if (CacheNodes == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheNodes\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CacheNodes\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
@@ -651,6 +658,7 @@ GetCacheNodeData (
   // Allocate tokens for the nodes
   Status = NvAllocateCmTokens (ParserHandle, NodeCount, &TokenMap);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: NvAllocateCmTokens failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -659,13 +667,13 @@ GetCacheNodeData (
   for (NodeIndex = 0; NodeIndex < NodeCount; NodeIndex++) {
     Status = DeviceTreeGetNextCompatibleNode (CacheCompatibleInfo, &NodeOffset);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get next cache node (index %u) after offset 0x%x\n", __FUNCTION__, Status, NodeIndex, NodeOffset));
+      DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNextCompatibleNode failed for index %u: %r\n", __FUNCTION__, NodeIndex, Status));
       goto CleanupAndReturn;
     }
 
     Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], NodeOffset, CACHE_TYPE_UNIFIED, TokenMap[NodeIndex], UNDEFINED_SOCKET, UNDEFINED_CLUSTER, UNDEFINED_CORE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CacheData for index %u at offset 0x%x\n", __FUNCTION__, Status, NodeIndex, NodeOffset));
+      DEBUG ((DEBUG_ERROR, "%a: CreateCacheNodeFromOffset failed for index %u: %r\n", __FUNCTION__, NodeIndex, Status));
       goto CleanupAndReturn;
     }
   }
@@ -699,10 +707,12 @@ GetCpuCacheNodeData (
   CM_OBJECT_TOKEN  *TokenMap;
   UINT32           NumEnabledCores;
   UINT64           CoreId;
+  UINT64           ProcessorId;
   INT32            CpuCacheOffset;
   UINT32           Socket;
   UINT32           Cluster;
   UINT32           Core;
+  UINT32           Thread;
   UINT32           CoreIndex;
 
   CacheNodes = NULL;
@@ -711,19 +721,25 @@ GetCpuCacheNodeData (
   if ((CacheTracker == NULL) ||
       (ParserHandle == NULL))
   {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameters - CacheTracker or ParserHandle is NULL\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = MpCoreInfoGetPlatformInfo (&NumEnabledCores, NULL, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (&NumEnabledCores, NULL, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: MpCoreInfoGetPlatformInfo failed: %r\n", __FUNCTION__, Status));
     return Status;
+  }
+
+  if (NumEnabledCores == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: No enabled cores found\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
   }
 
   // Allocate space for the nodes (potentially I & D caches per core)
   CacheNodes = (CACHE_NODE *)AllocateZeroPool (sizeof (CACHE_NODE) * (NumEnabledCores * 2));
   if (CacheNodes == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CpuCacheNodes\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CpuCacheNodes\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
@@ -731,32 +747,41 @@ GetCpuCacheNodeData (
   // Allocate tokens for the nodes
   Status = NvAllocateCmTokens (ParserHandle, (NumEnabledCores * 2), &TokenMap);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to allocate tokens CpuCacheNodes\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: NvAllocateCmTokens failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   CpuCacheOffset = -1;
   NodeIndex      = 0;
   for (CoreIndex = 0; CoreIndex < NumEnabledCores; CoreIndex++) {
+    Status = MpCoreInfoGetProcessorIdFromIndex (CoreIndex, &ProcessorId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: MpCoreInfoGetProcessorIdFromIndex failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
+      goto CleanupAndReturn;
+    }
+
+    Status = MpCoreInfoGetProcessorLocation (ProcessorId, &Socket, &Cluster, &Core, &Thread);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: MpCoreInfoGetProcessorLocation failed for CoreId %lx: %r\n", __FUNCTION__, CoreId, Status));
+      goto CleanupAndReturn;
+    }
+
+    // Skip cores that are not the primary thread
+    if (Thread != 0) {
+      continue;
+    }
+
     // Find the next device = "cpu" node
     Status = DeviceTreeGetNextCpuNode (&CpuCacheOffset);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the next Cpu node (index %u) after offset 0x%x\n", __FUNCTION__, Status, CoreIndex, CpuCacheOffset));
+      DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNextCpuNode failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
       goto CleanupAndReturn;
     }
 
     // determine the socket, cluster, and core for the cpu
     Status = DeviceTreeGetNodePropertyValue64 (CpuCacheOffset, "reg", &CoreId);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get CoreId (reg property) for CoreIndex %u\n", __FUNCTION__, Status, CoreIndex));
-      goto CleanupAndReturn;
-    }
-
-    DEBUG_CODE_BEGIN ();
-    UINT64  ProcessorId;
-    Status = MpCoreInfoGetProcessorIdFromIndex (CoreIndex, &ProcessorId);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get ProcessorId for CoreIndex %u\n", __FUNCTION__, Status, CoreIndex));
+      DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNodePropertyValue64 failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
       goto CleanupAndReturn;
     }
 
@@ -770,20 +795,13 @@ GetCpuCacheNodeData (
       CoreId,
       ProcessorId
       );
-    DEBUG_CODE_END ();
-
-    Status = MpCoreInfoGetProcessorLocation (CoreId, &Socket, &Cluster, &Core);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get ProcessorLocation for CoreId %lx\n", __FUNCTION__, Status, CoreId));
-      goto CleanupAndReturn;
-    }
 
     // Gather the I & D cache info from the CpuCacheOffset
 
     // I CacheData
     Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_ICACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get ICacheData for Logical Core %u\n", __FUNCTION__, Status, CoreIndex));
+      DEBUG ((DEBUG_ERROR, "%a: CreateCacheNodeFromOffset failed for ICache CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
     } else {
       NodeIndex++;
     }
@@ -791,10 +809,16 @@ GetCpuCacheNodeData (
     // D CacheData
     Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_DCACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get DCacheData for Logical Core %u\n", __FUNCTION__, Status, CoreIndex));
+      DEBUG ((DEBUG_ERROR, "%a: CreateCacheNodeFromOffset failed for DCache CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
     } else {
       NodeIndex++;
     }
+  }
+
+  if (NodeIndex == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: No valid cache nodes found for any cores\n", __FUNCTION__));
+    Status = EFI_NOT_FOUND;
+    goto CleanupAndReturn;
   }
 
   // Add the info to the CacheTracker
@@ -870,6 +894,7 @@ GenerateCacheInfo (
       goto CleanupAndReturn;
     }
   } else {
+    DEBUG ((DEBUG_ERROR, "%a: No cache nodes found\n", __FUNCTION__));
     Status = EFI_NOT_FOUND;
   }
 
@@ -901,7 +926,13 @@ FixupSocketClusterCoreFields (
   UINT32      SocketRootZeroed; // Bitmask of sockets that have had their root cache zeroed
 
   if (CacheTracker == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: CacheTracker is NULL\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (CacheTracker->CacheNodeCount == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: CacheNodeCount is 0\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
   }
 
   SocketRootZeroed = 0;
@@ -928,7 +959,7 @@ FixupSocketClusterCoreFields (
       } else {
         // Otherwise, Socket should be correct and Cluster and/or Core might be unused
         if (Next->Socket != Node->Socket) {
-          DEBUG ((DEBUG_ERROR, "%a: Need a level higher than socket for an L%u cache from Index %u to flow into\n", __FUNCTION__, Next->CacheData.CacheLevel, Index));
+          DEBUG ((DEBUG_ERROR, "%a: Socket mismatch for L%u cache at index %u\n", __FUNCTION__, Next->CacheData.CacheLevel, Index));
           return EFI_UNSUPPORTED;
         } else {
           // Sockets match
@@ -998,7 +1029,6 @@ FixupSocketClusterCoreFields (
     }
   }
 
-  // JDS TODO - do we want to sanity-check the result?
   return EFI_SUCCESS;
 }
 
@@ -1045,8 +1075,17 @@ CacheInfoParser (
   CacheHierarchyInfo = NULL;
   CacheTracker       = NULL;
 
-  if (ParserHandle == NULL) {
-    ASSERT (0);
+  NV_ASSERT_RETURN (
+    ParserHandle != NULL,
+  {
+    return EFI_INVALID_PARAMETER;
+  },
+    "%a: ParserHandle is NULL\n",
+    __FUNCTION__
+    );
+
+  if (HierarchyInfo == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: HierarchyInfo is NULL\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1054,13 +1093,13 @@ CacheInfoParser (
 
   Status = AllocateCacheHierarchyInfo (&CacheHierarchyInfo);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheHierarchyInfo\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CacheHierarchyInfo: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   CacheTracker = AllocateZeroPool (sizeof (CACHE_TRACKER));
   if (CacheTracker == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate for CacheTracker\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate CacheTracker\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
     goto CleanupAndReturn;
   }
@@ -1069,16 +1108,19 @@ CacheInfoParser (
 
   Status = GetCacheNodeData (ParserHandle, CacheTracker);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GetCacheNodeData failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   Status = GetCpuCacheNodeData (ParserHandle, CacheTracker);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GetCpuCacheNodeData failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   Status = FixupSocketClusterCoreFields (CacheTracker);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FixupSocketClusterCoreFields failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
@@ -1086,22 +1128,25 @@ CacheInfoParser (
 
   Status = GenerateCacheInfo (ParserHandle, CacheTracker, NULL);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GenerateCacheInfo failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   Status = GenerateHierarchyInfo (ParserHandle, CacheTracker, CacheHierarchyInfo);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GenerateHierarchyInfo failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
   // Store CacheTracker metadata for other code to use
   Status = GenerateCacheMetadata (ParserHandle, CacheTracker);
   if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: GenerateCacheMetadata failed: %r\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
 CleanupAndReturn:
-  if ((HierarchyInfo != NULL) && !EFI_ERROR (Status)) {
+  if (!EFI_ERROR (Status)) {
     *HierarchyInfo = CacheHierarchyInfo;
   } else {
     FreeCacheHierarchyInfo (CacheHierarchyInfo);
@@ -1110,6 +1155,10 @@ CleanupAndReturn:
   if (CacheTracker != NULL) {
     FREE_NON_NULL (CacheTracker->CacheNodes);
     FREE_NON_NULL (CacheTracker);
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Exiting with error status: %r\n", __FUNCTION__, Status));
   }
 
   return Status;

@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 4 and Type 7 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -25,6 +25,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/MpCoreInfoLib.h>
 
 #include "SmbiosParserPrivate.h"
 #include "SmbiosProcSubParser.h"
@@ -334,12 +335,16 @@ InstallSmbiosType4Cm (
 {
   EFI_STATUS                      Status;
   VOID                            *DtbBase;
-  UINTN                           ProcessorCount;
+  UINT32                          SocketCount;
+  UINT32                          SocketId;
+  UINT32                          TotalCoreCount;
+  UINT32                          EnabledCoreCount;
+  UINT32                          ThreadsPerCore;
   CM_SMBIOS_PROCESSOR_INFO        *ProcessorInfo;
   CHAR16                          *SerialNumberStr;
   CHAR8                           Type4NodeStr[] = "/firmware/smbios/type4@xx";
   INT32                           NodeOffset;
-  UINTN                           Index;
+  UINTN                           SocketLinearIndex;
   PROCESSOR_CHARACTERISTIC_FLAGS  ProcessorCharacteristics;
   OEM_MISC_PROCESSOR_DATA         ProcessorData;
   UINT8                           *LegacyVoltage;
@@ -358,44 +363,56 @@ InstallSmbiosType4Cm (
   Status        = EFI_SUCCESS;
   DtbBase       = Private->DtbBase;
 
-  // Get the socket count
-  ProcessorCount = OemGetMaxProcessors ();
+  Status = MpCoreInfoGetPlatformInfo (NULL, &SocketCount, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get socket count\n", __FUNCTION__));
+    goto ExitInstallSmbiosType4;
+  }
+
+  // Increment socket count to account for 0 based index
+  SocketCount++;
 
   // Allocate memory for Processor Info tables
-  ProcessorInfo = AllocateZeroPool (sizeof (CM_SMBIOS_PROCESSOR_INFO) * ProcessorCount);
+  ProcessorInfo = AllocateZeroPool (sizeof (CM_SMBIOS_PROCESSOR_INFO) * SocketCount);
   if (ProcessorInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 0x%llx bytes for ProcessorInfo - skipping Type 4 table\n", __FUNCTION__, sizeof (CM_SMBIOS_PROCESSOR_INFO) * ProcessorCount));
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Unable to allocate 0x%llx bytes for ProcessorInfo - skipping Type 4 table\n",
+      __FUNCTION__,
+      sizeof (CM_SMBIOS_PROCESSOR_INFO) * SocketCount
+      ));
     goto ExitInstallSmbiosType4;
   }
 
   // Fill Type 4 data
-  for (Index = 0; Index < ProcessorCount; Index++) {
+  SocketLinearIndex = 0;
+  MPCORE_FOR_EACH_ENABLED_SOCKET (SocketId) {
     // Fill in respective cache table handles generated while installing type 7 table in type 4 table L1, L2, L3 parameters
-    ProcessorInfo[Index].CacheInfoTokenL1 = CacheInfoTokenL1[Index];
-    ProcessorInfo[Index].CacheInfoTokenL2 = CacheInfoTokenL2[Index];
-    ProcessorInfo[Index].CacheInfoTokenL3 = CacheInfoTokenL3[Index];
+    ProcessorInfo[SocketLinearIndex].CacheInfoTokenL1 = CacheInfoTokenL1[SocketLinearIndex];
+    ProcessorInfo[SocketLinearIndex].CacheInfoTokenL2 = CacheInfoTokenL2[SocketLinearIndex];
+    ProcessorInfo[SocketLinearIndex].CacheInfoTokenL3 = CacheInfoTokenL3[SocketLinearIndex];
 
-    ProcessorInfo[Index].SocketDesignation     = NULL;
-    ProcessorInfo[Index].ProcessorVersion      = NULL;
-    ProcessorInfo[Index].ProcessorManufacturer = NULL;
-    ProcessorInfo[Index].PartNumber            = NULL;
-    ProcessorInfo[Index].AssetTag              = NULL;
-    FruDesc                                    = NULL;
+    ProcessorInfo[SocketLinearIndex].SocketDesignation     = NULL;
+    ProcessorInfo[SocketLinearIndex].ProcessorVersion      = NULL;
+    ProcessorInfo[SocketLinearIndex].ProcessorManufacturer = NULL;
+    ProcessorInfo[SocketLinearIndex].PartNumber            = NULL;
+    ProcessorInfo[SocketLinearIndex].AssetTag              = NULL;
+    FruDesc                                                = NULL;
 
-    AsciiSPrint (Type4NodeStr, sizeof (Type4NodeStr), "/firmware/smbios/type4@%u", Index);
+    AsciiSPrint (Type4NodeStr, sizeof (Type4NodeStr), "/firmware/smbios/type4@%u", SocketId);
     NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
     if (NodeOffset < 0) {
       DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 4 not found.\n", __FUNCTION__));
     } else {
       // Socket designation
-      GetPropertyFromDT (DtbBase, NodeOffset, "socket-designation", &ProcessorInfo[Index].SocketDesignation);
+      GetPropertyFromDT (DtbBase, NodeOffset, "socket-designation", &ProcessorInfo[SocketLinearIndex].SocketDesignation);
 
       // Processor version
-      GetPropertyFromDT (DtbBase, NodeOffset, "processor-version", &ProcessorInfo[Index].ProcessorVersion);
+      GetPropertyFromDT (DtbBase, NodeOffset, "processor-version", &ProcessorInfo[SocketLinearIndex].ProcessorVersion);
 
       // Processor Manufacturer
-      GetPropertyFromDT (DtbBase, NodeOffset, "manufacturer", &ProcessorInfo[Index].ProcessorManufacturer);
+      GetPropertyFromDT (DtbBase, NodeOffset, "manufacturer", &ProcessorInfo[SocketLinearIndex].ProcessorManufacturer);
 
       MaxSpeedVarName   = NULL;
       ProcessorMaxSpeed = 0;
@@ -411,7 +428,7 @@ InstallSmbiosType4Cm (
           DataSize = sizeof (ProcessorMaxSpeed);
           Status   = gRT->GetVariable (MaxSpeedVarName, &gNVIDIATokenSpaceGuid, NULL, (UINTN *)&DataSize, &ProcessorMaxSpeed);
           if (!EFI_ERROR (Status)) {
-            ProcessorInfo[Index].MaxSpeed = ProcessorMaxSpeed / 1000000;
+            ProcessorInfo[SocketLinearIndex].MaxSpeed = ProcessorMaxSpeed / 1000000;
           }
 
           FreePool (MaxSpeedVarName);
@@ -427,105 +444,121 @@ InstallSmbiosType4Cm (
         Type4FruInfo = FindFruByDescription (Private, FruDesc);
         // Part Number
         if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductPartNum != NULL)) {
-          ProcessorInfo[Index].PartNumber = AllocateCopyString (Type4FruInfo->ProductPartNum);
+          ProcessorInfo[SocketLinearIndex].PartNumber = AllocateCopyString (Type4FruInfo->ProductPartNum);
         }
 
         // Asset Tag
         if ((Type4FruInfo != NULL) && (Type4FruInfo->ProductSerial != NULL)) {
-          ProcessorInfo[Index].AssetTag = AllocateCopyString (Type4FruInfo->ProductSerial);
+          ProcessorInfo[SocketLinearIndex].AssetTag = AllocateCopyString (Type4FruInfo->ProductSerial);
         }
       } else {
         //
         // Get data from DTB
         //
         // Part Number
-        GetPropertyFromDT (DtbBase, NodeOffset, "part-number", &ProcessorInfo[Index].PartNumber);
+        GetPropertyFromDT (DtbBase, NodeOffset, "part-number", &ProcessorInfo[SocketLinearIndex].PartNumber);
         // Asset Tag
-        GetPropertyFromDT (DtbBase, NodeOffset, "asset-tag", &ProcessorInfo[Index].AssetTag);
+        GetPropertyFromDT (DtbBase, NodeOffset, "asset-tag", &ProcessorInfo[SocketLinearIndex].AssetTag);
       }
     }
 
     // Processor serial number
-    SerialNumberStr = GetCpuSerialNum (Index);
+    SerialNumberStr = GetCpuSerialNum (SocketId);
     if (SerialNumberStr != NULL) {
-      ProcessorInfo[Index].SerialNumber = AllocateZeroPool ((StrLen (SerialNumberStr) + 1));
-      if (ProcessorInfo[Index].SerialNumber == NULL) {
+      ProcessorInfo[SocketLinearIndex].SerialNumber = AllocateZeroPool ((StrLen (SerialNumberStr) + 1));
+      if (ProcessorInfo[SocketLinearIndex].SerialNumber == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Out of Resources. Type 4 will be skipped\r\n", __FUNCTION__));
         Status = EFI_OUT_OF_RESOURCES;
         goto ExitInstallSmbiosType4;
       }
 
       AsciiSPrint (
-        ProcessorInfo[Index].SerialNumber,
+        ProcessorInfo[SocketLinearIndex].SerialNumber,
         (StrLen (SerialNumberStr) + 1),
         "%s",
         SerialNumberStr
         );
     } else {
-      ProcessorInfo[Index].SerialNumber = NULL;
+      ProcessorInfo[SocketLinearIndex].SerialNumber = NULL;
     }
 
     // Processor info
-    ProcessorData.Voltage                 = 0;
-    ProcessorData.CurrentSpeed            = 0;
-    ProcessorData.CoreCount               = 0;
-    ProcessorData.CoresEnabled            = 0;
-    ProcessorData.ThreadCount             = 0;
-    ProcessorData.MaxSpeed                = 0;
-    ProcessorInfo[Index].ProcessorType    = CentralProcessor;
-    ProcessorInfo[Index].ProcessorUpgrade = ProcessorUpgradeNone;
+    ProcessorData.Voltage                             = 0;
+    ProcessorData.CurrentSpeed                        = 0;
+    ProcessorData.CoreCount                           = 0;
+    ProcessorData.CoresEnabled                        = 0;
+    ProcessorData.ThreadCount                         = 0;
+    ProcessorData.MaxSpeed                            = 0;
+    ProcessorInfo[SocketLinearIndex].ProcessorType    = CentralProcessor;
+    ProcessorInfo[SocketLinearIndex].ProcessorUpgrade = ProcessorUpgradeNone;
 
     OemGetProcessorInformation (
-      Index,
+      SocketId,
       &ProcessorStatus,
       (PROCESSOR_CHARACTERISTIC_FLAGS *)
-      &ProcessorInfo[Index].ProcessorCharacteristics,
+      &ProcessorInfo[SocketLinearIndex].ProcessorCharacteristics,
       &ProcessorData
       );
 
-    LegacyVoltage                     = (UINT8 *)&ProcessorInfo[Index].Voltage;
-    *LegacyVoltage                    = ProcessorData.Voltage;
-    ProcessorInfo[Index].CurrentSpeed = ProcessorData.CurrentSpeed;
-    ProcessorInfo[Index].Status       = ProcessorStatus.Data;
+    LegacyVoltage                                 = (UINT8 *)&ProcessorInfo[SocketLinearIndex].Voltage;
+    *LegacyVoltage                                = ProcessorData.Voltage;
+    ProcessorInfo[SocketLinearIndex].CurrentSpeed = ProcessorData.CurrentSpeed;
+    ProcessorInfo[SocketLinearIndex].Status       = ProcessorStatus.Data;
 
-    if (ProcessorInfo[Index].MaxSpeed == 0) {
-      ProcessorInfo[Index].MaxSpeed = ProcessorData.MaxSpeed;
+    if (ProcessorInfo[SocketLinearIndex].MaxSpeed == 0) {
+      ProcessorInfo[SocketLinearIndex].MaxSpeed = ProcessorData.MaxSpeed;
     }
 
-    ProcessorInfo[Index].CoreCount  = MIN (TegraGetMaxCoreCount (Index), MAX_UINT8);
-    ProcessorInfo[Index].CoreCount2 = TegraGetMaxCoreCount (Index);
+    Status = MpCoreInfoGetSocketInfo (SocketId, &EnabledCoreCount, NULL, NULL, &ThreadsPerCore, NULL);
+    if (EFI_ERROR (Status)) {
+      goto ExitInstallSmbiosType4;
+    }
 
-    ProcessorInfo[Index].EnabledCoreCount  = MIN (ProcessorData.CoresEnabled, MAX_UINT8);
-    ProcessorInfo[Index].EnabledCoreCount2 = ProcessorData.CoresEnabled;
+    ThreadsPerCore   = ThreadsPerCore + 1;
+    EnabledCoreCount = EnabledCoreCount / ThreadsPerCore;
 
-    ProcessorInfo[Index].ThreadCount  = MIN (TegraGetMaxCoreCount (Index) * PcdGet8 (PcdProcessorThreadsPerCore), MAX_UINT8);
-    ProcessorInfo[Index].ThreadCount2 = TegraGetMaxCoreCount (Index) * PcdGet8 (PcdProcessorThreadsPerCore);
+    Status = SupportsSoftwareCoreDisable (SocketId, &TotalCoreCount);
+    if (EFI_ERROR (Status)) {
+      // System does not support software core disable use enabled core count
+      TotalCoreCount = EnabledCoreCount;
+    }
 
-    ProcessorInfo[Index].ThreadEnabled = ProcessorData.CoresEnabled * PcdGet8 (PcdProcessorThreadsPerCore);
+    ProcessorInfo[SocketLinearIndex].CoreCount2 = TotalCoreCount;
+    ProcessorInfo[SocketLinearIndex].CoreCount  = MIN (ProcessorInfo[SocketLinearIndex].CoreCount2, MAX_UINT8);
 
-    ProcessorInfo[Index].ExternalClock =
+    ProcessorInfo[SocketLinearIndex].EnabledCoreCount2 = EnabledCoreCount;
+    ProcessorInfo[SocketLinearIndex].EnabledCoreCount  = MIN (ProcessorInfo[SocketLinearIndex].EnabledCoreCount2, MAX_UINT8);
+
+    ProcessorInfo[SocketLinearIndex].ThreadCount2 = ProcessorInfo[SocketLinearIndex].CoreCount2 * ThreadsPerCore;
+    ProcessorInfo[SocketLinearIndex].ThreadCount  = MIN (ProcessorInfo[SocketLinearIndex].ThreadCount2, MAX_UINT8);
+
+    ProcessorInfo[SocketLinearIndex].ThreadEnabled = EnabledCoreCount * ThreadsPerCore;
+
+    ProcessorInfo[SocketLinearIndex].ExternalClock =
       (UINT16)(SmbiosGetExternalClockFrequency () / 1000 / 1000);
 
-    ProcessorId  = (UINT64 *)&ProcessorInfo[Index].ProcessorId;
+    ProcessorId  = (UINT64 *)&ProcessorInfo[SocketLinearIndex].ProcessorId;
     *ProcessorId = SmbiosGetProcessorId ();
 
-    ProcessorCharacteristics                       = SmbiosGetProcessorCharacteristics ();
-    ProcessorInfo[Index].ProcessorCharacteristics |= *((UINT64 *)&ProcessorCharacteristics);
-    ProcessorInfo[Index].ProcessorFamily           = ProcessorFamilyIndicatorFamily2;
-    ChipID                                         = TegraGetChipID ();
+    ProcessorCharacteristics                                   = SmbiosGetProcessorCharacteristics ();
+    ProcessorInfo[SocketLinearIndex].ProcessorCharacteristics |= *((UINT64 *)&ProcessorCharacteristics);
+    ProcessorInfo[SocketLinearIndex].ProcessorFamily           = ProcessorFamilyIndicatorFamily2;
+    ChipID                                                     = TegraGetChipID ();
     if (ChipID == TH500_CHIP_ID) {
-      ProcessorInfo[Index].ProcessorFamily2 = ProcessorFamilyARMv9;
+      ProcessorInfo[SocketLinearIndex].ProcessorFamily2 = ProcessorFamilyARMv9;
     } else {
-      ProcessorInfo[Index].ProcessorFamily2 = SmbiosGetProcessorFamily2 ();
+      ProcessorInfo[SocketLinearIndex].ProcessorFamily2 = SmbiosGetProcessorFamily2 ();
     }
+
+    SocketLinearIndex++;
   }
 
   //
   // Install CM object for type 4
   //
   Desc.ObjectId = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjProcessorInfo);
-  Desc.Size     = ProcessorCount * sizeof (CM_SMBIOS_PROCESSOR_INFO);
-  Desc.Count    = ProcessorCount;
+  Desc.Size     = SocketLinearIndex * sizeof (CM_SMBIOS_PROCESSOR_INFO);
+  Desc.Count    = SocketLinearIndex;
   Desc.Data     = ProcessorInfo;
 
   Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, NULL, NULL);
@@ -724,7 +757,7 @@ ConfigureCacheArchitectureInformation (
                     UnifiedCache
                     );
   CacheSize64 *= EnabledCores;
-  CacheSize64 /= 1024; // Minimum granularity is 1K
+  CacheSize64 /= 1024;   // Minimum granularity is 1K
 
   // Encode the cache size into the format SMBIOS wants
   if (CacheSize64 < MAX_INT16) {
@@ -1014,26 +1047,30 @@ InstallSmbiosType7Cm (
   EFI_STATUS            Status;
   VOID                  *Dtb;
   UINTN                 DtbSize;
-  UINTN                 ProcessorCount;
   CM_SMBIOS_CACHE_INFO  *CacheInfo;
   UINTN                 Index;
+  UINT32                Socket;
   UINT8                 CacheLevel;
   UINT8                 MaxCacheLevel;
   BOOLEAN               DataCacheType;
   BOOLEAN               SeparateCaches;
   UINTN                 CacheSocketStrLen;
   CHAR8                 *SocketDesignationAsciiStr;
+  UINTN                 AllocatedTableCount;
   UINTN                 TableCount;
-  UINTN                 CoresEnabled;
+  UINT32                CoresEnabled;
+  UINT32                MaxThreadId;
+  UINT32                ThreadsPerCore;
   INT32                 SocketOffset;
   CHAR8                 SocketNodeStr[] = "/socket@xx";
   CM_OBJ_DESCRIPTOR     Desc;
   CM_OBJECT_TOKEN       *TokenMap;
 
-  TokenMap   = NULL;
-  CacheInfo  = NULL;
-  Status     = EFI_SUCCESS;
-  TableCount = 0;
+  TokenMap            = NULL;
+  CacheInfo           = NULL;
+  Status              = EFI_SUCCESS;
+  TableCount          = 0;
+  AllocatedTableCount = 0;
 
   MaxCacheLevel = 0;
   // See if there's an L1 cache present.
@@ -1043,10 +1080,7 @@ InstallSmbiosType7Cm (
     goto ExitInstallSmbiosType7;
   }
 
-  ProcessorCount = OemGetMaxProcessors ();
-
-  // Calculate the numer of cache tables required
-  for (Index = 0; Index < ProcessorCount; Index++) {
+  MPCORE_FOR_EACH_ENABLED_SOCKET (Socket) {
     for (CacheLevel = 1; CacheLevel <= MaxCacheLevel; CacheLevel++) {
       SeparateCaches = ProcessorHasSeparateCaches (CacheLevel);
       for (DataCacheType = 0; DataCacheType <= 1; DataCacheType++) {
@@ -1055,46 +1089,53 @@ InstallSmbiosType7Cm (
           continue;
         }
 
-        TableCount++;
+        AllocatedTableCount++;
       }
     }
 
-    // Increment TableCount for each processor's L3 cache that is captured by dtb
-    TableCount++;
+    // Increment AllocatedTableCount for each processor's L3 cache that is captured by dtb
+    AllocatedTableCount++;
   }
 
-  if (TableCount == 0) {
+  if (AllocatedTableCount == 0) {
     Status = EFI_NOT_FOUND;
     DEBUG ((DEBUG_ERROR, "%a: No tables found\n", __FUNCTION__));
     return Status;
   }
 
   // Allocate Token Map
-  Status = NvAllocateCmTokens (ParserHandle, TableCount, &TokenMap);
+  Status = NvAllocateCmTokens (ParserHandle, AllocatedTableCount, &TokenMap);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to allocate a token for SMBIOS Type 7: %r\n", __FUNCTION__, Status));
     goto ExitInstallSmbiosType7;
   }
 
   // Allocate memory for the cache tables
-  CacheInfo = AllocateZeroPool (sizeof (CM_SMBIOS_CACHE_INFO) * ProcessorCount * TableCount);
+  CacheInfo = AllocateZeroPool (sizeof (CM_SMBIOS_CACHE_INFO) * AllocatedTableCount);
   if (CacheInfo == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 0x%llx bytes for CacheInfo - Type 7 will be skipped\n", __FUNCTION__, sizeof (CM_SMBIOS_CACHE_INFO) * ProcessorCount * TableCount));
+    DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 0x%llx bytes for CacheInfo - Type 7 will be skipped\n", __FUNCTION__, sizeof (CM_SMBIOS_CACHE_INFO) * TableCount));
     goto ExitInstallSmbiosType7;
   }
 
   TableCount = 0;
 
   // Fill Type 7 data
-  for (Index = 0; Index < ProcessorCount; Index++) {
+  Index = 0;
+  MPCORE_FOR_EACH_ENABLED_SOCKET (Socket) {
     Status                  = EFI_SUCCESS;
     CacheInfoTokenL1[Index] = 0xFFFF;
     CacheInfoTokenL2[Index] = 0xFFFF;
     CacheInfoTokenL3[Index] = 0xFFFF;
 
     // Get the Cores enabled count to calculate the total cache size
-    CoresEnabled = GetCpuEnabledCores (Index);
+    Status = MpCoreInfoGetSocketInfo (Socket, &CoresEnabled, NULL, NULL, &MaxThreadId, NULL);
+    if (EFI_ERROR (Status)) {
+      goto ExitInstallSmbiosType7;
+    }
+
+    ThreadsPerCore = MaxThreadId + 1;
+    CoresEnabled   = CoresEnabled / ThreadsPerCore;
 
     // Get Dtb
     Status = DtPlatformLoadDtb (&Dtb, &DtbSize);
@@ -1102,7 +1143,7 @@ InstallSmbiosType7Cm (
       goto ExitInstallSmbiosType7;
     }
 
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Index);
+    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
     SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
 
     for (CacheLevel = 1; CacheLevel <= MaxCacheLevel; CacheLevel++) {
@@ -1165,7 +1206,7 @@ InstallSmbiosType7Cm (
     }
 
     // Additional logic to generate type 7 L3 cache table
-    Status = GetL3CacheInfo (Dtb, SocketOffset, Index, TableCount, &CacheInfo[TableCount]);
+    Status = GetL3CacheInfo (Dtb, SocketOffset, Socket, TableCount, &CacheInfo[TableCount]);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get L3CacheInfo - Type 7 will be skipped\n", __FUNCTION__, Status));
       goto ExitInstallSmbiosType7;
@@ -1175,13 +1216,15 @@ InstallSmbiosType7Cm (
     CacheInfoTokenL3[Index]              = CacheInfo[TableCount].CacheInfoToken;
 
     TableCount++;
+    Index++;
   }
 
   //
   // Install CM object for type 7
   //
+  ASSERT (TableCount == AllocatedTableCount);
   Desc.ObjectId = CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjCacheInfo);
-  Desc.Size     = TableCount * ProcessorCount * sizeof (CM_SMBIOS_CACHE_INFO);
+  Desc.Size     = TableCount * sizeof (CM_SMBIOS_CACHE_INFO);
   Desc.Count    = TableCount;
   Desc.Data     = CacheInfo;
 

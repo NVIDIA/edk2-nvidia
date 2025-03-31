@@ -1,13 +1,14 @@
 /** @file
 *  Provides functions that give information about the cores that are enabled
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
 #include <PiDxe.h>
+#include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/MpCoreInfoLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -69,30 +70,6 @@ GetCoreInfoFromHob (
     return EFI_SUCCESS;
   } else {
     return EFI_DEVICE_ERROR;
-  }
-}
-
-STATIC
-BOOLEAN
-EFIAPI
-IsAffinityMpIdrSupported (
-  VOID
-  )
-{
-  VOID  *Hob;
-
-  if (mResourceInfo != NULL) {
-    return mResourceInfo->AffinityMpIdrSupported;
-  } else {
-    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-    if ((Hob != NULL) &&
-        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-    {
-      mResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-      return mResourceInfo->AffinityMpIdrSupported;
-    }
-
-    return FALSE;
   }
 }
 
@@ -173,6 +150,7 @@ MpCoreInfoIsProcessorEnabled (
   @param[out]   Socket          Socket number of the processor
   @param[out]   Cluster         Cluster number of the processor
   @param[out]   Core            Core number of the processor
+  @param[out]   Thread          Thread number of the processor
 
   @retval       EFI_SUCCESS             Processor location is returned
   @retval       EFI_INVALID_PARAMETER   Processor Id is invalid
@@ -183,33 +161,24 @@ MpCoreInfoGetProcessorLocation (
   IN  UINT64  ProcessorId,
   OUT UINT32  *Socket   OPTIONAL,
   OUT UINT32  *Cluster  OPTIONAL,
-  OUT UINT32  *Core     OPTIONAL
+  OUT UINT32  *Core     OPTIONAL,
+  OUT UINT32  *Thread   OPTIONAL
   )
 {
-  UINT32  LocalCore;
-  UINT32  LocalCluster;
-  UINT32  LocalSocket;
-
-  if (!IsAffinityMpIdrSupported ()) {
-    LocalCore    = GET_MPIDR_AFF0 (ProcessorId);
-    LocalCluster = GET_MPIDR_AFF1 (ProcessorId);
-    LocalSocket  = GET_MPIDR_AFF2 (ProcessorId);
-  } else {
-    LocalCore    = GET_MPIDR_AFF1 (ProcessorId);
-    LocalCluster = GET_MPIDR_AFF2 (ProcessorId);
-    LocalSocket  = GET_MPIDR_AFF3 (ProcessorId);
-  }
-
   if (Socket != NULL) {
-    *Socket = LocalSocket;
+    *Socket = GET_MPIDR_AFF3 (ProcessorId);
   }
 
   if (Cluster != NULL) {
-    *Cluster = LocalCluster;
+    *Cluster = GET_MPIDR_AFF2 (ProcessorId);
   }
 
   if (Core != NULL) {
-    *Core = LocalCore;
+    *Core = GET_MPIDR_AFF1 (ProcessorId);
+  }
+
+  if (Thread != NULL) {
+    *Thread = GET_MPIDR_AFF0 (ProcessorId);
   }
 
   return EFI_SUCCESS;
@@ -222,6 +191,7 @@ MpCoreInfoGetProcessorLocation (
   @param[in]    Cluster         Cluster number of the processor
   @param[in]    Core            Core number of the processor
   @param[out]   ProcessorId     Id of the processor, for Arm processors this is mpidr
+  @param[in]    Thread          Thread number of the processor
 
   @retval       EFI_SUCCESS             Processor location is returned
   @retval       EFI_INVALID_PARAMETER   Socket,Cluster, or Core values are not correct
@@ -233,6 +203,7 @@ MpCoreInfoGetProcessorIdFromLocation (
   IN  UINT32  Socket,
   IN  UINT32  Cluster,
   IN  UINT32  Core,
+  IN  UINT32  Thread,
   OUT UINT64  *ProcessorId
   )
 {
@@ -248,15 +219,15 @@ MpCoreInfoGetProcessorIdFromLocation (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (Thread > MAX_UINT8) {
+    return EFI_INVALID_PARAMETER;
+  }
+
   if (ProcessorId == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (!IsAffinityMpIdrSupported ()) {
-    *ProcessorId = GET_AFFINITY_BASED_MPID (0, Socket, Cluster, Core);
-  } else {
-    *ProcessorId = GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, 0);
-  }
+  *ProcessorId = GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, Thread);
 
   return EFI_SUCCESS;
 }
@@ -267,15 +238,16 @@ MpCoreInfoGetProcessorIdFromLocation (
   This returns the number of cores actually enabled as well as the max values
   for the location identifiers present for the specified search.
 
-  @param[in]    IsSocketSpecified Is socket used to match
-  @param[in]    SocketToMatch     Socket id (0-based)
-  @param[in]    IsClusterSpecified Is cluster used to match
-  @param[in]    ClusterToMatch     Cluster id (0-based)
-  @param[out]   NumEnabledCores   Number of cores enabled
-  @param[out]   MaxSocket         Max socket value (0-based)
-  @param[out]   MaxCluster        Max cluster value (0-based)
-  @param[out]   MaxCore           Max core value (0-based)
-  @param[out]   FirstCoreId       First core id on this socket/cluster
+  @param[in]    IsSocketSpecified   Is socket used to match
+  @param[in]    SocketToMatch       Socket id (0-based)
+  @param[in]    IsClusterSpecified  Is cluster used to match
+  @param[in]    ClusterToMatch      Cluster id (0-based)
+  @param[out]   NumEnabledCores     Number of cores enabled
+  @param[out]   MaxSocket           Max socket value (0-based)
+  @param[out]   MaxCluster          Max cluster value (0-based)
+  @param[out]   MaxCore             Max core value (0-based)
+  @param[out]   MaxThread           Max thread value (0-based)
+  @param[out]   FirstCoreId         First core id on this socket/cluster
 
   @retval       EFI_SUCCESS         Processor location is returned
   @retval       EFI_NOT_FOUND       No processors supported on this socket
@@ -290,11 +262,12 @@ MpCoreInfoGetInfoCommon (
   IN  UINT32  SocketToMatch,
   IN BOOLEAN  IsClusterSpecified,
   IN  UINT32  ClusterToMatch,
-  OUT UINT32  *NumEnabledCores  OPTIONAL,
-  OUT UINT32  *MaxSocket        OPTIONAL,
-  OUT UINT32  *MaxCluster       OPTIONAL,
-  OUT UINT32  *MaxCore          OPTIONAL,
-  OUT UINT64  *FirstCoreId      OPTIONAL
+  OUT UINT32  *NumEnabledCores    OPTIONAL,
+  OUT UINT32  *MaxSocket          OPTIONAL,
+  OUT UINT32  *MaxCluster         OPTIONAL,
+  OUT UINT32  *MaxCore            OPTIONAL,
+  OUT UINT32  *MaxThread          OPTIONAL,
+  OUT UINT64  *FirstCoreId        OPTIONAL
   )
 {
   EFI_STATUS  Status;
@@ -302,17 +275,20 @@ MpCoreInfoGetInfoCommon (
   UINT32      SocketIdMax;
   UINT32      ClusterIdMax;
   UINT32      CoreIdMax;
+  UINT32      ThreadIdMax;
   UINT64      FirstMatchedCore;
   UINT32      Index;
   UINT64      ProcessorId;
   UINT32      Socket;
   UINT32      Cluster;
   UINT32      Core;
+  UINT32      Thread;
 
   CoreCount        = 0;
   SocketIdMax      = 0;
   ClusterIdMax     = 0;
   CoreIdMax        = 0;
+  ThreadIdMax      = 0;
   FirstMatchedCore = 0;
   Index            = 0;
 
@@ -322,7 +298,7 @@ MpCoreInfoGetInfoCommon (
 
   while (!EFI_ERROR (MpCoreInfoGetProcessorIdFromIndex (Index, &ProcessorId))) {
     Index++;
-    Status = MpCoreInfoGetProcessorLocation (ProcessorId, &Socket, &Cluster, &Core);
+    Status = MpCoreInfoGetProcessorLocation (ProcessorId, &Socket, &Cluster, &Core, &Thread);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -351,6 +327,10 @@ MpCoreInfoGetInfoCommon (
       CoreIdMax = Core;
     }
 
+    if (Thread > ThreadIdMax) {
+      ThreadIdMax = Thread;
+    }
+
     CoreCount++;
   }
 
@@ -374,6 +354,10 @@ MpCoreInfoGetInfoCommon (
     *MaxCore = CoreIdMax;
   }
 
+  if (MaxThread != NULL) {
+    *MaxThread = ThreadIdMax;
+  }
+
   if (FirstCoreId != NULL) {
     *FirstCoreId = FirstMatchedCore;
   }
@@ -386,10 +370,11 @@ MpCoreInfoGetInfoCommon (
   This returns the number of cores actually enabled as well as the max values
   for the location identifiers present.
 
-  @param[out]   NumEnabledCores Number of cores enabled
-  @param[out]   MaxSocket       Max socket value (0-based)
-  @param[out]   MaxCluster      Max cluster value (0-based)
-  @param[out]   MaxCore         Max core value (0-based)
+  @param[out]   NumEnabledCores   Number of cores enabled
+  @param[out]   MaxSocket         Max socket value (0-based)
+  @param[out]   MaxCluster        Max cluster value (0-based)
+  @param[out]   MaxCore           Max core value (0-based)
+  @param[out]   MaxThread         Max thread value (0-based)
 
   @retval       EFI_SUCCESS         Platfrom info is returned
   @retval       EFI_DEVICE_ERROR    Other error
@@ -397,10 +382,11 @@ MpCoreInfoGetInfoCommon (
 EFI_STATUS
 EFIAPI
 MpCoreInfoGetPlatformInfo (
-  OUT UINT32  *NumEnabledCores  OPTIONAL,
-  OUT UINT32  *MaxSocket        OPTIONAL,
-  OUT UINT32  *MaxCluster       OPTIONAL,
-  OUT UINT32  *MaxCore          OPTIONAL
+  OUT UINT32  *NumEnabledCores    OPTIONAL,
+  OUT UINT32  *MaxSocket          OPTIONAL,
+  OUT UINT32  *MaxCluster         OPTIONAL,
+  OUT UINT32  *MaxCore            OPTIONAL,
+  OUT UINT32  *MaxThread          OPTIONAL
   )
 {
   return MpCoreInfoGetInfoCommon (
@@ -412,6 +398,7 @@ MpCoreInfoGetPlatformInfo (
            MaxSocket,
            MaxCluster,
            MaxCore,
+           MaxThread,
            NULL
            );
 }
@@ -421,11 +408,12 @@ MpCoreInfoGetPlatformInfo (
   This returns the number of cores actually enabled as well as the max values
   for the location identifiers present for the specified socket.
 
-  @param[in]    Socket          Socket id (0-based)
-  @param[out]   NumEnabledCores Number of cores enabled
-  @param[out]   MaxCluster      Max cluster value (0-based)
-  @param[out]   MaxCore         Max core value (0-based)
-  @param[out]   FirstCoreId     First core id on this socket
+  @param[in]    Socket            Socket id (0-based)
+  @param[out]   NumEnabledCores   Number of cores enabled
+  @param[out]   MaxCluster        Max cluster value (0-based)
+  @param[out]   MaxCore           Max core value (0-based)
+  @param[out]   MaxThread         Max thread value (0-based)
+  @param[out]   FirstCoreId       First core id on this socket
 
   @retval       EFI_SUCCESS         Processor location is returned
   @retval       EFI_NOT_FOUND       No processors supported on this socket
@@ -435,10 +423,11 @@ EFI_STATUS
 EFIAPI
 MpCoreInfoGetSocketInfo (
   IN  UINT32  Socket,
-  OUT UINT32  *NumEnabledCores  OPTIONAL,
-  OUT UINT32  *MaxCluster       OPTIONAL,
-  OUT UINT32  *MaxCore          OPTIONAL,
-  OUT UINT64  *FirstCoreId      OPTIONAL
+  OUT UINT32  *NumEnabledCores    OPTIONAL,
+  OUT UINT32  *MaxCluster         OPTIONAL,
+  OUT UINT32  *MaxCore            OPTIONAL,
+  OUT UINT32  *MaxThread          OPTIONAL,
+  OUT UINT64  *FirstCoreId        OPTIONAL
   )
 {
   return MpCoreInfoGetInfoCommon (
@@ -450,6 +439,7 @@ MpCoreInfoGetSocketInfo (
            NULL,
            MaxCluster,
            MaxCore,
+           MaxThread,
            FirstCoreId
            );
 }
@@ -459,11 +449,12 @@ MpCoreInfoGetSocketInfo (
   This returns the number of cores actually enabled as well as the max values
   for the location identifiers present for the specified cluster.
 
-  @param[in]    Socket          Socket id (0-based)
-  @param[in]    Cluster         Cluster id (0-based)
-  @param[out]   NumEnabledCores Number of cores enabled
-  @param[out]   MaxCore         Max core value (0-based)
-  @param[out]   FirstCoreId     First core id on this socket
+  @param[in]    Socket            Socket id (0-based)
+  @param[in]    Cluster           Cluster id (0-based)
+  @param[out]   NumEnabledCores   Number of cores enabled
+  @param[out]   MaxCore           Max core value (0-based)
+  @param[out]   MaxThread         Max thread value (0-based)
+  @param[out]   FirstCoreId       First core id on this socket
 
   @retval       EFI_SUCCESS         Processor location is returned
   @retval       EFI_NOT_FOUND       No processors supported on this socket/cluster
@@ -474,9 +465,10 @@ EFIAPI
 MpCoreInfoGetSocketClusterInfo (
   IN  UINT32  Socket,
   IN  UINT32  Cluster,
-  OUT UINT32  *NumEnabledCores  OPTIONAL,
-  OUT UINT32  *MaxCore          OPTIONAL,
-  OUT UINT64  *FirstCoreId      OPTIONAL
+  OUT UINT32  *NumEnabledCores    OPTIONAL,
+  OUT UINT32  *MaxCore            OPTIONAL,
+  OUT UINT32  *MaxThread          OPTIONAL,
+  OUT UINT64  *FirstCoreId        OPTIONAL
   )
 {
   return MpCoreInfoGetInfoCommon (
@@ -488,6 +480,87 @@ MpCoreInfoGetSocketClusterInfo (
            NULL,
            NULL,
            MaxCore,
+           MaxThread,
            FirstCoreId
            );
+}
+
+/**
+  Get the first enabled socket
+
+  @retval  First enabled socket
+**/
+UINT32
+EFIAPI
+MpCoreInfoGetFirstEnabledSocket (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      SocketId;
+  UINT32      MaxSocket;
+
+  SocketId = 0;
+  Status   = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get platform info\n", __func__));
+    ASSERT (FALSE);
+    return 0;
+  }
+
+  for (SocketId = 0; SocketId <= MaxSocket; SocketId++) {
+    Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL, NULL);
+    if (!EFI_ERROR (Status)) {
+      return SocketId;
+    }
+  }
+
+  // No enabled sockets found
+  DEBUG ((DEBUG_ERROR, "%a: No sockets with cpus found\n", __func__));
+  ASSERT (FALSE);
+  return 0;
+}
+
+/**
+  Get the next enabled socket
+
+  @param[in, out]  SocketId  Socket index. On input the last socket id, on output the next enabled socket id
+
+  @retval  EFI_SUCCESS - Socket found
+  @retval  EFI_NOT_FOUND - No more sockets
+  @retval  EFI_INVALID_PARAMETER - SocketId is NULL
+  @retval  EFI_DEVICE_ERROR - Failed to get platform info
+**/
+EFI_STATUS
+EFIAPI
+MpCoreInfoGetNextEnabledSocket (
+  IN OUT UINT32  *SocketId
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      CurrentSocketId;
+  UINT32      MaxSocket;
+
+  if (SocketId == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get platform info\n", __func__));
+    ASSERT (FALSE);
+    *SocketId = MAX_UINT32;
+    return EFI_DEVICE_ERROR;
+  }
+
+  for (CurrentSocketId = *SocketId + 1; CurrentSocketId <= MaxSocket; CurrentSocketId++) {
+    Status = MpCoreInfoGetSocketInfo (CurrentSocketId, NULL, NULL, NULL, NULL, NULL);
+    if (!EFI_ERROR (Status)) {
+      *SocketId = CurrentSocketId;
+      return EFI_SUCCESS;
+    }
+  }
+
+  *SocketId = MAX_UINT32;
+  return EFI_NOT_FOUND;
 }

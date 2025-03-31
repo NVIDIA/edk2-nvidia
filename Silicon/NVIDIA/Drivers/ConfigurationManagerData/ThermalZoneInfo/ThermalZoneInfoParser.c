@@ -1,7 +1,7 @@
 /** @file
   Patches the SSDT with ThermalZoneInfo
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -21,13 +21,6 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <TH500/TH500Definitions.h>
 
-// Platform CPU configuration
-#define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
-#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
-#define PLATFORM_MAX_CPUS               (PLATFORM_MAX_CLUSTERS * \
-                                         PLATFORM_MAX_CORES_PER_CLUSTER)
-#define PLATFORM_CPUS_PER_SOCKET        (PLATFORM_MAX_CPUS / PLATFORM_MAX_SOCKETS)
-
 #define CELSIUS_TO_KELVIN(Temp)  (Temp + 2732)
 
 #define MAX_DEVICES_PER_THERMAL_ZONE  10
@@ -37,7 +30,7 @@ typedef struct {
   UINT32          ZoneId;
   BOOLEAN         PassiveSupported;
   BOOLEAN         CriticalSupported;
-  UINTN           *PassiveCpus;
+  UINT32          *PassiveCpus;
   CONST CHAR16    *SocketFormatString;
 } THERMAL_ZONE_DATA;
 
@@ -56,16 +49,16 @@ STATIC EFI_ACPI_DESCRIPTION_HEADER  *AcpiBpmpTableArray[] = {
   (EFI_ACPI_DESCRIPTION_HEADER *)bpmpssdtsocket3_th500_aml_code
 };
 
-STATIC UINTN  ThermalZoneCpu0_List[]  = { 0x00, 0x02, 0x04, 0x0E, MAX_UINTN };
-STATIC UINTN  ThermalZoneCpu1_List[]  = { 0x06, 0x08, 0x0A, 0x0C, 0x1A, MAX_UINTN };
-STATIC UINTN  ThermalZoneCpu2_List[]  = { 0x05, 0x12, 0x13, 0x1C, 0x20, 0x21, 0x1D, 0x03, 0x10, 0x11, 0x1E, 0x1F, MAX_UINTN };
-STATIC UINTN  ThermalZoneCpu3_List[]  = { 0x07, 0x14, 0x15, 0x22, 0x23, 0x0B, 0x18, 0x19, 0x26, 0x27, 0x28, 0x29, 0x09, 0x16, 0x17, 0x24, 0x25, MAX_UINTN };
-STATIC UINTN  ThermalZoneSoc0_List[]  = { 0x2A, 0x2B, 0x2D, 0x2C, 0x3B, 0x3A, 0x49, 0x2F, 0x2E, 0x3D, 0x3C, 0x4B, MAX_UINTN };
-STATIC UINTN  ThermalZoneSoc1_List[]  = { 0x31, 0x30, 0x3F, 0x3E, 0x4D, 0x33, 0x32, 0x41, 0x40, 0x4F, 0x35, 0x34, 0x43, 0x42, 0x51, 0x36, 0x37, MAX_UINTN };
-STATIC UINTN  ThermalZoneSoc2_List[]  = { 0x48, 0x38, 0x46, 0x4A, MAX_UINTN };
-STATIC UINTN  ThermalZoneSoc3_List[]  = { 0x4C, 0x4E, 0x50, 0x44, 0x52, MAX_UINTN };
-STATIC UINTN  ThermalZoneSoc4_List[]  = { MAX_UINTN };
-STATIC UINTN  ThermalZoneTjMax_List[] = { 0x00, MAX_UINTN };
+STATIC UINT32  ThermalZoneCpu0_List[]  = { 0x00, 0x02, 0x04, 0x0E, MAX_UINT32 };
+STATIC UINT32  ThermalZoneCpu1_List[]  = { 0x06, 0x08, 0x0A, 0x0C, 0x1A, MAX_UINT32 };
+STATIC UINT32  ThermalZoneCpu2_List[]  = { 0x05, 0x12, 0x13, 0x1C, 0x20, 0x21, 0x1D, 0x03, 0x10, 0x11, 0x1E, 0x1F, MAX_UINT32 };
+STATIC UINT32  ThermalZoneCpu3_List[]  = { 0x07, 0x14, 0x15, 0x22, 0x23, 0x0B, 0x18, 0x19, 0x26, 0x27, 0x28, 0x29, 0x09, 0x16, 0x17, 0x24, 0x25, MAX_UINT32 };
+STATIC UINT32  ThermalZoneSoc0_List[]  = { 0x2A, 0x2B, 0x2D, 0x2C, 0x3B, 0x3A, 0x49, 0x2F, 0x2E, 0x3D, 0x3C, 0x4B, MAX_UINT32 };
+STATIC UINT32  ThermalZoneSoc1_List[]  = { 0x31, 0x30, 0x3F, 0x3E, 0x4D, 0x33, 0x32, 0x41, 0x40, 0x4F, 0x35, 0x34, 0x43, 0x42, 0x51, 0x36, 0x37, MAX_UINT32 };
+STATIC UINT32  ThermalZoneSoc2_List[]  = { 0x48, 0x38, 0x46, 0x4A, MAX_UINT32 };
+STATIC UINT32  ThermalZoneSoc3_List[]  = { 0x4C, 0x4E, 0x50, 0x44, 0x52, MAX_UINT32 };
+STATIC UINT32  ThermalZoneSoc4_List[]  = { MAX_UINT32 };
+STATIC UINT32  ThermalZoneTjMax_List[] = { 0x00, MAX_UINT32 };
 
 STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
   { TH500_THERMAL_ZONE_CPU0,   !FixedPcdGetBool (PcdUseSinglePassiveThermalZone), TRUE, ThermalZoneCpu0_List,  L"Thermal Zone Skt%d CPU0"  },
@@ -139,8 +132,9 @@ ThermalZoneInfoParser (
   UINTN                        DevicesPerSubZone;
   UINTN                        SubZoneIndex;
   UINTN                        CurrentDevice;
-  UINTN                        FirstAvailCorePerSkt;
-  UINTN                        CurrentCpu;
+  UINT32                       CurrentCluster;
+  UINT64                       CoreId;
+  UINT32                       MaxSocket;
   BOOLEAN                      IsMultiSocketSystem;
   CM_STD_OBJ_ACPI_TABLE_INFO   NewAcpiTable;
 
@@ -195,19 +189,15 @@ ThermalZoneInfoParser (
     FastSampPeriod = TH500_THERMAL_ZONE_TFP;
   }
 
-  IsMultiSocketSystem = FALSE;
-  for (SocketId = 1; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
-    if (IsSocketEnabled (SocketId)) {
-      IsMultiSocketSystem = TRUE;
-      break;
-    }
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get platform info - %r\r\n", __FUNCTION__, Status));
+    return Status;
   }
 
-  for (SocketId = 0; SocketId < PcdGet32 (PcdTegraMaxSockets); SocketId++) {
-    if (!IsSocketEnabled (SocketId)) {
-      continue;
-    }
+  IsMultiSocketSystem = (MaxSocket >= 1);
 
+  MPCORE_FOR_EACH_ENABLED_SOCKET (SocketId) {
     Status = AmlParseDefinitionBlock (AcpiBpmpTableArray[SocketId], &RootNode);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Failed to open BPMP socket ACPI table - %r\r\n", Status));
@@ -242,7 +232,7 @@ ThermalZoneInfoParser (
           (ThermalZoneData[ThermalZoneIndex].PassiveCpus != NULL))
       {
         DevicesPerZone = 0;
-        while (ThermalZoneData[ThermalZoneIndex].PassiveCpus[DevicesPerZone] != MAX_UINTN) {
+        while (ThermalZoneData[ThermalZoneIndex].PassiveCpus[DevicesPerZone] != MAX_UINT32) {
           DevicesPerZone++;
         }
       }
@@ -363,33 +353,43 @@ ThermalZoneInfoParser (
           }
 
           for (SubZoneIndex = 0; SubZoneIndex < DevicesPerSubZone; SubZoneIndex++) {
-            CurrentCpu = ThermalZoneData[ThermalZoneIndex].PassiveCpus[CurrentDevice];
-            if (CurrentCpu == MAX_UINTN) {
-              break;
-            }
-
-            // treat TJMAX zone as a special case
             if (ThermalZoneData[ThermalZoneIndex].ZoneId == TH500_THERMAL_ZONE_TJ_MAX ) {
-              FirstAvailCorePerSkt = 0;
-              while (FirstAvailCorePerSkt < PLATFORM_CPUS_PER_SOCKET) {
-                if (IsCoreEnabled (FirstAvailCorePerSkt + SocketId * PLATFORM_CPUS_PER_SOCKET)) {
-                  CurrentCpu = FirstAvailCorePerSkt;
-                  break;
-                }
-
-                FirstAvailCorePerSkt++;
+              Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL, &CoreId);
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "Failed to get socket info - %r\r\n", Status));
+                ASSERT_EFI_ERROR (Status);
+                return Status;
               }
 
-              ASSERT (FirstAvailCorePerSkt != PLATFORM_CPUS_PER_SOCKET);
-            } else if (!IsCoreEnabled (CurrentCpu + SocketId * PLATFORM_CPUS_PER_SOCKET)) {
-              CurrentDevice++;
-              continue;
+              Status = MpCoreInfoGetProcessorLocation (CoreId, NULL, &CurrentCluster, NULL, NULL);
+              if (EFI_ERROR (Status)) {
+                DEBUG ((DEBUG_ERROR, "Failed to get processor location - %r\r\n", Status));
+                ASSERT_EFI_ERROR (Status);
+                return Status;
+              }
+            } else {
+              CurrentCluster = ThermalZoneData[ThermalZoneIndex].PassiveCpus[CurrentDevice];
+              if (CurrentCluster == MAX_UINT32) {
+                break;
+              }
+
+              Status = MpCoreInfoGetProcessorIdFromLocation (SocketId, CurrentCluster, 0, 0, &CoreId);
+              if (EFI_ERROR (Status)) {
+                CurrentDevice++;
+                continue;
+              }
+
+              Status = MpCoreInfoIsProcessorEnabled (CoreId);
+              if (EFI_ERROR (Status)) {
+                CurrentDevice++;
+                continue;
+              }
             }
 
             if (IsMultiSocketSystem) {
-              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C000.C%03x.C%03x", SocketId, CurrentCpu);
+              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C000.C%03x.C%03x", SocketId, CurrentCluster);
             } else {
-              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCpu);
+              AsciiSPrint (ThermalZoneString, sizeof (ThermalZoneString), "\\_SB_.C%03x.C%03x", SocketId, CurrentCluster);
             }
 
             Status = AmlAddNameStringToNamedPackage (ThermalZoneString, Node);

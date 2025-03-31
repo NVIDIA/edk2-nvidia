@@ -2,7 +2,7 @@
 
   MCE ARI library
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -170,23 +170,6 @@ AriGetResponseLow (
 }
 
 /**
-  Returns the ARI_RESPONSE_DATA_HI register value
-
-  @param[in]    AriBase         ARI register aperture base address
-
-  @return       UINT32          ARI_RESPONSE_DATA_HI value
-**/
-STATIC
-UINT32
-EFIAPI
-AriGetResponseHigh (
-  IN  UINTN  AriBase
-  )
-{
-  return AriRead32 (AriBase, ARI_RESPONSE_DATA_HI_OFFS);
-}
-
-/**
   Clobber the ARI response registers, required before starting a new request.
 
   @param[in]    AriBase         ARI register aperture base address
@@ -310,41 +293,6 @@ AriRequestWait (
 }
 
 /**
-  Returns the MCE ARI interface version.
-
-  @param[in]    AriBase         ARI register aperture base address
-
-  @return       UINT64          ARI Version: [63:32] Major version,
-                                              [31:0] Minor version.
-**/
-STATIC
-UINT64
-EFIAPI
-AriGetVersion (
-  IN  UINTN  AriBase
-  )
-{
-  UINT32  Status;
-  UINT64  Version;
-
-  Status = AriRequestWait (AriBase, 0, TEGRA_ARI_VERSION_CMD, 0, 0);
-
-  if (Status == ARI_REQ_NO_ERROR) {
-    Version  = AriGetResponseLow (AriBase);
-    Version |= (((UINT64)AriGetResponseHigh (AriBase)) << 32);
-  } else {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: ARI request failed, returning version=0!\n",
-      __FUNCTION__
-      ));
-    Version = 0;
-  }
-
-  return Version;
-}
-
-/**
   Returns a bitmask of enabled cores
 
   @param[in]    AriBase         ARI register aperture base address
@@ -386,6 +334,7 @@ AriGetCoresEnabledBitMask (
   Returns the Linear Core ID for a given MPIDR
 
   @param[in]    Mpidr           Mpidr register value
+  @param[in]    MaxPossibleCoresPerCluster  Maximum possible cores per cluster
 
   @return       UINTN           Linear Core ID
 **/
@@ -393,7 +342,8 @@ STATIC
 UINTN
 EFIAPI
 MceAriMpidrToLinearCoreId (
-  UINT64  Mpidr
+  IN UINT64  Mpidr,
+  IN UINT32  MaxPossibleCoresPerCluster
   )
 {
   UINTN                         Cluster;
@@ -413,24 +363,16 @@ MceAriMpidrToLinearCoreId (
   PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
 
   Cluster = (Mpidr >> MPIDR_AFF2_SHIFT) & MPIDR_AFFLVL_MASK;
+  Core    = (Mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
   NV_ASSERT_RETURN (
-    Cluster < PlatformResourceInfo->MaxPossibleClusters,
-    return 0,
-    "Invalid Cluster %u < %u\r\n",
-    Cluster,
-    PlatformResourceInfo->MaxPossibleClusters
-    );
-
-  Core = (Mpidr >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK;
-  NV_ASSERT_RETURN (
-    Core < PlatformResourceInfo->MaxPossibleCoresPerCluster,
+    Core < MaxPossibleCoresPerCluster,
     return 0,
     "Invalid Core %u < %u\r\n",
     Core,
-    PlatformResourceInfo->MaxPossibleCoresPerCluster
+    MaxPossibleCoresPerCluster
     );
 
-  LinearCoreId = (Cluster * PlatformResourceInfo->MaxPossibleCoresPerCluster) + Core;
+  LinearCoreId = (Cluster * MaxPossibleCoresPerCluster) + Core;
 
   DEBUG ((
     DEBUG_INFO,
@@ -448,20 +390,22 @@ MceAriMpidrToLinearCoreId (
 /**
   Returns the Linear Core ID for the currently executing core
 
+  @param[in]    MaxPossibleCoresPerCluster  Maximum possible cores per cluster
+
   @return       UINTN           Linear Core ID
 **/
 STATIC
 UINTN
 EFIAPI
 MceAriGetCurrentLinearCoreId (
-  VOID
+  IN UINT32  MaxPossibleCoresPerCluster
   )
 {
   UINT64  Mpidr;
   UINTN   LinearCoreId;
 
   Mpidr        = ArmReadMpidr ();
-  LinearCoreId = MceAriMpidrToLinearCoreId (Mpidr);
+  LinearCoreId = MceAriMpidrToLinearCoreId (Mpidr, MaxPossibleCoresPerCluster);
 
   return LinearCoreId;
 }
@@ -469,54 +413,24 @@ MceAriGetCurrentLinearCoreId (
 /**
   Returns the ARI register aperture base address for the currently executing core.
 
+  @param[in]    MaxPossibleCoresPerCluster  Maximum possible cores per cluster
+
   @return       UINTN           ARI register aperture base address
 **/
 STATIC
 UINTN
 EFIAPI
 MceAriGetApertureBase (
-  VOID
+  IN UINT32  MaxPossibleCoresPerCluster
   )
 {
   UINTN   LinearCoreId;
   UINT32  ApertureOffset;
 
-  LinearCoreId   = MceAriGetCurrentLinearCoreId ();
+  LinearCoreId   = MceAriGetCurrentLinearCoreId (MaxPossibleCoresPerCluster);
   ApertureOffset = MCE_ARI_APERTURE_OFFSET (LinearCoreId);
 
   return FixedPcdGet64 (PcdTegraMceAriApertureBaseAddress) + ApertureOffset;
-}
-
-UINT64
-EFIAPI
-MceAriGetVersion (
-  VOID
-  )
-{
-  UINTN  AriBase;
-
-  AriBase = MceAriGetApertureBase ();
-  return AriGetVersion (AriBase);
-}
-
-EFI_STATUS
-EFIAPI
-MceAriCheckCoreEnabled (
-  IN UINT64  *Mpidr
-  )
-{
-  UINTN   AriBase;
-  UINTN   LinearCoreId;
-  UINT32  LinearCoreIdBitmap;
-
-  LinearCoreId       = MceAriMpidrToLinearCoreId (*Mpidr);
-  AriBase            = MceAriGetApertureBase ();
-  LinearCoreIdBitmap = AriGetCoresEnabledBitMask (AriBase);
-  if (!(LinearCoreIdBitmap & BIT (LinearCoreId))) {
-    return EFI_NOT_FOUND;
-  }
-
-  return EFI_SUCCESS;
 }
 
 /**
@@ -526,12 +440,13 @@ MceAriCheckCoreEnabled (
 EFI_STATUS
 EFIAPI
 MceAriGetEnabledCoresBitMap (
-  IN  UINT64  *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap,
+  IN  UINT32  MaxPossibleCoresPerCluster
   )
 {
   UINTN  AriBase;
 
-  AriBase               = MceAriGetApertureBase ();
+  AriBase               = MceAriGetApertureBase (MaxPossibleCoresPerCluster);
   EnabledCoresBitMap[0] = AriGetCoresEnabledBitMask (AriBase);
 
   return EFI_SUCCESS;

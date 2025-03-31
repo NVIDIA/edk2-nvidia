@@ -86,7 +86,7 @@ EFI_STATUS
 EFIAPI
 CommonConfigGetEnabledCoresBitMap (
   IN CONST COMMON_RESOURCE_CONFIG_INFO  *ConfigInfo,
-  IN TEGRA_PLATFORM_RESOURCE_INFO       *PlatformResourceInfo
+  IN OUT SOC_CORE_BITMAP_INFO           *SocCoreBitmapInfo
   )
 {
   UINT32  ScratchDisableReg[MAX_CORE_DISABLE_WORDS];
@@ -100,10 +100,10 @@ CommonConfigGetEnabledCoresBitMap (
 
   NV_ASSERT_RETURN ((ConfigInfo->MaxCoreDisableWords <= MAX_CORE_DISABLE_WORDS), return EFI_UNSUPPORTED, "%a: bad max words\n", __FUNCTION__);
 
-  CoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+  CoresPerSocket = SocCoreBitmapInfo->MaxPossibleCoresPerSystem / SocCoreBitmapInfo->MaxPossibleSockets;
 
-  for (Socket = 0; Socket < PlatformResourceInfo->MaxPossibleSockets; Socket++) {
-    if (!(PlatformResourceInfo->SocketMask & (1UL << Socket))) {
+  for (Socket = 0; Socket < SocCoreBitmapInfo->MaxPossibleSockets; Socket++) {
+    if (!(ConfigInfo->SocketMask & (1UL << Socket))) {
       continue;
     }
 
@@ -140,8 +140,8 @@ CommonConfigGetEnabledCoresBitMap (
     AddSocketCoresToEnabledCoresBitMap (
       Socket,
       EnaBitMap,
-      PlatformResourceInfo->MaxPossibleCores,
-      PlatformResourceInfo->EnabledCoresBitMap,
+      SocCoreBitmapInfo->MaxPossibleCoresPerSystem,
+      SocCoreBitmapInfo->EnabledCoresBitMap,
       CoresPerSocket,
       ConfigInfo->MaxCoreDisableWords
       );

@@ -43,6 +43,7 @@
   TegraCpuFreqHelperLib
   FloorSweepingLib
   DtPlatformDtbLoaderLib
+  MpCoreInfoLib
 
 [Protocols]
   gEdkiiConfigurationManagerProtocolGuid     # PROTOCOL ALWAYS_CONSUMED

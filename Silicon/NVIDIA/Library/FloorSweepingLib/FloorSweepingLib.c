@@ -16,7 +16,7 @@
 #include <Library/HobLib.h>
 #include <Library/MceAriLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/NvgLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -27,195 +27,40 @@
 #include "CommonFloorSweepingLib.h"
 
 #define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
+#define MAX_CHILD_NODES_FOR_RENAME         100
 
-// Platform CPU configuration
-#define PLATFORM_MAX_CORES_PER_CLUSTER  (PcdGet32 (PcdTegraMaxCoresPerCluster))
-#define PLATFORM_MAX_CLUSTERS           (PcdGet32 (PcdTegraMaxClusters))
-#define PLATFORM_MAX_SOCKETS            (PcdGet32 (PcdTegraMaxSockets))
-#define PLATFORM_MAX_CORES_PER_SOCKET   ((PLATFORM_MAX_CLUSTERS /   \
-                                          PLATFORM_MAX_SOCKETS) *   \
-                                         PLATFORM_MAX_CORES_PER_CLUSTER)
-
-typedef struct {
-  UINTN     MaxClusters;
-  UINTN     MaxCoresPerCluster;
-  UINTN     MaxCores;
-
-  UINT32    SocketMask;
-  UINTN     EnabledCores;
-  UINT64    EnabledCoresBitMap[ALIGN_VALUE (MAX_SUPPORTED_CORES, 64) / 64];
-} PLATFORM_CPU_INFO;
-
-STATIC PLATFORM_CPU_INFO                   mCpuInfo       = { 0 };
-STATIC CONST TEGRA_PLATFORM_RESOURCE_INFO  *mResourceInfo = NULL;
-
-EFI_STATUS
-EFIAPI
-TH500FloorSweepCpus (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
-  );
-
-/**
-  Get floor sweep cpu info
-
-**/
 STATIC
-PLATFORM_CPU_INFO *
-EFIAPI
-FloorSweepCpuInfo (
-  VOID
-  )
-{
-  static BOOLEAN     InfoFilled = FALSE;
-  PLATFORM_CPU_INFO  *Info;
-  UINTN              Core;
-
-  Info = &mCpuInfo;
-  if (!InfoFilled) {
-    VOID  *Hob;
-
-    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
-    if ((Hob != NULL) &&
-        (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
-    {
-      mResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-    }
-
-    NV_ASSERT_RETURN ((mResourceInfo != NULL), return NULL, "%a: no resource info!\n", __FUNCTION__);
-
-    Info->MaxClusters        = mResourceInfo->MaxPossibleClusters;
-    Info->MaxCoresPerCluster = mResourceInfo->MaxPossibleCoresPerCluster;
-    Info->MaxCores           = mResourceInfo->MaxPossibleCores;
-
-    Info->SocketMask   = mResourceInfo->SocketMask;
-    Info->EnabledCores = mResourceInfo->NumberOfEnabledCores;
-    CopyMem (Info->EnabledCoresBitMap, mResourceInfo->EnabledCoresBitMap, sizeof (Info->EnabledCoresBitMap));
-
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: MaxClusters=%u MaxCoresPerCluster=%u MaxCores=%u\n",
-      __FUNCTION__,
-      Info->MaxClusters,
-      Info->MaxCoresPerCluster,
-      Info->MaxCores
-      ));
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: SocketMask=0x%x EnabledCores=%u\n",
-      __FUNCTION__,
-      Info->SocketMask,
-      Info->EnabledCores
-      ));
-    DEBUG_CODE (
-      for (Core = 0; Core < Info->MaxCores; Core += 64) {
-      UINTN Index = Core / 64;
-
-      DEBUG ((
-        DEBUG_INFO,
-        "EnabledCoresBitMap[%u]=0x%016llx ",
-        Index,
-        Info->EnabledCoresBitMap[Index]
-        ));
-    }
-
-      DEBUG ((DEBUG_INFO, "\n"));
-      );
-
-    InfoFilled = TRUE;
-  }
-
-  return Info;
-}
-
 UINT32
 EFIAPI
-GetClusterIDFromLinearCoreID (
-  IN UINT32  LinearCoreId
+GetSocketMask (
+  UINT32  *MaxPossibleSockets OPTIONAL
   )
 {
-  UINT32  Cluster;
+  STATIC UINT32                 SocketMask              = 0;
+  STATIC UINT32                 FixedMaxPossibleSockets = 0;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
 
-  Cluster = LinearCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
-  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
+  if (SocketMask == 0) {
+    Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+    NV_ASSERT_RETURN (
+      (Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)),
+      return 0,
+      "Failed to get PlatformResourceInfo\r\n"
+      );
 
-  DEBUG ((
-    DEBUG_INFO,
-    "%a:LinearCoreId=%u Cluster=%u\n",
-    __FUNCTION__,
-    LinearCoreId,
-    Cluster
-    ));
-
-  return Cluster;
-}
-
-UINT64
-EFIAPI
-GetMpidrFromLinearCoreID (
-  IN UINT32  LinearCoreId
-  )
-{
-  UINTN   Socket;
-  UINTN   Cluster;
-  UINTN   Core;
-  UINT64  Mpidr;
-  UINT32  SocketCoreId;
-
-  Socket = LinearCoreId / PLATFORM_MAX_CORES_PER_SOCKET;
-  ASSERT (Socket < PLATFORM_MAX_SOCKETS);
-
-  SocketCoreId = LinearCoreId - (Socket * PLATFORM_MAX_CORES_PER_SOCKET);
-
-  Cluster = SocketCoreId / PLATFORM_MAX_CORES_PER_CLUSTER;
-  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
-
-  Core = SocketCoreId % PLATFORM_MAX_CORES_PER_CLUSTER;
-  ASSERT (Core < PLATFORM_MAX_CORES_PER_CLUSTER);
-
-  // Check the Pcd and modify MPIDR generation if required
-  if (!PcdGetBool (PcdAffinityMpIdrSupported)) {
-    ASSERT (Socket == 0);
-    Mpidr = (UINT64)GET_MPID (Cluster, Core);
-  } else {
-    Mpidr = (UINT64)GET_AFFINITY_BASED_MPID (Socket, Cluster, Core, 0);
+    PlatformResourceInfo    = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+    SocketMask              = PlatformResourceInfo->SocketMask;
+    FixedMaxPossibleSockets = PlatformResourceInfo->MaxPossibleSockets;
+    ASSERT (FixedMaxPossibleSockets <= 32);
   }
 
-  DEBUG ((
-    DEBUG_INFO,
-    "%a:LinearCoreId=%u Socket=%u Cluster=%u, Core=%u, Mpidr=0x%llx \n",
-    __FUNCTION__,
-    LinearCoreId,
-    Socket,
-    Cluster,
-    Core,
-    Mpidr
-    ));
-
-  return Mpidr;
-}
-
-BOOLEAN
-EFIAPI
-ClusterIsPresent (
-  IN  UINTN  Socket,
-  IN  UINTN  ClusterId
-  )
-{
-  PLATFORM_CPU_INFO  *Info;
-  UINTN              Core;
-  UINT32             SocketCoreStart;
-
-  Info            = FloorSweepCpuInfo ();
-  SocketCoreStart = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
-
-  for (Core = 0; Core < Info->MaxCoresPerCluster; Core++) {
-    if (IsCoreEnabled (SocketCoreStart + Core + (ClusterId * Info->MaxCoresPerCluster))) {
-      return TRUE;
-    }
+  if (MaxPossibleSockets != NULL) {
+    *MaxPossibleSockets = FixedMaxPossibleSockets;
   }
 
-  return FALSE;
+  return SocketMask;
 }
 
 /**
@@ -228,46 +73,66 @@ IsSocketEnabled (
   IN UINT32  SocketIndex
   )
 {
-  PLATFORM_CPU_INFO  *Info;
+  UINT32  SocketMask;
 
-  Info = FloorSweepCpuInfo ();
-
-  return ((Info->SocketMask & (1UL << SocketIndex)) != 0);
+  SocketMask = GetSocketMask (NULL);
+  return (SocketMask & (1 << SocketIndex)) != 0;
 }
 
 /**
-  Check if given core is enabled
+  Get the first enabled socket
 
-**/
-BOOLEAN
-EFIAPI
-IsCoreEnabled (
-  IN  UINT32  CpuIndex
-  )
-{
-  PLATFORM_CPU_INFO  *Info;
-  UINTN              Index;
-  UINTN              Bit;
-
-  Info = FloorSweepCpuInfo ();
-
-  Index = CpuIndex / 64;
-  Bit   = CpuIndex % 64;
-
-  return ((Info->EnabledCoresBitMap[Index] & (1ULL << Bit)) != 0);
-}
-
-/**
-  Retrieve number of enabled CPUs for each platform
-
+  @retval  First enabled socket
 **/
 UINT32
 EFIAPI
-GetNumberOfEnabledCpuCores (
+GetFirstEnabledSocket (
   VOID
   )
 {
-  return (UINT32)FloorSweepCpuInfo ()->EnabledCores;
+  UINT32  SocketMask;
+  UINT32  MaxPossibleSockets;
+  UINT32  SocketIndex;
+
+  SocketMask = GetSocketMask (&MaxPossibleSockets);
+  for (SocketIndex = 0; SocketIndex < MaxPossibleSockets; SocketIndex++) {
+    if ((SocketMask & (1 << SocketIndex)) != 0) {
+      return SocketIndex;
+    }
+  }
+
+  return 0;
+}
+
+/**
+  Get the next enabled socket
+
+  @param[in, out]  SocketId  Socket index. On input the last socket id, on output the next enabled socket id
+                             if error is returned, SocketId is set to MAX_UINT32
+
+  @retval  EFI_SUCCESS - Socket found
+  @retval  EFI_NOT_FOUND - No more sockets
+**/
+EFI_STATUS
+EFIAPI
+GetNextEnabledSocket (
+  IN OUT UINT32  *SocketId
+  )
+{
+  UINT32  SocketMask;
+  UINT32  SocketIndex;
+  UINT32  MaxPossibleSockets;
+
+  SocketMask = GetSocketMask (&MaxPossibleSockets);
+  for (SocketIndex = *SocketId + 1; SocketIndex < MaxPossibleSockets; SocketIndex++) {
+    if ((SocketMask & (1 << SocketIndex)) != 0) {
+      *SocketId = SocketIndex;
+      return EFI_SUCCESS;
+    }
+  }
+
+  *SocketId = MAX_UINT32;
+  return EFI_NOT_FOUND;
 }
 
 /**
@@ -381,6 +246,53 @@ PhandleIsNextLevelCache (
   return FALSE;
 }
 
+/** Checks to see if any of the cpu nodes in the cluster are exist */
+STATIC
+BOOLEAN
+EFIAPI
+AreValidCpuNodesInCluster (
+  IN VOID   *Dtb,
+  IN INT32  ClusterNodeOffset
+  )
+{
+  INT32       CpuNodeOffset;
+  INT32       ActualCpuNodeOffset;
+  CONST VOID  *Property;
+  BOOLEAN     HasValidCpuNodes;
+
+  HasValidCpuNodes = FALSE;
+
+  CpuNodeOffset = fdt_first_subnode (Dtb, ClusterNodeOffset);
+  if (CpuNodeOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a:Failed to get first cpu node offset: %d\n", __func__, CpuNodeOffset));
+    return FALSE;
+  }
+
+  while (!HasValidCpuNodes) {
+    Property      = fdt_getprop (Dtb, CpuNodeOffset, "cpu", NULL);
+    CpuNodeOffset = fdt_next_subnode (Dtb, CpuNodeOffset);
+    // Check if subnode is a cpu node
+    if (Property == NULL) {
+      if (CpuNodeOffset < 0) {
+        DEBUG ((DEBUG_INFO, "%a: No more cpu nodes\n", __func__));
+        break;
+      } else {
+        continue;
+      }
+    }
+
+    ActualCpuNodeOffset = fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property));
+    if (ActualCpuNodeOffset < 0) {
+      DEBUG ((DEBUG_INFO, "%a: Failed to get cpu node offset by phandle\n", __func__));
+      continue;
+    }
+
+    HasValidCpuNodes = TRUE;
+  }
+
+  return HasValidCpuNodes;
+}
+
 /**
   Floorsweep CPUs in DTB
 
@@ -388,9 +300,8 @@ PhandleIsNextLevelCache (
 EFI_STATUS
 EFIAPI
 UpdateCpuFloorsweepingConfig (
-  IN UINT32  SocketMask,
-  IN INT32   CpusOffset,
-  IN VOID    *Dtb
+  IN INT32  CpusOffset,
+  IN VOID   *Dtb
   )
 {
   UINTN       Cpu;
@@ -407,7 +318,8 @@ UpdateCpuFloorsweepingConfig (
   EFI_STATUS  Status;
   CHAR8       SocketNodeStr[] = "socketXX";
   INT32       CpuMapSocketOffset;
-  UINTN       Socket;
+  UINT32      Socket;
+  UINT32      MaxPossibleSockets;
   BOOLEAN     HasSocketNode;
   UINT32      L2CachePhandle;
   UINT32      L3CachePhandle;
@@ -444,7 +356,7 @@ UpdateCpuFloorsweepingConfig (
       Mpidr = fdt32_to_cpu (Tmp32);
     }
 
-    if (IsMpidrEnabled (Mpidr)) {
+    if (MpCoreInfoIsProcessorEnabled (Mpidr) == EFI_SUCCESS) {
       NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
     } else {
       Property = fdt_getprop (Dtb, NodeOffset, "next-level-cache", NULL);
@@ -536,13 +448,14 @@ UpdateCpuFloorsweepingConfig (
   }
 
   HasSocketNode = TRUE;
-  for (Socket = 0; (Socket < PLATFORM_MAX_SOCKETS) && HasSocketNode; Socket++) {
+  GetSocketMask (&MaxPossibleSockets);
+  for (Socket = 0; (Socket < MaxPossibleSockets) && HasSocketNode; Socket++) {
     AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "socket%u", Socket);
     CpuMapSocketOffset = fdt_subnode_offset (Dtb, CpuMapOffset, SocketNodeStr);
     if (CpuMapSocketOffset < 0) {
       HasSocketNode      = FALSE;
       CpuMapSocketOffset = CpuMapOffset;
-    } else if (!(SocketMask & (1UL << Socket))) {
+    } else if (!IsSocketEnabled (Socket)) {
       FdtErr = fdt_del_node (Dtb, CpuMapSocketOffset);
       if (FdtErr < 0) {
         DEBUG ((DEBUG_ERROR, "Failed to delete /cpus/cpu-map/%a node: %a\n", SocketNodeStr, fdt_strerror (FdtErr)));
@@ -558,7 +471,7 @@ UpdateCpuFloorsweepingConfig (
       AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
       NodeOffset = fdt_subnode_offset (Dtb, CpuMapSocketOffset, ClusterNodeStr);
       if (NodeOffset >= 0) {
-        if (!ClusterIsPresent (Socket, Cluster)) {
+        if (!AreValidCpuNodesInCluster (Dtb, NodeOffset)) {
           FdtErr = fdt_del_node (Dtb, NodeOffset);
           if (FdtErr < 0) {
             DEBUG ((
@@ -583,6 +496,7 @@ UpdateCpuFloorsweepingConfig (
             ClusterCpuNodeOffset = fdt_next_subnode (Dtb, ClusterCpuNodeOffset);
 
             if (Property != NULL) {
+              // Check if the cpu node is missing if so remove from the cpu-map
               if (fdt_node_offset_by_phandle (Dtb, fdt32_to_cpu (*(UINT32 *)Property)) < 0) {
                 FdtErr = fdt_nop_node (Dtb, TmpOffset);
                 if (FdtErr < 0) {
@@ -598,7 +512,7 @@ UpdateCpuFloorsweepingConfig (
             }
           }
 
-          Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), 100);
+          Status = RenameChildNodesSequentially (Dtb, NodeOffset, "core%u", CoreNodeStr, sizeof (CoreNodeStr), MAX_CHILD_NODES_FOR_RENAME);
           if (EFI_ERROR (Status)) {
             return Status;
           }
@@ -610,14 +524,14 @@ UpdateCpuFloorsweepingConfig (
       }
     }
 
-    Status = RenameChildNodesSequentially (Dtb, CpuMapSocketOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), 100);
+    Status = RenameChildNodesSequentially (Dtb, CpuMapSocketOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), MAX_CHILD_NODES_FOR_RENAME);
     if (EFI_ERROR (Status)) {
       return Status;
     }
   }
 
   if (HasSocketNode) {
-    Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "socket%u", SocketNodeStr, sizeof (SocketNodeStr), 100);
+    Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "socket%u", SocketNodeStr, sizeof (SocketNodeStr), MAX_CHILD_NODES_FOR_RENAME);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -644,7 +558,7 @@ FloorSweepGlobalCpus (
     return EFI_DEVICE_ERROR;
   }
 
-  return UpdateCpuFloorsweepingConfig (0x1, CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
 }
 
 /**
@@ -827,11 +741,15 @@ FloorSweepDtb (
   IN VOID  *Dtb
   )
 {
-  PLATFORM_CPU_INFO  *Info;
-  UINTN              ChipId;
-  EFI_STATUS         Status;
+  UINT32      SocketMask;
+  UINTN       ChipId;
+  EFI_STATUS  Status;
 
-  Info   = FloorSweepCpuInfo ();
+  SocketMask = GetSocketMask (NULL);
+  if (SocketMask == 0) {
+    return EFI_DEVICE_ERROR;
+  }
+
   ChipId = TegraGetChipID ();
 
   if (ChipId == T234_CHIP_ID) {
@@ -850,85 +768,23 @@ FloorSweepDtb (
   }
 
   if (ChipId == TH500_CHIP_ID) {
-    TH500FloorSweepSockets (Info->SocketMask, Dtb);
-    Status = TH500FloorSweepCpus (Info->SocketMask, Dtb);
+    TH500FloorSweepSockets (SocketMask, Dtb);
+    Status = TH500FloorSweepCpus (Dtb);
   } else {
-    Status = CommonFloorSweepCpus (Info->SocketMask, Dtb);
+    Status = CommonFloorSweepCpus (Dtb);
   }
 
   if (!EFI_ERROR (Status)) {
-    Status = CommonFloorSweepPcie (Info->SocketMask, Dtb);
+    Status = CommonFloorSweepPcie (Dtb);
   }
 
   if (!EFI_ERROR (Status)) {
-    Status = CommonFloorSweepScfCache (Info->SocketMask, Dtb);
+    Status = CommonFloorSweepScfCache (Dtb);
   }
 
   if (!EFI_ERROR (Status)) {
-    Status = CommonFloorSweepIps (Info->SocketMask);
+    Status = CommonFloorSweepIps ();
   }
 
   return Status;
-}
-
-/**
-  Get First Enabled Core on Socket.
-
-**/
-EFI_STATUS
-EFIAPI
-GetFirstEnabledCoreOnSocket (
-  IN   UINTN  Socket,
-  OUT  UINTN  *LinearCoreId
-  )
-{
-  UINTN  SocketCore;
-
-  if (!IsSocketEnabled (Socket)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  for (SocketCore = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
-       SocketCore < (Socket + 1) * PLATFORM_MAX_CORES_PER_SOCKET;
-       SocketCore++)
-  {
-    if (IsCoreEnabled (SocketCore)) {
-      *LinearCoreId = SocketCore;
-      return EFI_SUCCESS;
-    }
-  }
-
-  return EFI_NOT_FOUND;
-}
-
-/**
-  Get Number of Enabled Cores on Socket.
-
-**/
-EFI_STATUS
-EFIAPI
-GetNumEnabledCoresOnSocket (
-  IN   UINTN  Socket,
-  OUT  UINTN  *NumEnabledCores
-  )
-{
-  UINTN  SocketCore;
-  UINTN  EnabledCoreCount = 0;
-
-  if (!IsSocketEnabled (Socket)) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  for (SocketCore = Socket * PLATFORM_MAX_CORES_PER_SOCKET;
-       SocketCore < (Socket + 1) * PLATFORM_MAX_CORES_PER_SOCKET;
-       SocketCore++)
-  {
-    if (IsCoreEnabled (SocketCore)) {
-      EnabledCoreCount++;
-    }
-  }
-
-  *NumEnabledCores = EnabledCoreCount;
-
-  return EFI_SUCCESS;
 }

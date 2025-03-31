@@ -24,6 +24,7 @@
 #include <Library/DtbUpdateLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/FloorSweepingLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <libfdt.h>
 #include <Guid/ImageAuthentication.h>
 #include <Guid/RtPropertiesTable.h>
@@ -125,11 +126,7 @@ SetOemTableIdPcdForTh500 (
   }
 
   // Find socket count in the system
-  for (SocketIndex = 0; SocketIndex < PcdGet32 (PcdTegraMaxSockets); SocketIndex++ ) {
-    if (!IsSocketEnabled (SocketIndex)) {
-      continue;
-    }
-
+  MPCORE_FOR_EACH_ENABLED_SOCKET (SocketIndex) {
     SocketCount++;
   }
 
@@ -770,8 +767,6 @@ TegraPlatformInitialize (
 
   // Set Pcds
   PcdSet32S (PcdTegraMaxSockets, PlatformResourceInfo->MaxPossibleSockets);
-  PcdSet32S (PcdTegraMaxClusters, PlatformResourceInfo->MaxPossibleClusters);
-  PcdSet32S (PcdTegraMaxCoresPerCluster, PlatformResourceInfo->MaxPossibleCoresPerCluster);
   SetGicInfoPcdsFromDtb (ChipID);
 
   Status = FloorSweepDtb (DtbBase);

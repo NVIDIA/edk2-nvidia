@@ -33,14 +33,10 @@
   ConfigurationManagerDataRepoLib
   MemoryAllocationLib
   MpCoreInfoLib
-  TegraPlatformInfoLib
 
 [Pcd]
   gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
   gNVIDIATokenSpaceGuid.PcdArmArchVirtMaintenanceIntrNum
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters
-  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
   gNVIDIATokenSpaceGuid.PcdSpeOverflowIntrNum
 
 [Guids]

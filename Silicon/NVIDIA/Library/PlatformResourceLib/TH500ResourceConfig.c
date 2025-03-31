@@ -49,6 +49,7 @@ STATIC UINT32  TH500CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
 };
 
 STATIC COMMON_RESOURCE_CONFIG_INFO  TH500CommonResourceConfigInfo = {
+  TH500_MAX_SOCKETS,
   MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,
@@ -986,29 +987,31 @@ InValidateActiveBootChain (
 EFI_STATUS
 EFIAPI
 SocGetEnabledCoresBitMap (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN UINTN                     CpuBootloaderAddress,
+  IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
   UINT32  SatMcCore;
   UINT32  CoresPerSocket;
 
-  // SatMC core is reserved on socket 0.
-  CoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+  SocCoreBitmapInfo->ThreadsPerCore        = 1;
+  TH500CommonResourceConfigInfo.SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
+  // SatMC core is reserved on socket 0.
   SatMcCore = MmioBitFieldRead32 (
                 TH500SocketScratchBaseAddr[0] + TH500CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS-1],
                 TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
                 TH500_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
                 );
   if (SatMcCore != TH500_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
+    CoresPerSocket = SocCoreBitmapInfo->MaxPossibleCoresPerSystem / SocCoreBitmapInfo->MaxPossibleSockets;
+    DEBUG ((DEBUG_ERROR, "%a: SatMcCore=%u CoresPerSocket=%u\n", __FUNCTION__, SatMcCore, CoresPerSocket));
     ASSERT (SatMcCore <= CoresPerSocket);
     TH500CommonResourceConfigInfo.SatMcSupported = TRUE;
     TH500CommonResourceConfigInfo.SatMcCore      = SatMcCore;
   }
 
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-
-  return CommonConfigGetEnabledCoresBitMap (&TH500CommonResourceConfigInfo, PlatformResourceInfo);
+  return CommonConfigGetEnabledCoresBitMap (&TH500CommonResourceConfigInfo, SocCoreBitmapInfo);
 }
 
 /**
@@ -1469,20 +1472,44 @@ SocUpdatePlatformResourceInformation (
   return Status;
 }
 
-UINTN
+/**
+  Get Total Core Count in case system supports software core disable
+
+  @param[in]  Socket              Socket Id
+  @param[out] TotalCoreCount      Total Core Count
+
+  @retval  EFI_SUCCESS             Max Core Count retrieved successfully.
+  @retval  EFI_INVALID_PARAMETER   Invalid socket id.
+  @retval  EFI_INVALID_PARAMETER   TotalCoreCount is NULL
+  @retval  EFI_UNSUPPORTED         Unsupported feature
+**/
+EFI_STATUS
 EFIAPI
-TegraGetMaxCoreCount (
-  IN UINTN  Socket
+SocSupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
   )
 {
   UINTN               CpuBootloaderAddress;
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
 
+  if (TotalCoreCount == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Socket >= TH500_MAX_SOCKETS) {
+    return EFI_INVALID_PARAMETER;
+  }
+
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  if (CpuBootloaderAddress == 0) {
+    return EFI_UNSUPPORTED;
+  }
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  return CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket]);
+  *TotalCoreCount = CPUBL_PARAMS (CpuBootloaderParams, EarlyBootVariablesDefaults->Data.Mb1Data.ActiveCores[Socket]);
+  return EFI_SUCCESS;
 }
 
 UINT32

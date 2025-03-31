@@ -1,7 +1,7 @@
 /** @file
   Unit tests for the implementation of MpCoreInfoLib.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 #include <Library/GoogleTestLib.h>
@@ -11,7 +11,6 @@
 extern "C" {
   #include <Uefi.h>
   #include <Library/MpCoreInfoLib.h>
-  #include <Library/PlatformResourceLib.h>
   #include <Pi/PiHob.h>
   #include <Guid/ArmMpCoreInfo.h>
   #include "../MpCoreInfoLib_private.h"
@@ -20,9 +19,10 @@ extern "C" {
 using namespace testing;
 
 // Info for creating core info
-#define NUM_SOCKETS  4UL                               // How many sockets should be created
-#define NUM_CLUSTERS(Socket)        (Socket+1)         // How many clusters should be created per socket
-#define NUM_CORES(Socket, Cluster)  (Socket+Cluster+1) // How many cores should be created per cluster
+#define NUM_SOCKETS  4UL                                            // How many sockets should be created
+#define NUM_CLUSTERS(Socket)                (Socket+1)              // How many clusters should be created per socket
+#define NUM_CORES(Socket, Cluster)          (Socket+Cluster+1)      // How many cores should be created per cluster
+#define NUM_THREADS(Socket, Cluster, Core)  (Socket+Cluster+Core+1) // How many threads should be created per core
 #define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
   (((UINT64)(Aff3) << 32) | ((Aff2) << 16) | ((Aff1) << 8) | (Aff0))
 
@@ -39,8 +39,6 @@ protected:
   UINT32 NumCores;
   EFI_HOB_GUID_TYPE *MpCoreHobData;
   ARM_CORE_INFO *MpCoreInfo;
-  EFI_HOB_GUID_TYPE *PlatformResourceInfoHobData;
-  TEGRA_PLATFORM_RESOURCE_INFO *PlatformResourceInfo;
 };
 
 MpCoreInfoLibTest::MpCoreInfoLibTest(
@@ -50,12 +48,15 @@ MpCoreInfoLibTest::MpCoreInfoLibTest(
   UINT32  SocketId;
   UINT32  ClusterId;
   UINT32  CoreId;
+  UINT32  ThreadId;
 
   NumCores = 0;
   for (SocketId = 0; SocketId < NUM_SOCKETS; SocketId++) {
     for (ClusterId = 0; ClusterId < NUM_CLUSTERS (SocketId); ClusterId++) {
       for (CoreId = 0; CoreId < NUM_CORES (SocketId, ClusterId); CoreId++) {
-        NumCores++;
+        for (ThreadId = 0; ThreadId < NUM_THREADS (SocketId, ClusterId, CoreId); ThreadId++) {
+          NumCores++;
+        }
       }
     }
   }
@@ -69,18 +70,13 @@ MpCoreInfoLibTest::MpCoreInfoLibTest(
   for (SocketId = 0; SocketId < NUM_SOCKETS; SocketId++) {
     for (ClusterId = 0; ClusterId < NUM_CLUSTERS (SocketId); ClusterId++) {
       for (CoreId = 0; CoreId < NUM_CORES (SocketId, ClusterId); CoreId++) {
-        MpCoreInfo[NumCores].Mpidr = GET_AFFINITY_BASED_MPID (SocketId, ClusterId, CoreId, 0);
-        NumCores++;
+        for (ThreadId = 0; ThreadId < NUM_THREADS (SocketId, ClusterId, CoreId); ThreadId++) {
+          MpCoreInfo[NumCores].Mpidr = GET_AFFINITY_BASED_MPID (SocketId, ClusterId, CoreId, ThreadId);
+          NumCores++;
+        }
       }
     }
   }
-
-  PlatformResourceInfoHobData                   = (EFI_HOB_GUID_TYPE *)malloc (sizeof (EFI_HOB_GUID_TYPE) + sizeof (TEGRA_PLATFORM_RESOURCE_INFO));
-  PlatformResourceInfoHobData->Header.HobType   = EFI_HOB_TYPE_GUID_EXTENSION;
-  PlatformResourceInfoHobData->Header.HobLength = sizeof (EFI_HOB_GUID_TYPE) + sizeof (TEGRA_PLATFORM_RESOURCE_INFO);
-  memcpy (&PlatformResourceInfoHobData->Name, &gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID));
-  PlatformResourceInfo                         = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (PlatformResourceInfoHobData);
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
 
   Status = EFI_SUCCESS;
   MpCoreInfoLibResetModule ();
@@ -92,8 +88,6 @@ MpCoreInfoLibTest::~MpCoreInfoLibTest(
 {
   free (MpCoreHobData);
   MpCoreHobData = NULL;
-  free (PlatformResourceInfoHobData);
-  PlatformResourceInfoHobData = NULL;
 }
 
 // Test MpCoreInfoGetProcessorIdFromIndex() API to verify error when pointer is
@@ -195,13 +189,13 @@ TEST_F (MpCoreInfoLibTest, GetProcessorLocation) {
   UINT32  TestSocket;
   UINT32  TestCluster;
   UINT32  TestCore;
+  UINT32  TestThread;
   UINT64  TestProcessorId;
 
   UINT32  Socket;
   UINT32  Cluster;
   UINT32  Core;
-
-  UINT32  Index;
+  UINT32  Thread;
 
   ON_CALL (
     HobMock,
@@ -211,75 +205,181 @@ TEST_F (MpCoreInfoLibTest, GetProcessorLocation) {
     )
     .WillByDefault (Return (MpCoreHobData));
 
-  EXPECT_CALL (
+  TestSocket  = NUM_SOCKETS-1;
+  TestCluster = NUM_CLUSTERS (TestSocket)-1;
+  TestCore    = NUM_CORES (TestSocket, TestCluster) - 1;
+  TestThread  = 0;
+
+  TestProcessorId = GET_AFFINITY_BASED_MPID (TestSocket, TestCluster, TestCore, TestThread);
+
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             NULL,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+
+  Socket = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             &Socket,
+             NULL,
+             NULL,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Socket, TestSocket);
+
+  Cluster = MAX_UINT32;
+  Status  = MpCoreInfoGetProcessorLocation (
+              TestProcessorId,
+              NULL,
+              &Cluster,
+              NULL,
+              NULL
+              );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Cluster, TestCluster);
+
+  Core   = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             &Core,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Core, TestCore);
+
+  Thread = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             NULL,
+             &Thread
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Thread, TestThread);
+
+  Socket  = MAX_UINT32;
+  Cluster = MAX_UINT32;
+  Core    = MAX_UINT32;
+  Thread  = MAX_UINT32;
+  Status  = MpCoreInfoGetProcessorLocation (
+              TestProcessorId,
+              &Socket,
+              &Cluster,
+              &Core,
+              &Thread
+              );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Socket, TestSocket);
+  EXPECT_EQ (Cluster, TestCluster);
+  EXPECT_EQ (Core, TestCore);
+  EXPECT_EQ (Thread, TestThread);
+}
+
+// Test GetProcessorLocation() API with thread parameter
+TEST_F (MpCoreInfoLibTest, GetProcessorLocationWithThread) {
+  UINT32  TestSocket;
+  UINT32  TestCluster;
+  UINT32  TestCore;
+  UINT32  TestThread;
+  UINT64  TestProcessorId;
+
+  UINT32  Socket;
+  UINT32  Cluster;
+  UINT32  Core;
+  UINT32  Thread;
+
+  ON_CALL (
     HobMock,
     GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
+      BufferEq (&gArmMpCoreInfoGuid, sizeof (EFI_GUID))
       )
     )
-    .WillRepeatedly (Return (PlatformResourceInfoHobData));
+    .WillByDefault (Return (MpCoreHobData));
 
   TestSocket  = NUM_SOCKETS-1;
   TestCluster = NUM_CLUSTERS (TestSocket)-1;
   TestCore    = NUM_CORES (TestSocket, TestCluster) - 1;
+  TestThread  = NUM_THREADS (TestSocket, TestCluster, TestCore) - 1;
 
-  for (Index = 0; Index < 2; Index++) {
-    if (Index == 0) {
-      PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-      TestProcessorId                              = GET_AFFINITY_BASED_MPID (TestSocket, TestCluster, TestCore, 0);
-    } else {
-      PlatformResourceInfo->AffinityMpIdrSupported = FALSE;
-      TestProcessorId                              = GET_AFFINITY_BASED_MPID (0, TestSocket, TestCluster, TestCore);
-    }
+  TestProcessorId = GET_AFFINITY_BASED_MPID (TestSocket, TestCluster, TestCore, TestThread);
 
-    Status = MpCoreInfoGetProcessorLocation (
-               TestProcessorId,
-               NULL,
-               NULL,
-               NULL
-               );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    Socket = MAX_UINT32;
-    Status = MpCoreInfoGetProcessorLocation (
-               TestProcessorId,
-               &Socket,
-               NULL,
-               NULL
-               );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    EXPECT_EQ (Socket, TestSocket);
-    Cluster = MAX_UINT32;
-    Status  = MpCoreInfoGetProcessorLocation (
-                TestProcessorId,
-                NULL,
-                &Cluster,
-                NULL
-                );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    EXPECT_EQ (Cluster, TestCluster);
-    Core   = MAX_UINT32;
-    Status = MpCoreInfoGetProcessorLocation (
-               TestProcessorId,
-               NULL,
-               NULL,
-               &Core
-               );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    EXPECT_EQ (Core, TestCore);
-    Socket  = MAX_UINT32;
-    Cluster = MAX_UINT32;
-    Core    = MAX_UINT32;
-    Status  = MpCoreInfoGetProcessorLocation (
-                TestProcessorId,
-                &Socket,
-                &Cluster,
-                &Core
-                );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    EXPECT_EQ (Socket, TestSocket);
-    EXPECT_EQ (Cluster, TestCluster);
-    EXPECT_EQ (Core, TestCore);
-  }
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             NULL,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+
+  Socket = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             &Socket,
+             NULL,
+             NULL,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Socket, TestSocket);
+
+  Cluster = MAX_UINT32;
+  Status  = MpCoreInfoGetProcessorLocation (
+              TestProcessorId,
+              NULL,
+              &Cluster,
+              NULL,
+              NULL
+              );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Cluster, TestCluster);
+
+  Core   = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             &Core,
+             NULL
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Core, TestCore);
+
+  Thread = MAX_UINT32;
+  Status = MpCoreInfoGetProcessorLocation (
+             TestProcessorId,
+             NULL,
+             NULL,
+             NULL,
+             &Thread
+             );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Thread, TestThread);
+
+  Socket  = MAX_UINT32;
+  Cluster = MAX_UINT32;
+  Core    = MAX_UINT32;
+  Thread  = MAX_UINT32;
+  Status  = MpCoreInfoGetProcessorLocation (
+              TestProcessorId,
+              &Socket,
+              &Cluster,
+              &Core,
+              &Thread
+              );
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (Socket, TestSocket);
+  EXPECT_EQ (Cluster, TestCluster);
+  EXPECT_EQ (Core, TestCore);
+  EXPECT_EQ (Thread, TestThread);
 }
 
 // Test MpCoreInfoGetProcessorIdFromLocation() API
@@ -287,9 +387,9 @@ TEST_F (MpCoreInfoLibTest, GetProcessorIdFromLocation) {
   UINT32  TestSocket;
   UINT32  TestCluster;
   UINT32  TestCore;
+  UINT32  TestThread;
   UINT64  TestProcessorId;
   UINT64  ProcessorId;
-  UINT32  Index;
 
   ON_CALL (
     HobMock,
@@ -299,36 +399,44 @@ TEST_F (MpCoreInfoLibTest, GetProcessorIdFromLocation) {
     )
     .WillByDefault (Return (MpCoreHobData));
 
-  EXPECT_CALL (
-    HobMock,
-    GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
-      )
-    )
-    .WillRepeatedly (Return (PlatformResourceInfoHobData));
+  Status = MpCoreInfoGetProcessorIdFromLocation (
+             MAX_UINT8+1,
+             0,
+             0,
+             0,
+             &ProcessorId
+             );
+  EXPECT_EQ (Status, EFI_INVALID_PARAMETER);
 
   Status = MpCoreInfoGetProcessorIdFromLocation (
+             0,
              MAX_UINT8+1,
              0,
              0,
              &ProcessorId
              );
   EXPECT_EQ (Status, EFI_INVALID_PARAMETER);
+
   Status = MpCoreInfoGetProcessorIdFromLocation (
+             0,
              0,
              MAX_UINT8+1,
              0,
              &ProcessorId
              );
   EXPECT_EQ (Status, EFI_INVALID_PARAMETER);
+
   Status = MpCoreInfoGetProcessorIdFromLocation (
+             0,
              0,
              0,
              MAX_UINT8+1,
              &ProcessorId
              );
   EXPECT_EQ (Status, EFI_INVALID_PARAMETER);
+
   Status = MpCoreInfoGetProcessorIdFromLocation (
+             0,
              0,
              0,
              0,
@@ -336,98 +444,30 @@ TEST_F (MpCoreInfoLibTest, GetProcessorIdFromLocation) {
              );
   EXPECT_EQ (Status, EFI_INVALID_PARAMETER);
 
-  TestSocket  = NUM_SOCKETS-1;
-  TestCluster = NUM_CLUSTERS (TestSocket)-1;
-  TestCore    = NUM_CORES (TestSocket, TestCluster) - 1;
-  for (Index = 0; Index < 2; Index++) {
-    if (Index == 0) {
-      PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-      TestProcessorId                              = GET_AFFINITY_BASED_MPID (TestSocket, TestCluster, TestCore, 0);
-    } else {
-      PlatformResourceInfo->AffinityMpIdrSupported = FALSE;
-      TestProcessorId                              = GET_AFFINITY_BASED_MPID (0, TestSocket, TestCluster, TestCore);
-    }
+  TestSocket      = NUM_SOCKETS-1;
+  TestCluster     = NUM_CLUSTERS (TestSocket)-1;
+  TestCore        = NUM_CORES (TestSocket, TestCluster) - 1;
+  TestThread      = 0;
+  TestProcessorId = GET_AFFINITY_BASED_MPID (TestSocket, TestCluster, TestCore, TestThread);
 
-    Status = MpCoreInfoGetProcessorIdFromLocation (
-               TestSocket,
-               TestCluster,
-               TestCore,
-               &ProcessorId
-               );
-    EXPECT_EQ (Status, EFI_SUCCESS);
-    EXPECT_EQ (ProcessorId, TestProcessorId);
-  }
-}
-
-// Test MpCoreInfoGetProcessorIdFromLocation() API with no resource hob
-TEST_F (MpCoreInfoLibTest, GetProcessorIdFromLocationNoHob) {
-  UINT32  TestSocket;
-  UINT32  TestCluster;
-  UINT32  TestCore;
-  UINT64  TestProcessorId;
-  UINT64  ProcessorId;
-
-  EXPECT_CALL (
-    HobMock,
-    GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
-      )
-    );
-
-  TestSocket                                   = NUM_SOCKETS-1;
-  TestCluster                                  = NUM_CLUSTERS (TestSocket)-1;
-  TestCore                                     = NUM_CORES (TestSocket, TestCluster) - 1;
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-  TestProcessorId                              = GET_AFFINITY_BASED_MPID (0, TestSocket, TestCluster, TestCore);
-  Status                                       = MpCoreInfoGetProcessorIdFromLocation (
-                                                   TestSocket,
-                                                   TestCluster,
-                                                   TestCore,
-                                                   &ProcessorId
-                                                   );
-  EXPECT_EQ (Status, EFI_SUCCESS);
-  EXPECT_EQ (ProcessorId, TestProcessorId);
-}
-
-// Test MpCoreInfoGetProcessorIdFromLocation() API with bad resource hob
-TEST_F (MpCoreInfoLibTest, GetProcessorIdFromLocationBadHob) {
-  UINT32  TestSocket;
-  UINT32  TestCluster;
-  UINT32  TestCore;
-  UINT64  TestProcessorId;
-  UINT64  ProcessorId;
-
-  EXPECT_CALL (
-
-    HobMock,
-    GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
-      )
-    )
-    .WillRepeatedly (Return (PlatformResourceInfoHobData));
-
-  TestSocket                                   = NUM_SOCKETS-1;
-  TestCluster                                  = NUM_CLUSTERS (TestSocket)-1;
-  TestCore                                     = NUM_CORES (TestSocket, TestCluster) - 1;
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-  TestProcessorId                              = GET_AFFINITY_BASED_MPID (0, TestSocket, TestCluster, TestCore);
-  PlatformResourceInfoHobData->Header.HobLength--;
   Status = MpCoreInfoGetProcessorIdFromLocation (
              TestSocket,
              TestCluster,
              TestCore,
+             TestThread,
              &ProcessorId
              );
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (ProcessorId, TestProcessorId);
-  PlatformResourceInfoHobData->Header.HobLength++;
 }
+
 // Test MpCoreInfoGetPlatformInfo() API
 TEST_F (MpCoreInfoLibTest, GetPlatformInfo) {
   UINT32  NumEnabledCores;
   UINT32  MaxSocket;
   UINT32  MaxCluster;
   UINT32  MaxCore;
+  UINT32  MaxThread;
 
   ON_CALL (
     HobMock,
@@ -437,46 +477,45 @@ TEST_F (MpCoreInfoLibTest, GetPlatformInfo) {
     )
     .WillByDefault (Return (MpCoreHobData));
 
-  ON_CALL (
-    HobMock,
-    GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
-      )
-    )
-    .WillByDefault (Return (PlatformResourceInfoHobData));
-
   NumEnabledCores = MAX_UINT32;
   MaxSocket       = MAX_UINT32;
   MaxCluster      = MAX_UINT32;
   MaxCore         = MAX_UINT32;
-  Status          = MpCoreInfoGetPlatformInfo (&NumEnabledCores, &MaxSocket, &MaxCluster, &MaxCore);
+  MaxThread       = MAX_UINT32;
+  Status          = MpCoreInfoGetPlatformInfo (&NumEnabledCores, &MaxSocket, &MaxCluster, &MaxCore, &MaxThread);
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (NumEnabledCores, NumCores);
   EXPECT_EQ (MaxSocket, NUM_SOCKETS-1);
   EXPECT_EQ (MaxCluster, NUM_CLUSTERS (NUM_SOCKETS-1) - 1);
   EXPECT_EQ (MaxCore, NUM_CORES (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1) - 1);
+  EXPECT_EQ (MaxThread, NUM_THREADS (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1, NUM_CORES (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1) - 1) - 1);
 
   NumEnabledCores = MAX_UINT32;
-  Status          = MpCoreInfoGetPlatformInfo (&NumEnabledCores, NULL, NULL, NULL);
+  Status          = MpCoreInfoGetPlatformInfo (&NumEnabledCores, NULL, NULL, NULL, NULL);
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (NumEnabledCores, NumCores);
 
   MaxSocket = MAX_UINT32;
-  Status    = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
+  Status    = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (MaxSocket, NUM_SOCKETS-1);
 
   MaxCluster = MAX_UINT32;
-  Status     = MpCoreInfoGetPlatformInfo (NULL, NULL, &MaxCluster, NULL);
+  Status     = MpCoreInfoGetPlatformInfo (NULL, NULL, &MaxCluster, NULL, NULL);
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (MaxCluster, NUM_CLUSTERS (NUM_SOCKETS-1) - 1);
 
   MaxCore = MAX_UINT32;
-  Status  = MpCoreInfoGetPlatformInfo (NULL, NULL, NULL, &MaxCore);
+  Status  = MpCoreInfoGetPlatformInfo (NULL, NULL, NULL, &MaxCore, NULL);
   EXPECT_EQ (Status, EFI_SUCCESS);
   EXPECT_EQ (MaxCore, NUM_CORES (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1) - 1);
 
-  Status = MpCoreInfoGetPlatformInfo (&NumEnabledCores, &MaxSocket, &MaxCluster, &MaxCore);
+  MaxThread = MAX_UINT32;
+  Status    = MpCoreInfoGetPlatformInfo (NULL, NULL, NULL, NULL, &MaxThread);
+  EXPECT_EQ (Status, EFI_SUCCESS);
+  EXPECT_EQ (MaxThread, NUM_THREADS (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1, NUM_CORES (NUM_SOCKETS-1, NUM_CLUSTERS (NUM_SOCKETS-1) - 1) - 1) - 1);
+
+  Status = MpCoreInfoGetPlatformInfo (&NumEnabledCores, &MaxSocket, &MaxCluster, &MaxCore, &MaxThread);
   EXPECT_EQ (Status, EFI_SUCCESS);
 }
 
@@ -487,8 +526,10 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
   UINT32  ExpectedEnabledCores;
   UINT32  MaxCluster;
   UINT32  MaxCore;
+  UINT32  MaxThread;
   UINT64  FirstCoreId;
   UINT32  ClusterIndex;
+  UINT32  CoreIndex;
 
   ON_CALL (
     HobMock,
@@ -498,25 +539,20 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
     )
     .WillByDefault (Return (MpCoreHobData));
 
-  ON_CALL (
-    HobMock,
-    GetFirstGuidHob (
-      BufferEq (&gNVIDIAPlatformResourceDataGuid, sizeof (EFI_GUID))
-      )
-    )
-    .WillByDefault (Return (PlatformResourceInfoHobData));
-
   for (SocketIndex = 0; SocketIndex <= NUM_SOCKETS; SocketIndex++) {
     ExpectedEnabledCores = 0;
     for (ClusterIndex = 0; ClusterIndex < NUM_CLUSTERS (SocketIndex); ClusterIndex++) {
-      ExpectedEnabledCores += NUM_CORES (SocketIndex, ClusterIndex);
+      for (CoreIndex = 0; CoreIndex < NUM_CORES (SocketIndex, ClusterIndex); CoreIndex++) {
+        ExpectedEnabledCores += NUM_THREADS (SocketIndex, ClusterIndex, CoreIndex);
+      }
     }
 
     NumEnabledCores = MAX_UINT32;
     MaxCluster      = MAX_UINT32;
     MaxCore         = MAX_UINT32;
+    MaxThread       = MAX_UINT32;
     FirstCoreId     = MAX_UINT64;
-    Status          = MpCoreInfoGetSocketInfo (SocketIndex, &NumEnabledCores, &MaxCluster, &MaxCore, &FirstCoreId);
+    Status          = MpCoreInfoGetSocketInfo (SocketIndex, &NumEnabledCores, &MaxCluster, &MaxCore, &MaxThread, &FirstCoreId);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {
@@ -524,11 +560,12 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
       EXPECT_EQ (NumEnabledCores, ExpectedEnabledCores);
       EXPECT_EQ (MaxCluster, NUM_CLUSTERS (SocketIndex) - 1);
       EXPECT_EQ (MaxCore, NUM_CORES (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1) - 1);
+      EXPECT_EQ (MaxThread, NUM_THREADS (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1, NUM_CORES (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1) - 1) - 1);
       EXPECT_EQ (FirstCoreId, GET_AFFINITY_BASED_MPID (SocketIndex, 0, 0, 0));
     }
 
     NumEnabledCores = MAX_UINT32;
-    Status          = MpCoreInfoGetSocketInfo (SocketIndex, &NumEnabledCores, NULL, NULL, NULL);
+    Status          = MpCoreInfoGetSocketInfo (SocketIndex, &NumEnabledCores, NULL, NULL, NULL, NULL);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {
@@ -537,7 +574,7 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
     }
 
     MaxCluster = MAX_UINT32;
-    Status     = MpCoreInfoGetSocketInfo (SocketIndex, NULL, &MaxCluster, NULL, NULL);
+    Status     = MpCoreInfoGetSocketInfo (SocketIndex, NULL, &MaxCluster, NULL, NULL, NULL);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {
@@ -546,7 +583,7 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
     }
 
     MaxCore = MAX_UINT32;
-    Status  = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, &MaxCore, NULL);
+    Status  = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, &MaxCore, NULL, NULL);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {
@@ -554,8 +591,17 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
       EXPECT_EQ (MaxCore, NUM_CORES (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1) - 1);
     }
 
+    MaxThread = MAX_UINT32;
+    Status    = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, NULL, &MaxThread, NULL);
+    if (SocketIndex == NUM_SOCKETS) {
+      EXPECT_EQ (Status, EFI_NOT_FOUND);
+    } else {
+      EXPECT_EQ (Status, EFI_SUCCESS);
+      EXPECT_EQ (MaxThread, NUM_THREADS (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1, NUM_CORES (SocketIndex, NUM_CLUSTERS (SocketIndex) - 1) - 1) - 1);
+    }
+
     FirstCoreId = MAX_UINT64;
-    Status      = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, NULL, &FirstCoreId);
+    Status      = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, NULL, NULL, &FirstCoreId);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {
@@ -563,7 +609,7 @@ TEST_F (MpCoreInfoLibTest, GetSocketInfo) {
       EXPECT_EQ (FirstCoreId, GET_AFFINITY_BASED_MPID (SocketIndex, 0, 0, 0));
     }
 
-    Status = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, NULL, NULL);
+    Status = MpCoreInfoGetSocketInfo (SocketIndex, NULL, NULL, NULL, NULL, NULL);
     if (SocketIndex == NUM_SOCKETS) {
       EXPECT_EQ (Status, EFI_NOT_FOUND);
     } else {

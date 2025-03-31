@@ -59,6 +59,7 @@ STATIC UINT32  T264CoreDisableFuseOffset[T264_MAX_CORE_DISABLE_WORDS] = {
 };
 
 STATIC COMMON_RESOURCE_CONFIG_INFO  T264CommonResourceConfigInfo = {
+  T264_MAX_SOCKETS,
   T264_MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,
@@ -712,12 +713,14 @@ T264GetMmioBaseAndSize (
 EFI_STATUS
 EFIAPI
 SocGetEnabledCoresBitMap (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  IN UINTN                     CpuBootloaderAddress,
+  IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
+  SocCoreBitmapInfo->ThreadsPerCore       = 1;
+  T264CommonResourceConfigInfo.SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
-  return CommonConfigGetEnabledCoresBitMap (&T264CommonResourceConfigInfo, PlatformResourceInfo);
+  return CommonConfigGetEnabledCoresBitMap (&T264CommonResourceConfigInfo, SocCoreBitmapInfo);
 }
 
 /**
@@ -1124,6 +1127,27 @@ SocGetPlatformResourceInformation (
   return EFI_SUCCESS;
 }
 
+/**
+  Get Total Core Count in case system supports software core disable
+
+  @param[in]  Socket              Socket Id
+  @param[out] TotalCoreCount      Total Core Count
+
+  @retval  EFI_SUCCESS             Max Core Count retrieved successfully.
+  @retval  EFI_INVALID_PARAMETER   Invalid socket id.
+  @retval  EFI_INVALID_PARAMETER   TotalCoreCount is NULL
+  @retval  EFI_UNSUPPORTED         Unsupported feature
+**/
+EFI_STATUS
+EFIAPI
+SocSupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
 STATIC
 EFI_STATUS
 EFIAPI
@@ -1331,23 +1355,6 @@ GetGicInfo (
   GicInfo->Version         = 4;
 
   return TRUE;
-}
-
-UINTN
-EFIAPI
-TegraGetMaxCoreCount (
-  IN UINTN  Socket
-  )
-{
-  UINTN       CoreCount;
-  EFI_STATUS  Status;
-
-  Status = GetNumEnabledCoresOnSocket (Socket, &CoreCount);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a:Failed to get Enabled Core Count for Socket %u %r\n", __FUNCTION__, Socket, Status));
-  }
-
-  return CoreCount;
 }
 
 EFI_STATUS

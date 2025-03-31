@@ -127,7 +127,7 @@ GetDeviceHandle (
     return EFI_SUCCESS;
   } else {
     // Multiple CPU frequency controllers found, find the one that matches the socket
-    Status = MpCoreInfoGetProcessorLocation (Mpidr, &Socket, NULL, NULL);
+    Status = MpCoreInfoGetProcessorLocation (Mpidr, &Socket, NULL, NULL, NULL);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get socket for CPU frequency controller.\n", __func__));
       return EFI_NOT_FOUND;
@@ -301,7 +301,7 @@ GetCpuCppcOffsets (
     return Status;
   }
 
-  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Cluster, &Core);
+  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Cluster, &Core, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get cluster and core for CPU frequency controller.\n", __func__));
     return EFI_NOT_FOUND;
@@ -455,7 +455,7 @@ TegraCpuGetNdivLimits (
     return Status;
   }
 
-  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Request.ClusterId, NULL);
+  Status = MpCoreInfoGetProcessorLocation (Mpidr, NULL, &Request.ClusterId, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get cluster id for CPU frequency controller.\n", __func__));
     return Status;

@@ -1,7 +1,7 @@
 /** @file
   Proc hierarchy info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -16,6 +16,7 @@
 // Top = GEN_CONTAINER_UID (0, 0, 0, 0)
 // Socket = GEN_CONTAINER_UID (1, SocketId, 0, 0)
 // Cluster = GEN_CONTAINER_UID (2, SocketId, ClusterId, 0)
+// Core_Container = GEN_CONTAINER_UID (3, SocketId, ClusterId, CoreId)
 
 /** A helper macro for populating the Processor Hierarchy Node flags
 */

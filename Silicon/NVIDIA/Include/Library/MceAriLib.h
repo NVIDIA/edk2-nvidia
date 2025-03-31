@@ -2,7 +2,7 @@
 
   MCE ARI library
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,39 +21,14 @@
   (MCE_ARI_APERTURE_SIZE * (LinearCoreId))
 
 /**
-  Returns the MCE ARI interface version.
-
-  @return       UINT64          ARI Version: [63:32] Major version,
-                                              [31:0] Minor version.
-**/
-UINT64
-EFIAPI
-MceAriGetVersion (
-  VOID
-  );
-
-/**
-  Checks to see if the core with the given MPIDR is enabled
-
-  @param[in]    Mpidr           Mpidr of the CPU (Affinity bits only)
-
-  @return       EFI_SUCCESS     CPU enabled
-  @return       EFI_NOT_FOUND   CPU not enabled
-**/
-EFI_STATUS
-EFIAPI
-MceAriCheckCoreEnabled (
-  IN  UINT64  *Mpidr
-  );
-
-/**
   Fills in bit map of enabled cores
 
 **/
 EFI_STATUS
 EFIAPI
 MceAriGetEnabledCoresBitMap (
-  IN  UINT64  *EnabledCoresBitMap
+  IN  UINT64  *EnabledCoresBitMap,
+  IN  UINT32  MaxPossibleCoresPerCluster
   );
 
 #endif

@@ -15,6 +15,7 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <Library/NumaInfoLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
@@ -284,10 +285,12 @@ NumaInfoLibConstructor (
   UINTN                                             NumberOfGpus;
   UINTN                                             NumberOfGpuDomains;
   UINTN                                             NumberOfRootBridges;
-  UINTN                                             Index;
-  UINTN                                             Index2;
+  UINTN                                             GpuIndex;
+  UINTN                                             RootBridgeIndex;
+  UINT32                                            SocketIndex;
   UINTN                                             NumaIndex;
   UINTN                                             DomainIndex;
+  MEMORY_TRANSFER_TYPE                              MemoryTransferType;
   EFI_HANDLE                                        *RootBridgeHandles = NULL;
   EFI_HANDLE                                        *HandleBuffer      = NULL;
   NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL  *RootBridgeCfgIo;
@@ -312,10 +315,8 @@ NumaInfoLibConstructor (
 
   // Get all the Sockets
   NumberOfSockets = 0;
-  for (Index = 0; Index < PcdGet32 (PcdTegraMaxSockets); Index++) {
-    if (IsSocketEnabled (Index)) {
-      NumberOfSockets++;
-    }
+  MPCORE_FOR_EACH_ENABLED_SOCKET (SocketIndex) {
+    NumberOfSockets++;
   }
 
   // Get all the GPUs
@@ -345,9 +346,9 @@ NumaInfoLibConstructor (
     NumberOfGpus        = 0;
   }
 
-  for (Index = 0; Index < NumberOfGpus; Index++) {
+  for (GpuIndex = 0; GpuIndex < NumberOfGpus; GpuIndex++) {
     Status = gBS->HandleProtocol (
-                    HandleBuffer[Index],
+                    HandleBuffer[GpuIndex],
                     &gEfiPciIoProtocolGuid,
                     (VOID **)&PciIo
                     );
@@ -360,9 +361,9 @@ NumaInfoLibConstructor (
       continue;
     }
 
-    for (Index2 = 0; Index2 < NumberOfRootBridges; Index2++) {
+    for (RootBridgeIndex = 0; RootBridgeIndex < NumberOfRootBridges; RootBridgeIndex++) {
       Status = gBS->HandleProtocol (
-                      RootBridgeHandles[Index2],
+                      RootBridgeHandles[RootBridgeIndex],
                       &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
                       (VOID **)&RootBridgeCfgIo
                       );
@@ -390,27 +391,25 @@ NumaInfoLibConstructor (
   }
 
   NumaIndex = 0;
-  for (Index = 0; Index < PcdGet32 (PcdTegraMaxSockets); Index++) {
-    if (IsSocketEnabled (Index)) {
-      mNumaInfo[NumaIndex].ProximityDomain               = Index;
-      mNumaInfo[NumaIndex].SocketId                      = Index;
-      mNumaInfo[NumaIndex].DeviceType                    = NUMA_INFO_TYPE_CPU;
-      mNumaInfo[NumaIndex].DeviceHandleType              = 0;
-      mNumaInfo[NumaIndex].DeviceHandle.Pci.PciBdfNumber = 0;
-      mNumaInfo[NumaIndex].DeviceHandle.Pci.PciSegment   = 0;
-      mNumaInfo[NumaIndex].InitiatorDomain               = TRUE;
-      mNumaInfo[NumaIndex].TargetDomain                  = TRUE;
-      NumaIndex++;
-    }
+  MPCORE_FOR_EACH_ENABLED_SOCKET (SocketIndex) {
+    mNumaInfo[NumaIndex].ProximityDomain               = SocketIndex;
+    mNumaInfo[NumaIndex].SocketId                      = SocketIndex;
+    mNumaInfo[NumaIndex].DeviceType                    = NUMA_INFO_TYPE_CPU;
+    mNumaInfo[NumaIndex].DeviceHandleType              = 0;
+    mNumaInfo[NumaIndex].DeviceHandle.Pci.PciBdfNumber = 0;
+    mNumaInfo[NumaIndex].DeviceHandle.Pci.PciSegment   = 0;
+    mNumaInfo[NumaIndex].InitiatorDomain               = TRUE;
+    mNumaInfo[NumaIndex].TargetDomain                  = TRUE;
+    NumaIndex++;
   }
 
   ASSERT (NumaIndex == NumberOfSockets);
 
   if (PlatformResourceInfo->HypervisorMode) {
-    for (Index = 0; Index < PcdGet32 (PcdTegraMaxSockets); Index++) {
-      if (IsSocketEnabled (Index)) {
-        mNumaInfo[NumaIndex].ProximityDomain               = TH500_HV_EGM_PXM_DOMAIN_START + Index;
-        mNumaInfo[NumaIndex].SocketId                      = Index;
+    for (SocketIndex = 0; SocketIndex < PcdGet32 (PcdTegraMaxSockets); SocketIndex++) {
+      if (IsSocketEnabled (SocketIndex)) {
+        mNumaInfo[NumaIndex].ProximityDomain               = TH500_HV_EGM_PXM_DOMAIN_START + SocketIndex;
+        mNumaInfo[NumaIndex].SocketId                      = SocketIndex;
         mNumaInfo[NumaIndex].DeviceType                    = NUMA_INFO_TYPE_HV;
         mNumaInfo[NumaIndex].DeviceHandleType              = 0;
         mNumaInfo[NumaIndex].DeviceHandle.Pci.PciBdfNumber = 0;
@@ -424,9 +423,9 @@ NumaInfoLibConstructor (
     ASSERT (NumaIndex == (2 * NumberOfSockets));
   }
 
-  for (Index = 0; Index < NumberOfGpus; Index++) {
+  for (GpuIndex = 0; GpuIndex < NumberOfGpus; GpuIndex++) {
     Status = gBS->HandleProtocol (
-                    HandleBuffer[Index],
+                    HandleBuffer[GpuIndex],
                     &gEfiPciIoProtocolGuid,
                     (VOID **)&PciIo
                     );
@@ -439,9 +438,9 @@ NumaInfoLibConstructor (
       continue;
     }
 
-    for (Index2 = 0; Index2 < NumberOfRootBridges; Index2++) {
+    for (RootBridgeIndex = 0; RootBridgeIndex < NumberOfRootBridges; RootBridgeIndex++) {
       Status = gBS->HandleProtocol (
-                      RootBridgeHandles[Index2],
+                      RootBridgeHandles[RootBridgeIndex],
                       &gNVIDIAPciRootBridgeConfigurationIoProtocolGuid,
                       (VOID **)&RootBridgeCfgIo
                       );
@@ -535,15 +534,15 @@ NumaInfoLibConstructor (
   mMemoryTransferBandwidth[GPU_TO_REMOTE_HBM_SAME_SOCKET]          = PcdGet32 (PcdGpuToRemoteHbmAccessBandwidth);
   mMemoryTransferNormalizedDistance[GPU_TO_REMOTE_HBM_SAME_SOCKET] = PcdGet32 (PcdGpuToRemoteHbmDistance);
 
-  for (Index = 0; Index < MAX_MEMORY_TRANSFER_TYPES; Index++) {
+  for (MemoryTransferType = 0; MemoryTransferType < MAX_MEMORY_TRANSFER_TYPES; MemoryTransferType++) {
     DEBUG ((
       DEBUG_INFO,
       "MemoryTransferType: %u, ReadLatency: %u, WriteLatency: %u, Bandwidth: %u, NormalizedDistance: %u\n",
-      Index,
-      mMemoryTransferReadLatency[Index],
-      mMemoryTransferWriteLatency[Index],
-      mMemoryTransferBandwidth[Index],
-      mMemoryTransferNormalizedDistance[Index]
+      MemoryTransferType,
+      mMemoryTransferReadLatency[MemoryTransferType],
+      mMemoryTransferWriteLatency[MemoryTransferType],
+      mMemoryTransferBandwidth[MemoryTransferType],
+      mMemoryTransferNormalizedDistance[MemoryTransferType]
       ));
   }
 

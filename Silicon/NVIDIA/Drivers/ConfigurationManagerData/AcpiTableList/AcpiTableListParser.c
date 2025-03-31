@@ -297,7 +297,7 @@ AcpiTableListParser (
     }
   }
 
-  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PlatformInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
@@ -318,7 +318,7 @@ AcpiTableListParser (
     NewAcpiTable.MinorRevision      = 0;
 
     for (SocketId = 1; SocketId <= MaxSocket; SocketId++) {
-      Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL);
+      Status = MpCoreInfoGetSocketInfo (SocketId, NULL, NULL, NULL, NULL, NULL);
       if (!EFI_ERROR (Status)) {
         NewAcpiTable.AcpiTableData = (EFI_ACPI_DESCRIPTION_HEADER *)AcpiTableArray[SocketId];
 

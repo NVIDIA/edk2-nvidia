@@ -588,8 +588,6 @@
   gNVIDIATokenSpaceGuid.PcdRcmKernelSize|0x0|UINT64|0x00000036
 
 #Cpu configuration
-  gNVIDIATokenSpaceGuid.PcdTegraMaxCoresPerCluster|1|UINT32|0x0000003B
-  gNVIDIATokenSpaceGuid.PcdTegraMaxClusters|1|UINT32|0x0000003C
   gNVIDIATokenSpaceGuid.PcdTegraMaxSockets|1|UINT32|0x0000005F
 
 #CPU GPU domain distance information
@@ -688,9 +686,6 @@
   <Packages>
     MdePkg/MdePkg.dec
   }
-  #Type04 Table Data
-  # Set thread count for processor core
-  gNVIDIATokenSpaceGuid.PcdProcessorThreadsPerCore|0x01|UINT8|0x000000AB
 
 #FwPartition and FwImage
   gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|FALSE|BOOLEAN|0x00000053
@@ -709,9 +704,6 @@
 
 #List of non-unique FMP system ImageTypeId's to generate warnings
   gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{0x0}|VOID*|0x000000A4
-
-#MPIDR generation
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|FALSE|BOOLEAN|0x00000060
 
 #Option to add new boot device at top or bottom of list
   gNVIDIATokenSpaceGuid.PcdNewDeviceHierarchy|0x01|UINT8|0x00000068

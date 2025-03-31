@@ -11,6 +11,7 @@
 #include <Library/FloorSweepingLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/MpCoreInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
@@ -19,14 +20,6 @@
 #include <libfdt.h>
 
 #include "CommonFloorSweepingLib.h"
-
-EFI_STATUS
-EFIAPI
-UpdateCpuFloorsweepingConfig (
-  IN UINT32  SocketMask,
-  IN INT32   CpusOffset,
-  IN VOID    *Dtb
-  );
 
 STATIC UINT64  *SocketCbbFabricBaseAddr                        = NULL;
 STATIC UINT64  TH500SocketCbbFabricBaseAddr[TH500_MAX_SOCKETS] = {
@@ -360,8 +353,7 @@ FloorSweepDisableNode (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepPcie (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   )
 {
   EFI_STATUS                       Status;
@@ -406,6 +398,7 @@ CommonFloorSweepPcie (
       INT32       Length;
       UINT32      Tmp32;
       UINT32      PcieId;
+      UINT32      CtrlId;
 
       Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
       if ((Property == NULL) || (AsciiStrCmp (Property, "pci") != 0)) {
@@ -431,8 +424,10 @@ CommonFloorSweepPcie (
       DEBUG ((DEBUG_INFO, "Found pcie 0x%x (%a)\n", PcieId, fdt_get_name (Dtb, NodeOffset, NULL)));
 
       InterfaceSocket = PcieIdToSocket (PcieId);
-      if (!(SocketMask & (1UL << InterfaceSocket)) ||
-          ((PcieDisableRegArray[InterfaceSocket] & (1UL << PcieIdToInterface (PcieId))) != 0))
+      CtrlId          = PcieIdToInterface (PcieId);
+
+      if (!IsSocketEnabled (InterfaceSocket) ||
+          ((PcieDisableRegArray[InterfaceSocket] & (1UL << CtrlId)) != 0))
       {
         FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "disabled", sizeof ("disabled"));
         if (FdtErr < 0) {
@@ -440,7 +435,7 @@ CommonFloorSweepPcie (
           return EFI_DEVICE_ERROR;
         }
 
-        DEBUG ((DEBUG_INFO, "%a: Disabled PcieId=0x%x reg=0x%x mask=0x%x\n", __FUNCTION__, PcieId, PcieDisableRegArray[InterfaceSocket], SocketMask));
+        DEBUG ((DEBUG_INFO, "%a: Disabled PcieId=0x%x reg=0x%x\n", __FUNCTION__, PcieId, PcieDisableRegArray[InterfaceSocket]));
         continue;
       }
 
@@ -485,11 +480,10 @@ BitsSet (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepScfCache (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   )
 {
-  UINTN                                 Socket;
+  UINT32                                Socket;
   UINTN                                 ScfCacheCount;
   UINT32                                ScfCacheSize;
   UINT32                                ScfCacheSets;
@@ -511,11 +505,7 @@ CommonFloorSweepScfCache (
   }
 
   // SCF Cache is distributed as l3-cache over all possible sockets
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
-
+  MPCORE_FOR_EACH_ENABLED_SOCKET (Socket) {
     ScfCacheCount = Scf->MaxScfCacheCountPerSocket;
     UINT64  ScratchBase = Scf->ScfDisableSocketBase[Socket];
     UINTN   ScfScratchWord;
@@ -597,8 +587,7 @@ CommonFloorSweepScfCache (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepCpus (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   )
 {
   CHAR8  CpusStr[] = "/cpus";
@@ -610,28 +599,23 @@ CommonFloorSweepCpus (
     return EFI_DEVICE_ERROR;
   }
 
-  return UpdateCpuFloorsweepingConfig (SocketMask, CpusOffset, Dtb);
+  return UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
 }
 
 EFI_STATUS
 EFIAPI
 TH500FloorSweepCpus (
-  IN  UINT32  SocketMask,
-  IN  VOID    *Dtb
+  IN  VOID  *Dtb
   )
 {
-  UINTN       Socket;
+  UINT32      Socket;
   CHAR8       SocketCpusStr[] = "/socket@00/cpus";
   CHAR8       CpusStr[]       = "/cpus";
   EFI_STATUS  Status;
 
   Status = EFI_UNSUPPORTED;
-  for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
+  MPCORE_FOR_EACH_ENABLED_SOCKET (Socket) {
     INT32  CpusOffset;
-
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
 
     AsciiSPrint (SocketCpusStr, sizeof (SocketCpusStr), "/socket@%u/cpus", Socket);
     CpusOffset = fdt_path_offset (Dtb, SocketCpusStr);
@@ -650,52 +634,13 @@ TH500FloorSweepCpus (
       DEBUG ((DEBUG_INFO, "Floorsweeping cpus in %a\n", SocketCpusStr));
     }
 
-    Status = UpdateCpuFloorsweepingConfig ((1UL << Socket), CpusOffset, Dtb);
+    Status = UpdateCpuFloorsweepingConfig (CpusOffset, Dtb);
     if (EFI_ERROR (Status)) {
       break;
     }
   }
 
   return Status;
-}
-
-UINT32
-EFIAPI
-GetLinearCoreIDFromMpidr (
-  IN UINT64  Mpidr
-  )
-{
-  UINTN   Cluster;
-  UINTN   Core;
-  UINTN   Socket;
-  UINT32  LinearCoreId;
-
-  Socket = MPIDR_AFFLVL3_VAL (Mpidr);
-  ASSERT (Socket < PLATFORM_MAX_SOCKETS);
-
-  Cluster = MPIDR_AFFLVL2_VAL (Mpidr);
-  ASSERT (Cluster < PLATFORM_MAX_CLUSTERS);
-
-  Core = MPIDR_AFFLVL1_VAL (Mpidr);
-  ASSERT (Core < PLATFORM_MAX_CORES_PER_CLUSTER);
-
-  LinearCoreId =
-    (Socket * PLATFORM_MAX_CORES_PER_SOCKET) +
-    (Cluster * PLATFORM_MAX_CORES_PER_CLUSTER) +
-    Core;
-
-  DEBUG ((
-    DEBUG_INFO,
-    "%a: Mpidr=0x%llx Socket=%u Cluster=%u, Core=%u, LinearCoreId=%u\n",
-    __FUNCTION__,
-    Mpidr,
-    Socket,
-    Cluster,
-    Core,
-    LinearCoreId
-    ));
-
-  return LinearCoreId;
 }
 
 STATIC
@@ -722,7 +667,6 @@ STATIC
 EFI_STATUS
 EFIAPI
 FloorSweepIpEntry (
-  IN  UINT32                               SocketMask,
   IN  INT32                                IpsOffset,
   IN  CONST TEGRA_FLOOR_SWEEPING_IP_ENTRY  *IpEntry
   )
@@ -743,7 +687,7 @@ FloorSweepIpEntry (
   MaxSockets   = mPlatformResourceInfo->MaxPossibleSockets;
   IpIsDisabled = FALSE;
   for (Socket = 0; Socket < MaxSockets; Socket++) {
-    if (!(SocketMask & (1UL << Socket)) || (IpEntry->DisableReg[Socket] != 0)) {
+    if (!IsSocketEnabled (Socket) || (IpEntry->DisableReg[Socket] != 0)) {
       IpIsDisabled = TRUE;
       break;
     }
@@ -771,7 +715,7 @@ FloorSweepIpEntry (
                  );
     }
 
-    if (((0x1UL << Socket) && SocketMask) == 0) {
+    if (!IsSocketEnabled (Socket)) {
       NodeIsDisabled = TRUE;
       DisableReg     = MAX_UINT32;
     } else {
@@ -804,7 +748,7 @@ FloorSweepIpEntry (
 EFI_STATUS
 EFIAPI
 CommonFloorSweepIps (
-  IN  UINT32  SocketMask
+  VOID
   )
 {
   CONST CHAR8                          *IpsRootName = "/bus@0";
@@ -829,7 +773,7 @@ CommonFloorSweepIps (
   }
 
   while (IpTable->IpName != NULL) {
-    Status = FloorSweepIpEntry (SocketMask, IpsOffset, IpTable);
+    Status = FloorSweepIpEntry (IpsOffset, IpTable);
 
     DEBUG ((DEBUG_INFO, "%a: floorswept %a nodes: %r\n", __FUNCTION__, IpTable->IpName, Status));
 
@@ -837,16 +781,4 @@ CommonFloorSweepIps (
   }
 
   return EFI_SUCCESS;
-}
-
-BOOLEAN
-EFIAPI
-IsMpidrEnabled (
-  UINT64  Mpidr
-  )
-{
-  UINT32  LinearCoreId;
-
-  LinearCoreId = GetLinearCoreIDFromMpidr (Mpidr);
-  return IsCoreEnabled (LinearCoreId);
 }

@@ -76,7 +76,7 @@ GicCpcParser (
 
   CpcInfo = NULL;
 
-  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
@@ -136,20 +136,30 @@ GicPsdParser (
 {
   EFI_STATUS               Status;
   CM_ARCH_COMMON_PSD_INFO  *PsdInfo;
+  UINT32                   MaxSocket;
+  UINT32                   MaxCluster;
+  UINT32                   NumClusters;
   UINT32                   NumCores;
-  UINT32                   CoreIndex;
+  UINT32                   ClusterIndex;
+  UINT32                   SocketId;
+  UINT32                   ClusterId;
   CM_OBJ_DESCRIPTOR        Desc;
   UINT32                   PsdInfoSize;
 
   PsdInfo = NULL;
 
-  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, &MaxCluster, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
-  PsdInfoSize = NumCores * sizeof (CM_ARCH_COMMON_PSD_INFO);
+  // Increment the max values to account for the 0-based index
+  MaxSocket++;
+  MaxCluster++;
+  NumClusters = MaxSocket * MaxCluster;
+
+  PsdInfoSize = NumClusters * sizeof (CM_ARCH_COMMON_PSD_INFO);
   PsdInfo     = AllocatePool (PsdInfoSize);
   if (PsdInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate PsdInfo structure array\r\n", __FUNCTION__));
@@ -158,16 +168,30 @@ GicPsdParser (
   }
 
   // Populate Psd structures for all enabled cores and return the list of tokens
-  for (CoreIndex = 0; CoreIndex < NumCores; CoreIndex++) {
-    PsdInfo[CoreIndex].Revision  = EFI_ACPI_6_5_AML_PSD_REVISION;
-    PsdInfo[CoreIndex].Domain    = CoreIndex;
-    PsdInfo[CoreIndex].CoordType = ACPI_AML_COORD_TYPE_SW_ALL;
-    PsdInfo[CoreIndex].NumProc   = 1;
+  for (ClusterIndex = 0; ClusterIndex < NumClusters; ClusterIndex++) {
+    SocketId  = ClusterIndex / MaxCluster;
+    ClusterId = ClusterIndex % MaxCluster;
+
+    Status = MpCoreInfoGetSocketClusterInfo (SocketId, ClusterId, &NumCores, NULL, NULL, NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r getting SocketClusterInfo for ClusterIndex %u\n", __FUNCTION__, Status, ClusterIndex));
+      if (Status == EFI_NOT_FOUND) {
+        // No cores in this cluster, this token will be created but not used
+        NumCores = 0;
+      } else {
+        goto CleanupAndReturn;
+      }
+    }
+
+    PsdInfo[ClusterIndex].Revision  = EFI_ACPI_6_5_AML_PSD_REVISION;
+    PsdInfo[ClusterIndex].Domain    = ClusterIndex;
+    PsdInfo[ClusterIndex].CoordType = ACPI_AML_COORD_TYPE_HW_ALL;
+    PsdInfo[ClusterIndex].NumProc   = NumCores;
   }
 
   Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjPsdInfo);
   Desc.Size     = PsdInfoSize;
-  Desc.Count    = NumCores;
+  Desc.Count    = NumClusters;
   Desc.Data     = PsdInfo;
 
   Status = NvAddMultipleCmObjGetTokens (ParserHandle, &Desc, TokenMapPtr, NULL);
@@ -227,6 +251,7 @@ GicCParser (
   CM_OBJECT_TOKEN                    *GicCInfoTokens;
   TEGRA_GIC_INFO                     *GicInfo;
   UINT32                             CoreIndex;
+  UINT32                             ClusterIndex;
   UINT64                             PmuBaseInterrupt;
   UINT64                             DbgFeatures;
   UINT16                             TrbeInterrupt;
@@ -243,9 +268,11 @@ GicCParser (
   UINT32                             SocketId;
   UINT32                             ClusterId;
   UINT32                             CoreId;
+  UINT32                             ThreadId;
   UINT32                             MaxClustersPerSocket;
   UINT32                             MaxCoresPerSocket;
   UINT32                             MaxCoresPerCluster;
+  UINT32                             MaxThreadsPerCore;
 
   GicInfo        = NULL;
   GicCInfo       = NULL;
@@ -268,12 +295,13 @@ GicCParser (
     goto CleanupAndReturn;
   }
 
-  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (&NumCores, NULL, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
   }
 
+  // Allocate for all processing entities
   GicCInfoSize = sizeof (CM_ARM_GICC_INFO) * NumCores;
   GicCInfo     = AllocateZeroPool (GicCInfoSize);
   if (GicCInfo == NULL) {
@@ -359,9 +387,18 @@ GicCParser (
     }
   }
 
-  MaxClustersPerSocket = (PcdGet32 (PcdTegraMaxClusters)) / (PcdGet32 (PcdTegraMaxSockets));
-  MaxCoresPerCluster   = PcdGet32 (PcdTegraMaxCoresPerCluster);
-  MaxCoresPerSocket    = MaxCoresPerCluster * MaxClustersPerSocket;
+  Status = MpCoreInfoGetPlatformInfo (NULL, NULL, &MaxClustersPerSocket, &MaxCoresPerCluster, &MaxThreadsPerCore);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get MpCoreInfo\n", __FUNCTION__, Status));
+    goto CleanupAndReturn;
+  }
+
+  // Increment the max values to account for the 0-based index
+  MaxClustersPerSocket++;
+  MaxCoresPerCluster++;
+  MaxThreadsPerCore++;
+
+  MaxCoresPerSocket = MaxCoresPerCluster * MaxClustersPerSocket;
 
   // Populate GICC structures for all enabled cores
   for (CoreIndex = 0; CoreIndex < NumCores; CoreIndex++) {
@@ -371,16 +408,21 @@ GicCParser (
       goto CleanupAndReturn;
     }
 
-    Status = MpCoreInfoGetProcessorLocation (MpIdr, &SocketId, &ClusterId, &CoreId);
+    Status = MpCoreInfoGetProcessorLocation (MpIdr, &SocketId, &ClusterId, &CoreId, &ThreadId);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Got %r getting ProcessorLocation for MpIdr 0x%lx\n", __FUNCTION__, Status, MpIdr));
       goto CleanupAndReturn;
     }
 
+    // Shared index for all threads
+    ClusterIndex = SocketId * MaxClustersPerSocket + ClusterId;
+
     // This value must be 0
     GicCInfo[CoreIndex].CPUInterfaceNumber = 0;
     // This value must be globally unique, including across sockets
-    GicCInfo[CoreIndex].AcpiProcessorUid         = (SocketId * MaxCoresPerSocket) + (ClusterId * MaxCoresPerCluster) + CoreId;
+    GicCInfo[CoreIndex].AcpiProcessorUid = (SocketId * MaxCoresPerSocket * MaxThreadsPerCore) +
+                                           (ClusterId * MaxCoresPerCluster * MaxThreadsPerCore) +
+                                           (CoreId * MaxThreadsPerCore) + ThreadId;
     GicCInfo[CoreIndex].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
     GicCInfo[CoreIndex].ParkingProtocolVersion   = 0;
     GicCInfo[CoreIndex].PerformanceInterruptGsiv = PmuBaseInterrupt;
@@ -402,7 +444,7 @@ GicCParser (
     GicCInfo[CoreIndex].AffinityFlags                 = EFI_ACPI_6_4_GICC_ENABLED;
 
     GicCInfo[CoreIndex].CpcToken      = CpcTokens ? CpcTokens[CoreIndex] : CM_NULL_TOKEN;
-    GicCInfo[CoreIndex].PsdToken      = PsdTokens ? PsdTokens[CoreIndex] : CM_NULL_TOKEN;
+    GicCInfo[CoreIndex].PsdToken      = PsdTokens ? PsdTokens[ClusterIndex] : CM_NULL_TOKEN;
     GicCInfo[CoreIndex].TrbeInterrupt = TrbeInterrupt;
     GicCInfo[CoreIndex].EtToken       = EtToken;
   }

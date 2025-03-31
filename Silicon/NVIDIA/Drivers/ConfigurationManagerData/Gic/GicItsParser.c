@@ -1,7 +1,7 @@
 /** @file
   GicIts parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -114,7 +114,7 @@ GicItsParser (
     goto CleanupAndReturn;
   }
 
-  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL);
+  Status = MpCoreInfoGetPlatformInfo (NULL, &MaxSocket, NULL, NULL, NULL);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r getting PlatformInfo\n", __FUNCTION__, Status));
     goto CleanupAndReturn;
@@ -123,7 +123,7 @@ GicItsParser (
   RegisterSize = 0;
   for (Index = 0; Index <= MaxSocket; Index++) {
     // check if socket enabled for this Index
-    Status = MpCoreInfoGetSocketInfo (Index, NULL, NULL, NULL, NULL);
+    Status = MpCoreInfoGetSocketInfo (Index, NULL, NULL, NULL, NULL, NULL);
     if (EFI_ERROR (Status)) {
       if (Status == EFI_NOT_FOUND) {
         continue;

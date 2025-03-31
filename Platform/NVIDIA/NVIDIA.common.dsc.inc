@@ -1307,7 +1307,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
 
@@ -1330,7 +1329,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId|'TEGRA264'
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdHspDoorbellRegionSize|0x1000
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
@@ -1404,7 +1402,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2FinalLogAreaLen|0x10000
   gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision|105
 
-  gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
   gNVIDIATokenSpaceGuid.PcdNonSecureQspiAvailable|TRUE
   gNVIDIATokenSpaceGuid.PcdGenerateGpuPxmInfoDsd|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
