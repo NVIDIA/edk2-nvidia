@@ -2287,6 +2287,8 @@ fail:
 STATIC
 VOID
 XudcCheckInterrupts (
+  IN        VOID  *p,
+  IN        VOID  *q
   )
 {
   XudcPollForEvent (0x10UL);
