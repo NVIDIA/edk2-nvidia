@@ -1392,6 +1392,8 @@ NorFlashInitialise (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: SFDP Read Failed\n", __FUNCTION__));
       FreePool (Private);
+      // Continue to the next socket.
+      Status  = EFI_SUCCESS;
       Private = NULL;
       continue;
     }
