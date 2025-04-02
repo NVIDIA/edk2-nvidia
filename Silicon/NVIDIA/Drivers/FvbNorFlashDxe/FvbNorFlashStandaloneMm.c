@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1575,16 +1575,17 @@ FVBNORInitialize (
     }
   }
 
-  CheckVarStoreIntegrity = FALSE;
+  CheckVarStoreIntegrity = FeaturePcdGet (PcdVarStoreIntegritySupported);
 
-  /* If Variable Store Integrity is enabled, user the reserved partition
+  /* If Variable Store Integrity is enabled, use the reserved partition
+   * to store the measurements. If the reserved partition is not found or does
+   * not meet the alignment requirements, return an error.
    */
-  if (FeaturePcdGet (PcdVarStoreIntegritySupported) == TRUE) {
+  if (CheckVarStoreIntegrity == TRUE) {
     if ((ReservedPartitionOffset != 0) && (ReservedPartitionSize != 0) &&
         ((ReservedPartitionOffset % NorFlashAttributes.BlockSize) == 0) &&
         ((ReservedPartitionSize % NorFlashAttributes.BlockSize) == 0))
     {
-      CheckVarStoreIntegrity = TRUE;
       DEBUG ((
         DEBUG_ERROR,
         "%a:Using Reserved Partition %lu %lu for VarStore Integrity\n",
@@ -1600,6 +1601,8 @@ FVBNORInitialize (
         ReservedPartitionSize,
         NorFlashAttributes.BlockSize
         ));
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
     }
   }
 
@@ -1608,6 +1611,7 @@ FVBNORInitialize (
   FvpData = AllocateRuntimeZeroPool (sizeof (NVIDIA_FVB_PRIVATE_DATA) * FVB_TO_CREATE);
   if (FvpData == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FvpData\r\n"));
+    Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
@@ -1615,6 +1619,7 @@ FVBNORInitialize (
   VarStoreBuffer = AllocateRuntimePages (EFI_SIZE_TO_PAGES (VariableSize));
   if (VarStoreBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create VarStoreBuffer\r\n"));
+    Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
@@ -1639,6 +1644,7 @@ FVBNORInitialize (
   FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
   if (FtwSpareBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwSpareBuffer\r\n"));
+    Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
@@ -1654,6 +1660,7 @@ FVBNORInitialize (
   FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
   if (FtwWorkingBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwWorkingBuffer\r\n"));
+    Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
 
