@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,6 +25,7 @@
 
 #define PCIE_NUMBER_OF_MAPPING_SPACE  4
 #define PCIE_NUMBER_OF_INTERRUPT_MAP  4
+#define PCIE_NUMBER_OF_IOMMU_MAP      4
 #define PCIE_REPO_OBJECTS             (3 + PCIE_NUMBER_OF_MAPPING_SPACE + PCIE_NUMBER_OF_INTERRUPT_MAP) // 2 Reference Arrays, Mappings, End of list
 #define PCIE_COMMON_REPO_OBJECTS      (3)                                                               // Config Space, Acpi Tables, end of list
 

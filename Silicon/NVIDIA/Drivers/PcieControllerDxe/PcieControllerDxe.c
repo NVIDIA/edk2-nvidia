@@ -1970,6 +1970,7 @@ DeviceDiscoveryNotify (
   PCI_ROOT_BRIDGE                              *RootBridge          = NULL;
   EFI_DEVICE_PATH_PROTOCOL                     *ParentDevicePath    = NULL;
   CONST VOID                                   *BusProperty         = NULL;
+  CONST UINT32                                 *IommuProperty       = NULL;
   CONST UINT32                                 *GpuKickGpioProperty = NULL;
   CONST UINT32                                 *PxmDmnStartProperty = NULL;
   CONST UINT32                                 *NumPxmDmnProperty   = NULL;
@@ -2232,6 +2233,19 @@ DeviceDiscoveryNotify (
 
       Private->PcieRootBridgeConfigurationIo.MinBusNumber = RootBridge->Bus.Base;
       Private->PcieRootBridgeConfigurationIo.MaxBusNumber = RootBridge->Bus.Limit;
+
+      IommuProperty = fdt_getprop (
+                        DeviceTreeNode->DeviceTreeBase,
+                        DeviceTreeNode->NodeOffset,
+                        "iommu-map",
+                        &PropertySize
+                        );
+
+      if ((IommuProperty == NULL) || (PropertySize != (PCIE_NUMBER_OF_IOMMU_MAP * sizeof (UINT32)))) {
+        DEBUG ((DEBUG_INFO, "PCIe Controller: IOMMU Mapping missing\r\n"));
+      } else {
+        Private->PcieRootBridgeConfigurationIo.SmmuV3pHandle = SwapBytes32 (IommuProperty[1]);
+      }
 
       NumberOfRanges = 0;
       Status         = DeviceTreeGetRanges (DeviceTreeNode->NodeOffset, "ranges", NULL, &NumberOfRanges);
