@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,10 +20,12 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/Eeprom.h>
 #include "TegraDeviceTreeOverlayLibCommon.h"
 
 STATIC CHAR8  *SWModule;
+STATIC CHAR8  *Environment;
 STATIC VOID   *CpublDtb;
 
 typedef enum {
@@ -79,6 +81,13 @@ MatchFuseInfo (
   VOID *
   );
 
+STATIC BOOLEAN
+MatchEnvironment (
+  VOID *,
+  CONST CHAR8 *,
+  VOID *
+  );
+
 DT_MATCH_INFO  MatchInfoArray[] = {
   {
     .Name    = "ids",
@@ -105,6 +114,11 @@ DT_MATCH_INFO  MatchInfoArray[] = {
     .MatchOp = MATCH_OR,
     .IsMatch = MatchFuseInfo,
   },
+  {
+    .Name    = "environment",
+    .MatchOp = MATCH_OR,
+    .IsMatch = MatchEnvironment,
+  }
 };
 
 STATIC OVERLAY_BOARD_INFO  *BoardInfo = NULL;
@@ -381,6 +395,20 @@ MatchFuseInfo (
 
   DEBUG ((DEBUG_INFO, "%a: Matching fuse-info %a. Result: %u\n", __FUNCTION__, FuseStr, Matched));
   return Matched;
+}
+
+STATIC BOOLEAN
+MatchEnvironment (
+  VOID         *Fdt,
+  CONST CHAR8  *EnvironmentStr,
+  VOID         *Param
+  )
+{
+  INTN  Ret;
+
+  Ret = AsciiStriCmp (Environment, EnvironmentStr);
+  DEBUG ((DEBUG_INFO, "%a: Matching environment %a. Result: %ld\n", __FUNCTION__, Environment, Ret));
+  return (Ret == 0) ? TRUE : FALSE;
 }
 
 STATIC EFI_STATUS
@@ -803,6 +831,9 @@ ApplyTegraDeviceTreeOverlayCommon (
   UINTN                         FdtSize;
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  TEGRA_PLATFORM_TYPE           PlatformType;
+
+  PlatformType = TegraGetPlatform ();
 
   Err = fdt_check_header (FdtBase);
   if (Err != 0) {
@@ -845,7 +876,17 @@ ApplyTegraDeviceTreeOverlayCommon (
     }
 
     SWModule = ModuleStr;
-    Status   = ProcessOverlayDeviceTree (FdtBase, FdtNext, FdtBuf);
+    if (PlatformType == TEGRA_PLATFORM_QT) {
+      Environment = "qt";
+    } else if (PlatformType == TEGRA_PLATFORM_SYSTEM_FPGA) {
+      Environment = "fpga";
+    } else if (PlatformType == TEGRA_PLATFORM_VDK) {
+      Environment = "sim";
+    } else {
+      Environment = "unknown";
+    }
+
+    Status = ProcessOverlayDeviceTree (FdtBase, FdtNext, FdtBuf);
     if (EFI_SUCCESS == Status) {
       Err = fdt_overlay_apply (FdtBase, FdtBuf);
       if (Err != 0) {
