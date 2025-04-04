@@ -262,6 +262,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   DramCarveoutLib|Silicon/NVIDIA/Library/DramCarveoutLib/DramCarveoutLib.inf
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoLib/BootChainInfoLib.inf
   ConfigurationManagerLib|Silicon/NVIDIA/Library/ConfigurationManagerLib/ConfigurationManagerLib.inf
+  SmmuLib|Silicon/NVIDIA/Library/SmmuLib/SmmuLib.inf
 
   OemMiscLib|Silicon/NVIDIA/Library/OemMiscLib/OemMiscLib.inf
   SmbiosMiscLib|Silicon/NVIDIA/Library/SmbiosMiscLib/SmbiosMiscLib.inf
@@ -2572,6 +2573,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   #
 !ifdef CONFIG_SMMU_V3
   Silicon/NVIDIA/Drivers/SmmuV3Dxe/SmmuV3Dxe.inf
+  Silicon/NVIDIA/Drivers/SmmuDriverDxe/SmmuDriverDxe.inf
 !endif
 
 [Components.AARCH64]

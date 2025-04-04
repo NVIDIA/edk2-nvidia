@@ -1,0 +1,33 @@
+/** @file
+
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SmmuLib
+  FILE_GUID                      = 80d62086-8cc2-4ec8-aa53-3003b96ab4f4
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SmmuLib
+
+[Sources.common]
+  SmmuLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+
+[LibraryClasses]
+  MemoryAllocationLib
+  BaseLib
+  UefiBootServicesTableLib
+  DebugLib
+
+[Protocols]
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid  ## CONSUMES

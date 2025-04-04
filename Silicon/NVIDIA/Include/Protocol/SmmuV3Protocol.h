@@ -26,8 +26,7 @@ typedef struct _NVIDIA_SMMUV3_CONTROLLER_PROTOCOL NVIDIA_SMMUV3_CONTROLLER_PROTO
   @param[in]  This              The protocol instance pointer.
   @param[in]  Mapping           The mapping value returned from Map().
   @param[in]  IoMmuAccess       The IOMMU access.
-  @param[in]  Rid               The requester ID.
-  @param[in]  Segment           The segment ID.
+  @param[in]  StreamId          The StreamId.
 
   @retval EFI_SUCCESS            The IoMmuAccess is set for the memory range specified by DeviceAddress and Length.
   @retval EFI_INVALID_PARAMETER  Invalid Input Parameters.
@@ -42,8 +41,7 @@ EFI_STATUS
   IN NVIDIA_SMMUV3_CONTROLLER_PROTOCOL  *This,
   IN VOID                               *Mapping,
   IN UINT64                             IoMmuAccess,
-  IN UINT16                             Rid,
-  IN UINT16                             Segment
+  IN UINT32                             StreamId
   );
 
 /// NVIDIA_SMMUV3_CONTROLLER_PROTOCOL protocol structure.

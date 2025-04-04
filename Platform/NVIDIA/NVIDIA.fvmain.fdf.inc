@@ -954,4 +954,5 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
 !ifdef CONFIG_SMMU_V3
   INF Silicon/NVIDIA/Drivers/SmmuV3Dxe/SmmuV3Dxe.inf
+  INF Silicon/NVIDIA/Drivers/SmmuDriverDxe/SmmuDriverDxe.inf
 !endif

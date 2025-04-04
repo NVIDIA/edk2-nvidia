@@ -1,0 +1,50 @@
+#/** @file
+#
+#  SMMU Driver Dxe inf file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = SmmuDxe
+  FILE_GUID                 = be2e1e6f-8c66-482f-9a47-ad8bb4453c7f
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = SmmuDxeEntryPoint
+
+[Sources]
+  SmmuDriverDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  BaseMemoryLib
+  UefiLib
+  UefiDriverEntryPoint
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  SmmuLib
+
+[Protocols]
+  gEdkiiIoMmuProtocolGuid
+  gEfiPciIoProtocolGuid
+  gNVIDIASmmuV3ProtocolGuid
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+
+[Depex]
+  gNVIDIASmmuV3InitCompleteProtocolGuid
