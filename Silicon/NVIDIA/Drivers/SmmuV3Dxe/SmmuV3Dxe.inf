@@ -43,6 +43,7 @@
 
 [Protocols]
   gNVIDIASmmuV3ProtocolGuid
+  gNVIDIASmmuV3InitCompleteProtocolGuid
 
 [Depex]
   TRUE

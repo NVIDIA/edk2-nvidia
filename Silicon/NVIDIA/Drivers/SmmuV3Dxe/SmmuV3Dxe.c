@@ -1795,6 +1795,19 @@ DeviceDiscoveryNotify (
 
       break;
 
+    case DeviceDiscoveryEnumerationCompleted:
+      Status = gBS->InstallMultipleProtocolInterfaces (
+                      &DriverHandle,
+                      &gNVIDIASmmuV3InitCompleteProtocolGuid,
+                      NULL,
+                      NULL
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to install nvidia smmuv3 init complete protocol.\n", __FUNCTION__));
+      }
+
+      break;
+
     default:
       break;
   }
