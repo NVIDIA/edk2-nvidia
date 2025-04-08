@@ -108,6 +108,11 @@ struct _NVIDIA_PCI_ROOT_BRIDGE_CONFIGURATION_IO_PROTOCOL {
   /// Associated SmmuV3pHandle
   ///
   UINT32                                                     SmmuV3pHandle;
+
+  ///
+  /// Associated SID Base
+  ///
+  UINT32                                                     StreamIdBase;
 };
 
 #endif

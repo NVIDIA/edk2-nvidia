@@ -2244,7 +2244,8 @@ DeviceDiscoveryNotify (
       if ((IommuProperty == NULL) || (PropertySize != (PCIE_NUMBER_OF_IOMMU_MAP * sizeof (UINT32)))) {
         DEBUG ((DEBUG_INFO, "PCIe Controller: IOMMU Mapping missing\r\n"));
       } else {
-        Private->PcieRootBridgeConfigurationIo.SmmuV3pHandle = SwapBytes32 (IommuProperty[1]);
+        Private->PcieRootBridgeConfigurationIo.SmmuV3pHandle = SwapBytes32 (IommuProperty[PCIE_IOMMU_MAP_PHANDLE]);
+        Private->PcieRootBridgeConfigurationIo.StreamIdBase  = SwapBytes32 (IommuProperty[PCIE_IOMMU_MAP_SID_BASE]);
       }
 
       NumberOfRanges = 0;
