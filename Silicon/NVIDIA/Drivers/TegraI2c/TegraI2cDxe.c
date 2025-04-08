@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1460,6 +1460,8 @@ ErrorExit:
       }
 
       FreePool (Private);
+      // remove the invalid i2c master descriptor.
+      mI2cPrivate[mI2cMasterCount--] = NULL;
     }
   }
 
