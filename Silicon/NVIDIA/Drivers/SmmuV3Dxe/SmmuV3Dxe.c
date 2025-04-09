@@ -1568,11 +1568,6 @@ OnReadyToBoot (
 
   Private = (SMMU_V3_CONTROLLER_PRIVATE_DATA *)Context;
 
-  // TODO: Implement SMMUv3 exit boot services steps:
-  // 1. Disable SMMU operation
-  // 2. Disable command queue
-  // 3. Disable event queue
-  // 4. Disable SMMU operation
   if (Private == NULL) {
     return;
   }
@@ -1649,8 +1644,6 @@ OnReadyToBoot (
     DEBUG ((DEBUG_ERROR, "%a: Unable disable SMMU 0x%lx\n", __FUNCTION__, Private->BaseAddress));
     return;
   }
-
-  FreePool (Private);
 }
 
 /**
