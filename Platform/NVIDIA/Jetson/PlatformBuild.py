@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,7 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return super().GetActiveScopes() + ["jetson"]
 
     def GetFirmwareVersionBase(self):
-        return "202210.5"
+        return "202210.5.1"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
