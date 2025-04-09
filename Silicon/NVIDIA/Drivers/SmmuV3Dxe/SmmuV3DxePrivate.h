@@ -208,6 +208,7 @@
 #define SMMU_V3_CSIGNAL_MASK   (0x3)
 
 // Command opcodes
+#define SMMU_V3_OP_CFGI_STE       (0x03)
 #define SMMU_V3_OP_CFGI_ALL       (0x04)
 #define SMMU_V3_OP_TLBI_EL2_ALL   (0x20)
 #define SMMU_V3_OP_TLBI_NSNH_ALL  (0x30)
@@ -215,6 +216,7 @@
 
 // Stream Table Entry fields
 #define SMMU_V3_STE_VALID             (1ULL)
+#define SMMU_V3_STE_CFG_ABORT         (0ULL)
 #define SMMU_V3_STE_CFG_BYPASS        (4ULL)
 #define SMMU_V3_USE_INCOMING_ATTR     (0ULL)
 #define SMMU_V3_USE_INCOMING_SH_ATTR  (1ULL)

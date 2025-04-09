@@ -1271,6 +1271,36 @@ InvalidateCachedCfgsTlbs (
 }
 
 /**
+  Creates a stream table entry (STE) configured for abort mode.
+
+  @param[out] Ste    Pointer to STE buffer to populate.
+                     Must be 8 UINT64s in size.
+
+  @retval None
+**/
+STATIC
+VOID
+CreateAbortSte (
+  OUT UINT64  *Ste
+  )
+{
+  if (Ste == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameter\n", __FUNCTION__));
+    return;
+  }
+
+  // Set STE to bypass mode
+  Ste[0] = SMMU_V3_STE_VALID;
+  Ste[0] = Ste[0] | BIT_FIELD_SET (SMMU_V3_STE_CFG_ABORT, SMMU_V3_STE_CFG_MASK, SMMU_V3_STE_CFG_SHIFT);
+  Ste[2] = 0;
+  Ste[3] = 0;
+  Ste[4] = 0;
+  Ste[5] = 0;
+  Ste[6] = 0;
+  Ste[7] = 0;
+}
+
+/**
   Creates a stream table entry (STE) configured for bypass mode.
 
   This function configures an STE to bypass translation and use incoming
@@ -1343,7 +1373,7 @@ Smmuv3DefaultTranslation (
   }
 
   SteCount = (1 << Private->Features.StreamNBits);
-  CreateBypassSte (SteData);
+  CreateAbortSte (SteData);
   SteAddr = (UINT64 *)Private->SteBase;
 
   // Populate all stream table entries
@@ -1518,6 +1548,153 @@ InitializeSmmuV3 (
 }
 
 /**
+  Construct command CMD_CFGI_STE
+
+  This command invalidates the STE indicated by StreamID in the SMMUv3 controller.
+
+  @param[in, out]      Cmd        Pointer to Command
+  @param[in]           StreamId   Stream ID to invalidate STE
+
+ **/
+STATIC
+VOID
+ConstructInvSteCfg (
+  IN OUT UINT64  *Cmd,
+  IN     UINT32  StreamId
+  )
+{
+  UINT32  Stream;
+
+  Stream = SMMU_V3_NS_STREAM;
+
+  Cmd[0]  = BIT_FIELD_SET (SMMU_V3_OP_CFGI_STE, SMMU_V3_OP_MASK, SMMU_V3_OP_SHIFT);
+  Cmd[0] |= BIT_FIELD_SET (Stream, SMMU_V3_SSEC_MASK, SMMU_V3_SSEC_SHIFT);
+  Cmd[0] |= BIT_FIELD_SET ((UINT64)StreamId, SMMU_V3_CMD_SID_MASK, SMMU_V3_CMD_SID_SHIFT);
+  Cmd[1]  = SMMU_V3_LEAF_STE;
+}
+
+/**
+  Invalidates cached Stream Table Entry (STE) configuration for a given Stream ID.
+
+  This function issues an STE invalidation command to the SMMU controller,
+  followed by a sync command to ensure completion. This is required when modifying STE
+  configurations to ensure the hardware uses updated values.
+
+  @param[in]  Private    Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[in]  StreamId   Stream ID whose STE configuration needs to be invalidated
+
+  @retval EFI_SUCCESS             STE configuration was invalidated successfully
+  @retval EFI_INVALID_PARAMETER   Private is NULL or StreamId is invalid
+  @retval Others                  Failed to issue commands to SMMU controller
+**/
+STATIC
+EFI_STATUS
+InvalidateCachedSte (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN  UINT32                           StreamId
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      Cmd[SMMU_V3_CMD_SIZE_DW];
+  UINT32      MaxStreamId;
+
+  Status = EFI_SUCCESS;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MaxStreamId = (1 << Private->Features.StreamNBits) - 1;
+  if (StreamId > MaxStreamId) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Stream ID: %u\n", __FUNCTION__, StreamId));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Invalidate a STE configuration
+  ConstructInvSteCfg (Cmd, StreamId);
+
+  Status = IssueCmdToSmmuV3Controller (Private, Cmd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to issue CMD_CFGI_STE STE command to CMDQ for Stream ID: %u\n", __FUNCTION__, StreamId));
+    return Status;
+  }
+
+  // Issue CMD_SYNC to ensure completion of prior commands used for invalidation
+  Status = SynchronizeCmdq (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to synchronize command queue\n", __FUNCTION__));
+    return Status;
+  }
+
+  return Status;
+}
+
+/**
+  Configures a Stream Table Entry (STE) in the SMMU v3 controller.
+
+  This function performs the following steps:
+  1. Invalidates existing STE configuration
+  2. Creates new Stage 2 STE configuration
+  3. Writes STE to stream table
+  4. Invalidates cached STE to ensure hardware uses new configuration
+
+  @param[in]  Private    Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[in]  StreamId   Stream ID for which STE needs to be configured
+
+  @retval EFI_SUCCESS             STE configured successfully
+  @retval EFI_INVALID_PARAMETER   Private is NULL or StreamId is invalid
+  @retval Others                  Failure in STE configuration steps
+**/
+STATIC
+EFI_STATUS
+ConfigureSmmuv3Ste (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN  UINT32                           StreamId
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      SteData[SMMU_V3_STRTAB_ENTRY_SIZE_DW];
+  UINT64      *SteAddr;
+  UINT32      MaxStreamId;
+
+  Status = EFI_SUCCESS;
+
+  if (Private == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MaxStreamId = (1 << Private->Features.StreamNBits) - 1;
+  if (StreamId > MaxStreamId) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Stream ID: %u\n", __FUNCTION__, StreamId));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  TrackCmdqIdx (Private);
+
+  Status = InvalidateCachedSte (Private, StreamId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate cached STE configuration for Stream ID: %u\n", __FUNCTION__, StreamId));
+    return Status;
+  }
+
+  ClearSte (SteData);
+  CreateBypassSte (SteData);
+
+  SteAddr = (UINT64 *)Private->SteBase + (StreamId * SMMU_V3_STRTAB_ENTRY_SIZE_DW);
+  WriteSte (SteAddr, SteData);
+
+  Status = InvalidateCachedSte (Private, StreamId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to invalidate cached STE configuration for Stream ID: %u\n", __FUNCTION__, StreamId));
+    return Status;
+  }
+
+  TrackCmdqIdx (Private);
+
+  return Status;
+}
+
+/**
   Set SMMU attribute for a system memory.
 
   @param[in]  This              The protocol instance pointer.
@@ -1541,7 +1718,27 @@ SetAttributeSmmuV3 (
   IN UINT32                             StreamId
   )
 {
-  return EFI_DEVICE_ERROR;
+  EFI_STATUS                       Status;
+  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private;
+
+  Private = SMMU_V3_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+
+  if (Private->ReadyToBootEvent == NULL) {
+    return EFI_SUCCESS;
+  }
+
+  if (StreamId >= (1 << Private->Features.StreamNBits)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Stream ID: 0x%x\n", __FUNCTION__, StreamId));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = ConfigureSmmuv3Ste (Private, StreamId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to configure SMMUv3 STE for Stream ID: %u\n", __FUNCTION__, StreamId));
+    return Status;
+  }
+
+  return Status;
 }
 
 /**
@@ -1568,6 +1765,8 @@ OnReadyToBoot (
   if (Private == NULL) {
     return;
   }
+
+  Private->ReadyToBootEvent = NULL;
 
   if (Private->CmdQueue.QBase != 0) {
     FreePages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
@@ -1749,9 +1948,6 @@ DeviceDiscoveryNotify (
       }
 
       Private->SmmuV3ControllerProtocol.SetAttribute = SetAttributeSmmuV3;
-
-      DEBUG ((DEBUG_ERROR, "%a: Base Addr 0x%lx\n", __FUNCTION__, Private->BaseAddress));
-      DEBUG ((DEBUG_ERROR, "%a: PHandle 0x%lx\n", __FUNCTION__, Private->SmmuV3ControllerProtocol.PHandle));
 
       Status = InitializeSmmuV3 (Private);
       if (EFI_ERROR (Status)) {
