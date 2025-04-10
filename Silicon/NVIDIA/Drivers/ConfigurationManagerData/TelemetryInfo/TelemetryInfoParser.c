@@ -357,6 +357,10 @@ UpdateDramSpeed (
   TEGRA_DRAM_DEVICE_INFO  *DramInfo;
   VOID                    *Hob;
   UINT32                  *TelemetryData;
+  UINT32                  DramSpeed;
+  UINT8                   Index;
+  UINT8                   BaseIndex;
+  UINT8                   NumModules;
 
   TelemetryData = NULL;
   TelemetryData = (UINT32 *)TelemetryDataBuffAddr;
@@ -364,9 +368,17 @@ UpdateDramSpeed (
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
-    DramInfo                                           = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
-    DramInfo[SocketId * MAX_DIMMS_PER_SOCKET].SpeedKhz = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
-    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramInfo[SocketId * MAX_DIMMS_PER_SOCKET].SpeedKhz, SocketId));
+    DramInfo   = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    NumModules = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumModules[SocketId];
+    DramSpeed  = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
+
+    // Populate the DramInfo struct sequentially based on the number of modules present per socket.
+    BaseIndex = SocketId * NumModules;
+    for (Index = 0; Index < NumModules; Index++) {
+      DramInfo[BaseIndex + Index].SpeedKhz = DramSpeed;
+    }
+
+    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramSpeed, SocketId));
   } else {
     return EFI_NOT_FOUND;
   }
