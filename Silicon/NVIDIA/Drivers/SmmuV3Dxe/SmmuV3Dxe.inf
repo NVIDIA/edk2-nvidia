@@ -36,6 +36,7 @@
   UefiDriverEntryPoint
   DeviceDiscoveryDriverLib
   UefiBootServicesTableLib
+  CacheMaintenanceLib
 
 [Guids]
   gNVIDIANonDiscoverableSmmuV3DeviceGuid

@@ -12,6 +12,8 @@
 #define _SMMU_V3_DXE_PRIVATE_H_
 
 #include <Protocol/SmmuV3Protocol.h>
+#include <Protocol/IoMmu.h>
+#include <Library/SmmuLib.h>
 
 #define SMMU_V3_CONTROLLER_SIGNATURE  SIGNATURE_32('S','M','U','3')
 
@@ -215,15 +217,31 @@
 #define SMMU_V3_OP_CMD_SYNC       (0x46)
 
 // Stream Table Entry fields
-#define SMMU_V3_STE_VALID             (1ULL)
-#define SMMU_V3_STE_CFG_ABORT         (0ULL)
-#define SMMU_V3_STE_CFG_BYPASS        (4ULL)
-#define SMMU_V3_USE_INCOMING_ATTR     (0ULL)
-#define SMMU_V3_USE_INCOMING_SH_ATTR  (1ULL)
+#define SMMU_V3_STE_VALID              (1ULL)
+#define SMMU_V3_STE_CFG_ABORT          (0ULL)
+#define SMMU_V3_STE_CFG_BYPASS         (4ULL)
+#define SMMU_V3_STE_CFG_STG2           (6ULL)
+#define SMMU_V3_STW_EL2                (2ULL)
+#define SMMU_V3_UEFI_VM_ID             (1ULL)
+#define SMMU_V3_USE_INCOMING_ATTR      (0ULL)
+#define SMMU_V3_USE_INCOMING_SH_ATTR   (1ULL)
+#define SMMU_V3_WB_CACHEABLE           (1ULL)
+#define SMMU_V3_INNER_SHAREABLE        (3ULL)
+#define SMMU_V3_S2TF_4KB               (0ULL)
+#define SMMU_V3_S2AA64                 (1ULL)
+#define SMMU_V3_S2_LITTLEENDIAN        (0ULL)
+#define SMMU_V3_AF_DISABLED            (1ULL)
+#define SMMU_V3_PTW_DEVICE_FAULT       (1ULL)
+#define SMMU_V3_VTTBR_BASE_ADDR_MASK   (0xFFFFFFFFFFFFULL)
+#define SMMU_V3_VTTBR_BASE_ADDR_SHIFT  (4ULL)
 
 #define SMMU_V3_WRAP_1DW            (64)
+#define SMMU_V3_WRAP_2DW            (128)
+#define SMMU_V3_WRAP_3DW            (192)
 #define SMMU_V3_STE_CFG_SHIFT       (1)
 #define SMMU_V3_STE_CFG_MASK        (0x7)
+#define SMMU_V3_STE_STW_SHIFT       (94 - SMMU_V3_WRAP_1DW)
+#define SMMU_V3_STE_STW_MASK        (0x3)
 #define SMMU_V3_STE_MTCFG_SHIFT     (100 - SMMU_V3_WRAP_1DW)
 #define SMMU_V3_STE_MTCFG_MASK      (0x1)
 #define SMMU_V3_STE_ALLOCCFG_SHIFT  (101 - SMMU_V3_WRAP_1DW)
@@ -236,6 +254,86 @@
 #define SMMU_V3_STE_PRIVCFG_MASK    (0x3)
 #define SMMU_V3_STE_INSTCFG_SHIFT   (114 - SMMU_V3_WRAP_1DW)
 #define SMMU_V3_STE_INSTCFG_MASK    (0x3)
+#define SMMU_V3_STE_VMID_SHIFT      (128 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_VMID_MASK       0xFFFF
+#define SMMU_V3_STE_S2T0SZ_SHIFT    (160 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2T0SZ_MASK     (0x3F)
+#define SMMU_V3_STE_S2SL0_SHIFT     (166 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2SL0_MASK      (0x3)
+#define SMMU_V3_STE_S2IR0_SHIFT     (168 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2IR0_MASK      (0x3)
+#define SMMU_V3_STE_S2OR0_SHIFT     (170 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2OR0_MASK      (0x3)
+#define SMMU_V3_STE_S2SH0_SHIFT     (172 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2SH0_MASK      (0x3)
+#define SMMU_V3_STE_S2TG_SHIFT      (174 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2TG_MASK       (0x3)
+#define SMMU_V3_STE_S2PS_SHIFT      (176 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2PS_MASK       (0x7)
+#define SMMU_V3_STE_S2AA64_SHIFT    (179 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2AA64_MASK     (0x1)
+#define SMMU_V3_STE_S2ENDI_SHIFT    (180 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2ENDI_MASK     (0x1)
+#define SMMU_V3_STE_S2AFFD_SHIFT    (181 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2AFFD_MASK     (0x1)
+#define SMMU_V3_STE_S2PTW_SHIFT     (182 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2PTW_MASK      (0x1)
+#define SMMU_V3_STE_S2RS_SHIFT      (185 - SMMU_V3_WRAP_2DW)
+#define SMMU_V3_STE_S2RS_MASK       (0x3)
+#define SMMU_V3_STE_S2TTB_SHIFT     (196 - SMMU_V3_WRAP_3DW)
+#define SMMU_V3_STE_S2TTB_MASK      SMMUV3_ALL_ONES(48)
+
+#define SMMU_V3_MAX_PAGE_TABLE_LEVEL    (4)
+#define SMMU_V3_PAGE_TABLE_START_LEVEL  (0)
+
+#define SMMU_V3_SMMU_READ   (1)
+#define SMMU_V3_SMMU_WRITE  (2)
+
+// Page Table Entry Types
+#define SMMU_V3_PTE_TYPE_BLOCK  (0x1)
+#define SMMU_V3_PTE_TYPE_TABLE  (0x3)
+#define SMMU_V3_PTE_TYPE_PAGE   (0x3)
+
+// Page Table Entry Attributes
+#define SMMU_V3_PTE_NG                  (BIT11)        // Non-Global
+#define SMMU_V3_PTE_SH_INNER_SHAREABLE  (BIT8 | BIT9)  // Inner Shareable
+#define SMMU_V3_PTE_AF                  (BIT10)        // Access Flag
+#define SMMU_V3_PTE_AP_RDONLY           (BIT6)         // Read-only
+#define SMMU_V3_PTE_AP_WRONLY           (BIT7)         // Write-only
+#define SMMU_V3_PTE_AP_READ_WRITE       (BIT7 | BIT6)  // Read/Write
+
+// Memory Attribute and Address Masks
+#define SMMU_V3_MAIR_ATTR_IDX_CACHE   (1)
+#define SMMU_V3_PTE_ATTR_INDEX_SHIFT  (2)
+#define SMMU_V3_PTE_ADDR_MASK         (0xFFFFFFFFF000ULL)
+
+// Combined PTE Flags
+#define SMMU_V3_PTE_FLAGS  (SMMU_V3_PTE_NG | /*SMMU_V3_PTE_AP_UNPRIV |*/             \
+                                       SMMU_V3_PTE_SH_INNER_SHAREABLE | SMMU_V3_PTE_AF)
+
+#define SMMU_V3_LEVEL0_PAGE_SHIFT  (39)
+#define SMMU_V3_LEVEL1_PAGE_SHIFT  (30)
+#define SMMU_V3_LEVEL2_PAGE_SHIFT  (21)
+#define SMMU_V3_LEVEL3_PAGE_SHIFT  (12)
+
+#define SMMU_V3_LEVEL0_PAGE_SIZE  (1ULL << SMMU_V3_LEVEL0_PAGE_SHIFT)
+#define SMMU_V3_LEVEL1_PAGE_SIZE  (1ULL << SMMU_V3_LEVEL1_PAGE_SHIFT)
+#define SMMU_V3_LEVEL2_PAGE_SIZE  (1ULL << SMMU_V3_LEVEL2_PAGE_SHIFT)
+#define SMMU_V3_LEVEL3_PAGE_SIZE  (1ULL << SMMU_V3_LEVEL3_PAGE_SHIFT)
+
+#define SMMU_V3_PAGE_INDEX_SIZE  (SMMU_V3_LEVEL2_PAGE_SHIFT - SMMU_V3_LEVEL3_PAGE_SHIFT)
+
+typedef struct {
+  UINT64    Size;    // Page size for translation level
+  UINT32    Shift;   // Page shift value for level
+} SMMU_V3_TT_LEVEL;
+
+STATIC CONST SMMU_V3_TT_LEVEL  mSmmuV3TtLevel[] = {
+  { SMMU_V3_LEVEL0_PAGE_SIZE, SMMU_V3_LEVEL0_PAGE_SHIFT },
+  { SMMU_V3_LEVEL1_PAGE_SIZE, SMMU_V3_LEVEL1_PAGE_SHIFT },
+  { SMMU_V3_LEVEL2_PAGE_SIZE, SMMU_V3_LEVEL2_PAGE_SHIFT },
+  { SMMU_V3_LEVEL3_PAGE_SIZE, SMMU_V3_LEVEL3_PAGE_SHIFT }
+};
 
 typedef struct {
   EFI_PHYSICAL_ADDRESS    QBase;
@@ -269,6 +367,7 @@ typedef struct {
   SMMU_V3_QUEUE                        CmdQueue;
   SMMU_V3_QUEUE                        EvtQueue;
   EFI_PHYSICAL_ADDRESS                 SteBase;
+  EFI_PHYSICAL_ADDRESS                 SteS2TtbBaseAddresses;
   VOID                                 *DeviceTreeBase;
   INT32                                NodeOffset;
   EFI_EVENT                            ReadyToBootEvent;

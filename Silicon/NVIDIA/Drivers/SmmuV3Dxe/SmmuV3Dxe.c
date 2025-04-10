@@ -19,6 +19,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/CacheMaintenanceLib.h>
 #include "SmmuV3DxePrivate.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
@@ -530,14 +531,14 @@ ClearSte (
 /**
   Write stream table entry (STE)
 
-  @param[in, out]      StEntry      Pointer to STE Entry
+  @param[in, out]      SteEntry      Pointer to STE Entry
   @param[in]           SteData      Pointer to STE Data
 
  **/
 STATIC
 VOID
 WriteSte (
-  IN OUT UINT64    *StEntry,
+  IN OUT UINT64    *SteEntry,
   IN CONST UINT64  *SteData
   )
 {
@@ -547,7 +548,7 @@ WriteSte (
     Invalidate Stream Table Entry by clearing the Valid bit
     Sets STE.Valid to 0 (bit[0] of first 64-bit word)
   */
-  StEntry[0] = 0;
+  SteEntry[0] = 0;
 
   /*
     Update Stream Table Entry by writing the upper 64-bit word first,
@@ -555,7 +556,7 @@ WriteSte (
     ensuring proper memory ordering
    */
   for (Index = SMMU_V3_STRTAB_ENTRY_SIZE_DW - 1; Index >= 0; Index--) {
-    StEntry[Index] = SteData[Index];
+    SteEntry[Index] = SteData[Index];
   }
 
   // Ensure written data (STE) is observable to SMMU controller by performing DSB
@@ -621,12 +622,29 @@ SetupSmmuV3StrTable (
   EFI_STATUS            Status;
   UINT32                StrtabSize;
   UINT32                StrtabCfgSetting;
+  UINT32                S2TtbBaseAddrTableSize;
   UINT64                StrtabBaseReg;
   EFI_PHYSICAL_ADDRESS  TblBase;
+  EFI_PHYSICAL_ADDRESS  S2TtbBaseAddrTable;
 
   if (Private == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
+  S2TtbBaseAddrTableSize = (1 << Private->Features.StreamNBits) * sizeof (EFI_PHYSICAL_ADDRESS);
+  DEBUG ((DEBUG_INFO, "%a: Total S2TTB entries: %d\n", __FUNCTION__, (1 << Private->Features.StreamNBits)));
+  DEBUG ((DEBUG_INFO, "%a: S2TTB Base Address Table size: 0x%lx\n", __FUNCTION__, S2TtbBaseAddrTableSize));
+
+  S2TtbBaseAddrTable = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (S2TtbBaseAddrTableSize));
+  if (!S2TtbBaseAddrTable) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for S2TTB Base Address Table\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  ZeroMem ((VOID *)S2TtbBaseAddrTable, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (S2TtbBaseAddrTableSize)));
+  DEBUG ((DEBUG_INFO, "%a: S2TtbBaseAddrTable: 0x%lx\n", __FUNCTION__, S2TtbBaseAddrTable));
+
+  Private->SteS2TtbBaseAddresses = S2TtbBaseAddrTable;
 
   StrtabSize = (1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE;
   DEBUG ((DEBUG_INFO, "%a: Total STRTAB entries: %d\n", __FUNCTION__, (1 << Private->Features.StreamNBits)));
@@ -1300,6 +1318,8 @@ CreateAbortSte (
   Ste[7] = 0;
 }
 
+#if 0
+
 /**
   Creates a stream table entry (STE) configured for bypass mode.
 
@@ -1344,6 +1364,8 @@ CreateBypassSte (
   Ste[6] = 0;
   Ste[7] = 0;
 }
+
+#endif
 
 /**
   Sets up default translation behavior for SMMUv3 streams.
@@ -1508,12 +1530,6 @@ InitializeSmmuV3 (
     return Status;
   }
 
-  // TODO: Implement SMMUv3 initialization steps:
-  // 1. Check hardware status
-  // 2. Configure global settings
-  // 3. Setup command queue
-  // 4. Setup event queue
-  // 5. Enable SMMU operation
   Status = ConfigureSmmuV3ControllerSettings (Private);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to configure SMMUv3 settings\n", __FUNCTION__));
@@ -1630,6 +1646,107 @@ InvalidateCachedSte (
 }
 
 /**
+  Creates a Stage 2 Stream Table Entry (STE) configuration for SMMU v3.
+
+  This function initializes an STE for Stage 2 translation with:
+  - Valid bit and stage 1 bypass configuration
+  - VM ID, input/output address size parameters
+  - Translation granule size (4KB)
+  - Cacheability and shareability attributes
+  - Little endian configuration
+  - Access flag disabled
+  - Page table walk configuration
+
+  @param[in]   Private    Pointer to the SMMU_V3_CONTROLLER_PRIVATE_DATA instance.
+  @param[out]  Ste        Pointer to store the configured STE
+
+  @retval EFI_SUCCESS             STE configuration created successfully
+  @retval EFI_INVALID_PARAMETER   Private or Ste pointer is NULL
+**/
+STATIC
+EFI_STATUS
+CreateStage2Ste (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  OUT UINT64                           *Ste,
+  IN  UINT32                           StreamId
+  )
+{
+  UINT32                PaBits;
+  UINT64                Sl0;
+  UINT64                S2PsBits;
+  EFI_PHYSICAL_ADDRESS  Ttbr;
+  UINT64                *SteS2TtbAddr;
+  UINT32                SteCount;
+  UINT64                TtbrTemp;
+
+  if ((Private == NULL) || (Ste == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid input params\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  S2PsBits = Private->Features.OasEncoding;
+  PaBits   = Private->Features.Oas;
+
+  if (PaBits >= 44) {
+    Sl0 = 2;
+  } else if (PaBits >= 35) {
+    Sl0 = 1;
+  } else {
+    Sl0 = 0;
+  }
+
+  // Bits 63:0
+  Ste[0] = SMMU_V3_STE_VALID | BIT_FIELD_SET (SMMU_V3_STE_CFG_STG2, SMMU_V3_STE_CFG_MASK, SMMU_V3_STE_CFG_SHIFT);
+
+  // Bits 191:128
+  Ste[2]  = BIT_FIELD_SET (SMMU_V3_UEFI_VM_ID, SMMU_V3_STE_VMID_MASK, SMMU_V3_STE_VMID_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (64 - Private->Features.Ias, SMMU_V3_STE_S2T0SZ_MASK, SMMU_V3_STE_S2T0SZ_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (Sl0, SMMU_V3_STE_S2SL0_MASK, SMMU_V3_STE_S2SL0_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_WB_CACHEABLE, SMMU_V3_STE_S2IR0_MASK, SMMU_V3_STE_S2IR0_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_WB_CACHEABLE, SMMU_V3_STE_S2OR0_MASK, SMMU_V3_STE_S2OR0_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_INNER_SHAREABLE, SMMU_V3_STE_S2SH0_MASK, SMMU_V3_STE_S2SH0_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_S2TF_4KB, SMMU_V3_STE_S2TG_MASK, SMMU_V3_STE_S2TG_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (S2PsBits, SMMU_V3_STE_S2PS_MASK, SMMU_V3_STE_S2PS_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_S2AA64, SMMU_V3_STE_S2AA64_MASK, SMMU_V3_STE_S2AA64_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_S2_LITTLEENDIAN, SMMU_V3_STE_S2ENDI_MASK, SMMU_V3_STE_S2ENDI_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_AF_DISABLED, SMMU_V3_STE_S2AFFD_MASK, SMMU_V3_STE_S2AFFD_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (SMMU_V3_PTW_DEVICE_FAULT, SMMU_V3_STE_S2PTW_MASK, SMMU_V3_STE_S2PTW_SHIFT);
+  Ste[2] |= BIT_FIELD_SET (0ULL, SMMU_V3_STE_S2RS_MASK, SMMU_V3_STE_S2RS_SHIFT);
+
+  // Bits 243:196
+  // Configure ttbr
+  SteS2TtbAddr = (UINT64 *)Private->SteS2TtbBaseAddresses + StreamId;
+
+  Ttbr = (EFI_VIRTUAL_ADDRESS)AllocatePages (1);
+  if (Ttbr == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for VTTBR\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Invalidate cache before page table setup to ensure working with
+  // clean memory state and prevent stale cache entries from affecting
+  // page table population
+  InvalidateDataCacheRange ((VOID *)Ttbr, EFI_PAGE_SIZE);
+
+  ZeroMem ((VOID *)Ttbr, EFI_PAGE_SIZE);
+
+  CopyMem (SteS2TtbAddr, &Ttbr, sizeof (EFI_PHYSICAL_ADDRESS));
+
+  SteCount = (1 << Private->Features.StreamNBits);
+
+  TtbrTemp = (Ttbr & (SMMU_V3_VTTBR_BASE_ADDR_MASK << SMMU_V3_VTTBR_BASE_ADDR_SHIFT)) >> SMMU_V3_VTTBR_BASE_ADDR_SHIFT;
+
+  DEBUG ((DEBUG_INFO, "%a: TTBR: 0x%lx Ttbr temp: 0x%lx\n", __FUNCTION__, Ttbr, TtbrTemp));
+  DEBUG ((DEBUG_INFO, "%a: SteS2TtbAddr: 0x%p SteS2Ttbr: 0x%lx\n", __FUNCTION__, (VOID *)SteS2TtbAddr, *SteS2TtbAddr));
+
+  Ste[1] = BIT_FIELD_SET (SMMU_V3_STW_EL2, SMMU_V3_STE_STW_MASK, SMMU_V3_STE_STW_SHIFT);
+
+  Ste[3] |= BIT_FIELD_SET (TtbrTemp, SMMU_V3_STE_S2TTB_MASK, SMMU_V3_STE_S2TTB_SHIFT);
+
+  return EFI_SUCCESS;
+}
+
+/**
   Configures a Stream Table Entry (STE) in the SMMU v3 controller.
 
   This function performs the following steps:
@@ -1678,7 +1795,11 @@ ConfigureSmmuv3Ste (
   }
 
   ClearSte (SteData);
-  CreateBypassSte (SteData);
+  Status = CreateStage2Ste (Private, SteData, StreamId);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to create STE configuration for Stream ID: %u\n", __FUNCTION__, StreamId));
+    return Status;
+  }
 
   SteAddr = (UINT64 *)Private->SteBase + (StreamId * SMMU_V3_STRTAB_ENTRY_SIZE_DW);
   WriteSte (SteAddr, SteData);
@@ -1693,6 +1814,415 @@ ConfigureSmmuv3Ste (
 
   return Status;
 }
+
+STATIC
+UINT64
+TableIndex (
+  IN  UINT64  Address,
+  IN  UINT32  Level
+  )
+{
+  return (Address >> mSmmuV3TtLevel[Level].Shift) & ((1 << SMMU_V3_PAGE_INDEX_SIZE) - 1);
+}
+
+STATIC
+EFI_STATUS
+InstallBlockPte (
+  IN  EFI_PHYSICAL_ADDRESS  DeviceAddress,
+  IN  UINT32                Operations,
+  IN  UINT32                Level,
+  IN  UINT64                *Pte
+  )
+{
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Entry - DevAddr:0x%lx Op:0x%x Level:%u Pte:0x%lx Pte value: 0x%lx\n",
+    __FUNCTION__,
+    DeviceAddress,
+    Operations,
+    Level,
+    (UINT64)Pte,
+    *Pte
+    ));
+  if (Pte == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Pte parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!(Operations & (SMMU_V3_SMMU_READ | SMMU_V3_SMMU_WRITE))) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Operations:0x%x\n", __FUNCTION__, Operations));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Level >= SMMU_V3_MAX_PAGE_TABLE_LEVEL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Level:%u\n", __FUNCTION__, Level));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Pte |= SMMU_V3_PTE_FLAGS;
+  DEBUG ((DEBUG_INFO, "%a: Added PTE flags, current value:0x%lx\n", __FUNCTION__, *Pte));
+
+  if ((Operations & SMMU_V3_SMMU_READ) && !(Operations & SMMU_V3_SMMU_WRITE)) {
+    *Pte |= SMMU_V3_PTE_AP_RDONLY;
+    DEBUG ((DEBUG_INFO, "%a: Set read-only access\n", __FUNCTION__));
+  } else if ((Operations & SMMU_V3_SMMU_WRITE) && !(Operations & SMMU_V3_SMMU_READ)) {
+    *Pte |= SMMU_V3_PTE_AP_WRONLY;
+    DEBUG ((DEBUG_INFO, "%a: Set write-only access\n", __FUNCTION__));
+  } else {
+    *Pte |= SMMU_V3_PTE_AP_READ_WRITE;
+    DEBUG ((DEBUG_INFO, "%a: Set read-write access\n", __FUNCTION__));
+  }
+
+  *Pte |= (SMMU_V3_MAIR_ATTR_IDX_CACHE << SMMU_V3_PTE_ATTR_INDEX_SHIFT);
+
+  if (Level == SMMU_V3_MAX_PAGE_TABLE_LEVEL - 1) {
+    *Pte |= SMMU_V3_PTE_TYPE_PAGE;
+    DEBUG ((DEBUG_INFO, "%a: Set page type\n", __FUNCTION__));
+  } else {
+    *Pte |= SMMU_V3_PTE_TYPE_BLOCK;
+    DEBUG ((DEBUG_INFO, "%a: Set block type\n", __FUNCTION__));
+  }
+
+  *Pte |= DeviceAddress;
+  DEBUG ((DEBUG_INFO, "%a: Final PTE value:0x%lx\n", __FUNCTION__, *Pte));
+
+  DEBUG ((DEBUG_INFO, "%a: L%u entry address: 0x%lx\n", __FUNCTION__, Level, (UINT64)Pte));
+  DEBUG ((DEBUG_INFO, "%a: L%u entry value: 0x%lx\n", __FUNCTION__, Level, *Pte));
+
+  InvalidateDataCacheRange ((VOID *)Pte, sizeof (*Pte));
+
+  DEBUG ((DEBUG_INFO, "%a: Exit Success\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+InstallTablePte (
+  IN  UINT64  *Table,
+  IN  UINT32  Level,
+  IN  UINT64  *TtPte
+  )
+{
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Entry - Table:0x%lx TtPte:0x%lx\n",
+    __FUNCTION__,
+    (UINT64)Table,
+    (UINT64)TtPte
+    ));
+  if ((Table == NULL) || (TtPte == NULL)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid parameters - Table:%p TtPte:%p\n",
+      __FUNCTION__,
+      Table,
+      TtPte
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ArmDataSynchronizationBarrier ();
+
+  *TtPte = ((UINT64)Table) | SMMU_V3_PTE_TYPE_TABLE;
+  DEBUG ((DEBUG_INFO, "%a: Configured PTE - Value:0x%lx\n", __FUNCTION__, *TtPte));
+
+  DEBUG ((DEBUG_INFO, "%a: L%u entry address: 0x%lx\n", __FUNCTION__, Level, (UINT64)TtPte));
+  DEBUG ((DEBUG_INFO, "%a: L%u entry value: 0x%lx\n", __FUNCTION__, Level, *TtPte));
+
+  InvalidateDataCacheRange ((VOID *)TtPte, sizeof (*TtPte));
+
+  DEBUG ((DEBUG_INFO, "%a: Exit Success\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+STATIC
+VOID
+CleanPte (
+  IN UINT64  *Pte
+  )
+{
+  DEBUG ((DEBUG_INFO, "%a: Entry - Pte:0x%lx Value:0x%lx\n", __FUNCTION__, (UINT64)Pte, *Pte));
+  *Pte = 0;
+
+  InvalidateDataCacheRange ((VOID *)Pte, sizeof (*Pte));
+  DEBUG ((DEBUG_INFO, "%a: Cleared PTE\n", __FUNCTION__));
+}
+
+STATIC
+EFI_STATUS
+SmmuV3DisableProtection (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN  EFI_VIRTUAL_ADDRESS              HostAddress,
+  IN  UINTN                            Size,
+  IN  UINT32                           StreamId,
+  OUT UINTN                            *UnmappedSize
+  )
+{
+  EFI_STATUS           Status;
+  EFI_VIRTUAL_ADDRESS  TranslationTable;
+  UINT32               Lvl;
+  UINT64               TblIdx;
+  UINT64               *TtPte;
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Entry - HostAddr:0x%lx Size:0x%x StreamId:%u\n",
+    __FUNCTION__,
+    HostAddress,
+    Size,
+    StreamId
+    ));
+
+  if ((Private == NULL) || (UnmappedSize == NULL)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Invalid parameters - Private:%p UnmappedSize:%p\n",
+      __FUNCTION__,
+      Private,
+      UnmappedSize
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!Size || !IS_ALIGNED (Size, EFI_PAGE_SIZE)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Size:0x%x or alignment\n", __FUNCTION__, Size));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (StreamId >= (1 << Private->Features.StreamNBits)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid StreamId\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (HostAddress & (EFI_PAGE_SIZE - 1)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Input Address\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  while (*UnmappedSize < Size) {
+    DEBUG ((DEBUG_INFO, "%a: Processing chunk - HostAddr:0x%lx Size:0x%x\n", __FUNCTION__, HostAddress, Size));
+    TranslationTable = (EFI_VIRTUAL_ADDRESS)Private->SteS2TtbBaseAddresses + StreamId;
+    DEBUG ((DEBUG_INFO, "%a: TranslationTable:0x%lx\n", __FUNCTION__, TranslationTable));
+
+    for (Lvl = 0; Lvl < SMMU_V3_MAX_PAGE_TABLE_LEVEL; Lvl++) {
+      TblIdx = TableIndex (HostAddress, Lvl);
+      DEBUG ((DEBUG_INFO, "%a: Table index: %lu HostAddr:0x%lx Level %u\n", __FUNCTION__, TblIdx, HostAddress, Lvl));
+      TtPte = (UINT64 *)TranslationTable + TblIdx;
+      DEBUG ((DEBUG_INFO, "%a: TtPte:0x%lx TtPte value:0x%lx\n", __FUNCTION__, (UINT64)TtPte, *TtPte));
+
+      if (*TtPte == 0ULL) {
+        DEBUG ((DEBUG_ERROR, "%a: No PTE mappings found for iova 0x%lx\n", __FUNCTION__, HostAddress));
+        *UnmappedSize = 0;
+        return EFI_NO_MAPPING;
+      }
+
+      if (mSmmuV3TtLevel[Lvl].Size == EFI_PAGE_SIZE) {
+        CleanPte (TtPte);
+        TrackCmdqIdx (Private);
+        // Invalidate and sync tlb entries
+        Status = InvalidateCachedCfgsTlbs (Private);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_INFO, "%a: Failed to invalidate cached configurations and TLBs\n", __FUNCTION__));
+          return EFI_DEVICE_ERROR;
+        }
+
+        // Issue CMD_SYNC to ensure completion of prior commands used for invalidation
+        Status = SynchronizeCmdq (Private);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_INFO, "%a: Failed to synchronize command queue\n", __FUNCTION__));
+          return EFI_DEVICE_ERROR;
+        }
+
+        TrackCmdqIdx (Private);
+        break;
+      }
+
+      TranslationTable = (EFI_VIRTUAL_ADDRESS)(*TtPte & SMMU_V3_PTE_ADDR_MASK);
+      DEBUG ((DEBUG_INFO, "%a: Found existing translation table at:0x%lx\n", __FUNCTION__, TranslationTable));
+    }
+
+    HostAddress   += EFI_PAGE_SIZE;
+    *UnmappedSize -= EFI_PAGE_SIZE;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+SmmuV3EnableProtection (
+  IN  SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private,
+  IN  EFI_VIRTUAL_ADDRESS              HostAddress,
+  IN  UINTN                            Size,
+  IN  EFI_PHYSICAL_ADDRESS             DeviceAddress,
+  IN  UINT32                           Operations,
+  IN  UINT32                           StreamId
+  )
+{
+  EFI_STATUS           Status;
+  UINT64               *TranslationTable;
+  UINT32               Lvl;
+  UINT64               TblIdx;
+  UINT64               *TtPte;
+  UINT64               *TtNext;
+  EFI_VIRTUAL_ADDRESS  OriginalHostAddress;
+  UINTN                OriginalSize;
+  UINTN                UnmappedSize;
+  UINT64               *BasePtr;
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Entry - HostAddr:0x%lx Size:0x%x DevAddr:0x%lx Op:0x%x StreamId:%u\n",
+    __FUNCTION__,
+    HostAddress,
+    Size,
+    DeviceAddress,
+    Operations,
+    StreamId
+    ));
+
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Private parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!(Operations & (SMMU_V3_SMMU_READ | SMMU_V3_SMMU_WRITE))) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Operations:0x%x\n", __FUNCTION__, Operations));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (!Size || !IS_ALIGNED (Size, EFI_PAGE_SIZE)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Size\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (StreamId >= (1 << Private->Features.StreamNBits)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid StreamId\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (HostAddress & (EFI_PAGE_SIZE - 1)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid Host Address\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  OriginalHostAddress = HostAddress;
+  OriginalSize        = Size;
+
+  while (Size) {
+    DEBUG ((DEBUG_INFO, "%a: Processing chunk - HostAddr:0x%lx Size:0x%x DevAddr:0x%lx\n", __FUNCTION__, HostAddress, Size, DeviceAddress));
+    BasePtr          = (UINT64 *)Private->SteS2TtbBaseAddresses;
+    TranslationTable = (UINT64 *)BasePtr[StreamId];
+    DEBUG ((DEBUG_INFO, "%a: TranslationTable:0x%p Value:0x%lx\n", __FUNCTION__, (VOID *)TranslationTable, *TranslationTable));
+
+    for (Lvl = 0; Lvl < SMMU_V3_MAX_PAGE_TABLE_LEVEL; Lvl++) {
+      DEBUG ((DEBUG_INFO, "%a: Level %u translation\n", __FUNCTION__, Lvl));
+      TblIdx = TableIndex (HostAddress, Lvl);
+      DEBUG ((DEBUG_INFO, "%a: Table index: %lu HostAddr:0x%lx Level %u\n", __FUNCTION__, TblIdx, HostAddress, Lvl));
+
+      TtPte = (UINT64 *)TranslationTable + TblIdx;
+      DEBUG ((DEBUG_INFO, "%a: TtPte:0x%lx TtPte value:0x%lx\n", __FUNCTION__, (UINT64)TtPte, *TtPte));
+
+      if (mSmmuV3TtLevel[Lvl].Size == EFI_PAGE_SIZE) {
+        Status = InstallBlockPte (DeviceAddress, Operations, Lvl, TtPte);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_INFO, "%a: Unable to install block pte for Device Addr: 0x%lx\n", __FUNCTION__, DeviceAddress));
+        }
+
+        break;
+      }
+
+      if (*TtPte) {
+        if ((*TtPte & SMMU_V3_PTE_TYPE_TABLE) == 0) {
+          DEBUG ((DEBUG_INFO, "%a: Table check TtPte:0x%lx TtPte value:0x%lx\n", __FUNCTION__, (UINT64)TtPte, *TtPte));
+          *TtPte |= SMMU_V3_PTE_TYPE_TABLE;
+          DEBUG ((DEBUG_INFO, "%a: Table check TtPte:0x%lx TtPte value:0x%lx\n", __FUNCTION__, (UINT64)TtPte, *TtPte));
+        }
+
+        TranslationTable = (UINT64 *)(*TtPte & SMMU_V3_PTE_ADDR_MASK);
+        DEBUG ((DEBUG_INFO, "%a: Found existing translation table at:0x%p Value: 0x%lx\n", __FUNCTION__, (VOID *)TranslationTable, *TranslationTable));
+        continue;
+      }
+
+      TtNext = (UINT64 *)AllocatePages (1);
+      if (TtNext == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for translation table\n", __FUNCTION__));
+        Status = EFI_OUT_OF_RESOURCES;
+        break;
+      }
+
+      // Invalidate cache before page table setup to ensure working with
+      // clean memory state and prevent stale cache entries from affecting
+      // page table population
+      InvalidateDataCacheRange ((VOID *)TtNext, EFI_PAGE_SIZE);
+
+      ZeroMem ((VOID *)TtNext, EFI_PAGE_SIZE);
+
+      DEBUG ((DEBUG_INFO, "%a: Allocated new translation table at:0x%p\n", __FUNCTION__, (VOID *)TtNext));
+      Status = InstallTablePte (TtNext, Lvl, TtPte);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_INFO, "%a: Unable to install table pte\n", __FUNCTION__));
+      }
+
+      TranslationTable = (UINT64 *)TtNext;
+      DEBUG ((DEBUG_INFO, "%a: Created new translation table at:0x%p\n", __FUNCTION__, (VOID *)TranslationTable));
+    }
+
+    if (Status != EFI_SUCCESS) {
+      break;
+    }
+
+    HostAddress   += EFI_PAGE_SIZE;
+    DeviceAddress += EFI_PAGE_SIZE;
+    Size          -= EFI_PAGE_SIZE;
+  }
+
+  ArmDataMemoryBarrier ();
+
+  if (Size) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to map all pages - Unmapped size: %lu\n", __FUNCTION__, Size));
+    SmmuV3DisableProtection (Private, OriginalHostAddress, OriginalSize, StreamId, &UnmappedSize);
+    return EFI_NO_MAPPING;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/*STATIC
+VOID
+FreePageTable (
+  IN  UINT32  Level,
+  IN  UINT64  *TtPte
+  )
+{
+  UINT64  *Start;
+  UINT64  *End;
+  UINT64  Pte;
+
+  Start = TtPte;
+
+  if (Level == SMMU_V3_MAX_PAGE_TABLE_LEVEL - 1) {
+    End = TtPte;
+  } else {
+    End = TtPte + EFI_PAGE_SIZE;
+  }
+
+  while (TtPte != End) {
+    Pte = *TtPte++;
+
+    if (!Pte) {
+      continue;
+    }
+
+    FreePageTable (Level + 1, (UINT64 *)(Pte & SMMU_V3_PTE_ADDR_MASK));
+  }
+
+  // Invalidate cache before page table setup to ensure working with
+  // clean memory state and prevent stale cache entries from affecting
+  // page table population
+  InvalidateDataCacheRange ((VOID *)Start, EFI_PAGE_SIZE);
+  // FreePages (Start, 1);
+}*/
 
 /**
   Set SMMU attribute for a system memory.
@@ -1720,22 +2250,124 @@ SetAttributeSmmuV3 (
 {
   EFI_STATUS                       Status;
   SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private;
+  MAP_INFO                         *MapInfo;
+  EFI_VIRTUAL_ADDRESS              HostAddress;
+  EFI_PHYSICAL_ADDRESS             DeviceAddress;
+  UINTN                            NumberOfPages;
+  UINTN                            NumberOfBytes;
+  UINT32                           Operations;
+  UINT64                           *SteS2TtbAddr;
+
+  if ((This == NULL)                                  ||
+      (Mapping == NULL)                               ||
+      (IoMmuAccess >= EdkiiIoMmuOperationMaximum)     ||
+      (IoMmuAccess < EdkiiIoMmuOperationBusMasterRead))
+  {
+    DEBUG ((DEBUG_INFO, "%a: Invalid parameters IoMmuAccess: %lu\n", __FUNCTION__, IoMmuAccess));
+    return EFI_INVALID_PARAMETER;
+  }
 
   Private = SMMU_V3_CONTROLLER_PRIVATE_DATA_FROM_PROTOCOL (This);
+  if (Private == NULL) {
+    DEBUG ((DEBUG_INFO, "%a: Invalid Private parameter\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
 
   if (Private->ReadyToBootEvent == NULL) {
     return EFI_SUCCESS;
   }
 
-  if (StreamId >= (1 << Private->Features.StreamNBits)) {
-    DEBUG ((DEBUG_ERROR, "%a: Invalid Stream ID: 0x%x\n", __FUNCTION__, StreamId));
+  if (Private->Signature != SMMU_V3_CONTROLLER_SIGNATURE) {
+    DEBUG ((DEBUG_INFO, "%a: Invalid Private signature\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = ConfigureSmmuv3Ste (Private, StreamId);
+  DEBUG ((DEBUG_INFO, "%a: StreamId: %u\n", __FUNCTION__, StreamId));
+  if (StreamId >= (1 << Private->Features.StreamNBits)) {
+    DEBUG ((DEBUG_INFO, "%a: Invalid Stream ID: %u\n", __FUNCTION__, StreamId));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MapInfo = (MAP_INFO *)Mapping;
+  if (MapInfo->Signature != MAP_INFO_SIGNATURE) {
+    DEBUG ((DEBUG_INFO, "%a: Invalid MapInfo signature\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  HostAddress   = MapInfo->HostAddress;
+  DeviceAddress = MapInfo->DeviceAddress;
+  NumberOfBytes = MapInfo->NumberOfBytes;
+  NumberOfPages = MapInfo->NumberOfPages;
+
+  DEBUG ((DEBUG_INFO, "%a: HostAddress: 0x%lx DeviceAddress: 0x%lx NumberOfBytes: %lu NumberOfPages: %lu StreamId: 0x%lx\n", __FUNCTION__, HostAddress, DeviceAddress, NumberOfBytes, NumberOfPages, StreamId));
+
+  if ((HostAddress == 0) || (DeviceAddress == 0) ||
+      (HostAddress != DeviceAddress))
+  {
+    DEBUG ((DEBUG_INFO, "%a: Invalid MapInfo parameters\n", __FUNCTION__));
+  }
+
+  HostAddress = DeviceAddress;
+
+  if ((NumberOfBytes == 0) ||
+      (NumberOfPages == 0))
+  {
+    DEBUG ((DEBUG_INFO, "%a: Invalid number of pages and bytes information\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  switch (IoMmuAccess) {
+    case EdkiiIoMmuOperationBusMasterRead:
+    case EdkiiIoMmuOperationBusMasterRead64:
+      Operations = SMMU_V3_SMMU_READ;
+      break;
+    case EdkiiIoMmuOperationBusMasterWrite:
+    case EdkiiIoMmuOperationBusMasterWrite64:
+      Operations = SMMU_V3_SMMU_WRITE;
+      break;
+    case EdkiiIoMmuOperationBusMasterCommonBuffer:
+    case EdkiiIoMmuOperationBusMasterCommonBuffer64:
+      Operations = SMMU_V3_SMMU_READ | SMMU_V3_SMMU_WRITE;
+      break;
+    default:
+      DEBUG ((DEBUG_INFO, "%a: Unsupported IoMmuAccess: %lu\n", __FUNCTION__, IoMmuAccess));
+      return EFI_INVALID_PARAMETER;
+  }
+
+  Operations = SMMU_V3_SMMU_READ | SMMU_V3_SMMU_WRITE;
+
+  DEBUG ((DEBUG_INFO, "%a: HostAddress: 0x%lx DeviceAddress: 0x%lx NumberOfBytes: %lu NumberOfPages: %lu StreamId: 0x%lx\n", __FUNCTION__, HostAddress, DeviceAddress, NumberOfBytes, NumberOfPages, StreamId));
+  DEBUG ((DEBUG_INFO, "%a: Operations: %u StreamId: %u\n", __FUNCTION__, Operations, StreamId));
+
+  SteS2TtbAddr = (UINT64 *)Private->SteS2TtbBaseAddresses + StreamId;
+  DEBUG ((DEBUG_INFO, "%a: StreamId: 0x%x SteS2TtbAddr: 0x%p SteS2Ttb: 0x%lx\n", __FUNCTION__, StreamId, (VOID *)SteS2TtbAddr, *SteS2TtbAddr));
+
+  if (*SteS2TtbAddr == 0) {
+    Status = ConfigureSmmuv3Ste (Private, StreamId);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_INFO, "%a: Failed to configure SMMUv3 STE for Stream ID: %u\n", __FUNCTION__, StreamId));
+      return Status;
+    }
+  }
+
+  Status = SmmuV3EnableProtection (Private, HostAddress, EFI_PAGES_TO_SIZE (NumberOfPages), DeviceAddress, Operations, StreamId);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to configure SMMUv3 STE for Stream ID: %u\n", __FUNCTION__, StreamId));
+    DEBUG ((DEBUG_INFO, "%a: Failed to enable Smmuv3 protection for host address 0x%lx, stream id %u\n", __FUNCTION__, HostAddress, StreamId));
     return Status;
+  }
+
+  // Invalidate cached configurations and TLBs
+  Status = InvalidateCachedCfgsTlbs (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: Failed to invalidate cached configurations and TLBs\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  // Issue CMD_SYNC to ensure completion of prior commands used for invalidation
+  Status = SynchronizeCmdq (Private);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: Failed to synchronize command queue\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
   }
 
   return Status;
@@ -1758,6 +2390,10 @@ OnReadyToBoot (
   SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private;
   UINT32                           GbpSetting;
 
+  /*UINT32                           SteCount;
+  UINT32                           Index;
+  UINT64                           *SteS2TtbAddr;*/
+
   gBS->CloseEvent (Event);
 
   Private = (SMMU_V3_CONTROLLER_PRIVATE_DATA *)Context;
@@ -1769,15 +2405,15 @@ OnReadyToBoot (
   Private->ReadyToBootEvent = NULL;
 
   if (Private->CmdQueue.QBase != 0) {
-    FreePages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
+    FreeAlignedPages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
   }
 
   if (Private->EvtQueue.QBase != 0) {
-    FreePages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
+    FreeAlignedPages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
   }
 
   if (Private->SteBase != 0) {
-    FreePages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
+    FreeAlignedPages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
   }
 
   // Disable Command Queue
@@ -1809,6 +2445,21 @@ OnReadyToBoot (
     DEBUG ((DEBUG_ERROR, "%a: Unable to disable event queue 0x%lx\n", __FUNCTION__, Private->BaseAddress));
     return;
   }
+
+  // Clear page tables
+
+  /*if (Private->SteS2TtbBaseAddresses != 0) {
+    SteCount = (1 << Private->Features.StreamNBits);
+    for (Index = 0; Index < SteCount; Index++) {
+      SteS2TtbAddr = (UINT64 *)Private->SteS2TtbBaseAddresses + Index;
+      if (*SteS2TtbAddr != 0) {
+        FreePageTable (SMMU_V3_PAGE_TABLE_START_LEVEL, (UINT64 *)*SteS2TtbAddr);
+        *SteS2TtbAddr = 0;
+      }
+    }
+
+    //FreePages ((VOID *)Private->SteS2TtbBaseAddresses, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * sizeof (EFI_PHYSICAL_ADDRESS)));
+  }*/
 
   // Set the controller in global bypass mode
   GbpSetting = BIT_FIELD_SET (1U, SMMU_V3_GBPA_UPDATE_MASK, SMMU_V3_GBPA_UPDATE_SHIFT);
@@ -1859,15 +2510,15 @@ Smmuv3Cleanup (
   }
 
   if (Private->CmdQueue.QBase != 0) {
-    FreePages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
+    FreeAlignedPages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
   }
 
   if (Private->EvtQueue.QBase != 0) {
-    FreePages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
+    FreeAlignedPages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
   }
 
   if (Private->SteBase != 0) {
-    FreePages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
+    FreeAlignedPages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
   }
 
   if (Private->ReadyToBootEvent != NULL) {
@@ -1955,7 +2606,7 @@ DeviceDiscoveryNotify (
         goto Exit;
       }
 
-      // Create an event to notify when the system is ready to exit boot services.
+      // Create an event to notify when the system is ready to boot.
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_NOTIFY,
@@ -1965,6 +2616,7 @@ DeviceDiscoveryNotify (
                       &Private->ReadyToBootEvent
                       );
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to install nvidia smmuv3 ready to boot event callback.\n", __FUNCTION__));
         goto Exit;
       }
 
@@ -1976,6 +2628,7 @@ DeviceDiscoveryNotify (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to install nvidia smmuv3 protocol.\n", __FUNCTION__));
         goto Exit;
       }
 
