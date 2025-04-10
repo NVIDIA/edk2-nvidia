@@ -417,7 +417,7 @@ menu "Boot Options"
     help
       How to hand-off the SOC display.
 
-    default SOC_DISPLAY_HANDOFF_MODE_NEVER
+    default SOC_DISPLAY_HANDOFF_MODE_AUTO
 
     config SOC_DISPLAY_HANDOFF_MODE_NEVER
     bool "Never"
