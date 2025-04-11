@@ -2,7 +2,7 @@
 
   UFS Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -72,6 +72,10 @@ typedef enum {
 #define PA_TX_HS_G1_PERPARE_LENGTH  0x1553U
 #define PA_TX_HS_G2_PERPARE_LENGTH  0x1555U
 #define PA_TX_HS_G3_PERPARE_LENGTH  0x1557U
+#define PA_TX_HS_ADAPT_TYPE         0x15D4U
+
+/* HS Adapt Type values, currently only PA_INITIAL_ADAPT_TYPE is known.*/
+#define PA_INITIAL_ADAPT_TYPE  0x01U
 
 #define PA_MAXRXHSGEAR  0x1587U
 
@@ -338,8 +342,8 @@ UfsCallback (
       DEBUG ((DEBUG_INFO, "%a: HS Series pcd=%u value=%u\n", __FUNCTION__, PcdGet32 (PcdUfsHsSeries), Value));
       Value = PcdGet32 (PcdUfsHsSeries);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_HS_SERIES, Value, NULL);
-
-      DEBUG ((DEBUG_INFO, "%a: HS pcd=%u mode=%u\n", __FUNCTION__, PcdGetBool (PcdUfsEnableHighSpeed), Mode));
+      UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_TX_HS_ADAPT_TYPE, PA_INITIAL_ADAPT_TYPE, NULL);
+      DEBUG ((DEBUG_INFO, "%a: HS pcd=%u mode=%u adapt type=%u\n", __FUNCTION__, PcdGetBool (PcdUfsEnableHighSpeed), Mode, PA_INITIAL_ADAPT_TYPE));
 
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_PWR_MODE, ((Mode << 4) | Mode), NULL);
       break;
