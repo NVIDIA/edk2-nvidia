@@ -423,12 +423,15 @@ SetupSmmuV3Cmdq (
   DEBUG ((DEBUG_INFO, "%a: Total CMDQ entries: %d\n", __FUNCTION__, (1 << Private->Features.CmdqEntriesLog2)));
 
   QBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (CmdqSize), CmdqSize);
-  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CmdqSize)));
-
   if (!QBase) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for CMDQ\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
+
+  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CmdqSize)));
+
+  // Perform cache maintenance to ensure SMMU sees the updated memory
+  WriteBackDataCacheRange ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (CmdqSize)));
 
   DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for CMDQ\n", __FUNCTION__, QBase));
   Private->CmdQueue.QBase = QBase;
@@ -447,6 +450,9 @@ SetupSmmuV3Cmdq (
   // Initialize command queue producer and consumer registers
   MmioWrite32 (Private->CmdQueue.ConsRegBase, 0);
   MmioWrite32 (Private->CmdQueue.ProdRegBase, 0);
+
+  // Ensure memory ordering
+  ArmDataSynchronizationBarrier ();
 
   return EFI_SUCCESS;
 }
@@ -481,12 +487,15 @@ SetupSmmuV3Evtq (
   DEBUG ((DEBUG_INFO, "%a: Total EVTQ entries: %d\n", __FUNCTION__, (1 << Private->Features.EvtqEntriesLog2)));
 
   QBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (EvtqSize), EvtqSize);
-  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (EvtqSize)));
-
   if (!QBase) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for EVTQ\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
+
+  ZeroMem ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (EvtqSize)));
+
+  // Perform cache maintenance to ensure SMMU sees the updated memory
+  WriteBackDataCacheRange ((VOID *)QBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (EvtqSize)));
 
   DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for EVTQ\n", __FUNCTION__, QBase));
   Private->EvtQueue.QBase = QBase;
@@ -505,6 +514,9 @@ SetupSmmuV3Evtq (
   // Initialize event queue producer and consumer registers
   MmioWrite32 (Private->EvtQueue.ConsRegBase, 0);
   MmioWrite32 (Private->EvtQueue.ProdRegBase, 0);
+
+  // Ensure memory ordering
+  ArmDataSynchronizationBarrier ();
 
   return EFI_SUCCESS;
 }
@@ -559,7 +571,10 @@ WriteSte (
     SteEntry[Index] = SteData[Index];
   }
 
-  // Ensure written data (STE) is observable to SMMU controller by performing DSB
+  // Perform cache maintenance to ensure SMMU sees the updated STE
+  WriteBackDataCacheRange ((VOID *)SteEntry, SMMU_V3_STRTAB_ENTRY_SIZE);
+
+  // Ensure memory ordering
   ArmDataSynchronizationBarrier ();
 }
 
@@ -838,6 +853,9 @@ PushEntryToCmdq (
   for (Index = 0; Index < SMMU_V3_CMD_SIZE_DW; Index++) {
     CmdqEntry[Index] = CmdDword[Index];
   }
+
+  // Perform cache maintenance to ensure SMMU sees the updated command
+  WriteBackDataCacheRange ((VOID *)CmdqEntry, SMMU_V3_CMD_SIZE);
 
   // Ensure data is observable to SMMU
   ArmDataSynchronizationBarrier ();
@@ -1723,12 +1741,10 @@ CreateStage2Ste (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  // Invalidate cache before page table setup to ensure working with
-  // clean memory state and prevent stale cache entries from affecting
-  // page table population
-  InvalidateDataCacheRange ((VOID *)Ttbr, EFI_PAGE_SIZE);
-
   ZeroMem ((VOID *)Ttbr, EFI_PAGE_SIZE);
+
+  // Perform cache maintenance to ensure SMMU sees the updated page table
+  WriteBackDataCacheRange ((VOID *)Ttbr, EFI_PAGE_SIZE);
 
   CopyMem (SteS2TtbAddr, &Ttbr, sizeof (EFI_PHYSICAL_ADDRESS));
 
@@ -1742,6 +1758,9 @@ CreateStage2Ste (
   Ste[1] = BIT_FIELD_SET (SMMU_V3_STW_EL2, SMMU_V3_STE_STW_MASK, SMMU_V3_STE_STW_SHIFT);
 
   Ste[3] |= BIT_FIELD_SET (TtbrTemp, SMMU_V3_STE_S2TTB_MASK, SMMU_V3_STE_S2TTB_SHIFT);
+
+  // Perform cache maintenance to ensure SMMU sees the updated STE
+  WriteBackDataCacheRange ((VOID *)Ste, SMMU_V3_STRTAB_ENTRY_SIZE);
 
   return EFI_SUCCESS;
 }
@@ -1889,7 +1908,7 @@ InstallBlockPte (
   DEBUG ((DEBUG_INFO, "%a: L%u entry address: 0x%lx\n", __FUNCTION__, Level, (UINT64)Pte));
   DEBUG ((DEBUG_INFO, "%a: L%u entry value: 0x%lx\n", __FUNCTION__, Level, *Pte));
 
-  InvalidateDataCacheRange ((VOID *)Pte, sizeof (*Pte));
+  WriteBackDataCacheRange ((VOID *)Pte, sizeof (*Pte));
 
   DEBUG ((DEBUG_INFO, "%a: Exit Success\n", __FUNCTION__));
   return EFI_SUCCESS;
@@ -1929,7 +1948,7 @@ InstallTablePte (
   DEBUG ((DEBUG_INFO, "%a: L%u entry address: 0x%lx\n", __FUNCTION__, Level, (UINT64)TtPte));
   DEBUG ((DEBUG_INFO, "%a: L%u entry value: 0x%lx\n", __FUNCTION__, Level, *TtPte));
 
-  InvalidateDataCacheRange ((VOID *)TtPte, sizeof (*TtPte));
+  WriteBackDataCacheRange ((VOID *)TtPte, sizeof (*TtPte));
 
   DEBUG ((DEBUG_INFO, "%a: Exit Success\n", __FUNCTION__));
   return EFI_SUCCESS;
@@ -2151,12 +2170,8 @@ SmmuV3EnableProtection (
         break;
       }
 
-      // Invalidate cache before page table setup to ensure working with
-      // clean memory state and prevent stale cache entries from affecting
-      // page table population
-      InvalidateDataCacheRange ((VOID *)TtNext, EFI_PAGE_SIZE);
-
       ZeroMem ((VOID *)TtNext, EFI_PAGE_SIZE);
+      WriteBackDataCacheRange ((VOID *)TtNext, EFI_PAGE_SIZE);
 
       DEBUG ((DEBUG_INFO, "%a: Allocated new translation table at:0x%p\n", __FUNCTION__, (VOID *)TtNext));
       Status = InstallTablePte (TtNext, Lvl, TtPte);

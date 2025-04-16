@@ -35,6 +35,7 @@
   UefiDriverEntryPoint
   DebugLib
   MemoryAllocationLib
+  CacheMaintenanceLib
   PcdLib
   SmmuLib
 

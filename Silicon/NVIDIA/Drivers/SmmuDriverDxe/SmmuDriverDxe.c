@@ -15,6 +15,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/CacheMaintenanceLib.h>
 #include <Protocol/PciIo.h>
 #include <Library/SmmuLib.h>
 #include <Protocol/SmmuV3Protocol.h>
@@ -289,6 +290,9 @@ IoMmuMap (
         (VOID *)(UINTN)MapInfo->HostAddress,
         MapInfo->NumberOfBytes
         );
+
+      // Perform cache maintenance on the destination (device memory)
+      WriteBackDataCacheRange ((VOID *)(UINTN)MapInfo->DeviceAddress, MapInfo->NumberOfBytes);
     }
   } else {
     MapInfo->DeviceAddress = MapInfo->HostAddress;
@@ -351,6 +355,9 @@ IoMmuUnmap (
     if ((MapInfo->Operation == EdkiiIoMmuOperationBusMasterWrite) ||
         (MapInfo->Operation == EdkiiIoMmuOperationBusMasterWrite64))
     {
+      // Invalidate the cache for the source (device memory)
+      InvalidateDataCacheRange ((VOID *)(UINTN)MapInfo->DeviceAddress, MapInfo->NumberOfBytes);
+
       CopyMem (
         (VOID *)(UINTN)MapInfo->HostAddress,
         (VOID *)(UINTN)MapInfo->DeviceAddress,
