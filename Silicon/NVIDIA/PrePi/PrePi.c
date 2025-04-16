@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -441,6 +441,45 @@ CEntryPoint (
                 (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
                 );
   SerialPortWrite ((UINT8 *)Buffer, CharCount);
+
+  DEBUG_CODE_BEGIN ();
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "Memory: 0x%lx-0x%lx (0x%lx)\n\r",
+                MemoryBase,
+                MemoryBase + MemorySize,
+                MemorySize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "Stack : 0x%lx-0x%lx (0x%lx)\n\r",
+                StackBase,
+                StackBase + StackSize,
+                StackSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "FV    : 0x%lx-0x%lx (0x%lx)\n\r",
+                (EFI_PHYSICAL_ADDRESS)FvHeader,
+                (EFI_PHYSICAL_ADDRESS)FvHeader + FvSize,
+                FvSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  CharCount = AsciiSPrint (
+                Buffer,
+                sizeof (Buffer),
+                "DTB   : 0x%lx-0x%lx (0x%lx)\n\r",
+                DtbBase,
+                DtbBase + DtbSize,
+                DtbSize
+                );
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  DEBUG_CODE_END ();
 
   // Enable exception handlers, now that we have a serial port to write to.
   Status = InitializeCpuExceptionHandlers (NULL);
