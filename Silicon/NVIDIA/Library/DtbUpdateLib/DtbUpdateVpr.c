@@ -76,7 +76,7 @@ DtbUpdateVpr (
       continue;
     }
 
-    if (!(PlatformResourceInfo->SocketMask & (1UL << Socket)) || (VprInfo[Socket].Size == 0)) {
+    if ((!(PlatformResourceInfo->SocketMask & (1UL << Socket)))) {
       Status = DeviceTreeSetNodeProperty (NodeOffset, "status", "disabled", sizeof ("disabled"));
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: disable error: %r\n", __FUNCTION__, Status));
