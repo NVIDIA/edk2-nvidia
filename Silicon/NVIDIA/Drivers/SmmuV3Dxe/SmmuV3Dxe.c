@@ -2388,11 +2388,6 @@ OnReadyToBoot (
   )
 {
   SMMU_V3_CONTROLLER_PRIVATE_DATA  *Private;
-  UINT32                           GbpSetting;
-
-  /*UINT32                           SteCount;
-  UINT32                           Index;
-  UINT64                           *SteS2TtbAddr;*/
 
   gBS->CloseEvent (Event);
 
@@ -2404,17 +2399,19 @@ OnReadyToBoot (
 
   Private->ReadyToBootEvent = NULL;
 
-  if (Private->CmdQueue.QBase != 0) {
-    FreeAlignedPages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
-  }
+  // Reset the controller into global bypass mode
+  ResetSmmuV3Controller (Private);
 
-  if (Private->EvtQueue.QBase != 0) {
-    FreeAlignedPages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
-  }
+  // Clear Stream Tables
+  MmioWrite64 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_OFFSET, 0);
+  MmioWrite32 (Private->BaseAddress + SMMU_V3_STRTAB_BASE_CFG_OFFSET, 0);
 
   if (Private->SteBase != 0) {
     FreeAlignedPages ((VOID *)Private->SteBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * SMMU_V3_STRTAB_ENTRY_SIZE));
   }
+
+  // Invalidate cached configurations and TLBs
+  InvalidateCachedCfgsTlbs (Private);
 
   // Disable Command Queue
   MmioBitFieldWrite32 (
@@ -2429,6 +2426,10 @@ OnReadyToBoot (
   if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_CMDQEN_SHIFT) & SMMU_V3_CR0ACK_CMDQEN_MASK) != SMMU_V3_Q_DISABLE) {
     DEBUG ((DEBUG_ERROR, "%a: Unable to disable command queue 0x%lx\n", __FUNCTION__, Private->BaseAddress));
     return;
+  }
+
+  if (Private->CmdQueue.QBase != 0) {
+    FreeAlignedPages ((VOID *)Private->CmdQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.CmdqEntriesLog2) * SMMU_V3_CMD_SIZE));
   }
 
   // Disable Event Queue
@@ -2446,6 +2447,10 @@ OnReadyToBoot (
     return;
   }
 
+  if (Private->EvtQueue.QBase != 0) {
+    FreeAlignedPages ((VOID *)Private->EvtQueue.QBase, EFI_SIZE_TO_PAGES ((1 << Private->Features.EvtqEntriesLog2) * SMMU_V3_EVT_RECORD_SIZE));
+  }
+
   // Clear page tables
 
   /*if (Private->SteS2TtbBaseAddresses != 0) {
@@ -2460,37 +2465,6 @@ OnReadyToBoot (
 
     //FreePages ((VOID *)Private->SteS2TtbBaseAddresses, EFI_SIZE_TO_PAGES ((1 << Private->Features.StreamNBits) * sizeof (EFI_PHYSICAL_ADDRESS)));
   }*/
-
-  // Set the controller in global bypass mode
-  GbpSetting = BIT_FIELD_SET (1U, SMMU_V3_GBPA_UPDATE_MASK, SMMU_V3_GBPA_UPDATE_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_ABORT_MASK, SMMU_V3_GBPA_ABORT_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_INSTCFG_MASK, SMMU_V3_GBPA_INSTCFG_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_PRIVCFG_MASK, SMMU_V3_GBPA_PRIVCFG_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (1, SMMU_V3_GBPA_SHCFG_MASK, SMMU_V3_GBPA_SHCFG_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_ALLOCFG_MASK, SMMU_V3_GBPA_ALLOCFG_SHIFT);
-  GbpSetting = GbpSetting | BIT_FIELD_SET (0, SMMU_V3_GBPA_MTCFG_MASK, SMMU_V3_GBPA_MTCFG_SHIFT);
-  MmioWrite32 (Private->BaseAddress + SMMU_V3_GBPA_OFFSET, GbpSetting);
-
-  // Wait for the controller to enter global bypass mode
-  gBS->Stall (10000);
-  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_GBPA_OFFSET) >> SMMU_V3_GBPA_UPDATE_SHIFT) & SMMU_V3_GBPA_UPDATE_MASK) == 1) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to put SMMU in global bypass mode 0x%lx\n", __FUNCTION__, Private->BaseAddress));
-    return;
-  }
-
-  MmioBitFieldWrite32 (
-    Private->BaseAddress + SMMU_V3_CR0_OFFSET,
-    SMMU_V3_CR0_SMMUEN_BIT,
-    SMMU_V3_CR0_SMMUEN_BIT,
-    SMMU_V3_DISABLE
-    );
-
-  // Wait for the controller to disable SMMU operation
-  gBS->Stall (10000);
-  if (((MmioRead32 (Private->BaseAddress + SMMU_V3_CR0ACK_OFFSET) >> SMMU_V3_CR0ACK_SMMUEN_SHIFT) & SMMU_V3_CR0ACK_SMMUEN_MASK) != SMMU_V3_DISABLE) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable disable SMMU 0x%lx\n", __FUNCTION__, Private->BaseAddress));
-    return;
-  }
 }
 
 /**
