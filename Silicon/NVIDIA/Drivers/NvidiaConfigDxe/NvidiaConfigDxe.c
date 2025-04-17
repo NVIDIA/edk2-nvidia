@@ -1032,6 +1032,9 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_HELP),
+
+  STRING_TOKEN (STR_PCIE_DELAY_AFTER_PERST_TITLE),
+  STRING_TOKEN (STR_PCIE_DELAY_AFTER_PERST_HELP),
 };
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
@@ -1075,15 +1078,16 @@ EFI_HII_CONFIG_ACCESS_PROTOCOL         mConfigAccess;
 CHAR16                                 mHiiControlStorageName[] = L"NVIDIA_CONFIG_HII_CONTROL";
 NVIDIA_CONFIG_HII_CONTROL              mHiiControlSettings      = { 0 };
 EFI_HANDLE                             mDriverHandle;
-TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config                   = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mMb1DefaultConfig            = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config        = { 0 };
-TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config           = { 0 };
-STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2             = NULL;
-STATIC VOID                            *mMmCommunicationBuffer      = NULL;
-UINT64                                 mOpRomDisMask                = 0;
-UINT32                                 mMaxPayloadSize[MAX_SOCKETS] = { 0 };
-UINT64                                 mExt10bitTagReqEnable        = 0;
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1Config                              = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mMb1DefaultConfig                       = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mLastWrittenMb1Config                   = { 0 };
+TEGRABL_EARLY_BOOT_VARIABLES           mVariableMb1Config                      = { 0 };
+STATIC EFI_MM_COMMUNICATION2_PROTOCOL  *mMmCommunicate2                        = NULL;
+STATIC VOID                            *mMmCommunicationBuffer                 = NULL;
+UINT64                                 mOpRomDisMask                           = 0;
+UINT32                                 mMaxPayloadSize[MAX_SOCKETS]            = { 0 };
+UINT8                                  mDelayAfterPERST[MAX_SOCKETS][MAX_PCIE] = { 0 };
+UINT64                                 mExt10bitTagReqEnable                   = 0;
 EFI_HII_HANDLE                         mHiiHandle;
 UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_DISABLED;
 
@@ -1864,6 +1868,11 @@ SyncHiiSettings (
       mHiiControlSettings.MaxPayloadSize2[Index]          = (mMaxPayloadSize[2] >> (Index * 3)) & (7ULL);
       mHiiControlSettings.MaxPayloadSize3[Index]          = (mMaxPayloadSize[3] >> (Index * 3)) & (7ULL);
 
+      mHiiControlSettings.DelayAfterPERST0[Index] = mDelayAfterPERST[0][Index];
+      mHiiControlSettings.DelayAfterPERST1[Index] = mDelayAfterPERST[1][Index];
+      mHiiControlSettings.DelayAfterPERST2[Index] = mDelayAfterPERST[2][Index];
+      mHiiControlSettings.DelayAfterPERST3[Index] = mDelayAfterPERST[3][Index];
+
       mHiiControlSettings.Extended10bitTagEnable0[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (0, Index))) != 0ULL;
       mHiiControlSettings.Extended10bitTagEnable1[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (1, Index))) != 0ULL;
       mHiiControlSettings.Extended10bitTagEnable2[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (2, Index))) != 0ULL;
@@ -1935,6 +1944,7 @@ SyncHiiSettings (
     mOpRomDisMask         = 0ULL;
     mExt10bitTagReqEnable = 0ULL;
     ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
+    ZeroMem (mDelayAfterPERST, sizeof (mDelayAfterPERST));
     for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth               = mHiiControlSettings.MaxWidth0[Index];
@@ -2015,6 +2025,10 @@ SyncHiiSettings (
       mMaxPayloadSize[1]                                                 |= (mHiiControlSettings.MaxPayloadSize1[Index] & 7ULL) << (Index * 3);
       mMaxPayloadSize[2]                                                 |= (mHiiControlSettings.MaxPayloadSize2[Index] & 7ULL) << (Index * 3);
       mMaxPayloadSize[3]                                                 |= (mHiiControlSettings.MaxPayloadSize3[Index] & 7ULL) << (Index * 3);
+      mDelayAfterPERST[0][Index]                                          = mHiiControlSettings.DelayAfterPERST0[Index];
+      mDelayAfterPERST[1][Index]                                          = mHiiControlSettings.DelayAfterPERST1[Index];
+      mDelayAfterPERST[2][Index]                                          = mHiiControlSettings.DelayAfterPERST2[Index];
+      mDelayAfterPERST[3][Index]                                          = mHiiControlSettings.DelayAfterPERST3[Index];
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
@@ -2208,6 +2222,18 @@ InitializeSettings (
                   );
   if (EFI_ERROR (Status)) {
     ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
+  }
+
+  BufferSize = sizeof (mDelayAfterPERST);
+  Status     = gRT->GetVariable (
+                      L"DelayAfterPERST",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &mDelayAfterPERST
+                      );
+  if (EFI_ERROR (Status)) {
+    ZeroMem (mDelayAfterPERST, sizeof (mDelayAfterPERST));
   }
 
   BufferSize = sizeof (mExt10bitTagReqEnable);
@@ -2648,6 +2674,17 @@ ConfigRouteConfig (
   }
 
   Status = gRT->SetVariable (
+                  L"DelayAfterPERST",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  sizeof (mDelayAfterPERST),
+                  &mDelayAfterPERST
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gRT->SetVariable (
                   L"Ext10bitTagReq",
                   &gNVIDIAPublicVariableGuid,
                   EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
@@ -3018,6 +3055,11 @@ GetDefaultValue (
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_MAX_PAYLOAD_SIZE) && (QuestionId <= KEY_SOCKET3_PCIE9_MAX_PAYLOAD_SIZE)) {
         //
         // PCIE MAX_PAYLOAD_SIZE
+        //
+        Data = 0x0;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DELAY_AFTER_PERST) && (QuestionId <= KEY_SOCKET3_PCIE9_DELAY_AFTER_PERST)) {
+        //
+        // PCIE DELAY_AFTER_PERST
         //
         Data = 0x0;
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_EXTENDED_10BIT_TAG_ENABLE) && (QuestionId <= KEY_SOCKET3_PCIE9_EXTENDED_10BIT_TAG_ENABLE)) {

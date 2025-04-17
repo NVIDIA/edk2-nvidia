@@ -86,6 +86,9 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .ThreadedDeviceStart             = TRUE
 };
 
+BOOLEAN  gDelayAfterPERSTRead                                                   = FALSE;
+UINT8    gDelayAfterPERST[TEGRABL_SOC_MAX_SOCKETS][TEGRABL_MAX_PCIE_PER_SOCKET] = { 0 };
+
 BOOLEAN                           gPciPltProtInstalled = FALSE;
 extern EFI_PCI_PLATFORM_PROTOCOL  mPciPlatformProtocol;
 
@@ -527,6 +530,45 @@ SenseGpu (
 }
 
 STATIC
+VOID
+CheckAndAddDelayAfterPERST (
+  IN UINT32  SocketId,
+  IN UINT32  CtrlId,
+  BOOLEAN    C2cInitRequired
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+
+  /* Check if user has requested a delay after PERST */
+  if (gDelayAfterPERSTRead == FALSE) {
+    BufferSize = sizeof (gDelayAfterPERST);
+    Status     = gRT->GetVariable (
+                        L"DelayAfterPERST",
+                        &gNVIDIAPublicVariableGuid,
+                        NULL,
+                        &BufferSize,
+                        &gDelayAfterPERST
+                        );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_VERBOSE, "Delay after PERST has not been set (Status = %r)\r\n", Status));
+    }
+
+    gDelayAfterPERSTRead = TRUE;
+  }
+
+  /* Add a delay after PERST if requested */
+  if (gDelayAfterPERST[SocketId][CtrlId] > 0) {
+    DEBUG ((DEBUG_ERROR, "PCIe Socket-0x%x:Ctrl-0x%x: Added %d second(s) delay after releasing PERST#\r\n", SocketId, CtrlId, gDelayAfterPERST[SocketId][CtrlId]));
+    if (C2cInitRequired) {
+      MicroSecondDelay (gDelayAfterPERST[SocketId][CtrlId] * 1000 * 1000);
+    } else {
+      DeviceDiscoveryThreadMicroSecondDelay (gDelayAfterPERST[SocketId][CtrlId] * 1000 * 1000);
+    }
+  }
+}
+
+STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
@@ -607,6 +649,9 @@ InitializeController (
   val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
   val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
   MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, val);
+
+  /* Add a delay after PERST if requested by the user */
+  CheckAndAddDelayAfterPERST (Private->SocketId, Private->CtrlId, Private->C2cInitRequired);
 
   /* Wait for link up */
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);

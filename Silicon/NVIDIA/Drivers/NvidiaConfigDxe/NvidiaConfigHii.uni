@@ -1075,6 +1075,9 @@
 #string STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET3_PCIE9_TITLE #language en-US "Disable L2/L3 transition at warm reset"
 #string STR_PCIE_DISABLE_L23_AT_WARM_RESET_HELP                #language en-US "Disable L2/L3 transition at warm reset"
 
+#string STR_PCIE_DELAY_AFTER_PERST_TITLE #language en-US "Delay after PERST"
+#string STR_PCIE_DELAY_AFTER_PERST_HELP  #language en-US "Delay in seconds after PERST for this Root Port (max 60 seconds)"
+
 #string STR_UEFI_DEBUG_LEVEL_PROMPT      #language en-US "UEFI Debug Log Level"
 #string STR_UEFI_DEBUG_LEVEL_HELP        #language en-US "32 bit field matching the definition of gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel"
 
