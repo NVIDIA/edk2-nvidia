@@ -99,7 +99,6 @@ jobs:
           ([ -d edk2-redfish-client ] && edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t24x_datacenter.defconfig) || true
           edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/build.sh
           edk2-nvidia/Platform/NVIDIA/StandaloneMm/build.sh
-          edk2-nvidia/Platform/NVIDIA/StandaloneMmJetson/build.sh
           edk2-nvidia/Platform/NVIDIA/DeviceTree/build.sh
           edk2-nvidia/Platform/NVIDIA/L4TLauncher/build.sh
       - name: Package
