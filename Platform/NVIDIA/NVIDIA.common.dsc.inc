@@ -441,6 +441,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
 
   SystemContextLib|Silicon/NVIDIA/Library/SystemContextLib/SystemContextLib.inf
+  SystemFiberLib|Silicon/NVIDIA/Library/SystemFiberLib/SystemFiberLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/StatusRegLib/StatusRegLib.inf
 
   OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf

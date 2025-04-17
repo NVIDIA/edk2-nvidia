@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library private structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,7 @@
 #include <PiDxe.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/ClockParents.h>
+#include <Library/SystemFiberLib.h>
 
 extern SCMI_CLOCK2_PROTOCOL           *gScmiClockProtocol;
 extern NVIDIA_CLOCK_PARENTS_PROTOCOL  *gClockParentsProtocol;
@@ -27,7 +28,7 @@ typedef struct {
 typedef struct {
   EFI_PHYSICAL_ADDRESS                   StackBase;
   EFI_EVENT                              Timer;
-  EFI_SYSTEM_CONTEXT_AARCH64             Context;
+  SYSTEM_FIBER                           Fiber;
   EFI_HANDLE                             DriverHandle;
   EFI_HANDLE                             Controller;
   IN NVIDIA_DEVICE_TREE_NODE_PROTOCOL    *Node;
