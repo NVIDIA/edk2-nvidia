@@ -886,6 +886,47 @@
 #define KEY_SOCKET3_PCIE8_EXTENDED_10BIT_TAG_ENABLE  0x2177
 #define KEY_SOCKET3_PCIE9_EXTENDED_10BIT_TAG_ENABLE  0x2178
 
+#define KEY_SOCKET0_PCIE0_DELAY_AFTER_PERST  0x2179
+#define KEY_SOCKET0_PCIE1_DELAY_AFTER_PERST  0x217A
+#define KEY_SOCKET0_PCIE2_DELAY_AFTER_PERST  0x217B
+#define KEY_SOCKET0_PCIE3_DELAY_AFTER_PERST  0x217C
+#define KEY_SOCKET0_PCIE4_DELAY_AFTER_PERST  0x217D
+#define KEY_SOCKET0_PCIE5_DELAY_AFTER_PERST  0x217E
+#define KEY_SOCKET0_PCIE6_DELAY_AFTER_PERST  0x217F
+#define KEY_SOCKET0_PCIE7_DELAY_AFTER_PERST  0x2180
+#define KEY_SOCKET0_PCIE8_DELAY_AFTER_PERST  0x2181
+#define KEY_SOCKET0_PCIE9_DELAY_AFTER_PERST  0x2182
+#define KEY_SOCKET1_PCIE0_DELAY_AFTER_PERST  0x2183
+#define KEY_SOCKET1_PCIE1_DELAY_AFTER_PERST  0x2184
+#define KEY_SOCKET1_PCIE2_DELAY_AFTER_PERST  0x2185
+#define KEY_SOCKET1_PCIE3_DELAY_AFTER_PERST  0x2186
+#define KEY_SOCKET1_PCIE4_DELAY_AFTER_PERST  0x2187
+#define KEY_SOCKET1_PCIE5_DELAY_AFTER_PERST  0x2188
+#define KEY_SOCKET1_PCIE6_DELAY_AFTER_PERST  0x2189
+#define KEY_SOCKET1_PCIE7_DELAY_AFTER_PERST  0x218A
+#define KEY_SOCKET1_PCIE8_DELAY_AFTER_PERST  0x218B
+#define KEY_SOCKET1_PCIE9_DELAY_AFTER_PERST  0x218C
+#define KEY_SOCKET2_PCIE0_DELAY_AFTER_PERST  0x218D
+#define KEY_SOCKET2_PCIE1_DELAY_AFTER_PERST  0x218E
+#define KEY_SOCKET2_PCIE2_DELAY_AFTER_PERST  0x218F
+#define KEY_SOCKET2_PCIE3_DELAY_AFTER_PERST  0x2190
+#define KEY_SOCKET2_PCIE4_DELAY_AFTER_PERST  0x2191
+#define KEY_SOCKET2_PCIE5_DELAY_AFTER_PERST  0x2192
+#define KEY_SOCKET2_PCIE6_DELAY_AFTER_PERST  0x2193
+#define KEY_SOCKET2_PCIE7_DELAY_AFTER_PERST  0x2194
+#define KEY_SOCKET2_PCIE8_DELAY_AFTER_PERST  0x2195
+#define KEY_SOCKET2_PCIE9_DELAY_AFTER_PERST  0x2196
+#define KEY_SOCKET3_PCIE0_DELAY_AFTER_PERST  0x2197
+#define KEY_SOCKET3_PCIE1_DELAY_AFTER_PERST  0x2198
+#define KEY_SOCKET3_PCIE2_DELAY_AFTER_PERST  0x2199
+#define KEY_SOCKET3_PCIE3_DELAY_AFTER_PERST  0x219A
+#define KEY_SOCKET3_PCIE4_DELAY_AFTER_PERST  0x219B
+#define KEY_SOCKET3_PCIE5_DELAY_AFTER_PERST  0x219C
+#define KEY_SOCKET3_PCIE6_DELAY_AFTER_PERST  0x219D
+#define KEY_SOCKET3_PCIE7_DELAY_AFTER_PERST  0x219E
+#define KEY_SOCKET3_PCIE8_DELAY_AFTER_PERST  0x219F
+#define KEY_SOCKET3_PCIE9_DELAY_AFTER_PERST  0x21A0
+
 #define KEY_SOCKET0_PCIE0_OS_NATIVE_AER  0x2201
 #define KEY_SOCKET0_PCIE1_OS_NATIVE_AER  0x2202
 #define KEY_SOCKET0_PCIE2_OS_NATIVE_AER  0x2203
@@ -1197,6 +1238,10 @@ typedef struct {
   BOOLEAN    DisableL23AtWarmReset_1[MAX_PCIE];
   BOOLEAN    DisableL23AtWarmReset_2[MAX_PCIE];
   BOOLEAN    DisableL23AtWarmReset_3[MAX_PCIE];
+  UINT8      DelayAfterPERST0[MAX_PCIE];
+  UINT8      DelayAfterPERST1[MAX_PCIE];
+  UINT8      DelayAfterPERST2[MAX_PCIE];
+  UINT8      DelayAfterPERST3[MAX_PCIE];
   BOOLEAN    NvDisplayHandoffControlSupported;
 } NVIDIA_CONFIG_HII_CONTROL;
 
@@ -1498,6 +1543,16 @@ typedef struct {
            help = STRING_TOKEN(STR_PCIE_EXTENDED_10BIT_TAG_ENABLE_HELP),                          \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
+  numeric varid = NVIDIA_CONFIG_HII_CONTROL.DelayAfterPERST##socket[pcie],                        \
+          questionid = KEY_SOCKET##socket##_PCIE##pcie##_DELAY_AFTER_PERST,                       \
+          prompt = STRING_TOKEN(STR_PCIE_DELAY_AFTER_PERST_TITLE),                                \
+          help = STRING_TOKEN(STR_PCIE_DELAY_AFTER_PERST_HELP),                                   \
+          flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,                                \
+          minimum = 0,                                                                            \
+          maximum = 60,                                                                           \
+          step = 1,                                                                               \
+          default = 0,                                                                            \
+          endnumeric;                                                                             \
   endif;                                                                                          \
   endif;                                                                                          \
   endform;
