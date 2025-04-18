@@ -1,0 +1,64 @@
+## @file
+#  Shell application GicUtil.
+#
+#  This application is used to set and retrieve GIC information for the platform.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GicUtil
+  FILE_GUID                      = 3d61f5f0-4b95-4fa1-8a9f-f7bdf402bad4
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeGicUtil
+  MODULE_UNI_FILE                = GicUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  GicUtil.c
+  GicUtilStrings.uni
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiLib
+  ShellLib
+  UefiBootServicesTableLib
+  UefiHiiServicesLib
+  HiiLib
+  MemoryAllocationLib
+  ArmGicLib
+  PcdLib
+  UefiApplicationEntryPoint
+
+[Protocols]
+  gEfiTimerArchProtocolGuid                     ##CONSUMES
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+  gFdtClientProtocolGuid                        ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  GicUtilExtra.uni
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicRedistributorsBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase

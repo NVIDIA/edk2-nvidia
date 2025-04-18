@@ -602,6 +602,9 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
   INF Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
   INF Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+  INF Silicon/NVIDIA/Application/GicUtil/GicUtil.inf
+  INF Silicon/NVIDIA/Application/PcieUtil/PcieUtil.inf
+  INF Silicon/NVIDIA/Application/TimerUtil/TimerUtil.inf
 !ifdef CONFIG_SOC_USB
   INF Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif

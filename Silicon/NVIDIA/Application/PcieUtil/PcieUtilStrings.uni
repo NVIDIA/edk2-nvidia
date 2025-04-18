@@ -1,0 +1,65 @@
+/** @file
+  String definitions for the Shell PcieUtil application.
+
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_PCIE_UTIL_PROTOCOL_FOUND                #language en-US  "%s: Pcie Protocol found\n"
+
+#string STR_PCIE_UTIL_HELP                 #language en-US    ""
+".TH PcieUtil 0 "Displays or modifies the pcie configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the pcie configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HPcieUtil --list\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  --list                            List all NVIDIA PCIe controllers in the system.\r\n"
+" \r\n"
+"  -?                              Displays this help.\r\n"
+" \r\n"
+
+#string STR_PCIE_UTIL_INVALID_PARAM          #language en-US  "%s: Invalid parameter\n"
+#string STR_PCIE_UTIL_NO_PCIE                #language en-US  "%s: PCIE not available or base addresses not configured\n"
+
+#string STR_PCIE_UTIL_SEPARATOR              #language en-US  "===============================================\n"
+#string STR_PCIE_UTIL_CONTROLLER_INFO        #language en-US  "Controller Information:\n"
+#string STR_PCIE_UTIL_SOCKET_ID              #language en-US  "  Socket ID:     %u\n"
+#string STR_PCIE_UTIL_CONTROLLER_ID          #language en-US  "  Controller ID: %u\n"
+#string STR_PCIE_UTIL_SEGMENT                #language en-US  "  Segment:       %u\n"
+#string STR_PCIE_UTIL_BUS_RANGE              #language en-US  "  Bus Range:     %u-%u\n"
+#string STR_PCIE_UTIL_ECAM_BASE              #language en-US  "  ECAM Base:     0x%016lX\n"
+#string STR_PCIE_UTIL_DEVICE_PATH            #language en-US  "  DevicePath:    %s\n"
+#string STR_PCIE_UTIL_LINK_STATUS            #language en-US  "  Link Status:   %s\n"
+#string STR_PCIE_UTIL_LINK_SPEED             #language en-US  "  Link Speed:    Gen-%u\n"
+#string STR_PCIE_UTIL_LINK_WIDTH             #language en-US  "  Link Width:    x%u\n"
+#string STR_PCIE_UTIL_MAX_CAPABILITY         #language en-US  "  Max Capability: Gen-%u, Width x%u\n"
+#string STR_PCIE_UTIL_LINK_UNKNOWN           #language en-US  "  Link Status:   Unknown (PCIe capability not found)\n"
+#string STR_PCIE_UTIL_PORT_TYPE              #language en-US  "  Port Type:     External Facing\n"
+#string STR_PCIE_UTIL_CONTROLLERS_FOUND      #language en-US  "%s: Found %u NVIDIA PCIe controller(s)\n\n"
+#string STR_PCIE_UTIL_CONFIG_IO_FAILED       #language en-US  "%s: Failed to get ConfigIo protocol: %r\n"
+#string STR_PCIE_UTIL_CONFIG_DATA_FAILED     #language en-US  "%s: Failed to get ConfigData protocol: %r\n"
+#string STR_PCIE_UTIL_NO_VALID_CONTROLLERS   #language en-US  "%s: No valid NVIDIA PCIe controllers found\n"
+
+#string STR_PCIE_UTIL_NVIDIA_INFO_HEADER    #language en-US  "NVIDIA Controller-Specific Information:\n"
+#string STR_PCIE_UTIL_BPMP_PHANDLE          #language en-US  "  BPMP Phandle:          0x%08X\n"
+#string STR_PCIE_UTIL_NO_BPMP               #language en-US  "  No BPMP mapping available\n"
+#string STR_PCIE_UTIL_C2C_PRESENT           #language en-US  "  C2C Connection Present: Yes\n"
+#string STR_PCIE_UTIL_NO_C2C                #language en-US  "  C2C Connection Present: No\n"
+#string STR_PCIE_UTIL_HBM_RANGE             #language en-US  "  HBM Memory Range:       0x%016lX - 0x%016lX\n"
+#string STR_PCIE_UTIL_HBM_SIZE              #language en-US  "  HBM Memory Size:        %lu bytes (%lu MB)\n"
+#string STR_PCIE_UTIL_PROXIMITY_DOMAIN      #language en-US  "  Proximity Domains:      %u-%u (%u domains)\n"
+#string STR_PCIE_UTIL_OSC_CTRL              #language en-US  "  OS Control Status:      0x%08X\n"
+#string STR_PCIE_UTIL_PORT_TYPE_EXTERNAL    #language en-US  "  Port Type:              External Facing (Hot-pluggable connector)\n"
+#string STR_PCIE_UTIL_PORT_TYPE_INTERNAL    #language en-US  "  Port Type:              Internal Connection\n"
+#string STR_PCIE_UTIL_PHYSICAL_LOCATION     #language en-US  "  Physical Location:      Socket %u, Controller %u\n"
+#string STR_PCIE_UTIL_OSC_HEADER           #language en-US  "OS Control (OSC) Capabilities:\n"
+#string STR_PCIE_UTIL_OSC_BIT_STATUS       #language en-US  "  %-14s %-30s: %s\n"
+#string STR_PCIE_UTIL_OSC_UNKNOWN_BITS     #language en-US  "  Unknown bits set: 0x%08X\n"

@@ -1,0 +1,54 @@
+## @file
+#  Shell application TimerUtil.
+#
+#  This application is used to set and retrieve clock information for the platform.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = TimerUtil
+  FILE_GUID                      = 4e2a9985-7c31-4a56-b8d9-e7f3c0a94d12
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeTimerUtil
+  MODULE_UNI_FILE                = TimerUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  TimerUtilStrings.uni
+  TimerUtil.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  UefiHiiServicesLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  UefiLib
+
+[Protocols]
+  gEfiTimerArchProtocolGuid                     ##CONSUMES
+  gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  TimerUtilExtra.uni
+

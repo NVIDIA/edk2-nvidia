@@ -2110,6 +2110,9 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   Silicon/NVIDIA/Application/RegulatorUtil/RegulatorUtil.inf
   Silicon/NVIDIA/Application/ClockUtil/ClockUtil.inf
   Silicon/NVIDIA/Application/GpioUtil/GpioUtil.inf
+  Silicon/NVIDIA/Application/GicUtil/GicUtil.inf
+  Silicon/NVIDIA/Application/PcieUtil/PcieUtil.inf
+  Silicon/NVIDIA/Application/TimerUtil/TimerUtil.inf
 !ifdef CONFIG_SOC_USB
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif

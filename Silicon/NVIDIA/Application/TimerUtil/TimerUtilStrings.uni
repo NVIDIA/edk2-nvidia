@@ -1,0 +1,54 @@
+/** @file
+  String definitions for the Shell TimerUtil application.
+
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_TIMER_UTIL_LOCATE_FAILED                 #language en-US  "%s: Failed to locate Timer Protocol\n"
+#string STR_TIMER_UTIL_SET_PERIOD_FAILED             #language en-US  "%s: Failed to set Timer period\n"
+#string STR_TIMER_UTIL_GET_PERIOD_FAILED             #language en-US  "%s: Failed to get Timer period\n"
+#string STR_TIMER_UTIL_NOTIFY_FAILED                 #language en-US  "%s: Failed to register Timer notification function\n"
+#string STR_TIMER_UTIL_NOTIFY_FAILED_STATUS          #language en-US  "%s: RegisterHandler failed with status: %r (0x%lX)\n"
+#string STR_TIMER_UTIL_NOTIFY_SUCCESS                #language en-US  "%s: Timer notification function registered\n"
+#string STR_TIMER_UTIL_PROTOCOL_FOUND                #language en-US  "%s: Timer Protocol found\n"
+#string STR_TIMER_UTIL_DISPLAY_PERIOD                #language en-US  "%s: Period - %d\n"
+#string STR_TIMER_UTIL_BAD_PERIOD_VALUE              #language en-US  "%s: Bad period value\n"
+#string STR_TIMER_UTIL_SET_PERIOD_SUCCESS            #language en-US  "%s: Set period to %d\n"
+#string STR_TIMER_UTIL_ELAPSED_TIME                  #language en-US  "%s: Elapsed time: %d in ns\n"
+#string STR_TIMER_UTIL_UNREGISTER_FAILED             #language en-US  "%s: Failed to unregister Timer notification function\n"
+#string STR_TIMER_UTIL_UNREGISTER_SUCCESS            #language en-US  "%s: Timer notification function unregistered\n"
+#string STR_TIMER_UTIL_TEST_STARTED                  #language en-US  "%s: Test started\n"
+#string STR_TIMER_UTIL_TEST_PASSED_SET               #language en-US  "%s: Test passed: Set period\n"
+#string STR_TIMER_UTIL_TEST_PASSED_NOTIFY            #language en-US  "%s: Test passed: Notify with timer period %d 100ns\n"
+#string STR_TIMER_UTIL_TEST_PASSED_ALL               #language en-US  "%s: [ PASSED ] 3 tests.\n"
+#string STR_TIMER_UTIL_TEST_FAILED                   #language en-US  "%s: [  FAILED  ] Timer test\n"
+#string STR_TIMER_UTIL_NOTIFY_ALREADY_PASSED         #language en-US  "%s: Test passed, timer handler already registered as expected.\n"
+#string STR_TIMER_UTIL_TIME_INVALID                  #language en-US  "%s: Elapsed time %lld ns is not within expected range of %lld ns\r\n"
+#string STR_TIMER_UTIL_ORIGINAL_PERIOD               #language en-US  "%s: Original timer period: %llu\n"
+#string STR_TIMER_UTIL_ENV_TYPE                      #language en-US  "%s: Detected %s environment for timer tests\n"
+#string STR_TIMER_UTIL_SCALING                       #language en-US  "%s: Using scale factor: %llu for virtual environment\n"
+#string STR_TIMER_UTIL_TEST_PARAMETERS               #language en-US  "%s: Test parameters: ExpectedTimeNs=%llu, ToleranceNs=%llu, StallTime=%llu, TimerInterval=%llu, TestPeriod=%llu\n"
+
+#string STR_TIMER_UTIL_HELP                 #language en-US    ""
+".TH TimerUtil 0 "Displays or modifies the timer configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the timer configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HTimerUtil [--set_period <value>] [--get_period] [--notify] [--test]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Specifies the timer command
+"  --set_period <value>             Set Timer period to value in 100 nS units.\r\n"
+"  --get_period                     Get Timer period in 100 nS units.\r\n"
+"  --notify                         Calls timer with event callback. 500 ms time should elapse.\r\n"
+"  --test                           Test Timer notification function.\r\n"
+" \r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"

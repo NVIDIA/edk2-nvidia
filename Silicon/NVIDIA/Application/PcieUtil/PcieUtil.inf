@@ -1,0 +1,67 @@
+## @file
+#  Shell application PcieUtil.
+#
+#  This application is used to set and retrieve PCIE information for the platform.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PcieUtil
+  FILE_GUID                      = 8f2c7db1-6a9d-42f7-b13c-59fd90ef3d56
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializePcieUtil
+  MODULE_UNI_FILE                = PcieUtil.uni
+
+#
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  PcieUtil.c
+  PcieUtilStrings.uni
+  PcieOscDefinitions.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiLib
+  ShellLib
+  UefiBootServicesTableLib
+  UefiHiiServicesLib
+  HiiLib
+  MemoryAllocationLib
+  PcdLib
+  UefiApplicationEntryPoint
+  DevicePathLib
+  PciSegmentLib
+
+[Protocols]
+  gEfiTimerArchProtocolGuid                        ##CONSUMES
+  gEfiHiiPackageListProtocolGuid                   ##CONSUMES
+  gEfiDevicePathProtocolGuid                       ##CONSUMES
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid  ##CONSUMES
+  gNVIDIAPciConfigurationDataProtocolGuid          ##CONSUMES
+  gNVIDIAConfigurationManagerDataObjectGuid        ##CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  PcieUtilExtra.uni
+
+
+

@@ -1,0 +1,66 @@
+/** @file
+  String definitions for the Shell GicUtil application.
+
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_GIC_UTIL_LOCATE_FAILED                 #language en-US  "%s: Failed to locate Gic Protocol\n"
+#string STR_GIC_UTIL_PROTOCOL_FOUND                #language en-US  "%s: Gic Protocol found\n"
+
+#string STR_GIC_UTIL_HELP                 #language en-US    ""
+".TH GicUtil 0 "Displays or modifies the gic configuration."\r\n"
+".SH NAME\r\n"
+"Displays or modifies the gic configuration.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HGicUtil [--info] [--enable <id>] [--disable <id>] [--priority <id>,<priority>] [--sgi <id>,<target>,<filter>] [--status <id>] [--rawpcd] [--test]\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"%Hcommand%N:\r\n"
+"  Specifies gic commands\r\n"
+"  --info                           Display GIC information.\r\n"
+"  --enable <id>                    Enable interrupt with specified ID.\r\n"
+"  --disable <id>                   Disable interrupt with specified ID.\r\n"
+"  --priority <id>,<priority>       Set priority for interrupt with specified ID.\r\n"
+"  --sgi <id>,<target>,<filter>     Send SGI to specified targets, where Filter is: 0=TargetList, 1=AllExceptSelf, 2=Self. Target list is a bitmask of the targets to send the SGI to.\r\n"
+"  --status <id>                    Check status of interrupt with specified ID.\r\n"
+"  --rawpcd                         Display raw PCD values for debugging.\r\n"
+"  --test                           Run test cases.\r\n"
+" \r\n"
+"  -?                               Displays this help.\r\n"
+" \r\n"
+
+#string STR_GIC_UTIL_REVISION               #language en-US  "%s: GIC Revision: %d\n"
+#string STR_GIC_UTIL_DIST_BASE              #language en-US  "%s: GIC Distributor Base: 0x%lx\n"
+#string STR_GIC_UTIL_REDIST_BASE            #language en-US  "%s: GIC Redistributor Base: 0x%lx\n"
+#string STR_GIC_UTIL_INTERFACE_BASE         #language en-US  "%s: GIC Interface Base: 0x%lx\n"
+#string STR_GIC_UTIL_INTERFACE_ID           #language en-US  "%s: GIC Interface ID: ProductID=0x%x, ArchVersion=0x%x, Revision=0x%x, Implementer=0x%x\n"
+#string STR_GIC_UTIL_MAX_INT                #language en-US  "%s: Maximum Number of Interrupts: %d\n"
+#string STR_GIC_UTIL_ENABLE_INT             #language en-US  "%s: Enabled Interrupt %d\n"
+#string STR_GIC_UTIL_DISABLE_INT            #language en-US  "%s: Disabled Interrupt %d\n"
+#string STR_GIC_UTIL_SET_PRIORITY           #language en-US  "%s: Set Interrupt %d Priority to %d\n"
+#string STR_GIC_UTIL_SEND_SGI               #language en-US  "%s: Sent SGI %d to target list 0x%x with filter %s\n"
+#string STR_GIC_UTIL_INT_ENABLED            #language en-US  "%s: Interrupt %d is ENABLED\n"
+#string STR_GIC_UTIL_INT_DISABLED           #language en-US  "%s: Interrupt %d is DISABLED\n"
+#string STR_GIC_UTIL_INVALID_PARAM          #language en-US  "%s: Invalid parameter\n"
+#string STR_GIC_UTIL_OUT_OF_RESOURCES       #language en-US  "%s: Out of resources\n"
+#string STR_GIC_UTIL_NO_GIC                 #language en-US  "%s: GIC not available or base addresses not configured\n"
+#string STR_GIC_UTIL_INT_ACK                #language en-US "%hs: Interrupt acknowledged. ID: %d, Register value: 0x%x\r\n"
+#string STR_GIC_UTIL_NO_ACK                 #language en-US "%hs: Acknowledgement check only available for self-targeted SGIs\r\n"
+#string STR_GIC_UTIL_TEST_START             #language en-US  "%s: Test started\n"
+#string STR_GIC_UTIL_TEST_CASE              #language en-US  "%s: Test case %d: %s\n"
+#string STR_GIC_UTIL_TEST_PASSED_ALL        #language en-US  "%s: [ PASSED ] 5 tests.\n"
+#string STR_GIC_UTIL_TEST_FAILED            #language en-US  "%s: [  FAILED  ] at stage: %d\n"
+#string STR_GIC_UTIL_TEST_SUMMARY_FAILED    #language en-US  "%s: [  FAILED  ] GIC Test\n"
+#string STR_GIC_UTIL_BASE_ADDRESSES         #language en-US "%s: GIC Base Addresses:\n  GICD: 0x%016lx\n  GICR: 0x%016lx\n"
+#string STR_GIC_UTIL_FDT_NOT_FOUND          #language en-US "%s: FDT Client Protocol not found: %r\n"
+#string STR_GIC_UTIL_NO_GIC_NODE            #language en-US "%s: No GIC node found in Device Tree: %r\n"
+#string STR_GIC_UTIL_FOUND_GICV3            #language en-US "%s: Found GICv3 in Device Tree - GICD: 0x%llx, GICR: 0x%llx\n"
+#string STR_GIC_UTIL_FOUND_GICV2            #language en-US "%s: Found GICv2 in Device Tree - GICD: 0x%llx, GICC: 0x%llx\n"
+#string STR_GIC_UTIL_HARDCODED_GICD         #language en-US "%s: Using hardcoded GICD Base: 0x%016llx\n"
+#string STR_GIC_UTIL_HARDCODED_GICR         #language en-US "%s: Using hardcoded GICR Base: 0x%016llx\n"
