@@ -1461,7 +1461,7 @@ ErrorExit:
 
       FreePool (Private);
       // remove the invalid i2c master descriptor.
-      mI2cPrivate[mI2cMasterCount--] = NULL;
+      mI2cPrivate[--mI2cMasterCount] = NULL;
     }
   }
 
