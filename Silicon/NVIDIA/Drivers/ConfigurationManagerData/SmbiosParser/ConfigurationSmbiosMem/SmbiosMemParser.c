@@ -14,6 +14,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/FruLib.h>
+#include <TH500/TH500Definitions.h>
 #include <libfdt.h>
 
 #include <ConfigurationManagerObject.h>
@@ -76,6 +77,11 @@ InstallSmbiosType17Cm (
   INT32                         NodeOffset;
   CONST VOID                    *Property;
   CHAR8                         Type4NodeStr[] = "/firmware/smbios/type4@xx";
+  UINT32                        SocketMask;
+  UINT32                        SocketIndex;
+  UINT32                        DimmIndex;
+  UINT32                        Count;
+  UINT32                        DevCount;
 
   TokenMapType17   = NULL;
   CmMemDevicesInfo = NULL;
@@ -86,7 +92,8 @@ InstallSmbiosType17Cm (
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
-    DramInfo = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    DramInfo   = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    SocketMask = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->SocketMask;
   } else {
     DEBUG ((
       DEBUG_ERROR,
@@ -112,96 +119,105 @@ InstallSmbiosType17Cm (
     goto ExitInstallSmbiosType17Cm;
   }
 
-  for (Index = 0; Index < DramDevicesCount; Index++) {
-    CmMemDevicesInfo[Index].ModuleManufacturerId = (UINT16)DramInfo[Index].ManufacturerId;
-    CmMemDevicesInfo[Index].SerialNum            = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
-    if (CmMemDevicesInfo[Index].SerialNum != NULL) {
-      AsciiSPrint (
-        CmMemDevicesInfo[Index].SerialNum,
-        SMBIOS_TYPE17_MAX_STRLEN,
-        "%lu",
-        DramInfo[Index].SerialNumber
-        );
+  for (SocketIndex = 0, DevCount = 0; SocketIndex < PLATFORM_MAX_SOCKETS; SocketIndex++) {
+    if (!(SocketMask & (1UL << SocketIndex))) {
+      continue;
     }
 
-    if (AsciiStrLen ((CHAR8 *)DramInfo[Index].PartNumber) != 0) {
-      CmMemDevicesInfo[Index].PartNum = AllocateCopyString ((CHAR8 *)DramInfo[Index].PartNumber);
-    } else {
-      //
-      // For solder-down DRAMs design, now using processor board info
-      // for DRAM part number reporting.
-      //
-      AsciiSPrint (
-        Type4NodeStr,
-        sizeof (Type4NodeStr),
-        "/firmware/smbios/type4@%u",
-        Index
-        );
+    DimmIndex = SocketIndex * MAX_DIMMS_PER_SOCKET;
+    for (Count = 0; Count < ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->NumModules[SocketIndex]; Count++) {
+      CmMemDevicesInfo[DevCount].ModuleManufacturerId = (UINT16)DramInfo[DimmIndex + Count].ManufacturerId;
+      CmMemDevicesInfo[DevCount].SerialNum            = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+      if (CmMemDevicesInfo[DevCount].SerialNum != NULL) {
+        AsciiSPrint (
+          CmMemDevicesInfo[DevCount].SerialNum,
+          SMBIOS_TYPE17_MAX_STRLEN,
+          "%lu",
+          DramInfo[DimmIndex + Count].SerialNumber
+          );
+      }
 
-      NodeOffset = 0;
-      NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
-      if (NodeOffset > 0) {
-        Property = NULL;
-        Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
-        if (Property != NULL) {
-          FruInfo = NULL;
-          FruDesc = (CHAR8 *)Property;
-          FruInfo = FindFruByDescription (Private, FruDesc);
-          if ((FruInfo != NULL) && (FruInfo->BoardPartNum != NULL)) {
-            CmMemDevicesInfo[Index].PartNum = AllocateCopyString (FruInfo->BoardPartNum);
+      if (AsciiStrLen ((CHAR8 *)DramInfo[DimmIndex + Count].PartNumber) != 0) {
+        CmMemDevicesInfo[DevCount].PartNum = AllocateCopyString ((CHAR8 *)DramInfo[DimmIndex + Count].PartNumber);
+      } else {
+        //
+        // For solder-down DRAMs design, now using processor board info
+        // for DRAM part number reporting.
+        //
+        AsciiSPrint (
+          Type4NodeStr,
+          sizeof (Type4NodeStr),
+          "/firmware/smbios/type4@%u",
+          SocketIndex
+          );
+
+        NodeOffset = 0;
+        NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
+        if (NodeOffset > 0) {
+          Property = NULL;
+          Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+          if (Property != NULL) {
+            FruInfo = NULL;
+            FruDesc = (CHAR8 *)Property;
+            FruInfo = FindFruByDescription (Private, FruDesc);
+            if ((FruInfo != NULL) && (FruInfo->BoardPartNum != NULL)) {
+              CmMemDevicesInfo[DevCount].PartNum = AllocateCopyString (FruInfo->BoardPartNum);
+            }
           }
         }
       }
-    }
 
-    //
-    // Set the memory min/max/config voltage.
-    //
-    CmMemDevicesInfo[Index].MinVolt  = 1100;
-    CmMemDevicesInfo[Index].MaxVolt  = 1100;
-    CmMemDevicesInfo[Index].ConfVolt = 1100;
+      //
+      // Set the memory min/max/config voltage.
+      //
+      CmMemDevicesInfo[DevCount].MinVolt  = 1100;
+      CmMemDevicesInfo[DevCount].MaxVolt  = 1100;
+      CmMemDevicesInfo[DevCount].ConfVolt = 1100;
 
-    CmMemDevicesInfo[Index].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
-    if (CmMemDevicesInfo[Index].DeviceLocator != NULL) {
-      AsciiSPrint (
-        CmMemDevicesInfo[Index].DeviceLocator,
-        SMBIOS_TYPE17_MAX_STRLEN,
-        "LP5x_%u",
-        Index
-        );
-    }
+      CmMemDevicesInfo[DevCount].DeviceLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+      if (CmMemDevicesInfo[DevCount].DeviceLocator != NULL) {
+        AsciiSPrint (
+          CmMemDevicesInfo[DevCount].DeviceLocator,
+          SMBIOS_TYPE17_MAX_STRLEN,
+          "LP5x_%u",
+          DimmIndex + Count
+          );
+      }
 
-    CmMemDevicesInfo[Index].BankLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
-    if (CmMemDevicesInfo[Index].BankLocator != NULL) {
-      AsciiSPrint (
-        CmMemDevicesInfo[Index].BankLocator,
-        SMBIOS_TYPE17_MAX_STRLEN,
-        "LP5x_%u",
-        Index
-        );
-    }
+      CmMemDevicesInfo[DevCount].BankLocator = AllocateZeroPool (SMBIOS_TYPE17_MAX_STRLEN);
+      if (CmMemDevicesInfo[DevCount].BankLocator != NULL) {
+        AsciiSPrint (
+          CmMemDevicesInfo[DevCount].BankLocator,
+          SMBIOS_TYPE17_MAX_STRLEN,
+          "LP5x_%u",
+          DimmIndex + Count
+          );
+      }
 
-    CmMemDevicesInfo[Index].Size       = DramInfo[Index].Size;
-    CmMemDevicesInfo[Index].DataWidth  = DramInfo[Index].DataWidth;
-    CmMemDevicesInfo[Index].TotalWidth = DramInfo[Index].TotalWidth;
-    CmMemDevicesInfo[Index].Rank       = DramInfo[Index].Rank;
-    // Per spec the speed is to be reported in MT/s (Mega Transfers / second)
-    CmMemDevicesInfo[Index].Speed                                             = ((DramInfo[Index].SpeedKhz / 1000) * 2);
-    CmMemDevicesInfo[Index].PhysicalArrayToken                                = PhysMemArrayToken;
-    CmMemDevicesInfo[Index].DeviceType                                        = MemoryTypeLpddr5;
-    CmMemDevicesInfo[Index].TypeDetail.Synchronous                            = 1;
-    CmMemDevicesInfo[Index].TypeDetail.Unbuffered                             = 1;
-    CmMemDevicesInfo[Index].DeviceTechnology                                  = MemoryTechnologyDram;
-    CmMemDevicesInfo[Index].MemoryErrorInformationHandle                      = 0xFFFE;
-    CmMemDevicesInfo[Index].ConfiguredMemorySpeed                             = CmMemDevicesInfo[Index].Speed;
-    CmMemDevicesInfo[Index].MemoryOperatingModeCapability.Bits.VolatileMemory = 1;
+      CmMemDevicesInfo[DevCount].Size       = DramInfo[DimmIndex + Count].Size;
+      CmMemDevicesInfo[DevCount].DataWidth  = DramInfo[DimmIndex + Count].DataWidth;
+      CmMemDevicesInfo[DevCount].TotalWidth = DramInfo[DimmIndex + Count].TotalWidth;
+      CmMemDevicesInfo[DevCount].Rank       = DramInfo[DimmIndex + Count].Rank;
+      // Per spec the speed is to be reported in MT/s (Mega Transfers / second)
+      CmMemDevicesInfo[DevCount].Speed                                             = ((DramInfo[DimmIndex + Count].SpeedKhz / 1000) * 2);
+      CmMemDevicesInfo[DevCount].PhysicalArrayToken                                = PhysMemArrayToken;
+      CmMemDevicesInfo[DevCount].DeviceType                                        = MemoryTypeLpddr5;
+      CmMemDevicesInfo[DevCount].TypeDetail.Synchronous                            = 1;
+      CmMemDevicesInfo[DevCount].TypeDetail.Unbuffered                             = 1;
+      CmMemDevicesInfo[DevCount].DeviceTechnology                                  = MemoryTechnologyDram;
+      CmMemDevicesInfo[DevCount].MemoryErrorInformationHandle                      = 0xFFFE;
+      CmMemDevicesInfo[DevCount].ConfiguredMemorySpeed                             = CmMemDevicesInfo[DevCount].Speed;
+      CmMemDevicesInfo[DevCount].MemoryOperatingModeCapability.Bits.VolatileMemory = 1;
 
-    if (DramInfo[Index].FormFactor == 0) {
-      CmMemDevicesInfo[Index].FormFactor = MemoryFormFactorDie;
-    } else if (DramInfo[Index].FormFactor == 1) {
-      CmMemDevicesInfo[Index].FormFactor = MemoryFormFactorCamm;
-    } else {
-      DEBUG ((DEBUG_ERROR, "%a: Unsupported form factor for SMBIOS Type 17\n", __FUNCTION__));
+      if (DramInfo[DimmIndex + Count].FormFactor == 0) {
+        CmMemDevicesInfo[DevCount].FormFactor = MemoryFormFactorDie;
+      } else if (DramInfo[DimmIndex + Count].FormFactor == 1) {
+        CmMemDevicesInfo[DevCount].FormFactor = MemoryFormFactorCamm;
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: Unsupported form factor for SMBIOS Type 17\n", __FUNCTION__));
+      }
+
+      DevCount++;
     }
   }
 

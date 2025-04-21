@@ -1170,60 +1170,64 @@ SocGetPlatformResourceInformation (
   PlatformResourceInfo->DramDeviceInfo   = TH500DramDeviceInfo;
 
   // Populate Total Memory.
+  //
+  // The Dram device Info array is setup as a sparse array, with each socket having a contiguous block of DRAM devices.
+  // For v0, each socket has only one DRAM device per socket, DramInfo will have 1 entry per socket and the index will be based on the socket mask bit position.
+  // For v1, each socket can have upto MAX_DIMMS_PER_SOCKET DRAM devices, and the index will be the (socket mask bit position * MAX_DIMMS_PER_SOCKET) + the DRAM device index in the socket.
+  //
   if (CPUBL_VERSION (CpuBootloaderParams) == 0) {
     for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
       if (!(SocketMask & (1UL << Index))) {
         continue;
       }
 
-      PlatformResourceInfo->PhysicalDramSize   += CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
-      PlatformResourceInfo->NumModules[Index]   = 1;
-      TH500DramDeviceInfo[Index].Socket         = Index;
-      TH500DramDeviceInfo[Index].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
-      TH500DramDeviceInfo[Index].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
-      TH500DramDeviceInfo[Index].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
-      TH500DramDeviceInfo[Index].SerialNumber   = CpuBootloaderParams->v0.DramInfo[Index].SerialNumber;
-      TH500DramDeviceInfo[Index].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
-      TH500DramDeviceInfo[Index].FormFactor     = 0;
-      TH500DramDeviceInfo[Index].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
-      TH500DramDeviceInfo[Index].SpeedKhz       = 0;
+      Dimm                                     = Index * MAX_DIMMS_PER_SOCKET;
+      PlatformResourceInfo->PhysicalDramSize  += CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+      PlatformResourceInfo->NumModules[Index]  = 1;
+      TH500DramDeviceInfo[Dimm].Socket         = Index;
+      TH500DramDeviceInfo[Dimm].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
+      TH500DramDeviceInfo[Dimm].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
+      TH500DramDeviceInfo[Dimm].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
+      TH500DramDeviceInfo[Dimm].SerialNumber   = CpuBootloaderParams->v0.DramInfo[Index].SerialNumber;
+      TH500DramDeviceInfo[Dimm].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
+      TH500DramDeviceInfo[Dimm].FormFactor     = 0;
+      TH500DramDeviceInfo[Dimm].Size           = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
+      TH500DramDeviceInfo[Dimm].SpeedKhz       = 0;
 
       CopyMem (
-        TH500DramDeviceInfo[Index].PartNumber,
+        TH500DramDeviceInfo[Dimm].PartNumber,
         CpuBootloaderParams->v0.DramInfo[Index].PartNumber,
         sizeof (CpuBootloaderParams->v0.DramInfo[Index].PartNumber)
         );
     }
   } else if (CPUBL_VERSION (CpuBootloaderParams) == 1) {
-    Dimm = 0;
     for (Index = 0; Index < TH500_MAX_SOCKETS; Index++) {
       if (!(SocketMask & (1UL << Index))) {
         continue;
       }
 
+      Dimm                                    = Index * MAX_DIMMS_PER_SOCKET;
       PlatformResourceInfo->NumModules[Index] = CpuBootloaderParams->v1.DramInfo[Index].NumModules;
       PlatformResourceInfo->PhysicalDramSize += CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Index].Size);
-      // The Dram device Info array is meant to be a contiguous array, iresspective of certain sockets being not present.
-      // Socket field in the array specifies the socket number present.
-      for (Count = 0; Count < MAX_DIMMS_PER_SOCKET; Count++) {
-        TH500DramDeviceInfo[Dimm].Socket         = Index;
-        TH500DramDeviceInfo[Dimm].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
-        TH500DramDeviceInfo[Dimm].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
-        TH500DramDeviceInfo[Dimm].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
-        TH500DramDeviceInfo[Dimm].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
-        TH500DramDeviceInfo[Dimm].FormFactor     = CpuBootloaderParams->v1.DramInfo[Index].FormFactor;
-        TH500DramDeviceInfo[Dimm].Size           = CpuBootloaderParams->v1.DramInfo[Index].Size;
-        TH500DramDeviceInfo[Dimm].SpeedKhz       = 0;
+
+      for (Count = 0; Count < PlatformResourceInfo->NumModules[Index]; Count++) {
+        TH500DramDeviceInfo[Dimm + Count].Socket         = Index;
+        TH500DramDeviceInfo[Dimm + Count].DataWidth      = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].DataWidth);
+        TH500DramDeviceInfo[Dimm + Count].ManufacturerId = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].ManufacturerId);
+        TH500DramDeviceInfo[Dimm + Count].Rank           = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].Rank);
+        TH500DramDeviceInfo[Dimm + Count].TotalWidth     = CPUBL_PARAMS (CpuBootloaderParams, DramInfo[Index].TotalWidth);
+        TH500DramDeviceInfo[Dimm + Count].FormFactor     = CpuBootloaderParams->v1.DramInfo[Index].FormFactor;
+        TH500DramDeviceInfo[Dimm + Count].Size           = CpuBootloaderParams->v1.DramInfo[Index].Size;
+        TH500DramDeviceInfo[Dimm + Count].SpeedKhz       = 0;
 
         // Populate per Memory module Information.
-        TH500DramDeviceInfo[Dimm].SerialNumber = CpuBootloaderParams->v1.DramInfo[Index].SerialNumber[Count];
-        TH500DramDeviceInfo[Dimm].Attribute    = CpuBootloaderParams->v1.DramInfo[Index].Attribute[Count];
+        TH500DramDeviceInfo[Dimm + Count].SerialNumber = CpuBootloaderParams->v1.DramInfo[Index].SerialNumber[Count];
+        TH500DramDeviceInfo[Dimm + Count].Attribute    = CpuBootloaderParams->v1.DramInfo[Index].Attribute[Count];
         CopyMem (
-          TH500DramDeviceInfo[Dimm].PartNumber,
+          TH500DramDeviceInfo[Dimm + Count].PartNumber,
           CpuBootloaderParams->v1.DramInfo[Index].PartNumber[Count],
           sizeof (CpuBootloaderParams->v1.DramInfo[Index].PartNumber[Count])
           );
-        Dimm++;
       }
     }
   } else {
