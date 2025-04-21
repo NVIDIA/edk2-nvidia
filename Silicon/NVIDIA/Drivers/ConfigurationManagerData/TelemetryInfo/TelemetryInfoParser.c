@@ -1,7 +1,7 @@
 /** @file
   Patches the DSDT with Telemetry info
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -364,9 +364,9 @@ UpdateDramSpeed (
   if ((Hob != NULL) &&
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
-    DramInfo                    = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
-    DramInfo[SocketId].SpeedKhz = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
-    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramInfo[SocketId].SpeedKhz, SocketId));
+    DramInfo                                           = ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->DramDeviceInfo;
+    DramInfo[SocketId * MAX_DIMMS_PER_SOCKET].SpeedKhz = TelemetryData[TH500_TEL_LAYOUT_DRAM_RATE_IDX];
+    DEBUG ((DEBUG_INFO, "Setting Dram Speed to %u for Socket %u\n", DramInfo[SocketId * MAX_DIMMS_PER_SOCKET].SpeedKhz, SocketId));
   } else {
     return EFI_NOT_FOUND;
   }
