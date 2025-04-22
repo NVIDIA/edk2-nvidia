@@ -326,3 +326,21 @@ GetActiveBootChainStMm (
 {
   return EFI_UNSUPPORTED;
 }
+
+BOOLEAN
+EFIAPI
+BootChainIsFailed (
+  IN UINT32  BootChain
+  )
+{
+  return FALSE;
+}
+
+EFI_STATUS
+EFIAPI
+SetInactiveBootChainStatus (
+  IN BOOLEAN  SetGoodStatus
+  )
+{
+  return EFI_SUCCESS;
+}

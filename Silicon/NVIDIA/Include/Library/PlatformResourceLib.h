@@ -281,6 +281,36 @@ InValidateActiveBootChain (
   );
 
 /**
+  Check if boot chain is failed
+
+  @param[in]  BootChain     Boot chain
+
+  @retval TRUE              Boot chain is failed
+  @retval FALSE             Boot chain is not failed
+
+**/
+BOOLEAN
+EFIAPI
+BootChainIsFailed (
+  IN UINT32  BootChain
+  );
+
+/**
+  Set inactive boot chain status
+
+  @param[in]  SetGoodStatus     If TRUE, set good status, otherwise set failed status
+
+  @retval EFI_SUCCESS           Operation successful
+  @retval EFI_INVALID_PARAMETER Invalid boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+SetInactiveBootChainStatus (
+  IN BOOLEAN  SetGoodStatus
+  );
+
+/**
   Update boot chain scratch register to boot given boot chain on next reset
 
   @param[in]  BootChain             Boot chain
