@@ -130,6 +130,10 @@ GetGPUPciLocation (
   return Status;
 }
 
+/* Disable standard SHIM mapping to execute Patched version for testing on tarball TH500 Sim */
+#if 1
+#define SHIM_GET_GUID_HOB_DATA(Hob)  GET_GUID_HOB_DATA(Hob)
+#else
 /* Test shim code for grabbing Hob and then adding the EgmMemoryInfo manually. */
 STATIC
 TEGRA_PLATFORM_RESOURCE_INFO *
@@ -160,10 +164,6 @@ PatchLegacySimPlatformResourceHobData (
   return FixedPlatformResourceInfo;
 }
 
-/* Disable standard SHIM mapping to execute Patched version for testing on tarball TH500 Sim */
-#if 1
-#define SHIM_GET_GUID_HOB_DATA(Hob)  GET_GUID_HOB_DATA(Hob)
-#else
 #define SHIM_GET_GUID_HOB_DATA(Hob)  PatchLegacySimPlatformResourceHobData(Hob)
 #endif
 
