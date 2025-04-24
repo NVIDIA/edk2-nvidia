@@ -174,6 +174,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
   DefaultExceptionHandlerLib|ArmPkg/Library/DefaultExceptionHandlerLib/DefaultExceptionHandlerLib.inf
+  ImageInfoLib|ArmPkg/Library/ImageInfoLib/ImageInfoLib.inf
 !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
   DefaultExceptionCallbackLib|Silicon/NVIDIA/Server/TH500/Library/DefaultExceptionCallbackLibServer/DefaultExceptionCallbackLibServer.inf
 !else
