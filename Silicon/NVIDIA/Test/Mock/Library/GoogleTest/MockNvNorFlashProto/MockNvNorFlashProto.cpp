@@ -6,13 +6,13 @@
 **/
 #include <GoogleTest/Library/MockNvNorFlashProto.h>
 
-MOCK_INTERFACE_DEFINITION(MockNvNorFlashProto);
+MOCK_INTERFACE_DEFINITION (MockNvNorFlashProto);
 
-MOCK_FUNCTION_DEFINITION(MockNvNorFlashProto, NvNorFlashProto_Read, 4, EFIAPI);
-MOCK_FUNCTION_DEFINITION(MockNvNorFlashProto, NvNorFlashProto_Write, 4, EFIAPI);
-MOCK_FUNCTION_DEFINITION(MockNvNorFlashProto, NvNorFlashProto_Erase, 3, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockNvNorFlashProto, NvNorFlashProto_Read, 4, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockNvNorFlashProto, NvNorFlashProto_Write, 4, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockNvNorFlashProto, NvNorFlashProto_Erase, 3, EFIAPI);
 
-static NVIDIA_NOR_FLASH_PROTOCOL localNvNorFlashProto = {
+static NVIDIA_NOR_FLASH_PROTOCOL  localNvNorFlashProto = {
   0,                      // FvbAttributes;
   NULL,                   // GetAttributes;
   NvNorFlashProto_Read,   // Read
@@ -21,5 +21,5 @@ static NVIDIA_NOR_FLASH_PROTOCOL localNvNorFlashProto = {
 };
 
 extern "C" {
-  NVIDIA_NOR_FLASH_PROTOCOL* MockNvNorFlash = &localNvNorFlashProto;
+  NVIDIA_NOR_FLASH_PROTOCOL  *MockNvNorFlash = &localNvNorFlashProto;
 }

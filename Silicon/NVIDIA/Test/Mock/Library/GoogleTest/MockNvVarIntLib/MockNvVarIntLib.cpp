@@ -6,6 +6,6 @@
 **/
 #include <GoogleTest/Library/MockNvVarIntLib.h>
 
-MOCK_INTERFACE_DEFINITION(MockNvVarIntLib);
+MOCK_INTERFACE_DEFINITION (MockNvVarIntLib);
 
-MOCK_FUNCTION_DEFINITION(MockNvVarIntLib, ComputeVarMeasurement, 6, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockNvVarIntLib, ComputeVarMeasurement, 6, EFIAPI);

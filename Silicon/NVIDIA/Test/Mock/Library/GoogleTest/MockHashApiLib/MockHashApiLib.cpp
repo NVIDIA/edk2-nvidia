@@ -6,9 +6,9 @@
 **/
 #include <GoogleTest/Library/MockHashApiLib.h>
 
-MOCK_INTERFACE_DEFINITION(MockHashApiLib);
+MOCK_INTERFACE_DEFINITION (MockHashApiLib);
 
-MOCK_FUNCTION_DEFINITION(MockHashApiLib, HashApiGetContextSize, 0, EFIAPI);
-MOCK_FUNCTION_DEFINITION(MockHashApiLib, HashApiInit, 1, EFIAPI);
-MOCK_FUNCTION_DEFINITION(MockHashApiLib, HashApiUpdate, 3, EFIAPI);
-MOCK_FUNCTION_DEFINITION(MockHashApiLib, HashApiFinal, 2, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockHashApiLib, HashApiGetContextSize, 0, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockHashApiLib, HashApiInit, 1, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockHashApiLib, HashApiUpdate, 3, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockHashApiLib, HashApiFinal, 2, EFIAPI);

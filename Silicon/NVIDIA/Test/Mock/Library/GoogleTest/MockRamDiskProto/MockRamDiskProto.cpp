@@ -6,15 +6,15 @@
 **/
 #include <GoogleTest/Library/MockRamDiskProto.h>
 
-MOCK_INTERFACE_DEFINITION(MockRamDiskProto);
+MOCK_INTERFACE_DEFINITION (MockRamDiskProto);
 
-MOCK_FUNCTION_DEFINITION(MockRamDiskProto, Register,   5, EFIAPI);
+MOCK_FUNCTION_DEFINITION (MockRamDiskProto, Register, 5, EFIAPI);
 
-static EFI_RAM_DISK_PROTOCOL localRamDiskProtocol = {
+static EFI_RAM_DISK_PROTOCOL  localRamDiskProtocol = {
   Register,    // mock version of EFI_RAM_DISK_PROTOCOL.Register
   NULL,        // Unregister currently not implemented
 };
 
 extern "C" {
-  EFI_RAM_DISK_PROTOCOL* gMockRamDiskProtocol = &localRamDiskProtocol;
+  EFI_RAM_DISK_PROTOCOL  *gMockRamDiskProtocol = &localRamDiskProtocol;
 }

@@ -15,7 +15,7 @@ using namespace testing;
 
 // test buffers originally created with cmdline:
 // $ for i in {1..4096}; do hexdump -vn16 -e'16/1 "0x%02x, " 1 "\n"' /dev/urandom; done
-STATIC CONST UINT8  InputBuffer_A[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+STATIC CONST UINT8  InputBuffer_A[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
 
 STATIC CONST UINT8  InputBuffer_B[] = {
   0xe2, 0x24, 0x11, 0xb3, 0x39, 0x3c, 0xa3, 0x0b, 0xe9, 0xbf, 0x95, 0x99, 0x18, 0xb8, 0x30, 0x50,
@@ -4116,97 +4116,87 @@ STATIC CONST UINT8  InputBuffer_B[] = {
   0x26, 0x38, 0xfa, 0x7f, 0x3c, 0xe1, 0x3f, 0xbc, 0x72, 0xf0, 0xa4, 0x8b, 0xa8, 0x28, 0x8f
 };
 
+#define BUFFER_A_CRC8_SEED_00  ( (UINT8) 0x1e )
+#define BUFFER_A_CRC8_SEED_FF  ( (UINT8) 0xc5 )
+#define BUFFER_B_CRC8_SEED_00  ( (UINT8) 0x31 )
+#define BUFFER_B_CRC8_SEED_FF  ( (UINT8) 0x1a )
 
-#define BUFFER_A_CRC8_SEED_00         ( (UINT8) 0x1e )
-#define BUFFER_A_CRC8_SEED_FF         ( (UINT8) 0xc5 )
-#define BUFFER_B_CRC8_SEED_00         ( (UINT8) 0x31 )
-#define BUFFER_B_CRC8_SEED_FF         ( (UINT8) 0x1a )
-
-#define BUFFER_A_CRC8_MAXIM_SEED_00   ( (UINT8) 0xdd )
-#define BUFFER_A_CRC8_MAXIM_SEED_FF   ( (UINT8) 0x00 )
-#define BUFFER_B_CRC8_MAXIM_SEED_00   ( (UINT8) 0x16 )
-#define BUFFER_B_CRC8_MAXIM_SEED_FF   ( (UINT8) 0xc4 )
-#define BUFFER_A_CRC8_UNSUPPORTED     ( (UINT8) 0x00 )
-
+#define BUFFER_A_CRC8_MAXIM_SEED_00  ( (UINT8) 0xdd )
+#define BUFFER_A_CRC8_MAXIM_SEED_FF  ( (UINT8) 0x00 )
+#define BUFFER_B_CRC8_MAXIM_SEED_00  ( (UINT8) 0x16 )
+#define BUFFER_B_CRC8_MAXIM_SEED_FF  ( (UINT8) 0xc4 )
+#define BUFFER_A_CRC8_UNSUPPORTED    ( (UINT8) 0x00 )
 
 class Crc8LibTest : public Test {
-  protected:
-    UINT8 ReturnedCrc8;
+protected:
+  UINT8 ReturnedCrc8;
 };
 
+TEST_F (Crc8LibTest, CalculateCrc8Test_BufferA) {
+  // if Size=0 then the Seed is returned; is that by design?
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, 0x00, 0x00, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, 0x00) << "Unexpected CRC8 for InputBuffer_A Size 0x00 seed 0x00";
 
-TEST_F(Crc8LibTest, CalculateCrc8Test_BufferA) {
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, 0x00, 0xFF, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, 0xFF) << "Unexpected CRC8 for InputBuffer_A Size 0x00 seed 0xFF";
 
-    // if Size=0 then the Seed is returned; is that by design?
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, 0x00, 0x00, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, 0x00) << "Unexpected CRC8 for InputBuffer_A Size 0x00 seed 0x00";
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0x00, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_SEED_00) << "Unexpected CRC8 for InputBuffer_A seed 0x00";
 
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, 0x00, 0xFF, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, 0xFF) << "Unexpected CRC8 for InputBuffer_A Size 0x00 seed 0xFF" ;
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0x00, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_SEED_00) << "Unexpected CRC8 for InputBuffer_A seed 0x00";
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0xFF, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_SEED_FF) << "Unexpected CRC8 for InputBuffer_A seed 0xFF" ;
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0xFF, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_SEED_FF) << "Unexpected CRC8 for InputBuffer_A seed 0xFF";
 }
 
+TEST_F (Crc8LibTest, CalculateCrc8Test_BufferB) {
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_B, sizeof (InputBuffer_B), 0x00, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_SEED_00) << "Unexpected CRC8 for InputBuffer_B seed 0x00";
 
-TEST_F(Crc8LibTest, CalculateCrc8Test_BufferB) {
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_B, sizeof(InputBuffer_B), 0x00, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_SEED_00) << "Unexpected CRC8 for InputBuffer_B seed 0x00";
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_B, sizeof(InputBuffer_B), 0xFF, TYPE_CRC8);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_SEED_FF) << "Unexpected CRC8 for InputBuffer_B seed 0xFF" ;
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_B, sizeof (InputBuffer_B), 0xFF, TYPE_CRC8);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_SEED_FF) << "Unexpected CRC8 for InputBuffer_B seed 0xFF";
 }
 
+TEST_F (Crc8LibTest, CalculateCrc8MaximTest_BufferA) {
+  // if Size=0 then the Seed is returned; is that by design?
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, 0x00, 0x00, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, 0x00) << "Unexpected CRC8-Maxim for InputBuffer_A Size 0x00 seed 0x00";
 
-TEST_F(Crc8LibTest, CalculateCrc8MaximTest_BufferA) {
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, 0x00, 0xFF, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, 0xFF) << "Unexpected CRC8-Maxim for InputBuffer_A Size 0x00 seed 0xFF";
 
-    // if Size=0 then the Seed is returned; is that by design?
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, 0x00, 0x00, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, 0x00) << "Unexpected CRC8-Maxim for InputBuffer_A Size 0x00 seed 0x00";
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0x00, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_MAXIM_SEED_00) << "Unexpected CRC8-Maxim for InputBuffer_A seed 0x00";
 
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, 0x00, 0xFF, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, 0xFF) << "Unexpected CRC8-Maxim for InputBuffer_A Size 0x00 seed 0xFF" ;
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0x00, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_MAXIM_SEED_00) << "Unexpected CRC8-Maxim for InputBuffer_A seed 0x00";
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0xFF, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_MAXIM_SEED_FF) << "Unexpected CRC8-Maxim for InputBuffer_A seed 0xFF" ;
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0xFF, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_MAXIM_SEED_FF) << "Unexpected CRC8-Maxim for InputBuffer_A seed 0xFF";
 }
 
+TEST_F (Crc8LibTest, CalculateCrc8MaximTest_BufferB) {
+  // if Size=0 then the Seed is returned; is that by design?
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_B, sizeof (InputBuffer_B), 0x00, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_MAXIM_SEED_00) << "Unexpected CRC8-Maxim for InputBuffer_B seed 0x00";
 
-TEST_F(Crc8LibTest, CalculateCrc8MaximTest_BufferB) {
-
-    // if Size=0 then the Seed is returned; is that by design?
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_B, sizeof(InputBuffer_B), 0x00, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_MAXIM_SEED_00) << "Unexpected CRC8-Maxim for InputBuffer_B seed 0x00";
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_B, sizeof(InputBuffer_B), 0xFF, TYPE_CRC8_MAXIM);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_MAXIM_SEED_FF) << "Unexpected CRC8-Maxim for InputBuffer_B seed 0xFF" ;
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_B, sizeof (InputBuffer_B), 0xFF, TYPE_CRC8_MAXIM);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_B_CRC8_MAXIM_SEED_FF) << "Unexpected CRC8-Maxim for InputBuffer_B seed 0xFF";
 }
 
-
-TEST_F(Crc8LibTest, CalculateCrc8Test_Null) {
-    EXPECT_DEATH (CalculateCrc8 (NULL, sizeof(InputBuffer_A), 0, TYPE_CRC8), ""); // no death message
+TEST_F (Crc8LibTest, CalculateCrc8Test_Null) {
+  EXPECT_DEATH (CalculateCrc8 (NULL, sizeof (InputBuffer_A), 0, TYPE_CRC8), "");  // no death message
 }
 
+TEST_F (Crc8LibTest, CalculateCrc8MaximTest_Unsupported) {
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0x00, TYPE_CRC8_MAXIM+1);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_UNSUPPORTED) << "Unexpected return for > CRC8-Maxim Type seed 0x00";
 
-TEST_F(Crc8LibTest, CalculateCrc8MaximTest_Unsupported) {
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0x00, TYPE_CRC8_MAXIM+1);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_UNSUPPORTED) << "Unexpected return for > CRC8-Maxim Type seed 0x00";
-
-    ReturnedCrc8 = CalculateCrc8 ((UINT8*)InputBuffer_A, sizeof(InputBuffer_A), 0xFF, TYPE_CRC8_MAXIM+1);
-    EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_UNSUPPORTED) << "Unexpected return for > CRC8-Maxim Type seed 0xFF";
+  ReturnedCrc8 = CalculateCrc8 ((UINT8 *)InputBuffer_A, sizeof (InputBuffer_A), 0xFF, TYPE_CRC8_MAXIM+1);
+  EXPECT_EQ (ReturnedCrc8, BUFFER_A_CRC8_UNSUPPORTED) << "Unexpected return for > CRC8-Maxim Type seed 0xFF";
 }
 
-
-int main(int argc, char *argv[]) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+int
+main (
+  int   argc,
+  char  *argv[]
+  )
+{
+  testing::InitGoogleTest (&argc, argv);
+  return RUN_ALL_TESTS ();
 }
-
