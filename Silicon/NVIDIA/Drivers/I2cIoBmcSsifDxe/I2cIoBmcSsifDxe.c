@@ -2,7 +2,7 @@
 
   I2C IO IPMI driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright 1999 - 2021 Intel Corporation. <BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -35,6 +35,9 @@
 #define BMC_SMBALERT_TIMEOUT    5000000
 #define BMC_SMBALERT_POLL_TIME  100
 
+#define MAX_SSIF_TRANSACTION_TIME_ENTRIES  10
+#define MAX_SSIF_AVG_TRANSACTION_TIME_NS   1000000000ULL
+
 // Private data structure
 typedef struct {
   UINT64                     Signature;
@@ -52,6 +55,9 @@ typedef struct {
   EMBEDDED_GPIO              *Gpio;
   BOOLEAN                    SmbAlertSupported;
   EMBEDDED_GPIO_PIN          SmbAlertGpio;
+
+  UINT64                     LastTransactionTimes[MAX_SSIF_TRANSACTION_TIME_ENTRIES];
+  UINT8                      TransactionTimeIndex;
 } BMC_SSIF_PRIVATE_DATA;
 
 #define BMC_SSIF_PRIVATE_DATA_FROM_IPMI(a)  CR (a, BMC_SSIF_PRIVATE_DATA, IpmiTransport, BMC_SSIF_SIGNATURE)
@@ -130,9 +136,13 @@ I2cIoBmcSsifIpmiSubmitCommand (
   UINT64                 Timeout;
   UINTN                  GpioValue;
   UINT64                 StartTime, EndTime;
+  UINT64                 TransactionTime;
+  UINT64                 AvgTransactionTime;
 
   BmcSsifPrivate         = BMC_SSIF_PRIVATE_DATA_FROM_IPMI (This);
   ResponseDataBufferSize = *ResponseDataSize;
+
+  TransactionTime = GetTimeInNanoSecond (GetPerformanceCounter ());
 
   for (OverallRetryCount = 0; OverallRetryCount < BMC_RETRY_COUNT; OverallRetryCount++) {
     // Transmit data
@@ -384,7 +394,40 @@ I2cIoBmcSsifIpmiSubmitCommand (
     break;
   }
 
-  return Status;
+  if (EFI_ERROR (Status) || (ResponseData == NULL)) {
+    return Status;
+  }
+
+  // Record the time spent in the last couple of transactions
+  BmcSsifPrivate->LastTransactionTimes[BmcSsifPrivate->TransactionTimeIndex] = GetTimeInNanoSecond (GetPerformanceCounter ()) - TransactionTime;
+
+  BmcSsifPrivate->TransactionTimeIndex = (BmcSsifPrivate->TransactionTimeIndex + 1) % MAX_SSIF_TRANSACTION_TIME_ENTRIES;
+
+  // Calculate the average time of the last couple of transactions
+  TransactionTime = 0;
+  for (UINT8 i = 0; i < MAX_SSIF_TRANSACTION_TIME_ENTRIES; i++) {
+    if (BmcSsifPrivate->LastTransactionTimes[i] == 0) {
+      TransactionTime = 0;
+      break;
+    }
+
+    TransactionTime += BmcSsifPrivate->LastTransactionTimes[i];
+  }
+
+  AvgTransactionTime = TransactionTime / MAX_SSIF_TRANSACTION_TIME_ENTRIES;
+
+  // Force error if the average time of the last few calls is too long
+  if (AvgTransactionTime > MAX_SSIF_AVG_TRANSACTION_TIME_NS) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Force error due to long transaction time (%u ms on average)\r\n",
+      __FUNCTION__,
+      AvgTransactionTime / 1000000
+      ));
+    return EFI_TIMEOUT;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -502,6 +545,8 @@ I2cIoBmcMasterNotify (
   BmcSsifPrivate->I2cMaster                       = I2cMasterProtocol;
   BmcSsifPrivate->IpmiTransport.IpmiSubmitCommand = I2cIoBmcSsifIpmiSubmitCommand;
   BmcSsifPrivate->IpmiTransport.GetBmcStatus      = I2cIoBmcSsifGetBmcStatus;
+  BmcSsifPrivate->TransactionTimeIndex            = 0;
+  ZeroMem (BmcSsifPrivate->LastTransactionTimes, sizeof (BmcSsifPrivate->LastTransactionTimes));
 
   gBS->CloseEvent (Event);
 
