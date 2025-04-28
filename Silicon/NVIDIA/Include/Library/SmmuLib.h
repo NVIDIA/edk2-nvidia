@@ -10,6 +10,7 @@
 #define __SMMU_LIB_H__
 
 #include <Protocol/IoMmu.h>
+#include <Protocol/SmmuV3Protocol.h>
 
 typedef struct {
   UINT32    StreamId;
@@ -19,8 +20,9 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 GetSourceIdFromPciHandle (
-  IN EFI_HANDLE  PciDeviceHandle,
-  OUT SOURCE_ID  *SourceId
+  IN  EFI_HANDLE                PciDeviceHandle,
+  OUT SOURCE_ID                 *SourceId,
+  OUT SMMU_V3_TRANSLATION_MODE  *TranslationMode
   );
 
 // Max Legal 48 bit addressable space

@@ -20,6 +20,12 @@
 //
 typedef struct _NVIDIA_SMMUV3_CONTROLLER_PROTOCOL NVIDIA_SMMUV3_CONTROLLER_PROTOCOL;
 
+typedef enum {
+  SMMU_V3_BYPASS,
+  SMMU_V3_TRANSLATE,
+  SMMU_V3_MAX
+} SMMU_V3_TRANSLATION_MODE;
+
 /**
   Set SMMU attribute for a system memory.
 
@@ -39,6 +45,7 @@ typedef
 EFI_STATUS
 (EFIAPI *NVIDIA_SMMU_SET_ATTRIBUTE)(
   IN NVIDIA_SMMUV3_CONTROLLER_PROTOCOL  *This,
+  IN SMMU_V3_TRANSLATION_MODE           TranslationMode,
   IN VOID                               *Mapping,
   IN UINT64                             IoMmuAccess,
   IN UINT32                             StreamId

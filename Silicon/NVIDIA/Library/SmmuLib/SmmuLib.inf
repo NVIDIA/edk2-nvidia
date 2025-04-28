@@ -18,6 +18,7 @@
   SmmuLib.c
 
 [Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
@@ -28,6 +29,7 @@
   BaseLib
   UefiBootServicesTableLib
   DebugLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid  ## CONSUMES
