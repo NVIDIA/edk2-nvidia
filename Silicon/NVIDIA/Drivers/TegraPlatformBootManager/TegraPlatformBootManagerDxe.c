@@ -768,6 +768,8 @@ RefreshNvBootOptions (
   UINTN                         NvBootOptionsCount;
   UINTN                         Index;
 
+  Status = EFI_SUCCESS;
+
   if ((BootOptions == NULL) ||
       (BootOptionsCount == 0))
   {
@@ -801,7 +803,6 @@ RefreshNvBootOptions (
     EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionsCount);
   }
 
-  NvBootOptions = NULL;
   NvBootOptions = EfiBootManagerGetLoadOptions (
                     &NvBootOptionsCount,
                     LoadOptionTypeBoot
