@@ -689,6 +689,9 @@ ParseDefaultBootPriority (
   CurrentBootPriorityStr = DefaultBootOrder;
   while (CurrentBootPriorityStr < (DefaultBootOrder + DefaultBootOrderSize)) {
     BootPriorityClassStart = CurrentBootPriorityStr;
+    BootPriorityClassEnd   = CurrentBootPriorityStr;
+    BootPrioritySbdfStart  = CurrentBootPriorityStr;
+    BootPrioritySbdfEnd    = CurrentBootPriorityStr;
     CurrentBootPriorityEnd = CurrentBootPriorityStr;
     while (CurrentBootPriorityEnd < (DefaultBootOrder + DefaultBootOrderSize)) {
       if ((*CurrentBootPriorityEnd == BOOT_ORDER_CLASS_SEPARATOR) ||
@@ -697,6 +700,7 @@ ParseDefaultBootPriority (
       {
         BootPriorityClassEnd  = CurrentBootPriorityEnd;
         BootPrioritySbdfStart = CurrentBootPriorityEnd;
+        BootPrioritySbdfEnd   = CurrentBootPriorityEnd;
         while (CurrentBootPriorityEnd < (DefaultBootOrder + DefaultBootOrderSize) &&
                !((*CurrentBootPriorityEnd == BOOT_ORDER_CLASS_SEPARATOR) ||
                  (*CurrentBootPriorityEnd == BOOT_ORDER_TERMINATOR)))
