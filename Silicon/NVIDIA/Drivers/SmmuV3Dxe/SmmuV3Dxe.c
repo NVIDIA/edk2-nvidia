@@ -1325,7 +1325,7 @@ CreateAbortSte (
     return;
   }
 
-  // Set STE to bypass mode
+  // Set STE to abort mode
   Ste[0] = SMMU_V3_STE_VALID;
   Ste[0] = Ste[0] | BIT_FIELD_SET (SMMU_V3_STE_CFG_ABORT, SMMU_V3_STE_CFG_MASK, SMMU_V3_STE_CFG_SHIFT);
   Ste[2] = 0;
@@ -1335,8 +1335,6 @@ CreateAbortSte (
   Ste[6] = 0;
   Ste[7] = 0;
 }
-
-#if 0
 
 /**
   Creates a stream table entry (STE) configured for bypass mode.
@@ -1382,8 +1380,6 @@ CreateBypassSte (
   Ste[6] = 0;
   Ste[7] = 0;
 }
-
-#endif
 
 /**
   Sets up default translation behavior for SMMUv3 streams.
@@ -2243,6 +2239,7 @@ FreePageTable (
   Set SMMU attribute for a system memory.
 
   @param[in]  This              The protocol instance pointer.
+  @param[in]  TranslationMode   The translation mode.
   @param[in]  Mapping           The mapping value returned from Map().
   @param[in]  IoMmuAccess       The IOMMU access.
   @param[in]  StreamId          The StreamId.
@@ -2258,6 +2255,7 @@ EFI_STATUS
 EFIAPI
 SetAttributeSmmuV3 (
   IN NVIDIA_SMMUV3_CONTROLLER_PROTOCOL  *This,
+  IN SMMU_V3_TRANSLATION_MODE           TranslationMode,
   IN VOID                               *Mapping,
   IN UINT64                             IoMmuAccess,
   IN UINT32                             StreamId
@@ -2272,8 +2270,11 @@ SetAttributeSmmuV3 (
   UINTN                            NumberOfBytes;
   UINT32                           Operations;
   UINT64                           *SteS2TtbAddr;
+  UINT64                           SteData[SMMU_V3_STRTAB_ENTRY_SIZE_DW];
+  UINT64                           *SteAddr;
 
   if ((This == NULL)                                  ||
+      (TranslationMode >= SMMU_V3_MAX)                ||
       (Mapping == NULL)                               ||
       (IoMmuAccess >= EdkiiIoMmuOperationMaximum)     ||
       (IoMmuAccess < EdkiiIoMmuOperationBusMasterRead))
@@ -2307,6 +2308,15 @@ SetAttributeSmmuV3 (
   if (MapInfo->Signature != MAP_INFO_SIGNATURE) {
     DEBUG ((DEBUG_INFO, "%a: Invalid MapInfo signature\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (TranslationMode == SMMU_V3_BYPASS) {
+    CreateBypassSte (SteData);
+    SteAddr = (UINT64 *)Private->SteBase + (StreamId * SMMU_V3_STRTAB_ENTRY_SIZE_DW);
+
+    WriteSte (SteAddr, SteData);
+
+    return InvalCachedCfgs (Private);
   }
 
   HostAddress   = MapInfo->HostAddress;

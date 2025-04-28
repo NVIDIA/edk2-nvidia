@@ -113,9 +113,10 @@ IoMmuSetAttribute (
   IN UINT64                IoMmuAccess
   )
 {
-  EFI_STATUS  Status;
-  SOURCE_ID   *SourceId;
-  UINTN       Index;
+  EFI_STATUS                Status;
+  SOURCE_ID                 *SourceId;
+  UINTN                     Index;
+  SMMU_V3_TRANSLATION_MODE  TranslationMode;
 
   if (SmmuV3ProtocolInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "%a SmmuV3ProtocolInfo is NULL. Exiting \n", __FUNCTION__));
@@ -129,7 +130,7 @@ IoMmuSetAttribute (
     goto CleanupAndReturn;
   }
 
-  Status = GetSourceIdFromPciHandle (DeviceHandle, SourceId);
+  Status = GetSourceIdFromPciHandle (DeviceHandle, SourceId, &TranslationMode);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a Could not get Source Id from PCI Handle %r ", __FUNCTION__, Status));
     goto CleanupAndReturn;
@@ -150,7 +151,13 @@ IoMmuSetAttribute (
         SmmuV3ProtocolInfo[Index].SmmuV3pHandle,
         SourceId->StreamId
         ));
-      Status = SmmuV3ProtocolInfo[Index].SmmuV3CtlrProtocolInterface->SetAttribute (SmmuV3ProtocolInfo[Index].SmmuV3CtlrProtocolInterface, Mapping, IoMmuAccess, SourceId->StreamId);
+      Status = SmmuV3ProtocolInfo[Index].SmmuV3CtlrProtocolInterface->SetAttribute (
+                                                                        SmmuV3ProtocolInfo[Index].SmmuV3CtlrProtocolInterface,
+                                                                        TranslationMode,
+                                                                        Mapping,
+                                                                        IoMmuAccess,
+                                                                        SourceId->StreamId
+                                                                        );
       break;
     }
   }
