@@ -2473,7 +2473,10 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   # Redfish support
   #
   RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
-  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf {
+    <LibraryClasses>
+      RedfishPlatformWantedDeviceLib|RedfishPkg/Library/RedfishPlatformWantedDeviceType42Lib/RedfishPlatformWantedDeviceType42Lib.inf
+  }
   RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
   RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
   RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
