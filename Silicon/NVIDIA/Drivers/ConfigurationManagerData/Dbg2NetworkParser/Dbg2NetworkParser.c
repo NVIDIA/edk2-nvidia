@@ -31,33 +31,43 @@ Dbg2NetworkParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                         Status;
-  UINT32                             Data;
-  UINTN                              DataSize;
-  EFI_HANDLE                         *HandleBuffer = NULL;
-  UINTN                              NumberOfHandles;
-  UINT32                             Index;
-  UINT32                             BarIndex;
-  EFI_PCI_IO_PROTOCOL                *PciIo;
-  PCI_TYPE00                         PciData;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *MmioDesc;
-  UINTN                              SegmentNumber;
-  UINTN                              BusNumber;
-  UINTN                              DeviceNumber;
-  UINTN                              FunctionNumber;
-  CM_OBJ_DESCRIPTOR                  *Dbg2CmObjDesc;
-  CM_ARM_DBG2_DEVICE_INFO            Dbg2DeviceInfo;
-  CM_STD_OBJ_ACPI_TABLE_INFO         AcpiTableHeader;
+  EFI_STATUS                              Status;
+  UINT32                                  Data;
+  UINTN                                   DataSize;
+  EFI_HANDLE                              *HandleBuffer = NULL;
+  UINTN                                   NumberOfHandles;
+  UINTN                                   Index;
+  UINT32                                  BarIndex;
+  EFI_PCI_IO_PROTOCOL                     *PciIo;
+  PCI_TYPE00                              PciData;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR       *MmioDesc;
+  UINTN                                   SegmentNumber;
+  UINTN                                   BusNumber;
+  UINTN                                   DeviceNumber;
+  UINTN                                   FunctionNumber;
+  CM_OBJ_DESCRIPTOR                       *Dbg2CmObjDesc;
+  CM_ARCH_COMMON_DBG2_DEVICE_INFO         Dbg2DeviceInfo;
+  CM_STD_OBJ_ACPI_TABLE_INFO              *AcpiTableHeader;
+  CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR  MemoryRanges[PCI_MAX_BAR];
+  UINTN                                   MemoryRangeCount;
+  CM_OBJ_DESCRIPTOR                       *MemoryRangeCmObjDesc;
 
-  Dbg2CmObjDesc = NULL;
+  Dbg2CmObjDesc    = NULL;
+  MemoryRangeCount = 0;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
     return EFI_INVALID_PARAMETER;
   }
 
+  AcpiTableHeader = AllocatePool (sizeof (CM_STD_OBJ_ACPI_TABLE_INFO));
+  if (AcpiTableHeader == NULL) {
+    DEBUG ((DEBUG_ERROR, "Failed to allocate memory for AcpiTableHeader\n"));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
   Status = NvCreateCmObjDesc (
-             CREATE_CM_ARM_OBJECT_ID (EArmObjDbg2DeviceInfo),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjGenericDbg2DeviceInfo),
              1,
              &Dbg2DeviceInfo,
              sizeof (Dbg2DeviceInfo),
@@ -110,10 +120,10 @@ Dbg2NetworkParser (
       continue;
     }
 
-    Dbg2DeviceInfo.PortType          = EFI_ACPI_DBG2_PORT_TYPE_NET;
-    Dbg2DeviceInfo.PortSubtype       = PciData.Hdr.VendorId;
-    Dbg2DeviceInfo.AccessSize        = EFI_ACPI_6_4_DWORD;
-    Dbg2DeviceInfo.NumberOfAddresses = 0;
+    Dbg2DeviceInfo.PortType    = EFI_ACPI_DBG2_PORT_TYPE_NET;
+    Dbg2DeviceInfo.PortSubtype = PciData.Hdr.VendorId;
+    Dbg2DeviceInfo.AccessSize  = EFI_ACPI_6_4_DWORD;
+    MemoryRangeCount           = 0;
 
     for (BarIndex = 0; BarIndex < PCI_MAX_BAR; BarIndex++) {
       Status = PciIo->GetBarAttributes (PciIo, BarIndex, NULL, (VOID **)&MmioDesc);
@@ -124,22 +134,45 @@ Dbg2NetworkParser (
       }
 
       if (MmioDesc->AddrTranslationOffset != 0) {
-        Dbg2DeviceInfo.NumberOfAddresses = 0;
+        MemoryRangeCount = 0;
         DEBUG ((DEBUG_ERROR, "Dbg2: Address Translation Offset is not supported\n"));
         break;
       }
 
-      Dbg2DeviceInfo.BaseAddress[Dbg2DeviceInfo.NumberOfAddresses]       = MmioDesc->AddrRangeMin;
-      Dbg2DeviceInfo.BaseAddressLength[Dbg2DeviceInfo.NumberOfAddresses] = MmioDesc->AddrLen;
-      Dbg2DeviceInfo.NumberOfAddresses++;
+      MemoryRanges[MemoryRangeCount].BaseAddress = MmioDesc->AddrRangeMin;
+      MemoryRanges[MemoryRangeCount].Length      = MmioDesc->AddrLen;
+      MemoryRangeCount++;
     }
 
     break;
   }
 
-  if (Dbg2DeviceInfo.NumberOfAddresses == 0) {
+  if (MemoryRangeCount == 0) {
     Status = EFI_NOT_FOUND;
     DEBUG ((DEBUG_ERROR, "Failed to find a valid PCI device for Dbg2\n"));
+    goto CleanupAndReturn;
+  }
+
+  Status = NvCreateCmObjDesc (
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjMemoryRangeDescriptor),
+             MemoryRangeCount,
+             &MemoryRanges,
+             sizeof (CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR) * MemoryRangeCount,
+             &MemoryRangeCmObjDesc
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to create CM object descriptor for MemoryRanges\n"));
+    goto CleanupAndReturn;
+  }
+
+  Status = NvAddMultipleCmObjGetTokens (
+             ParserHandle,
+             MemoryRangeCmObjDesc,
+             NULL,
+             &Dbg2DeviceInfo.AddressResourceToken
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to add MemoryRanges to ConfigManager: %r\n", Status));
     goto CleanupAndReturn;
   }
 
@@ -153,21 +186,25 @@ Dbg2NetworkParser (
     goto CleanupAndReturn;
   }
 
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
-  AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
-  AcpiTableHeader.AcpiTableData      = NULL;
-  AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
-  AcpiTableHeader.OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-  AcpiTableHeader.MinorRevision      = 0;
+  AcpiTableHeader->AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
+  AcpiTableHeader->AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
+  AcpiTableHeader->TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
+  AcpiTableHeader->AcpiTableData      = NULL;
+  AcpiTableHeader->OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
+  AcpiTableHeader->OemRevision        = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  AcpiTableHeader->MinorRevision      = 0;
 
-  Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
+  Status = NvAddAcpiTableGenerator (ParserHandle, AcpiTableHeader);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to add Dbg2 to ConfigManager: %r\n", Status));
     goto CleanupAndReturn;
   }
 
 CleanupAndReturn:
+  if (EFI_ERROR (Status)) {
+    FREE_NON_NULL (AcpiTableHeader);
+  }
+
   FREE_NON_NULL (Dbg2CmObjDesc);
   FREE_NON_NULL (HandleBuffer);
   return Status;

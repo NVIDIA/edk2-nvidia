@@ -56,14 +56,13 @@ SmscLanInfoParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_STATUS                      Status;
-  INT32                           NodeOffset;
-  CM_ARM_GENERIC_DEVICE_INFO      DeviceInfo;
-  CM_OBJ_DESCRIPTOR               *CmObjDesc     = NULL;
-  CM_OBJ_DESCRIPTOR               *Dbg2CmObjDesc = NULL;
-  CM_ARM_DBG2_DEVICE_INFO         Dbg2DeviceInfo;
-  CM_ARM_MEMORY_RANGE_DESCRIPTOR  *MemoryRanges;
-  CM_STD_OBJ_ACPI_TABLE_INFO      AcpiTableHeader;
+  EFI_STATUS                       Status;
+  INT32                            NodeOffset;
+  CM_ARM_GENERIC_DEVICE_INFO       DeviceInfo;
+  CM_OBJ_DESCRIPTOR                *CmObjDesc     = NULL;
+  CM_OBJ_DESCRIPTOR                *Dbg2CmObjDesc = NULL;
+  CM_ARCH_COMMON_DBG2_DEVICE_INFO  Dbg2DeviceInfo;
+  CM_STD_OBJ_ACPI_TABLE_INFO       AcpiTableHeader;
 
   NodeOffset = -1;
 
@@ -85,7 +84,7 @@ SmscLanInfoParser (
   }
 
   Status = NvCreateCmObjDesc (
-             CREATE_CM_ARM_OBJECT_ID (EArmObjDbg2DeviceInfo),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjGenericDbg2DeviceInfo),
              1,
              &Dbg2DeviceInfo,
              sizeof (Dbg2DeviceInfo),
@@ -111,7 +110,7 @@ SmscLanInfoParser (
                ParserHandle,
                NodeOffset,
                1,
-               &MemoryRanges,
+               NULL,
                NULL,
                &DeviceInfo.AddressResourceToken
                );
@@ -140,9 +139,7 @@ SmscLanInfoParser (
       break;
     }
 
-    Dbg2DeviceInfo.NumberOfAddresses    = 1;
-    Dbg2DeviceInfo.BaseAddress[0]       = MemoryRanges[0].BaseAddress;
-    Dbg2DeviceInfo.BaseAddressLength[0] = MemoryRanges[0].Length;
+    Dbg2DeviceInfo.AddressResourceToken = DeviceInfo.AddressResourceToken;
     Dbg2DeviceInfo.PortType             = EFI_ACPI_DBG2_PORT_TYPE_NET;
     Dbg2DeviceInfo.PortSubtype          = SMSC_LAN_SUBTYPE;
     Dbg2DeviceInfo.AccessSize           = EFI_ACPI_6_3_DWORD;

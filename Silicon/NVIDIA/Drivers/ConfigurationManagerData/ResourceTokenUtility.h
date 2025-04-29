@@ -1,7 +1,7 @@
 /** @file
   Resource token utility functions.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -34,12 +34,12 @@
 EFI_STATUS
 EFIAPI
 CreateMemoryRangesObject (
-  IN  CONST HW_INFO_PARSER_HANDLE           ParserHandle,
-  IN        INT32                           NodeOffset,
-  IN        INT32                           ResourceMax,
-  OUT       CM_ARM_MEMORY_RANGE_DESCRIPTOR  **MemoryRanges OPTIONAL,
-  OUT       UINT32                          *MemoryRangeCount OPTIONAL,
-  OUT       CM_OBJECT_TOKEN                 *Token OPTIONAL
+  IN  CONST HW_INFO_PARSER_HANDLE                   ParserHandle,
+  IN        INT32                                   NodeOffset,
+  IN        INT32                                   ResourceMax,
+  OUT       CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR  **MemoryRanges OPTIONAL,
+  OUT       UINT32                                  *MemoryRangeCount OPTIONAL,
+  OUT       CM_OBJECT_TOKEN                         *Token OPTIONAL
   );
 
 /** Creates Interrupts CM Object.

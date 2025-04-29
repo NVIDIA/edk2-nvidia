@@ -1,7 +1,7 @@
 /** @file
   Resource token utility functions.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -35,21 +35,21 @@
 EFI_STATUS
 EFIAPI
 CreateMemoryRangesObject (
-  IN  CONST HW_INFO_PARSER_HANDLE           ParserHandle,
-  IN        INT32                           NodeOffset,
-  IN        INT32                           ResourceMax,
-  OUT       CM_ARM_MEMORY_RANGE_DESCRIPTOR  **MemoryRanges OPTIONAL,
-  OUT       UINT32                          *MemoryRangeCount OPTIONAL,
-  OUT       CM_OBJECT_TOKEN                 *Token OPTIONAL
+  IN  CONST HW_INFO_PARSER_HANDLE                   ParserHandle,
+  IN        INT32                                   NodeOffset,
+  IN        INT32                                   ResourceMax,
+  OUT       CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR  **MemoryRanges OPTIONAL,
+  OUT       UINT32                                  *MemoryRangeCount OPTIONAL,
+  OUT       CM_OBJECT_TOKEN                         *Token OPTIONAL
   )
 {
-  EFI_STATUS                        Status;
-  NVIDIA_DEVICE_TREE_REGISTER_DATA  *RegisterArray;
-  UINT32                            NumberOfRegisters;
-  UINT32                            ObjectSize;
-  UINT32                            Index;
-  CM_ARM_MEMORY_RANGE_DESCRIPTOR    *LocalMemoryRanges;
-  CM_OBJ_DESCRIPTOR                 *CmObjDesc;
+  EFI_STATUS                              Status;
+  NVIDIA_DEVICE_TREE_REGISTER_DATA        *RegisterArray;
+  UINT32                                  NumberOfRegisters;
+  UINT32                                  ObjectSize;
+  UINT32                                  Index;
+  CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR  *LocalMemoryRanges;
+  CM_OBJ_DESCRIPTOR                       *CmObjDesc;
 
   RegisterArray     = NULL;
   NumberOfRegisters = 0;
@@ -76,8 +76,8 @@ CreateMemoryRangesObject (
     NumberOfRegisters = MIN (NumberOfRegisters, ResourceMax);
   }
 
-  ObjectSize        = sizeof (CM_ARM_MEMORY_RANGE_DESCRIPTOR) * NumberOfRegisters;
-  LocalMemoryRanges = (CM_ARM_MEMORY_RANGE_DESCRIPTOR *)AllocatePool (ObjectSize);
+  ObjectSize        = sizeof (CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR) * NumberOfRegisters;
+  LocalMemoryRanges = (CM_ARCH_COMMON_MEMORY_RANGE_DESCRIPTOR *)AllocatePool (ObjectSize);
   if (LocalMemoryRanges == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -89,7 +89,7 @@ CreateMemoryRangesObject (
   }
 
   Status = NvCreateCmObjDesc (
-             CREATE_CM_ARM_OBJECT_ID (EArmObjMemoryRangeDescriptor),
+             CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjMemoryRangeDescriptor),
              NumberOfRegisters,
              LocalMemoryRanges,
              ObjectSize,
