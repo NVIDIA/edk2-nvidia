@@ -30,6 +30,7 @@
   UefiBootServicesTableLib
   DebugLib
   DeviceTreeHelperLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gNVIDIAPciRootBridgeConfigurationIoProtocolGuid  ## CONSUMES
