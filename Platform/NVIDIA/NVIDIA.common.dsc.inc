@@ -2445,7 +2445,10 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   # Redfish support
   #
   RedfishPkg/RestJsonStructureDxe/RestJsonStructureDxe.inf
-  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf
+  RedfishPkg/RedfishRestExDxe/RedfishRestExDxe.inf {
+    <LibraryClasses>
+      RedfishPlatformWantedDeviceLib|RedfishPkg/Library/RedfishPlatformWantedDeviceType42Lib/RedfishPlatformWantedDeviceType42Lib.inf
+  }
   RedfishPkg/RedfishCredentialDxe/RedfishCredentialDxe.inf
   RedfishPkg/RedfishDiscoverDxe/RedfishDiscoverDxe.inf
   RedfishPkg/RedfishConfigHandler/RedfishConfigHandlerDriver.inf
