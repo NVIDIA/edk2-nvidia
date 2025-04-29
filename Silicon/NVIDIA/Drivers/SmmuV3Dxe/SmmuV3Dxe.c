@@ -2599,6 +2599,8 @@ DeviceDiscoveryNotify (
 
       Private->SmmuV3ControllerProtocol.SetAttribute = SetAttributeSmmuV3;
 
+      DEBUG ((DEBUG_ERROR, "%a: Configuring all STEs for SMMUv3 0x%x in abort mode. Please wait as this may take time.\n", __FUNCTION__, Private->SmmuV3ControllerProtocol.PHandle));
+
       Status = InitializeSmmuV3 (Private);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Unable to initialize SMMUv3\n", __FUNCTION__));
