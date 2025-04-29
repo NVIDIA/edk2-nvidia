@@ -18,6 +18,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/DevicePath.h>
@@ -164,8 +165,16 @@ GetSourceIdFromPciHandle (
   UINTN                HandleIdx;
   UINT16               BypassVendorId;
 
-  SmmuV3pHandle = 0;
-  StreamId      = 0;
+  if ((PciHandle       == NULL) ||
+      (SourceId        == NULL) ||
+      (TranslationMode == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  SmmuV3pHandle    = 0;
+  StreamId         = 0;
+  *TranslationMode = SMMU_V3_TRANSLATE;
 
   Status = gBS->HandleProtocol (
                   PciHandle,
@@ -256,20 +265,22 @@ GetSourceIdFromPciHandle (
   SourceId->StreamId      = StreamId;
   SourceId->SmmuV3pHandle = SmmuV3pHandle;
 
-  // Check DTB for bypass vendor ID first
-  BypassVendorId = GetBypassVendorIdFromDtb ();
-  if (BypassVendorId == 0) {
-    // No bypass vendor ID in DTB, use translate mode
-    *TranslationMode = SMMU_V3_TRANSLATE;
-    DEBUG ((DEBUG_INFO, "%a: Setting TRANSLATE mode (no bypass VID in DTB)\n", __FUNCTION__));
-  } else if (CheckForBypassVendorId (PciHandle, BypassVendorId)) {
-    // Found matching vendor ID, use bypass mode
-    *TranslationMode = SMMU_V3_BYPASS;
-    DEBUG ((DEBUG_INFO, "%a: Setting BYPASS mode due to VendorId 0x%04x\n", __FUNCTION__, BypassVendorId));
-  } else {
-    // No match found, use translate mode
-    *TranslationMode = SMMU_V3_TRANSLATE;
-    DEBUG ((DEBUG_INFO, "%a: Setting TRANSLATE mode\n", __FUNCTION__));
+  if (TegraGetPlatform () == TEGRA_PLATFORM_SILICON) {
+    // Check DTB for bypass vendor ID first
+    BypassVendorId = GetBypassVendorIdFromDtb ();
+    if (BypassVendorId == 0) {
+      // No bypass vendor ID in DTB, use translate mode
+      *TranslationMode = SMMU_V3_TRANSLATE;
+      DEBUG ((DEBUG_INFO, "%a: Setting TRANSLATE mode (no bypass VID in DTB)\n", __FUNCTION__));
+    } else if (CheckForBypassVendorId (PciHandle, BypassVendorId)) {
+      // Found matching vendor ID, use bypass mode
+      *TranslationMode = SMMU_V3_BYPASS;
+      DEBUG ((DEBUG_INFO, "%a: Setting BYPASS mode due to VendorId 0x%04x\n", __FUNCTION__, BypassVendorId));
+    } else {
+      // No match found, use translate mode
+      *TranslationMode = SMMU_V3_TRANSLATE;
+      DEBUG ((DEBUG_INFO, "%a: Setting TRANSLATE mode\n", __FUNCTION__));
+    }
   }
 
 CleanupAndReturn:
