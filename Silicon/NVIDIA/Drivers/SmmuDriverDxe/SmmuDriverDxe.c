@@ -44,7 +44,7 @@ IoMmuAllocateBuffer (
   EFI_STATUS            Status;
   EFI_PHYSICAL_ADDRESS  PhysicalAddress;
 
-  DEBUG ((DEBUG_INFO, "IoMmuAllocateBuffer: ==> 0x%08x\n", Pages));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuAllocateBuffer: ==> 0x%08x\n", Pages));
 
   // Validate Attributes
   if ((Attributes & EDKII_IOMMU_ATTRIBUTE_INVALID_FOR_ALLOCATE_BUFFER) != 0) {
@@ -86,7 +86,7 @@ IoMmuAllocateBuffer (
     return Status;
   }
 
-  DEBUG ((DEBUG_INFO, "IoMmuAllocateBuffer: 0x%08x <==\n", *HostAddress));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuAllocateBuffer: 0x%08x <==\n", *HostAddress));
 
   return Status;
 }
@@ -99,7 +99,7 @@ IoMmuFreeBuffer (
   IN  VOID                  *HostAddress
   )
 {
-  DEBUG ((DEBUG_INFO, "IoMmuFreeBuffer: 0x%x\n", Pages));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuFreeBuffer: 0x%x\n", Pages));
   return gBS->FreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)HostAddress, Pages);
 }
 
@@ -145,7 +145,7 @@ IoMmuSetAttribute (
       }
 
       DEBUG ((
-        DEBUG_INFO,
+        DEBUG_VERBOSE,
         "%a Calling SetAttribute for SmmuV3ProtocolInfo->SmmuV3pHandle = 0x%X and StreamID = 0x%X \n",
         __FUNCTION__,
         SmmuV3ProtocolInfo[Index].SmmuV3pHandle,
@@ -197,7 +197,7 @@ IoMmuMap (
     Status = EFI_INVALID_PARAMETER;
   }
 
-  DEBUG ((DEBUG_INFO, "IoMmuMap: ==> 0x%X - 0x%X (%x)\n", (UINTN)HostAddress, *NumberOfBytes, Operation));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuMap: ==> 0x%X - 0x%X (%x)\n", (UINTN)HostAddress, *NumberOfBytes, Operation));
 
   // Make sure that Operation is valid
   if ((UINT32)Operation >= EdkiiIoMmuOperationMaximum) {
@@ -282,7 +282,7 @@ IoMmuMap (
     if (EFI_ERROR (Status)) {
       FreePool (MapInfo);
       *NumberOfBytes = 0;
-      DEBUG ((DEBUG_INFO, "IoMmuMap: %r\n", Status));
+      DEBUG ((DEBUG_VERBOSE, "IoMmuMap: %r\n", Status));
       return Status;
     }
 
@@ -313,7 +313,7 @@ IoMmuMap (
   // Return a pointer to the MAP_INFO structure in Mapping
   *Mapping = MapInfo;
 
-  DEBUG ((DEBUG_INFO, "IoMmuMap: 0x%08x - 0x%08x <==\n", *DeviceAddress, *Mapping));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuMap: 0x%08x - 0x%08x <==\n", *DeviceAddress, *Mapping));
 
   return EFI_SUCCESS;
 }
@@ -328,7 +328,7 @@ IoMmuUnmap (
   MAP_INFO    *MapInfo;
   LIST_ENTRY  *Link;
 
-  DEBUG ((DEBUG_INFO, "IoMmuUnmap: 0x%X\n", (UINTN)Mapping));
+  DEBUG ((DEBUG_VERBOSE, "IoMmuUnmap: 0x%X\n", (UINTN)Mapping));
 
   if (Mapping == NULL) {
     DEBUG ((DEBUG_ERROR, "IoMmuUnmap: %r\n", EFI_INVALID_PARAMETER));
