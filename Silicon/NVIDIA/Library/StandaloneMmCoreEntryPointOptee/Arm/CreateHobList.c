@@ -2,7 +2,7 @@
   Creates HOB during Standalone MM Foundation entry point
   on ARM platforms.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -58,7 +58,6 @@ CreateHobListFromBootInfo (
   )
 {
   EFI_HOB_HANDOFF_INFO_TABLE      *HobStart;
-  EFI_RESOURCE_ATTRIBUTE_TYPE     Attributes;
   UINT32                          Index;
   UINT32                          BufferSize;
   UINT32                          Flags;
@@ -84,25 +83,6 @@ CreateHobListFromBootInfo (
 
   // Build a Boot Firmware Volume HOB
   BuildFvHob (PayloadBootInfo->SpImageBase, PayloadBootInfo->SpImageSize);
-
-  // Build a resource descriptor Hob that describes the available physical
-  // memory range
-  Attributes = (
-                EFI_RESOURCE_ATTRIBUTE_PRESENT |
-                EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-                EFI_RESOURCE_ATTRIBUTE_TESTED |
-                EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
-                );
-
-  BuildResourceDescriptorHob (
-    EFI_RESOURCE_SYSTEM_MEMORY,
-    Attributes,
-    (UINTN)PayloadBootInfo->SpMemBase,
-    PayloadBootInfo->SpMemLimit - PayloadBootInfo->SpMemBase
-    );
 
   // Find the size of the GUIDed HOB with MP information
   BufferSize  = sizeof (MP_INFORMATION_HOB_DATA);

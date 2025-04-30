@@ -2,7 +2,7 @@
   Creates HOB during Standalone MM Foundation entry point
   on ARM platforms.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -57,7 +57,6 @@ CreateHobListFromBootInfo (
   )
 {
   EFI_HOB_HANDOFF_INFO_TABLE      *HobStart;
-  EFI_RESOURCE_ATTRIBUTE_TYPE     Attributes;
   UINT32                          Index;
   UINT32                          BufferSize;
   UINT32                          Flags;
@@ -83,25 +82,6 @@ CreateHobListFromBootInfo (
 
   // Build a Boot Firmware Volume HOB
   BuildFvHob (PayloadBootInfo->SpImageBase, PayloadBootInfo->SpImageSize);
-
-  // Build a resource descriptor Hob that describes the available physical
-  // memory range
-  Attributes = (
-                EFI_RESOURCE_ATTRIBUTE_PRESENT |
-                EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-                EFI_RESOURCE_ATTRIBUTE_TESTED |
-                EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
-                EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
-                );
-
-  BuildResourceDescriptorHob (
-    EFI_RESOURCE_SYSTEM_MEMORY,
-    Attributes,
-    (UINTN)PayloadBootInfo->SpMemBase,
-    PayloadBootInfo->SpMemLimit - PayloadBootInfo->SpMemBase
-    );
 
   // Find the size of the GUIDed HOB with MP information
   BufferSize  = sizeof (MP_INFORMATION_HOB_DATA);
@@ -136,7 +116,7 @@ CreateHobListFromBootInfo (
   // of the communication buffer shared with the Normal world.
   NsCommBufMmramRange = (EFI_MMRAM_DESCRIPTOR *)BuildGuidHob (
                                                   &gEfiStandaloneMmNonSecureBufferGuid,
-                                                  (NS_MAX_REGIONS * sizeof (EFI_MM_DEVICE_REGION))
+                                                  (NS_MAX_REGIONS * sizeof (EFI_MMRAM_DESCRIPTOR))
                                                   );
   for (Index = 0; Index < NS_MAX_REGIONS; Index++) {
     NsCommBufMmramRange[Index].PhysicalStart = PayloadBootInfo->SpNsRegions[Index].DeviceRegionStart;
@@ -214,6 +194,10 @@ CreateHobListFromBootInfo (
   MmramRanges[MmRangeIndex].PhysicalSize  = HobStart->EfiFreeMemoryTop - HobStart->EfiFreeMemoryBottom;
   MmramRanges[MmRangeIndex].RegionState   = EFI_CACHEABLE;
   MmRangeIndex++;
+
+  for (Index = 0; Index < MmRangeIndex; Index++) {
+    DEBUG ((DEBUG_ERROR, "MmramRanges[%d]: 0x%016lx - 0x%016lx, 0x%x\n", Index, MmramRanges[Index].PhysicalStart, MmramRanges[Index].PhysicalSize, MmramRanges[Index].RegionState));
+  }
 
   return HobStart;
 }
