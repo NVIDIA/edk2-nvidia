@@ -154,15 +154,8 @@ GetCacheInfoFromCacheNode (
 
   // Next level token
   if (CacheNode->CacheData.NextLevelCache != 0) {
-    NextCacheNode = FindpHandleInTracker (CacheNode->CacheData.NextLevelCache, CacheTracker);
-    if (((CacheNode->Socket == NextCacheNode->Socket) &&
-         (CacheNode->Cluster == NextCacheNode->Cluster) &&
-         (CacheNode->Core == NextCacheNode->Core)))
-    {
-      CacheInfo->NextLevelOfCacheToken = NextCacheNode->Token;
-    } else {
-      CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
-    }
+    NextCacheNode                    = FindpHandleInTracker (CacheNode->CacheData.NextLevelCache, CacheTracker);
+    CacheInfo->NextLevelOfCacheToken = NextCacheNode->Token;
   } else {
     CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
   }
@@ -961,6 +954,11 @@ FixupSocketClusterCoreFields (
       Node = Next;
       Next = FindpHandleInTracker (Next->CacheData.NextLevelCache, CacheTracker);
     }
+
+    // When Next is NULL, we have reached the top of the hierarchy.
+    // Node should be pointing to the top-level cache node at this point.
+    Node->Cluster = UNUSED_CLUSTER;
+    Node->Core    = UNUSED_CORE;
   }
 
   // JDS TODO - do we want to sanity-check the result?
