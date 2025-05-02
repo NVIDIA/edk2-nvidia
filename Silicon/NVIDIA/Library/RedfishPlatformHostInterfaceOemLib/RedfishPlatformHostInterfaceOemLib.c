@@ -388,7 +388,7 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
     DeviceDesc->CredentialBootstrappingHandle = CBHandle;
   }
 
-  *DeviceType       = REDFISH_HOST_INTERFACE_DEVICE_TYPE_PCI_PCIE_V2;
+  *DeviceType       = REDFISH_HOST_INTERFACE_DEVICE_TYPE_USB_V2;
   *DeviceDescriptor = RedfishInterfaceData;
   DumpRedfishDeviceDescriptorData (DeviceDesc, sizeof (USB_INTERFACE_DEVICE_DESCRIPTOR_V2) - 1);
   return EFI_SUCCESS;
