@@ -44,6 +44,9 @@ CONFIG_FIRMWARE_CAPSULE_SIZE=0
 !ifndef CONFIG_FIRMWARE_MANAGEMENT
 FMP_SYSTEM_IMAGE_TYPE_ID=0
 !endif
+!ifndef CONFIG_LOGO_IMPLEMENTER
+CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
+!endif
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID = $(CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID)
@@ -901,6 +904,12 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   #
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceTestKeySha256Digest|{0}
 
+  #
+  # Logo scaling/placement factors
+  #
+  gNVIDIATokenSpaceGuid.PcdLogoScreenRatio|$(CONFIG_LOGO_SCALED_SCREEN_RATIO)
+  gNVIDIATokenSpaceGuid.PcdLogoCenterY|$(CONFIG_LOGO_SCALED_CENTER_Y)
+
 [PcdsFixedAtBuild]
   #
   # Variable Services PCDs.
@@ -1631,7 +1640,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   # Logo support
   #
 !ifdef CONFIG_LOGO
-  Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
+  $(CONFIG_LOGO_IMPLEMENTER)
 !ifdef CONFIG_ACPI
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 !endif

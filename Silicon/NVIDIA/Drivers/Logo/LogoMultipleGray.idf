@@ -1,0 +1,11 @@
+// /** @file
+// Platform Logo image definition file.
+//
+// SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+#image IMG_LOGO_0 nvidiagray480.bmp
+#image IMG_LOGO_1 nvidiagray720.bmp
+#image IMG_LOGO_2 nvidiagray1080.bmp

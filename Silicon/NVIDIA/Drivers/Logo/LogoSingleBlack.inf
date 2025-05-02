@@ -1,0 +1,59 @@
+## @file
+#  Platform Logo Resources
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 1.27
+  BASE_NAME                      = LogoSingleBlackDxe
+  MODULE_UNI_FILE                = LogoDxe.uni
+  FILE_GUID                      = 5b568a4c-5bb0-413e-b15c-1f3ba305ff32
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeLogo
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  nvidiablack-1036x864.bmp
+  LogoSingleBlack.idf
+  LogoSingleBlack.c
+  Logo.c
+
+[Packages]
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  DebugLib
+  DxeServicesLib
+  MemoryAllocationLib
+  PcdLib
+  BaseMemoryLib
+  PerformanceLib
+
+[Protocols]
+  gEfiHiiDatabaseProtocolGuid        ## CONSUMES
+  gEfiHiiImageExProtocolGuid         ## CONSUMES
+  gEfiHiiPackageListProtocolGuid     ## PRODUCES CONSUMES
+  gEdkiiPlatformLogoProtocolGuid     ## PRODUCES
+  gEfiGraphicsOutputProtocolGuid     ## CONSUMES
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  LogoDxeExtra.uni
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdLogoScreenRatio
+  gNVIDIATokenSpaceGuid.PcdLogoCenterY
+
+[Depex]
+  gEfiHiiDatabaseProtocolGuid AND
+  gEfiHiiImageExProtocolGuid
