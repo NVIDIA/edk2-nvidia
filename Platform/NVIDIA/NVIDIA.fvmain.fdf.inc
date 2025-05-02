@@ -228,19 +228,11 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Logo support
   #
 !ifdef CONFIG_LOGO
-  INF Silicon/NVIDIA/Drivers/Logo/LogoDxe.inf
+  INF $(CONFIG_LOGO_IMPLEMENTER)
+
 !ifdef CONFIG_ACPI
   INF MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
 !endif
-
-  #
-  # Logo Files
-  #
-  FILE FREEFORM = gNVIDIAPlatformLogoGuid {
-    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray480.bmp
-    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray720.bmp
-    SECTION RAW = Silicon/NVIDIA/Assets/nvidiagray1080.bmp
-  }
 !endif
 
   INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf

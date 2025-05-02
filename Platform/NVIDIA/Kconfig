@@ -529,11 +529,59 @@ menu "Hardware support"
         800x600
     endchoice
 
-    config LOGO
-    bool "Boot Logo Support"
-    help
-      Adds support for a boot logo during boot, will not be used if there no graphics console supported.
+    menu "Boot Logo"
+      config LOGO
+      bool "Boot Logo Support"
+      help
+        Adds support for a boot logo during boot, will not be used if there are no graphics consoles supported.
 
+      config USE_NO_LOGO_SCALING
+      bool
+      config USE_40_PERCENT_LOGO_SCALING
+      bool
+      config USE_FULL_SCREEN_LOGO_SCALING
+      bool
+
+      config USE_SINGLE_BLACK_LOGO
+      bool
+      config USE_MULTIPLE_GRAY_LOGOS
+      bool
+
+      config LOGO_SCALED_SCREEN_RATIO
+      int "Logo Screen Ratio"
+      depends on LOGO
+      range 0 1000
+      default 1000 if USE_FULL_SCREEN_LOGO_SCALING
+      default 400 if USE_40_PERCENT_LOGO_SCALING
+      default 0 if USE_NO_LOGO_SCALING
+      default 400
+      help
+        The ratio of the logo to the screen size. In 10ths of a percentage. defaults to 400 (40%)
+        If 0 is selected, the logo will not be scaled.
+        Note that this scaling is based on screen size not available screen size if the image is not centered.
+
+      config LOGO_SCALED_CENTER_Y
+      int "Logo Center Y"
+      depends on LOGO
+      range 0 1000
+      default 500 if USE_FULL_SCREEN_LOGO_SCALING
+      default 382 if USE_40_PERCENT_LOGO_SCALING
+      default 500 if USE_NO_LOGO_SCALING
+      default 382
+      help
+        The screen Y position of the center of the logo. In 10ths of a percentage. defaults to 382 (38.2%)
+        Care should be taken on how this relates to image size and scaling.
+        If part of image would be above or below screen no logo will be shown.
+
+      config LOGO_IMPLEMENTER
+      string "Logo Implementer"
+      depends on LOGO
+      default "Silicon/NVIDIA/Drivers/Logo/LogoMultipleGray.inf" if USE_MULTIPLE_GRAY_LOGOS
+      default "Silicon/NVIDIA/Drivers/Logo/LogoSingleBlack.inf" if USE_SINGLE_BLACK_LOGO
+      help
+        The name of the logo implementer driver.
+
+    endmenu
   endmenu
 
   config IPMI_BMC

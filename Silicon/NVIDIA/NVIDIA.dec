@@ -486,6 +486,12 @@
 #CCPLEX NS INITIATOR ID
   gNVIDIATokenSpaceGuid.PcdCcplexNsInitiatorId|17|UINT32|0x00000164
 
+#Logo scaling/placement factors
+  #Logo to Screen Ratio in 1000ths
+  gNVIDIATokenSpaceGuid.PcdLogoScreenRatio|400|UINT16|0x00000165
+  #Center of Logo Y Position in 1000ths
+  gNVIDIATokenSpaceGuid.PcdLogoCenterY|382|UINT16|0x00000166
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
