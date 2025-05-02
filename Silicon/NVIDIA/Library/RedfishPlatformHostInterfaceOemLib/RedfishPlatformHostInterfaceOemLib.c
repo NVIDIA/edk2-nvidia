@@ -5,7 +5,7 @@
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
   Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -385,7 +385,7 @@ RedfishPlatformHostInterfaceDeviceDescriptor (
     DeviceDesc->CredentialBootstrappingHandle = CBHandle;
   }
 
-  *DeviceType       = REDFISH_HOST_INTERFACE_DEVICE_TYPE_PCI_PCIE_V2;
+  *DeviceType       = REDFISH_HOST_INTERFACE_DEVICE_TYPE_USB_V2;
   *DeviceDescriptor = RedfishInterfaceData;
   DumpRedfishDeviceDescriptorData (DeviceDesc, sizeof (USB_INTERFACE_DEVICE_DESCRIPTOR_V2) - 1);
   return EFI_SUCCESS;
