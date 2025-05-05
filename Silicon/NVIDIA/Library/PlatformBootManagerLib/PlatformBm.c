@@ -53,6 +53,7 @@
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/ReportStatusCodeHandler.h>
 #include <Protocol/SavedCapsuleProtocol.h>
+#include <Protocol/SimpleTextOut.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
 #include <Uefi/UefiSpec.h>
 #include <Guid/EventGroup.h>
@@ -66,6 +67,7 @@
 #include "PlatformBm.h"
 
 #define WAIT_POLLED_PER_CYCLE_DELAY  1000      // 1 MS
+#define MAX_STRING_SIZE              256
 
 #define DP_NODE_LEN(Type)  { (UINT8)sizeof (Type), (UINT8)(sizeof (Type) >> 8) }
 
@@ -137,6 +139,73 @@ VOID
   IN EFI_HANDLE   Handle,
   IN CONST CHAR16 *ReportText
   );
+
+/**
+  Prints a string to the console but skips the GOP consoles.
+
+  @param[in] Format  The format string to print.
+  @param[in] ...     The arguments to print.
+**/
+STATIC
+VOID
+EFIAPI
+PrintNonGopConsoles (
+  IN CONST CHAR16  *Format,
+  ...
+  )
+{
+  EFI_STATUS                       Status;
+  EFI_HANDLE                       *Handles;
+  UINTN                            NumberOfHandles;
+  UINTN                            Index;
+  VOID                             *GopInterface;
+  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *SimpleTextOut;
+  CHAR16                           String[MAX_STRING_SIZE];
+  VA_LIST                          Marker;
+
+  VA_START (Marker, Format);
+  UnicodeVSPrint (String, sizeof (String), Format, Marker);
+  VA_END (Marker);
+
+  // Get all the console out devices
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiConsoleOutDeviceGuid,
+                  NULL /* SearchKey */,
+                  &NumberOfHandles,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  // Check if the console out device is a GOP
+  for (Index = 0; Index < NumberOfHandles; Index++) {
+    Status = gBS->HandleProtocol (
+                    Handles[Index],
+                    &gEfiGraphicsOutputProtocolGuid,
+                    (VOID **)&GopInterface
+                    );
+    if (!EFI_ERROR (Status)) {
+      continue;
+    }
+
+    // Get the simple text out protocol
+    Status = gBS->HandleProtocol (
+                    Handles[Index],
+                    &gEfiSimpleTextOutProtocolGuid,
+                    (VOID **)&SimpleTextOut
+                    );
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    // Print the string to the console
+    SimpleTextOut->OutputString (SimpleTextOut, String);
+  }
+
+  FreePool (Handles);
+}
 
 /**
   Locate all handles that carry the specified protocol, filter them with a
@@ -1178,19 +1247,15 @@ DisplaySystemAndHotkeyInformation (
   //
   // firmware version.
   //
-  UnicodeSPrint (
-    Buffer,
-    sizeof (Buffer),
+  //
+  // Serial console only.
+  //
+  PrintNonGopConsoles (
     L"%s System firmware version %s date %s\n\r",
     (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
     (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
     (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
     );
-
-  //
-  // Serial console only.
-  //
-  Print (Buffer);
 
   //
   // Check and see if GOP is available.
@@ -1279,16 +1344,16 @@ DisplaySystemAndHotkeyInformation (
   // Add a newline to maintain ordering and readability of logs.
   //
   if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
-    Print (L"\n\r");
+    PrintNonGopConsoles (L"\n\r");
   }
 
-  Print (L"ESC   to enter Setup.\n");
-  Print (L"F11   to enter Boot Manager Menu.\n");
+  PrintNonGopConsoles (L"ESC   to enter Setup.\n");
+  PrintNonGopConsoles (L"F11   to enter Boot Manager Menu.\n");
   if (ShellHotkeySupported) {
-    Print (L"%c     to enter Shell.\n", PcdGet16 (PcdShellHotkey));
+    PrintNonGopConsoles (L"%c     to enter Shell.\n", PcdGet16 (PcdShellHotkey));
   }
 
-  Print (L"Enter to continue boot.\n");
+  PrintNonGopConsoles (L"Enter to continue boot.\n");
 }
 
 STATIC
