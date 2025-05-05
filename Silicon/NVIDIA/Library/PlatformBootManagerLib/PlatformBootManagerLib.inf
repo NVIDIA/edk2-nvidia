@@ -97,6 +97,9 @@
   gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs
+  gNVIDIATokenSpaceGuid.PcdBootManagerCustomColors
+  gNVIDIATokenSpaceGuid.PcdBootManagerForegroundColor|0x000000
+  gNVIDIATokenSpaceGuid.PcdBootManagerBackgroundColor|0xFFFFFF
 
 [Guids]
   gEfiFileInfoGuid

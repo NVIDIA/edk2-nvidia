@@ -580,7 +580,33 @@ menu "Hardware support"
       default "Silicon/NVIDIA/Drivers/Logo/LogoSingleBlack.inf" if USE_SINGLE_BLACK_LOGO
       help
         The name of the logo implementer driver.
+    endmenu
 
+    menu "Boot Manager Colors"
+      config USE_BOOT_MANAGER_BLACK_TEXT
+      bool
+
+      config BOOT_MANAGER_CUSTOM_COLORS
+      bool "Custom boot manager colors"
+      default y if USE_BOOT_MANAGER_BLACK_TEXT
+      help
+        Use custom colors for the boot manager console prints
+
+      config BOOT_MANAGER_FOREGROUND_COLOR
+      hex "Boot manager foreground color"
+      depends on BOOT_MANAGER_CUSTOM_COLORS
+      default 0x000000 if USE_BOOT_MANAGER_BLACK_TEXT
+      default 0xFFFFFF
+      help
+        The foreground color for the boot manager
+
+      config BOOT_MANAGER_BACKGROUND_COLOR
+      hex "Boot manager background color"
+      depends on BOOT_MANAGER_CUSTOM_COLORS
+      default 0xFFFFFF if USE_BOOT_MANAGER_BLACK_TEXT
+      default 0x000000
+      help
+        The background color for the boot manager
     endmenu
   endmenu
 

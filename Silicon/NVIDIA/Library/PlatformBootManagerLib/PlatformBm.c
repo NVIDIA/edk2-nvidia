@@ -106,6 +106,11 @@ STATIC PLATFORM_USB_KEYBOARD  mUsbKeyboard = {
 STATIC PLATFORM_CONFIGURATION_DATA  CurrentPlatformConfigData;
 EFI_RSC_HANDLER_PROTOCOL            *mRscHandler = NULL;
 
+EFI_GRAPHICS_OUTPUT_BLT_PIXEL        *mForegroundColorPtr = NULL;
+EFI_GRAPHICS_OUTPUT_BLT_PIXEL        *mBackgroundColorPtr = NULL;
+EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  mForegroundColor     = { 0 };
+EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  mBackgroundColor     = { 0 };
+
 /**
   Check if the handle satisfies a particular condition.
 
@@ -1213,18 +1218,16 @@ DisplaySystemAndHotkeyInformation (
   VOID
   )
 {
-  EFI_STATUS                     Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL   *GraphicsOutput;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Black;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  White;
-  CHAR16                         Buffer[150];
-  UINTN                          ScreenWidthChars;
-  UINTN                          PosX;
-  UINTN                          PosY;
-  UINTN                          StartLineX = EFI_GLYPH_WIDTH+2;
-  UINTN                          LineDeltaY = EFI_GLYPH_HEIGHT+1;
-  UINTN                          LineCount  = 0;
-  BOOLEAN                        ShellHotkeySupported;
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
+  CHAR16                        Buffer[150];
+  UINTN                         ScreenWidthChars;
+  UINTN                         PosX;
+  UINTN                         PosY;
+  UINTN                         StartLineX = EFI_GLYPH_WIDTH+2;
+  UINTN                         LineDeltaY = EFI_GLYPH_HEIGHT+1;
+  UINTN                         LineCount  = 0;
+  BOOLEAN                       ShellHotkeySupported;
 
   CheckUefiShellLoadOption (&ShellHotkeySupported);
   if (ShellHotkeySupported && (PcdGet16 (PcdShellHotkey) == CHAR_NULL)) {
@@ -1234,8 +1237,6 @@ DisplaySystemAndHotkeyInformation (
   //
   // Display hotkey information at upper left corner.
   //
-  Black.Blue = Black.Green = Black.Red = Black.Reserved = 0;
-  White.Blue = White.Green = White.Red = White.Reserved = 0xFF;
 
   //
   // Show NVIDIA Internal Banner.
@@ -1296,7 +1297,7 @@ DisplaySystemAndHotkeyInformation (
     Buffer[ScreenWidthChars] = '\0';
     PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
                                 StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
 
     // Version
     PosY += LineDeltaY;
@@ -1309,7 +1310,7 @@ DisplaySystemAndHotkeyInformation (
     Buffer[ScreenWidthChars] = '\0';
     PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
                                 StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
 
     // Date
     PosY += LineDeltaY;
@@ -1322,20 +1323,20 @@ DisplaySystemAndHotkeyInformation (
     Buffer[ScreenWidthChars] = '\0';
     PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
                                 StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, NULL, NULL, Buffer);
+    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
 
     PosY += LineDeltaY;
 
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"ESC   to enter Setup.");
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"ESC   to enter Setup.");
     LineCount++;
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"F11   to enter Boot Manager Menu.");
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"F11   to enter Boot Manager Menu.");
     LineCount++;
     if (ShellHotkeySupported) {
-      PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"%c     to enter Shell.", PcdGet16 (PcdShellHotkey));
+      PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"%c     to enter Shell.", PcdGet16 (PcdShellHotkey));
       LineCount++;
     }
 
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, &White, &Black, L"Enter to continue boot.");
+    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"Enter to continue boot.");
     LineCount++;
   }
 
@@ -2688,6 +2689,14 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
+  // Set the foreground and background colors if custom colors are enabled
+  if (PcdGetBool (PcdBootManagerCustomColors)) {
+    mForegroundColor.Raw = PcdGet32 (PcdBootManagerForegroundColor);
+    mBackgroundColor.Raw = PcdGet32 (PcdBootManagerBackgroundColor);
+    mForegroundColorPtr  = &mForegroundColor.Pixel;
+    mBackgroundColorPtr  = &mBackgroundColor.Pixel;
+  }
+
   // Print the BootOrder information
   PrintCurrentBootOrder (DEBUG_ERROR);
 
