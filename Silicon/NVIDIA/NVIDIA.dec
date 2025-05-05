@@ -493,6 +493,11 @@
   #Center of Logo Y Position in 1000ths
   gNVIDIATokenSpaceGuid.PcdLogoCenterY|382|UINT16|0x00000166
 
+#Boot manager colors
+  gNVIDIATokenSpaceGuid.PcdBootManagerCustomColors|FALSE|BOOLEAN|0x00000167
+  gNVIDIATokenSpaceGuid.PcdBootManagerForegroundColor|0x000000|UINT32|0x00000168
+  gNVIDIATokenSpaceGuid.PcdBootManagerBackgroundColor|0xFFFFFF|UINT32|0x00000169
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
