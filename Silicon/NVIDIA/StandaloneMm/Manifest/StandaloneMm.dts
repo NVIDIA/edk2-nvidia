@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,11 +31,11 @@
 	execution-ctx-count = <1>;
 	exception-level = <2>; /* S-EL1 */
 	execution-state = <0>; /* AARCH64 */
-	load-address = <0x00000000 0x8B000000>;
+	load-address = <0x00000000 0x92E00000>;
 	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
 	reserved-pages-count = <0>;
 	xlat-granule = <0>; /* 4KiB */
-	boot-order = <1>;
+	boot-order = <0>;
 	messaging-method = <3>; /* Direct messaging with managed exit */
 	run-time-model = <0>; /* Run to completion */
 	ns-interrupts-action = <0>; /* Non-secure interrupt is queued */
@@ -77,7 +77,7 @@
 		common-shared-buffer-ras-mm {
 			description = "ras-mm";
 			pages-count = <9>;
-			base-address = <0x00000000 0x8ACF2000>;
+			base-address = <0x00000000 0x922F2000>;
 			attributes = <SECURE_RW>; /* read-write */
 			nv-sp-shared-buffer-id = <2>;
 		};
@@ -85,28 +85,28 @@
 		common-shared-buffer-satmc-mm {
 			description = "satmc-mm";
 			pages-count = <1>;
-			base-address = <0x00000000 0x8ACF1000>;
+			base-address = <0x00000000 0x922F1000>;
 			attributes = <SECURE_RW>; /* read-write */
 			nv-sp-shared-buffer-id = <1>;
 		};
 		rxbuffer: rx-buffer {
 			description = "rx-buffer";
 			pages-count = <1>;
-			base-address = <0x00000000 0x8B52F000>;
+			base-address = <0x00000000 0x9738D000>;
 			attributes = <SECURE_RO>; /* read-only */
 		};
 		/* Reserved memory for stage-1 table entries */
 		stage1-entries {
 			description = "stage1-entries";
 			pages-count = <96>;
-			base-address = <0x00000000 0x8B530000>;
+			base-address = <0x00000000 0x9738E000>;
 			attributes = <SECURE_RW>; /* read-write */
 		};
 		/* Shared memory between StMM and NS world */
 		stmmns-memory {
 			description = "stmmns-memory";
 			pages-count = <512>;
-			base-address = <0x00000000 0x8B5F0000>;
+			base-address = <0x00000000 0x973EE000>;
 			attributes = <NON_SECURE_RW>; /* read-write */
 			nv-non-secure-memory = <0x1>;
 			nv-erst-cached-pages-count = <16>;
@@ -115,13 +115,13 @@
 		txbuffer: tx-buffer {
 			description = "tx-buffer";
 			pages-count = <1>;
-			base-address = <0x00000000 0x8B7FF000>;
+			base-address = <0x00000000 0x975EE000>;
 			attributes = <SECURE_RW>; /* read-write */
 		};
 		stmmprm-0-memory {
 			description = "stmmprm-0-memory";
 			pages-count = <17>;
-			base-address = <0x00000000 0x8B800000>;
+			base-address = <0x00000000 0x975EF000>;
 			attributes = <0x3>; /* read-write */
 			nv-non-secure-memory = <0x1>;
 		};
