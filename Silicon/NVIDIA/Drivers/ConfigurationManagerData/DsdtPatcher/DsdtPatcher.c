@@ -1,7 +1,7 @@
 /** @file
   Patches to the DSDT
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -16,6 +16,8 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/DtPlatformDtbLoaderLib.h>
+#include <libfdt.h>
 
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 
@@ -55,6 +57,75 @@ UpdatePlatInfo (
 
 ErrorExit:
   return (Status == EFI_NOT_FOUND) ? EFI_SUCCESS : Status;
+}
+
+/** patch PBTN data in DSDT.
+
+  @retval EFI_SUCCESS   Success
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdatePwrBtnInfo (
+  IN NVIDIA_AML_PATCH_PROTOCOL  *PatchProtocol
+  )
+{
+  EFI_STATUS            Status;
+  NVIDIA_AML_NODE_INFO  AcpiNodeInfo;
+  UINT8                 PowerButtonPolicy;
+  VOID                  *DeviceTreeBase;
+  UINTN                 DeviceTreeSize;
+  INT32                 NodeOffset;
+  CONST VOID            *Property;
+  INT32                 Length;
+
+  PowerButtonPolicy = 0x00;
+  DeviceTreeBase    = NULL;
+  DeviceTreeSize    = 0;
+  Property          = NULL;
+  Length            = 0;
+
+  //
+  // Get acpi-power-button-policy setting from Dtb
+  //
+  Status = DtPlatformLoadDtb (&DeviceTreeBase, &DeviceTreeSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to load device tree: %r\n", __FUNCTION__, Status));
+    return EFI_DEVICE_ERROR;
+  }
+
+  NodeOffset = fdt_path_offset (DeviceTreeBase, UEFI_FDT_NODE_STR);
+  if (NodeOffset < 0) {
+    DEBUG ((DEBUG_INFO, "%a: Device tree node for %a not found.\n", __FUNCTION__, UEFI_FDT_NODE_STR));
+    return EFI_SUCCESS;
+  }
+
+  Property = fdt_getprop (DeviceTreeBase, NodeOffset, PWR_BTN_FDT_STR, &Length);
+  if ((Property == NULL) || (Length == 0)) {
+    DEBUG ((DEBUG_INFO, "%a: Device tree node for %a not found.\n", __FUNCTION__, PWR_BTN_FDT_STR));
+    return EFI_SUCCESS;
+  }
+
+  //
+  // 0x00: ACPI graceful shutdown support
+  // 0x01: ACPI power button support
+  //
+  PowerButtonPolicy = (UINT8)SwapBytes32 (*(CONST UINT32 *)Property);
+  DEBUG ((DEBUG_INFO, "%a: %a/%a= 0x%x\n", __FUNCTION__, UEFI_FDT_NODE_STR, PWR_BTN_FDT_STR, PowerButtonPolicy));
+
+  Status = PatchProtocol->FindNode (PatchProtocol, ACPI_PWR_BTN_INFO, &AcpiNodeInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: PBTN node is not found for patching %a - %r\n", __FUNCTION__, ACPI_PWR_BTN_INFO, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  Status = PatchProtocol->SetNodeData (PatchProtocol, &AcpiNodeInfo, &PowerButtonPolicy, AcpiNodeInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error updating %a - %r\n", __FUNCTION__, ACPI_PLAT_INFO, Status));
+  }
+
+  return Status;
 }
 
 /**
@@ -463,6 +534,7 @@ UpdateEepromInfo (
 
   The DSDT table is potentially patched with the following information:
     "_SB_.PLAT"
+    "_SB_.PBTN"
     "_SB_.GED1.SMR1"
     "_SB_.QSP1._STA"
     "_SB_.I2C3._STA"
@@ -536,6 +608,11 @@ DsdtPatcher (
   }
 
   Status = UpdateEepromInfo (PatchProtocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = UpdatePwrBtnInfo (PatchProtocol);
   if (EFI_ERROR (Status)) {
     return Status;
   }

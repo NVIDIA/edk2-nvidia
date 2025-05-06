@@ -1,7 +1,7 @@
 /*
  * Intel ACPI Component Architecture
  * iASL Compiler/Disassembler version 20180105 (64-bit version)
- * SPDX-FileCopyrightText: Copyright (c) 2020 - 2024, NVIDIA Corporation. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020 - 2025, NVIDIA Corporation. All rights reserved.
  * Copyright (c) 2000 - 2018 Intel Corporation
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -16,6 +16,7 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
   Scope(_SB)
   {
     Name(PLAT, 0xFF)
+    Name(PBTN, 0x00)
     //---------------------------------------------------------------------
     // GED to receive RAS events
     //---------------------------------------------------------------------
@@ -663,6 +664,11 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
       })
     }
 
+    Device (PWRB) {
+        Name (_HID, EISAID("PNP0C0C")) // HID of Power Button
+        Name (_STA, 0x0B)
+    }
+
     //---------------------------------------------------------------------
     // GPIO Device
     //---------------------------------------------------------------------
@@ -698,7 +704,12 @@ DefinitionBlock ("dsdt_th500.aml", "DSDT", 2, "NVIDIA", "TH500", 0x00000001)
             Switch (Arg0) {
                 Case (70) {
                   If (LEqual (\_SB.PLAT, 0x0)) {
-                    Notify (\_SB, 0x81)
+                    If (LEqual (\_SB.PBTN, 0x1)) {
+                      Notify (\_SB.PWRB, 0x80)
+                    }
+                    Else {
+                      Notify (\_SB, 0x81)
+                    }
                   }
                 }
             }
