@@ -2,7 +2,7 @@
 
   BR-BCT Update Device Library
 
-  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,7 @@
 #include <Uefi/UefiBaseType.h>
 
 #define BR_BCT_SLOT_MAX                       4
+#define BR_BCT_SLOT_MARKER_BASED_MAX          3
 #define BR_BCT_BACKUP_PARTITION_CHAIN_OFFSET  (16 * 1024)
 
 STATIC BR_BCT_UPDATE_PRIVATE_DATA  mPrivate                         = { 0 };
@@ -26,6 +27,8 @@ STATIC VOID                        *mVerifyBuffer                   = NULL;
 STATIC BOOLEAN                     mPcdBrBctVerifyUpdateBeforeWrite = FALSE;
 STATIC BOOLEAN                     mPcdFwImageEnableBPartitions     = FALSE;
 STATIC BOOLEAN                     mPcdOverwriteActiveFwPartition   = FALSE;
+STATIC BOOLEAN                     mPcdBootChainIsMarkerBased       = FALSE;
+STATIC VOID                        *mInvalidateBuffer               = NULL;
 
 /**
   Get device offset of given BR-BCT slot data.
@@ -260,12 +263,48 @@ BrBctWriteAndVerifySlot (
   return Status;
 }
 
+STATIC
+BOOLEAN
+EFIAPI
+SlotShouldBeInvalidated (
+  IN  UINTN  Slot,
+  IN  UINTN  NewFwChain
+  )
+{
+  if (mPcdBootChainIsMarkerBased) {
+    if ((NewFwChain == BOOT_CHAIN_B) && (Slot == 0)) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+STATIC
+BOOLEAN
+EFIAPI
+SlotShouldBeUpdated (
+  IN  UINTN  Slot,
+  IN  UINTN  NewFwChain
+  )
+{
+  if (mPcdBootChainIsMarkerBased) {
+    return (
+            ((Slot & 0x1) == NewFwChain) ||
+            SlotShouldBeInvalidated (Slot, NewFwChain)
+            );
+  }
+
+  return TRUE;
+}
+
 /**
   Update all BCT partition slots
 
   @param[in]  Private           Pointer to private data structure
   @param[in]  Bytes             Bytes to write
   @param[out] Buffer            Address of data to write
+  @param[in]  NewFwChain        New firmware chain to boot
 
   @retval EFI_SUCCESS           Operation successful
   @retval others                Error occurred
@@ -276,19 +315,33 @@ EFIAPI
 BrBctUpdateBctSlots (
   BR_BCT_UPDATE_PRIVATE_DATA  *Private,
   IN  UINTN                   Bytes,
-  IN  CONST VOID              *Buffer
+  IN  CONST VOID              *Buffer,
+  IN  UINTN                   NewFwChain
   )
 {
   UINTN       Index;
-  EFI_STATUS  Status = EFI_SUCCESS;
+  UINTN       Slot;
+  CONST VOID  *BufferToWrite = Buffer;
+  EFI_STATUS  Status         = EFI_SUCCESS;
 
   for (Index = 0; Index < Private->BctPartitionSlots; Index++) {
+    Slot = Private->BctPartitionSlots - Index - 1;
+    if (!SlotShouldBeUpdated (Slot, NewFwChain)) {
+      DEBUG ((DEBUG_INFO, "%a: Slot=%u not updated\n", __FUNCTION__, Slot));
+      continue;
+    }
+
+    if (SlotShouldBeInvalidated (Slot, NewFwChain)) {
+      DEBUG ((DEBUG_INFO, "%a: Slot=%u invalidated\n", __FUNCTION__, Slot));
+      BufferToWrite = mInvalidateBuffer;
+    }
+
     Status = BrBctWriteAndVerifySlot (
                Private,
                Private->BrBctPartition,
-               Private->BctPartitionSlots - Index - 1,
+               Slot,
                Bytes,
-               Buffer
+               BufferToWrite
                );
     if (EFI_ERROR (Status)) {
       return Status;
@@ -349,7 +402,7 @@ BrBctUpdateFwChain (
     goto Done;
   }
 
-  Status = BrBctUpdateBctSlots (Private, DataSize, Buffer);
+  Status = BrBctUpdateBctSlots (Private, DataSize, Buffer, NewFwChain);
   if (EFI_ERROR (Status)) {
     goto Done;
   }
@@ -413,8 +466,15 @@ BrBctUpdateDeviceLibInit (
   )
 {
   BR_BCT_UPDATE_PRIVATE_DATA  *Private;
+  UINTN                       MaxBctSlotsSupported;
 
-  mActiveBootChain = ActiveBootChain;
+  mActiveBootChain                 = ActiveBootChain;
+  mPcdBrBctVerifyUpdateBeforeWrite = PcdGetBool (PcdBrBctVerifyUpdateBeforeWrite);
+  mPcdFwImageEnableBPartitions     = PcdGetBool (PcdFwImageEnableBPartitions);
+  mPcdOverwriteActiveFwPartition   = PcdGetBool (PcdOverwriteActiveFwPartition);
+  mPcdBootChainIsMarkerBased       = PcdGetBool (PcdBootChainIsMarkerBased);
+
+  MaxBctSlotsSupported = (mPcdBootChainIsMarkerBased ? BR_BCT_SLOT_MARKER_BASED_MAX : BR_BCT_SLOT_MAX);
 
   // Initialize our private data for the protocol
   Private                = &mPrivate;
@@ -452,8 +512,8 @@ BrBctUpdateDeviceLibInit (
 
       return EFI_UNSUPPORTED;
     }
-  } else if (Private->BctPartitionSlots > BR_BCT_SLOT_MAX) {
-    Private->BctPartitionSlots = BR_BCT_SLOT_MAX;
+  } else if (Private->BctPartitionSlots > MaxBctSlotsSupported) {
+    Private->BctPartitionSlots = MaxBctSlotsSupported;
   }
 
   DEBUG ((
@@ -471,9 +531,15 @@ BrBctUpdateDeviceLibInit (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  mPcdBrBctVerifyUpdateBeforeWrite = PcdGetBool (PcdBrBctVerifyUpdateBeforeWrite);
-  mPcdFwImageEnableBPartitions     = PcdGetBool (PcdFwImageEnableBPartitions);
-  mPcdOverwriteActiveFwPartition   = PcdGetBool (PcdOverwriteActiveFwPartition);
+  if (mPcdBootChainIsMarkerBased) {
+    mInvalidateBuffer = AllocateRuntimePool (Private->BrBctDataSize);
+    if (mInvalidateBuffer == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: mInvalidateBuffer alloc failed\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    SetMem (mInvalidateBuffer, Private->BrBctDataSize, 0xff);
+  }
 
   return EFI_SUCCESS;
 }

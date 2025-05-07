@@ -369,6 +369,12 @@ BootChainExecuteUpdate (
     goto SetStatusAndBootOs;
   }
 
+  // check that requested chain is not failed
+  if (BootChainIsFailed (BCNext)) {
+    BCStatus = STATUS_ERROR_BOOT_CHAIN_IS_FAILED;
+    goto SetStatusAndBootOs;
+  }
+
   // save current boot chain before starting update
   Status = BCSetVariable (BC_PREVIOUS, mBootChain);
   if (EFI_ERROR (Status)) {

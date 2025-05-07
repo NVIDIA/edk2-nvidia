@@ -1331,6 +1331,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
+  gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
+  gNVIDIATokenSpaceGuid.PcdBootChainIsMarkerBased|TRUE
 
 [PcdsDynamicDefault.common.T264Presil]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE

@@ -2,7 +2,7 @@
 
   Boot Chain Protocol Driver
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -37,6 +37,7 @@
 #define STATUS_ERROR_SETTING_SCRATCH            16
 #define STATUS_ERROR_UPDATE_BR_BCT_FLAG_SET     17
 #define STATUS_ERROR_SETTING_PREVIOUS           18
+#define STATUS_ERROR_BOOT_CHAIN_IS_FAILED       19
 
 typedef enum {
   BC_CURRENT,
