@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 3 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -98,6 +98,7 @@ InstallSmbiosType3Cm (
   EFI_STATUS                        Status;
   INTN                              Type3ContainedElementOffset;
   CONST VOID                        *Property;
+  CONST CHAR8                       *PropertyStr;
   INT32                             Length;
   FRU_DEVICE_INFO                   *Type3FruInfo;
   UINT8                             ChassisType;
@@ -123,6 +124,7 @@ InstallSmbiosType3Cm (
   CHAR16                            ProductInfoVariableName[]  = L"ProductInfo";
   CHAR8                             Type3NodeStr[]             = "/firmware/smbios/type3@xx";
   CHAR8                             DtContainedElementFormat[] = "/firmware/smbios/type3@xx/contained-element@xx";
+  BOOLEAN                           ManufacturerStrAllocated   = FALSE;
   CM_OBJ_DESCRIPTOR                 Desc;
   CM_OBJECT_TOKEN                   *TokenMap;
 
@@ -147,6 +149,16 @@ InstallSmbiosType3Cm (
     NodeOffset = fdt_path_offset (DtbBase, Type3NodeStr);
     if (NodeOffset < 0) {
       break;
+    }
+
+    // Get manufacturer data from DTB
+    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "manufacturer", &Length);
+    if (PropertyStr != NULL ) {
+      ManufacturerStr = (CHAR8 *)AllocateZeroPool (Length + 1);
+      if (ManufacturerStr != NULL) {
+        ManufacturerStrAllocated = TRUE;
+        AsciiSPrint (ManufacturerStr, Length + 1, PropertyStr);
+      }
     }
 
     //
@@ -186,8 +198,14 @@ InstallSmbiosType3Cm (
         ChassisType = Type3RecordPcd->Type;
       }
 
-      ManufacturerStr = Type3FruInfo->ProductManufacturer;
-      VersionStr      = Type3FruInfo->ProductVersion;
+      // If overrides does not have manufacturer data, use fru product/board manufacturer.
+      if (ManufacturerStr == NULL) {
+        ManufacturerStr = Type3FruInfo->ProductManufacturer != NULL
+                    ? Type3FruInfo->ProductManufacturer
+                    : Type3FruInfo->BoardManufacturer;
+      }
+
+      VersionStr = Type3FruInfo->ProductVersion;
     } else {
       continue;
     }
@@ -406,5 +424,9 @@ InstallSmbiosType3Cm (
 CleanupAndReturn:
   FREE_NON_NULL (TokenMap);
   FREE_NON_NULL (EnclosureInfo);
+  if (ManufacturerStrAllocated) {
+    FREE_NON_NULL (ManufacturerStr);
+  }
+
   return Status;
 }
