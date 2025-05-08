@@ -776,6 +776,12 @@ menu "Hardware support"
   config SUPPORTS_BOOTLOADER_RAMDISK
   bool
 
+  config RAS_SMBIOS_MODULE
+  bool "RAS SMBIOS module support"
+  depends on RAS
+  help
+    Exposes API to send SMBIOS data to RASFW via SMBIOS protocol
+
   config BOOTLOADER_RAMDISK
   bool "Early bootloader ramdisk support"
   depends on SUPPORTS_BOOTLOADER_RAMDISK

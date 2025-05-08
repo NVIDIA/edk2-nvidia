@@ -1,0 +1,49 @@
+## @file
+#  A simple implementation to transfer SMBIOS Type17 Handles to RASFW
+
+#  SPDX-FileCopyrightText: copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SmbiosRasTransfer
+  FILE_GUID                      = e232d567-3840-45dc-a564-6c5fb375fd31
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = SmbiosRasTransferEntry
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
+#
+
+[Sources]
+  SmbiosRasTransfer.c
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  MemoryAllocationLib
+  SecureFwCommLib
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+
+[Guids]
+  gEfiEventReadyToBootGuid               ## CONSUMES ## Event
+  gNVIDIARasSmbiosMsgGuid                ## CONSUMES ## MM Communicate GUID
+
+[Protocols]
+  gEfiSmbiosProtocolGuid                 ## CONSUMES ## Smbios Protocol
+  gEfiMmCommunication2ProtocolGuid       ## CONSUMES ## MM Communicate Protocol
+
+[Depex]
+  TRUE

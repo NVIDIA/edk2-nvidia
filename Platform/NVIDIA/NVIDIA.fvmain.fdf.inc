@@ -979,3 +979,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/SmmuV3Dxe/SmmuV3Dxe.inf
   INF Silicon/NVIDIA/Drivers/SmmuDriverDxe/SmmuDriverDxe.inf
 !endif
+
+!ifdef CONFIG_RAS_SMBIOS_MODULE
+  INF Silicon/NVIDIA/Server/TH500/Drivers/SmbiosRasTransfer/SmbiosRasTransfer.inf
+!endif

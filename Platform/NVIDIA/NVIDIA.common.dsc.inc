@@ -2704,6 +2704,16 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 !endif
 
+!ifdef CONFIG_RAS_SMBIOS_MODULE
+  #
+  # RAS SMBIOS module
+  #
+  Silicon/NVIDIA/Server/TH500/Drivers/SmbiosRasTransfer/SmbiosRasTransfer.inf {
+    <LibraryClasses>
+      SecureFwCommLib|Silicon/NVIDIA/Server/TH500/Library/SecureFwCommLib/SecureFwCommLib.inf
+    }
+!endif
+
   #
   # SMMUv3 support
   #

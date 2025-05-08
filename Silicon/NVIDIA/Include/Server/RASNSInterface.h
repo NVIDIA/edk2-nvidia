@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION. All rights reserved.
+*  Copyright (c) 2021-2025, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -22,6 +22,20 @@
 #define RAS_FW_COMM_SIZE  SIZE_64KB
 #define RAS_FW_EINJ_SIZE  SIZE_4KB
 #define RAS_FW_PCIE_SIZE  SIZE_4KB
+
+/*
+ * Unique ID (UUID) that identifies the RAS_FW secure partition
+ */
+#define RAS_FW_UUID_0  0x3c99b242
+#define RAS_FW_UUID_1  0xc93d11eb
+#define RAS_FW_UUID_2  0x91012fbd
+#define RAS_FW_UUID_3  0xec0769ff
+
+/*
+ * Operation Ids for RAS_FW, to be passed as Arg3 via FFA direct messaging
+ */
+#define RAS_FW_NS_BUFFER_REQ       0xC0270001
+#define RAS_FW_GUID_COMMUNICATION  0xC0270002
 
 typedef struct {
   PHYSICAL_ADDRESS    Base;
