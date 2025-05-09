@@ -703,6 +703,10 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported|TRUE
 !endif
 
+!ifdef CONFIG_PCIE_IGNORE_IO_BAR
+  gEfiMdeModulePkgTokenSpaceGuid.PcdPciIgnoreIoSpaceBars|TRUE
+!endif
+
 [PcdsFixedAtBuild.common]
 !ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
   gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone|TRUE

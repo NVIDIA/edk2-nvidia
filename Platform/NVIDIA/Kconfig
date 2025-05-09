@@ -322,6 +322,12 @@ menu "Hardware support"
     bool "NVMe support"
     help
       Support for NVMe drives on the system
+
+    config PCIE_IGNORE_IO_BAR
+    bool "Ignore PCIe EP IO BAR Request"
+    depends on NVIDIA_PCIE
+    help
+      Allows for ignoring PCIe EP requests for IO BAR
   endif
 
   config SMMU_V3
