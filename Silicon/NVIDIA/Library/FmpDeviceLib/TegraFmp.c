@@ -72,6 +72,8 @@ enum {
   LAS_ERROR_GPT_VERIFY_FAILED,
   LAS_ERROR_GPT_INVALIDATE_FAILED,
   LAS_ERROR_GPT_WRITE_FAILED,
+  LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_BAD_FAILED,
+  LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_GOOD_FAILED,
 };
 
 // special images that are not processed in the main loop
@@ -1393,6 +1395,13 @@ FmpTegraSetImage (
     mTotalBytesToFlash
     ));
 
+  Status = SetInactiveBootChainStatus (FALSE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Set inactive chain bad failed: %r\n", __FUNCTION__, Status));
+    *LastAttemptStatus = LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_BAD_FAILED;
+    return EFI_ABORTED;
+  }
+
   // detect optional GPT update
   GptUpdate = FALSE;
   if ((FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
@@ -1468,6 +1477,13 @@ FmpTegraSetImage (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Update BCT failed: %r\n", Status));
     *LastAttemptStatus = LAS_ERROR_BCT_UPDATE_FAILED;
+    return EFI_ABORTED;
+  }
+
+  Status = SetInactiveBootChainStatus (TRUE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Set inactive chain good failed: %r\n", __FUNCTION__, Status));
+    *LastAttemptStatus = LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_GOOD_FAILED;
     return EFI_ABORTED;
   }
 
