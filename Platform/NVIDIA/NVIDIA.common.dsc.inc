@@ -1330,7 +1330,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
-  gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions|FALSE
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdBootChainIsMarkerBased|TRUE
