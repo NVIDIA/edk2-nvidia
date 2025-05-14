@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol Image Names support
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,7 +14,6 @@
 #include <Protocol/FwImageProtocol.h>
 
 STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
-  L"adsp-fw",
   L"bpmp-fw",
   L"bpmp-fw-dtb",
   L"cpu-bootloader",
@@ -22,30 +21,32 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"MB1_BCT",
   L"mb2",
   L"MEM_BCT",
-  L"mts-mce",
   L"rce-fw",
   L"sc7",
-  L"secure-os",
-  L"spe-fw",
   L"VER",
   NULL
 };
 
 STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
+  L"adsp-fw",
   L"dce-fw",
   L"mb2rf",
+  L"mts-mce",
   L"nvdec",
   L"psc_bl1",
   L"psc-fw",
   L"pscrf",
   L"pva-fw",
+  L"secure-os",
+  L"spe-fw",
   NULL
 };
 
 STATIC CONST CHAR16  *SystemFwImageNamesT264[] = {
+  L"adsp0-fw",
+  L"adsp1-fw",
   L"psc_bl1",
   L"psc-fw",
-  L"fsi-fw",
   NULL
 };
 
