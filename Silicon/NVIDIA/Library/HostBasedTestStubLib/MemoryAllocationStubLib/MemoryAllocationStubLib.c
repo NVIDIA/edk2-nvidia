@@ -8,7 +8,7 @@
   However, if Mock calls are used to simulate allocation failures, then
   MemoryAllocationStubLibInit() must be called to reset state.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2018 - 2020, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -327,7 +327,7 @@ AllocatePool (
  */
 VOID
 MockAllocatePool (
-  UINT64  AvailableAllocations
+  UINT32  AvailableAllocations
   )
 {
   mAvailableAllocations = AvailableAllocations;
