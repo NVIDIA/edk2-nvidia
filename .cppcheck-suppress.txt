@@ -1,0 +1,22 @@
+//  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+//  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+
+// This file lists known cppcheck findings that should be suppressed.
+//
+// The format for each is:
+//     // A reason for the suppresssion
+//     [error id]:[filename pattern]:[line]
+//
+// Suppressions should always be as specific as possible, including the line
+// number.  If the code is updated so that the line number changes, this file
+// can be updated, too.
+
+
+// TegraFastBootDxe: Ignore missingReturn false positive.  Seems to be a bug in cppcheck.
+missingReturn:*/edk2-nvidia*/Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBoot.c:54
+
+// ShellTest: Ignore missingReturn false positive.  Seems to be a bug in cppcheck.
+missingReturn:*/edk2-nvidia*/Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTest.c:577
+missingReturn:*/edk2-nvidia*/Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTest.c:623
+missingReturn:*/edk2-nvidia*/Silicon/NVIDIA/Test/ShellTest/BootOrderTest/BootOrderTest.c:1101

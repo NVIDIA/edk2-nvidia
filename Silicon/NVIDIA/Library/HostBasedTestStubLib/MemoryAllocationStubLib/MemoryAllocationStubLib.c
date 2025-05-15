@@ -190,7 +190,6 @@ AllocateAlignedPages (
   PageHeadPtr = (VOID *)((UINTN)PageHead.AlignedBuffer - sizeof (PAGE_HEAD));
   memcpy (PageHeadPtr, &PageHead, sizeof (PAGE_HEAD));
 
-  // cppcheck-suppress memleak
   return PageHead.AlignedBuffer;
 }
 

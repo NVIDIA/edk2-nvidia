@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -472,7 +472,6 @@ TestMemoryThreadDone (
   RangeData.Start                 = MemoryTestRange->StartAddress;
   RangeData.Length                = MemoryTestRange->Length;
 
-  // cppcheck-suppress comparisonError
   REPORT_STATUS_CODE_EX (
     EFI_PROGRESS_CODE,
     EFI_COMPUTING_UNIT_MEMORY | EFI_CU_MEMORY_PC_TEST,
@@ -491,7 +490,6 @@ TestMemoryThreadDone (
     ExtendedErrorData.Address               = MemoryTestRange->BadAddress;
     ExtendedErrorData.Resolution            = MemoryVerificationGetCacheLineLength ();
 
-    // cppcheck-suppress comparisonError
     REPORT_STATUS_CODE_EX (
       EFI_ERROR_CODE,
       EFI_COMPUTING_UNIT_MEMORY | EFI_CU_MEMORY_EC_UNCORRECTABLE,
