@@ -14,6 +14,7 @@
 #include <Library/NctLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/AndroidBcbLib.h>
+#include <Library/BootConfigProtocolLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
 
@@ -27,6 +28,7 @@ CHAR8  *SlotSuffixNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
   "_a",
   "_b",
 };
+CHAR8  AndroidbootDtboIdx[MAX_ANDROID_BOOT_DTBO_IDX] = "";
 
 /**
  * Appends androidboot.newArgs=newValue to the bootconfig string.
@@ -296,6 +298,43 @@ BootConfigAddQuiescentBootInfo (
   return Status;
 }
 
+EFI_STATUS
+EFIAPI
+BootConfigSetDtboIdx (
+  CONST CHAR8  *NewDtboIdx
+  )
+{
+  return AsciiStrCpyS (AndroidbootDtboIdx, MAX_ANDROID_BOOT_DTBO_IDX, NewDtboIdx);
+}
+
+/**
+ * Adds dtbo idx to the boot configuration.
+ *
+ * @param NewValue The new dtbo idx to add.
+ *
+ * @retval EFI_SUCCESS The serial number was added successfully.
+ * @retval Other The operation failed with an error status.
+ */
+EFI_STATUS
+EFIAPI
+BootConfigAddDtboIdx (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig update protocol\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "dtbo_idx", AndroidbootDtboIdx);
+
+  return Status;
+}
+
 /**
  * Adds boot time boot configuration.
  *
@@ -316,6 +355,11 @@ BootConfigPrepareBootTimeArgs (
   }
 
   Status = BootConfigAddQuiescentBootInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = BootConfigAddDtboIdx ();
   if (EFI_ERROR (Status)) {
     return Status;
   }

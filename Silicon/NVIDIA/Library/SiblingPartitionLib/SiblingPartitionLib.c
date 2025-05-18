@@ -1,7 +1,7 @@
 /** @file
   SiblingPartitionLib
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -74,4 +74,129 @@ Exit:
   }
 
   return SiblingHandle;
+}
+
+EFI_STATUS
+EFIAPI
+AndroidBootLocateSiblingPartition (
+  IN  CHAR16  *PrivatePartitionName,
+  OUT CHAR16  *PartitionName,
+  IN  CHAR16  *KernelPartitionToSiblingPartitionMap[][2],
+  IN  UINTN   NumberOfEntries
+  )
+{
+  UINTN  Count;
+
+  for (Count = 0;
+       Count < NumberOfEntries;
+       Count++)
+  {
+    if (StrCmp (PrivatePartitionName, KernelPartitionToSiblingPartitionMap[Count][0]) == 0) {
+      StrCpyS (PartitionName, MAX_PARTITION_NAME_LEN, KernelPartitionToSiblingPartitionMap[Count][1]);
+      return EFI_SUCCESS;
+    }
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a Partition not found after scanning Count = %u\r\n", __FUNCTION__, Count));
+  return EFI_NOT_FOUND;
+}
+
+EFI_STATUS
+EFIAPI
+AndroidBootReadSiblingPartition (
+  IN  EFI_HANDLE  PrivateControllerHandle,
+  IN  CHAR16      *PartitionName,
+  OUT VOID        **Partition
+  )
+{
+  EFI_STATUS             Status = EFI_SUCCESS;
+  EFI_HANDLE             PartitionHandle;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  UINT64                 Size;
+
+  if ((*Partition != NULL) || (PrivateControllerHandle == NULL) || (PartitionName == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid parameters.\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PartitionHandle = GetSiblingPartitionHandle (
+                      PrivateControllerHandle,
+                      PartitionName
+                      );
+  if (PartitionHandle == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to obtain sibling partition for %s\r\n", __FUNCTION__, PartitionName));
+  }
+
+  Status = gBS->HandleProtocol (
+                  PartitionHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  (VOID **)&BlockIo
+                  );
+  if (EFI_ERROR (Status) || (BlockIo == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate BlockIo protocol\r\n", __FUNCTION__));
+    goto Exit;
+  }
+
+  Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
+
+  *Partition = AllocatePool (Size);
+  if (*Partition == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for %a\r\n", __FUNCTION__, PartitionName));
+    goto Exit;
+  }
+
+  Status = BlockIo->ReadBlocks (
+                      BlockIo,
+                      BlockIo->Media->MediaId,
+                      0,
+                      Size,
+                      *Partition
+                      );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read blocks into memory\r\n", __FUNCTION__));
+    goto Exit;
+  }
+
+Exit:
+  if ((*Partition != NULL) && EFI_ERROR (Status)) {
+    FreePool (*Partition);
+    *Partition = NULL;
+  }
+
+  return Status;
+}
+
+EFI_STATUS
+EFIAPI
+AndroidBootLocateAndReadSiblingPartition (
+  IN  CHAR16      *PrivatePartitionName,
+  IN  EFI_HANDLE  PrivateControllerHandle,
+  IN  CHAR16      *KernelPartitionToSiblingPartitionMap[][2],
+  IN  UINTN       NumberOfEntries,
+  OUT VOID        **Partition
+  )
+{
+  CHAR16      PartitionName[MAX_PARTITION_NAME_LEN];
+  EFI_STATUS  Status;
+
+  Status = AndroidBootLocateSiblingPartition (
+             PrivatePartitionName,
+             PartitionName,
+             KernelPartitionToSiblingPartitionMap,
+             NumberOfEntries
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AndroidBootReadSiblingPartition (
+             PrivateControllerHandle,
+             PartitionName,
+             Partition
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return EFI_SUCCESS;
 }

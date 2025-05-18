@@ -13,6 +13,8 @@
 
 #include <Protocol/BootConfigUpdateProtocol.h>
 
+#define MAX_ANDROID_BOOT_DTBO_IDX  10
+
 EFI_STATUS
 EFIAPI
 GetBootConfigUpdateProtocol (
@@ -30,6 +32,18 @@ BootConfigAddSerialNumber (
 EFI_STATUS
 EFIAPI
 BootConfigAddSlotSuffix (
+  VOID
+  );
+
+EFI_STATUS
+EFIAPI
+BootConfigSetDtboIdx (
+  CONST CHAR8  *NewValue
+  );
+
+EFI_STATUS
+EFIAPI
+BootConfigAddDtboIdx (
   VOID
   );
 

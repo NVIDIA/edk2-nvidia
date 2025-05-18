@@ -26,6 +26,8 @@
   UpdateKernelArgsUnitTests.c
   ../AndroidBootDxe.c
   ../AndroidBootConfig.c
+  ../AndroidBootDtbImgParser.h
+  ../AndroidBootDtbImgParser.c
 
 [Packages]
   MdePkg/MdePkg.dec

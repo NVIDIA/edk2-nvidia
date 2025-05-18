@@ -12,6 +12,7 @@
 
 #include "AndroidBootDxe.h"
 #include "AndroidBootConfig.h"
+#include "AndroidBootDtbImgParser.h"
 #include <libfdt.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
@@ -48,6 +49,15 @@ STATIC INITRD_DEVICE_PATH  mInitrdDevicePath = {
   {
     END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE,
     { sizeof (EFI_DEVICE_PATH_PROTOCOL) }
+  }
+};
+
+STATIC CHAR16  *pKernelPartitionDtboMapping[][2] = {
+  {
+    L"boot_a", L"dtbo_a"
+  },
+  {
+    L"boot_b", L"dtbo_b"
   }
 };
 
@@ -309,6 +319,153 @@ AndroidBootOnConnectCompleteHandler (
 
       AndroidBootUninstallProtocols (Private);
     }
+  }
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+AndroidLocateKernelDtb (
+  IN OUT VOID  **Dtb
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     Retried = FALSE;
+
+retry:
+
+  if (fdt_check_header (*Dtb) == 0) {
+    return EFI_SUCCESS;
+  }
+
+  Status = ExtractDtbfromDtbImg (Dtb);
+
+  if (!EFI_ERROR (Status)) {
+    if (fdt_check_header (*Dtb) == 0) {
+      return EFI_SUCCESS;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtb, fdt_check_header (*Dtb)));
+      return EFI_NOT_FOUND;
+    }
+  } else if (Status == EFI_INVALID_PARAMETER) {
+    DEBUG ((DEBUG_ERROR, "%a: ExtractDtbfromDtbImg returned %r.\r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_INVALID_PARAMETER;
+  } else if (!Retried) {
+    *Dtb    = (VOID *)((UINTN)*Dtb + PcdGet32 (PcdSignedImageHeaderSize));
+    Retried = TRUE;
+    DEBUG ((DEBUG_ERROR, "%a: ExtractDtbfromDtbImg failed. Applying offset and retrying...\r\n", __FUNCTION__));
+    goto retry;
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+AndroidLocateKernelDtbo (
+  IN OUT VOID    **Dtbo,
+  IN     UINT32  *DtboCount
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     Retried = FALSE;
+
+retry:
+
+  Status = ExtractDtbofromDtboImg (Dtbo, DtboCount);
+
+  if (!EFI_ERROR (Status)) {
+    if (fdt_check_header (*Dtbo) == 0) {
+      return EFI_SUCCESS;
+    } else {
+      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtbo, fdt_check_header (*Dtbo)));
+      return EFI_NOT_FOUND;
+    }
+  } else if (Status == EFI_INVALID_PARAMETER) {
+    DEBUG ((DEBUG_ERROR, "%a: ExtractDtbfromDtboImg returned %r.\r\n", __FUNCTION__, EFI_INVALID_PARAMETER));
+    return EFI_INVALID_PARAMETER;
+  } else if (!Retried) {
+    *Dtbo   = (VOID *)((UINTN)*Dtbo + PcdGet32 (PcdSignedImageHeaderSize));
+    Retried = TRUE;
+    DEBUG ((DEBUG_ERROR, "%a: ExtractDtbfromDtbImg failed. Applying offset and retrying...\r\n", __FUNCTION__));
+    goto retry;
+  }
+
+  return EFI_NOT_FOUND;
+}
+
+STATIC
+VOID
+EFIAPI
+AndroidApplyOverlays (
+  IN OUT  VOID  *Dtb,
+  IN VOID       *Dtbo,
+  IN  UINT32    DtboCount,
+  IN  CHAR8     *AndroidbootDtboIdx
+  )
+{
+  UINTN  Count;
+  VOID   *FdtNext;
+  UINTN  FdtSize;
+  INT32  Status;
+  UINTN  CurrentLength = AsciiStrLen (AndroidbootDtboIdx);
+  UINTN  DtbSize;
+  VOID   *DtbBackup = NULL;
+
+  FdtNext = Dtbo;
+  for ( Count = 0;
+        Count < DtboCount;
+        Count++ )
+  {
+    Status =  fdt_check_header (FdtNext);
+    if (Status != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Invalid overlay. Count = %u. Error = %d Returning\r\n", __FUNCTION__, Count, Status));
+      continue;
+    }
+
+    // Backup current DTB before attempting overlay
+    DtbSize   = fdt_totalsize (Dtb);
+    DtbBackup = AllocatePool (DtbSize);
+    if (DtbBackup == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to allocate DTB backup buffer\r\n", __FUNCTION__));
+      continue;
+    }
+
+    CopyMem (DtbBackup, Dtb, DtbSize);
+
+    Status = fdt_overlay_apply (Dtb, FdtNext);
+    if (Status != 0) {
+      DEBUG ((DEBUG_ERROR, "%a:Could not apply overlay to kernel dtb. Error = %d\r\n", __FUNCTION__, Status));
+      CopyMem (Dtb, DtbBackup, DtbSize);
+      FreePool (DtbBackup);
+      continue;
+    }
+
+    FreePool (DtbBackup);
+
+    // Set androidboot.dtbo_idx kernel commandline parameter.
+    if (!CurrentLength) {
+      AndroidbootDtboIdx[CurrentLength++] = '0' + Count;
+      AndroidbootDtboIdx[CurrentLength]   = '\0';
+    } else {
+      if (CurrentLength+2 < MAX_ANDROID_BOOT_DTBO_IDX) {
+        AndroidbootDtboIdx[CurrentLength++] = ',';
+        AndroidbootDtboIdx[CurrentLength++] = '0' + Count;
+        AndroidbootDtboIdx[CurrentLength]   = '\0';
+      } else {
+        DEBUG ((DEBUG_ERROR, "%a: AndroidbootDtboIdx overflowed", __FUNCTION__));
+        break;
+      }
+    }
+
+    FdtSize = fdt_totalsize (FdtNext);
+    FdtNext = (VOID *)((UINT64)FdtNext + FdtSize);
+  }
+
+  Status = BootConfigSetDtboIdx (AndroidbootDtboIdx);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to set androidboot.dtbo_idx to bootconfig\n", __FUNCTION__, Status));
   }
 }
 
@@ -667,16 +824,15 @@ AndroidBootDxeLoadDtb (
   VOID                               *AcpiBase   = NULL;
   VOID                               *CurrentDtb = NULL;
   INT32                              PropLen;
-  CHAR16                             DtbPartitionName[MAX_PARTITION_NAME_LEN];
-  EFI_HANDLE                         DtbPartitionHandle;
-  EFI_BLOCK_IO_PROTOCOL              *BlockIo;
-  UINT64                             Size;
   VOID                               *KernelDtb = NULL;
-  VOID                               *Dtb;
+  VOID                               *Dtb       = NULL;
   VOID                               *DtbCopy;
-  UINTN                              Count;
-  BOOLEAN                            KernelDtbMappingFound;
-  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate = NULL;
+  VOID                               *KernelDtbo = NULL;
+  VOID                               *Dtbo;
+  UINT32                             DtboCount;
+  BOOLEAN                            SkipOverlays                                  = FALSE;
+  CHAR8                              AndroidbootDtboIdx[MAX_ANDROID_BOOT_DTBO_IDX] = "";
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate                             = NULL;
   CHAR8                              NewBootConfigStr[BOOTCONFIG_MAX_LEN];
   CHAR8                              *BootConfigEntry = NULL;
   INT32                              FdtErr;
@@ -695,157 +851,156 @@ AndroidBootDxeLoadDtb (
     DEBUG ((DEBUG_ERROR, "%a: No DTB currently installed.\r\n", __FUNCTION__));
   }
 
-  KernelDtbMappingFound = FALSE;
-
-  if (!Private->RecoveryMode) {
-    for (Count = 0;
-         Count < sizeof (pKernelPartitionDtbMapping) / sizeof (pKernelPartitionDtbMapping[0]);
-         Count++)
-    {
-      if (StrCmp (Private->PartitionName, pKernelPartitionDtbMapping[Count][0]) == 0) {
-        StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, pKernelPartitionDtbMapping[Count][1]);
-        KernelDtbMappingFound = TRUE;
-        break;
-      }
-    }
-  } else {
-    for (Count = 0;
-         Count < sizeof (pRecoveryKernelPartitionDtbMapping) / sizeof (pRecoveryKernelPartitionDtbMapping[0]);
-         Count++)
-    {
-      if (StrCmp (Private->PartitionName, pRecoveryKernelPartitionDtbMapping[Count][0]) == 0) {
-        StrCpyS (DtbPartitionName, MAX_PARTITION_NAME_LEN, pRecoveryKernelPartitionDtbMapping[Count][1]);
-        KernelDtbMappingFound = TRUE;
-        break;
-      }
-    }
-  }
-
-  if (!KernelDtbMappingFound) {
-    DEBUG ((DEBUG_ERROR, "%a: Using pre-installed DTB if any.\r\n", __FUNCTION__));
-    return;
-  }
-
-  DtbPartitionHandle = GetSiblingPartitionHandle (
-                         Private->ControllerHandle,
-                         DtbPartitionName
-                         );
-  if (DtbPartitionHandle != NULL) {
-    Status = gBS->HandleProtocol (
-                    DtbPartitionHandle,
-                    &gEfiBlockIoProtocolGuid,
-                    (VOID **)&BlockIo
-                    );
-    if (EFI_ERROR (Status) || (BlockIo == NULL)) {
-      goto Exit;
+  // Locate dtb partition and read it into memory.
+  if ((PcdGetBool (PcdBootAndroidImage))) {
+    // Find dtb partition name
+    if (!Private->RecoveryMode) {
+      Status = AndroidBootLocateAndReadSiblingPartition (
+                 Private->PartitionName,
+                 Private->ControllerHandle,
+                 pKernelPartitionDtbMapping,
+                 (sizeof (pKernelPartitionDtbMapping) / sizeof (pKernelPartitionDtbMapping[0])),
+                 &KernelDtb
+                 );
+    } else {
+      Status = AndroidBootLocateAndReadSiblingPartition (
+                 Private->PartitionName,
+                 Private->ControllerHandle,
+                 pRecoveryKernelPartitionDtbMapping,
+                 (sizeof (pRecoveryKernelPartitionDtbMapping) / sizeof (pRecoveryKernelPartitionDtbMapping[0])),
+                 &KernelDtb
+                 );
     }
 
-    Size = MultU64x32 (BlockIo->Media->LastBlock+1, BlockIo->Media->BlockSize);
-
-    KernelDtb = AllocatePool (Size);
-    if (KernelDtb == NULL) {
-      goto Exit;
-    }
-
-    Status = BlockIo->ReadBlocks (
-                        BlockIo,
-                        BlockIo->Media->MediaId,
-                        0,
-                        Size,
-                        KernelDtb
-                        );
     if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Using pre-installed DTB if any.\r\n", __FUNCTION__));
       goto Exit;
     }
 
-    Dtb = KernelDtb;
-    if (fdt_check_header (Dtb) != 0) {
-      Dtb += PcdGet32 (PcdSignedImageHeaderSize);
-      if (fdt_check_header (Dtb) != 0) {
-        DEBUG ((DEBUG_ERROR, "%a: DTB on partition was corrupted, attempt use to UEFI DTB\r\n", __FUNCTION__));
-        goto Exit;
-      }
+    Dtb    = KernelDtb;
+    Status = AndroidLocateKernelDtb (&Dtb);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Valid DTB image not found, attempt to use UEFI DTB\r\n", __FUNCTION__));
+      goto Exit;
     }
 
-    DtbCopy = NULL;
-    // Allowing space for overlays
-    DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (Dtb)));
-    if ((DtbCopy != NULL) &&
-        (fdt_open_into (Dtb, DtbCopy, 4 * fdt_totalsize (Dtb)) == 0))
-    {
-      DEBUG ((DEBUG_ERROR, "%a: Installing Kernel DTB from %s\r\n", __FUNCTION__, DtbPartitionName));
-
-      Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
+    // Locate dtbo partition and read it into memory.
+    // Find dtbo partition
+    if (!Private->RecoveryMode) {
+      Status = AndroidBootLocateAndReadSiblingPartition (
+                 Private->PartitionName,
+                 Private->ControllerHandle,
+                 pKernelPartitionDtboMapping,
+                 (sizeof (pKernelPartitionDtboMapping) / sizeof (pKernelPartitionDtboMapping[0])),
+                 &KernelDtbo
+                 );
       if (EFI_ERROR (Status)) {
-        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
-        DtbCopy = NULL;
-      } else {
-        if (CurrentDtb != NULL) {
-          INT32  KernelDtbNodeOffset;
-          INT32  UefiDtbNodeOffset;
+        DEBUG ((DEBUG_ERROR, "%a: DTBO partition not found\r\n", __FUNCTION__));
+        SkipOverlays = TRUE;
+      }
+    } else {
+      // TODO: support dtbo for recovery
+      DEBUG ((DEBUG_ERROR, "%a: No dtbo partition support for recovery yet. Skipping\r\n", __FUNCTION__));
+      SkipOverlays = TRUE;
+    }
 
-          KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
-          UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
-
-          // Only patch DTB if both have chosen nodes and hypervisor mode is detected
-          if ((KernelDtbNodeOffset >= 0) && (UefiDtbNodeOffset >= 0) &&
-              fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
-          {
-            Status = PatchKernelDtbWithUefiData (CurrentDtb, DtbCopy);
-            if (EFI_ERROR (Status)) {
-              DEBUG ((DEBUG_ERROR, "%a: Failed to patch kernel DTB with UEFI data, Status=%r\n", __FUNCTION__, Status));
-            }
-          }
-
-          // Modify /chosen/bootconfig
-          Status = BootConfigPrepareBootTimeArgs ();
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add boottime BootConfig\n", __FUNCTION__, Status));
-          }
-
-          Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
-          if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
-            BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
-            if (NULL == BootConfigEntry) {
-              // Not fatal
-              DEBUG ((DEBUG_ERROR, "%a: /chosen/bootconfig not found, creating..\n", __FUNCTION__));
-              AsciiSPrint (
-                NewBootConfigStr,
-                sizeof (NewBootConfigStr),
-                "%a",
-                BootConfigUpdate->BootConfigs
-                );
-            } else {
-              DEBUG ((DEBUG_ERROR, "%a: Updating /chosen/bootconfig\n", __FUNCTION__));
-              AsciiSPrint (
-                NewBootConfigStr,
-                sizeof (NewBootConfigStr),
-                "%a%a",
-                BootConfigEntry,
-                BootConfigUpdate->BootConfigs
-                );
-            }
-
-            PropLen = AsciiStrLen (NewBootConfigStr) + 1;
-            FdtErr  = fdt_setprop (DtbCopy, KernelDtbNodeOffset, "bootconfig", NewBootConfigStr, PropLen);
-            if (FdtErr < 0) {
-              // Not fatal
-              DEBUG ((DEBUG_ERROR, "%a: Got err=%d trying to set bootconfig\n", __FUNCTION__, FdtErr));
-            }
-          } else {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
-          }
-
-          gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
-        }
+    if (SkipOverlays == FALSE) {
+      Dtbo   = KernelDtbo;
+      Status = AndroidLocateKernelDtbo (&Dtbo, &DtboCount);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Valid DTBO image not found\r\n", __FUNCTION__));
+        SkipOverlays = TRUE;
       }
     }
   }
+
+  DtbCopy = NULL;
+  // Allowing space for overlays
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (fdt_totalsize (Dtb) + 4 * fdt_totalsize (Dtb)));
+  if ((DtbCopy != NULL) &&
+      (fdt_open_into (Dtb, DtbCopy, (fdt_totalsize (Dtb)+ 4 * fdt_totalsize (Dtb))) == 0))
+  {
+    if (SkipOverlays == FALSE) {
+      AndroidApplyOverlays (DtbCopy, Dtbo, DtboCount, AndroidbootDtboIdx);
+    }
+
+    Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
+    if (EFI_ERROR (Status)) {
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
+      DtbCopy = NULL;
+    } else {
+      if (CurrentDtb != NULL) {
+        INT32  KernelDtbNodeOffset;
+        INT32  UefiDtbNodeOffset;
+
+        KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
+        UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
+
+        // Only patch DTB if both have chosen nodes and hypervisor mode is detected
+        if ((KernelDtbNodeOffset >= 0) && (UefiDtbNodeOffset >= 0) &&
+            fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
+        {
+          Status = PatchKernelDtbWithUefiData (CurrentDtb, DtbCopy);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Failed to patch kernel DTB with UEFI data, Status=%r\n", __FUNCTION__, Status));
+          }
+        }
+
+        // Modify /chosen/bootconfig
+        Status = BootConfigPrepareBootTimeArgs ();
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add slot_suffix to BootConfigProtocol\n", __FUNCTION__, Status));
+        }
+
+        Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
+        if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
+          BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
+          if (NULL == BootConfigEntry) {
+            // Not fatal
+            DEBUG ((DEBUG_ERROR, "%a: /chosen/bootconfig not found, creating..\n", __FUNCTION__));
+            AsciiSPrint (
+              NewBootConfigStr,
+              sizeof (NewBootConfigStr),
+              "%a",
+              BootConfigUpdate->BootConfigs
+              );
+          } else {
+            DEBUG ((DEBUG_ERROR, "%a: Updating /chosen/bootconfig\n", __FUNCTION__));
+            AsciiSPrint (
+              NewBootConfigStr,
+              sizeof (NewBootConfigStr),
+              "%a%a",
+              BootConfigEntry,
+              BootConfigUpdate->BootConfigs
+              );
+          }
+
+          PropLen = AsciiStrLen (NewBootConfigStr) + 1;
+          FdtErr  = fdt_setprop (DtbCopy, KernelDtbNodeOffset, "bootconfig", NewBootConfigStr, PropLen);
+          if (FdtErr < 0) {
+            // Not fatal
+            DEBUG ((DEBUG_ERROR, "%a: Got err=%d trying to set bootconfig\n", __FUNCTION__, FdtErr));
+          }
+        } else {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
+        }
+
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+      }
+    }
+  }
+
+  goto Exit;
 
 Exit:
   if (KernelDtb != NULL) {
     FreePool (KernelDtb);
     KernelDtb = NULL;
+  }
+
+  if (KernelDtbo != NULL) {
+    FreePool (KernelDtbo);
+    KernelDtbo = NULL;
   }
 }
 
