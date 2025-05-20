@@ -304,7 +304,9 @@ AcpiTableListParser (
   }
 
   // Add tables for additional sockets if needed
-  if (MaxSocket > 0) {
+  if ((MaxSocket > 0) &&
+      (ArraySize > 1))
+  {
     UINT32                      SocketId;
     CM_STD_OBJ_ACPI_TABLE_INFO  NewAcpiTable;
 
