@@ -895,10 +895,13 @@ FixupSocketClusterCoreFields (
   UINT32      Index;
   CACHE_NODE  *Node;
   CACHE_NODE  *Next;
+  UINT32      SocketRootZeroed; // Bitmask of sockets that have had their root cache zeroed
 
   if (CacheTracker == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
+  SocketRootZeroed = 0;
 
   // Go through all the L1 entries, and propagate their Socket/Cluster/Core info upward
   for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++) {
@@ -957,8 +960,13 @@ FixupSocketClusterCoreFields (
 
     // When Next is NULL, we have reached the top of the hierarchy.
     // Node should be pointing to the top-level cache node at this point.
-    Node->Cluster = UNUSED_CLUSTER;
-    Node->Core    = UNUSED_CORE;
+    if ((Node->Socket != UNDEFINED_SOCKET) &&
+        ((SocketRootZeroed & (1 << Node->Socket)) == 0))
+    {
+      SocketRootZeroed |= (1 << Node->Socket);
+      Node->Cluster     = UNUSED_CLUSTER;
+      Node->Core        = UNUSED_CORE;
+    }
   }
 
   // JDS TODO - do we want to sanity-check the result?
