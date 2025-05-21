@@ -1028,6 +1028,9 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
 !endif
 
+  #Increase the size of the post end of dxe fpdt record
+  gEfiMdeModulePkgTokenSpaceGuid.PcdExtFpdtBootRecordPadSize|0x2000000
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
