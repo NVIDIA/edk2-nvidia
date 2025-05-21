@@ -518,12 +518,6 @@ AndroidBootDxeLoadDtb (
             }
           }
 
-          // Modify /chosen/bootconfig
-          Status = BootConfigAddSerialNumber (NULL);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add serial number to BootConfigProtocol\n", __FUNCTION__, Status));
-          }
-
           Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
           if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
             BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);

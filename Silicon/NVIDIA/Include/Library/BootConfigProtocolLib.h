@@ -2,7 +2,7 @@
 
   BootConfig Protocol library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,9 @@ GetBootConfigUpdateProtocol (
 EFI_STATUS
 EFIAPI
 BootConfigAddSerialNumber (
-  CONST CHAR8  *NewValue OPTIONAL
+  CONST CHAR8  *NewValue OPTIONAL,
+  CHAR8        *OutStrSn,
+  UINT32       OutStrSnLen
   );
 
 #endif /* __BOOTCONFIG_PROTOCOL_LIB_H_ */

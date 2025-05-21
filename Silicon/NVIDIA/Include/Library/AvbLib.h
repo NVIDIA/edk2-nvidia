@@ -14,15 +14,25 @@
 #include <Library/OpteeNvLib.h>
 
 typedef enum {
-  VERIFIED_BOOT_UNKNOWN_STATE,
-  VERIFIED_BOOT_RED_STATE,
-  VERIFIED_BOOT_YELLOW_STATE,
   VERIFIED_BOOT_GREEN_STATE,
+  VERIFIED_BOOT_YELLOW_STATE,
   VERIFIED_BOOT_ORANGE_STATE,
+  VERIFIED_BOOT_RED_STATE,
   VERIFIED_BOOT_RED_STATE_EIO,
+  VERIFIED_BOOT_UNKNOWN_STATE,
 } AVB_BOOT_STATE;
 
 #define TA_AVB_MAX_ROLLBACK_LOCATIONS  256
+
+// ROT params definition
+#define ROT_VERIFIEDBOOT_KEY_NAME    "avb.managed_verity_mode.verified_boot_key"
+#define ROT_SERIALNO_NAME            "avb.managed_verity_mode.serial"
+#define ROT_VBMETA_DIGEST_NAME       "avb.managed_verity_mode.vbmeta_digest"
+#define ROT_DEVICE_BOOT_LOCKED_NAME  "avb.managed_verity_mode.device_boot_locked"
+#define ROT_VERIFIEDBOOT_STATE_NAME  "avb.managed_verity_mode.verified_boot_state"
+#define ROT_BOOT_PATCHLEVEL_NAME     "avb.managed_verity_mode.boot_patchlevel"
+
+#define PROP_BOOT_PATCHLEVEL_NAME  "com.android.build.boot.security_patch"
 
 /*
  * Gets the rollback index corresponding to the given rollback index slot.

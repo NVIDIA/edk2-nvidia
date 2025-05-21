@@ -152,16 +152,21 @@ GetBootConfigUpdateProtocol (
 /**
  * Adds a serial number to the boot configuration.
  *
- * @param NewValue The new serial number to add. If NULL, the function will
- * retrieve the serial number from the CVM protocol.
+ * @param NewValue       The new serial number to add. If NULL, the function will
+ *                       retrieve the serial number from the CVM protocol.
  *
- * @retval EFI_SUCCESS The serial number was added successfully.
- * @retval Other The operation failed with an error status.
+ * @param OutStrSn       Pass final serial number buffer to caller, if not NULL.
+ * @param OutStrSnLen    Buffer size of OutStrSn.
+ *
+ * @retval EFI_SUCCESS   The serial number was added successfully.
+ * @retval Other         The operation failed with an error status.
  */
 EFI_STATUS
 EFIAPI
 BootConfigAddSerialNumber (
-  CONST CHAR8  *NewValue OPTIONAL
+  CONST CHAR8  *NewValue OPTIONAL,
+  CHAR8        *OutStrSn OPTIONAL,
+  UINT32       OutStrSnLen
   )
 {
   EFI_STATUS                         Status;
@@ -198,7 +203,12 @@ BootConfigAddSerialNumber (
   Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "serialno", NewValue);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add Serial Number to bootconfig\n", __FUNCTION__, Status));
+    return Status;
   }
 
-  return Status;
+  if (OutStrSn != NULL) {
+    AsciiStrCpyS (OutStrSn, OutStrSnLen, NewValue);
+  }
+
+  return EFI_SUCCESS;
 }

@@ -34,7 +34,28 @@
 #define UPPER_32_BITS(n)  ((UINT32)((n) >> 32))
 #define LOWER_32_BITS(n)  ((UINT32)(n))
 
+#define LIBAVB_MODULUS_OFFSET  8
+#define LIBAVB_KEY2MOD(x)  ((x) + LIBAVB_MODULUS_OFFSET)
+#define LIBAVB_KEY_LEN  (LIBAVB_MODULUS_OFFSET + (VERITY_KEY_SIZE * 2))
+
+#define MAX_SN_LEN              32
+#define PatchLevelStrFormatLen  10
+
 STATIC EFI_HANDLE  mControllerHandle;
+
+/*
+ * @brief Holds information about the public key used to validate
+ *        the ROT binary.
+ * @param PubKey      Pointer to the public key stored within |slot_data|
+ * @param Len         Length of the public key in bytes
+ * @param IsTrusted   Indicates if platform key == public key used
+ *                    to validate the ROT binary.
+ */
+STATIC struct AvbKeyData {
+  CONST UINT8    *PubKey;
+  UINT32         Len;
+  BOOLEAN        IsTrusted;
+} gAvbKeyData;
 
 /**
   Read tamper-evident storage, parse device unlocked state.
@@ -52,10 +73,42 @@ ReadIsDeviceUnlocked (
   OUT bool    *IsUnlocked
   )
 {
-  // Unlocked state will stay in tamper-resist storage
-  // Always return "Locked" as WAR
-  *IsUnlocked = false;
-  return AVB_IO_RESULT_OK;
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+
+  InvokeFunctionArg.Function            = TA_AVB_CMD_READ_LOCK_STATE;
+  InvokeFunctionArg.Params[0].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read unlocked state from AVB TA\n", __FUNCTION__, Status));
+    AvbResult = (Status == EFI_NOT_FOUND) ? AVB_IO_RESULT_ERROR_NO_SUCH_VALUE : AVB_IO_RESULT_ERROR_IO;
+  }
+
+  // If locked state not found, setting as locked by default
+  if (AvbResult == AVB_IO_RESULT_ERROR_NO_SUCH_VALUE) {
+    ZeroMem (&InvokeFunctionArg, sizeof (OPTEE_INVOKE_FUNCTION_ARG));
+    InvokeFunctionArg.Function                = TA_AVB_CMD_WRITE_LOCK_STATE;
+    InvokeFunctionArg.Params[0].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
+    InvokeFunctionArg.Params[0].Union.Value.A = 1;
+
+    Status = AvbOpteeInvoke (&InvokeFunctionArg);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write unlocked state from AVB TA\n", __FUNCTION__, Status));
+      AvbResult = AVB_IO_RESULT_ERROR_IO;
+      goto Exit;
+    }
+
+    AvbResult = AVB_IO_RESULT_OK;
+  } else if (AvbResult != AVB_IO_RESULT_OK) {
+    goto Exit;
+  }
+
+  *IsUnlocked = (InvokeFunctionArg.Params[0].Union.Value.A == 0) ? TRUE : FALSE;
+
+Exit:
+  return AvbResult;
 }
 
 /**
@@ -84,18 +137,28 @@ GetSizeOfPartition (
   CHAR16                 ActivePartitionName[MAX_PARTITION_NAME_LEN];
   AvbIOResult            AvbResult = AVB_IO_RESULT_OK;
 
-  UnicodeSPrintAsciiFormat (PartitionName, sizeof (PartitionName), "%a", Partition);
+  if (AsciiStrCmp (Partition, "recovery") == 0) {
+    UnicodeSPrintAsciiFormat (ActivePartitionName, sizeof (ActivePartitionName), "%a", Partition);
+  } else {
+    UnicodeSPrintAsciiFormat (PartitionName, sizeof (PartitionName), "%a", Partition);
 
-  Status = GetActivePartitionName (PartitionName, ActivePartitionName);
-  if (EFI_ERROR (Status)) {
-    AvbResult = AVB_IO_RESULT_ERROR_NO_SUCH_PARTITION;
-    goto Exit;
+    Status = GetActivePartitionName (PartitionName, ActivePartitionName);
+    if (EFI_ERROR (Status)) {
+      AvbResult = AVB_IO_RESULT_ERROR_NO_SUCH_PARTITION;
+      goto Exit;
+    }
   }
 
   PartitionHandle = GetSiblingPartitionHandle (
                       mControllerHandle,
                       ActivePartitionName
                       );
+
+  if (PartitionHandle == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Unable to found sibling partition handle for %s\r\n", __FUNCTION__, ActivePartitionName));
+    AvbResult = AVB_IO_RESULT_ERROR_NO_SUCH_PARTITION;
+    goto Exit;
+  }
 
   Status = gBS->HandleProtocol (
                   PartitionHandle,
@@ -373,6 +436,10 @@ ValidateVbmetaPublicKey (
   {
     *OutIsTrusted = TRUE;
   }
+
+  gAvbKeyData.PubKey    = PubKey;
+  gAvbKeyData.Len       = PubKeyLen;
+  gAvbKeyData.IsTrusted = *OutIsTrusted;
 
 Exit:
   return AvbResult;
@@ -697,6 +764,170 @@ VerifiedBootGetBootState (
   return (*BootState != VERIFIED_BOOT_RED_STATE) ? EFI_SUCCESS : EFI_SECURITY_VIOLATION;
 }
 
+/**
+  Convert a bootpatch level string to UINT32.
+
+  @param[in] bootpatch level string as YYYY-MM-DD.
+
+  @retval bootpatch level
+**/
+STATIC
+UINT32
+BootPatchLevelStrToL (
+  IN CONST CHAR8  *Str
+  )
+{
+  UINT32  Year, Month, Day = 0;
+
+  if ((Str == NULL) || (AsciiStrLen (Str) != PatchLevelStrFormatLen)) {
+    return 0;
+  }
+
+  // Str == YYYY-MM-DD
+  Year  = 1000 * (Str[0] - '0') + 100 * (Str[1] - '0') + 10 * (Str[2] - '0') + (Str[3] - '0');
+  Month = 10 * (Str[5] - '0') + (Str[6] - '0');
+  Day   = 10 * (Str[8] - '0') + (Str[9] - '0');
+
+  return 10000 * Year + 100 * Month + Day;
+}
+
+/**
+  Pass ROT bootinfo to optee AVB TA.
+
+  @param[in]  Ops                    A pointer to the AvbOps struct.
+  @param[in]  SlotData               AvbSlotVerifyData output ptr from avb_slot_verify call.
+  @param[in]  BootState              Avb BootState color value.
+
+  @retval bootpatch level
+**/
+STATIC
+EFI_STATUS
+AvbPassOpteeBootInfo (
+  IN AvbOps             *Ops,
+  IN AvbSlotVerifyData  *SlotData,
+  IN AVB_BOOT_STATE     BootState
+  )
+{
+  EFI_STATUS   Status                      = EFI_SUCCESS;
+  UINT8        AvbHash[SHA256_DIGEST_SIZE] = { 0 };
+  BOOLEAN      Response;
+  CHAR8        Sn[MAX_SN_LEN] = { 0 };
+  INT32        NodeOffset;
+  CONST CHAR8  *BootConfigStr     = NULL;
+  CHAR8        *SnStartPtr        = NULL;
+  CHAR8        *SnEndPtr          = NULL;
+  CONST CHAR8  *BootPatchLevelStr = NULL;
+  UINT32       BootPatchLevel     = 20241201;
+  UINT8        DeviceBootLocked;
+  UINT8        DeviceBootUnlocked;
+  AvbIOResult  AvbResult = AVB_IO_RESULT_OK;
+  UINT32       Idx       = 0;
+
+  // avb.managed_verity_mode.verified_boot_key
+  if (BootState != VERIFIED_BOOT_ORANGE_STATE) {
+    Response = Sha256HashAll (gAvbKeyData.PubKey, gAvbKeyData.Len, AvbHash);
+    if (Response == FALSE) {
+      Status = EFI_NOT_READY;
+      goto Exit;
+    }
+  }
+
+  AvbResult = WritePersistentValue (Ops, ROT_VERIFIEDBOOT_KEY_NAME, SHA256_DIGEST_SIZE, AvbHash);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_VERIFIEDBOOT_KEY_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // avb.managed_verity_mode.serial
+  // Check bootconfig first, if not found, call BootConfigAddSerialNumber()
+  NodeOffset = -1;
+  Status     = DeviceTreeGetNodeByPath ("/chosen", &NodeOffset);
+  if (!EFI_ERROR (Status)) {
+    Status = DeviceTreeGetNodeProperty (NodeOffset, "bootconfig", (CONST VOID **)&BootConfigStr, NULL);
+    if (!EFI_ERROR (Status)) {
+      SnStartPtr = AsciiStrStr (BootConfigStr, "serialno=");
+    }
+  }
+
+  if (SnStartPtr != NULL) {
+    SnStartPtr += AsciiStrLen ("serialno=");
+    SnEndPtr    = AsciiStrStr (SnStartPtr, "\n");
+    AsciiStrnCpyS (Sn, MAX_SN_LEN, SnStartPtr, SnEndPtr - SnStartPtr);
+  } else {
+    Status = BootConfigAddSerialNumber (NULL, Sn, MAX_SN_LEN);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add serial number to BootConfigProtocol\n", __FUNCTION__, Status));
+      goto Exit;
+    }
+  }
+
+  AvbResult = WritePersistentValue (Ops, ROT_SERIALNO_NAME, AsciiStrLen (Sn), (UINT8 *)Sn);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_SERIALNO_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // avb.managed_verity_mode.device_boot_locked
+  ReadIsDeviceUnlocked (Ops, (BOOLEAN *)&DeviceBootUnlocked);
+  DeviceBootLocked = (DeviceBootUnlocked != 0) ? 0 : 1;
+  AvbResult        = WritePersistentValue (Ops, ROT_DEVICE_BOOT_LOCKED_NAME, sizeof (DeviceBootLocked), &DeviceBootLocked);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_DEVICE_BOOT_LOCKED_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // avb.managed_verity_mode.verified_boot_state
+  AvbResult = WritePersistentValue (Ops, ROT_VERIFIEDBOOT_STATE_NAME, sizeof (BootState), (UINT8 *)&BootState);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_VERIFIEDBOOT_STATE_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // avb.managed_verity_mode.boot_patchlevel
+  for (Idx = 0; Idx < SlotData->num_vbmeta_images; Idx++) {
+    AvbVBMetaData  *VbmetaImg = &(SlotData->vbmeta_images[Idx]);
+    BootPatchLevelStr = avb_property_lookup (
+                          VbmetaImg->vbmeta_data,
+                          VbmetaImg->vbmeta_size,
+                          PROP_BOOT_PATCHLEVEL_NAME,
+                          0,
+                          NULL
+                          );
+    if (BootPatchLevelStr != NULL) {
+      BootPatchLevel = BootPatchLevelStrToL (BootPatchLevelStr);
+      DEBUG ((DEBUG_INFO, "%a: BootPatchLevel found = %u\n", __FUNCTION__, BootPatchLevel));
+      break;
+    }
+  }
+
+  AvbResult = WritePersistentValue (Ops, ROT_BOOT_PATCHLEVEL_NAME, sizeof (BootPatchLevel), (UINT8 *)&BootPatchLevel);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_BOOT_PATCHLEVEL_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+  // avb.managed_verity_mode.vbmeta_digest
+  avb_slot_verify_data_calculate_vbmeta_digest (
+    SlotData,
+    AVB_DIGEST_TYPE_SHA256,
+    AvbHash
+    );
+  AvbResult = WritePersistentValue (Ops, ROT_VBMETA_DIGEST_NAME, SHA256_DIGEST_SIZE, AvbHash);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ROT - %a\n", __FUNCTION__, ROT_VBMETA_DIGEST_NAME));
+    Status = EFI_UNSUPPORTED;
+    goto Exit;
+  }
+
+Exit:
+  return Status;
+}
+
 EFI_STATUS
 AvbVerifyBoot (
   IN BOOLEAN     IsRecovery,
@@ -726,6 +957,12 @@ AvbVerifyBoot (
   if ((SlotData != NULL) && (AvbCmdline != NULL)) {
     DEBUG ((DEBUG_ERROR, "Avb cmdline: %a\n", SlotData->cmdline));
     *AvbCmdline = SlotData->cmdline;
+  }
+
+  Status = AvbPassOpteeBootInfo (NULL, SlotData, BootState);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: %r to set ROT bootinfo to Optee\n", __FUNCTION__, Status));
+    goto Exit;
   }
 
   BootStateStr = (BootState == VERIFIED_BOOT_RED_STATE) ? "red" :
