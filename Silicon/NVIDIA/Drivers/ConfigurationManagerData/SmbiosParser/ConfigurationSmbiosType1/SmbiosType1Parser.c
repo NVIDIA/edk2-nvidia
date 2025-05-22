@@ -1,13 +1,14 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 1 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/PrintLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/IpmiBaseLib.h>
@@ -108,6 +109,7 @@ InstallSmbiosType1Cm (
   INTN                   DtbOffset;
   CONST VOID             *Property;
   INT32                  Length;
+  UINTN                  Index;
   FRU_DEVICE_INFO        *SystemFru;
   CHAR8                  *FruDesc;
   CHAR8                  *ManufacturerStr;
@@ -115,6 +117,7 @@ InstallSmbiosType1Cm (
   CHAR8                  *ProductVersionStr;
   CHAR8                  *ProductSerialStr;
   CHAR8                  *ProductPartNumStr;
+  CHAR8                  NodeName[] = "type1@x";
   CM_OBJECT_TOKEN        *TokenMap;
   CM_OBJ_DESCRIPTOR      Desc;
 
@@ -132,13 +135,36 @@ InstallSmbiosType1Cm (
 
   //
   // Get system info from FRU data
-  // '/firmware/smbios/type1/fru-desc' is required to specify which FRU is used
+  // '/firmware/smbios/type1@x/fru-desc' is required to specify which FRU is used
   //
   DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type1");
   if (DtbOffset < 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 1 not found.\n", __FUNCTION__));
-    Status = RETURN_NOT_FOUND;
-    goto CleanupAndReturn;
+    // If 'type1' node not found or not valid, look for 'type1@x' nodes
+    for (Index = 0; Index < MAX_TYPE1_COUNT; Index++) {
+      AsciiSPrint (NodeName, sizeof (NodeName), "type1@%u", Index);
+      DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, NodeName);
+      if (DtbOffset < 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 1 not found.\n", __FUNCTION__));
+        Status = RETURN_NOT_FOUND;
+        goto CleanupAndReturn;
+      }
+
+      //
+      // Evaluate 'condition' for relevant product node and skip if not met
+      //
+      Status = EvaluateDtbNodeCondition (Private, DtbOffset);
+      ASSERT (Status != EFI_INVALID_PARAMETER);
+      if (Status == EFI_SUCCESS) {
+        break;
+      }
+    }
+
+    // If the loop exits with an error status, log an error and exit.
+    if (Status != EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed conditional DTB evaluation for all Type 1 DTB nodes.\n\n", __FUNCTION__));
+      Status = RETURN_NOT_FOUND;
+      goto CleanupAndReturn;
+    }
   }
 
   Property = fdt_getprop (DtbBase, DtbOffset, "fru-desc", &Length);
