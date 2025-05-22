@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 2 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -164,6 +164,15 @@ InstallSmbiosType2Cm (
     NodeOffset = fdt_path_offset (DtbBase, Type2tNodeStr);
     if (NodeOffset < 0) {
       break;
+    }
+
+    //
+    // Evaluate 'condition' for relevant product node
+    //
+    Status = EvaluateDtbNodeCondition (Private, NodeOffset);
+    ASSERT (Status != EFI_INVALID_PARAMETER);
+    if (Status == EFI_UNSUPPORTED) {
+      continue;
     }
 
     BaseboardInfo = ReallocatePool (

@@ -14,6 +14,7 @@
 #include <Library/NvCmObjectDescUtility.h>
 
 #define MAX_SMBIOS_TABLE_TYPES_SUPPORTED       64
+#define MAX_TYPE1_COUNT                        5
 #define MAX_TYPE2_COUNT                        10
 #define MAX_TYPE3_COUNT                        100
 #define MAX_TYPE3_CONTAINED_ELEMENT_COUNT      100
@@ -116,6 +117,21 @@ GetFruExtraStr (
 CHAR8 *
 AllocateCopyString (
   IN  CHAR8  *String
+  );
+
+/**
+  Search for a string or substring in a FRU record.
+
+  @param[in] FruRecord   Pointer to the FRU_DEVICE_INFO to search.
+  @param[in] SearchStr   The string to search for.
+
+  @retval TRUE   If a match or substring is found in any field.
+  @retval FALSE  Otherwise.
+**/
+BOOLEAN
+FruRecordSearchStr (
+  IN FRU_DEVICE_INFO  *FruRecord,
+  IN CONST CHAR8      *SearchStr
   );
 
 /**

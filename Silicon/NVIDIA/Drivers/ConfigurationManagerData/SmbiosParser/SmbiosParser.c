@@ -140,6 +140,57 @@ AllocateCopyString (
 }
 
 /**
+  Search for a string or substring in a FRU record.
+
+  @param[in] FruRecord   Pointer to the FRU_DEVICE_INFO to search.
+  @param[in] SearchStr   The string to search for.
+
+  @retval TRUE   If a match or substring is found in any field.
+  @retval FALSE  Otherwise.
+**/
+BOOLEAN
+FruRecordSearchStr (
+  IN FRU_DEVICE_INFO  *FruRecord,
+  IN CONST CHAR8      *SearchStr
+  )
+{
+  UINT32  Idx;
+
+  if ((FruRecord == NULL) || (SearchStr == NULL)) {
+    return FALSE;
+  }
+
+  // Check main string fields in the specified fru record
+  if (((FruRecord->ChassisPartNum != NULL) && (AsciiStrStr (FruRecord->ChassisPartNum, SearchStr) != NULL)) ||
+      ((FruRecord->ChassisSerial != NULL) && (AsciiStrStr (FruRecord->ChassisSerial, SearchStr) != NULL)) ||
+      ((FruRecord->BoardManufacturer != NULL) && (AsciiStrStr (FruRecord->BoardManufacturer, SearchStr) != NULL)) ||
+      ((FruRecord->BoardProduct != NULL) && (AsciiStrStr (FruRecord->BoardProduct, SearchStr) != NULL)) ||
+      ((FruRecord->BoardSerial != NULL) && (AsciiStrStr (FruRecord->BoardSerial, SearchStr) != NULL)) ||
+      ((FruRecord->BoardPartNum != NULL) && (AsciiStrStr (FruRecord->BoardPartNum, SearchStr) != NULL)) ||
+      ((FruRecord->ProductManufacturer != NULL) && (AsciiStrStr (FruRecord->ProductManufacturer, SearchStr) != NULL)) ||
+      ((FruRecord->ProductName != NULL) && (AsciiStrStr (FruRecord->ProductName, SearchStr) != NULL)) ||
+      ((FruRecord->ProductPartNum != NULL) && (AsciiStrStr (FruRecord->ProductPartNum, SearchStr) != NULL)) ||
+      ((FruRecord->ProductVersion != NULL) && (AsciiStrStr (FruRecord->ProductVersion, SearchStr) != NULL)) ||
+      ((FruRecord->ProductSerial != NULL) && (AsciiStrStr (FruRecord->ProductSerial, SearchStr) != NULL)) ||
+      ((FruRecord->ProductAssetTag != NULL) && (AsciiStrStr (FruRecord->ProductAssetTag, SearchStr) != NULL)))
+  {
+    return TRUE;
+  }
+
+  // Check extra fields (arrays)
+  for (Idx = 0; Idx < MAX_EXTRA_FRU_AREA_ENTRIES; Idx++) {
+    if (((FruRecord->ChassisExtra[Idx] != NULL) && (AsciiStrStr (FruRecord->ChassisExtra[Idx], SearchStr) != NULL)) ||
+        ((FruRecord->BoardExtra[Idx] != NULL) && (AsciiStrStr (FruRecord->BoardExtra[Idx], SearchStr) != NULL)) ||
+        ((FruRecord->ProductExtra[Idx] != NULL) && (AsciiStrStr (FruRecord->ProductExtra[Idx], SearchStr) != NULL)))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
   Check if the input DTB node has condition and if the condition is satisfied.
   Examples:
 
@@ -182,6 +233,7 @@ EvaluateDtbNodeCondition (
   FRU_DEVICE_INFO      *Fru;
   CHAR8                *TypeStr;
   CHAR8                *FruDesc;
+  CHAR8                *Pattern;
   EFI_PCI_IO_PROTOCOL  *PciIo;
   UINTN                Index;
   UINTN                HandleCount;
@@ -192,6 +244,7 @@ EvaluateDtbNodeCondition (
   UINT32               ExpectedValue;
   UINT32               ExpectedMask = 0xFFFFFFFF;
   BOOLEAN              Unexpected   = FALSE;
+  BOOLEAN              StrExist     = FALSE;
   UINTN                Segment;
   UINTN                Bus;
   UINTN                Device;
@@ -245,7 +298,19 @@ EvaluateDtbNodeCondition (
     FruDesc = (CHAR8 *)Property;
     Fru     = FindFruByDescription (Private, FruDesc);
     if (Fru != NULL) {
-      return Unexpected ? EFI_UNSUPPORTED : EFI_SUCCESS;
+      Property = fdt_getprop (DtbBase, DtbOffset, "pattern", &Length);
+      if ((Property == NULL) || (Length == 0)) {
+        DEBUG ((DEBUG_ERROR, "'condition/pattern' not found.\n"));
+        return EFI_INVALID_PARAMETER;
+      }
+
+      if (Length > 1) {
+        Pattern  = (CHAR8 *)Property;
+        StrExist = FruRecordSearchStr (Fru, Pattern);
+        if (StrExist) {
+          return Unexpected ? EFI_UNSUPPORTED : EFI_SUCCESS;
+        }
+      }
     }
 
     return Unexpected ? EFI_SUCCESS : EFI_UNSUPPORTED;
