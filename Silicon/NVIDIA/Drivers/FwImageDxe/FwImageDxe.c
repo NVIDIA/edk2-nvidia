@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,6 +19,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeLib.h>
+#include <Protocol/BrBctUpdateProtocol.h>
 #include <Protocol/FwImageProtocol.h>
 #include <Protocol/FwPartitionProtocol.h>
 
@@ -579,7 +580,7 @@ FwImageHasNoBackup (
   FW_IMAGE_PRIVATE_DATA  *Private
   )
 {
-  return ((StrCmp (Private->Name, L"BCT-boot-chain_backup") == 0) ||
+  return ((StrCmp (Private->Name, BR_BCT_BACKUP_PARTITION_NAME) == 0) ||
           (StrCmp (Private->Name, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) == 0));
 }
 

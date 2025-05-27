@@ -12,7 +12,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/BrBctUpdateDeviceLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Uefi/UefiBaseType.h>
@@ -20,6 +20,7 @@
 #define BR_BCT_SLOT_MAX                       4
 #define BR_BCT_SLOT_MARKER_BASED_MAX          3
 #define BR_BCT_BACKUP_PARTITION_CHAIN_OFFSET  (16 * 1024)
+#define BR_BCT_BACKUP_PARTITION_DATA_SIZE     (BR_BCT_BACKUP_PARTITION_CHAIN_OFFSET * BOOT_CHAIN_COUNT)
 
 STATIC BR_BCT_UPDATE_PRIVATE_DATA  mPrivate                         = { 0 };
 STATIC UINT32                      mActiveBootChain                 = MAX_UINT32;
@@ -29,6 +30,7 @@ STATIC BOOLEAN                     mPcdFwImageEnableBPartitions     = FALSE;
 STATIC BOOLEAN                     mPcdOverwriteActiveFwPartition   = FALSE;
 STATIC BOOLEAN                     mPcdBootChainIsMarkerBased       = FALSE;
 STATIC VOID                        *mInvalidateBuffer               = NULL;
+STATIC VOID                        *mBackupPartitionBuffer          = NULL;
 
 /**
   Get device offset of given BR-BCT slot data.
@@ -414,6 +416,105 @@ Done:
   return Status;
 }
 
+// NVIDIA_BR_BCT_UPDATE_PROTOCOL.UpdateBackupPartition()
+STATIC
+EFI_STATUS
+EFIAPI
+BrBctUpdateBackupPartition (
+  IN  CONST NVIDIA_BR_BCT_UPDATE_PROTOCOL  *This,
+  IN  CONST VOID                           *Data
+  )
+{
+  NVIDIA_FW_PARTITION_PROTOCOL  *PartitionProtocol;
+  BR_BCT_UPDATE_PRIVATE_DATA    *Private;
+  EFI_STATUS                    Status;
+  UINT32                        PartitionDataSize;
+  UINT64                        BackupOffset;
+  UINTN                         UpdateFwChain;
+
+  DEBUG ((DEBUG_INFO, "%a: ActiveChain=%u\n", __FUNCTION__, mActiveBootChain));
+
+  if ((This == NULL) || (Data == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (mPcdFwImageEnableBPartitions) {
+    UpdateFwChain = OTHER_BOOT_CHAIN (mActiveBootChain);
+  } else if (mPcdOverwriteActiveFwPartition) {
+    UpdateFwChain = mActiveBootChain;
+  } else {
+    return EFI_UNSUPPORTED;
+  }
+
+  Private = CR (
+              This,
+              BR_BCT_UPDATE_PRIVATE_DATA,
+              Protocol,
+              BR_BCT_UPDATE_PRIVATE_DATA_SIGNATURE
+              );
+  PartitionDataSize = BR_BCT_BACKUP_PARTITION_DATA_SIZE;
+  PartitionProtocol = &Private->BrBctBackupPartition->Protocol;
+  Status            = PartitionProtocol->Read (
+                                           PartitionProtocol,
+                                           0,
+                                           PartitionDataSize,
+                                           mBackupPartitionBuffer
+                                           );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: read failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BackupOffset = UpdateFwChain * BR_BCT_BACKUP_PARTITION_CHAIN_OFFSET;
+
+  if (CompareMem (
+        mBackupPartitionBuffer + BackupOffset,
+        Data + BackupOffset,
+        Private->BrBctDataSize
+        ) == 0)
+  {
+    DEBUG ((DEBUG_INFO, "%a: no update needed at offset=0x%x\n", __FUNCTION__, BackupOffset));
+    return EFI_SUCCESS;
+  }
+
+  CopyMem (
+    mBackupPartitionBuffer + BackupOffset,
+    Data + BackupOffset,
+    Private->BrBctDataSize
+    );
+
+  DEBUG ((DEBUG_INFO, "%a: Updating partition at offset=0x%x bytes=%u\n", __FUNCTION__, BackupOffset, Private->BrBctDataSize));
+
+  Status = PartitionProtocol->Write (
+                                PartitionProtocol,
+                                0,
+                                PartitionDataSize,
+                                mBackupPartitionBuffer
+                                );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: write failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = PartitionProtocol->Read (
+                                PartitionProtocol,
+                                0,
+                                PartitionDataSize,
+                                mVerifyBuffer
+                                );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: verify read failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (CompareMem (mVerifyBuffer, mBackupPartitionBuffer, PartitionDataSize) != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: verify failed\n", __FUNCTION__));
+    return EFI_VOLUME_CORRUPTED;
+  }
+
+  return Status;
+}
+
 VOID
 EFIAPI
 BrBctUpdateAddressChangeHandler (
@@ -427,10 +528,15 @@ BrBctUpdateAddressChangeHandler (
     ConvertFunction ((VOID **)&Private->BrBctPartition);
     ConvertFunction ((VOID **)&Private->BrBctBackupPartition);
     ConvertFunction ((VOID **)&Private->Protocol.UpdateFwChain);
+    ConvertFunction ((VOID **)&Private->Protocol.UpdateBackupPartition);
   }
 
   if (mVerifyBuffer != NULL) {
     ConvertFunction ((VOID **)&mVerifyBuffer);
+  }
+
+  if (mBackupPartitionBuffer != NULL) {
+    ConvertFunction ((VOID **)&mBackupPartitionBuffer);
   }
 }
 
@@ -452,6 +558,11 @@ BrBctUpdateDeviceLibDeinit (
   if (mVerifyBuffer != NULL) {
     FreePool (mVerifyBuffer);
     mVerifyBuffer = NULL;
+  }
+
+  if (mBackupPartitionBuffer != NULL) {
+    FreePool (mBackupPartitionBuffer);
+    mBackupPartitionBuffer = NULL;
   }
 
   mActiveBootChain = MAX_UINT32;
@@ -484,11 +595,12 @@ BrBctUpdateDeviceLibInit (
                              EraseBlockSize,
                              PcdGet32 (PcdBrBctLogicalSlotSize)
                              );
-  Private->Protocol.UpdateFwChain = BrBctUpdateFwChain;
+  Private->Protocol.UpdateFwChain         = BrBctUpdateFwChain;
+  Private->Protocol.UpdateBackupPartition = BrBctUpdateBackupPartition;
 
   // Find the BCT and backup partitions
   Private->BrBctPartition       = FwPartitionFindByName (L"BCT");
-  Private->BrBctBackupPartition = FwPartitionFindByName (L"BCT-boot-chain_backup");
+  Private->BrBctBackupPartition = FwPartitionFindByName (BR_BCT_BACKUP_PARTITION_NAME);
   if ((Private->BrBctPartition == NULL) ||
       (Private->BrBctBackupPartition == NULL))
   {
@@ -516,6 +628,8 @@ BrBctUpdateDeviceLibInit (
     Private->BctPartitionSlots = MaxBctSlotsSupported;
   }
 
+  NV_ASSERT_RETURN (Private->BrBctDataSize <= BR_BCT_BACKUP_PARTITION_CHAIN_OFFSET, return EFI_UNSUPPORTED, "%a: data size %u > chain offset\n", __FUNCTION__, Private->BrBctDataSize);
+
   DEBUG ((
     DEBUG_INFO,
     "%a: BCT partition slots=%u size=0x%x\n",
@@ -524,10 +638,16 @@ BrBctUpdateDeviceLibInit (
     Private->SlotSize
     ));
 
-  // Pre-allocate a slot verify buffer to support runtime update of BCT data
-  mVerifyBuffer = AllocateRuntimeZeroPool (Private->BrBctDataSize);
+  // Pre-allocate verify buffers to support runtime update of BCT data
+  mVerifyBuffer = AllocateRuntimeZeroPool (BR_BCT_BACKUP_PARTITION_DATA_SIZE);
   if (mVerifyBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: mVerifyBuffer alloc failed\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  mBackupPartitionBuffer = AllocateRuntimeZeroPool (BR_BCT_BACKUP_PARTITION_DATA_SIZE);
+  if (mBackupPartitionBuffer == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: mBackupPartitionBuffer alloc failed\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
 

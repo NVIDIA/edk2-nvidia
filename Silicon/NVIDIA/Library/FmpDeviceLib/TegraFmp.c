@@ -74,6 +74,7 @@ enum {
   LAS_ERROR_GPT_WRITE_FAILED,
   LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_BAD_FAILED,
   LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_GOOD_FAILED,
+  LAS_ERROR_UPDATE_BCT_BACKUP_PARTITION_FAILED,
 };
 
 // special images that are not processed in the main loop
@@ -81,6 +82,7 @@ STATIC CONST CHAR16  *SpecialImageNames[] = {
   L"GPT",
   L"mb1",
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
+  BR_BCT_BACKUP_PARTITION_NAME,
   NULL
 };
 
@@ -88,6 +90,7 @@ STATIC CONST CHAR16  *SpecialImageNames[] = {
 STATIC CONST CHAR16  *NoVerifyPartitionNames[] = {
   L"BCT",
   FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
+  BR_BCT_BACKUP_PARTITION_NAME,
   NULL
 };
 
@@ -965,6 +968,43 @@ InvalidateImage (
 }
 
 /**
+  Update the BR-BCT backup partition if package has data
+
+  @param[in]  Header                Pointer to the FW package header
+
+  @retval EFI_SUCCESS               The operation completed successfully
+  @retval Others                    An error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+UpdateBctBackupPartition (
+  IN  CONST FW_PACKAGE_HEADER  *Header
+  )
+{
+  EFI_STATUS                   Status;
+  UINTN                        ImageIndex;
+  CONST VOID                   *DataBuffer;
+  CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
+
+  Status = GetPackageImageIndex (Header, BR_BCT_BACKUP_PARTITION_NAME, &ImageIndex);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%s not found in package: %r\n", BR_BCT_BACKUP_PARTITION_NAME, Status));
+    return EFI_SUCCESS;
+  }
+
+  PkgImageInfo = FwPackageImageInfoPtr (Header, ImageIndex);
+  DataBuffer   = FwPackageImageDataPtr (Header, ImageIndex);
+
+  Status = mBrBctUpdateProtocol->UpdateBackupPartition (
+                                   mBrBctUpdateProtocol,
+                                   DataBuffer
+                                   );
+  return Status;
+}
+
+/**
   Update a single FwImage from a special single-image FW package/capsule.
   This is a development feature enabled by PcdFmpSingleImageUpdate and
   requires that the FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE variable
@@ -1469,6 +1509,12 @@ FmpTegraSetImage (
   }
 
   SetImageProgress (FMP_PROGRESS_VERIFY_IMAGES);
+
+  Status = UpdateBctBackupPartition (Header);
+  if (EFI_ERROR (Status)) {
+    *LastAttemptStatus = LAS_ERROR_UPDATE_BCT_BACKUP_PARTITION_FAILED;
+    return EFI_ABORTED;
+  }
 
   Status = mBrBctUpdateProtocol->UpdateFwChain (
                                    mBrBctUpdateProtocol,
