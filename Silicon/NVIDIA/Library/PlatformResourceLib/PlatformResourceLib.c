@@ -87,30 +87,71 @@ UpdateCoreInfoFromDtb (
   CHAR8       CpuMapPathStr[] = "/socket@xx/cpus/cpu-map";
   CHAR8       *CpuMapPathFormat;
   UINTN       Socket;
+  INT32       CpusOffset;
+  CONST VOID  *Property;
+  INT32       Length;
+  UINT32      NumaNodeId;
+  UINTN       MaxSocketsInCpuMap;
 
-  Dtb = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
+  Dtb        = (VOID *)PlatformResourceInfo->ResourceInfo->DtbLoadAddress;
+  MaxSockets = 0;
 
-  // count number of socket nodes, 100 limit due to socket@xx string
-  for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
-    AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
-    SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
-    if (SocketOffset < 0) {
-      break;
+  // find highest numa-node-id, if present
+  CpusOffset = fdt_path_offset (Dtb, "/cpus");
+  fdt_for_each_subnode (NodeOffset, Dtb, CpusOffset) {
+    Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
+    if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+      continue;
+    }
+
+    Property = fdt_getprop (Dtb, NodeOffset, "numa-node-id", &Length);
+    if ((Property == NULL) || (Length != sizeof (NumaNodeId))) {
+      if (MaxSockets != 0) {
+        DEBUG ((DEBUG_ERROR, "Missing numa-node-id in /cpus/%a\n", fdt_get_name (Dtb, NodeOffset, NULL)));
+        return EFI_DEVICE_ERROR;
+      } else {
+        break;
+      }
+    }
+
+    NumaNodeId = fdt32_to_cpu (*(UINT32 *)Property);
+    if ((NumaNodeId + 1) > MaxSockets) {
+      MaxSockets = NumaNodeId + 1;
     }
   }
 
-  // handle global vs per-socket cpu map
-  if (MaxSockets == 0) {
-    PlatformResourceInfo->MaxPossibleSockets = 1;
-    CpuMapPathFormat                         = "/cpus/cpu-map";
-  } else {
-    PlatformResourceInfo->MaxPossibleSockets = MaxSockets;
-    CpuMapPathFormat                         = "/socket@%u/cpus/cpu-map";
+  if (MaxSockets != 0) {
+    MaxSocketsInCpuMap = 1;
+    CpuMapPathFormat   = "/cpus/cpu-map";
   }
+
+  // check for socket nodes, 100 limit due to socket@xx string
+  if (MaxSockets == 0) {
+    for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
+      AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
+      SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
+      if (SocketOffset < 0) {
+        break;
+      }
+    }
+
+    MaxSocketsInCpuMap = MaxSockets;
+    CpuMapPathFormat   = "/socket@%u/cpus/cpu-map";
+  }
+
+  // override when no socket info detected
+  if (MaxSockets == 0) {
+    MaxSockets         = 1;
+    MaxSocketsInCpuMap = 1;
+    CpuMapPathFormat   = "/cpus/cpu-map";
+  }
+
+  PlatformResourceInfo->MaxPossibleSockets = MaxSockets;
 
   // count clusters across all sockets
   MaxClusters = 0;
-  for (Socket = 0; Socket < PlatformResourceInfo->MaxPossibleSockets; Socket++) {
+  for (Socket = 0; Socket < MaxSocketsInCpuMap; Socket++) {
     UINTN  Cluster;
 
     AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
