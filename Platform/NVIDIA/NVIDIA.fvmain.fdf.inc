@@ -395,10 +395,16 @@ FvNameGuid         = $(PLATFORM_GUID)
   # Display hardware
   #
 !ifdef CONFIG_NVIDIA_DISPLAY
+  !ifdef CONFIG_SOC_T23X
   !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.fdf.inc
+  !endif
   INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+  !ifdef CONFIG_SOC_T26X
+    INF Silicon/NVIDIA/Drivers/NvGopDriver/nvgop-gb1xx-platform.inf
+  !endif
 !endif
+
 !ifdef CONFIG_ASPEED_2600_DISPLAY
   #
   # AST2600 VGA GOP Support

@@ -90,7 +90,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !include Features/Ext4Pkg/Ext4.dsc.inc
 !endif
 !ifdef CONFIG_NVIDIA_DISPLAY
+!ifdef CONFIG_SOC_T23X
 !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
+!endif
 !endif
 
 [LibraryClasses.common]
@@ -1971,6 +1973,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_NVIDIA_DISPLAY
   Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
+  !ifdef CONFIG_SOC_T26X
+    Silicon/NVIDIA/Drivers/NvGopDriver/nvgop-gb1xx-platform.inf
+  !endif
 !endif
 
   #
