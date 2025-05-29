@@ -1142,7 +1142,7 @@ depends on FIRMWARE_MANAGEMENT
   config FIRMWARE_CAPSULE_SIZE
   hex "Size of firmware capsule supported"
   default 0x1400000 if USE_SERVER_FIRMWARE_CAPSULE_SIZE
-  default 0xc00000 if USE_GENERAL_FIRMWARE_CAPSULE_SIZE
+  default 0x1000000 if USE_GENERAL_FIRMWARE_CAPSULE_SIZE
   default 0x0
   depends on FIRMWARE_CAPSULE_SUPPORTED
   help
