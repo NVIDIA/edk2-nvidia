@@ -2,7 +2,7 @@
 
   PLDM FW update task lib
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1528,14 +1528,12 @@ PldmFwTaskReceive (
 
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: %s Receive failed: %r\n", __FUNCTION__, Task->DeviceName, Status));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_RECEIVE_FAILED);
-    return StateFatalError;
+    return StateReceive;
   }
 
   if (Task->RecvLength < sizeof (*RecvHeader)) {
     DEBUG ((DEBUG_ERROR, "%a: %s invalid RecvLength %u\n", __FUNCTION__, Task->DeviceName, Task->RecvLength));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_RECEIVE_BAD_LEN);
-    return StateFatalError;
+    return StateReceive;
   }
 
   RecvHeader = (MCTP_PLDM_COMMON *)Task->RecvBuffer;
@@ -1543,8 +1541,7 @@ PldmFwTaskReceive (
       (RecvHeader->PldmType != PLDM_TYPE_FW_UPDATE))
   {
     DEBUG ((DEBUG_ERROR, "%a: %s invalid type %u/%u\n", __FUNCTION__, Task->DeviceName, RecvHeader->MctpType, RecvHeader->PldmType));
-    PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_RECEIVE_BAD_TYPE);
-    return StateFatalError;
+    return StateReceive;
   }
 
   Command = RecvHeader->Command;
@@ -1560,8 +1557,7 @@ PldmFwTaskReceive (
         return StateApplyCompleteHandleReq;
       default:
         DEBUG ((DEBUG_ERROR, "%a: %s unsupported command=0x%x\n", __FUNCTION__, Task->DeviceName, Command));
-        PldmFwTaskSetError (PLDM_FW_UPDATE_TASK_ERROR_UNSUPPORTED_CMD);
-        return StateFatalError;
+        return StateReceive;
     }
   } else {
     return StateProcessRsp;
