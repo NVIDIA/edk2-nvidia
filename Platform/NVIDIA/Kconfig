@@ -568,32 +568,42 @@ menu "Hardware support"
         The name of the logo implementer driver.
     endmenu
 
-    menu "Boot Manager Colors"
-      config USE_BOOT_MANAGER_BLACK_TEXT
-      bool
+    config USE_BOOT_MANAGER_BLACK_TEXT
+    bool
 
-      config BOOT_MANAGER_CUSTOM_COLORS
-      bool "Custom boot manager colors"
-      default y if USE_BOOT_MANAGER_BLACK_TEXT
-      help
-        Use custom colors for the boot manager console prints
+    config BOOT_MANAGER_CON_OUT_ATTRIBUTES
+    hex "Boot manager foreground color"
+    default 0x70 if USE_BOOT_MANAGER_BLACK_TEXT
+    default 0x07
+    help
+      The color of the text in the boot manager
+      EFI_BLACK                              0x00
+      EFI_BLUE                               0x01
+      EFI_GREEN                              0x02
+      EFI_CYAN                               0x03
+      EFI_RED                                0x04
+      EFI_MAGENTA                            0x05
+      EFI_BROWN                              0x06
+      EFI_LIGHTGRAY                          0x07
+      EFI_BRIGHT                             0x08
+      EFI_DARKGRAY(EFI_BLACK \| EFI_BRIGHT)  0x08
+      EFI_LIGHTBLUE                          0x09
+      EFI_LIGHTGREEN                         0x0A
+      EFI_LIGHTCYAN                          0x0B
+      EFI_LIGHTRED                           0x0C
+      EFI_LIGHTMAGENTA                       0x0D
+      EFI_YELLOW                             0x0E
+      EFI_WHITE                              0x0F
 
-      config BOOT_MANAGER_FOREGROUND_COLOR
-      hex "Boot manager foreground color"
-      depends on BOOT_MANAGER_CUSTOM_COLORS
-      default 0x000000 if USE_BOOT_MANAGER_BLACK_TEXT
-      default 0xFFFFFF
-      help
-        The foreground color for the boot manager
 
-      config BOOT_MANAGER_BACKGROUND_COLOR
-      hex "Boot manager background color"
-      depends on BOOT_MANAGER_CUSTOM_COLORS
-      default 0xFFFFFF if USE_BOOT_MANAGER_BLACK_TEXT
-      default 0x000000
-      help
-        The background color for the boot manager
-    endmenu
+      EFI_BACKGROUND_BLACK                   0x00
+      EFI_BACKGROUND_BLUE                    0x10
+      EFI_BACKGROUND_GREEN                   0x20
+      EFI_BACKGROUND_CYAN                    0x30
+      EFI_BACKGROUND_RED                     0x40
+      EFI_BACKGROUND_MAGENTA                 0x50
+      EFI_BACKGROUND_BROWN                   0x60
+      EFI_BACKGROUND_LIGHTGRAY               0x70
   endmenu
 
   config IPMI_BMC

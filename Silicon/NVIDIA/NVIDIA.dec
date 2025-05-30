@@ -493,9 +493,9 @@
   gNVIDIATokenSpaceGuid.PcdLogoCenterY|382|UINT16|0x00000166
 
 #Boot manager colors
-  gNVIDIATokenSpaceGuid.PcdBootManagerCustomColors|FALSE|BOOLEAN|0x00000167
-  gNVIDIATokenSpaceGuid.PcdBootManagerForegroundColor|0x000000|UINT32|0x00000168
-  gNVIDIATokenSpaceGuid.PcdBootManagerBackgroundColor|0xFFFFFF|UINT32|0x00000169
+  #Foreground color - Light gray
+  #Background color - Black
+  gNVIDIATokenSpaceGuid.PcdBootManagerConOutAttributes|0x07|UINT16|0x00000167
 
 [PcdsFeatureFlag]
 #OPTEE presence
