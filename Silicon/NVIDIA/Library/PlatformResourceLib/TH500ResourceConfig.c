@@ -1585,6 +1585,15 @@ GetActiveBootChainStMm (
   return EFI_UNSUPPORTED;
 }
 
+UINT32
+EFIAPI
+DramAddrToSocket (
+  IN EFI_PHYSICAL_ADDRESS  DramAddr
+  )
+{
+  return (((UINT64)DramAddr & TH500_DRAM_START_MASK) >> TH500_DRAM_START_SHFT);
+}
+
 BOOLEAN
 EFIAPI
 BootChainIsFailed (

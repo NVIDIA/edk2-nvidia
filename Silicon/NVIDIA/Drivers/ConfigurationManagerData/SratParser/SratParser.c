@@ -20,6 +20,7 @@
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 
 #include <TH500/TH500Definitions.h>
+#include <T410/T410Definitions.h>
 
 /**
   Check whether a memory region is fully covered by an existing DRAM region.
@@ -60,7 +61,7 @@ IsRegionCoveredByDramRegion (
     }
 
     if ((RegionStart >= DramStart) && (RegionEnd <= DramEnd)) {
-      // Containment in a DRAM region implies the same TH500_AMAP_GET_SOCKET() PXM.
+      // Containment in a DRAM region implies the same DramAddrToSocket() PXM.
       return TRUE;
     }
   }
@@ -196,7 +197,7 @@ SratParser (
   }
 
   for (MemoryAffinityInfoIndex = 0; MemoryAffinityInfoIndex < PlatformResourceInfo->ResourceInfo->DramRegionsCount; MemoryAffinityInfoIndex++) {
-    MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress);
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = DramAddrToSocket (PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress);
     MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress;
     MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryLength;
     MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_6_MEMORY_ENABLED;
@@ -234,7 +235,7 @@ SratParser (
       continue;
     }
 
-    MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (Region->MemoryBaseAddress);
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = DramAddrToSocket (Region->MemoryBaseAddress);
     MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = Region->MemoryBaseAddress;
     MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = Region->MemoryLength;
     MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;

@@ -562,4 +562,18 @@ PcieIdToSocket (
   IN UINT32  PcieId
   );
 
+/**
+Return socket from DRAM Addr
+
+@param[in]  DramAddr              DRAM Address
+
+@retval  UINT32                   Socket indicated by DRAM Address
+
+**/
+UINT32
+EFIAPI
+DramAddrToSocket (
+  IN EFI_PHYSICAL_ADDRESS  DramAddr
+  );
+
 #endif //__PLATFORM_RESOURCE_LIB_H__

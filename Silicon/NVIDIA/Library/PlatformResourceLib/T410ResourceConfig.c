@@ -1261,6 +1261,15 @@ GetActiveBootChainStMm (
   return EFI_UNSUPPORTED;
 }
 
+UINT32
+EFIAPI
+DramAddrToSocket (
+  IN EFI_PHYSICAL_ADDRESS  DramAddr
+  )
+{
+  return (((UINT64)DramAddr & T410_DRAM_START_MASK) >> T410_DRAM_START_SHFT);
+}
+
 /**
   Set the next boot chain
 

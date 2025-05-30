@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -222,10 +222,9 @@
 #define TH500_AMAP_START_SOCKET_1  0x100000000000ULL
 #define TH500_AMAP_START_SOCKET_2  0x200000000000ULL
 #define TH500_AMAP_START_SOCKET_3  0x300000000000ULL
-#define TH500_AMAP_START_MASK      0x300000000000ULL
-#define TH500_AMAP_START_SHFT      44
-#define TH500_AMAP_GET_SOCKET(addr)      (((UINT64)addr & TH500_AMAP_START_MASK) >> TH500_AMAP_START_SHFT)
-#define TH500_AMAP_GET_ADD(addr, socid)  ((UINT64)addr | ((UINT64)socid << TH500_AMAP_START_SHFT))
+#define TH500_DRAM_START_MASK      0x300000000000ULL
+#define TH500_DRAM_START_SHFT      44
+#define TH500_AMAP_GET_ADD(addr, socid)  ((UINT64)addr | ((UINT64)socid << TH500_DRAM_START_SHFT))
 
 #define PLATFORM_MAX_SOCKETS             (PcdGet32 (PcdTegraMaxSockets))
 #define TH500_HV_EGM_PXM_DOMAIN_START    4
