@@ -410,14 +410,11 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   # SE RNG
   #
-!ifdef CONFIG_SOC_ORIN
+!ifdef CONFIG_SOC_T23X
   INF Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 !endif
 
-  #
-  # Common Jetson devices
-  #
-!ifdef CONFIG_SOC_JETSON
+!ifdef CONFIG_SOC_GENERAL
   #
   # PinMux Support
   #
