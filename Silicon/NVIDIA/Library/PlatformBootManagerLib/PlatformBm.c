@@ -106,11 +106,6 @@ STATIC PLATFORM_USB_KEYBOARD  mUsbKeyboard = {
 STATIC PLATFORM_CONFIGURATION_DATA  CurrentPlatformConfigData;
 EFI_RSC_HANDLER_PROTOCOL            *mRscHandler = NULL;
 
-EFI_GRAPHICS_OUTPUT_BLT_PIXEL        *mForegroundColorPtr = NULL;
-EFI_GRAPHICS_OUTPUT_BLT_PIXEL        *mBackgroundColorPtr = NULL;
-EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  mForegroundColor     = { 0 };
-EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION  mBackgroundColor     = { 0 };
-
 /**
   Check if the handle satisfies a particular condition.
 
@@ -146,70 +141,45 @@ VOID
   );
 
 /**
-  Prints a string to the console but skips the GOP consoles.
+  Prints a string to the console in the center of the screen at the specified
+  row.
+  Updates the cursor position.
 
+  @param[in] Row     The row to print the string at.
   @param[in] Format  The format string to print.
   @param[in] ...     The arguments to print.
 **/
 STATIC
 VOID
 EFIAPI
-PrintNonGopConsoles (
+PrintCentered (
+  IN UINTN         Row,
   IN CONST CHAR16  *Format,
   ...
   )
 {
-  EFI_STATUS                       Status;
-  EFI_HANDLE                       *Handles;
-  UINTN                            NumberOfHandles;
-  UINTN                            Index;
-  VOID                             *GopInterface;
-  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *SimpleTextOut;
-  CHAR16                           String[MAX_STRING_SIZE];
-  VA_LIST                          Marker;
+  CHAR16   String[MAX_STRING_SIZE];
+  VA_LIST  Marker;
+  UINTN    NumberOfChars;
+  UINTN    Columns;
+  UINTN    Rows;
+  UINTN    StartColumn;
 
   VA_START (Marker, Format);
-  UnicodeVSPrint (String, sizeof (String), Format, Marker);
+  NumberOfChars = UnicodeVSPrint (String, sizeof (String), Format, Marker);
   VA_END (Marker);
 
-  // Get all the console out devices
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiConsoleOutDeviceGuid,
-                  NULL /* SearchKey */,
-                  &NumberOfHandles,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
-    return;
+  // Remove trailing linefeed and carriage return
+  while ((String[NumberOfChars] == CHAR_LINEFEED) ||
+         (String[NumberOfChars] == CHAR_CARRIAGE_RETURN))
+  {
+    NumberOfChars--;
   }
 
-  // Check if the console out device is a GOP
-  for (Index = 0; Index < NumberOfHandles; Index++) {
-    Status = gBS->HandleProtocol (
-                    Handles[Index],
-                    &gEfiGraphicsOutputProtocolGuid,
-                    (VOID **)&GopInterface
-                    );
-    if (!EFI_ERROR (Status)) {
-      continue;
-    }
-
-    // Get the simple text out protocol
-    Status = gBS->HandleProtocol (
-                    Handles[Index],
-                    &gEfiSimpleTextOutProtocolGuid,
-                    (VOID **)&SimpleTextOut
-                    );
-    if (EFI_ERROR (Status)) {
-      continue;
-    }
-
-    // Print the string to the console
-    SimpleTextOut->OutputString (SimpleTextOut, String);
-  }
-
-  FreePool (Handles);
+  gST->ConOut->QueryMode (gST->ConOut, gST->ConOut->Mode->Mode, &Columns, &Rows);
+  StartColumn = (Columns - NumberOfChars) / 2;
+  gST->ConOut->SetCursorPosition (gST->ConOut, StartColumn, Row);
+  gST->ConOut->OutputString (gST->ConOut, String);
 }
 
 /**
@@ -1218,16 +1188,7 @@ DisplaySystemAndHotkeyInformation (
   VOID
   )
 {
-  EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  CHAR16                        Buffer[150];
-  UINTN                         ScreenWidthChars;
-  UINTN                         PosX;
-  UINTN                         PosY;
-  UINTN                         StartLineX = EFI_GLYPH_WIDTH+2;
-  UINTN                         LineDeltaY = EFI_GLYPH_HEIGHT+1;
-  UINTN                         LineCount  = 0;
-  BOOLEAN                       ShellHotkeySupported;
+  BOOLEAN  ShellHotkeySupported;
 
   CheckUefiShellLoadOption (&ShellHotkeySupported);
   if (ShellHotkeySupported && (PcdGet16 (PcdShellHotkey) == CHAR_NULL)) {
@@ -1235,126 +1196,30 @@ DisplaySystemAndHotkeyInformation (
   }
 
   //
-  // Display hotkey information at upper left corner.
-  //
-
-  //
   // Show NVIDIA Internal Banner.
   //
   if (PcdGetBool (PcdTegraPrintInternalBanner)) {
-    Print (L"********** FOR NVIDIA INTERNAL USE ONLY **********\n");
+    PrintCentered (gST->ConOut->Mode->CursorRow, L"********** FOR NVIDIA INTERNAL USE ONLY **********\r\n");
   }
 
   //
-  // firmware version.
+  // Show system information.
   //
-  //
-  // Serial console only.
-  //
-  PrintNonGopConsoles (
-    L"%s System firmware version %s date %s\n\r",
-    (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName),
-    (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString),
-    (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
-    );
+  PrintCentered (gST->ConOut->Mode->CursorRow, L"%s System firmware\r\n", (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName));
+  PrintCentered (gST->ConOut->Mode->CursorRow, L"version %s\r\n", (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString));
+  PrintCentered (gST->ConOut->Mode->CursorRow, L"date %s\r\n", (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString));
 
   //
-  // Check and see if GOP is available.
+  // Display hotkey information at upper left corner.
   //
-  Status = gBS->HandleProtocol (
-                  gST->ConsoleOutHandle,
-                  &gEfiGraphicsOutputProtocolGuid,
-                  (VOID **)&GraphicsOutput
-                  );
-
-  if (!EFI_ERROR (Status)) {
-    //
-    // Determine the character width of the screen.  We cannot write more
-    // characters than this.
-    //
-    ScreenWidthChars = GraphicsOutput->Mode->Info->HorizontalResolution / EFI_GLYPH_WIDTH;
-
-    //
-    // Don't assume our buffer is larger than the screen
-    //
-    ScreenWidthChars = MIN (ScreenWidthChars, sizeof (Buffer) / sizeof (CHAR16) - 1);
-
-    //
-    // Print the system name, version, and date on three separate lines to
-    // avoid running out of space on small screens.
-    //
-    // We'll start from the top and center it up.
-    //
-
-    // System name
-    PosY = 0;
-    UnicodeSPrint (
-      Buffer,
-      sizeof (Buffer),
-      L"%s System firmware",
-      (CHAR16 *)PcdGetPtr (PcdPlatformFamilyName)
-      );
-    Buffer[ScreenWidthChars] = '\0';
-    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
-                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
-
-    // Version
-    PosY += LineDeltaY;
-    UnicodeSPrint (
-      Buffer,
-      sizeof (Buffer),
-      L"version %s",
-      (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString)
-      );
-    Buffer[ScreenWidthChars] = '\0';
-    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
-                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
-
-    // Date
-    PosY += LineDeltaY;
-    UnicodeSPrint (
-      Buffer,
-      sizeof (Buffer),
-      L"date %s",
-      (CHAR16 *)PcdGetPtr (PcdFirmwareReleaseDateString)
-      );
-    Buffer[ScreenWidthChars] = '\0';
-    PosX                     = (GraphicsOutput->Mode->Info->HorizontalResolution -
-                                StrLen (Buffer) * EFI_GLYPH_WIDTH) / 2;
-    PrintXY (PosX, PosY, mForegroundColorPtr, mBackgroundColorPtr, Buffer);
-
-    PosY += LineDeltaY;
-
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"ESC   to enter Setup.");
-    LineCount++;
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"F11   to enter Boot Manager Menu.");
-    LineCount++;
-    if (ShellHotkeySupported) {
-      PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"%c     to enter Shell.", PcdGet16 (PcdShellHotkey));
-      LineCount++;
-    }
-
-    PrintXY (StartLineX, PosY+LineDeltaY*LineCount, mForegroundColorPtr, mBackgroundColorPtr, L"Enter to continue boot.");
-    LineCount++;
-  }
-
-  //
-  // If Timeout is 0, next message comes in same line as previous message.
-  // Add a newline to maintain ordering and readability of logs.
-  //
-  if (PcdGet16 (PcdPlatformBootTimeOut) == 0) {
-    PrintNonGopConsoles (L"\n\r");
-  }
-
-  PrintNonGopConsoles (L"ESC   to enter Setup.\n");
-  PrintNonGopConsoles (L"F11   to enter Boot Manager Menu.\n");
+  gST->ConOut->SetCursorPosition (gST->ConOut, 0, gST->ConOut->Mode->CursorRow + 1);
+  Print (L"ESC   to enter Setup.\r\n");
+  Print (L"F11   to enter Boot Manager Menu.\r\n");
   if (ShellHotkeySupported) {
-    PrintNonGopConsoles (L"%c     to enter Shell.\n", PcdGet16 (PcdShellHotkey));
+    Print (L"%c     to enter Shell.\r\n", PcdGet16 (PcdShellHotkey));
   }
 
-  PrintNonGopConsoles (L"Enter to continue boot.\n");
+  Print (L"Enter to continue boot.\r\n");
 }
 
 STATIC
@@ -2673,6 +2538,57 @@ VerifyAcpiSanity (
 }
 
 /**
+  Configure the console
+
+  Sets the mode to the maximum resolution supported by the platform
+  Sets the attributes to values specified in PCD
+**/
+VOID
+EFIAPI
+ConfigureConsole (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       ModeIndex;
+  UINTN       MaxMode;
+  UINTN       ModeWidth;
+  UINTN       ModeHeight;
+
+  UINTN  SelectedMode   = 0;
+  UINTN  SelectedWidth  = 0;
+  UINTN  SelectedHeight = 0;
+
+  MaxMode = gST->ConOut->Mode->MaxMode;
+  for (ModeIndex = 0; ModeIndex < MaxMode; ModeIndex++) {
+    Status = gST->ConOut->QueryMode (gST->ConOut, ModeIndex, &ModeWidth, &ModeHeight);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    // Maximize width then pick largest height
+    if (ModeWidth >= SelectedWidth) {
+      SelectedWidth  = ModeWidth;
+      SelectedHeight = ModeHeight;
+      SelectedMode   = ModeIndex;
+    } else if ((ModeWidth == SelectedWidth) && (ModeHeight > SelectedHeight)) {
+      SelectedHeight = ModeHeight;
+      SelectedMode   = ModeIndex;
+    }
+  }
+
+  Status = gST->ConOut->SetMode (gST->ConOut, SelectedMode);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set mode %d: %r\n", SelectedMode, Status));
+  }
+
+  Status = gST->ConOut->SetAttribute (gST->ConOut, PcdGet16 (PcdBootManagerConOutAttributes));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set attributes: %r\n", Status));
+  }
+}
+
+/**
   Do the platform specific action after the console is ready
   Possible things that can be done in PlatformBootManagerAfterConsole:
   > Console post action:
@@ -2689,16 +2605,11 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
-  // Set the foreground and background colors if custom colors are enabled
-  if (PcdGetBool (PcdBootManagerCustomColors)) {
-    mForegroundColor.Raw = PcdGet32 (PcdBootManagerForegroundColor);
-    mBackgroundColor.Raw = PcdGet32 (PcdBootManagerBackgroundColor);
-    mForegroundColorPtr  = &mForegroundColor.Pixel;
-    mBackgroundColorPtr  = &mBackgroundColor.Pixel;
-  }
-
   // Print the BootOrder information
   PrintCurrentBootOrder (DEBUG_ERROR);
+
+  // Configure the console
+  ConfigureConsole ();
 
   //
   // Show the splash screen.

@@ -296,7 +296,7 @@ GetImage (
       return Status;
     }
 
-    DEBUG ((DEBUG_ERROR, "%a: Found logo %ux%u\r\n", __func__, CurrentImage.Width, CurrentImage.Height));
+    DEBUG ((DEBUG_VERBOSE, "%a: Found logo %ux%u\r\n", __func__, CurrentImage.Width, CurrentImage.Height));
     if (LogoScreenRatio == 0) {
       // If larger that display or this is smaller then previous image skip
       if ((CurrentImage.Height > TargetHeight) ||

@@ -912,11 +912,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdLogoScreenRatio|$(CONFIG_LOGO_SCALED_SCREEN_RATIO)
   gNVIDIATokenSpaceGuid.PcdLogoCenterY|$(CONFIG_LOGO_SCALED_CENTER_Y)
 
-!ifdef CONFIG_BOOT_MANAGER_CUSTOM_COLORS
-  gNVIDIATokenSpaceGuid.PcdBootManagerCustomColors|TRUE
-  gNVIDIATokenSpaceGuid.PcdBootManagerForegroundColor|$(CONFIG_BOOT_MANAGER_FOREGROUND_COLOR)
-  gNVIDIATokenSpaceGuid.PcdBootManagerBackgroundColor|$(CONFIG_BOOT_MANAGER_BACKGROUND_COLOR)
-!endif
+  gNVIDIATokenSpaceGuid.PcdBootManagerConOutAttributes|$(CONFIG_BOOT_MANAGER_CON_OUT_ATTRIBUTES)
 
 [PcdsFixedAtBuild]
   #
