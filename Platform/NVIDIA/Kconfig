@@ -101,20 +101,6 @@ choice
 
 endchoice
 
-# Temporary translation of SOC names
-# TODO: remove these when the inf files have been updated to the official names
-config SOC_ORIN
-bool
-default y if SOC_T23X
-
-config SOC_T264
-bool
-default y if SOC_T26X
-
-config SOC_JETSON
-bool
-default y if SOC_GENERAL
-
 choice
   prompt "Build Type"
 

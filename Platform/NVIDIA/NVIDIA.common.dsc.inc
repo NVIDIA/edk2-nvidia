@@ -54,21 +54,21 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
 [SkuIds]
   0|DEFAULT
-!ifdef CONFIG_SOC_ORIN
+!ifdef CONFIG_SOC_T23X
   2|T234
   3|T234SLT|T234
 !endif
-!ifdef CONFIG_SOC_T264
+!ifdef CONFIG_SOC_T26X
   4|T264
 !endif
 !ifdef CONFIG_SOC_T24X
   5|TH500
   253|TH500Presil|TH500
 !endif
-!ifdef CONFIG_SOC_T264
+!ifdef CONFIG_SOC_T26X
   254|T264Presil|T264
 !endif
-!ifdef CONFIG_SOC_ORIN
+!ifdef CONFIG_SOC_T23X
   255|T234Presil|T234
 !endif
 
@@ -326,7 +326,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_BLOB
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpBlobLib/FmpBlobLib.inf
-  !ifdef CONFIG_SOC_JETSON
+  !ifdef CONFIG_SOC_GENERAL
     FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPartition.inf
   !else
     FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPcd.inf
@@ -414,7 +414,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
   DtbUpdateLib|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateLib.inf
   DtbUpdateBpmpIpc|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateBpmpIpc.inf
-!ifdef CONFIG_SOC_JETSON
+!ifdef CONFIG_SOC_GENERAL
   DtbUpdateMacAddr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateMacAddr.inf
   DtbUpdateFsi|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateFsi.inf
   DtbUpdateVpr|Silicon/NVIDIA/Library/DtbUpdateLib/DtbUpdateVpr.inf
@@ -1025,7 +1025,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdNvGopSupported|TRUE
 !endif
 
-!ifdef CONFIG_SOC_JETSON
+!ifdef CONFIG_SOC_GENERAL
   gArmTokenSpaceGuid.PcdBaseBoardManufacturer|L"NVIDIA"
   gArmTokenSpaceGuid.PcdBaseBoardProductName|L"Jetson"
 !endif
@@ -1291,7 +1291,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   !endif
 !endif
 
-!ifdef CONFIG_SOC_ORIN
+!ifdef CONFIG_SOC_T23X
 [PcdsDynamicDefault.common.T234]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0X0F400000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0X0F440000
@@ -1317,7 +1317,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdRcmUseDtbCmdline|TRUE
 !endif
 
-!ifdef CONFIG_SOC_T264
+!ifdef CONFIG_SOC_T26X
 [PcdsDynamicDefault.common.T264]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x8146000000
   gArmTokenSpaceGuid.PcdGicRedistributorsBase|0x8146080000
@@ -1976,14 +1976,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   #
   # SE RNG
   #
-!ifdef CONFIG_SOC_ORIN
+!ifdef CONFIG_SOC_T23X
   Silicon/NVIDIA/Tegra/T234/Drivers/SeRngDxe/SeRngDxe.inf
 !endif
 
-  #
-  # Common Jetson devices
-  #
-!ifdef CONFIG_SOC_JETSON
+!ifdef CONFIG_SOC_GENERAL
   #
   # PinMux Support
   #
