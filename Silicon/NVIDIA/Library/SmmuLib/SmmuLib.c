@@ -23,42 +23,51 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/DevicePath.h>
 
+#define UEFI_FW_DTB_PATH              "/firmware/uefi"
+#define MAX_CACHED_BYPASS_INFO_COUNT  64
+
+typedef struct {
+  EFI_HANDLE    Handle;
+  BOOLEAN       BypassNeeded;
+} BYPASS_INFO;
+
+STATIC UINT16       mBypassVendorId = 0;
+STATIC BYPASS_INFO  mBypassInfo[MAX_CACHED_BYPASS_INFO_COUNT];
+STATIC UINT16       mBypassInfoCount = 0;
+
 STATIC
-UINT16
-GetBypassVendorIdFromDtb (
+VOID
+InitBypassVendorIdFromDtb (
   VOID
   )
 {
   EFI_STATUS  Status;
-  UINT16      BypassVendorId;
   INT32       NodeOffset;
   UINT32      BypassVendorIdValue;
 
-  BypassVendorId = 0;
-
   // Get vendor IDs from DTB
-  Status = DeviceTreeGetNodeByPath ("/firmware/uefi", &NodeOffset);
+  Status = DeviceTreeGetNodeByPath (UEFI_FW_DTB_PATH, &NodeOffset);
   if (Status == EFI_NOT_FOUND) {
     goto Exit;
   } else if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to check for %a\n", __FUNCTION__, Status, "/firmware/uefi"));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read bypass vendor ID from DTB. Got %r trying to check for %a\n", __FUNCTION__, Status, UEFI_FW_DTB_PATH));
     goto Exit;
   } else if (NodeOffset >= 0) {
     Status = DeviceTreeGetNodePropertyValue32 (NodeOffset, "skip-smmu-vid", &BypassVendorIdValue);
     if (Status == EFI_SUCCESS) {
-      BypassVendorId = (UINT16)BypassVendorIdValue;
+      DEBUG ((DEBUG_INFO, "%a: Bypass Vendor ID (skip-smmu-vid) read from DTB 0x%08x\n", __FUNCTION__, BypassVendorIdValue));
+      mBypassVendorId = (UINT16)BypassVendorIdValue;
     }
   }
 
 Exit:
-  return BypassVendorId;
+  return;
 }
 
 STATIC
 BOOLEAN
 CheckForBypassVendorId (
-  IN EFI_HANDLE  Handle,
-  IN UINT16      BypassVendorId
+  IN EFI_HANDLE  Handle
   )
 {
   EFI_STATUS                Status;
@@ -72,6 +81,13 @@ CheckForBypassVendorId (
   UINT16                    VendorId;
   BOOLEAN                   BypassNeeded;
   UINTN                     Size;
+  UINT16                    Idx;
+
+  for (Idx = 0; Idx < mBypassInfoCount; Idx++) {
+    if (mBypassInfo[Idx].Handle == Handle) {
+      return mBypassInfo[Idx].BypassNeeded;
+    }
+  }
 
   BypassNeeded = FALSE;
   DevicePath   = NULL;
@@ -121,7 +137,7 @@ CheckForBypassVendorId (
                               &VendorId
                               );
         if (!EFI_ERROR (Status)) {
-          if (VendorId == BypassVendorId) {
+          if (VendorId == mBypassVendorId) {
             BypassNeeded = TRUE;
             FreePool (SubPath);
             SubPath = NULL;
@@ -135,6 +151,19 @@ CheckForBypassVendorId (
     SubPath        = NULL;
     TempDevicePath = NextDevicePathNode (TempDevicePath);
   }
+
+  ASSERT (mBypassInfoCount < ARRAY_SIZE (mBypassInfo));
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Caching bypass info Handle %p BypassNeeded %d\n",
+    __FUNCTION__,
+    Handle,
+    (UINTN)BypassNeeded
+    ));
+  mBypassInfo[mBypassInfoCount].Handle       = Handle;
+  mBypassInfo[mBypassInfoCount].BypassNeeded = BypassNeeded;
+  mBypassInfoCount++;
 
   return BypassNeeded;
 }
@@ -163,7 +192,6 @@ GetSourceIdFromPciHandle (
   EFI_HANDLE           *Handles = NULL;
   UINTN                NumberOfHandles;
   UINTN                HandleIdx;
-  UINT16               BypassVendorId;
 
   if ((PciHandle       == NULL) ||
       (SourceId        == NULL) ||
@@ -266,16 +294,14 @@ GetSourceIdFromPciHandle (
   SourceId->SmmuV3pHandle = SmmuV3pHandle;
 
   if (TegraGetPlatform () == TEGRA_PLATFORM_SILICON) {
-    // Check DTB for bypass vendor ID first
-    BypassVendorId = GetBypassVendorIdFromDtb ();
-    if (BypassVendorId == 0) {
+    if (mBypassVendorId == 0) {
       // No bypass vendor ID in DTB, use translate mode
       *TranslationMode = SMMU_V3_TRANSLATE;
       DEBUG ((DEBUG_VERBOSE, "%a: Setting TRANSLATE mode (no bypass VID in DTB)\n", __FUNCTION__));
-    } else if (CheckForBypassVendorId (PciHandle, BypassVendorId)) {
+    } else if (CheckForBypassVendorId (PciHandle)) {
       // Found matching vendor ID, use bypass mode
       *TranslationMode = SMMU_V3_BYPASS;
-      DEBUG ((DEBUG_VERBOSE, "%a: Setting BYPASS mode due to VendorId 0x%04x\n", __FUNCTION__, BypassVendorId));
+      DEBUG ((DEBUG_VERBOSE, "%a: Setting BYPASS mode due to VendorId 0x%04x\n", __FUNCTION__, mBypassVendorId));
     } else {
       // No match found, use translate mode
       *TranslationMode = SMMU_V3_TRANSLATE;
@@ -289,4 +315,14 @@ CleanupAndReturn:
   }
 
   return Status;
+}
+
+EFI_STATUS
+EFIAPI
+SmmuLibConstructor (
+  VOID
+  )
+{
+  InitBypassVendorIdFromDtb ();
+  return EFI_SUCCESS;
 }

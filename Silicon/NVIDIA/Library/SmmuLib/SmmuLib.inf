@@ -13,6 +13,7 @@
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = SmmuLib
+  CONSTRUCTOR                    = SmmuLibConstructor
 
 [Sources.common]
   SmmuLib.c
