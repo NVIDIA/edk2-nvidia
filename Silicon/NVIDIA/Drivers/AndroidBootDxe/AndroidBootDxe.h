@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver's private data structure and interfaces declaration
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro.
 
@@ -109,6 +109,13 @@ typedef struct {
   UINT32    PageSize;
   UINT32    HeaderVersion;
 } ANDROID_BOOT_DATA;
+
+// Android Init Boot Data structure
+typedef struct {
+  UINT32    RamdiskSize;
+  UINT32    PageSize;
+  UINT32    HeaderVersion;
+} ANDROID_INIT_BOOT_DATA;
 
 // Private data structure
 typedef struct {
