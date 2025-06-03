@@ -28,7 +28,6 @@
 #include "T264/T264Definitions.h"
 
 #define T264_MAX_CORE_DISABLE_WORDS  1
-#define T264_SOCKET_MASK             0x1
 
 typedef struct {
   CONST CHAR8    *IpName;
@@ -37,7 +36,7 @@ typedef struct {
   UINT64         DisableRegAddr;
   UINT32         DisableRegMask;
   UINT8          DisableRegShift;
-  UINT32         DisableRegArray[1];
+  UINT32         DisableRegArray[TEGRABL_MAX_SOCKETS];
 } T264_FLOOR_SWEEPING_IP_ENTRY;
 
 STATIC TEGRA_FUSE_INFO  T264FuseList[] = {
@@ -46,8 +45,9 @@ STATIC TEGRA_FUSE_INFO  T264FuseList[] = {
   { "fuse-ate-priv-2", T264_FUSE_ATE_PRIV_2_OFFSET, BIT0                        },
 };
 
-STATIC UINT64  T264FuseBaseAddr[] = {
-  T264_FUSE_BASE,
+STATIC UINT64  T264SocketFuseBaseAddr[TEGRABL_MAX_SOCKETS] = {
+  T264_FUSE_BASE_SOCKET_0,
+  T264_FUSE_BASE_SOCKET_1,
 };
 
 STATIC UINT32  T264CoreDisableFuseMask[T264_MAX_CORE_DISABLE_WORDS] = {
@@ -62,7 +62,7 @@ STATIC COMMON_RESOURCE_CONFIG_INFO  T264CommonResourceConfigInfo = {
   T264_MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,
-  T264FuseBaseAddr,
+  T264SocketFuseBaseAddr,
   T264CoreDisableFuseOffset,
   T264CoreDisableFuseMask,
 };
@@ -96,21 +96,33 @@ TEGRA_MMIO_INFO  T264MmioInfo[] = {
 
 STATIC TEGRA_MMIO_INFO  T264GicRedistributorMmioInfo[] = {
   {
-    T264_GIC_REDISTRIBUTOR_BASE,
+    T264_GIC_REDISTRIBUTOR_BASE_SOCKET_0,
+    T264_GIC_REDISTRIBUTOR_INSTANCES *SIZE_256KB
+  },
+  {
+    T264_GIC_REDISTRIBUTOR_BASE_SOCKET_1,
     T264_GIC_REDISTRIBUTOR_INSTANCES *SIZE_256KB
   },
 };
 
 STATIC TEGRA_MMIO_INFO  T264GicItsMmioInfo[] = {
   {
-    T264_GIC_ITS_BASE,
+    T264_GIC_ITS_BASE_SOCKET_0,
+    SIZE_64KB
+  },
+  {
+    T264_GIC_ITS_BASE_SOCKET_1,
     SIZE_64KB
   },
 };
 
-STATIC TEGRA_MMIO_INFO  T264FuseMmioInfo[] = {
+STATIC TEGRA_MMIO_INFO  T264SocketFuseMmioInfo[] = {
   {
-    T264_FUSE_BASE,
+    T264_FUSE_BASE_SOCKET_0,
+    SIZE_256KB
+  },
+  {
+    T264_FUSE_BASE_SOCKET_1,
     SIZE_256KB
   },
 };
@@ -120,11 +132,19 @@ STATIC TEGRA_MMIO_INFO  T264MemoryControllerMmioInfo[] = {
     T264_MEMORY_CONTROLLER_BASE,
     SIZE_64KB
   },
+  {
+    T264_SOCKET_OFFSET + T264_MEMORY_CONTROLLER_BASE,
+    SIZE_64KB
+  },
 };
 
 STATIC TEGRA_MMIO_INFO  T264UphyFuseMmioInfo[] = {
   {
     T264_UPHY0_FUSE_BASE,
+    SIZE_128KB
+  },
+  {
+    T264_SOCKET_OFFSET + T264_UPHY0_FUSE_BASE,
     SIZE_128KB
   },
 };
@@ -134,6 +154,10 @@ STATIC TEGRA_MMIO_INFO  T264MiscMmioInfo[] = {
     T264_MISC_REG_BASE,
     SIZE_512KB
   },
+  {
+    T264_SOCKET_OFFSET + T264_MISC_REG_BASE,
+    SIZE_512KB
+  },
 };
 
 STATIC TEGRA_MMIO_INFO  T264ScratchMmioInfo[] = {
@@ -141,14 +165,18 @@ STATIC TEGRA_MMIO_INFO  T264ScratchMmioInfo[] = {
     T264_SCRATCH_BASE,
     SIZE_64KB
   },
+  {
+    T264_SOCKET_OFFSET + T264_SCRATCH_BASE,
+    SIZE_64KB
+  },
 };
 
-STATIC TEGRA_MMIO_INFO  T264FrameBufferMmioInfo[1] = { 0 };
+STATIC TEGRA_MMIO_INFO  T264FrameBufferMmioInfo[TEGRABL_MAX_SOCKETS] = { 0 };
 
-STATIC TEGRA_MMIO_INFO  *T264MmioTables[] = {
+STATIC TEGRA_MMIO_INFO  *T264SocketMmioTables[] = {
   T264GicRedistributorMmioInfo,
   T264GicItsMmioInfo,
-  T264FuseMmioInfo,
+  T264SocketFuseMmioInfo,
   T264MemoryControllerMmioInfo,
   T264FrameBufferMmioInfo,
   T264UphyFuseMmioInfo,
@@ -156,7 +184,7 @@ STATIC TEGRA_MMIO_INFO  *T264MmioTables[] = {
   T264ScratchMmioInfo,
 };
 
-STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo[1] = { 0 };
+STATIC TEGRA_BASE_AND_SIZE_INFO  mVprInfo[TEGRABL_MAX_SOCKETS] = { 0 };
 
 STATIC CONST CHAR8  *T264AudioCompatibility[] = {
   "nvidia,tegra186-audio-graph-card",
@@ -194,7 +222,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingIpTable[] = {
     "audio",
     T264AudioCompatibility,
     NULL,
-    T264_FUSE_BASE + T264_FUSE_AUDIO_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_AUDIO_DISABLE_OFFSET,
     T264_FUSE_AUDIO_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -202,7 +230,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingIpTable[] = {
     "mgbe",
     T264MgbeCompatibility,
     "nvidia,instance_id",
-    T264_FUSE_BASE + T264_FUSE_MGBE_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_MGBE_DISABLE_OFFSET,
     T264_FUSE_MGBE_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -210,7 +238,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingIpTable[] = {
     "vic",
     T264VicCompatibility,
     NULL,
-    T264_FUSE_BASE + T264_FUSE_VIC_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_VIC_DISABLE_OFFSET,
     T264_FUSE_VIC_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -218,7 +246,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingIpTable[] = {
     "pva",
     T264PvaCompatibility,
     NULL,
-    T264_FUSE_BASE + T264_FUSE_PVA_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_PVA_DISABLE_OFFSET,
     T264_FUSE_PVA_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -226,7 +254,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingIpTable[] = {
     "display",
     T264DisplayCompatibility,
     NULL,
-    T264_FUSE_BASE + T264_FUSE_DISPLAY_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_DISPLAY_DISABLE_OFFSET,
     T264_FUSE_DISPLAY_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -240,7 +268,7 @@ STATIC T264_FLOOR_SWEEPING_IP_ENTRY  mT264FloorSweepingPresilIpTable[] = {
     "hwpm",
     T264HwpmCompatibility,
     NULL,
-    T264_FUSE_BASE + T264_FUSE_HWPM_DISABLE_OFFSET,
+    T264_FUSE_BASE_SOCKET_0 + T264_FUSE_HWPM_DISABLE_OFFSET,
     T264_FUSE_HWPM_DISABLE_MASK,
     T264_FUSE_NO_SHIFT,
   },
@@ -262,6 +290,28 @@ NVDA_MEMORY_REGION  T264DramPageBlacklistInfoAddress[] = {
 };
 
 /**
+  Get Socket Mask
+
+**/
+UINT32
+EFIAPI
+T264GetSocketMask (
+  IN UINTN  CpuBootloaderAddress
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINT32              SocketMask;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  SocketMask = CpuBootloaderParams->SocketMask;
+  ASSERT (SocketMask != 0);
+  ASSERT (HighBitSet32 (SocketMask) < TEGRABL_MAX_SOCKETS);
+
+  return SocketMask;
+}
+
+/**
  Builds a list of DRAM memory regions.
 
  @param[in]  CpuBootloaderParams  CPU BL params.
@@ -281,22 +331,32 @@ T264BuildDramRegions (
   )
 {
   NVDA_MEMORY_REGION  *Regions;
+  UINTN               Index, Socket;
 
-  Regions = (NVDA_MEMORY_REGION *)AllocatePool (sizeof (*Regions));
+  Regions = (NVDA_MEMORY_REGION *)AllocatePool (TEGRABL_MAX_SOCKETS * sizeof (*Regions));
   NV_ASSERT_RETURN (Regions != NULL, return EFI_DEVICE_ERROR, "%a: Failed to allocate DRAM regions\n", __FUNCTION__);
 
-  DEBUG ((
-    EFI_D_ERROR,
-    "Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
-    CpuBootloaderParams->SdramInfo.Base,
-    CpuBootloaderParams->SdramInfo.Size
-    ));
+  Index = 0;
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++) {
+    if (!(CpuBootloaderParams->SocketMask & (1UL << Socket))) {
+      continue;
+    }
 
-  Regions->MemoryBaseAddress = CpuBootloaderParams->SdramInfo.Base;
-  Regions->MemoryLength      = CpuBootloaderParams->SdramInfo.Size;
+    DEBUG ((
+      EFI_D_ERROR,
+      "Socket %u Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      Socket,
+      CpuBootloaderParams->SdramInfo[Socket].Base,
+      CpuBootloaderParams->SdramInfo[Socket].Size
+      ));
+
+    Regions[Index].MemoryBaseAddress = CpuBootloaderParams->SdramInfo[Socket].Base;
+    Regions[Index].MemoryLength      = CpuBootloaderParams->SdramInfo[Socket].Size;
+    Index++;
+  }
 
   *DramRegions     = Regions;
-  *DramRegionCount = 1;
+  *DramRegionCount = Index;
 
   return EFI_SUCCESS;
 }
@@ -316,6 +376,7 @@ STATIC
 VOID
 EFIAPI
 T264AddBootloaderCarveouts (
+  IN     CONST UINTN                         Socket,
   IN     NVDA_MEMORY_REGION          *CONST  Regions,
   IN OUT UINTN                       *CONST  RegionCount,
   IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
@@ -339,7 +400,7 @@ T264AddBootloaderCarveouts (
       continue;
     }
 
-    DEBUG ((DEBUG_ERROR, "Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n", Index, Base, Size));
+    DEBUG ((DEBUG_ERROR, "Socket %u Carveout %u Region: Base: 0x%016lx, Size: 0x%016lx\n", Socket, Index, Base, Size));
 
     switch (Index) {
       case CARVEOUT_RCM_BLOB:
@@ -364,16 +425,17 @@ T264AddBootloaderCarveouts (
         break;
 
       case CARVEOUT_DISP_EARLY_BOOT_FB:
-        T264FrameBufferMmioInfo[0].Base = Base;
-        T264FrameBufferMmioInfo[0].Size = Size;
+        T264FrameBufferMmioInfo[Socket].Base = Base;
+        T264FrameBufferMmioInfo[Socket].Size = Size;
         break;
 
       case CARVEOUT_CCPLEX_INTERWORLD_SHMEM:
-        // Add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
-        // in T264MmioInfo for MMIO mapping.
-        CcplexInterworldShmemMmioInfo->Base = Base;
-        CcplexInterworldShmemMmioInfo->Size = Size;
-        break;
+        if (Socket == 0) {
+          // For primary socket, add memory in DRAM CO CARVEOUT_CCPLEX_INTERWORLD_SHMEM in its placeholder
+          // in T264MmioInfo for MMIO mapping.
+          CcplexInterworldShmemMmioInfo->Base = Base;
+          CcplexInterworldShmemMmioInfo->Size = Size;
+        }
 
       default:
         break;
@@ -411,10 +473,11 @@ T264BuildCarveoutRegions (
   UINTN               RegionCount, RegionCountMax;
   NVDA_MEMORY_REGION  *UsableRegions;
   UINTN               UsableRegionCount, UsableRegionCountMax;
+  UINTN               Socket;
   CONST BOOLEAN       DramPageRetirementEnabled =
     CpuBootloaderParams->FeatureFlag.EnableDramPageRetirement;
 
-  RegionCountMax = UsableRegionCountMax = CARVEOUT_OEM_COUNT;
+  RegionCountMax = UsableRegionCountMax = CARVEOUT_OEM_COUNT * TEGRABL_MAX_SOCKETS;
   if (DramPageRetirementEnabled) {
     RegionCountMax += TEGRABL_NUM_DRAM_BAD_PAGES;
   }
@@ -426,14 +489,21 @@ T264BuildCarveoutRegions (
   NV_ASSERT_RETURN (UsableRegions != NULL, return EFI_DEVICE_ERROR, "%a: Failed to allocate %lu usable carveout regions\n", __FUNCTION__, UsableRegionCountMax);
 
   RegionCount = UsableRegionCount = 0;
-  T264AddBootloaderCarveouts (
-    Regions,
-    &RegionCount,
-    UsableRegions,
-    &UsableRegionCount,
-    CpuBootloaderParams->CarveoutInfo,
-    CARVEOUT_OEM_COUNT
-    );
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++) {
+    if (!(CpuBootloaderParams->SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    T264AddBootloaderCarveouts (
+      Socket,
+      Regions,
+      &RegionCount,
+      UsableRegions,
+      &UsableRegionCount,
+      CpuBootloaderParams->CarveoutInfo[Socket],
+      CARVEOUT_OEM_COUNT
+      );
+  }
 
   if (DramPageRetirementEnabled) {
     PlatformResourceAddRetiredDramPageIndices (
@@ -482,6 +552,7 @@ T264GetResourceConfig (
   )
 {
   EFI_STATUS                 Status;
+  UINTN                      Socket;
   NVDA_MEMORY_REGION         *BpmpIpcRegions;
   NVDA_MEMORY_REGION         *DramRegions, *CarveoutRegions, *UsableCarveoutRegions;
   UINTN                      DramRegionCount, CarveoutRegionCount, UsableCarveoutRegionCount;
@@ -517,11 +588,17 @@ T264GetResourceConfig (
   ResourceInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
   ResourceInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionCount;
 
-  BpmpIpcRegions               = (NVDA_MEMORY_REGION *)AllocateZeroPool (sizeof (NVDA_MEMORY_REGION));
+  BpmpIpcRegions               = (NVDA_MEMORY_REGION *)AllocateZeroPool (sizeof (NVDA_MEMORY_REGION) * TEGRABL_MAX_SOCKETS);
   ResourceInfo->BpmpIpcRegions = BpmpIpcRegions;
 
-  BpmpIpcRegions->MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP_CPU_NS].Base;
-  BpmpIpcRegions->MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_BPMP_CPU_NS].Size;
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++) {
+    if (!(CpuBootloaderParams->SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    BpmpIpcRegions[Socket].MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_BPMP_CPU_NS].Base;
+    BpmpIpcRegions[Socket].MemoryLength      = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_BPMP_CPU_NS].Size;
+  }
 
   return EFI_SUCCESS;
 }
@@ -566,8 +643,8 @@ GetDTBBaseAddress (
 
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
   CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase           = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Base;
-  MemorySize           = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Size;
+  MemoryBase           = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_UEFI].Base;
+  MemorySize           = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_UEFI].Size;
   FvHeader             = NULL;
   FvOffset             = 0;
 
@@ -596,25 +673,32 @@ GetDTBBaseAddress (
 TEGRA_MMIO_INFO *
 EFIAPI
 T264GetMmioBaseAndSize (
-  VOID
+  IN UINT32  SocketMask
   )
 {
   TEGRA_MMIO_INFO  *MmioInfo;
   TEGRA_MMIO_INFO  *MmioInfoEnd;
+  UINTN            Socket;
   UINTN            Index;
 
   MmioInfo = AllocateZeroPool (
                sizeof (T264MmioInfo) +
-               (ARRAY_SIZE (T264MmioTables) * sizeof (TEGRA_MMIO_INFO))
+               (TEGRABL_MAX_SOCKETS * ARRAY_SIZE (T264SocketMmioTables) * sizeof (TEGRA_MMIO_INFO))
                );
   CopyMem (MmioInfo, T264MmioInfo, sizeof (T264MmioInfo));
 
   // point to the table terminating entry copied from T264MmioInfo
   MmioInfoEnd = MmioInfo + (sizeof (T264MmioInfo) / sizeof (TEGRA_MMIO_INFO)) - 1;
 
-  for (Index = 0; Index < ARRAY_SIZE (T264MmioTables); Index++) {
-    if (T264MmioTables[Index]->Size != 0) {
-      CopyMem (MmioInfoEnd++, T264MmioTables[Index], sizeof (TEGRA_MMIO_INFO));
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    for (Index = 0; Index < ARRAY_SIZE (T264SocketMmioTables); Index++) {
+      if (T264SocketMmioTables[Index][Socket].Size != 0) {
+        CopyMem (MmioInfoEnd++, &T264SocketMmioTables[Index][Socket], sizeof (TEGRA_MMIO_INFO));
+      }
     }
   }
 
@@ -654,7 +738,7 @@ T264GetBoardInfo (
   EepromData     = PlatformResourceInfo->EepromData;
   T264EepromData = (T264_EEPROM_DATA *)EepromData->CvmEepromData;
 
-  BoardInfo->FuseBaseAddr = T264_FUSE_BASE;
+  BoardInfo->FuseBaseAddr = T264_FUSE_BASE_SOCKET_0;
   BoardInfo->FuseList     = T264FuseList;
   BoardInfo->FuseCount    = ARRAY_SIZE (T264FuseList);
 
@@ -722,16 +806,26 @@ STATIC
 EFI_STATUS
 EFIAPI
 T264GetActiveBootChain (
+  IN  UINTN   Socket,
   OUT UINT32  *BootChain
   )
 {
+  UINT64  SocketBase;
+
+  SocketBase = Socket * T264_SOCKET_OFFSET;
+
+  UINT32  RegValue;
+
+  RegValue = MmioRead32 (SocketBase + T264_BOOT_CHAIN_REGISTER);
+  DEBUG ((DEBUG_INFO, "%a: reg=0x%x\n", __FUNCTION__, RegValue));
+
   *BootChain = MmioBitFieldRead32 (
-                 T264_BOOT_CHAIN_REGISTER,
+                 SocketBase + T264_BOOT_CHAIN_REGISTER,
                  T264_BOOT_CHAIN_MB1_BOOT_CHAIN_FIELD_LO,
                  T264_BOOT_CHAIN_MB1_BOOT_CHAIN_FIELD_HI
                  );
 
-  DEBUG ((DEBUG_INFO, "%a: bootchain=0x%x\n", __FUNCTION__, *BootChain));
+  DEBUG ((DEBUG_INFO, "%a: bootchain %u reg=0x%x\n", __FUNCTION__, Socket, *BootChain));
 
   if (*BootChain >= T264_BOOT_CHAIN_MAX) {
     return EFI_UNSUPPORTED;
@@ -752,32 +846,43 @@ ValidateActiveBootChain (
 {
   EFI_STATUS          Status;
   UINT32              BootChain;
+  UINT32              SocketMask;
+  UINTN               Socket;
+  UINT64              SocketBase;
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
   UINTN               CpuBootloaderAddress;
 
   CpuBootloaderAddress = GetCPUBLBaseAddress ();
   CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)CpuBootloaderAddress;
-  Status               = T264GetActiveBootChain (&BootChain);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: GetActiveBootChain failed: %r\n", __FUNCTION__, Status));
-    return Status;
+  SocketMask           = CpuBootloaderParams->SocketMask;
+  SocketBase           = 0;
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++, SocketBase += T264_SOCKET_OFFSET) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    Status = T264GetActiveBootChain (Socket, &BootChain);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: GetActiveBootChain socket %u failed: %r\n", __FUNCTION__, Socket, Status));
+      return Status;
+    }
+
+    // set all BR chain status bits to GOOD
+    MmioBitFieldWrite32 (
+      SocketBase + T264_BOOT_CHAIN_REGISTER,
+      T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_LO,
+      T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_HI,
+      T264_BOOT_CHAIN_STATUS_GOOD
+      );
+
+    // Set active boot chain mb1 status to GOOD
+    MmioBitFieldWrite32 (
+      SocketBase + T264_BOOT_CHAIN_REGISTER,
+      T264_BOOT_CHAIN_MB1_FAIL_BITMAP_FIELD_LO + BootChain,
+      T264_BOOT_CHAIN_MB1_FAIL_BITMAP_FIELD_LO + BootChain,
+      T264_BOOT_CHAIN_STATUS_GOOD
+      );
   }
-
-  // set all BR chain status bits to GOOD
-  MmioBitFieldWrite32 (
-    T264_BOOT_CHAIN_REGISTER,
-    T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_LO,
-    T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_HI,
-    T264_BOOT_CHAIN_STATUS_GOOD
-    );
-
-  // Set active boot chain mb1 status to GOOD
-  MmioBitFieldWrite32 (
-    T264_BOOT_CHAIN_REGISTER,
-    T264_BOOT_CHAIN_MB1_FAIL_BITMAP_FIELD_LO + BootChain,
-    T264_BOOT_CHAIN_MB1_FAIL_BITMAP_FIELD_LO + BootChain,
-    T264_BOOT_CHAIN_STATUS_GOOD
-    );
 
   return EFI_SUCCESS;
 }
@@ -789,6 +894,7 @@ ValidateActiveBootChain (
 EFI_STATUS
 EFIAPI
 T264InitFloorSweepingIpTable (
+  UINT32                             SocketMask,
   IN T264_FLOOR_SWEEPING_IP_ENTRY    *T264IpTable,
   OUT TEGRA_FLOOR_SWEEPING_IP_ENTRY  **TegraIpTable
   )
@@ -799,8 +905,8 @@ T264InitFloorSweepingIpTable (
 
   while (T264IpTable->IpName != NULL) {
     GetDisableRegArray (
-      T264_SOCKET_MASK,
-      0,
+      SocketMask,
+      T264_SOCKET_OFFSET,
       T264IpTable->DisableRegAddr,
       T264IpTable->DisableRegMask,
       T264IpTable->DisableRegShift,
@@ -833,19 +939,23 @@ T264InitFloorSweepingInfo (
 {
   TEGRA_FLOOR_SWEEPING_INFO      *Info;
   EFI_STATUS                     Status;
+  UINT64                         SocketBase;
+  UINTN                          Socket;
   TEGRA_PLATFORM_TYPE            Platform;
   UINT32                         GpuEnable;
+  UINT32                         SocketMask;
   TEGRA_FLOOR_SWEEPING_IP_ENTRY  *TegraIpTable;
   UINT32                         *PcieDisableRegArray;
   TEGRA_FLOOR_SWEEPING_IP_ENTRY  *TegraIpTableNextEntry;
 
-  Platform = TegraGetPlatform ();
+  SocketMask = PlatformResourceInfo->SocketMask;
+  Platform   = TegraGetPlatform ();
 
   // Get PCIe disable reg
-  PcieDisableRegArray = AllocateZeroPool (sizeof (*PcieDisableRegArray));
+  PcieDisableRegArray = AllocateZeroPool (TEGRABL_MAX_SOCKETS * sizeof (*PcieDisableRegArray));
   Status              = GetDisableRegArray (
-                          T264_SOCKET_MASK,
-                          0,
+                          SocketMask,
+                          T264_SOCKET_OFFSET,
                           T264_UPHY0_FUSE_BASE + T264_PCIE_FLOORSWEEPING_DISABLE_OFFSET,
                           ~T264_PCIE_FLOORSWEEPING_DISABLE_MASK,
                           T264_FUSE_NO_SHIFT,
@@ -855,15 +965,22 @@ T264InitFloorSweepingInfo (
     DEBUG ((DEBUG_ERROR, "%a: PcieDisableRegArray failed: %r\n", __FUNCTION__, Status));
   }
 
-  // C0 always present, disable register only has bits for C1-C4
-  *PcieDisableRegArray <<= 1;
+  SocketBase = 0;
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++, SocketBase += T264_SOCKET_OFFSET) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
 
-  if (Platform != TEGRA_PLATFORM_SILICON) {
-    GpuEnable = MmioRead32 (T264_PRESIL_GPU_ENABLE_REG);
-    if ((GpuEnable & BIT31) == 0) {
-      // if gpu is disabled, disable PCIe C0
-      *PcieDisableRegArray |= 0x1;
-      DEBUG ((DEBUG_ERROR, "%a: GpuEnable=0x%x, PcieDisable=0x%x\n", __FUNCTION__, GpuEnable, *PcieDisableRegArray));
+    // C0 always present, disable register only has bits for C1-C4
+    PcieDisableRegArray[Socket] <<= 1;
+
+    if (Platform != TEGRA_PLATFORM_SILICON) {
+      GpuEnable = MmioRead32 (SocketBase + T264_PRESIL_GPU_ENABLE_REG);
+      if ((GpuEnable & BIT31) == 0) {
+        // if gpu is disabled, disable PCIe C0
+        PcieDisableRegArray[Socket] |= 0x1;
+        DEBUG ((DEBUG_ERROR, "%a: socket %u GpuEnable=0x%x, PcieDisable=0x%x\n", __FUNCTION__, Socket, GpuEnable, PcieDisableRegArray[Socket]));
+      }
     }
   }
 
@@ -875,6 +992,7 @@ T264InitFloorSweepingInfo (
                    );
   TegraIpTableNextEntry = TegraIpTable;
   Status                = T264InitFloorSweepingIpTable (
+                            SocketMask,
                             mT264FloorSweepingIpTable,
                             &TegraIpTableNextEntry
                             );
@@ -886,6 +1004,7 @@ T264InitFloorSweepingInfo (
   // Add IPs that only require floorsweeping for pre-sil
   if (Platform != TEGRA_PLATFORM_SILICON) {
     Status = T264InitFloorSweepingIpTable (
+               SocketMask,
                mT264FloorSweepingPresilIpTable,
                &TegraIpTableNextEntry
                );
@@ -895,8 +1014,8 @@ T264InitFloorSweepingInfo (
   }
 
   Info                       = AllocateZeroPool (sizeof (TEGRA_FLOOR_SWEEPING_INFO));
-  Info->SocketAddressMask    = 0x1;
-  Info->AddressToSocketShift = 63;     // not used
+  Info->SocketAddressMask    = T264_SOCKET_MASK;
+  Info->AddressToSocketShift = T264_SOCKET_SHIFT;
   Info->PcieEpCompatibility  = "nvidia,tegra264-pcie-ep";
   Info->PcieDisableRegArray  = PcieDisableRegArray;
   Info->PcieParentNameFormat = "/bus@0";
@@ -922,14 +1041,15 @@ SocGetPlatformResourceInformation (
 {
   EFI_STATUS          Status;
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               Index;
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)CpuBootloaderAddress;
 
-  PlatformResourceInfo->SocketMask = T264_SOCKET_MASK;
+  PlatformResourceInfo->SocketMask = (UINT32)CpuBootloaderParams->SocketMask;
   PlatformResourceInfo->BootType   = (UINT32)CpuBootloaderParams->BootType;
 
   if (InMm == FALSE) {
-    Status = T264GetActiveBootChain (&PlatformResourceInfo->ActiveBootChain);
+    Status = T264GetActiveBootChain (0, &PlatformResourceInfo->ActiveBootChain);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -943,8 +1063,9 @@ SocGetPlatformResourceInformation (
       return Status;
     }
 
-    PlatformResourceInfo->MmioInfo   = T264GetMmioBaseAndSize ();
-    PlatformResourceInfo->EepromData = &CpuBootloaderParams->Eeprom;
+    PlatformResourceInfo->MmioInfo = T264GetMmioBaseAndSize (PlatformResourceInfo->SocketMask);
+
+    PlatformResourceInfo->EepromData = &CpuBootloaderParams->Eeprom[0];
 
     Status = T264GetBoardInfo (PlatformResourceInfo);
     if (EFI_ERROR (Status)) {
@@ -952,43 +1073,50 @@ SocGetPlatformResourceInformation (
     }
   }
 
-  PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_OS].Base;
-  PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_OS].Size;
+  PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_OS].Base;
+  PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_OS].Size;
 
-  PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Base;
-  PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_UEFI].Size;
+  PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_UEFI].Base;
+  PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_UEFI].Size;
 
   // Populate RcmBlobInfo
-  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Base;
-  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_RCM_BLOB].Size;
+  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_RCM_BLOB].Base;
+  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_RCM_BLOB].Size;
 
-  PlatformResourceInfo->FsiNsInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Base;
-  PlatformResourceInfo->FsiNsInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_FSI_CPU_NS].Size;
+  PlatformResourceInfo->FsiNsInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_FSI_CPU_NS].Base;
+  PlatformResourceInfo->FsiNsInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_FSI_CPU_NS].Size;
 
   if (InMm == FALSE) {
     PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryBaseAddress =
-      CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Base;
+      CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_RAM_OOPS].Base;
     PlatformResourceInfo->ResourceInfo->RamOopsRegion.MemoryLength =
-      CpuBootloaderParams->CarveoutInfo[CARVEOUT_RAM_OOPS].Size;
+      CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_RAM_OOPS].Size;
   }
 
-  PlatformResourceInfo->PhysicalDramSize = CpuBootloaderParams->SdramInfo.Size;
+  PlatformResourceInfo->PhysicalDramSize = 0;
+  for (Index = 0; Index < TEGRABL_MAX_SOCKETS; Index++) {
+    if (!(PlatformResourceInfo->SocketMask & (1UL << Index))) {
+      continue;
+    }
 
-  PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Base;
-  PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_GR].Size;
+    PlatformResourceInfo->PhysicalDramSize += CpuBootloaderParams->SdramInfo[Index].Size;
+  }
 
-  PlatformResourceInfo->PvaFwInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_PVA].Base;
-  PlatformResourceInfo->PvaFwInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_PVA].Size;
+  PlatformResourceInfo->GrOutputInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_GR].Base;
+  PlatformResourceInfo->GrOutputInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_GR].Size;
 
-  PlatformResourceInfo->FrameBufferInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Base;
-  PlatformResourceInfo->FrameBufferInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_DISP_EARLY_BOOT_FB].Size;
+  PlatformResourceInfo->PvaFwInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_PVA].Base;
+  PlatformResourceInfo->PvaFwInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_PVA].Size;
 
-  PlatformResourceInfo->ProfilerInfo.Base = CpuBootloaderParams->CarveoutInfo[CARVEOUT_PROFILING].Base;
-  PlatformResourceInfo->ProfilerInfo.Size = CpuBootloaderParams->CarveoutInfo[CARVEOUT_PROFILING].Size;
+  PlatformResourceInfo->FrameBufferInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_DISP_EARLY_BOOT_FB].Base;
+  PlatformResourceInfo->FrameBufferInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_DISP_EARLY_BOOT_FB].Size;
+
+  PlatformResourceInfo->ProfilerInfo.Base = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_PROFILING].Base;
+  PlatformResourceInfo->ProfilerInfo.Size = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_PROFILING].Size;
 
   if (InMm == FALSE) {
-    PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[CARVEOUT_XUSB].Base;
-    PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[CARVEOUT_XUSB].Size;
+    PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryBaseAddress = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_XUSB].Base;
+    PlatformResourceInfo->ResourceInfo->XusbRegion.MemoryLength      = CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_XUSB].Size;
   }
 
   PlatformResourceInfo->PcieAddressBits = T264_PCIE_ADDRESS_BITS;
@@ -1003,23 +1131,33 @@ T264GetVprInfo (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
+  UINTN   Socket;
   UINT64  McBase;
+  UINT64  SocketBase;
 
   if (PlatformResourceInfo == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
+  SocketBase                    = 0;
   PlatformResourceInfo->VprInfo = mVprInfo;
-  McBase                        = T264_MEMORY_CONTROLLER_BASE;
+  for (Socket = 0; Socket < TEGRABL_MAX_SOCKETS; Socket++, SocketBase += T264_SOCKET_OFFSET) {
+    if ((PlatformResourceInfo->SocketMask & (1UL << Socket)) == 0) {
+      continue;
+    }
 
-  PlatformResourceInfo->VprInfo[0].Base =
-    ((UINT64)MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
-    MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_BOM_0);
+    McBase = (Socket * T264_SOCKET_OFFSET) + T264_MEMORY_CONTROLLER_BASE;
 
-  PlatformResourceInfo->VprInfo[0].Size =
-    (UINT64)MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_SIZE_MB_0) << 20;
+    PlatformResourceInfo->VprInfo[Socket].Base =
+      SocketBase |
+      ((UINT64)MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_BOM_ADR_HI_0) << 32) |
+      MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_BOM_0);
 
-  DEBUG ((DEBUG_INFO, "%a: VPR base=0x%llx size=0x%llx\n", __FUNCTION__, PlatformResourceInfo->VprInfo[0].Base, PlatformResourceInfo->VprInfo[0].Size));
+    PlatformResourceInfo->VprInfo[Socket].Size =
+      (UINT64)MmioRead32 (McBase + T264_MC_VIDEO_PROTECT_SIZE_MB_0) << 20;
+
+    DEBUG ((DEBUG_INFO, "%a: Socket %u VPR base=0x%llx size=0x%llx\n", __FUNCTION__, Socket, PlatformResourceInfo->VprInfo[Socket].Base, PlatformResourceInfo->VprInfo[Socket].Size));
+  }
 
   return EFI_SUCCESS;
 }
@@ -1055,7 +1193,7 @@ PcieIdToInterface (
   IN UINT32  PcieId
   )
 {
-  return PcieId;
+  return (PcieId < T264_PCIE_IDS_PER_SOCKET) ? PcieId : PcieId - T264_PCIE_IDS_PER_SOCKET;
 }
 
 UINT32
@@ -1064,7 +1202,7 @@ PcieIdToSocket (
   IN UINT32  PcieId
   )
 {
-  return 0;
+  return (PcieId < T264_PCIE_IDS_PER_SOCKET) ? 0 : 1;
 }
 
 BOOLEAN
@@ -1097,7 +1235,7 @@ SetInactiveBootChainStatus (
   UINT32      BootChain;
   EFI_STATUS  Status;
 
-  Status = T264GetActiveBootChain (&BootChain);
+  Status = T264GetActiveBootChain (0, &BootChain);
   NV_ASSERT_EFI_ERROR_RETURN (Status, return Status);
 
   BootChain = OTHER_BOOT_CHAIN (BootChain);
@@ -1158,7 +1296,16 @@ SocGetSocketMask (
   IN UINTN  CpuBootloaderAddress
   )
 {
-  return T264_SOCKET_MASK;
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINT32              SocketMask;
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+
+  SocketMask = CpuBootloaderParams->SocketMask;
+  ASSERT (SocketMask != 0);
+  ASSERT (HighBitSet32 (SocketMask) < TEGRABL_MAX_SOCKETS);
+
+  return SocketMask;
 }
 
 BOOLEAN

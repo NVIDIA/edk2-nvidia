@@ -13,6 +13,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
+#define TEGRABL_MAX_SOCKETS                     2U
 #define TEGRABL_SHA512_DIGEST_BYTES             64U
 #define TEGRABL_MAX_CPUBL_OEM_FW_RATCHET_INDEX  304U
 #define TEGRABL_NUM_DRAM_BAD_PAGES              1024
@@ -263,32 +264,23 @@ typedef struct {
   /**< Uart instance */
   UEFI_DECLARE_ALIGNED (UINT32 UartInstance, 4);
 
-  /**< EEPROM data CVB */
-  UEFI_DECLARE_ALIGNED (TEGRABL_EEPROM_DATA Eeprom, 8);
-
-  /* reserved  */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved1[520], 8);
+  /**< EEPROM data CVB only valid for socket0 */
+  UEFI_DECLARE_ALIGNED (TEGRABL_EEPROM_DATA Eeprom[TEGRABL_MAX_SOCKETS], 8);
 
   /**< Controller prod data */
   UEFI_DECLARE_ALIGNED (T264_CONTROLLER_PROD_DATA ControllerProdSettings, 8);
 
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved2[4], 4);
+  /**< Bit mask to specify which sockets are enabled */
+  UEFI_DECLARE_ALIGNED (UINT32 SocketMask, 4);
 
   /**< Multi SKU data */
   UEFI_DECLARE_ALIGNED (T264_MULTI_SKU_DATA MultiSkuData, 8);
 
-  /**< Base and size information of the DRAM */
-  UEFI_DECLARE_ALIGNED (T264_SDRAM_INFO_DATA SdramInfo, 8);
-
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved3[16], 8);
+  /**< Base and size information of the DRAM connected to each socket */
+  UEFI_DECLARE_ALIGNED (T264_SDRAM_INFO_DATA SdramInfo[TEGRABL_MAX_SOCKETS], 8);
 
   /**< physical address and size of the carveouts */
-  UEFI_DECLARE_ALIGNED (TEGRABL_CARVEOUT_INFO CarveoutInfo[CARVEOUT_OEM_COUNT], 8);
-
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved4[1776], 8);
+  UEFI_DECLARE_ALIGNED (TEGRABL_CARVEOUT_INFO CarveoutInfo[TEGRABL_MAX_SOCKETS][CARVEOUT_OEM_COUNT], 8);
 
   /**< BRBCT unsigned and signed customer data */
   UEFI_DECLARE_ALIGNED (T264_BRBCT_CUSTOMER_DATA BrbctCustomerData, 8);
@@ -302,11 +294,8 @@ typedef struct {
   /**< Start address of PVIT page */
   UEFI_DECLARE_ALIGNED (UINT64 PvitPageAddress, 8);
 
-  /**< Base address of the RIST TID table */
-  UEFI_DECLARE_ALIGNED (UINT64 RistTidInfo, 8);
-
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved5[8], 8);
+  /**< Base address of the RIST TID table loaded in each socket */
+  UEFI_DECLARE_ALIGNED (UINT64 RistTidInfo[TEGRABL_MAX_SOCKETS], 8);
 
   UEFI_DECLARE_ALIGNED (UINT8 MinRatchetLevel[TEGRABL_MAX_CPUBL_OEM_FW_RATCHET_INDEX], 8);
 
@@ -314,19 +303,13 @@ typedef struct {
   UEFI_DECLARE_ALIGNED (T264_FEATURE_FLAG_DATA FeatureFlag, 8);
 
   /**< Ratchet update status of FWs loaded by MB2 including RIST auth */
-  UEFI_DECLARE_ALIGNED (T264_RATCHET_UPDATE_STATUS ratchet_update_status[MAX_RATCHET_UPDATE_FWS], 8);
-
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved6[40], 8);
+  UEFI_DECLARE_ALIGNED (T264_RATCHET_UPDATE_STATUS ratchet_update_status[TEGRABL_MAX_SOCKETS][MAX_RATCHET_UPDATE_FWS], 8);
 
   /** VECU-ID */
   UEFI_DECLARE_ALIGNED (UINT8 vecu_id[TEGRABL_MB2BCT_VECU_ID_SIZE], 8);
 
   /** PKC revoke fuse burn error bitmap*/
-  UEFI_DECLARE_ALIGNED (T264_PKC_REVOKE_STATUS pkc_revoke_status, 8);
-
-  /* reserved */
-  UEFI_DECLARE_ALIGNED (UINT8 Reserved7[8], 8);
+  UEFI_DECLARE_ALIGNED (T264_PKC_REVOKE_STATUS pkc_revoke_status[TEGRABL_MAX_SOCKETS], 8);
 } TEGRA_CPUBL_PARAMS;
 
 #endif //__T264_BL_PARAMS_H__
