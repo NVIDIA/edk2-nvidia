@@ -1134,6 +1134,177 @@ Exit:
 }
 
 /**
+  Verify if there is the Android Init Boot image file by reading the magic word at the first
+  block of the Android Init Boot image and save the important size information when a container
+  is provided.
+
+  @param[in]  BlockIo             BlockIo protocol interface which is already located.
+  @param[in]  DiskIo              DiskIo protocol interface which is already located.
+  @param[out] ImgData             A pointer to the internal data structure to retain
+                                  the important size data of ramdisk images contained
+                                  in the Android Init Boot image header.
+
+  @retval EFI_SUCCESS             Operation successful.
+  @retval others                  Error occurred
+**/
+STATIC
+EFI_STATUS
+InitBootGetVerify (
+  IN  EFI_BLOCK_IO_PROTOCOL   *BlockIo,
+  IN  EFI_DISK_IO_PROTOCOL    *DiskIo,
+  OUT ANDROID_INIT_BOOT_DATA  *ImgData
+  )
+{
+  EFI_STATUS                    Status;
+  ANDROID_BOOTIMG_TYPE4_HEADER  *Header;
+  UINTN                         PartitionSize;
+  UINTN                         ImageSize;
+  UINT32                        PageSize;
+  UINT32                        RamdiskSize;
+
+  if ((BlockIo == NULL) || (DiskIo == NULL) || (ImgData == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Allocate a buffer to hold the type4 header.
+  Header = (ANDROID_BOOTIMG_TYPE4_HEADER *)AllocatePool (sizeof (ANDROID_BOOTIMG_TYPE4_HEADER));
+  if (Header == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  // Read the type4 header.
+  Status = AndroidBootRead (
+             BlockIo,
+             DiskIo,
+             0,
+             Header,
+             sizeof (ANDROID_BOOTIMG_TYPE4_HEADER)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  // Make sure it's a kind of Android boot image
+  if (AsciiStrnCmp (
+        (CONST CHAR8 *)Header->BootMagic,
+        ANDROID_BOOT_MAGIC,
+        ANDROID_BOOT_MAGIC_LENGTH
+        ) != 0)
+  {
+    goto Exit;
+  }
+
+  // Init boot only support version 4
+  switch (Header->HeaderVersion) {
+    case 4:
+      PageSize    = SIZE_4KB;
+      RamdiskSize = Header->RamdiskSize;
+      break;
+
+    default:
+      // Unsupported header type
+      Status = EFI_INCOMPATIBLE_VERSION;
+      DEBUG ((DEBUG_ERROR, "%a: Unsupported header type %x\n", __FUNCTION__, Header->HeaderVersion));
+      goto Exit;
+  }
+
+  // The page size is not specified, but it should be power of 2 at least
+  if (!IS_VALID_ANDROID_PAGE_SIZE (PageSize)) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Make sure that the image fits in the partition
+  PartitionSize = (UINTN)(BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  ImageSize     = PageSize
+                  + ALIGN_VALUE (RamdiskSize, PageSize);
+  if (ImageSize > PartitionSize) {
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  // Set up the internal data structure
+  ImgData->RamdiskSize   = RamdiskSize;
+  ImgData->PageSize      = PageSize;
+  ImgData->HeaderVersion = Header->HeaderVersion;
+  Status                 = EFI_SUCCESS;
+
+Exit:
+  FreePool (Header);
+
+  return Status;
+}
+
+/**
+  Attempt to setup access to the Android Init Boot image by acquiring
+  the necessary protocol interfaces and validating the image header.
+
+  @param[in]  ControllerHandle    The handle of the controller for init_boot. This handle
+                                  must support a protocol interface that supplies
+                                  an I/O abstraction to the driver.
+  @param[out] BlockIo             BlockIo protocol interface which is to be located.
+  @param[out] DiskIo              DiskIo protocol interface which is to be located.
+  @param[out] ImgData             A pointer to the internal data structure to retain
+                                  the important size data of ramdisk images contained
+                                  in the Android Init Boot image header.
+
+  @retval EFI_SUCCESS             Operation successful.
+  @retval others                  Error occurred
+**/
+STATIC
+EFI_STATUS
+InitBootSetup (
+  IN EFI_HANDLE               ControllerHandle,
+  OUT EFI_BLOCK_IO_PROTOCOL   **BlockIo,
+  OUT EFI_DISK_IO_PROTOCOL    **DiskIo,
+  OUT ANDROID_INIT_BOOT_DATA  *ImgData
+  )
+{
+  EFI_STATUS              Status;
+  ANDROID_INIT_BOOT_DATA  InitImgData;
+  EFI_DISK_IO_PROTOCOL    *InitDiskIo  = NULL;
+  EFI_BLOCK_IO_PROTOCOL   *InitBlockIo = NULL;
+
+  if (ControllerHandle == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  if ((BlockIo == NULL) || (DiskIo == NULL) || (ImgData == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  (VOID **)&InitBlockIo
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gBS->HandleProtocol (
+                  ControllerHandle,
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&InitDiskIo
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  // Examine if the Android Init Boot Image can be found
+  Status = InitBootGetVerify (InitBlockIo, InitDiskIo, &InitImgData);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  *DiskIo  = InitDiskIo;
+  *BlockIo = InitBlockIo;
+  *ImgData = InitImgData;
+
+  return EFI_SUCCESS;
+}
+
+/**
   Attempt to load the kernel and initrd from the Android Boot image.
   Allocate pages reserved in BootService for the initrd image to persist until
   the completion of the kernel booting.
@@ -1143,6 +1314,16 @@ Exit:
   @param[in]  ImgData             A pointer to the internal data structure to retain
                                   the important size data of kernel and initrd images
                                   contained in the Android Boot image header.
+  @param[in]  VendorBlockIo       BlockIo protocol interface for vendor_boot partition.
+  @param[in]  VendorDiskIo        DiskIo protocol interface for vendor_boot partition.
+  @param[in]  VendorImgData       A pointer to the internal data structure to retain
+                                  the important size data of vendor_boot img contained
+                                  in the Android Vendor Boot header.
+  @param[in]  InitBootBlockIo     BlockIo protocol interface for init_boot partition.
+  @param[in]  InitBootDiskIo      DiskIo protocol interface for init_boot partition.
+  @param[in]  InitBootImgData     A pointer to the internal data structure to retain
+                                  the important size data of init_boot img contained
+                                  in the Android Init Boot header.
   @param[in]  Buffer              The memory buffer to transfer the file to.
 
   @retval EFI_SUCCESS             Operation successful.
@@ -1150,13 +1331,16 @@ Exit:
 **/
 EFI_STATUS
 AndroidBootLoadFile (
-  IN EFI_BLOCK_IO_PROTOCOL  *BlockIo,
-  IN EFI_DISK_IO_PROTOCOL   *DiskIo,
-  IN ANDROID_BOOT_DATA      *ImgData,
-  IN EFI_BLOCK_IO_PROTOCOL  *VendorBlockIo,
-  IN EFI_DISK_IO_PROTOCOL   *VendorDiskIo,
-  IN VENDOR_BOOT_DATA       *VendorImgData,
-  IN VOID                   *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL   *BlockIo,
+  IN EFI_DISK_IO_PROTOCOL    *DiskIo,
+  IN ANDROID_BOOT_DATA       *ImgData,
+  IN EFI_BLOCK_IO_PROTOCOL   *VendorBlockIo,
+  IN EFI_DISK_IO_PROTOCOL    *VendorDiskIo,
+  IN VENDOR_BOOT_DATA        *VendorImgData,
+  IN EFI_BLOCK_IO_PROTOCOL   *InitBootBlockIo,
+  IN EFI_DISK_IO_PROTOCOL    *InitBootDiskIo,
+  IN ANDROID_INIT_BOOT_DATA  *InitBootImgData,
+  IN VOID                    *Buffer
   )
 {
   EFI_STATUS   Status;
@@ -1219,7 +1403,13 @@ AndroidBootLoadFile (
     return Status;
   }
 
-  BufSize = ImgData->RamdiskSize;
+  // Check if init_boot exists as fallback
+  if ((ImgData->RamdiskSize == 0) && (InitBootImgData != NULL)) {
+    BufSize = InitBootImgData->RamdiskSize;
+    DEBUG ((DEBUG_INFO, "%a: use init_boot to load ramdisk\n", __FUNCTION__));
+  } else {
+    BufSize = ImgData->RamdiskSize;
+  }
 
   // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
   // if kernel boot and vendor_boot ramdisk exists
@@ -1286,16 +1476,29 @@ AndroidBootLoadFile (
     BufBase += BufSize;
   }
 
-  Addr = ImgData->PageSize + ImgData->Offset + \
-         ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
-  BufSize = ImgData->RamdiskSize;
-  Status  = AndroidBootRead (
-              BlockIo,
-              DiskIo,
-              Addr,
-              (VOID *)BufBase,
-              BufSize
-              );
+  if ((ImgData->RamdiskSize == 0) && (InitBootImgData != NULL)) {
+    Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), InitBootImgData->PageSize);
+    BufSize = InitBootImgData->RamdiskSize;
+    Status  = AndroidBootRead (
+                InitBootBlockIo,
+                InitBootDiskIo,
+                Addr,
+                (VOID *)BufBase,
+                BufSize
+                );
+  } else {
+    Addr = ImgData->PageSize + ImgData->Offset + \
+           ALIGN_VALUE (ImgData->KernelSize, ImgData->PageSize);
+    BufSize = ImgData->RamdiskSize;
+    Status  = AndroidBootRead (
+                BlockIo,
+                DiskIo,
+                Addr,
+                (VOID *)BufBase,
+                BufSize
+                );
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
@@ -1463,6 +1666,12 @@ AndroidBootDxeLoadFile (
   CHAR16                     VendorBootPartitionName[MAX_PARTITION_NAME_LEN];
   ANDROID_BOOTIMG_PROTOCOL   *AndroidBootImgProtocol;
   CHAR8                      *AvbCmdline = NULL;
+  CHAR16                     InitBootPartitionName[MAX_PARTITION_NAME_LEN];
+  EFI_HANDLE                 InitBootHandle;
+  ANDROID_INIT_BOOT_DATA     InitBootImgData;
+  ANDROID_INIT_BOOT_DATA     *InitBootImgDataPtr = NULL;
+  EFI_DISK_IO_PROTOCOL       *InitBootDiskIo     = NULL;
+  EFI_BLOCK_IO_PROTOCOL      *InitBootBlockIo    = NULL;
 
   // Verify if the valid parameters
   if ((This == NULL) || (BufferSize == NULL) || (FilePath == NULL) || !IsDevicePathValid (FilePath, 0)) {
@@ -1553,6 +1762,26 @@ AndroidBootDxeLoadFile (
         VendorImgDataPtr = &VendorImgData;
       }
     }
+
+    Status = GetActivePartitionName (L"init_boot", InitBootPartitionName);
+    if (!EFI_ERROR (Status)) {
+      // Get BlockIo/DiskIo for init_boot img
+      InitBootHandle = GetSiblingPartitionHandle (
+                         Private->ControllerHandle,
+                         InitBootPartitionName
+                         );
+      if (InitBootHandle != NULL) {
+        Status = InitBootSetup (
+                   InitBootHandle,
+                   &InitBootBlockIo,
+                   &InitBootDiskIo,
+                   &InitBootImgData
+                   );
+        if (!EFI_ERROR (Status)) {
+          InitBootImgDataPtr = &InitBootImgData;
+        }
+      }
+    }
   }
 
   // Load kernel dtb
@@ -1590,6 +1819,9 @@ AndroidBootDxeLoadFile (
              VendorBlockIo,
              VendorDiskIo,
              VendorImgDataPtr,
+             InitBootBlockIo,
+             InitBootDiskIo,
+             InitBootImgDataPtr,
              Buffer
              );
   if (EFI_ERROR (Status)) {
@@ -2357,7 +2589,7 @@ RcmLoadFile (
   }
 
   // Load Android Boot image
-  Status = AndroidBootLoadFile (NULL, NULL, &ImgData, NULL, NULL, NULL, Buffer);
+  Status = AndroidBootLoadFile (NULL, NULL, &ImgData, NULL, NULL, NULL, NULL, NULL, NULL, Buffer);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
