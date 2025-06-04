@@ -253,36 +253,6 @@ PrintExtCsd (
 
 STATIC
 EFI_STATUS
-RpmbEmmcSelect (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  UINT16                         Rca
-  )
-{
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-
-  ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
-  ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
-  ZeroMem (&Packet, sizeof (Packet));
-  Packet.SdMmcCmdBlk    = &SdMmcCmdBlk;
-  Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
-  Packet.Timeout        = EMMC_TRANS_TIMEOUT;
-
-  SdMmcCmdBlk.CommandIndex    = EMMC_SELECT_DESELECT_CARD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
-  SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
-
-  Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
-
-  return Status;
-}
-
-STATIC
-EFI_STATUS
 RpmbEmmcGetExtCsd (
   EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
   UINT8                          Slot,
@@ -594,12 +564,6 @@ GetRpmbDevInfo (
     DEBUG ((DEBUG_WARN, "Failed to setnd status 0 %r\n", Status));
   }
 
-  // Deselect the device First.
-  Status = RpmbEmmcSelect (PassThru, Slot, 0);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Error selectint device %r\n", Status));
-  }
-
   Status = RpmbEmmcSendStatus (PassThru, Slot, &DevStatus);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_WARN, "Failed to setnd status 0 %r\n", Status));
@@ -613,11 +577,6 @@ GetRpmbDevInfo (
   } else {
     CopyMem (&DevInfo->Cid, &Cid, sizeof (EMMC_CID));
     PrintCid (&Cid);
-  }
-
-  Status = RpmbEmmcSelect (PassThru, Slot, (Slot + 1));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Error selectint device %r\n", Status));
   }
 
   Status = RpmbEmmcGetExtCsd (PassThru, Slot, &ExtCsd);
@@ -778,11 +737,6 @@ HandleRpmbWrite (
 {
   EFI_STATUS  Status;
 
-  Status = RpmbEmmcSelect (PassThru, Slot, (Slot + 1));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to select RPMB %r\n", __FUNCTION__, Status));
-  }
-
   Status = RpmbEmmcSetPartition (PassThru, Slot);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to select RPMB Partition %r\n", __FUNCTION__, Status));
@@ -869,11 +823,6 @@ HandleRpmbRead (
   )
 {
   EFI_STATUS  Status;
-
-  Status = RpmbEmmcSelect (PassThru, Slot, (Slot + 1));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "%a: Failed to select RPMB %r\n", __FUNCTION__, Status));
-  }
 
   Status = RpmbEmmcSetPartition (PassThru, Slot);
   if (EFI_ERROR (Status)) {
