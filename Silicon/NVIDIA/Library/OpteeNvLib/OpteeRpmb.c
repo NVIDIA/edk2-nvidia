@@ -53,6 +53,13 @@ U16ToBytes (
   *(ByteArr + 1) = (UINT8)U16;
 }
 
+/**
+  GetEmmcDevice
+  Locate the PassThru protocol for the eMMC device.
+
+  @return EFI_SUCCESS             if the eMMC device is retrieved successfully
+          Other EFI_STATUS values if a device is not found.
+**/
 STATIC
 EFI_STATUS
 GetEmmcDevice (
@@ -81,7 +88,7 @@ GetEmmcDevice (
 
   EmmcFound = FALSE;
   PassThru  = NULL;
-  Slot      = 0xFF;
+
   for (Index = 0; (Index < PassThruNumHandles) && (EmmcFound == FALSE); Index++) {
     Status = gBS->HandleProtocol (
                     PassThruHandleBuffer[Index],
@@ -98,10 +105,11 @@ GetEmmcDevice (
       continue;
     }
 
+    Slot = 0xFF;
     while (TRUE) {
       Status = PassThru->GetNextSlot (PassThru, &Slot);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_WARN, "No more legal slots %r", Status));
+        DEBUG ((DEBUG_INFO, "No more legal slots %r", Status));
         break;
       }
 
@@ -119,6 +127,7 @@ GetEmmcDevice (
         EmmcPassThru = PassThru;
         EmmcSlot     = Slot;
         EmmcFound    = TRUE;
+        DEBUG ((DEBUG_INFO, "%a: Found EMMC device at Slot %d\n", __FUNCTION__, Slot));
         break;
       }
     }
@@ -126,6 +135,11 @@ GetEmmcDevice (
 
   if (PassThruHandleBuffer != NULL) {
     FreePool (PassThruHandleBuffer);
+  }
+
+  if (!EmmcFound) {
+    DEBUG ((DEBUG_ERROR, "%a: No PassThru EMMC device found\n", __FUNCTION__));
+    Status = EFI_NOT_FOUND;
   }
 
   return Status;
@@ -163,12 +177,23 @@ PrintCid (
   DEBUG ((DEBUG_INFO, "DeviceHead %x OemId %x \n", Cid->DeviceType, Cid->OemId));
 }
 
+/**
+  PrintExtCsd
+  Print the extended CSD of the eMMC device.
+
+  @param[in] ExtCsd - The extended CSD of the eMMC device.
+**/
 STATIC
 VOID
 PrintExtCsd (
-  EMMC_EXT_CSD  *ExtCsd
+  IN EMMC_EXT_CSD  *ExtCsd
   )
 {
+  if (ExtCsd == NULL) {
+    DEBUG ((DEBUG_INFO, "ExtCsd is NULL\n"));
+    return;
+  }
+
   DEBUG ((DEBUG_INFO, "==Dump Emmc ExtCsd Register==\n"));
   DEBUG ((DEBUG_INFO, "  Supported Command Sets                 0x%x\n", ExtCsd->CmdSet));
   DEBUG ((DEBUG_INFO, "  HPI features                           0x%x\n", ExtCsd->HpiFeatures));
@@ -251,12 +276,23 @@ PrintExtCsd (
     ));
 }
 
+/**
+  RpmbEmmcGetExtCsd
+  Get the extended CSD of the eMMC device.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[out] ExtCsd  - The extended CSD of the eMMC device.
+
+  @return EFI_SUCCESS             if the extended CSD is retrieved successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbEmmcGetExtCsd (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  EMMC_EXT_CSD                   *ExtCsd
+  IN  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN  UINT8                          Slot,
+  OUT EMMC_EXT_CSD                   *ExtCsd
   )
 {
   EFI_STATUS                           Status;
@@ -360,85 +396,22 @@ GetEmmcCid (
   return EFI_SUCCESS;
 }
 
-STATIC
-EFI_STATUS
-RpmbEmmcGetCsd (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  EMMC_CSD                       *Csd
-  )
-{
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  UINT16                               Rca;
+/**
+  RpmbEmmcClearPartition
+  Clear the partition field of the extended CSD register of the eMMC device.
+  This needs to be done after the partition is set to RPMB.
 
-  ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
-  ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
-  ZeroMem (&Packet, sizeof (Packet));
-  ZeroMem (Csd, sizeof (EMMC_CSD));
-  Rca = Slot + 1;
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
 
-  Packet.SdMmcCmdBlk    = &SdMmcCmdBlk;
-  Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
-  Packet.Timeout        = EMMC_TRANS_TIMEOUT;
-
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_CSD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR2;
-  SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
-
-  Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
-  if (!EFI_ERROR (Status)) {
-    //
-    // For details, refer to SD Host Controller Simplified Spec 3.0 Table 2-12.
-    //
-    CopyMem (((UINT8 *)Csd) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CSD) - 1);
-  }
-
-  DEBUG ((DEBUG_INFO, "== Dump Emmc Csd Register==\n"));
-  DEBUG ((DEBUG_INFO, "  CSD structure                    0x%x\n", Csd->CsdStructure));
-  DEBUG ((DEBUG_INFO, "  System specification version     0x%x\n", Csd->SpecVers));
-  DEBUG ((DEBUG_INFO, "  Data read access-time 1          0x%x\n", Csd->Taac));
-  DEBUG ((DEBUG_INFO, "  Data read access-time 2          0x%x\n", Csd->Nsac));
-  DEBUG ((DEBUG_INFO, "  Max. bus clock frequency         0x%x\n", Csd->TranSpeed));
-  DEBUG ((DEBUG_INFO, "  Device command classes           0x%x\n", Csd->Ccc));
-  DEBUG ((DEBUG_INFO, "  Max. read data block length      0x%x\n", Csd->ReadBlLen));
-  DEBUG ((DEBUG_INFO, "  Partial blocks for read allowed  0x%x\n", Csd->ReadBlPartial));
-  DEBUG ((DEBUG_INFO, "  Write block misalignment         0x%x\n", Csd->WriteBlkMisalign));
-  DEBUG ((DEBUG_INFO, "  Read block misalignment          0x%x\n", Csd->ReadBlkMisalign));
-  DEBUG ((DEBUG_INFO, "  DSR implemented                  0x%x\n", Csd->DsrImp));
-  DEBUG ((DEBUG_INFO, "  Device size                      0x%x\n", Csd->CSizeLow | (Csd->CSizeHigh << 2)));
-  DEBUG ((DEBUG_INFO, "  Max. read current @ VDD min      0x%x\n", Csd->VddRCurrMin));
-  DEBUG ((DEBUG_INFO, "  Max. read current @ VDD max      0x%x\n", Csd->VddRCurrMax));
-  DEBUG ((DEBUG_INFO, "  Max. write current @ VDD min     0x%x\n", Csd->VddWCurrMin));
-  DEBUG ((DEBUG_INFO, "  Max. write current @ VDD max     0x%x\n", Csd->VddWCurrMax));
-  DEBUG ((DEBUG_INFO, "  Device size multiplier           0x%x\n", Csd->CSizeMult));
-  DEBUG ((DEBUG_INFO, "  Erase group size                 0x%x\n", Csd->EraseGrpSize));
-  DEBUG ((DEBUG_INFO, "  Erase group size multiplier      0x%x\n", Csd->EraseGrpMult));
-  DEBUG ((DEBUG_INFO, "  Write protect group size         0x%x\n", Csd->WpGrpSize));
-  DEBUG ((DEBUG_INFO, "  Write protect group enable       0x%x\n", Csd->WpGrpEnable));
-  DEBUG ((DEBUG_INFO, "  Manufacturer default ECC         0x%x\n", Csd->DefaultEcc));
-  DEBUG ((DEBUG_INFO, "  Write speed factor               0x%x\n", Csd->R2WFactor));
-  DEBUG ((DEBUG_INFO, "  Max. write data block length     0x%x\n", Csd->WriteBlLen));
-  DEBUG ((DEBUG_INFO, "  Partial blocks for write allowed 0x%x\n", Csd->WriteBlPartial));
-  DEBUG ((DEBUG_INFO, "  Content protection application   0x%x\n", Csd->ContentProtApp));
-  DEBUG ((DEBUG_INFO, "  File format group                0x%x\n", Csd->FileFormatGrp));
-  DEBUG ((DEBUG_INFO, "  Copy flag (OTP)                  0x%x\n", Csd->Copy));
-  DEBUG ((DEBUG_INFO, "  Permanent write protection       0x%x\n", Csd->PermWriteProtect));
-  DEBUG ((DEBUG_INFO, "  Temporary write protection       0x%x\n", Csd->TmpWriteProtect));
-  DEBUG ((DEBUG_INFO, "  File format                      0x%x\n", Csd->FileFormat));
-  DEBUG ((DEBUG_INFO, "  ECC code                         0x%x\n", Csd->Ecc));
-
-  return Status;
-}
-
+  @return EFI_SUCCESS             if the partition is cleared successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbEmmcClearPartition (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT16                         Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT16                         Slot
   )
 {
   EFI_STATUS                           Status;
@@ -461,8 +434,7 @@ RpmbEmmcClearPartition (
   SdMmcCmdBlk.CommandIndex    = EMMC_SWITCH;
   SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
   SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1b;
-  SdMmcCmdBlk.CommandArgument = (UINT32)(Slot + 1) << 16;
-  SdMmcCmdBlk.CommandArgument = (Value << 8) | (Offset << 16);
+  SdMmcCmdBlk.CommandArgument = (Value << 8) | (Offset << 16) | BIT24 | BIT25;
 
   Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
   if (!EFI_ERROR (Status)) {
@@ -472,11 +444,22 @@ RpmbEmmcClearPartition (
   return Status;
 }
 
+/**
+  RpmbEmmcSetPartition
+  Set the partition of the eMMC device to RPMB.
+  This needs to be done before sending RPMB commands.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+
+  @return EFI_SUCCESS             if the partition is set successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbEmmcSetPartition (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT16                         Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT16                         Slot
   )
 {
   EFI_STATUS                           Status;
@@ -502,7 +485,6 @@ RpmbEmmcSetPartition (
   SdMmcCmdBlk.CommandIndex    = EMMC_SWITCH;
   SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
   SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1b;
-  SdMmcCmdBlk.CommandArgument = (UINT32)(Slot + 1) << 16;
   SdMmcCmdBlk.CommandArgument = (Value << 8) | (Offset << 16) | BIT24 | BIT25;
 
   Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
@@ -513,63 +495,29 @@ RpmbEmmcSetPartition (
   return Status;
 }
 
-STATIC
-EFI_STATUS
-RpmbEmmcSendStatus (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT16                         Slot,
-  OUT UINT32                     *DevStatus
-  )
-{
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+/**
+  GetRpmbDevInfo
+  Get the RPMB device information as requested by the OP-TEE driver.
+  The Device information is a combination of the CID and the extended CSD.
 
-  ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
-  ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
-  ZeroMem (&Packet, sizeof (Packet));
-  Packet.SdMmcCmdBlk    = &SdMmcCmdBlk;
-  Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
-  Packet.Timeout        = EMMC_TRANS_TIMEOUT;
+  @param[out] DevInfo - The RPMB device information.
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_STATUS;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
-  SdMmcCmdBlk.CommandArgument = (UINT32)(Slot + 1) << 16;
-
-  Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
-  if (!EFI_ERROR (Status)) {
-    CopyMem (DevStatus, &SdMmcStatusBlk.Resp0, sizeof (UINT32));
-  }
-
-  return Status;
-}
-
+  @return EFI_SUCCESS             if the RPMB device information is retrieved successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 GetRpmbDevInfo (
-  RPMB_DEV_INFO                  *DevInfo,
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot
+  OUT RPMB_DEV_INFO                  *DevInfo,
+  IN  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN  UINT8                          Slot
   )
 {
   EFI_STATUS  Status;
-  UINT32      DevStatus;
-  EMMC_CSD    Csd;
   EMMC_CID    Cid;
 
-  Status = RpmbEmmcSendStatus (PassThru, Slot, &DevStatus);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Failed to setnd status 0 %r\n", Status));
-  }
-
-  Status = RpmbEmmcSendStatus (PassThru, Slot, &DevStatus);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Failed to setnd status 0 %r\n", Status));
-  }
-
-  RpmbEmmcGetCsd (PassThru, Slot, &Csd);
   Status = GetEmmcCid (&Cid);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get CID %r\n", __FUNCTION__, Status));
@@ -580,21 +528,40 @@ GetRpmbDevInfo (
   }
 
   Status = RpmbEmmcGetExtCsd (PassThru, Slot, &ExtCsd);
-  PrintExtCsd (&ExtCsd);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get ExtCsd %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "Continue without this information\n"));
+  } else {
+    PrintExtCsd (&ExtCsd);
+    DevInfo->RpmbSizeMult  = ExtCsd.RpmbSizeMult;
+    DevInfo->RelWrSecCount = ExtCsd.RelWrSecC;
+  }
 
-  DevInfo->RpmbSizeMult  = ExtCsd.RpmbSizeMult;
-  DevInfo->RelWrSecCount = ExtCsd.RelWrSecC;
-  DevInfo->RetCode       = RPMB_CMD_GET_DEV_INFO_RET_OK;
+  // Always return success. It looks like the OP-TEE driver can proceed without
+  // the CID and extended CSD.
+  DevInfo->RetCode = RPMB_CMD_GET_DEV_INFO_RET_OK;
   return Status;
 }
 
+/**
+  RpmbReadBlocks
+  Read blocks from the RPMB device.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] BlockCount - The number of blocks to read.
+  @param[out] DataFrame - Read data buffer.
+
+  @return EFI_SUCCESS             if the read operation is successful
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbReadBlocks (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  UINTN                          BlockCount,
-  RPMB_FRAME                     *DataFrame
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT8                          Slot,
+  IN UINTN                          BlockCount,
+  OUT RPMB_FRAME                    *DataFrame
   )
 {
   EFI_STATUS                           Status;
@@ -619,13 +586,25 @@ RpmbReadBlocks (
   return Status;
 }
 
+/**
+  RpmbWriteBlocks
+  Write blocks to the RPMB device.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] BlockCount - The number of blocks to write.
+  @param[in] DataFrame - The RPMB frame to write.
+
+  @return EFI_SUCCESS             if the write operation is successful
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbWriteBlocks (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  UINTN                          BlockCount,
-  RPMB_FRAME                     *DataFrame
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT8                          Slot,
+  IN UINTN                          BlockCount,
+  IN RPMB_FRAME                     *DataFrame
   )
 {
   EFI_STATUS                           Status;
@@ -650,13 +629,25 @@ RpmbWriteBlocks (
   return Status;
 }
 
+/**
+  RpmbSetBlockCount
+  Set the block count for the RPMB operation.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] BlockCount - The number of blocks to set.
+  @param[in] IsWrite    - TRUE if the operation is a write, FALSE if it is a read.
+
+  @return EFI_SUCCESS             if the block count is set successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 RpmbSetBlockCount (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  UINTN                          BlockCount,
-  BOOLEAN                        IsWrite
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN UINT8                          Slot,
+  IN UINTN                          BlockCount,
+  IN BOOLEAN                        IsWrite
   )
 {
   EFI_STATUS                           Status;
@@ -724,15 +715,29 @@ DumpRpmbFrame (
 
 #endif
 
+/**
+  HandleRpmbWrite
+  Handle RPMB write request.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] ReqFrame - The RPMB request.
+  @param[in] NumReqFrames - The number of request frames.
+  @param[out] RespFrame - The RPMB response.
+  @param[in] NumRespFrames - The number of response frames.
+
+  @return EFI_SUCCESS             if the request is handled successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 HandleRpmbWrite (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  RPMB_FRAME                     *ReqFrame,
-  UINTN                          NumReqFrames,
-  RPMB_FRAME                     *RespFrame,
-  UINTN                          NumRespFrames
+  IN  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN  UINT8                          Slot,
+  IN  RPMB_FRAME                     *ReqFrame,
+  IN  UINTN                          NumReqFrames,
+  OUT RPMB_FRAME                     *RespFrame,
+  IN  UINTN                          NumRespFrames
   )
 {
   EFI_STATUS  Status;
@@ -811,15 +816,29 @@ HandleRpmbWrite (
   return Status;
 }
 
+/**
+  HandleRpmbRead
+  Handle RPMB read request.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] ReqFrame - The RPMB request.
+  @param[in] NumReqFames - The number of request frames.
+  @param[out] RespFrame - The RPMB response.
+  @param[in] NumRespFrames - The number of response frames.
+
+  @return EFI_SUCCESS             if the request is handled successfully
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 HandleRpmbRead (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  RPMB_FRAME                     *ReqFrame,
-  UINTN                          NumReqFames,
-  RPMB_FRAME                     *RespFrame,
-  UINTN                          NumRespFrames
+  IN  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN  UINT8                          Slot,
+  IN  RPMB_FRAME                     *ReqFrame,
+  IN  UINTN                          NumReqFames,
+  OUT RPMB_FRAME                     *RespFrame,
+  IN  UINTN                          NumRespFrames
   )
 {
   EFI_STATUS  Status;
@@ -868,15 +887,30 @@ HandleRpmbRead (
   return Status;
 }
 
+/**
+  HandleRpmbDataReq
+  Handle RPMB data request such as writes and reads.
+
+  @param[in] PassThru - The SD MMC pass-through protocol.
+  @param[in] Slot     - The slot number of the eMMC device.
+  @param[in] RpmbReq  - The RPMB request.
+  @param[in] ReqSize  - The size of the request.
+  @param[out] RpmbResp - The RPMB response.
+  @param[in] RespSize - The size of the response.
+
+  @return EFI_SUCCESS             if the request is handled successfully
+          EFI_INVALID_PARAMETER   if the message parameters are invalid.
+          Other EFI_STATUS values if an error occurs during device operations.
+**/
 STATIC
 EFI_STATUS
 HandleRpmbDataReq (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  VOID                           *RpmbReq,
-  UINT64                         ReqSize,
-  VOID                           *RpmbResp,
-  UINT64                         RespSize
+  IN  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
+  IN  UINT8                          Slot,
+  IN  VOID                           *RpmbReq,
+  IN  UINT64                         ReqSize,
+  OUT VOID                           *RpmbResp,
+  IN  UINT64                         RespSize
   )
 {
   RPMB_FRAME  *ReqFrame;
@@ -932,10 +966,18 @@ Error:
   return Status;
 }
 
+/**
+  HandleCmdRpmb
+  Entry point for RPMB commands from OP-TEE.
+
+  @param[in] Msg - The message to handle.
+
+  @return None.
+**/
 VOID
 EFIAPI
 HandleCmdRpmb (
-  OPTEE_MESSAGE_ARG  *Msg
+  IN OPTEE_MESSAGE_ARG  *Msg
   )
 {
   OPTEE_SHM_COOKIE  *ReqShm;
@@ -953,7 +995,7 @@ HandleCmdRpmb (
       (Msg->Params[1].Attribute != OPTEE_MESSAGE_ATTRIBUTE_TYPE_MEMORY_OUTPUT))
   {
     DEBUG ((
-      DEBUG_INFO,
+      DEBUG_ERROR,
       "Invalid RPMB Params Num %d [0].Attr %d [1].Attr %d\n",
       Msg->NumParams,
       Msg->Params[0].Attribute,
