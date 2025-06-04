@@ -2,10 +2,8 @@
   Api's to communicate with RPMB partition on the eMMC device via RPC calls
   from OP-TEE.
 
-    SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
-
 **/
 
 #include <Uefi.h>
@@ -13,6 +11,7 @@
 
 #include <Protocol/SdMmcPassThru.h>
 #include <Protocol/DevicePath.h>
+#include <Protocol/DiskInfo.h>
 
 #include <Library/ArmSmcLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -132,12 +131,23 @@ GetEmmcDevice (
   return Status;
 }
 
+/**
+  PrintCid
+  Print the CID of the eMMC device.
+
+  @param[in] Cid - The CID of the eMMC device.
+**/
 STATIC
 VOID
 PrintCid (
-  EMMC_CID  *Cid
+  IN EMMC_CID  *Cid
   )
 {
+  if (Cid == NULL) {
+    DEBUG ((DEBUG_INFO, "Cid is NULL\n"));
+    return;
+  }
+
   DEBUG ((DEBUG_INFO, "==Dump Emmc Cid Register==\n"));
   DEBUG ((
     DEBUG_INFO,
@@ -307,40 +317,77 @@ RpmbEmmcGetExtCsd (
   return Status;
 }
 
+/**
+  GetEmmcCid
+  Get the CID of the eMMC device. Attempting to read the CID from the eMMC device using
+  the EMMC_SEND_CID seems to fail. Instead use the DiskInfo protocol to get the CID.
+
+  @param[out] Cid - The CID of the eMMC device.
+
+  @return EFI_SUCCESS             if the CID is retrieved successfully
+          Other EFI_STATUS values if a device is not found.
+**/
 STATIC
 EFI_STATUS
-RpmbEmmcGetCid (
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  UINT8                          Slot,
-  UINT8 (*Cid)[16]
+GetEmmcCid (
+  OUT EMMC_CID  *Cid
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS              Status;
+  UINTN                   DiskInfoNumHandles;
+  EFI_HANDLE              *DiskInfoHandleBuffer = NULL;
+  EFI_DISK_INFO_PROTOCOL  *DiskInfo;
+  UINTN                   Index;
+  BOOLEAN                 EmmcFound = FALSE;
+  UINT32                  InquiryDataSize;
 
-  ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
-  ZeroMem (&Packet, sizeof (Packet));
-  ZeroMem (Cid, sizeof (EMMC_CID));
-
-  Packet.SdMmcCmdBlk    = &SdMmcCmdBlk;
-  Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
-  Packet.Timeout        = EMMC_TRANS_TIMEOUT;
-
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_CID;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR2;
-  SdMmcCmdBlk.CommandArgument = (UINT32)(Slot + 1) << 16;
-
-  Status = PassThru->PassThru (PassThru, Slot, &Packet, NULL);
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiDiskInfoProtocolGuid,
+                  NULL,
+                  &DiskInfoNumHandles,
+                  &DiskInfoHandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_WARN, "Failed CID packet %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "Error locating DiskInfo handles: %r\n", Status));
+    return Status;
   }
 
-  CopyMem (((UINT8 *)Cid) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CID) - 1);
+  for (Index = 0; (Index < DiskInfoNumHandles) && (EmmcFound == FALSE); Index++) {
+    Status = gBS->HandleProtocol (
+                    DiskInfoHandleBuffer[Index],
+                    &gEfiDiskInfoProtocolGuid,
+                    (VOID **)&DiskInfo
+                    );
+    if (EFI_ERROR (Status) || (DiskInfo == NULL)) {
+      DEBUG ((DEBUG_ERROR, "Failed to get DiskInfo for handle index %u: %r\n", Index, Status));
+      continue;
+    }
 
-  return Status;
+    if (CompareGuid (&DiskInfo->Interface, &gEfiDiskInfoSdMmcInterfaceGuid) != TRUE) {
+      DEBUG ((DEBUG_VERBOSE, "DiskInfo interface is not SD_MMC: %r\n", Status));
+      continue;
+    }
+
+    InquiryDataSize = sizeof (EMMC_CID);
+    Status          = DiskInfo->Inquiry (DiskInfo, (VOID *)Cid, &InquiryDataSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to get DiskInfo data: %r\n", Status));
+      continue;
+    }
+
+    EmmcFound = TRUE;
+  }
+
+  if (DiskInfoHandleBuffer != NULL) {
+    FreePool (DiskInfoHandleBuffer);
+  }
+
+  if (EmmcFound) {
+    PrintCid (Cid);
+  }
+
+  return EFI_SUCCESS;
 }
 
 STATIC
@@ -540,7 +587,7 @@ GetRpmbDevInfo (
   EFI_STATUS  Status;
   UINT32      DevStatus;
   EMMC_CSD    Csd;
-  EMMC_CID    *Cid;
+  EMMC_CID    Cid;
 
   Status = RpmbEmmcSendStatus (PassThru, Slot, &DevStatus);
   if (EFI_ERROR (Status)) {
@@ -559,9 +606,14 @@ GetRpmbDevInfo (
   }
 
   RpmbEmmcGetCsd (PassThru, Slot, &Csd);
-  RpmbEmmcGetCid (PassThru, Slot, &DevInfo->Cid);
-  Cid = (EMMC_CID *)&DevInfo->Cid;
-  PrintCid (Cid);
+  Status = GetEmmcCid (&Cid);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get CID %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "Continue without this information\n"));
+  } else {
+    CopyMem (&DevInfo->Cid, &Cid, sizeof (EMMC_CID));
+    PrintCid (&Cid);
+  }
 
   Status = RpmbEmmcSelect (PassThru, Slot, (Slot + 1));
   if (EFI_ERROR (Status)) {
