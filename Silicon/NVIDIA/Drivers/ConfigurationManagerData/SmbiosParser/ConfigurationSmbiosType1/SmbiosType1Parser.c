@@ -123,6 +123,7 @@ InstallSmbiosType1Cm (
 
   TokenMap   = NULL;
   SystemInfo = NULL;
+  Status     = EFI_SUCCESS;
   //
   // Allocate and zero out System Info. The strings that are NULL will be set as "Unknown"
   //
@@ -137,34 +138,38 @@ InstallSmbiosType1Cm (
   // Get system info from FRU data
   // '/firmware/smbios/type1@x/fru-desc' is required to specify which FRU is used
   //
-  DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type1");
-  if (DtbOffset < 0) {
-    // If 'type1' node not found or not valid, look for 'type1@x' nodes
-    for (Index = 0; Index < MAX_TYPE1_COUNT; Index++) {
-      AsciiSPrint (NodeName, sizeof (NodeName), "type1@%u", Index);
-      DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, NodeName);
-      if (DtbOffset < 0) {
-        DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 1 not found.\n", __FUNCTION__));
-        Status = RETURN_NOT_FOUND;
-        goto CleanupAndReturn;
-      }
-
-      //
-      // Evaluate 'condition' for relevant product node and skip if not met
-      //
-      Status = EvaluateDtbNodeCondition (Private, DtbOffset);
-      ASSERT (Status != EFI_INVALID_PARAMETER);
-      if (Status == EFI_SUCCESS) {
-        break;
-      }
+  for (Index = 0; Index < MAX_TYPE1_COUNT; Index++) {
+    AsciiSPrint (NodeName, sizeof (NodeName), "type1@%u", Index);
+    DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, NodeName);
+    if (DtbOffset < 0) {
+      break;
     }
 
-    // If the loop exits with an error status, log an error and exit.
-    if (Status != EFI_SUCCESS) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed conditional DTB evaluation for all Type 1 DTB nodes.\n\n", __FUNCTION__));
+    //
+    // Evaluate 'condition' for relevant product node and skip if not met
+    //
+    Status = EvaluateDtbNodeCondition (Private, DtbOffset);
+    ASSERT (Status != EFI_INVALID_PARAMETER);
+    if (Status == EFI_SUCCESS) {
+      break;
+    }
+  }
+
+  //
+  // If 'type1@x' nodes not found or not valid, look for 'type1' node
+  // If the loop exits with an error status, log an error and exit.
+  //
+  if (DtbOffset < 0) {
+    DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type1");
+    if (DtbOffset < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 1 not found.\n", __FUNCTION__));
       Status = RETURN_NOT_FOUND;
       goto CleanupAndReturn;
     }
+  } else if (Status != EFI_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed conditional DTB evaluation for all Type 1 DTB nodes.\n\n", __FUNCTION__));
+    Status = RETURN_NOT_FOUND;
+    goto CleanupAndReturn;
   }
 
   Property = fdt_getprop (DtbBase, DtbOffset, "fru-desc", &Length);
