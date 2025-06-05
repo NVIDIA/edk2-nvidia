@@ -2,7 +2,7 @@
 #
 #  DW EQoS device tree binding driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -26,7 +26,6 @@
   nvethernetrm/include/osi_dma.h
   nvethernetrm/include/osi_dma_txrx.h
   nvethernetrm/include/osi_macsec.h
-  nvethernetrm/osi/common/include/local_common.h
 
   EqosDeviceDxe.c
   DwEqosSnpDxe.c
@@ -40,6 +39,7 @@
   EqosAdapterInfo.c
 
   nvethernetrm/osd.c
+  nvethernetrm/osi/core/core_common.c
   nvethernetrm/osi/core/debug.c
   nvethernetrm/osi/core/eqos_core.c
   nvethernetrm/osi/core/eqos_mmc.c
@@ -58,9 +58,7 @@
   nvethernetrm/osi/dma/eqos_desc.c
   nvethernetrm/osi/dma/mgbe_desc.c
   nvethernetrm/osi/dma/debug.c
-  nvethernetrm/osi/common/osi_common.c
-  nvethernetrm/osi/common/eqos_common.c
-  nvethernetrm/osi/common/mgbe_common.c
+  nvethernetrm/osi/nvxpcsrm/nvxpcs.c
 
 [Packages]
   ArmPkg/ArmPkg.dec

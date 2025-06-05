@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -13,7 +14,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
@@ -23,10 +24,8 @@
 #ifndef INCLUDED_DMA_DEBUG_H
 #define INCLUDED_DMA_DEBUG_H
 
-#include <osi_common.h>
 #include <osi_dma.h>
 #include "hw_desc.h"
-#include "../osi/common/common.h"
 #include "dma_local.h"
 
 /**
@@ -35,16 +34,31 @@
  * @brief Helper macros used for debugging.
  * @{
  */
-#define TX_DESC_DUMP		OSI_BIT(0)
-#define RX_DESC_DUMP		OSI_BIT(1)
-#define TXRX_DESC_DUMP_MASK     (OSI_BIT(0) | OSI_BIT(1))
-#define TX_DESC_DUMP_TX		OSI_BIT(2)
-#define TX_DESC_DUMP_TX_DONE	OSI_BIT(3)
-#define TX_DESC_DUMP_MASK	(OSI_BIT(2) | OSI_BIT(3))
+#define TX_DESC_DUMP          OSI_BIT(0)
+#define RX_DESC_DUMP          OSI_BIT(1)
+#define TXRX_DESC_DUMP_MASK   (OSI_BIT(0) | OSI_BIT(1))
+#define TX_DESC_DUMP_TX       OSI_BIT(2)
+#define TX_DESC_DUMP_TX_DONE  OSI_BIT(3)
+#define TX_DESC_DUMP_MASK     (OSI_BIT(2) | OSI_BIT(3))
 /** @} */
 
-void desc_dump(struct osi_dma_priv_data *osi_dma, unsigned int f_idx,
-	       unsigned int l_idx, unsigned int flag, unsigned int chan);
-void reg_dump(struct osi_dma_priv_data *osi_dma);
-void structs_dump(struct osi_dma_priv_data *osi_dma);
+void
+desc_dump (
+  struct osi_dma_priv_data  *osi_dma,
+  unsigned int              f_idx,
+  unsigned int              l_idx,
+  unsigned int              flag,
+  unsigned int              chan
+  );
+
+void
+reg_dump (
+  struct osi_dma_priv_data  *osi_dma
+  );
+
+void
+structs_dump (
+  struct osi_dma_priv_data  *osi_dma
+  );
+
 #endif /* INCLUDED_DMA_DEBUG_H*/

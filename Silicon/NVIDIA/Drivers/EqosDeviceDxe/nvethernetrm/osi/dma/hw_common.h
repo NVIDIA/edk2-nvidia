@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,24 +21,27 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef OSI_DEBUG
-#ifndef INCLUDED_CORE_DEBUG_H
-#define INCLUDED_CORE_DEBUG_H
+#ifndef INCLUDED_HW_COMMON_H
+#define INCLUDED_HW_COMMON_H
 
-  #include <osi_core.h>
-  #include <osi_macsec.h>
-  #include "common.h"
-  #include "core_local.h"
+/**
+ * @addtogroup COMMON HW specific offset macros
+ *
+ * @brief Register offset values common for EQOS and MGBE
+ * @{
+ */
+#define HW_GLOBAL_DMA_STATUS  0x8700U
+#define VIRT_INTR_CHX_CNTRL(x)   (0x8600U + ((x) * 8U))
+#define VIRT_INTR_CHX_STATUS(x)  (0x8604U + ((x) * 8U))
+#define AXI_BUS_WIDTH            0x10U
+#define DMA_CHX_INTR_TIE         OSI_BIT(0)
+#define DMA_CHX_INTR_RIE         OSI_BIT(6)
+#define DMA_CHX_CTRL_PBLX8       OSI_BIT(16)
+#define DMA_CHX_TX_CTRL_OSP      OSI_BIT(4)
+#define DMA_CHX_TX_CTRL_TSE      OSI_BIT(12)
+#define DMA_CHX_RBSZ_MASK        0x7FFEU
+#define DMA_CHX_RBSZ_SHIFT       1U
+#define DMA_CHX_RX_WDT_RWT_MASK  0xFFU
+/** @} */
 
-void
-core_reg_dump (
-  struct osi_core_priv_data  *osi_core
-  );
-
-void
-core_structs_dump (
-  struct osi_core_priv_data  *osi_core
-  );
-
-#endif /* INCLUDED_CORE_DEBUG_H*/
-#endif /* OSI_DEBUG */
+#endif /* INCLUDED_HW_COMMON_H */

@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Limited. All rights reserved.
@@ -16,13 +16,16 @@
 #include "osi_core.h"
 #include "osi_dma.h"
 
+#define TX_DESC_CNT  256
+#define RX_DESC_CNT  256
+
 typedef struct {
-  struct osi_core_priv_data    *osi_core;
-  struct osi_dma_priv_data     *osi_dma;
-  void                         *tx_buffers[TX_DESC_CNT];
-  void                         *tx_completed_buffer;
-  struct osi_rx_pkt_cx         *rxpkt_cx;
-  struct osi_rx_swcx           *rx_pkt_swcx;
+  struct osi_core_priv_data     *osi_core;
+  struct osi_dma_priv_data      *osi_dma;
+  void                          *tx_buffers[TX_DESC_CNT];
+  void                          *tx_completed_buffer;
+  const struct osi_rx_pkt_cx    *rxpkt_cx;
+  struct osi_rx_swcx            *rx_pkt_swcx;
 } EMAC_DRIVER;
 
 EFI_STATUS

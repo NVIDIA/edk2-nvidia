@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2019 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
@@ -60,19 +60,20 @@ EmacDxeInitialization (
   EmacDriver->osi_dma->osd  = EmacDriver;
 
   // Initialize the variables of osi_core
-  EmacDriver->osi_core->base                 = (void *)MacBaseAddress;
-  EmacDriver->osi_core->xpcs_base            = (void *)XpcsBaseAddress;
-  EmacDriver->osi_core->mac                  = MacType;
-  EmacDriver->osi_core->num_mtl_queues       = 1;
-  EmacDriver->osi_core->mtl_queues[0]        = 0;
-  EmacDriver->osi_core->dcs_en               = OSI_DISABLE;
-  EmacDriver->osi_core->pause_frames         = OSI_PAUSE_FRAMES_DISABLE;
-  EmacDriver->osi_core->rxq_prio[0]          = 2;
-  EmacDriver->osi_core->rxq_ctrl[0]          = 2;
-  EmacDriver->osi_core->osd_ops.ops_log      = osd_log;
-  EmacDriver->osi_core->osd_ops.udelay       = osd_udelay;
-  EmacDriver->osi_core->osd_ops.usleep_range = osd_usleep_range;
-  EmacDriver->osi_core->osd_ops.msleep       = osd_msleep;
+  EmacDriver->osi_core->base                         = (void *)MacBaseAddress;
+  EmacDriver->osi_core->xpcs_base                    = (void *)XpcsBaseAddress;
+  EmacDriver->osi_core->mac                          = MacType;
+  EmacDriver->osi_core->num_mtl_queues               = 1;
+  EmacDriver->osi_core->mtl_queues[0]                = 0;
+  EmacDriver->osi_core->dcs_en                       = OSI_DISABLE;
+  EmacDriver->osi_core->pause_frames                 = OSI_PAUSE_FRAMES_DISABLE;
+  EmacDriver->osi_core->rxq_prio[0]                  = 2;
+  EmacDriver->osi_core->rxq_ctrl[0]                  = 2;
+  EmacDriver->osi_core->osd_ops.ops_log              = osd_log;
+  EmacDriver->osi_core->osd_ops.udelay               = osd_udelay;
+  EmacDriver->osi_core->osd_ops.usleep               = osd_usleep;
+  EmacDriver->osi_core->osd_ops.padctrl_mii_rx_pins  = osd_padctrl_mii_rx_pins;
+  EmacDriver->osi_core->osd_ops.restart_lane_bringup = osd_restart_lane_bringup;
  #ifdef OSI_DEBUG
   EmacDriver->osi_core->osd_ops.printf = osd_core_printf;
  #endif
@@ -83,6 +84,9 @@ EmacDxeInitialization (
   EmacDriver->osi_dma->dma_chans[0]              = 0;
   EmacDriver->osi_dma->mac                       = MacType;
   EmacDriver->osi_dma->mtu                       = OSI_DFLT_MTU_SIZE;
+  EmacDriver->osi_dma->is_ethernet_server        = OSI_ENABLE;
+  EmacDriver->osi_dma->tx_ring_sz                = TX_DESC_CNT;
+  EmacDriver->osi_dma->rx_ring_sz                = RX_DESC_CNT;
   EmacDriver->osi_dma->osd_ops.transmit_complete = osd_transmit_complete;
   EmacDriver->osi_dma->osd_ops.receive_packet    = osd_receive_packet;
   EmacDriver->osi_dma->osd_ops.ops_log           = osd_log;

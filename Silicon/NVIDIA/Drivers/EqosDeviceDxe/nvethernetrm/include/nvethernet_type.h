@@ -21,34 +21,46 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef INCLUDED_MGBE_DESC_H_
-#define INCLUDED_MGBE_DESC_H_
-
-#ifndef OSI_STRIPPED_LIB
+#ifndef INCLUDED_NVETHERNET_TYPE_H
+#define INCLUDED_NVETHERNET_TYPE_H
 
 /**
- * @addtogroup MGBE MAC FRP Stats.
+ * @addtogroup typedef related info
  *
- * @brief Values defined for the MGBE Flexible Receive Parser Receive Status
+ * @brief typedefs that indicate size and signness
  * @{
  */
-#define MGBE_RDES2_FRPSM  OSI_BIT(10)
-#define MGBE_RDES3_FRPSL  OSI_BIT(14)
-/** @} */
-#endif /* !OSI_STRIPPED_LIB */
-
-/**
- * @addtogroup MGBE RDESC bits.
- *
- * @brief Values defined for the MGBE rx descriptor bit fields
- * @{
+/* Following added to avoid misraC 4.6
+ * Here we are defining intermediate type
  */
+/** intermediate type for unsigned int */
+typedef unsigned int my_uint32_t;
+/** intermediate type for int */
+typedef int my_int32_t;
+/** intermediate type for unsigned short */
+typedef unsigned short my_uint16_t;
+/** intermediate type for char */
+typedef char my_int8_t;
+/** intermediate type for unsigned char */
+typedef unsigned char my_uint8_t;
+/** intermediate type for unsigned long long */
+typedef unsigned long long my_ulint_64;
 
-#define MGBE_RDES3_PT_MASK      (OSI_BIT(20) | OSI_BIT(21) | OSI_BIT(22) | OSI_BIT(23))
-#define MGBE_RDES3_PT_IPV4_TCP  OSI_BIT(20)
-#define MGBE_RDES3_PT_IPV4_UDP  OSI_BIT(21)
-#define MGBE_RDES3_PT_IPV6_TCP  (OSI_BIT(20) | OSI_BIT(23))
-#define MGBE_RDES3_PT_IPV6_UDP  (OSI_BIT(21) | OSI_BIT(23))
+/* Actual type used in code */
+/** typedef equivalent to unsigned int */
+typedef my_uint32_t nveu32_t;
+/** typedef equivalent to int */
+typedef my_int32_t nve32_t;
+/** typedef equivalent to unsigned short */
+typedef my_uint16_t nveu16_t;
+/** typedef equivalent to char */
+typedef my_int8_t nve8_t;
+/** typedef equivalent to unsigned char */
+typedef my_uint8_t nveu8_t;
+/** typedef equivalent to unsigned long  long */
+typedef my_ulint_64 nveul64_t;
+/** typedef equivalent to unsigned long long */
+typedef my_ulint_64 nveu64_t;
 /** @} */
 
-#endif /* INCLUDED_MGBE_DESC_H_ */
+#endif /* INCLUDED_NVETHERNET_TYPE_H */
