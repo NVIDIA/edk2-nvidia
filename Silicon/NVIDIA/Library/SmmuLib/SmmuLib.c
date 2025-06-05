@@ -159,7 +159,7 @@ CheckForBypassVendorId (
     "%a: Caching bypass info Handle %p BypassNeeded %d\n",
     __FUNCTION__,
     Handle,
-    BypassNeeded
+    (UINTN)BypassNeeded
     ));
   mBypassInfo[mBypassInfoCount].Handle       = Handle;
   mBypassInfo[mBypassInfoCount].BypassNeeded = BypassNeeded;
