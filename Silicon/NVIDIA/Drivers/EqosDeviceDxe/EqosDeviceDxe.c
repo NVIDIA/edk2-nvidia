@@ -28,6 +28,7 @@
 #include "DwEqosSnpDxe.h"
 #include "EqosDeviceDxePrivate.h"
 #include "DtAcpiMacUpdate.h"
+#include "core_common.h"
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,eqos",                &gDwEqosNetNonDiscoverableDeviceGuid },
@@ -189,7 +190,6 @@ DeviceDiscoveryNotify (
   UINT32                       PhyNodeHandle;
   INT32                        PhyNodeOffset;
   INT32                        OsiReturn;
-  struct osi_hw_features       hw_feat;
   INT32                        MacRegionIndex;
   INT32                        XpcsRegionIndex;
   CONST VOID                   *Property;
@@ -513,9 +513,7 @@ DeviceDiscoveryNotify (
         return EFI_DEVICE_ERROR;
       }
 
-      osi_get_hw_features (Snp->MacDriver.osi_core, &hw_feat);
-
-      osi_poll_for_mac_reset_complete (Snp->MacDriver.osi_core);
+      hw_poll_for_swr (Snp->MacDriver.osi_core);
 
       // Init EMAC DMA
       // Ignore error message on these failure to allow OS to initialize controller
@@ -524,7 +522,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_ERROR, "Failed to initialize MAC DMA\n"));
       } else {
         Snp->DmaInitialized = TRUE;
-        OsiReturn           = osi_hw_core_init (Snp->MacDriver.osi_core, hw_feat.tx_fifo_size, hw_feat.rx_fifo_size);
+        OsiReturn           = osi_hw_core_init (Snp->MacDriver.osi_core);
         if (OsiReturn < 0) {
           DEBUG ((DEBUG_ERROR, "Failed to initialize MAC Core: %d\n", OsiReturn));
         }

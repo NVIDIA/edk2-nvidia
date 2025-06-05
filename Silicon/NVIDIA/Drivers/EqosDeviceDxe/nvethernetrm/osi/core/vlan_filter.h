@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -13,18 +14,20 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef VLAN_FILTER_H
-#define VLAN_FILTER_H
+#ifndef INCLUDED_VLAN_FILTER_H
+#define INCLUDED_VLAN_FILTER_H
 
 #include <osi_core.h>
 #include "core_local.h"
+
+#ifndef OSI_STRIPPED_LIB
 
 /**
  * @addtogroup MAC-VLAN MAC VLAN configuration registers and bit fields
@@ -33,16 +36,16 @@
  * for VLAN configuration.
  * @{
  */
-#define MAC_VLAN_TAG_CTRL	0x50
-#define MAC_VLAN_TAG_DATA	0x54
-#define MAC_VLAN_HASH_FILTER	0x58
-#define MAC_VLAN_TAG_CTRL_OFS_MASK	0x7C
-#define MAC_VLAN_TAG_CTRL_OFS_SHIFT	2U
-#define MAC_VLAN_TAG_CTRL_CT	OSI_BIT(1)
-#define MAC_VLAN_TAG_CTRL_OB	OSI_BIT(0)
-#define MAC_VLAN_TAG_CTRL_VHTM	OSI_BIT(25)
-#define MAC_VLAN_TAG_DATA_ETV	OSI_BIT(16)
-#define MAC_VLAN_TAG_DATA_VEN	OSI_BIT(17)
+#define MAC_VLAN_TAG_CTRL            0x50
+#define MAC_VLAN_TAG_DATA            0x54
+#define MAC_VLAN_HASH_FILTER         0x58
+#define MAC_VLAN_TAG_CTRL_OFS_MASK   0x7CU
+#define MAC_VLAN_TAG_CTRL_OFS_SHIFT  2U
+#define MAC_VLAN_TAG_CTRL_CT         OSI_BIT(1)
+#define MAC_VLAN_TAG_CTRL_OB         OSI_BIT(0)
+#define MAC_VLAN_TAG_CTRL_VHTM       OSI_BIT(25)
+#define MAC_VLAN_TAG_DATA_ETV        OSI_BIT(16)
+#define MAC_VLAN_TAG_DATA_VEN        OSI_BIT(17)
 /** @} */
 
 /**
@@ -51,12 +54,12 @@
  * @brief VLAN filtering releated macros
  * @{
  */
-#define VLAN_HW_MAX_NRVF	32U
-#define VLAN_HW_FILTER_FULL_IDX	VLAN_HW_MAX_NRVF
-#define VLAN_VID_MASK		0xFFFF
-#define VLAN_ID_INVALID		0xFFFF
-#define VLAN_HASH_ALLOW_ALL	0xFFFF
-#define VLAN_ACTION_MASK	OSI_BIT(31)
+#define VLAN_HW_MAX_NRVF         32U
+#define VLAN_HW_FILTER_FULL_IDX  VLAN_HW_MAX_NRVF
+#define VLAN_VID_MASK            0xFFFFU
+#define VLAN_ID_INVALID          0xFFFFU
+#define VLAN_HASH_ALLOW_ALL      0xFFFFU
+#define VLAN_ACTION_MASK         OSI_BIT(31)
 /** @} */
 
 /**
@@ -70,7 +73,12 @@
  * @return 0 on success
  * @return -1 on failure.
  */
-int update_vlan_id(struct osi_core_priv_data *osi_core,
-		   struct core_ops *ops_p,
-                   unsigned int vid);
-#endif /* VLAN_FILTER_H */
+nve32_t
+update_vlan_id (
+  struct osi_core_priv_data  *osi_core,
+  struct core_ops            *ops_p,
+  nveu32_t                   vid
+  );
+
+#endif /* !OSI_STRIPPED_LIB */
+#endif /* INCLUDED_VLAN_FILTER_H */

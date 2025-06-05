@@ -1,7 +1,7 @@
 /** @file
   DW EMAC SNP DXE driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -13,6 +13,7 @@
 #include "EmacDxeUtil.h"
 #include "PhyDxeUtil.h"
 #include "DtAcpiMacUpdate.h"
+#include "core_common.h"
 
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -197,7 +198,7 @@ SnpInitialize (
     Snp->DmaInitialized = TRUE;
   }
 
-  osi_start_mac (Snp->MacDriver.osi_core);
+  hw_start_mac (Snp->MacDriver.osi_core);
 
   // Declare the driver as initialized
   Snp->SnpMode.State = EfiSimpleNetworkInitialized;
@@ -255,7 +256,7 @@ SnpReset (
     return EFI_NOT_STARTED;
   }
 
-  osi_stop_mac (Snp->MacDriver.osi_core);
+  hw_stop_mac (Snp->MacDriver.osi_core);
 
   osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
   Snp->DmaInitialized = FALSE;
@@ -270,7 +271,7 @@ SnpReset (
   osi_hw_dma_init (Snp->MacDriver.osi_dma);
   Snp->DmaInitialized = TRUE;
 
-  osi_start_mac (Snp->MacDriver.osi_core);
+  hw_start_mac (Snp->MacDriver.osi_core);
 
   return EFI_SUCCESS;
 }
@@ -317,7 +318,7 @@ SnpShutdown (
     return EFI_NOT_STARTED;
   }
 
-  osi_stop_mac (Snp->MacDriver.osi_core);
+  hw_stop_mac (Snp->MacDriver.osi_core);
 
   osi_hw_dma_deinit (Snp->MacDriver.osi_dma);
   Snp->DmaInitialized = FALSE;
@@ -338,24 +339,28 @@ RegisterFilterIndex (
   IN UINT32           BaseMode
   )
 {
-  struct osi_filter  filter;
+  struct osi_ioctl   ioctl;
+  struct osi_filter  *filter = &ioctl.data.l2_filter;
 
-  ZeroMem (&filter, sizeof (filter));
-  filter.oper_mode = BaseMode;
+  ZeroMem (&ioctl, sizeof (ioctl));
+  filter->oper_mode = BaseMode;
 
   if (Enable) {
-    filter.oper_mode |= OSI_OPER_ADDR_UPDATE;
+    filter->oper_mode |= OSI_OPER_ADDR_UPDATE;
   } else {
-    filter.oper_mode |= OSI_OPER_ADDR_DEL;
+    filter->oper_mode |= OSI_OPER_ADDR_DEL;
   }
 
-  filter.index = Index;
-  CopyMem (filter.mac_address, MacAddress->Addr, OSI_ETH_ALEN);
-  filter.dma_routing = EmacDriver->osi_core->dcs_en;
-  filter.dma_chan    = EmacDriver->osi_dma->dma_chans[0];
-  filter.addr_mask   = OSI_AMASK_DISABLE;
-  filter.src_dest    = OSI_DA_MATCH;
-  osi_l2_filter (EmacDriver->osi_core, &filter);
+  filter->index = Index;
+  CopyMem (filter->mac_addr, MacAddress->Addr, OSI_ETH_ALEN);
+  filter->dma_routing = EmacDriver->osi_core->dcs_en;
+  filter->dma_chan    = EmacDriver->osi_dma->dma_chans[0];
+  filter->addr_mask   = OSI_AMASK_DISABLE;
+  filter->src_dest    = OSI_DA_MATCH;
+
+  ioctl.cmd = OSI_CMD_L2_FILTER;
+
+  osi_handle_ioctl (EmacDriver->osi_core, &ioctl);
 }
 
 /**
@@ -748,12 +753,13 @@ SnpStatistics (
 
   if (Reset) {
     ioctl_data.cmd = OSI_CMD_RESET_MMC;
-    osi_hal_handle_ioctl (Snp->MacDriver.osi_core, &ioctl_data);
+    osi_handle_ioctl (Snp->MacDriver.osi_core, &ioctl_data);
   }
 
   Status = EFI_SUCCESS;
   if (Statistics != NULL) {
-    osi_read_mmc (Snp->MacDriver.osi_core);
+    ioctl_data.cmd = OSI_CMD_READ_MMC;
+    osi_handle_ioctl (Snp->MacDriver.osi_core, &ioctl_data);
 
     // Populate local copy of data structure to allow for partial read
     LocalStats.RxTotalFrames     = Snp->MacDriver.osi_core->mmc.mmc_rx_framecount_gb;

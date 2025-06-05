@@ -3,7 +3,7 @@
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
-  SPDX-FileCopyrightText: Copyright (c) 2020 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,6 +24,7 @@
 #include "PhyRealtek.h"
 #include "PhyMgbe.h"
 #include "PhyMicrel.h"
+#include "core_common.h"
 
 STATIC
 EFI_STATUS
@@ -314,7 +315,7 @@ PhyLinkAdjustEmacConfig (
     if (PhyDriver->PhyCurrentLink == LINK_UP) {
       if (PhyDriver->Speed == SPEED_10000) {
         ClockRate = ETHER_MGBE_TX_CLK_USXGMII_10G;
-        osi_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_10000);
+        hw_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_10000);
 
         Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "rx-input", ETHER_MGBE_RX_CLK_USXGMII_10G);
         if (EFI_ERROR (Status)) {
@@ -377,19 +378,19 @@ PhyLinkAdjustEmacConfig (
         }
       } else if (PhyDriver->Speed == SPEED_1000) {
         ClockRate = TX_CLK_RATE_1G;
-        osi_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_1000);
+        hw_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_1000);
       } else if (PhyDriver->Speed == SPEED_100) {
         ClockRate = TX_CLK_RATE_100M;
-        osi_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_100);
+        hw_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_100);
       } else {
         ClockRate = TX_CLK_RATE_10M;
-        osi_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_10);
+        hw_set_speed (PhyDriver->MacDriver->osi_core, OSI_SPEED_10);
       }
 
       if (PhyDriver->Duplex == DUPLEX_FULL) {
-        osi_set_mode (PhyDriver->MacDriver->osi_core, OSI_FULL_DUPLEX);
+        hw_set_mode (PhyDriver->MacDriver->osi_core, OSI_FULL_DUPLEX);
       } else {
-        osi_set_mode (PhyDriver->MacDriver->osi_core, OSI_HALF_DUPLEX);
+        hw_set_mode (PhyDriver->MacDriver->osi_core, OSI_HALF_DUPLEX);
       }
 
       Status = DeviceDiscoverySetClockFreq (PhyDriver->ControllerHandle, "tx", ClockRate);

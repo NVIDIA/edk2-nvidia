@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -14,31 +14,16 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 
 /**
- * @brief osd_usleep_range - sleep in micro seconds
+ * @brief osd_usleep - sleep in micro seconds
  *
- * @param[in] umin: Minimum time in usecs to sleep
- * @param[in] umax: Maximum time in usecs to sleep
+ * @param[in] usec: time in usec
  */
 void
-osd_usleep_range (
-  unsigned long  umin,
-  unsigned long  umax
+osd_usleep (
+  unsigned long long  usec
   )
 {
-  DeviceDiscoveryThreadMicroSecondDelay (umin);
-}
-
-/**
- * @brief osd_msleep - sleep in milli seconds
- *
- * @param[in] msec: time in milli seconds
- */
-void
-osd_msleep (
-  unsigned int  msec
-  )
-{
-  DeviceDiscoveryThreadMicroSecondDelay (((unsigned long)msec) * 1000);
+  DeviceDiscoveryThreadMicroSecondDelay (usec);
 }
 
 /**
@@ -48,7 +33,7 @@ osd_msleep (
  */
 void
 osd_udelay (
-  unsigned long  usec
+  unsigned long long  usec
   )
 {
   DeviceDiscoveryThreadMicroSecondDelay (usec);
@@ -135,12 +120,12 @@ osd_log (
  */
 void
 osd_receive_packet (
-  void                  *priv,
-  struct osi_rx_ring    *rxring,
-  unsigned int          chan,
-  unsigned int          dma_buf_len,
-  struct osi_rx_pkt_cx  *rxpkt_cx,
-  struct osi_rx_swcx    *rx_pkt_swcx
+  void                        *priv,
+  struct osi_rx_ring          *rxring,
+  unsigned int                chan,
+  unsigned int                dma_buf_len,
+  const struct osi_rx_pkt_cx  *rxpkt_cx,
+  struct osi_rx_swcx          *rx_pkt_swcx
   )
 {
   EMAC_DRIVER  *EmacDriver = (EMAC_DRIVER *)priv;
@@ -159,9 +144,7 @@ osd_receive_packet (
  *        3) Time stamp will be updated to stack if available.
  *
  * @param[in] priv: OSD private data structure.
- * @param[in] buffer: Buffer address to free.
- * @param[in] dmaaddr: DMA address to unmap.
- * @param[in] len: Length of data.
+ * @param[in] swcx: Pointer to struct which has tx done status info.
  * @param[in] txdone_pkt_cx: Pointer to struct which has tx done status info.
  *              This struct has flags to indicate tx error, whether DMA address
  *              is mapped from paged/linear buffer, Time stamp availability,
@@ -175,16 +158,14 @@ osd_receive_packet (
  */
 void
 osd_transmit_complete (
-  void                      *priv,
-  void                      *buffer,
-  unsigned long             dmaaddr,
-  unsigned int              len,
-  struct osi_txdone_pkt_cx  *txdone_pkt_cx
+  void                            *priv,
+  const struct osi_tx_swcx        *swcx,
+  const struct osi_txdone_pkt_cx  *txdone_pkt_cx
   )
 {
   EMAC_DRIVER  *EmacDriver = (EMAC_DRIVER *)priv;
 
-  EmacDriver->tx_completed_buffer = buffer;
+  EmacDriver->tx_completed_buffer = swcx->buf_virt_addr;
 }
 
 /**.printf function callback */
@@ -217,4 +198,23 @@ osd_dma_printf (
   VA_START (Marker, fmt);
   DebugVPrint (DEBUG_ERROR, fmt, Marker);
   VA_END (Marker);
+}
+
+void
+osd_restart_lane_bringup (
+  void      *priv,
+  nveu32_t  en_disable
+  )
+{
+  DEBUG ((DEBUG_ERROR, "%a\n", __FUNCTION__));
+}
+
+nve32_t
+osd_padctrl_mii_rx_pins (
+  void      *priv,
+  nveu32_t  enable
+  )
+{
+  DEBUG ((DEBUG_ERROR, "%a\n", __FUNCTION__));
+  return 0;
 }
