@@ -295,14 +295,13 @@ GetGPUMemoryInfo (
       if ((PlatformResourceInfo->EgmRetiredPages[Socket].Base != 0) &&
           (PlatformResourceInfo->EgmRetiredPages[Socket].Size != 0))
       {
-        EgmRetiredPageList = (EFI_PHYSICAL_ADDRESS)AllocateAlignedReservedPages (EFI_SIZE_TO_PAGES (SIZE_64KB + PlatformResourceInfo->EgmRetiredPages[Socket].Size), SIZE_64KB);
-        ZeroMem ((VOID *)EgmRetiredPageList, (SIZE_64KB + PlatformResourceInfo->EgmRetiredPages[Socket].Size));
+        EgmRetiredPageList = (EFI_PHYSICAL_ADDRESS)AllocateReservedPages (EFI_SIZE_TO_PAGES (PlatformResourceInfo->EgmRetiredPages[Socket].Size));
         CopyMem ((VOID *)EgmRetiredPageList, (CONST VOID *)PlatformResourceInfo->EgmRetiredPages[Socket].Base, PlatformResourceInfo->EgmRetiredPages[Socket].Size);
       }
 
       if (EgmRetiredPageList == 0) {
-        EgmRetiredPageList = (EFI_PHYSICAL_ADDRESS)AllocateAlignedReservedPages (EFI_SIZE_TO_PAGES (SIZE_64KB), SIZE_64KB);
-        ZeroMem ((VOID *)EgmRetiredPageList, SIZE_64KB);
+        EgmRetiredPageList = (EFI_PHYSICAL_ADDRESS)AllocateReservedPages (EFI_SIZE_TO_PAGES (SIZE_4KB));
+        ZeroMem ((VOID *)EgmRetiredPageList, SIZE_4KB);
       }
 
       GpuMemInfo->Entry[GPU_MEMORY_INFO_PROPERTY_INDEX_EGM_RETIRED_PAGES_ADDR].PropertyValue = EgmRetiredPageList;
