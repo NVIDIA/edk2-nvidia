@@ -33,8 +33,6 @@
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,eqos",                &gDwEqosNetNonDiscoverableDeviceGuid },
   { "nvidia,nvmgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid },
-  { "nvidia,tegra264-eqos",       NULL                                 },
-  { "nvidia,tegra264-mgbe",       NULL                                 },
   { "nvidia,*-eqos",              &gDwEqosNetNonDiscoverableDeviceGuid },
   { "nvidia,*-mgbe",              &gDwMgbeNetNonDiscoverableDeviceGuid },
   { "snps,dwc-qos-ethernet-4.10", &gDwEqosNetNonDiscoverableDeviceGuid },
@@ -195,6 +193,7 @@ DeviceDiscoveryNotify (
   CONST VOID                   *Property;
   INT32                        PropertySize;
   CONST UINT8                  *MacAddress;
+  BOOLEAN                      T26xMgbe;
 
   PlatformType = TegraGetPlatform ();
   switch (Phase) {
@@ -454,6 +453,17 @@ DeviceDiscoveryNotify (
 
       Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);
 
+      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "compatible", NULL);
+      if (Property == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: No compatible\n", __FUNCTION__));
+        return EFI_DEVICE_ERROR;
+      }
+
+      T26xMgbe = (AsciiStrCmp ((CONST CHAR8 *)Property, "nvidia,tegra264-mgbe") == 0);
+      if (T26xMgbe) {
+        DEBUG ((DEBUG_INFO, "T26xMgbe detected\n"));
+      }
+
       // Init EMAC
       if (Snp->PhyDriver.MgbeDevice) {
         // Get XPCS base address
@@ -475,7 +485,12 @@ DeviceDiscoveryNotify (
           return EFI_UNSUPPORTED;
         }
 
-        Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, Snp->XpcsBase, OSI_MAC_HW_MGBE);
+        Status = EmacDxeInitialization (
+                   &Snp->MacDriver,
+                   Snp->MacBase,
+                   Snp->XpcsBase,
+                   (T26xMgbe) ? OSI_MAC_HW_MGBE_T26X : OSI_MAC_HW_MGBE
+                   );
       } else {
         Status = EmacDxeInitialization (&Snp->MacDriver, Snp->MacBase, 0, OSI_MAC_HW_EQOS);
       }
