@@ -1148,16 +1148,16 @@ PlatformRegisterOptionsAndKeys (
   Esc.ScanCode    = SCAN_ESC;
   Esc.UnicodeChar = CHAR_NULL;
   Status          = EfiBootManagerGetBootManagerMenu (&BootOption);
-  ASSERT_EFI_ERROR (Status);
-
-  Status = EfiBootManagerAddKeyOptionVariable (
-             NULL,
-             (UINT16)BootOption.OptionNumber,
-             0,
-             &Esc,
-             NULL
-             );
-  ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+  if (!EFI_ERROR (Status)) {
+    Status = EfiBootManagerAddKeyOptionVariable (
+               NULL,
+               (UINT16)BootOption.OptionNumber,
+               0,
+               &Esc,
+               NULL
+               );
+    ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+  }
 
   //
   // Map F11 to Boot Menu App (defined by PcdBootMenuAppFile)
@@ -1165,16 +1165,16 @@ PlatformRegisterOptionsAndKeys (
   F11.ScanCode    = SCAN_F11;
   F11.UnicodeChar = CHAR_NULL;
   Status          = EfiBootManagerGetBootMenuApp (&BootOption);
-  ASSERT_EFI_ERROR (Status);
-
-  Status = EfiBootManagerAddKeyOptionVariable (
-             NULL,
-             (UINT16)BootOption.OptionNumber,
-             0,
-             &F11,
-             NULL
-             );
-  ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+  if (!EFI_ERROR (Status)) {
+    Status = EfiBootManagerAddKeyOptionVariable (
+               NULL,
+               (UINT16)BootOption.OptionNumber,
+               0,
+               &F11,
+               NULL
+               );
+    ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
+  }
 }
 
 /**
@@ -1188,7 +1188,8 @@ DisplaySystemAndHotkeyInformation (
   VOID
   )
 {
-  BOOLEAN  ShellHotkeySupported;
+  BOOLEAN                       ShellHotkeySupported;
+  EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
 
   CheckUefiShellLoadOption (&ShellHotkeySupported);
   if (ShellHotkeySupported && (PcdGet16 (PcdShellHotkey) == CHAR_NULL)) {
@@ -1213,13 +1214,22 @@ DisplaySystemAndHotkeyInformation (
   // Display hotkey information at upper left corner.
   //
   gST->ConOut->SetCursorPosition (gST->ConOut, 0, gST->ConOut->Mode->CursorRow + 1);
-  Print (L"ESC   to enter Setup.\r\n");
-  Print (L"F11   to enter Boot Manager Menu.\r\n");
-  if (ShellHotkeySupported) {
-    Print (L"%c     to enter Shell.\r\n", PcdGet16 (PcdShellHotkey));
-  }
 
-  Print (L"Enter to continue boot.\r\n");
+  if (PcdGet16 (PcdPlatformBootTimeOut) != 0) {
+    if (!EFI_ERROR (EfiBootManagerGetBootManagerMenu (&BootOption))) {
+      Print (L"ESC   to enter Setup.\r\n");
+    }
+
+    if (!EFI_ERROR (EfiBootManagerGetBootMenuApp (&BootOption))) {
+      Print (L"F11   to enter Boot Manager Menu.\r\n");
+    }
+
+    if (ShellHotkeySupported) {
+      Print (L"%c     to enter Shell.\r\n", PcdGet16 (PcdShellHotkey));
+    }
+
+    Print (L"Enter to continue boot.\r\n");
+  }
 }
 
 STATIC
@@ -2724,6 +2734,7 @@ PlatformBootManagerUnableToBoot (
   VOID
   )
 {
+  Print (L"Unable to boot, system will halt\r\n");
   return;
 }
 
