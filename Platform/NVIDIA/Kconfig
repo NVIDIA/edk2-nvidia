@@ -274,11 +274,18 @@ menu "Variable options"
   help
     Forces UEFI to use emulated variable store.
 
+  config NEED_VARIABLE_NON_SECURE_SUPPORTED
+  bool
+
   config VARIABLE_NON_SECURE_SUPPORTED
+  default y if NEED_VARIABLE_NON_SECURE_SUPPORTED
   bool "Non-secure variable driver"
   help
     Allows for variables to run in non-secure if needed.
     If MM is supported this will only be used if MM is not running.
+  comment "INVALID CONFIG - a selected config requires VARIABLE_NON_SECURE_SUPPORTED, but VARIABLE_NON_SECURE_SUPPORTED has been disabled"
+  depends on !VARIABLE_NON_SECURE_SUPPORTED && NEED_VARIABLE_NON_SECURE_SUPPORTED
+
 endmenu
 
 menu "Hardware support"
@@ -791,6 +798,7 @@ menu "Boot Options"
   config RCM_BOOT
   bool "Rcm Boot Support"
   default y if DEFAULT_RCM_BOOT_L4T_LAUNCHER || DEFAULT_RCM_BOOT_UEFI_SHELL || DEFAULT_RCM_BOOT_NORMAL || DEFAULT_RCM_BOOT_DEADLOOP_APP
+  imply NEED_VARIABLE_NON_SECURE_SUPPORTED
   help
     UEFI RCM boot supported
 
