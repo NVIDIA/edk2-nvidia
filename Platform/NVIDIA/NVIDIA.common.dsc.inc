@@ -1185,6 +1185,10 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
   gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_SERVER_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T23X_ANDROID_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T24X_NVIDIA)"),GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID_GUID_T26X_NVIDIA)")}
 
+!ifndef CONFIG_SHELL
+  gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|0x0
+!endif
+
 [PcdsDynamicHii.common.DEFAULT]
   # Global variables
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|$(CONFIG_BOOT_DEFAULT_TIMEOUT)
@@ -1208,7 +1212,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdL4TDefaultBootMode|L"L4TDefaultBootMode"|gNVIDIAPublicVariableGuid|0x00|0xFF|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode|L"IpmiNetworkBootMode"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled|L"AcpiTimerEnabled"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV
+!ifdef CONFIG_SHELL
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|L"UefiShellEnabled"|gNVIDIAPublicVariableGuid|0x0|0x01|BS,NV
+!endif
   gNVIDIATokenSpaceGuid.PcdDgpuDtEfifbSupport|L"DgpuDtEfifbSupport"|gNVIDIAPublicVariableGuid|0x0|0|BS,NV,RT
   gNVIDIATokenSpaceGuid.PcdEnabledPcieNicTopology|L"EnabledPcieNicTopology"|gNVIDIAPublicVariableGuid|0x0|{ 0x0, 0xFF, 0xFF, 0xFF, 0xFF }|BS,NV
 !ifdef CONFIG_SOC_DISPLAY_HANDOFF_MODE_NEVER
