@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2023, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -53,7 +53,7 @@ FfaAllocateAndMapRxTxBuffers (
 
   CallFfaSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_MAP failed: 0x%x\n",
@@ -95,7 +95,7 @@ FfaReleaseRxBuffer (
 
   CallFfaSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RX_RELEASE failed: 0x%x\n",
@@ -136,7 +136,7 @@ FfaFreeRxTxBuffers (
 
   CallFfaSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_UNMAP failed: 0x%x\n",
@@ -219,13 +219,13 @@ FfaGetRasFwBuffer (
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
 
-  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  ArmSmcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
   ArmSmcArgs.Arg1 = RasFwVmId;
   ArmSmcArgs.Arg3 = RAS_FW_NS_BUFFER_REQ;
 
   CallFfaSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+  if (ArmSmcArgs.Arg0 != ARM_FID_FFA_MSG_SEND_DIRECT_RESP) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Invalid FFA response: 0x%x\n",
@@ -301,7 +301,7 @@ FfaGuidedCommunication (
 
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
 
-  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  ArmSmcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
   ArmSmcArgs.Arg1 = RasFwVmId;
   ArmSmcArgs.Arg3 = RAS_FW_GUID_COMMUNICATION;
 
@@ -322,7 +322,7 @@ FfaGuidedCommunication (
 
   CallFfaSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+  if (ArmSmcArgs.Arg0 != ARM_FID_FFA_MSG_SEND_DIRECT_RESP) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Invalid FFA response: 0x%x\n",

@@ -56,6 +56,7 @@
   MemoryInitPeiLib
   CacheMaintenanceLib
   CpuExceptionHandlerLib
+  StackCheckLib
 
 [Ppis]
   gArmMpCoreInfoPpiGuid

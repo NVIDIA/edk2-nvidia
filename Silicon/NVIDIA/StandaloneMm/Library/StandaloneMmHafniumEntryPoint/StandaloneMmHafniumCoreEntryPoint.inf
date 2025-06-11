@@ -45,6 +45,7 @@
   PlatformResourceLib
   StandaloneMmOpteeLib
   SlabMemoryAllocationLib
+  StackCheckLib
 
 [LibraryClasses.AARCH64]
   StandaloneMmMmuLib
@@ -64,7 +65,6 @@
   gNVIDIAStMMBuffersGuid
 
 [FeaturePcd.AARCH64]
-  gArmTokenSpaceGuid.PcdFfaEnable
   gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported
 
 [FixedPcd]

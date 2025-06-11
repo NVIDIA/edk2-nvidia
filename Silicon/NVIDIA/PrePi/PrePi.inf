@@ -53,6 +53,7 @@
   CpuExceptionHandlerLib
   StatusRegLib
   PlatformResourceLib
+  StackCheckLib
 
 [Guids]
   gEfiFirmwarePerformanceGuid

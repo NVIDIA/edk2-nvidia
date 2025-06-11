@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -28,17 +28,18 @@
 #include <IndustryStandard/ArmStdSmc.h>
 #include <IndustryStandard/ArmMmSvc.h>
 #include <IndustryStandard/ArmFfaSvc.h>
+#include <ArmFfaSvcLegacy.h>
 
 #define SPM_MAJOR_VER_MASK   0xFFFF0000
 #define SPM_MINOR_VER_MASK   0x0000FFFF
 #define SPM_MAJOR_VER_SHIFT  16
 #define FFA_NOT_SUPPORTED    -1
 
-STATIC CONST UINT32  mSpmMajorVer = SPM_MAJOR_VERSION;
-STATIC CONST UINT32  mSpmMinorVer = SPM_MINOR_VERSION;
+STATIC CONST UINT32  mSpmMajorVer = ARM_SPM_MM_SUPPORT_MAJOR_VERSION;
+STATIC CONST UINT32  mSpmMinorVer = ARM_SPM_MM_SUPPORT_MINOR_VERSION;
 
-STATIC CONST UINT32  mSpmMajorVerFfa = SPM_MAJOR_VERSION_FFA;
-STATIC CONST UINT32  mSpmMinorVerFfa = SPM_MINOR_VERSION_FFA;
+STATIC CONST UINT32  mSpmMajorVerFfa = ARM_FFA_LEGACY_MAJOR_VERSION;
+STATIC CONST UINT32  mSpmMinorVerFfa = ARM_FFA_LEGACY_MINOR_VERSION;
 
 #define BOOT_PAYLOAD_VERSION  1
 
@@ -124,7 +125,6 @@ DelegatedEventLoop (
   IN ARM_SVC_ARGS  *EventCompleteSvcArgs
   )
 {
-  BOOLEAN     FfaEnabled;
   EFI_STATUS  Status;
   UINTN       SvcStatus;
 
@@ -141,68 +141,46 @@ DelegatedEventLoop (
     DEBUG ((DEBUG_INFO, "X6 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg6));
     DEBUG ((DEBUG_INFO, "X7 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg7));
 
-    FfaEnabled = FeaturePcdGet (PcdFfaEnable);
-    if (FfaEnabled) {
-      Status = CpuDriverEntryPoint (
-                 EventCompleteSvcArgs->Arg0,
-                 EventCompleteSvcArgs->Arg6,
-                 EventCompleteSvcArgs->Arg3
-                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "Failed delegated event 0x%x, Status 0x%x\n",
-          EventCompleteSvcArgs->Arg3,
-          Status
-          ));
-      }
-    } else {
-      Status = CpuDriverEntryPoint (
-                 EventCompleteSvcArgs->Arg0,
-                 EventCompleteSvcArgs->Arg3,
-                 EventCompleteSvcArgs->Arg1
-                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "Failed delegated event 0x%x, Status 0x%x\n",
-          EventCompleteSvcArgs->Arg0,
-          Status
-          ));
-      }
+    Status = CpuDriverEntryPoint (
+               EventCompleteSvcArgs->Arg0,
+               EventCompleteSvcArgs->Arg6,
+               EventCompleteSvcArgs->Arg3
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed delegated event 0x%x, Status 0x%x\n",
+        EventCompleteSvcArgs->Arg3,
+        Status
+        ));
     }
 
     switch (Status) {
       case EFI_SUCCESS:
-        SvcStatus = ARM_SVC_SPM_RET_SUCCESS;
+        SvcStatus = ARM_SPM_MM_RET_SUCCESS;
         break;
       case EFI_INVALID_PARAMETER:
-        SvcStatus = ARM_SVC_SPM_RET_INVALID_PARAMS;
+        SvcStatus = ARM_SPM_MM_RET_INVALID_PARAMS;
         break;
       case EFI_ACCESS_DENIED:
-        SvcStatus = ARM_SVC_SPM_RET_DENIED;
+        SvcStatus = ARM_SPM_MM_RET_DENIED;
         break;
       case EFI_OUT_OF_RESOURCES:
-        SvcStatus = ARM_SVC_SPM_RET_NO_MEMORY;
+        SvcStatus = ARM_SPM_MM_RET_NO_MEMORY;
         break;
       case EFI_UNSUPPORTED:
-        SvcStatus = ARM_SVC_SPM_RET_NOT_SUPPORTED;
+        SvcStatus = ARM_SPM_MM_RET_NOT_SUPPORTED;
         break;
       default:
-        SvcStatus = ARM_SVC_SPM_RET_NOT_SUPPORTED;
+        SvcStatus = ARM_SPM_MM_RET_NOT_SUPPORTED;
         break;
     }
 
-    if (FfaEnabled) {
-      EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
-      EventCompleteSvcArgs->Arg1 = 0;
-      EventCompleteSvcArgs->Arg2 = 0;
-      EventCompleteSvcArgs->Arg3 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-      EventCompleteSvcArgs->Arg4 = SvcStatus;
-    } else {
-      EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-      EventCompleteSvcArgs->Arg1 = SvcStatus;
-    }
+    EventCompleteSvcArgs->Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_RESP;
+    EventCompleteSvcArgs->Arg1 = 0;
+    EventCompleteSvcArgs->Arg2 = 0;
+    EventCompleteSvcArgs->Arg3 = ARM_FID_SPM_MM_SP_EVENT_COMPLETE;
+    EventCompleteSvcArgs->Arg4 = SvcStatus;
   }
 }
 
@@ -226,17 +204,11 @@ GetSpmVersion (
   UINT32        SpmVersion;
   ARM_SVC_ARGS  SpmVersionArgs;
 
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    SpmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
-    SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
-    SpmVersionArgs.Arg1 |= mSpmMinorVerFfa;
-    CallerSpmMajorVer    = mSpmMajorVerFfa;
-    CallerSpmMinorVer    = mSpmMinorVerFfa;
-  } else {
-    SpmVersionArgs.Arg0 = ARM_SVC_ID_SPM_VERSION_AARCH32;
-    CallerSpmMajorVer   = mSpmMajorVer;
-    CallerSpmMinorVer   = mSpmMinorVer;
-  }
+  SpmVersionArgs.Arg0  = ARM_FID_FFA_VERSION;
+  SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
+  SpmVersionArgs.Arg1 |= mSpmMinorVerFfa;
+  CallerSpmMajorVer    = mSpmMajorVerFfa;
+  CallerSpmMinorVer    = mSpmMinorVerFfa;
 
   ArmCallSvc (&SpmVersionArgs);
 
@@ -294,16 +266,11 @@ InitArmSvcArgs (
   OUT INT32         *Ret
   )
 {
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    InitMmFoundationSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
-    InitMmFoundationSvcArgs->Arg1 = 0;
-    InitMmFoundationSvcArgs->Arg2 = 0;
-    InitMmFoundationSvcArgs->Arg3 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-    InitMmFoundationSvcArgs->Arg4 = *Ret;
-  } else {
-    InitMmFoundationSvcArgs->Arg0 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-    InitMmFoundationSvcArgs->Arg1 = *Ret;
-  }
+  InitMmFoundationSvcArgs->Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_RESP;
+  InitMmFoundationSvcArgs->Arg1 = 0;
+  InitMmFoundationSvcArgs->Arg2 = 0;
+  InitMmFoundationSvcArgs->Arg3 = ARM_FID_SPM_MM_SP_EVENT_COMPLETE;
+  InitMmFoundationSvcArgs->Arg4 = *Ret;
 }
 
 /**

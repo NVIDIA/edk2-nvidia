@@ -72,7 +72,7 @@
   NULL|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
 
   # Add support for GCC stack protector
-  NULL|MdePkg/Library/StackCheckLib/StackCheckLibStaticInit.inf
+  StackCheckLib|MdePkg/Library/StackCheckLib/StackCheckLib.inf
   StackCheckFailureHookLib|MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
 
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf

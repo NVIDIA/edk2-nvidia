@@ -34,6 +34,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <IndustryStandard/ArmStdSmc.h>
 #include <IndustryStandard/ArmMmSvc.h>
 #include <IndustryStandard/ArmFfaSvc.h>
+#include <ArmFfaSvcLegacy.h>
 
 #include <Include/libfdt.h>
 
@@ -67,11 +68,11 @@ PI_MM_CPU_DRIVER_ENTRYPOINT        CpuDriverEntryPoint = NULL;
 EFI_SECURE_PARTITION_BOOT_INFO     PayloadBootInfo;
 STATIC STMM_COMM_BUFFERS           StmmCommBuffers;
 
-STATIC CONST UINT32  mSpmMajorVer = SPM_MAJOR_VERSION;
-STATIC CONST UINT32  mSpmMinorVer = SPM_MINOR_VERSION;
+STATIC CONST UINT32  mSpmMajorVer = ARM_SPM_MM_SUPPORT_MAJOR_VERSION;
+STATIC CONST UINT32  mSpmMinorVer = ARM_SPM_MM_SUPPORT_MINOR_VERSION;
 
-STATIC CONST UINT32  mSpmMajorVerFfa = SPM_MAJOR_VERSION_FFA;
-STATIC CONST UINT32  mSpmMinorVerFfa = SPM_MINOR_VERSION_FFA;
+STATIC CONST UINT32  mSpmMajorVerFfa = ARM_FFA_LEGACY_MAJOR_VERSION;
+STATIC CONST UINT32  mSpmMinorVerFfa = ARM_FFA_LEGACY_MINOR_VERSION;
 
 STATIC CHAR8  Version[VERSION_STR_MAX];
 
@@ -801,7 +802,6 @@ DelegatedEventLoop (
 {
   EFI_STATUS  Status;
   UINTN       SvcStatus;
-  BOOLEAN     FfaEnabled;
   UINT16      SenderPartId;
   UINT16      ReceiverPartId;
 
@@ -821,120 +821,98 @@ DelegatedEventLoop (
     SenderPartId   = EventCompleteSvcArgs->Arg1 >> FFA_VMID_SHIFT;
     ReceiverPartId = EventCompleteSvcArgs->Arg1 & FFA_VMID_MASK;
 
-    FfaEnabled = FeaturePcdGet (PcdFfaEnable);
-    if (FfaEnabled) {
-      switch (EventCompleteSvcArgs->Arg3) {
-        case STMM_GET_NS_BUFFER:
-          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsBufferAddr;
-          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsBufferSize;
-          Status                     = EFI_SUCCESS;
-          break;
-        case STMM_GET_ERST_UNCACHED_BUFFER:
-          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstUncachedBufAddr;
-          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstUncachedBufSize;
-          Status                     = EFI_SUCCESS;
-          break;
-        case STMM_GET_PRM0_BUFFER:
-          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsPrm0BufferAddr;
-          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsPrm0BufferSize;
-          Status                     = EFI_SUCCESS;
-          break;
-        case STMM_GET_ERST_CACHED_BUFFER:
-          EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstCachedBufAddr;
-          EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstCachedBufSize;
-          Status                     = EFI_SUCCESS;
-          break;
-        case STMM_SATMC_EVENT:
-          if (EventCompleteSvcArgs->Arg6 == TH500_ERST_SW_IO_6_GIC_ID_SOCKET0) {
-            Status = GetErrorSerializationProtocol ();
-            if (ErrorSerializationProtocol != NULL) {
-              Status = ErrorSerializationProtocol->InterruptHandler (NULL, NULL, NULL, NULL);
-            }
-          } else {
-            Status = EFI_UNSUPPORTED;
+    switch (EventCompleteSvcArgs->Arg3) {
+      case STMM_GET_NS_BUFFER:
+        EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsBufferAddr;
+        EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsBufferSize;
+        Status                     = EFI_SUCCESS;
+        break;
+      case STMM_GET_ERST_UNCACHED_BUFFER:
+        EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstUncachedBufAddr;
+        EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstUncachedBufSize;
+        Status                     = EFI_SUCCESS;
+        break;
+      case STMM_GET_PRM0_BUFFER:
+        EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsPrm0BufferAddr;
+        EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsPrm0BufferSize;
+        Status                     = EFI_SUCCESS;
+        break;
+      case STMM_GET_ERST_CACHED_BUFFER:
+        EventCompleteSvcArgs->Arg5 = StmmCommBuffers.NsErstCachedBufAddr;
+        EventCompleteSvcArgs->Arg6 = StmmCommBuffers.NsErstCachedBufSize;
+        Status                     = EFI_SUCCESS;
+        break;
+      case STMM_SATMC_EVENT:
+        if (EventCompleteSvcArgs->Arg6 == TH500_ERST_SW_IO_6_GIC_ID_SOCKET0) {
+          Status = GetErrorSerializationProtocol ();
+          if (ErrorSerializationProtocol != NULL) {
+            Status = ErrorSerializationProtocol->InterruptHandler (NULL, NULL, NULL, NULL);
           }
-
-          break;
-        case ARM_SMC_ID_MM_COMMUNICATE_AARCH64:
-          if (SenderPartId == 0) {
-            Status = CpuDriverEntryPoint (
-                       EventCompleteSvcArgs->Arg0,
-                       EventCompleteSvcArgs->Arg6,
-                       EventCompleteSvcArgs->Arg5
-                       );
-            if (EFI_ERROR (Status)) {
-              DEBUG ((
-                DEBUG_ERROR,
-                "Failed delegated event 0x%x, Status 0x%x\n",
-                EventCompleteSvcArgs->Arg3,
-                Status
-                ));
-            }
-          } else {
-            Status = HandleSpComm (SenderPartId, (UINTN)EventCompleteSvcArgs->Arg5);
-            if (EFI_ERROR (Status)) {
-              DEBUG ((
-                DEBUG_ERROR,
-                "Secure SPComm Failed delegated event 0x%x, Status 0x%x\n",
-                EventCompleteSvcArgs->Arg3,
-                Status
-                ));
-            }
-          }
-
-          break;
-        default:
-          DEBUG ((DEBUG_ERROR, "Unknown DelegatedEvent request 0x%x\n", EventCompleteSvcArgs->Arg3));
+        } else {
           Status = EFI_UNSUPPORTED;
-          break;
-      }
-    } else {
-      Status = CpuDriverEntryPoint (
-                 EventCompleteSvcArgs->Arg0,
-                 EventCompleteSvcArgs->Arg3,
-                 EventCompleteSvcArgs->Arg1
-                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "Failed delegated event 0x%x, Status 0x%x\n",
-          EventCompleteSvcArgs->Arg0,
-          Status
-          ));
-      }
+        }
+
+        break;
+      case ARM_SMC_ID_MM_COMMUNICATE_AARCH64:
+        if (SenderPartId == 0) {
+          Status = CpuDriverEntryPoint (
+                     EventCompleteSvcArgs->Arg0,
+                     EventCompleteSvcArgs->Arg6,
+                     EventCompleteSvcArgs->Arg5
+                     );
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "Failed delegated event 0x%x, Status 0x%x\n",
+              EventCompleteSvcArgs->Arg3,
+              Status
+              ));
+          }
+        } else {
+          Status = HandleSpComm (SenderPartId, (UINTN)EventCompleteSvcArgs->Arg5);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((
+              DEBUG_ERROR,
+              "Secure SPComm Failed delegated event 0x%x, Status 0x%x\n",
+              EventCompleteSvcArgs->Arg3,
+              Status
+              ));
+          }
+        }
+
+        break;
+      default:
+        DEBUG ((DEBUG_ERROR, "Unknown DelegatedEvent request 0x%x\n", EventCompleteSvcArgs->Arg3));
+        Status = EFI_UNSUPPORTED;
+        break;
     }
 
     switch (Status) {
       case EFI_SUCCESS:
-        SvcStatus = ARM_SVC_SPM_RET_SUCCESS;
+        SvcStatus = ARM_SPM_MM_RET_SUCCESS;
         break;
       case EFI_INVALID_PARAMETER:
-        SvcStatus = ARM_SVC_SPM_RET_INVALID_PARAMS;
+        SvcStatus = ARM_SPM_MM_RET_INVALID_PARAMS;
         break;
       case EFI_ACCESS_DENIED:
-        SvcStatus = ARM_SVC_SPM_RET_DENIED;
+        SvcStatus = ARM_SPM_MM_RET_DENIED;
         break;
       case EFI_OUT_OF_RESOURCES:
-        SvcStatus = ARM_SVC_SPM_RET_NO_MEMORY;
+        SvcStatus = ARM_SPM_MM_RET_NO_MEMORY;
         break;
       case EFI_UNSUPPORTED:
-        SvcStatus = ARM_SVC_SPM_RET_NOT_SUPPORTED;
+        SvcStatus = ARM_SPM_MM_RET_NOT_SUPPORTED;
         break;
       default:
-        SvcStatus = ARM_SVC_SPM_RET_NOT_SUPPORTED;
+        SvcStatus = ARM_SPM_MM_RET_NOT_SUPPORTED;
         break;
     }
 
-    if (FfaEnabled) {
-      EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP;
-      EventCompleteSvcArgs->Arg1 = ReceiverPartId << FFA_VMID_SHIFT | SenderPartId;
-      EventCompleteSvcArgs->Arg2 = 0;
-      EventCompleteSvcArgs->Arg3 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-      EventCompleteSvcArgs->Arg4 = SvcStatus;
-    } else {
-      EventCompleteSvcArgs->Arg0 = ARM_SVC_ID_SP_EVENT_COMPLETE;
-      EventCompleteSvcArgs->Arg1 = SvcStatus;
-    }
+    EventCompleteSvcArgs->Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_RESP;
+    EventCompleteSvcArgs->Arg1 = ReceiverPartId << FFA_VMID_SHIFT | SenderPartId;
+    EventCompleteSvcArgs->Arg2 = 0;
+    EventCompleteSvcArgs->Arg3 = ARM_FID_SPM_MM_SP_EVENT_COMPLETE;
+    EventCompleteSvcArgs->Arg4 = SvcStatus;
   }
 }
 
@@ -958,17 +936,11 @@ GetSpmVersion (
   UINT32        SpmVersion;
   ARM_SVC_ARGS  SpmVersionArgs;
 
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    SpmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
-    SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
-    SpmVersionArgs.Arg1 |= (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
-    CallerSpmMajorVer    = mSpmMajorVerFfa;
-    CallerSpmMinorVer    = (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
-  } else {
-    SpmVersionArgs.Arg0 = ARM_SVC_ID_SPM_VERSION_AARCH32;
-    CallerSpmMajorVer   = mSpmMajorVer;
-    CallerSpmMinorVer   = mSpmMinorVer;
-  }
+  SpmVersionArgs.Arg0  = ARM_FID_FFA_VERSION;
+  SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
+  SpmVersionArgs.Arg1 |= (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
+  CallerSpmMajorVer    = mSpmMajorVerFfa;
+  CallerSpmMinorVer    = (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
 
   ArmCallSvc (&SpmVersionArgs);
 

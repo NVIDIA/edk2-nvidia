@@ -163,7 +163,6 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
   INF ShellPkg/Application/Shell/Shell.inf
-  INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
 
   #
   # Android Boot Support

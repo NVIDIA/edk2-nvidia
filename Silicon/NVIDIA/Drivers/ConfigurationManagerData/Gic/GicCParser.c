@@ -1,14 +1,13 @@
 /** @file
   GicC parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/NvCmObjectDescUtility.h>
 #include "GicParser.h"
-#include <Library/ArmGicLib.h>
 #include <Library/ArmLib/AArch64/AArch64Lib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MpCoreInfoLib.h>

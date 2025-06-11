@@ -37,6 +37,7 @@
 [LibraryClasses]
   BaseLib
   DebugLib
+  StackCheckLib
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   StandaloneMmMmuLib
@@ -50,7 +51,6 @@
   gEfiStandaloneMmDeviceMemoryRegions
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]
-  gArmTokenSpaceGuid.PcdFfaEnable
 
 #
 # This configuration fails for CLANGPDB, which does not support PIE in the GCC

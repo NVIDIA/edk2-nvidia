@@ -48,7 +48,6 @@
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy|0x00000002
 
 [PcdsFeatureFlag]
-  gArmTokenSpaceGuid.PcdFfaEnable|TRUE
   gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
   gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|TRUE

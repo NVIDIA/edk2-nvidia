@@ -78,7 +78,6 @@
   gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
 
 [PcdsFeatureFlag]
-  gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 
 [PcdsPatchableInModule]
 

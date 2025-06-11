@@ -55,7 +55,6 @@
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
 
 [PcdsFeatureFlag]
-  gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 
 [PcdsPatchableInModule]
   #

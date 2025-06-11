@@ -2,8 +2,8 @@
 
   FV block I/O protocol driver for RPMB eMMC accessed via OP-TEE
 
-  Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2020, Linaro Ltd. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -70,7 +70,7 @@ ReadWriteRpmb (
 
   ZeroMem (&SvcArgs, sizeof (SvcArgs));
 
-  SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ;
+  SvcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
   SvcArgs.Arg1 = mStorageId;
   SvcArgs.Arg2 = 0;
   SvcArgs.Arg3 = SvcAct;
@@ -93,23 +93,23 @@ ReadWriteRpmb (
   }
 
   switch (SvcArgs.Arg3) {
-    case ARM_SVC_SPM_RET_SUCCESS:
+    case ARM_SPM_MM_RET_SUCCESS:
       Status = EFI_SUCCESS;
       break;
 
-    case ARM_SVC_SPM_RET_NOT_SUPPORTED:
+    case ARM_SPM_MM_RET_NOT_SUPPORTED:
       Status = EFI_UNSUPPORTED;
       break;
 
-    case ARM_SVC_SPM_RET_INVALID_PARAMS:
+    case ARM_SPM_MM_RET_INVALID_PARAMS:
       Status = EFI_INVALID_PARAMETER;
       break;
 
-    case ARM_SVC_SPM_RET_DENIED:
+    case ARM_SPM_MM_RET_DENIED:
       Status = EFI_ACCESS_DENIED;
       break;
 
-    case ARM_SVC_SPM_RET_NO_MEMORY:
+    case ARM_SPM_MM_RET_NO_MEMORY:
       Status = EFI_OUT_OF_RESOURCES;
       break;
 

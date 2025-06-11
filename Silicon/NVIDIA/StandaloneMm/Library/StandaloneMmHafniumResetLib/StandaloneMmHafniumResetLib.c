@@ -1,7 +1,7 @@
 /** @file
 Reset Library for Standalone MM in Hafnium Deployments.
 
-SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -55,7 +55,7 @@ StMmHafniumL2Reset (
   /* Prepare FFA request */
   ZeroMem (&ArmSvcArgs, sizeof (ARM_SVC_ARGS));
 
-  ArmSvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  ArmSvcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
   ArmSvcArgs.Arg1 = ((UINTN)(STMM_VMID) << 16) | RASFW_VMID;
   ArmSvcArgs.Arg2 = 0;
   ArmSvcArgs.Arg3 = RAS_FW_MM_RESET_REQ;

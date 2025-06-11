@@ -3,7 +3,7 @@
 
   Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023- 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -13,7 +13,6 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
-#include <Library/ArmDisassemblerLib.h>
 #include <Library/SerialPortLib.h>
 
 #include <Protocol/DebugSupport.h>

@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
+[Defines]
+  UNIT_TESTING_ADDRESS_SANITIZER_ENABLE = FALSE
+
 !include UnitTestFrameworkPkg/UnitTestFrameworkPkgHost.dsc.inc
 !include Platform/NVIDIA/NVIDIA.global.dsc.inc
 

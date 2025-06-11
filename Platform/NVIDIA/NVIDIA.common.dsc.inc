@@ -173,7 +173,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   DefaultExceptionCallbackLib|ArmPkg/Library/DefaultExceptionCallbackLibNull/DefaultExceptionCallbackLibNull.inf
 !endif
   CpuExceptionHandlerLib|ArmPkg/Library/ArmExceptionLib/ArmExceptionLib.inf
-  ArmDisassemblerLib|ArmPkg/Library/ArmDisassemblerLib/ArmDisassemblerLib.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmPsciResetSystemLib/ArmPsciResetSystemLib.inf
@@ -638,7 +637,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   NULL|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
 
   # Add support for GCC stack protector
-  NULL|MdePkg/Library/StackCheckLib/StackCheckLibStaticInit.inf
+  StackCheckLib|MdePkg/Library/StackCheckLib/StackCheckLib.inf
   StackCheckFailureHookLib|MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
 
 
@@ -656,9 +655,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiMdePkgTokenSpaceGuid.PcdDriverDiagnosticsDisable|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdComponentName2Disable|FALSE
   gEfiMdePkgTokenSpaceGuid.PcdDriverDiagnostics2Disable|TRUE
-
-  # Use the Vector Table location in CpuDxe. We will not copy the Vector Table at PcdCpuVectorBaseAddress
-  gArmTokenSpaceGuid.PcdRelocateVectorTable|FALSE
 
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob|TRUE
 
@@ -702,10 +698,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
 !ifdef CONFIG_DEBUG_LEVEL_MENU_SUPPORT
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|TRUE
-!endif
-
-!ifdef CONFIG_SECURITY_MM_FFA
-  gArmTokenSpaceGuid.PcdFfaEnable|TRUE
 !endif
 
 !ifdef CONFIG_MEMORY_TEST

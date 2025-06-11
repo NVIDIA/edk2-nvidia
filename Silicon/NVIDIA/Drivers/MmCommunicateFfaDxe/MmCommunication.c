@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016-2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -108,7 +108,7 @@ SendFfaDirectReqStMm (
 
   StmmFfaSmc (&LocalArgs);
 
-  if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+  if (LocalArgs.Arg0 != ARM_FID_FFA_MSG_SEND_DIRECT_RESP) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: Invalid Response Arg0:0x%x, Arg1:0x%x, Arg2:0x%x, Arg3:0x%x\n",
@@ -132,7 +132,7 @@ SendFfaDirectReqStMm (
       CopyMem ((VOID *)&LocalArgs, (VOID *)Args, sizeof (ARM_SMC_ARGS));
       StmmFfaSmc (&LocalArgs);
 
-      if (LocalArgs.Arg0 != ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64) {
+      if (LocalArgs.Arg0 != ARM_FID_FFA_MSG_SEND_DIRECT_RESP) {
         DEBUG ((
           DEBUG_ERROR,
           "%a:%d Invalid Response Arg0:0x%x, Arg1:0x%x, Arg2:0x%x, Arg3:0x%x\n",
@@ -267,42 +267,27 @@ MmCommunication2Communicate (
   // Copy Communication Payload
   CopyMem ((VOID *)CommBuffMemRegion->VirtualBase, CommBufferVirtual, BufferSize);
 
-  // Use the FF-A interface if enabled.
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    // FF-A Interface ID for direct message communication
-    CommunicateSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  // FF-A Interface ID for direct message communication
+  CommunicateSmcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
 
-    // FF-A Destination EndPoint ID, not used as of now
-    CommunicateSmcArgs.Arg1 = StmmVmId;
+  // FF-A Destination EndPoint ID, not used as of now
+  CommunicateSmcArgs.Arg1 = StmmVmId;
 
-    // Reserved for future use(MBZ)
-    CommunicateSmcArgs.Arg2 = 0x0;
+  // Reserved for future use(MBZ)
+  CommunicateSmcArgs.Arg2 = 0x0;
 
-    // Arg3 onwards are the IMPLEMENTATION DEFINED FF-A parameters
-    // SMC Function ID
-    CommunicateSmcArgs.Arg3 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
+  // Arg3 onwards are the IMPLEMENTATION DEFINED FF-A parameters
+  // SMC Function ID
+  CommunicateSmcArgs.Arg3 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
 
-    // Cookie
-    CommunicateSmcArgs.Arg4 = 0x0;
+  // Cookie
+  CommunicateSmcArgs.Arg4 = 0x0;
 
-    // comm_buffer_address (64-bit physical address)
-    CommunicateSmcArgs.Arg5 = (UINTN)CommBuffMemRegion->PhysicalBase;
+  // comm_buffer_address (64-bit physical address)
+  CommunicateSmcArgs.Arg5 = (UINTN)CommBuffMemRegion->PhysicalBase;
 
-    // comm_size_address (not used, indicated by setting to zero)
-    CommunicateSmcArgs.Arg6 = 0;
-  } else {
-    // SMC Function ID
-    CommunicateSmcArgs.Arg0 = ARM_SMC_ID_MM_COMMUNICATE_AARCH64;
-
-    // Cookie
-    CommunicateSmcArgs.Arg1 = 0;
-
-    // comm_buffer_address (64-bit physical address)
-    CommunicateSmcArgs.Arg2 = (UINTN)CommBuffMemRegion->PhysicalBase;
-
-    // comm_size_address (not used, indicated by setting to zero)
-    CommunicateSmcArgs.Arg3 = 0;
-  }
+  // comm_size_address (not used, indicated by setting to zero)
+  CommunicateSmcArgs.Arg6 = 0;
 
   Status = SendFfaDirectReqStMm (&CommunicateSmcArgs);
   if (EFI_ERROR (Status)) {
@@ -310,11 +295,7 @@ MmCommunication2Communicate (
     goto ExitMmCommunication2Communicate;
   }
 
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    Ret = CommunicateSmcArgs.Arg2;
-  } else {
-    Ret = CommunicateSmcArgs.Arg0;
-  }
+  Ret = CommunicateSmcArgs.Arg2;
 
   switch (Ret) {
     case ARM_SMC_MM_RET_SUCCESS:
@@ -504,14 +485,9 @@ GetMmCompatibility (
     return EFI_UNSUPPORTED;
   }
 
-  if (FeaturePcdGet (PcdFfaEnable)) {
-    MmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
-    MmVersionArgs.Arg1  = MM_CALLER_MAJOR_VER << MM_MAJOR_VER_SHIFT;
-    MmVersionArgs.Arg1 |= MM_CALLER_MINOR_VER;
-  } else {
-    // MM_VERSION uses SMC32 calling conventions
-    MmVersionArgs.Arg0 = ARM_SMC_ID_MM_VERSION_AARCH32;
-  }
+  MmVersionArgs.Arg0  = ARM_FID_FFA_VERSION;
+  MmVersionArgs.Arg1  = MM_CALLER_MAJOR_VER << MM_MAJOR_VER_SHIFT;
+  MmVersionArgs.Arg1 |= MM_CALLER_MINOR_VER;
 
   ArmCallSmc (&MmVersionArgs);
 
@@ -836,7 +812,7 @@ FfaAllocateAndMapRxTxBuffers (
 
   ArmCallSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_MAP failed: 0x%x\n",
@@ -885,7 +861,7 @@ FfaFreeRxTxBuffers (
 
   ArmCallSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RXTX_UNMAP failed: 0x%x\n",
@@ -919,7 +895,7 @@ GetBufferAddr (
   ZeroMem (&ArmSmcArgs, sizeof (ARM_SMC_ARGS));
   Status = EFI_SUCCESS;
 
-  ArmSmcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  ArmSmcArgs.Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_REQ;
   ArmSmcArgs.Arg1 = StmmVmId;
   ArmSmcArgs.Arg3 = BufferId;
 
@@ -1068,7 +1044,7 @@ FfaReleaseRxBuffer (
 
   ArmCallSmc (&ArmSmcArgs);
 
-  if (ArmSmcArgs.Arg2 != ARM_FFA_SPM_RET_SUCCESS) {
+  if (ArmSmcArgs.Arg2 != ARM_FFA_RET_SUCCESS) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: ARM_SVC_ID_FFA_RX_RELEASE failed: 0x%x\n",
