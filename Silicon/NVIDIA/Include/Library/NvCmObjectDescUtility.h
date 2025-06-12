@@ -1,7 +1,7 @@
 /** @file
   Nvidia's Configuration manager Object Descriptor Utility.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021, ARM Limited. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -28,6 +28,7 @@ typedef struct CacheInfoNode {
   UINT32                           Socket;
   UINT32                           Cluster;
   UINT32                           Core;
+  BOOLEAN                          IsPrivateRoot;
 } CACHE_NODE;
 
 /** Create a CM_OBJ_DESCRIPTOR.

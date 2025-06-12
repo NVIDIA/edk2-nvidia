@@ -1,7 +1,7 @@
 /** @file
   Cache info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -377,7 +377,8 @@ GeneratePrivateDataForPosition (
 
     if ((Node->Socket == Socket) &&
         (Node->Cluster == Cluster) &&
-        (Node->Core == Core))
+        (Node->Core == Core) &&
+        (Node->IsPrivateRoot))
     {
       PrivateCount++;
     }
@@ -404,7 +405,8 @@ GeneratePrivateDataForPosition (
 
     if ((Node->Socket == Socket) &&
         (Node->Cluster == Cluster) &&
-        (Node->Core == Core))
+        (Node->Core == Core) &&
+        (Node->IsPrivateRoot))
     {
       PrivateData[PrivateDataIndex] = Node->Token;
       PrivateDataIndex++;
@@ -598,10 +600,11 @@ CreateCacheNodeFromOffset (
     return Status;
   }
 
-  Node->Token   = Token;
-  Node->Socket  = Socket;
-  Node->Cluster = Cluster;
-  Node->Core    = Core;
+  Node->Token         = Token;
+  Node->Socket        = Socket;
+  Node->Cluster       = Cluster;
+  Node->Core          = Core;
+  Node->IsPrivateRoot = TRUE;  // Set to true here will update later if is a not a root node
 
   return Status;
 }
@@ -907,12 +910,10 @@ FixupSocketClusterCoreFields (
     return EFI_INVALID_PARAMETER;
   }
 
-  // Go through all the L1 entries, and propagate their Socket/Cluster/Core info upward
+  // Go through all the L1 d-cache entries, and propagate their Socket/Cluster/Core info upward
   for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++) {
     Node = &CacheTracker->CacheNodes[Index];
-    if ((Node->CacheData.Type != CACHE_TYPE_DCACHE) &&
-        (Node->CacheData.Type != CACHE_TYPE_ICACHE))
-    {
+    if (Node->CacheData.Type != CACHE_TYPE_DCACHE) {
       continue;
     }
 
@@ -955,6 +956,34 @@ FixupSocketClusterCoreFields (
             Next->Core    = UNUSED_CORE;
           }
         }
+      }
+
+      // Follow the chain up
+      Node = Next;
+      Next = FindpHandleInTracker (Next->CacheData.NextLevelCache, CacheTracker);
+    }
+  }
+
+  // Go through all the L1 d-cache entries, and propagate the next level cache and private root
+  // information upwards.
+  for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++) {
+    Node = &CacheTracker->CacheNodes[Index];
+    if (Node->CacheData.Type != CACHE_TYPE_DCACHE) {
+      continue;
+    }
+
+    Next = FindpHandleInTracker (Node->CacheData.NextLevelCache, CacheTracker);
+
+    // Trace the chain up from this Node
+    while (Next != NULL) {
+      if ((Next->Socket == Node->Socket) &&
+          (Next->Cluster == Node->Cluster) &&
+          (Next->Core == Node->Core))
+      {
+        Next->IsPrivateRoot = FALSE;
+      } else {
+        // break the link as this is shared
+        Node->CacheData.NextLevelCache = 0;
       }
 
       // Follow the chain up
