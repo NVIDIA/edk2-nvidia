@@ -76,13 +76,14 @@ STATIC UINT32  TH500ScfCacheDisableScratchShift[MAX_SCF_CACHE_DISABLE_WORDS] = {
 };
 
 STATIC TEGRA_FLOOR_SWEEPING_SCF_CACHE  TH500ScfCacheInfo = {
-  .ScfDisableWords      = MAX_SCF_CACHE_DISABLE_WORDS,
-  .ScfDisableSocketBase = TH500SocketScratchBaseAddr,
-  .ScfDisableOffset     = TH500ScfCacheDisableScratchOffset,
-  .ScfDisableMask       = TH500ScfCacheDisableScratchMask,
-  .ScfDisableShift      = TH500ScfCacheDisableScratchShift,
-  .ScfSliceSize         = SCF_CACHE_SLICE_SIZE,
-  .ScfSliceSets         = SCF_CACHE_SLICE_SETS,
+  .MaxScfCacheCountPerSocket = TH500_SCF_CACHE_INSTANCES_PER_SOCKET,
+  .ScfDisableWords           = MAX_SCF_CACHE_DISABLE_WORDS,
+  .ScfDisableSocketBase      = TH500SocketScratchBaseAddr,
+  .ScfDisableOffset          = TH500ScfCacheDisableScratchOffset,
+  .ScfDisableMask            = TH500ScfCacheDisableScratchMask,
+  .ScfDisableShift           = TH500ScfCacheDisableScratchShift,
+  .ScfSliceSize              = SCF_CACHE_SLICE_SIZE,
+  .ScfSliceSets              = SCF_CACHE_SLICE_SETS,
 };
 
 TEGRA_MMIO_INFO  TH500MmioInfo[] = {

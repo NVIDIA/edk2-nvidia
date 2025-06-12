@@ -490,7 +490,6 @@ CommonFloorSweepScfCache (
   )
 {
   UINTN                                 Socket;
-  UINTN                                 CoresPerSocket;
   UINTN                                 ScfCacheCount;
   UINT32                                ScfCacheSize;
   UINT32                                ScfCacheSets;
@@ -511,17 +510,13 @@ CommonFloorSweepScfCache (
     return EFI_SUCCESS;
   }
 
-  CoresPerSocket = ((PLATFORM_MAX_CLUSTERS * PLATFORM_MAX_CORES_PER_CLUSTER) /
-                    PLATFORM_MAX_SOCKETS);
-
   // SCF Cache is distributed as l3-cache over all possible sockets
   for (Socket = 0; Socket < PLATFORM_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
     }
 
-    // total number of scf cache elements per socket is same as CPU cores
-    ScfCacheCount = CoresPerSocket;
+    ScfCacheCount = Scf->MaxScfCacheCountPerSocket;
     UINT64  ScratchBase = Scf->ScfDisableSocketBase[Socket];
     UINTN   ScfScratchWord;
 

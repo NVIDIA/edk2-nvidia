@@ -140,6 +140,7 @@ typedef struct {
 } TEGRA_FLOOR_SWEEPING_IP_ENTRY;
 
 typedef struct {
+  UINT32    MaxScfCacheCountPerSocket;
   UINT32    ScfDisableWords;
   UINT64    *ScfDisableSocketBase;
   UINT32    *ScfDisableOffset;
