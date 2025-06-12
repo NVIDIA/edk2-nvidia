@@ -16,9 +16,10 @@
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/HiiLib.h>
-#include <Library/ArmGicLib.h>
 #include <Library/PcdLib.h>
+#include <Library/ArmLib.h>
 #include <Protocol/FdtClient.h>
+#include <Library/IoLib.h>
 
 //
 // Used for ShellCommandLineParseEx only
@@ -30,7 +31,6 @@ SHELL_PARAM_ITEM  mGicUtilParamList[] = {
   { L"--enable",   TypeValue },
   { L"--disable",  TypeValue },
   { L"--priority", TypeValue },
-  { L"--sgi",      TypeValue },
   { L"--status",   TypeValue },
   { L"-?",         TypeFlag  },
   { NULL,          TypeMax   },
@@ -39,13 +39,46 @@ SHELL_PARAM_ITEM  mGicUtilParamList[] = {
 EFI_HII_HANDLE  mHiiHandle;
 CHAR16          mAppName[] = L"GicUtil";
 
+// GIC Distributor
+#define ARM_GIC_ICDISER  0x100        // Interrupt Set-Enable Registers
+#define ARM_GIC_ICDICER  0x180        // Interrupt Clear-Enable Registers
+#define ARM_GIC_ICDIPR   0x400        // Interrupt Priority Registers
+
+// GIC Redistributor
+#define ARM_GICR_CTLR_FRAME_SIZE          SIZE_64KB
+#define ARM_GICR_SGI_PPI_FRAME_SIZE       SIZE_64KB
+#define ARM_GICR_SGI_VLPI_FRAME_SIZE      SIZE_64KB
+#define ARM_GICR_SGI_RESERVED_FRAME_SIZE  SIZE_64KB
+
+// GIC Redistributor Control frame
+#define ARM_GICR_TYPER  0x0008          // Redistributor Type Register
+
+// GIC SGI & PPI Redistributor frame
+#define ARM_GICR_ISENABLER  0x0100      // Interrupt Set-Enable Registers
+#define ARM_GICR_ICENABLER  0x0180      // Interrupt Clear-Enable Registers
+
+#define ARM_GICR_TYPER_LAST      (1 << 4)                 // Last Redistributor in series
+#define ARM_GICR_TYPER_AFFINITY  (0xFFFFFFFFULL << 32)    // Redistributor Affinity
+
+#define ARM_GICR_TYPER_GET_AFFINITY(TypeReg)  (((TypeReg) & \
+                                                ARM_GICR_TYPER_AFFINITY) >> 32)
+
 #define MACH_VIRT_GICD_BASE  0x08000000  // MACH_VIRT_PERIPH_BASE for GICD
 #define MACH_VIRT_GICR_BASE  0x080A0000  // MACH_VIRT_PERIPH_BASE + 0xA0000 for GICR
 
 // GIC Base addresses from PCD
 EFI_PHYSICAL_ADDRESS  GicDistributorBase;
 EFI_PHYSICAL_ADDRESS  GicRedistributorBase;
-EFI_PHYSICAL_ADDRESS  GicInterruptInterfaceBase;
+
+// Helper macros for GIC register access
+#define ISENABLER_ADDRESS(base, offset)  ((base) +\
+          ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_ISENABLER + 4 * (offset))
+
+#define ICENABLER_ADDRESS(base, offset)  ((base) +\
+          ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_ICENABLER + 4 * (offset))
+
+#define IPRIORITY_ADDRESS(base, offset)  ((base) +\
+          ARM_GICR_CTLR_FRAME_SIZE + ARM_GIC_ICDIPR + 4 * (offset))
 
 /**
   Print GIC information
@@ -55,48 +88,66 @@ PrintGicInfo (
   VOID
   )
 {
-  UINT32                 InterfaceId;
-  UINTN                  MaxInterrupts;
-  ARM_GIC_ARCH_REVISION  Revision;
-
-  Revision = ArmGicGetSupportedArchRevision ();
-
   ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_PROTOCOL_FOUND), mHiiHandle, mAppName);
 
   // Print GIC architecture revision
-  ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_REVISION), mHiiHandle, mAppName, Revision);
+  ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_REVISION), mHiiHandle, mAppName, 3);
 
   // Print GIC distributor base
   ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_DIST_BASE), mHiiHandle, mAppName, GicDistributorBase);
 
-  // Print GIC redistributor base (for GICv3+)
-  if (Revision >= ARM_GIC_ARCH_REVISION_3) {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_REDIST_BASE), mHiiHandle, mAppName, GicRedistributorBase);
-  }
+  // Print GIC redistributor base
+  ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_REDIST_BASE), mHiiHandle, mAppName, GicRedistributorBase);
+}
 
-  // Print GIC CPU interface base (for GICv2)
-  if (Revision == ARM_GIC_ARCH_REVISION_2) {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INTERFACE_BASE), mHiiHandle, mAppName, GicInterruptInterfaceBase);
+/**
+  Return whether the Source interrupt index refers to a shared interrupt (SPI)
+**/
+STATIC
+BOOLEAN
+SourceIsSpi (
+  IN UINTN  Source
+  )
+{
+  return Source >= 32 && Source < 1020;
+}
 
-    // For GICv2, get the interface ID
-    InterfaceId = ArmGicGetInterfaceIdentification (GicInterruptInterfaceBase);
-    ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GIC_UTIL_INTERFACE_ID),
-      mHiiHandle,
-      mAppName,
-      ARM_GIC_ICCIIDR_GET_PRODUCT_ID (InterfaceId),
-      ARM_GIC_ICCIIDR_GET_ARCH_VERSION (InterfaceId),
-      ARM_GIC_ICCIIDR_GET_REVISION (InterfaceId),
-      ARM_GIC_ICCIIDR_GET_IMPLEMENTER (InterfaceId)
-      );
-  }
+/**
+  Return the base address of the GIC redistributor for the current CPU
+**/
+STATIC
+UINTN
+GicGetCpuRedistributorBase (
+  IN UINTN  GicRedistributorBase
+  )
+{
+  UINTN   MpId;
+  UINTN   CpuAffinity;
+  UINTN   Affinity;
+  UINTN   GicCpuRedistributorBase;
+  UINT64  TypeRegister;
 
-  // Get and print maximum number of interrupts
-  MaxInterrupts = ArmGicGetMaxNumInterrupts (GicDistributorBase);
-  ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_MAX_INT), mHiiHandle, mAppName, MaxInterrupts);
+  MpId = ArmReadMpidr ();
+  // Define CPU affinity as:
+  // Affinity0[0:8], Affinity1[9:15], Affinity2[16:23], Affinity3[24:32]
+  // whereas Affinity3 is defined at [32:39] in MPIDR
+  CpuAffinity = (MpId & (ARM_CORE_AFF0 | ARM_CORE_AFF1 | ARM_CORE_AFF2)) |
+                ((MpId & ARM_CORE_AFF3) >> 8);
+
+  GicCpuRedistributorBase = GicRedistributorBase;
+
+  do {
+    TypeRegister = MmioRead64 (GicCpuRedistributorBase + ARM_GICR_TYPER);
+    Affinity     = ARM_GICR_TYPER_GET_AFFINITY (TypeRegister);
+    if (Affinity == CpuAffinity) {
+      return GicCpuRedistributorBase;
+    }
+
+    // Move to the next GIC Redistributor frame
+    GicCpuRedistributorBase += ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_SGI_PPI_FRAME_SIZE;
+  } while ((TypeRegister & ARM_GICR_TYPER_LAST) == 0);
+
+  return 0;
 }
 
 /**
@@ -109,8 +160,33 @@ EnableInterrupt (
   IN UINTN  InterruptId
   )
 {
-  // Enable the interrupt
-  ArmGicEnableInterrupt (GicDistributorBase, GicRedistributorBase, InterruptId);
+  UINT32  RegOffset;
+  UINT8   RegShift;
+  UINTN   GicCpuRedistributorBase;
+
+  // Calculate enable register offset and bit position
+  RegOffset = (UINT32)(InterruptId / 32);
+  RegShift  = (UINT8)(InterruptId % 32);
+
+  if (SourceIsSpi (InterruptId)) {
+    // Write set-enable register
+    MmioWrite32 (
+      GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset),
+      1 << RegShift
+      );
+  } else {
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase);
+    if (GicCpuRedistributorBase == 0) {
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_ERROR), mHiiHandle, mAppName, EFI_NOT_FOUND);
+      return;
+    }
+
+    // Write set-enable register
+    MmioWrite32 (
+      ISENABLER_ADDRESS (GicCpuRedistributorBase, RegOffset),
+      1 << RegShift
+      );
+  }
 
   ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_ENABLE_INT), mHiiHandle, mAppName, InterruptId);
 }
@@ -125,8 +201,33 @@ DisableInterrupt (
   IN UINTN  InterruptId
   )
 {
-  // Disable the interrupt
-  ArmGicDisableInterrupt (GicDistributorBase, GicRedistributorBase, InterruptId);
+  UINT32  RegOffset;
+  UINT8   RegShift;
+  UINTN   GicCpuRedistributorBase;
+
+  // Calculate enable register offset and bit position
+  RegOffset = (UINT32)(InterruptId / 32);
+  RegShift  = (UINT8)(InterruptId % 32);
+
+  if (SourceIsSpi (InterruptId)) {
+    // Write clear-enable register
+    MmioWrite32 (
+      GicDistributorBase + ARM_GIC_ICDICER + (4 * RegOffset),
+      1 << RegShift
+      );
+  } else {
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase);
+    if (GicCpuRedistributorBase == 0) {
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_ERROR), mHiiHandle, mAppName, EFI_NOT_FOUND);
+      return;
+    }
+
+    // Write clear-enable register
+    MmioWrite32 (
+      ICENABLER_ADDRESS (GicCpuRedistributorBase, RegOffset),
+      1 << RegShift
+      );
+  }
 
   ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_DISABLE_INT), mHiiHandle, mAppName, InterruptId);
 }
@@ -146,6 +247,9 @@ SetInterruptPriority (
   CHAR16  *TempStr;
   UINTN   InterruptId;
   UINTN   Priority;
+  UINT32  RegOffset;
+  UINT8   RegShift;
+  UINTN   GicCpuRedistributorBase;
 
   // Make a copy of the parameter string
   TempStr = AllocateCopyPool (StrSize (ParamStr), ParamStr);
@@ -179,8 +283,30 @@ SetInterruptPriority (
     return;
   }
 
-  // Set the interrupt priority
-  ArmGicSetInterruptPriority (GicDistributorBase, GicRedistributorBase, InterruptId, Priority);
+  // Calculate register offset and bit position
+  RegOffset = (UINT32)(InterruptId / 4);
+  RegShift  = (UINT8)((InterruptId % 4) * 8);
+
+  if (SourceIsSpi (InterruptId)) {
+    MmioAndThenOr32 (
+      GicDistributorBase + ARM_GIC_ICDIPR + (4 * RegOffset),
+      ~(0xff << RegShift),
+      Priority << RegShift
+      );
+  } else {
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase);
+    if (GicCpuRedistributorBase == 0) {
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_ERROR), mHiiHandle, mAppName, EFI_NOT_FOUND);
+      FreePool (TempStr);
+      return;
+    }
+
+    MmioAndThenOr32 (
+      IPRIORITY_ADDRESS (GicCpuRedistributorBase, RegOffset),
+      ~(0xff << RegShift),
+      Priority << RegShift
+      );
+  }
 
   ShellPrintHiiEx (
     -1,
@@ -197,151 +323,56 @@ SetInterruptPriority (
 }
 
 /**
-  Trigger a Software Generated Interrupt (SGI)
-
-  @param[in] ParamStr   Parameter string in format "SGIID,TargetList,Filter"
-                        Where Filter is: 0=TargetList, 1=AllExceptSelf, 2=Self
-**/
-VOID
-SendSgi (
-  IN CONST CHAR16  *ParamStr
-  )
-{
-  CHAR16  *StrSgiId;
-  CHAR16  *StrTargetList;
-  CHAR16  *StrFilter;
-  CHAR16  *TempStr;
-  CHAR16  *TempPtr;
-  UINT8   SgiId;
-  UINT8   TargetList;
-  UINT8   Filter;
-  UINTN   ReceivedInterruptId;
-  UINTN   RegisterValue;
-
-  // Make a copy of the parameter string
-  TempStr = AllocateCopyPool (StrSize (ParamStr), ParamStr);
-  if (TempStr == NULL) {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_OUT_OF_RESOURCES), mHiiHandle, mAppName);
-    return;
-  }
-
-  // Parse the parameter string
-  StrSgiId      = TempStr;
-  StrTargetList = StrStr (TempStr, L",");
-
-  if (StrTargetList == NULL) {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INVALID_PARAM), mHiiHandle, mAppName);
-    FreePool (TempStr);
-    return;
-  }
-
-  // Replace first comma with NULL to split the string
-  *StrTargetList = L'\0';
-  StrTargetList++;
-
-  // Find the second comma for the filter
-  StrFilter = StrStr (StrTargetList, L",");
-
-  if (StrFilter == NULL) {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INVALID_PARAM), mHiiHandle, mAppName);
-    FreePool (TempStr);
-    return;
-  }
-
-  // Replace second comma with NULL
-  *StrFilter = L'\0';
-  StrFilter++;
-
-  // Convert string parameters to integers
-  SgiId      = (UINT8)ShellStrToUintn (StrSgiId);
-  TargetList = (UINT8)ShellStrToUintn (StrTargetList);
-  Filter     = (UINT8)ShellStrToUintn (StrFilter);
-
-  // Validate parameters, SGI ID must be between 0 and 15, Filter must be between 0 and 2, and the parameters must not have conversion errors
-  if ((SgiId > 15) || (Filter > 2) ||
-      ((SgiId == 0) && (StrSgiId[0] != L'0')) ||
-      ((TargetList == 0) && (StrTargetList[0] != L'0')) ||
-      ((Filter == 0) && (StrFilter[0] != L'0')))
-  {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INVALID_PARAM), mHiiHandle, mAppName);
-    FreePool (TempStr);
-    return;
-  }
-
-  // Send the SGI
-  ArmGicSendSgiTo (GicDistributorBase, Filter, TargetList, SgiId);
-
-  // Print the operation that occurred
-  if (Filter == ARM_GIC_ICDSGIR_FILTER_TARGETLIST) {
-    TempPtr = L"TargetList";
-  } else if (Filter == ARM_GIC_ICDSGIR_FILTER_EVERYONEELSE) {
-    TempPtr = L"EveryoneElse";
-  } else {
-    TempPtr = L"Self";
-  }
-
-  ShellPrintHiiEx (
-    -1,
-    -1,
-    NULL,
-    STRING_TOKEN (STR_GIC_UTIL_SEND_SGI),
-    mHiiHandle,
-    mAppName,
-    SgiId,
-    TargetList,
-    TempPtr
-    );
-
-  // Check if the SGI was acknowledged
-  if (Filter == ARM_GIC_ICDSGIR_FILTER_ITSELF) {
-    // If we're sending to self, we can check acknowledgement
-    RegisterValue = ArmGicAcknowledgeInterrupt (GicInterruptInterfaceBase, &ReceivedInterruptId);
-
-    ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GIC_UTIL_INT_ACK),
-      mHiiHandle,
-      mAppName,
-      ReceivedInterruptId,
-      RegisterValue
-      );
-
-    // End the interrupt (required after acknowledging)
-    ArmGicEndOfInterrupt (GicInterruptInterfaceBase, RegisterValue);
-  } else {
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_NO_ACK), mHiiHandle, mAppName);
-  }
-
-  FreePool (TempStr);
-}
-
-/**
   Check if an interrupt is enabled
 
   @param[in] InterruptId   The interrupt ID to check
+  @return TRUE if the interrupt is enabled, FALSE otherwise
 **/
-VOID
+BOOLEAN
 CheckInterruptStatus (
   IN UINTN  InterruptId
   )
 {
+  UINT32   RegOffset;
+  UINT8    RegShift;
+  UINTN    GicCpuRedistributorBase;
+  UINT32   Interrupts;
   BOOLEAN  IsEnabled;
 
-  // Check if the interrupt is enabled
-  IsEnabled = ArmGicIsInterruptEnabled (GicDistributorBase, GicRedistributorBase, InterruptId);
+  // Calculate enable register offset and bit position
+  RegOffset = (UINT32)(InterruptId / 32);
+  RegShift  = (UINT8)(InterruptId % 32);
+
+  if (SourceIsSpi (InterruptId)) {
+    Interrupts = MmioRead32 (
+                   GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset)
+                   );
+  } else {
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase);
+    if (GicCpuRedistributorBase == 0) {
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_ERROR), mHiiHandle, mAppName, EFI_NOT_FOUND);
+      return FALSE;
+    }
+
+    // Read set-enable register
+    Interrupts = MmioRead32 (
+                   ISENABLER_ADDRESS (GicCpuRedistributorBase, RegOffset)
+                   );
+  }
+
+  IsEnabled = ((Interrupts & (1 << RegShift)) != 0);
 
   if (IsEnabled) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INT_ENABLED), mHiiHandle, mAppName, InterruptId);
   } else {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_INT_DISABLED), mHiiHandle, mAppName, InterruptId);
   }
+
+  return IsEnabled;
 }
 
 /**
   Detect GIC addresses from Device Tree if available
-  Based on edk2/ArmVirtPkg/Library/ArmVirtGicArchLib/ArmVirtGicArchLib.c
 **/
 EFI_STATUS
 DetectGicAddressesFromDeviceTree (
@@ -352,7 +383,6 @@ DetectGicAddressesFromDeviceTree (
   CONST UINT64         *Reg;
   UINT32               RegSize;
   UINTN                AddressCells, SizeCells;
-  UINTN                GicRevision;
   EFI_STATUS           Status;
 
   // Try to locate the FDT Client Protocol
@@ -366,63 +396,30 @@ DetectGicAddressesFromDeviceTree (
     return Status;
   }
 
-  // First try to find GICv3
-  GicRevision = 3;
-  Status      = FdtClient->FindCompatibleNodeReg (
-                             FdtClient,
-                             "arm,gic-v3",
-                             (CONST VOID **)&Reg,
-                             &AddressCells,
-                             &SizeCells,
-                             &RegSize
-                             );
-
-  // If not found, try GICv2
-  if (Status == EFI_NOT_FOUND) {
-    GicRevision = 2;
-    Status      = FdtClient->FindCompatibleNodeReg (
-                               FdtClient,
-                               "arm,cortex-a15-gic",
-                               (CONST VOID **)&Reg,
-                               &AddressCells,
-                               &SizeCells,
-                               &RegSize
-                               );
-  }
+  // Find GICv3 node
+  Status = FdtClient->FindCompatibleNodeReg (
+                        FdtClient,
+                        "arm,gic-v3",
+                        (CONST VOID **)&Reg,
+                        &AddressCells,
+                        &SizeCells,
+                        &RegSize
+                        );
 
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_NO_GIC_NODE), mHiiHandle, mAppName, Status);
     return Status;
   }
 
-  switch (GicRevision) {
-    case 3:
-      // For GICv3, first pair is distributor, second is redistributor
-      if (RegSize < 32) {
-        return EFI_INVALID_PARAMETER;
-      }
-
-      GicDistributorBase   = SwapBytes64 (Reg[0]);
-      GicRedistributorBase = SwapBytes64 (Reg[2]);
-
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_FOUND_GICV3), mHiiHandle, mAppName, GicDistributorBase, GicRedistributorBase);
-      break;
-
-    case 2:
-      // For GICv2, first pair is distributor, second is CPU interface
-      if ((RegSize != 32) && (RegSize != 64)) {
-        return EFI_INVALID_PARAMETER;
-      }
-
-      GicDistributorBase        = SwapBytes64 (Reg[0]);
-      GicInterruptInterfaceBase = SwapBytes64 (Reg[2]);
-
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_FOUND_GICV2), mHiiHandle, mAppName, GicDistributorBase, GicInterruptInterfaceBase);
-      break;
-
-    default:
-      return EFI_UNSUPPORTED;
+  // For GICv3, first pair is distributor, second is redistributor
+  if (RegSize < 32) {
+    return EFI_INVALID_PARAMETER;
   }
+
+  GicDistributorBase   = SwapBytes64 (Reg[0]);
+  GicRedistributorBase = SwapBytes64 (Reg[2]);
+
+  ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_FOUND_GICV3), mHiiHandle, mAppName, GicDistributorBase, GicRedistributorBase);
 
   return EFI_SUCCESS;
 }
@@ -445,9 +442,8 @@ InitializeGicBaseAddresses (
   }
 
   // If Device Tree detection failed, fall back to values from PcdGet
-  GicDistributorBase        = PcdGet64 (PcdGicDistributorBase);
-  GicRedistributorBase      = PcdGet64 (PcdGicRedistributorsBase);
-  GicInterruptInterfaceBase = PcdGet64 (PcdGicInterruptInterfaceBase);
+  GicDistributorBase   = PcdGet64 (PcdGicDistributorBase);
+  GicRedistributorBase = PcdGet64 (PcdGicRedistributorsBase);
 
   // If addresses are not valid or not aligned to 4KB, use hardcoded values that are known to work with edk2 virt
   if ((GicDistributorBase == 0) || !IS_ALIGNED (GicDistributorBase, SIZE_4KB)) {
@@ -544,7 +540,7 @@ InitializeGicUtil (
     EnableInterrupt (9);
 
     // Verify interrupt 9 is enabled
-    IsEnabled = ArmGicIsInterruptEnabled (GicDistributorBase, GicRedistributorBase, 9);
+    IsEnabled = CheckInterruptStatus (9);
     if (!IsEnabled) {
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_FAILED), mHiiHandle, mAppName, 1);
       TestPassed = FALSE;
@@ -556,25 +552,23 @@ InitializeGicUtil (
     SetInterruptPriority (L"9,1");
 
     // Test case 3: Check if interrupt 9 is enabled
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 4, L"Verify interrupt 9 is enabled");
-    CheckInterruptStatus (9);
-    IsEnabled = ArmGicIsInterruptEnabled (GicDistributorBase, GicRedistributorBase, 9);
+    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 3, L"Verify interrupt 9 is enabled");
+    IsEnabled = CheckInterruptStatus (9);
     if (!IsEnabled) {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_FAILED), mHiiHandle, mAppName, 4);
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_FAILED), mHiiHandle, mAppName, 3);
       TestPassed = FALSE;
       goto TestDone;
     }
 
     // Test case 4: Disable interrupt 9
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 5, L"Disable interrupt 9");
+    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 4, L"Disable interrupt 9");
     DisableInterrupt (9);
 
     // Test case 5: Check if interrupt 9 is disabled
-    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 6, L"Verify interrupt 9 is disabled");
-    CheckInterruptStatus (9);
-    IsEnabled = ArmGicIsInterruptEnabled (GicDistributorBase, GicRedistributorBase, 9);
+    ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_CASE), mHiiHandle, mAppName, 5, L"Verify interrupt 9 is disabled");
+    IsEnabled = CheckInterruptStatus (9);
     if (IsEnabled) {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_FAILED), mHiiHandle, mAppName, 6);
+      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GIC_UTIL_TEST_FAILED), mHiiHandle, mAppName, 5);
       TestPassed = FALSE;
       goto TestDone;
     }
@@ -612,12 +606,6 @@ TestDone:
   ValueStr = ShellCommandLineGetValue (ParamPackage, L"--priority");
   if (ValueStr != NULL) {
     SetInterruptPriority (ValueStr);
-    goto Done;
-  }
-
-  ValueStr = ShellCommandLineGetValue (ParamPackage, L"--sgi");
-  if (ValueStr != NULL) {
-    SendSgi (ValueStr);
     goto Done;
   }
 
