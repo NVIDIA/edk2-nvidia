@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -344,6 +344,7 @@ BpmpIpcCommunicate (
   BOOLEAN                       Blocking = FALSE;
   EFI_STATUS                    Status;
   EFI_TPL                       OldTpl;
+  EFI_TPL                       EntryTpl;
   NVIDIA_BPMP_IPC_PRIVATE_DATA  *PrivateData        = NULL;
   BPMP_PENDING_TRANSACTION      *PendingTransaction = NULL;
   BOOLEAN                       NeedQueue           = FALSE;
@@ -394,7 +395,7 @@ BpmpIpcCommunicate (
     Token              = &LocalToken;
     Status             = gBS->CreateEvent (
                                 0,
-                                TPL_CALLBACK,
+                                TPL_NOTIFY,
                                 NULL,
                                 NULL,
                                 &Token->Event
@@ -419,6 +420,11 @@ BpmpIpcCommunicate (
   PendingTransaction->RxDataSize     = RxDataSize;
   PendingTransaction->Blocking       = Blocking;
   PendingTransaction->MessageError   = MessageError;
+
+  if (Blocking) {
+    // prevent threaded device discovery callbacks until this blocking call completes
+    EntryTpl = gBS->RaiseTPL (TPL_NOTIFY);
+  }
 
   OldTpl    = gBS->RaiseTPL (TPL_NOTIFY);
   NeedQueue = IsListEmpty (&PrivateData->TransactionList);
@@ -445,6 +451,8 @@ BpmpIpcCommunicate (
 
       gBS->Stall (TIMEOUT_STALL_US);
     }
+
+    gBS->RestoreTPL (EntryTpl);
 
     gBS->CloseEvent (Token->Event);
     if (EFI_ERROR (Status)) {
