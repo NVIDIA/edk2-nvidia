@@ -100,7 +100,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .ThreadedDeviceStart             = FALSE
+  .ThreadedDeviceStart             = TRUE
 };
 
 CHAR8  CoreClockNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
@@ -592,9 +592,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 PrepareHost (
-  PCIE_CONTROLLER_PRIVATE                    *Private,
-  IN EFI_HANDLE                              ControllerHandle,
-  IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
+  PCIE_CONTROLLER_PRIVATE  *Private,
+  IN EFI_HANDLE            ControllerHandle
   )
 {
   EFI_STATUS  Status;
@@ -823,18 +822,15 @@ STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
-  PCIE_CONTROLLER_PRIVATE                     *Private,
-  IN  EFI_HANDLE                              ControllerHandle,
-  IN  CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode OPTIONAL
+  PCIE_CONTROLLER_PRIVATE  *Private,
+  IN  EFI_HANDLE           ControllerHandle
   )
 {
   EFI_STATUS                Status;
   UINT32                    val;
   UINT32                    Index;
   UINT32                    Count;
-  NVIDIA_TEGRAP2U_PROTOCOL  *P2U         = NULL;
-  CONST VOID                *Property    = NULL;
-  INT32                     PropertySize = 0;
+  NVIDIA_TEGRAP2U_PROTOCOL  *P2U = NULL;
 
   /* Deassert powergate nodes */
   Status = AssertPgNodes (ControllerHandle, FALSE);
@@ -879,25 +875,9 @@ InitializeController (
     return EFI_UNSUPPORTED;
   }
 
-  Property = fdt_getprop (
-               DeviceTreeNode->DeviceTreeBase,
-               DeviceTreeNode->NodeOffset,
-               "phys",
-               &PropertySize
-               );
-  if (Property == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get P2U PHY entries\n", __FUNCTION__));
-    return EFI_UNSUPPORTED;
-  }
-
-  for (Index = 0; Index < PropertySize; Index += sizeof (UINT32)) {
-    UINT32  P2UId;
-
-    CopyMem ((VOID *)&P2UId, Property + Index, sizeof (UINT32));
-    P2UId = SwapBytes32 (P2UId);
-
-    if (EFI_ERROR (P2U->Init (P2U, P2UId))) {
-      DEBUG ((DEBUG_ERROR, "Failed to Initialize P2U\n"));
+  for (Index = 0; Index < Private->P2UIdCount; Index++) {
+    if (EFI_ERROR (P2U->Init (P2U, Private->P2UId[Index]))) {
+      DEBUG ((DEBUG_ERROR, "Failed to Initialize P2U[%u]=0x%x\n", Index, Private->P2UId[Index]));
     }
   }
 
@@ -1023,7 +1003,7 @@ InitializeController (
           );
   Private->ASPML1SSCapOffset = val + PCI_L1SS_CAP;
 
-  Status = PrepareHost (Private, ControllerHandle, DeviceTreeNode);
+  Status = PrepareHost (Private, ControllerHandle);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
     return Status;
@@ -1102,7 +1082,7 @@ InitializeController (
     val   &= ~PCI_DLF_EXCHANGE_ENABLE;
     MmioWrite32 (Private->DbiBase + offset + PCI_DLF_CAP, val);
 
-    Status = PrepareHost (Private, ControllerHandle, DeviceTreeNode);
+    Status = PrepareHost (Private, ControllerHandle);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Unable to Prepare Host controller (%r)\r\n", Status));
       return Status;
@@ -1940,27 +1920,6 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_INFO, "Failed to find 12v slot supply regulator\n"));
       }
 
-      /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
-      MicroSecondDelay (100000);
-
-      Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
-        Status = EFI_NOT_READY;
-        goto ErrorExit;
-      }
-
-      if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
-        Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 1);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
-          Status = EFI_NOT_READY;
-          goto ErrorExit;
-        }
-
-        DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
-      }
-
       if (NULL != fdt_get_property (
                     DeviceTreeNode->DeviceTreeBase,
                     DeviceTreeNode->NodeOffset,
@@ -1983,25 +1942,6 @@ DeviceDiscoveryNotify (
         Private->EnableExtREFCLK = TRUE;
       } else {
         Private->EnableExtREFCLK = FALSE;
-      }
-
-      Status = InitializeController (Private, ControllerHandle, DeviceTreeNode);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
-        goto ErrorExit;
-      }
-
-      Status = gBS->CreateEventEx (
-                      EVT_NOTIFY_SIGNAL,
-                      TPL_CALLBACK,
-                      OnExitBootServices,
-                      Private,
-                      &gEfiEventExitBootServicesGuid,
-                      &Private->ExitBootServicesEvent
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
-        goto ErrorExit;
       }
 
       RootBridge->Segment               = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
@@ -2056,6 +1996,151 @@ DeviceDiscoveryNotify (
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "PCIe Controller: Unable to get ranges: %r\r\n", Status));
         break;
+      }
+
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, 2, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 2 tokens for the ConfigSpaceInfo token maps\n", __FUNCTION__));
+        break;
+      }
+
+      Private->ConfigSpaceInfo.AddressMapToken   = TokenMap[0];
+      Private->ConfigSpaceInfo.InterruptMapToken = TokenMap[1];
+      FreePool (TokenMap);
+      TokenMap = NULL;
+
+      InterruptMap = AllocateZeroPool (PCIE_NUMBER_OF_INTERRUPT_MAP * sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA));
+      if (InterruptMap == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate space for %d interrupt maps\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      NumberOfInterruptMaps = PCIE_NUMBER_OF_INTERRUPT_MAP;
+      Status                = DeviceTreeGetInterruptMap (DeviceTreeNode->NodeOffset, InterruptMap, &NumberOfInterruptMaps);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PCIE interrupt map\n", __FUNCTION__, Status));
+        ASSERT (!EFI_ERROR (Status));
+        FreePool (InterruptMap);
+        break;
+      }
+
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERRUPT_MAP, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
+        FreePool (InterruptMap);
+        break;
+      }
+
+      DEBUG ((DEBUG_VERBOSE, "%a: NumberOfInterruptMaps = %u\n", __FUNCTION__, NumberOfInterruptMaps));
+      if (NumberOfInterruptMaps == 1) {
+        for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
+          Private->InterruptMapInfo[Index].PciInterrupt            = Index;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptMap[0].ParentInterrupt);
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = InterruptMap[0].ParentInterrupt.Flag;
+        }
+      } else if (NumberOfInterruptMaps == PCIE_NUMBER_OF_INTERRUPT_MAP) {
+        for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
+          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
+          Private->InterruptMapInfo[Index].PciInterrupt            = InterruptMap[Index].ChildInterrupt.Interrupt - 1;
+          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptMap[Index].ParentInterrupt);
+          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = InterruptMap[Index].ParentInterrupt.Flag;
+        }
+      } else {
+        Status = EFI_DEVICE_ERROR;
+        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupt maps, got %u\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP, NumberOfInterruptMaps));
+        FreePool (InterruptMap);
+        break;
+      }
+
+      for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
+        DEBUG ((DEBUG_VERBOSE, "%a: InterruptRefInfo[%u] has PcieInterrupt %d, IntcInterrupt %d, Flags 0x%x\n", __FUNCTION__, Index, Private->InterruptMapInfo[Index].PciInterrupt, Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt, Private->InterruptMapInfo[Index].IntcInterrupt.Flags));
+      }
+
+      FreePool (InterruptMap);
+      FreePool (TokenMap);
+      TokenMap = NULL;
+
+      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, NumberOfRanges, &TokenMap);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u tokens for the AddressMap token map\n", __FUNCTION__, NumberOfRanges));
+        break;
+      }
+
+      for (Index = 0; Index < NumberOfRanges; Index++) {
+        Private->AddressMapRefInfo[Index].ReferenceToken = TokenMap[Index];
+      }
+
+      FreePool (TokenMap);
+      TokenMap = NULL;
+
+      Property = fdt_getprop (
+                   DeviceTreeNode->DeviceTreeBase,
+                   DeviceTreeNode->NodeOffset,
+                   "phys",
+                   &PropertySize
+                   );
+
+      if (Property == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to get P2U PHY entries\n", __FUNCTION__));
+        return EFI_UNSUPPORTED;
+      }
+
+      Private->P2UId = (UINT32 *)AllocateZeroPool (PropertySize);
+      if (Private->P2UId == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to P2UId size %d\n", __FUNCTION__, PropertySize));
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      Private->P2UIdCount = PropertySize / sizeof (UINT32);
+      for (Index = 0; Index < Private->P2UIdCount; Index++) {
+        CopyMem ((VOID *)&Private->P2UId[Index], Property + (Index * sizeof (UINT32)), sizeof (UINT32));
+        Private->P2UId[Index] = SwapBytes32 (Private->P2UId[Index]);
+      }
+
+      // All CM and DT operations must be completed before
+      // starting threaded init with first delay below.
+      CMTokenProtocol = NULL;
+      DeviceTreeNode  = NULL;
+
+      /* Spec defined T_PVPERL delay (100ms) after enabling power to the slot */
+      DeviceDiscoveryThreadMicroSecondDelay (100000);
+
+      Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&Private->BpmpIpcProtocol);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "Failed to get BPMP-FW handle\n"));
+        Status = EFI_NOT_READY;
+        goto ErrorExit;
+      }
+
+      if (PcdGetBool (PcdBPMPPCIeControllerEnable)) {
+        Status = BpmpProcessSetCtrlState (Private->BpmpIpcProtocol, Private->BpmpPhandle, Private->CtrlId, 1);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Failed to Enable Controller-%u\n", Private->CtrlId));
+          Status = EFI_NOT_READY;
+          goto ErrorExit;
+        }
+
+        DEBUG ((DEBUG_INFO, "Enabled Controller-%u through BPMP-FW\n", Private->CtrlId));
+      }
+
+      Status = InitializeController (Private, ControllerHandle);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to initialize controller (%r)\r\n", __FUNCTION__, Status));
+        goto ErrorExit;
+      }
+
+      Status = gBS->CreateEventEx (
+                      EVT_NOTIFY_SIGNAL,
+                      TPL_CALLBACK,
+                      OnExitBootServices,
+                      Private,
+                      &gEfiEventExitBootServicesGuid,
+                      &Private->ExitBootServicesEvent
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Unable to setup exit boot services uninitialize. (%r)\r\n", __FUNCTION__, Status));
+        goto ErrorExit;
       }
 
       // Mark all regions as unsupported
@@ -2151,6 +2236,8 @@ DeviceDiscoveryNotify (
         goto ErrorExit;
       }
 
+      ASSERT (Private->AddressMapCount == NumberOfRanges);
+
       if ((RootBridge->PMem.Base == MAX_UINT64) && (RootBridge->PMemAbove4G.Base == MAX_UINT64)) {
         RootBridge->AllocationAttributes |= EFI_PCI_HOST_BRIDGE_COMBINE_MEM_PMEM;
       }
@@ -2186,85 +2273,11 @@ DeviceDiscoveryNotify (
         Private->ConfigSpaceInfo.EndBusNumber   = Private->PcieRootBridgeConfigurationIo.MaxBusNumber;
       }
 
-      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, 2, &TokenMap);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate 2 tokens for the ConfigSpaceInfo token maps\n", __FUNCTION__));
-        break;
-      }
-
-      Private->ConfigSpaceInfo.AddressMapToken   = TokenMap[0];
-      Private->ConfigSpaceInfo.InterruptMapToken = TokenMap[1];
-      FreePool (TokenMap);
-      TokenMap = NULL;
-
-      InterruptMap = AllocateZeroPool (PCIE_NUMBER_OF_INTERRUPT_MAP * sizeof (NVIDIA_DEVICE_TREE_INTERRUPT_MAP_DATA));
-      if (InterruptMap == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate space for %d interrupt maps\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
-        return EFI_OUT_OF_RESOURCES;
-      }
-
-      NumberOfInterruptMaps = PCIE_NUMBER_OF_INTERRUPT_MAP;
-      Status                = DeviceTreeGetInterruptMap (DeviceTreeNode->NodeOffset, InterruptMap, &NumberOfInterruptMaps);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get PCIE interrupt map\n", __FUNCTION__, Status));
-        ASSERT (!EFI_ERROR (Status));
-        FreePool (InterruptMap);
-        break;
-      }
-
-      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, PCIE_NUMBER_OF_INTERRUPT_MAP, &TokenMap);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %d tokens for the InterruptMap token map\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP));
-        FreePool (InterruptMap);
-        break;
-      }
-
-      DEBUG ((DEBUG_VERBOSE, "%a: NumberOfInterruptMaps = %u\n", __FUNCTION__, NumberOfInterruptMaps));
-      if (NumberOfInterruptMaps == 1) {
-        for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
-          Private->InterruptMapInfo[Index].PciInterrupt            = Index;
-          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptMap[0].ParentInterrupt);
-          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = InterruptMap[0].ParentInterrupt.Flag;
-        }
-      } else if (NumberOfInterruptMaps == PCIE_NUMBER_OF_INTERRUPT_MAP) {
-        for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
-          Private->InterruptRefInfo[Index].ReferenceToken          = TokenMap[Index];
-          Private->InterruptMapInfo[Index].PciInterrupt            = InterruptMap[Index].ChildInterrupt.Interrupt - 1;
-          Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptMap[Index].ParentInterrupt);
-          Private->InterruptMapInfo[Index].IntcInterrupt.Flags     = InterruptMap[Index].ParentInterrupt.Flag;
-        }
-
+      if (NumberOfInterruptMaps == PCIE_NUMBER_OF_INTERRUPT_MAP) {
         if (Private->IsT234) {
           MmioOr32 (Private->ApplSpace + APPL_PCIE_MISC0_BASE, APPL_PCIE_MISC0_INT_SEGREGATION_EN);
         }
-      } else {
-        Status = EFI_DEVICE_ERROR;
-        DEBUG ((DEBUG_ERROR, "%a: Expected %d interrupt maps, got %u\r\n", __FUNCTION__, PCIE_NUMBER_OF_INTERRUPT_MAP, NumberOfInterruptMaps));
-        FreePool (InterruptMap);
-        break;
       }
-
-      for (Index = 0; Index < PCIE_NUMBER_OF_INTERRUPT_MAP; Index++) {
-        DEBUG ((DEBUG_VERBOSE, "%a: InterruptRefInfo[%u] has PcieInterrupt %d, IntcInterrupt %d, Flags 0x%x\n", __FUNCTION__, Index, Private->InterruptMapInfo[Index].PciInterrupt, Private->InterruptMapInfo[Index].IntcInterrupt.Interrupt, Private->InterruptMapInfo[Index].IntcInterrupt.Flags));
-      }
-
-      FreePool (InterruptMap);
-      FreePool (TokenMap);
-      TokenMap = NULL;
-
-      Status = CMTokenProtocol->AllocateTokens (CMTokenProtocol, Private->AddressMapCount, &TokenMap);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Unable to allocate %u tokens for the AddressMap token map\n", __FUNCTION__, Private->AddressMapCount));
-        break;
-      }
-
-      for (Index = 0; Index < Private->AddressMapCount; Index++) {
-        Private->AddressMapRefInfo[Index].ReferenceToken = TokenMap[Index];
-      }
-
-      FreePool (TokenMap);
-      TokenMap = NULL;
 
       Index                                  = 0;
       Private->RepoInfo[Index].CmObjectId    = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjCmRef);

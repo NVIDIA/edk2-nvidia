@@ -2,7 +2,7 @@
 
   PCIe Controller Driver private structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -72,6 +72,8 @@ typedef struct {
   UINT64                                              GicBase;
   UINT64                                              MsiBase;
   UINT32                                              BpmpPhandle;
+  UINT32                                              *P2UId;
+  UINT32                                              P2UIdCount;
 
   // Configuration data
   CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO                ConfigSpaceInfo;
