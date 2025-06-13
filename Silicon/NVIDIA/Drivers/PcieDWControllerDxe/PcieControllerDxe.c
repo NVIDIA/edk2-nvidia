@@ -100,7 +100,7 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertReset               = FALSE,
   .AutoDeassertPg                  = FALSE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
-  .ThreadedDeviceStart             = FALSE
+  .ThreadedDeviceStart             = TRUE
 };
 
 CHAR8  CoreClockNames[][PCIE_CLOCK_RESET_NAME_LENGTH] = {
