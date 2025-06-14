@@ -171,6 +171,7 @@ PLDM_FW_UPDATE_TASK           *mTasks           = NULL;
 PLDM_FW_UPDATE_TASK_ERROR     mError            = PLDM_FW_UPDATE_TASK_ERROR_NONE;
 PLDM_FW_UPDATE_TASK_PROGRESS  mProgressFunction = NULL;
 UINTN                         mCompletion       = 0;
+BOOLEAN                       mCancelAllUpdates = FALSE;
 
 /**
   Call optional client progress function with percent complete.
@@ -633,6 +634,11 @@ PldmFwTaskRequestUpdateSetupReq (
   PLDM_FW_REQUEST_UPDATE_REQUEST      *Request;
   UINTN                               RequestLength;
 
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateSetupReq;
+  }
+
   DeviceIdRecord = Task->DeviceIdRecord;
   Request        = (PLDM_FW_REQUEST_UPDATE_REQUEST *)Task->Request;
 
@@ -680,6 +686,11 @@ PldmFwTaskRequestUpdateProcessRsp (
 {
   PLDM_FW_REQUEST_UPDATE_RESPONSE  *Response;
   EFI_STATUS                       Status;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateSetupReq;
+  }
 
   Response = (PLDM_FW_REQUEST_UPDATE_RESPONSE *)Task->RecvBuffer;
 
@@ -729,6 +740,11 @@ PldmFwTaskPassComponentTableSetupReq (
   CONST PLDM_FW_PKG_COMPONENT_IMAGE_INFO  *ImageInfo;
   UINT8                                   TransferFlag;
   UINTN                                   RequestLength;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateSetupReq;
+  }
 
   ImageInfo = Task->ImageInfo;
 
@@ -815,6 +831,11 @@ PldmFwTaskPassComponentTableProcessRsp (
   PLDM_FW_PASS_COMPONENT_TABLE_RESPONSE  *Response;
   EFI_STATUS                             Status;
 
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateSetupReq;
+  }
+
   Request  = (PLDM_FW_PASS_COMPONENT_TABLE_REQUEST *)Task->Request;
   Response = (PLDM_FW_PASS_COMPONENT_TABLE_RESPONSE *)Task->RecvBuffer;
 
@@ -859,6 +880,11 @@ PldmFwTaskPassComponentTableNextComponent (
   IN  PLDM_FW_UPDATE_TASK  *Task
   )
 {
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateSetupReq;
+  }
+
   Task->FwParamsComponentIndex++;
   if (PldmFwGetNextFwParamsMatchingComponent (
         Task->GetFwParamsResponse,
@@ -901,6 +927,11 @@ PldmFwTaskUpdateComponentSetupReq (
   CONST PLDM_FW_PKG_COMPONENT_IMAGE_INFO  *ImageInfo;
   PLDM_FW_UPDATE_COMPONENT_REQUEST        *Request;
   UINTN                                   RequestLength;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
 
   ImageInfo = Task->ImageInfo;
 
@@ -974,6 +1005,11 @@ PldmFwTaskUpdateComponentProcessRsp (
   PLDM_FW_UPDATE_COMPONENT_RESPONSE  *Response;
   EFI_STATUS                         Status;
 
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
+
   Response = (PLDM_FW_UPDATE_COMPONENT_RESPONSE *)Task->RecvBuffer;
 
   Status = PldmFwCheckRspCompletionAndLength (Response, Task->RecvLength, sizeof (*Response), __FUNCTION__, Task->DeviceName);
@@ -1029,6 +1065,11 @@ PldmFwTaskWaitForRequests (
   IN  PLDM_FW_UPDATE_TASK  *Task
   )
 {
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
+
   Task->IsExpectingFDRequests = TRUE;
 
   return StateReceive;
@@ -1056,6 +1097,11 @@ PldmFwTaskRequestFwDataHandleReq (
   UINT32                                  Length;
   UINT8                                   CompletionCode;
   EFI_STATUS                              Status;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
 
   Request = (PLDM_FW_REQUEST_FW_DATA_REQUEST *)Task->RecvBuffer;
 
@@ -1138,6 +1184,11 @@ PldmFwTaskTransferCompleteHandleReq (
   PLDM_FW_TRANSFER_COMPLETE_RESPONSE  *Response;
   EFI_STATUS                          Status;
 
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
+
   Response = (PLDM_FW_TRANSFER_COMPLETE_RESPONSE *)Task->Response;
   Request  = (PLDM_FW_TRANSFER_COMPLETE_REQUEST *)Task->RecvBuffer;
   if (Task->RecvLength < sizeof (*Request)) {
@@ -1214,6 +1265,11 @@ PldmFwTaskVerifyCompleteHandleReq (
   PLDM_FW_VERIFY_COMPLETE_RESPONSE  *Response;
   EFI_STATUS                        Status;
 
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
+
   Response = (PLDM_FW_VERIFY_COMPLETE_RESPONSE *)Task->Response;
   Request  = (PLDM_FW_VERIFY_COMPLETE_REQUEST *)Task->RecvBuffer;
   if (Task->RecvLength < sizeof (*Request)) {
@@ -1287,6 +1343,11 @@ PldmFwTaskApplyCompleteHandleReq (
   PLDM_FW_APPLY_COMPLETE_RESPONSE  *Response;
   EFI_STATUS                       Status;
   BOOLEAN                          ApplyFailed;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
 
   Response = (PLDM_FW_APPLY_COMPLETE_RESPONSE *)Task->Response;
   Request  = (PLDM_FW_APPLY_COMPLETE_REQUEST *)Task->RecvBuffer;
@@ -1374,6 +1435,11 @@ PldmFwTaskNextComponent (
   IN  PLDM_FW_UPDATE_TASK  *Task
   )
 {
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
+
   Task->FwParamsComponentIndex++;
   if (PldmFwGetNextFwParamsMatchingComponent (
         Task->GetFwParamsResponse,
@@ -1414,6 +1480,11 @@ PldmFwTaskActivateFwSetupReq (
   )
 {
   PLDM_FW_ACTIVATE_FW_REQUEST  *Request;
+
+  if (mCancelAllUpdates == TRUE) {
+    DEBUG ((DEBUG_ERROR, "%a: %s Aborting update due to global cancel request\n", __FUNCTION__, Task->DeviceName));
+    return StateCancelUpdateComponentSetupReq;
+  }
 
   Request                                 = (PLDM_FW_ACTIVATE_FW_REQUEST *)Task->Request;
   Request->SelfContainedActivationRequest = FALSE;
@@ -1928,6 +1999,14 @@ PldmFwTaskStateMachineLoop (
 
         if (EFI_ERROR (Task->Status)) {
           mStatus = EFI_PROTOCOL_ERROR;
+          // If encountered errors with any of the Erots, terminate update.
+          mCancelAllUpdates = TRUE;
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: Erot%u failed - aborting update for all EROTs\n",
+            __FUNCTION__,
+            Index
+            ));
         }
 
         if (++mNumTasksComplete == mNumTasks) {
