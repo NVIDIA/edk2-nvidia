@@ -1,7 +1,7 @@
 ## @file
 # Component description file for the AvbLib module.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -14,6 +14,7 @@
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = AvbLib
+
 
 [Sources]
   AvbLibApi.c
@@ -41,6 +42,9 @@
   libavb/libavb/sha/sha256_impl.c
   libavb/libavb/sha/sha512_impl.c
 
+  # Avb UI - Android Verified Boot warning screens
+  AvbUi/AvbUi.c
+
   # libavb headers
   # - These will not be built, but listing them will ensure they are in the
   # include path
@@ -49,6 +53,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   ShellPkg/ShellPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
   CryptoPkg/CryptoPkg.dec
@@ -67,12 +72,15 @@
   BaseCryptLib
   BootConfigProtocolLib
   AvbOpteeInterfaceLib
+  PerformanceLib
+  AndroidBcbLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
   gNVIDIABootConfigUpdateProtocol
+  gNVIDIAAvbUiProtocolGuid           ## CONSUMES
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS = -DAVB_COMPILATION -DAVB_ENABLE_DEBUG

@@ -1,59 +1,52 @@
 ## @file
-#  Platform Logo Resources
+#  AVB UI DXE Driver - Displays Android Verified Boot warning screens.
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
 [Defines]
   INF_VERSION                    = 1.27
-  BASE_NAME                      = LogoSingleBlackDxe
-  MODULE_UNI_FILE                = LogoDxe.uni
-  FILE_GUID                      = 5b568a4c-5bb0-413e-b15c-1f3ba305ff32
+  BASE_NAME                      = AvbUiDxe
+  FILE_GUID                      = 7a8f2e3d-4c5b-6a9e-8d7f-1c2b3a4e5f60
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = InitializeLogo
+  ENTRY_POINT                    = AvbUiDxeInitialize
 #
 #  This flag specifies whether HII resource section is generated into PE image.
 #
   UEFI_HII_RESOURCE_SECTION      = TRUE
 
 [Sources]
-  nvidiablack-1036x864.bmp
-  LogoSingleBlack.idf
-  LogoSingleBlack.c
-  Logo.c
+  AvbUiDxe.c
+  AvbUiImages.c
+  AvbUi.idf
+  verity_orange_pause_720.bmp
+  verity_yellow_pause_720.bmp
+  verity_red_stop_720.bmp
+  verity_red_eio_720.bmp
 
 [Packages]
-  MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   DebugLib
-  DxeServicesLib
   MemoryAllocationLib
-  PcdLib
   BaseMemoryLib
-  PerformanceLib
+  TimerLib
   ImageScaleLib
 
 [Protocols]
   gEfiHiiDatabaseProtocolGuid        ## CONSUMES
   gEfiHiiImageExProtocolGuid         ## CONSUMES
-  gEfiHiiPackageListProtocolGuid     ## PRODUCES CONSUMES
-  gEdkiiPlatformLogoProtocolGuid     ## PRODUCES
+  gEfiHiiPackageListProtocolGuid     ## CONSUMES
   gEfiGraphicsOutputProtocolGuid     ## CONSUMES
-
-[UserExtensions.TianoCore."ExtraFiles"]
-  LogoDxeExtra.uni
-
-[Pcd]
-  gNVIDIATokenSpaceGuid.PcdLogoScreenRatio
-  gNVIDIATokenSpaceGuid.PcdLogoCenterY
+  gNVIDIAAvbUiProtocolGuid           ## PRODUCES
 
 [Depex]
   gEfiHiiDatabaseProtocolGuid AND

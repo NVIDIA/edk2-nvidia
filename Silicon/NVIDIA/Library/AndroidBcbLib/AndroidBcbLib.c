@@ -1,7 +1,7 @@
 /**
   Implementation for AndroidBcbLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -629,4 +629,70 @@ AndroidBcbCheckAndUpdateRetryCount (
   DEBUG_CODE_END ();
 
   return Status;
+}
+
+/**
+  Check if active boot slot has verity corruption flag set.
+
+  @param[in]   Handle              Image Handle to access block device
+  @param[out]  VerityCorrupted     Pointer to receive verity corruption status
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_INVALID_PARAMETER    VerityCorrupted is NULL.
+  @retval others                   Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+AndroidBcbGetVerityCorrupted (
+  IN  EFI_HANDLE  Handle,
+  OUT BOOLEAN     *VerityCorrupted
+  )
+{
+  EFI_STATUS             Status;
+  EFI_BLOCK_IO_PROTOCOL  *MscBlockIo;
+  EFI_DISK_IO_PROTOCOL   *MscDiskIo;
+  BootloaderControl      BootCtrl;
+  UINT32                 MscActiveSlotIndex;
+  UINT32                 BootCtrlOffset;
+  UINT32                 ComputedCrc;
+
+  if (VerityCorrupted == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *VerityCorrupted = FALSE;
+
+  Status = GetMiscIoProtocolFromHandle (Handle, &MscBlockIo, &MscDiskIo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to fetch IO protocols\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BootCtrlOffset = NV_OFFSETOF (BootloaderMessageAb, BootCtrl);
+
+  Status = MscDiskIo->ReadDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        BootCtrlOffset,
+                        sizeof (BootloaderControl),
+                        (VOID *)&BootCtrl
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read bootcontrol from Misc\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ComputedCrc = BootloaderControlLeCrc (&BootCtrl);
+  if (ComputedCrc != BootCtrl.Crc32Le) {
+    // First boot after factory flash, no corruption
+    DEBUG ((DEBUG_INFO, "%a: BootCtrl Crc mismatch, considering first boot\r\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  MscActiveSlotIndex = BcbGetActiveBootSlot (&BootCtrl);
+  *VerityCorrupted   = (BootCtrl.SlotInfo[MscActiveSlotIndex].VerityCorrupted != 0);
+
+  DEBUG ((DEBUG_INFO, "%a: Slot %u VerityCorrupted = %u\r\n", __FUNCTION__, MscActiveSlotIndex, *VerityCorrupted));
+
+  return EFI_SUCCESS;
 }

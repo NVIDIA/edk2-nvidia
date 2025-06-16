@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -208,6 +208,23 @@ EFI_STATUS
 EFIAPI
 AndroidBcbCheckAndUpdateRetryCount (
   EFI_HANDLE  Handle
+  );
+
+/**
+  Check if active boot slot has verity corruption flag set.
+
+  @param[in]   Handle              Image Handle to access block device
+  @param[out]  VerityCorrupted     Pointer to receive verity corruption status
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_INVALID_PARAMETER    VerityCorrupted is NULL.
+  @retval others                   Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+AndroidBcbGetVerityCorrupted (
+  IN  EFI_HANDLE  Handle,
+  OUT BOOLEAN     *VerityCorrupted
   );
 
 #endif /* __BOOTLOADER_MESSAGE_H_ */

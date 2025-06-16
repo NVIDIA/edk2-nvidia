@@ -114,6 +114,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   PerformanceLib|MdePkg/Library/BasePerformanceLibNull/BasePerformanceLibNull.inf
+  ImageScaleLib|Silicon/NVIDIA/Library/ImageScaleLib/ImageScaleLib.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
   PeCoffLib|MdePkg/Library/BasePeCoffLib/BasePeCoffLib.inf
@@ -2505,6 +2506,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 
   # Boot support for mkbootimg partitions
 !ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
+  Silicon/NVIDIA/Drivers/AvbUiDxe/AvbUiDxe.inf
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf {
     <LibraryClasses>
       AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf

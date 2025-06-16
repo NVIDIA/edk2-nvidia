@@ -809,6 +809,7 @@ FvNameGuid         = $(PLATFORM_GUID)
 
   # Boot support for mkbootimg partitions
 !ifdef CONFIG_BOOT_NATIVE_ANDROID_PARTITION_SUPPORT
+  INF Silicon/NVIDIA/Drivers/AvbUiDxe/AvbUiDxe.inf
   INF Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf
 !endif
 

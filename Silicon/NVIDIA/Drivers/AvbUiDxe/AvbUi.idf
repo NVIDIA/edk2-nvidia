@@ -1,0 +1,12 @@
+// /** @file
+// AVB UI Image definition file.
+//
+// SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// **/
+
+#image IMG_AVB_ORANGE   verity_orange_pause_720.bmp
+#image IMG_AVB_YELLOW   verity_yellow_pause_720.bmp
+#image IMG_AVB_RED_STOP verity_red_stop_720.bmp
+#image IMG_AVB_RED_EIO  verity_red_eio_720.bmp

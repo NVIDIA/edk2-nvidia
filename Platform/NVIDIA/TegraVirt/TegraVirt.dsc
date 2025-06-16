@@ -62,6 +62,7 @@
   PlatformBootManagerLib|Silicon/NVIDIA/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
   PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLibNoIpmi.inf
   BootLogoLib|MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
+  ImageScaleLib|Silicon/NVIDIA/Library/ImageScaleLib/ImageScaleLib.inf
 
   CustomizedDisplayLib|MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
   FrameBufferBltLib|MdeModulePkg/Library/FrameBufferBltLib/FrameBufferBltLib.inf
@@ -365,6 +366,7 @@
   MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
   # Boot support for mkbootimg partitions
+  Silicon/NVIDIA/Drivers/AvbUiDxe/AvbUiDxe.inf
   Silicon/NVIDIA/Drivers/AndroidBootDxe/AndroidBootDxe.inf {
     <LibraryClasses>
       AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceFfa/AvbOpteeInterfaceFfa.inf

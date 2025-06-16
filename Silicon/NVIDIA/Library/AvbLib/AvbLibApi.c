@@ -1,7 +1,7 @@
 /** @file
   EDK2 API for LibAvb
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,6 +23,7 @@
 #include <Library/BaseCryptLib.h>
 #include <Library/BootConfigProtocolLib.h>
 #include <Library/OpteeNvLib.h>
+#include <Library/AndroidBcbLib.h>
 
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
@@ -42,6 +43,11 @@
 #define PatchLevelStrFormatLen  10
 
 STATIC EFI_HANDLE  mControllerHandle;
+
+EFI_STATUS
+AvbShowUi (
+  IN AVB_BOOT_STATE  BootState
+  );
 
 /*
  * @brief Holds information about the public key used to validate
@@ -715,9 +721,11 @@ VerifiedBootGetBootState (
     .read_rollback_index               = ReadRollbackIndex,
     .write_rollback_index              = WriteRollbackIndex,
   };
+  EFI_STATUS           Status;
   AvbSlotVerifyResult  AvbRes                         = AVB_SLOT_VERIFY_RESULT_ERROR_VERIFICATION;
   BOOLEAN              DeviceUnlocked                 = FALSE;
   AvbSlotVerifyFlags   Flags                          = 0;
+  BOOLEAN              VerityCorrupted                = FALSE;
   const char           *NormalRequestedPartitions[]   = { "boot", "vendor_boot", NULL };
   const char           *RecoveryRequestedPartitions[] = { NULL };
   const char *const    *RequestedPartitions;
@@ -727,7 +735,14 @@ VerifiedBootGetBootState (
   }
 
   RequestedPartitions = IsRecovery ? RecoveryRequestedPartitions : NormalRequestedPartitions;
-  Flags              |= AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR;
+  Flags              |= (DeviceUnlocked ? AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR : 0);
+
+  // Check for dm-verity corruption flag in slot metadata
+  Status = AndroidBcbGetVerityCorrupted (NULL, &VerityCorrupted);
+  if (!EFI_ERROR (Status) && VerityCorrupted) {
+    DEBUG ((DEBUG_INFO, "%a: Verity corruption detected, setting RESTART_CAUSED_BY_HASHTREE_CORRUPTION flag\n", __FUNCTION__));
+    Flags |= AVB_SLOT_VERIFY_FLAGS_RESTART_CAUSED_BY_HASHTREE_CORRUPTION;
+  }
 
   AvbRes = avb_slot_verify (
              &Ops,
@@ -743,6 +758,8 @@ VerifiedBootGetBootState (
     * Device is unlocked
     * Red state:
     * Any fatal failure during verification
+    * Red EIO state:
+    * I/O error during verification, or dm-verity corruption detected
     * Yellow state:
     * Verification passed, but public key for vbmeta.img does not match the
     * PKC public key for the platform
@@ -754,13 +771,16 @@ VerifiedBootGetBootState (
     *BootState = VERIFIED_BOOT_ORANGE_STATE;
   } else if (AvbRes == AVB_SLOT_VERIFY_RESULT_ERROR_PUBLIC_KEY_REJECTED) {
     *BootState = VERIFIED_BOOT_YELLOW_STATE;
+  } else if (AvbRes == AVB_SLOT_VERIFY_RESULT_ERROR_IO) {
+    *BootState = VERIFIED_BOOT_RED_STATE_EIO;
   } else if (AvbRes != AVB_SLOT_VERIFY_RESULT_OK) {
     *BootState = VERIFIED_BOOT_RED_STATE;
   } else {
     *BootState = VERIFIED_BOOT_GREEN_STATE;
   }
 
-  return (*BootState != VERIFIED_BOOT_RED_STATE) ? EFI_SUCCESS : EFI_SECURITY_VIOLATION;
+  return ((*BootState != VERIFIED_BOOT_RED_STATE) && (*BootState != VERIFIED_BOOT_RED_STATE_EIO))
+         ? EFI_SUCCESS : EFI_SECURITY_VIOLATION;
 }
 
 /**
@@ -965,6 +985,7 @@ AvbVerifyBoot (
   }
 
   BootStateStr = (BootState == VERIFIED_BOOT_RED_STATE) ? "red" :
+                 (BootState == VERIFIED_BOOT_RED_STATE_EIO) ? "red_eio" :
                  (BootState == VERIFIED_BOOT_YELLOW_STATE) ? "yellow" :
                  (BootState == VERIFIED_BOOT_GREEN_STATE) ? "green" :
                  (BootState == VERIFIED_BOOT_ORANGE_STATE) ? "orange" : "unknown";
@@ -985,6 +1006,8 @@ AvbVerifyBoot (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: %r to update BootConfigUpdateProtocol\n", __FUNCTION__, Status));
   }
+
+  AvbShowUi (BootState);
 
 Exit:
   return Status;

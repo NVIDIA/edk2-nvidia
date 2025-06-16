@@ -1,7 +1,7 @@
 /** @file
   Logo DXE Driver, install Edkii Platform Logo protocol.
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -21,6 +21,7 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PerformanceLib.h>
+#include <Library/ImageScaleLib.h>
 
 #include "LogoPrivate.h"
 
@@ -43,145 +44,6 @@ Abs (
   )
 {
   return (Value < 0) ? (UINT64)(-Value) : (UINT64)Value;
-}
-
-/**
-  Scales an image to a new width and height.
-
-  @param[in]  Image          Pointer to the source image to scale
-  @param[in]  ImageWidth     Width of the image in pixels
-  @param[in]  ImageHeight    Height of the image in pixels
-  @param[in]  ScaledWidth    Width of the scaled image in pixels
-  @param[in]  ScaledHeight   Height of the scaled image in pixels
-  @param[out] ScaledImage    Pointer to receive the scaled image
-
-  @retval EFI_SUCCESS           Image was scaled successfully
-  @retval EFI_OUT_OF_RESOURCES  Failed to allocate memory for scaled image
-  @retval EFI_INVALID_PARAMETER OriginalImage or ScaledImage is NULL
-**/
-EFI_STATUS
-ScaleImage (
-  IN  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *Image,
-  IN  UINT64                         ImageWidth,
-  IN  UINT64                         ImageHeight,
-  IN  UINT64                         ScaledWidth,
-  IN  UINT64                         ScaledHeight,
-  OUT EFI_GRAPHICS_OUTPUT_BLT_PIXEL  **ScaledImage
-  )
-{
-  EFI_STATUS  Status;
-  UINT64      PixelCount;
-  UINT64      DstX;
-  UINT64      DstY;
-  UINT64      SrcY;
-  UINT64      SrcX;
-  // Variables for box/area resampling
-  double                         SrcY0f;
-  double                         SrcY1f;
-  UINT64                         SrcY0;
-  UINT64                         SrcY1;
-  double                         SrcX0f;
-  double                         SrcX1f;
-  UINT64                         SrcX0;
-  UINT64                         SrcX1;
-  UINT32                         SumRed;
-  UINT32                         SumGreen;
-  UINT32                         SumBlue;
-  UINT32                         SumReserved;
-  UINT64                         Count;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  P;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Result;
-
-  PERF_FUNCTION_BEGIN ();
-  if ((Image == NULL) || (ScaledImage == NULL)) {
-    Status = EFI_INVALID_PARAMETER;
-    goto Done;
-  }
-
-  if ((ImageWidth == 0) || (ImageHeight == 0) || (ScaledWidth == 0) || (ScaledHeight == 0)) {
-    Status = EFI_INVALID_PARAMETER;
-    goto Done;
-  }
-
-  PixelCount = ScaledWidth * ScaledHeight;
-
-  *ScaledImage = (EFI_GRAPHICS_OUTPUT_BLT_PIXEL *)AllocatePool (PixelCount * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
-  if (*ScaledImage == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Done;
-  }
-
-  if ((ScaledHeight == ImageHeight) && (ScaledWidth == ImageWidth)) {
-    CopyMem (*ScaledImage, Image, PixelCount * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
-    Status = EFI_SUCCESS;
-    goto Done;
-  }
-
-  // Box (area) resampling scaling
-  if ((ScaledWidth >= ImageWidth) || (ScaledHeight >= ImageHeight)) {
-    // For upscaling, fall back to nearest-neighbor
-    for (DstY = 0; DstY < ScaledHeight; ++DstY) {
-      SrcY = (DstY * ImageHeight) / ScaledHeight;
-      for (DstX = 0; DstX < ScaledWidth; ++DstX) {
-        SrcX                                      = (DstX * ImageWidth) / ScaledWidth;
-        (*ScaledImage)[DstY * ScaledWidth + DstX] = Image[SrcY * ImageWidth + SrcX];
-      }
-    }
-  } else {
-    // For downscaling, use box/area resampling
-    for (DstY = 0; DstY < ScaledHeight; ++DstY) {
-      // Calculate the source box for this destination row
-      SrcY0f = ((double)DstY * (double)ImageHeight) / (double)ScaledHeight;
-      SrcY1f = ((double)(DstY + 1) * (double)ImageHeight) / (double)ScaledHeight;
-      SrcY0  = (UINT64)SrcY0f;
-      SrcY1  = (UINT64)SrcY1f;
-      if (SrcY1 > ImageHeight) {
-        SrcY1 = ImageHeight;
-      }
-
-      for (DstX = 0; DstX < ScaledWidth; ++DstX) {
-        SrcX0f = ((double)DstX * (double)ImageWidth) / (double)ScaledWidth;
-        SrcX1f = ((double)(DstX + 1) * (double)ImageWidth) / (double)ScaledWidth;
-        SrcX0  = (UINT64)SrcX0f;
-        SrcX1  = (UINT64)SrcX1f;
-        if (SrcX1 > ImageWidth) {
-          SrcX1 = ImageWidth;
-        }
-
-        SumRed      = 0;
-        SumGreen    = 0;
-        SumBlue     = 0;
-        SumReserved = 0;
-        Count       = 0;
-        for (UINT64 y = SrcY0; y < SrcY1; ++y) {
-          for (UINT64 x = SrcX0; x < SrcX1; ++x) {
-            P            = Image[y * ImageWidth + x];
-            SumRed      += P.Red;
-            SumGreen    += P.Green;
-            SumBlue     += P.Blue;
-            SumReserved += P.Reserved;
-            ++Count;
-          }
-        }
-
-        ZeroMem (&Result, sizeof (Result));
-        if (Count > 0) {
-          Result.Red      = (UINT8)(SumRed / Count);
-          Result.Green    = (UINT8)(SumGreen / Count);
-          Result.Blue     = (UINT8)(SumBlue / Count);
-          Result.Reserved = (UINT8)(SumReserved / Count);
-        }
-
-        (*ScaledImage)[DstY * ScaledWidth + DstX] = Result;
-      }
-    }
-  }
-
-  Status = EFI_SUCCESS;
-
-Done:
-  PERF_FUNCTION_END ();
-  return Status;
 }
 
 /**
@@ -333,12 +195,12 @@ GetImage (
       TargetHeight = (SelectedImage.Height * TargetWidth) / SelectedImage.Width;
     }
 
-    Status = ScaleImage (
+    Status = ImageScale (
                SelectedImage.Bitmap,
-               SelectedImage.Width,
-               SelectedImage.Height,
-               TargetWidth,
-               TargetHeight,
+               (UINTN)SelectedImage.Width,
+               (UINTN)SelectedImage.Height,
+               (UINTN)TargetWidth,
+               (UINTN)TargetHeight,
                &ScaledImage
                );
     if (EFI_ERROR (Status)) {
