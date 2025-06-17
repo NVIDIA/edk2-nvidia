@@ -5,7 +5,7 @@
   This driver listen to Redfish after-provision event and remove SMBIOS type 42
   record so tht OS can not use it to talk to Redfish service.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -103,6 +103,44 @@ RedfishHostInterfaceControlUnload (
 }
 
 /**
+  Event notification function called when the EFI_EVENT_GROUP_READY_TO_BOOT is
+  signaled.
+
+  @param  Event     Event whose notification function is being invoked.
+  @param  Context   The pointer to the notification function's context,
+                    which is implementation-dependent.
+
+**/
+STATIC
+VOID
+EFIAPI
+HostInterfaceReadyToBoot (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EFI_STATUS                    Status;
+  NVIDIA_USB_NIC_INFO_PROTOCOL  *UsbNicInfo;
+
+  gBS->CloseEvent (Event);
+
+  Status = gBS->LocateProtocol (&gNVIDIAUsbNicInfoProtocolGuid, NULL, (VOID **)&UsbNicInfo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Redfish host interface is missing\n", __func__));
+
+    //
+    // Report status code for Redfish failure
+    //
+    REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
+      EFI_ERROR_CODE | EFI_ERROR_MAJOR,
+      EFI_COMPUTING_UNIT_MANAGEABILITY | EFI_MANAGEABILITY_EC_REDFISH_HOST_INTERFACE_ERROR,
+      REDFISH_HOST_INTERFACE_MISSING,
+      sizeof (REDFISH_HOST_INTERFACE_MISSING)
+      );
+  }
+}
+
+/**
   The entry point for platform redfish BIOS driver which installs the Redfish Resource
   Addendum protocol on its ImageHandle.
 
@@ -121,6 +159,7 @@ RedfishHostInterfaceControlEntryPoint (
   )
 {
   EFI_STATUS  Status;
+  EFI_EVENT   ReadyToBootEvent;
 
   if (PcdGet8 (PcdRedfishHostInterface) == REDFISH_HOST_INTERFACE_DISABLE) {
     DEBUG ((DEBUG_INFO, "%a: Redfish Host Interface is set to disabled. Remove SMBIOS type 42 record\n", __FUNCTION__));
@@ -135,6 +174,16 @@ RedfishHostInterfaceControlEntryPoint (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: failed to register after-provisioning event: %r\n", __FUNCTION__, Status));
     }
+  }
+
+  Status = EfiCreateEventReadyToBootEx (
+             TPL_CALLBACK,
+             HostInterfaceReadyToBoot,
+             NULL,
+             &ReadyToBootEvent
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to register ready-to-boot event: %r\n", __FUNCTION__, Status));
   }
 
   return EFI_SUCCESS;
