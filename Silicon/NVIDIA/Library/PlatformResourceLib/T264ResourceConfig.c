@@ -1264,7 +1264,19 @@ SetNextBootChain (
     return EFI_INVALID_PARAMETER;
   }
 
-  // nothing to do for marker-based boot chain
+  MmioBitFieldWrite32 (
+    T264_BOOT_CHAIN_REGISTER,
+    T264_BOOT_CHAIN_BR_BOOT_CHAIN_FIELD_LO,
+    T264_BOOT_CHAIN_BR_BOOT_CHAIN_FIELD_HI,
+    BootChain
+    );
+  MmioBitFieldWrite32 (
+    T264_BOOT_CHAIN_REGISTER,
+    T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_LO + BootChain,
+    T264_BOOT_CHAIN_BR_FAIL_BITMAP_FIELD_LO + BootChain,
+    T264_BOOT_CHAIN_STATUS_GOOD
+    );
+
   return EFI_SUCCESS;
 }
 
