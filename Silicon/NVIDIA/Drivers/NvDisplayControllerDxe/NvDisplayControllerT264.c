@@ -122,7 +122,9 @@ EnableHwT264 (
 
     ClocksEnabled = TRUE;
   } else {
-    Status = EFI_SUCCESS;
+    /* Shutdown display HW if and only if we were called to disable
+       the display. */
+    Status = NvDisplayHwShutdown (DriverHandle, ControllerHandle);
 
 Disable:
     if (ClocksEnabled) {

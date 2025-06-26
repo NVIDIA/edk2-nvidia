@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -102,6 +102,22 @@ NvDisplayEnableClocks (
   IN CONST CHAR8 *CONST  Clocks[],
   IN CONST CHAR8 *CONST  ClockParents[][2],
   IN BOOLEAN             Enable
+  );
+
+/**
+  Shutdown active display HW before reset to prevent a lingering bad
+  state.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayHwShutdown (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
   );
 
 /**

@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - HW
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,11 +10,26 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
+
+#define DISPLAY_HEAD_COUNT     8
+#define DISPLAY_SOR_COUNT      8
+#define DISPLAY_FE_SW_SYS_CAP  0x00030000
+#define DISPLAY_FE_CMGR_CLK_RG(Index)   (0x00002200 + (Index) * SIZE_2KB)
+#define DISPLAY_FE_CMGR_CLK_SOR(Index)  (0x00002300 + (Index) * SIZE_2KB)
+#define DISPLAY_FE_CMGR_CLK_SF(Index)   (0x00002420 + (Index) * SIZE_2KB)
+
+#define GetDisplayFeSysCapHeadExists(FeSysCap, Index)         (BOOLEAN)BitFieldRead32 ((FeSysCap), (Index), (Index))
+#define GetDisplayFeSysCapSorExists(FeSysCap, Index)          (BOOLEAN)BitFieldRead32 ((FeSysCap), (Index) + 8, (Index) + 8)
+#define SetDisplayFeCmgrClkRgForceSafeEnable(FeCmgrClkRg)     BitFieldWrite32 ((FeCmgrClkRg), 11, 11, 1)
+#define SetDisplayFeCmgrClkSfSafeCtrlBypass(FeCmgrClkSf)      BitFieldWrite32 ((FeCmgrClkSf), 16, 17, 1)
+#define SetDisplayFeCmgrClkSorModeBypassDpSafe(FeCmgrClkSor)  BitFieldWrite32 ((FeCmgrClkSor), 16, 17, 2)
 
 /**
   Assert or deassert display resets.
@@ -148,6 +163,70 @@ NvDisplayEnableClocks (
         Status
         ));
       return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Shutdown active display HW before reset to prevent a lingering bad
+  state.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayHwShutdown (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINTN                 Size;
+  UINTN                 Index;
+  UINT32                FeSysCap, Data32;
+  CONST UINTN           DisplayRegion = 0;
+
+  Status = DeviceDiscoveryGetMmioRegion (
+             ControllerHandle,
+             DisplayRegion,
+             &Base,
+             &Size
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve display region: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  FeSysCap = MmioRead32 (Base + DISPLAY_FE_SW_SYS_CAP);
+
+  for (Index = 0; Index < DISPLAY_HEAD_COUNT; ++Index) {
+    if (GetDisplayFeSysCapHeadExists (FeSysCap, Index)) {
+      Data32 = MmioRead32 (Base + DISPLAY_FE_CMGR_CLK_RG (Index));
+      Data32 = SetDisplayFeCmgrClkRgForceSafeEnable (Data32);
+      MmioWrite32 (Base + DISPLAY_FE_CMGR_CLK_RG (Index), Data32);
+
+      Data32 = MmioRead32 (Base + DISPLAY_FE_CMGR_CLK_SF (Index));
+      Data32 = SetDisplayFeCmgrClkSfSafeCtrlBypass (Data32);
+      MmioWrite32 (Base + DISPLAY_FE_CMGR_CLK_SF (Index), Data32);
+    }
+  }
+
+  for (Index = 0; Index < DISPLAY_SOR_COUNT; ++Index) {
+    if (GetDisplayFeSysCapSorExists (FeSysCap, Index)) {
+      Data32 = MmioRead32 (Base + DISPLAY_FE_CMGR_CLK_SOR (Index));
+      Data32 = SetDisplayFeCmgrClkSorModeBypassDpSafe (Data32);
+      MmioWrite32 (Base + DISPLAY_FE_CMGR_CLK_SOR (Index), Data32);
     }
   }
 
