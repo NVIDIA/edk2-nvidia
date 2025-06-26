@@ -1131,7 +1131,7 @@ SetInactiveBootChainStatus (
   IN BOOLEAN  SetGoodStatus
   )
 {
-  return EFI_UNSUPPORTED;
+  return EFI_SUCCESS;
 }
 
 /**
