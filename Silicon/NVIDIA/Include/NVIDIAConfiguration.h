@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -52,6 +52,9 @@
 #define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER   0
 #define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS  1
 #define NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO    2
+
+#define NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB  1
+#define NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_EFIFB     2
 
 // Option to expose PCIe in OS
 typedef struct {
@@ -164,6 +167,10 @@ typedef struct {
 typedef struct {
   UINT8    Mode;
 } NVIDIA_SOC_DISPLAY_HANDOFF_MODE;
+
+typedef struct {
+  UINT8    Method;
+} NVIDIA_SOC_DISPLAY_HANDOFF_METHOD;
 
 typedef struct {
   UINT8    PowerControl;

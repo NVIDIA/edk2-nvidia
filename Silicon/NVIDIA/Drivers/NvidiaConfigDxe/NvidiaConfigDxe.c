@@ -2134,6 +2134,9 @@ InitializeSettings (
   // Initialize SOC display hand-off mode
   PcdSet8S (PcdSocDisplayHandoffMode, PcdGet8 (PcdSocDisplayHandoffMode));
 
+  // Initialize SOC display hand-off method
+  PcdSet8S (PcdSocDisplayHandoffMethod, PcdGet8 (PcdSocDisplayHandoffMethod));
+
   // Initialize Server Power Control settings
   PcdSet8S (PcdServerPowerControlSetting, PcdGet8 (PcdServerPowerControlSetting));
 

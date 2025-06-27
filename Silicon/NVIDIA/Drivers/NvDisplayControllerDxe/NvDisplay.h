@@ -157,4 +157,22 @@ NvDisplayUpdateFdtTableActiveChildGop (
   IN EFI_HANDLE  ControllerHandle
   );
 
+/**
+  Enable the EFIFB driver if there is an active GOP instance with a
+  suitable framebuffer installed on a child handle.
+
+  @param[in] DriverHandle      Handle of the driver.
+  @param[in] ControllerHandle  Handle of the controller.
+
+  @return TRUE   EFIFB driver enabled successfully.
+  @return FALSE  No GOP child handle was found.
+  @return FALSE  The GOP child handle was inactive.
+  @return FALSE  The EFI framebuffer is not suitable for EFIFB driver.
+ */
+BOOLEAN
+NvDisplayEnableEfifbActiveChildGop (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
+  );
+
 #endif // __NV_DISPLAY_H__

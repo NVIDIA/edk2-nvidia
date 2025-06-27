@@ -1161,6 +1161,9 @@
 #string STR_ALWAYS                       #language en-US  "Always"
 #string STR_AUTO                         #language en-US  "Auto"
 
+#string STR_SIMPLEFB                     #language en-US  "simplefb"
+#string STR_EFIFB                        #language en-US  "efifb"
+
 #string STR_IPV4                         #language en-US  "IPv4"
 #string STR_IPV6                         #language en-US  "IPv6"
 
@@ -1234,6 +1237,9 @@
 
 #string STR_SOC_DISPLAY_HANDOFF_MODE_PROMPT #language en-US "SOC Display Hand-Off Mode"
 #string STR_SOC_DISPLAY_HANDOFF_MODE_HELP   #language en-US "How to hand-off the SOC display: Never - always reset the display on UEFI exit; Always - never reset the display on UEFI exit; Auto - reset the display on UEFI exit unless it is active (requires kernel support)."
+
+#string STR_SOC_DISPLAY_HANDOFF_METHOD_PROMPT #language en-US "SOC Display Hand-Off Method"
+#string STR_SOC_DISPLAY_HANDOFF_METHOD_HELP   #language en-US "The method of SOC display hand-off: simplefb - update simple-framebuffer node in the Device Tree; efifb - expose framebuffer address in EFI Graphics Output Protocol."
 
 #string STR_NONE                     #language en-US "None"
 #string STR_DBG2_NETWORK_DEVICE      #language en-US "DBG2 Network Device"

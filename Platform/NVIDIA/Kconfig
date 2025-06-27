@@ -492,6 +492,30 @@ menu "Hardware support"
         kernel support).
     endchoice
 
+    config DEFAULT_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB
+    bool
+    config DEFAULT_SOC_DISPLAY_HANDOFF_METHOD_EFIFB
+    bool
+
+    choice SOC_DISPLAY_HANDOFF_METHOD
+      prompt "SOC Display Hand-Off Method"
+      help
+        The method of SOC display hand-off.
+
+      default SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB if DEFAULT_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB
+      default SOC_DISPLAY_HANDOFF_METHOD_EFIFB if DEFAULT_SOC_DISPLAY_HANDOFF_METHOD_EFIFB
+
+      config SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB
+      bool "simplefb"
+      help
+        Update simple-framebuffer node in the Device Tree.
+
+      config SOC_DISPLAY_HANDOFF_METHOD_EFIFB
+      bool "efifb"
+      help
+        Expose framebuffer address in EFI Graphics Output Protocol.
+    endchoice
+
     config DEFAULT_DEFAULT_GOP_MODE_MAX
     bool
     config DEFAULT_DEFAULT_GOP_MODE_1080p

@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - Child GOP
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,21 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
+#include <Protocol/KernelCmdLineUpdate.h>
+
 #include "NvDisplay.h"
+
+/* Extra command-line arguments passed to the kernel when EFIFB
+   support is enabled.
+
+   They are required to prevent the kernel from cutting power and
+   clocks to the display, since it cannot know the display is being
+   used to back the EFI framebuffer.
+*/
+STATIC CONST NVIDIA_KERNEL_CMD_LINE_UPDATE_PROTOCOL  mEfifbSupportKernelCmdLineUpdateProtocol = {
+  .ExistingCommandLineArgument = NULL,
+  .NewCommandLineArgument      = L"clk_ignore_unused pd_ignore_unused console=tty0",
+};
 
 /**
   Checks if ChildHandle is a child handle of ControllerHandle (in
@@ -250,4 +264,60 @@ NvDisplayUpdateFdtTableActiveChildGop (
            (UINT64)FrameBufferBase,
            (UINT64)FrameBufferSize
            );
+}
+
+/**
+  Enable the EFIFB driver if there is an active GOP instance with a
+  suitable framebuffer installed on a child handle.
+
+  @param[in] DriverHandle      Handle of the driver.
+  @param[in] ControllerHandle  Handle of the controller.
+
+  @return TRUE   EFIFB driver enabled successfully.
+  @return FALSE  No GOP child handle was found.
+  @return FALSE  The GOP child handle was inactive.
+  @return FALSE  The EFI framebuffer is not suitable for EFIFB driver.
+ */
+BOOLEAN
+NvDisplayEnableEfifbActiveChildGop (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+
+  Status = NvDisplayLocateActiveChildGop (DriverHandle, ControllerHandle, &Gop);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  if (  (Gop->Mode->FrameBufferBase == 0)
+     || (Gop->Mode->FrameBufferSize == 0)
+     || (Gop->Mode->Info->PixelFormat == PixelBltOnly))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: framebuffer not suitable for EFIFB\r\n", __FUNCTION__));
+    return FALSE;
+  }
+
+  /* We have a child handle with GOP protocol installed and a suitable
+     framebuffer, enable the kernel EFI FB driver. Ignore "protocol
+     already installed" error to keep the function idempotent. */
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  (EFI_HANDLE *)&DriverHandle,
+                  &gNVIDIAKernelCmdLineUpdateGuid,
+                  (VOID **)&mEfifbSupportKernelCmdLineUpdateProtocol,
+                  NULL
+                  );
+  if (EFI_ERROR (Status) && (Status != EFI_INVALID_PARAMETER)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to install the kernel command-line update protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return FALSE;
+  }
+
+  return TRUE;
 }
