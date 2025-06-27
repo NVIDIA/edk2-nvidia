@@ -1,7 +1,7 @@
 ## @file
 #  NVIDIA Configuration Dxe
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -99,6 +99,7 @@
   gNVIDIATokenSpaceGuid.PcdMemoryTest
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod
   gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting
   gNVIDIATokenSpaceGuid.PcdNvGopSupported
 

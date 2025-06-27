@@ -1220,6 +1220,12 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_SOC_DISPLAY_HANDOFF_MODE_AUTO
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|L"SocDisplayHandoffMode"|gNVIDIAPublicVariableGuid|0x0|2|BS,NV,RT
 !endif
+!ifdef CONFIG_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod|L"SocDisplayHandoffMethod"|gNVIDIAPublicVariableGuid|0x0|1|BS,NV,RT
+!endif
+!ifdef CONFIG_SOC_DISPLAY_HANDOFF_METHOD_EFIFB
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod|L"SocDisplayHandoffMethod"|gNVIDIAPublicVariableGuid|0x0|2|BS,NV,RT
+!endif
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
 !ifdef CONFIG_MEMORY_TEST

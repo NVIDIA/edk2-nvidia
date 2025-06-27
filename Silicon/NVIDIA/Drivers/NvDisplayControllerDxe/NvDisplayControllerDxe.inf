@@ -49,11 +49,13 @@
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiLib
+  UefiRuntimeServicesTableLib
 
 [Guids]
-  gEfiAcpiTableGuid
+  gDtPlatformFormSetGuid
   gEfiEventReadyToBootGuid
   gFdtTableGuid
+  gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIANonDiscoverableT234DisplayDeviceGuid
   gNVIDIANonDiscoverableT264DisplayDeviceGuid
   gNVIDIAPlatformResourceDataGuid
@@ -65,9 +67,12 @@
   gNVIDIANonDiscoverableDeviceProtocolGuid
   gNVIDIAI2cExpanderGpioProtocolGuid            ## CONSUMES
   gNVIDIADeviceTreeNodeProtocolGuid             ## CONSUMES
+  gNVIDIAGraphicsOutputForceBltOnlyProtocolGuid
 
 [Pcd]
+  gEmbeddedTokenSpaceGuid.PcdDefaultDtPref
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
+  gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod
 
 [Depex]
   gEfiVariableArchProtocolGuid                  AND
