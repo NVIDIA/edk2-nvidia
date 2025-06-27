@@ -1694,7 +1694,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
   ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
-  ArmPkg/Drivers/TimerDxe/TimerDxe.inf
+  ArmPkg/Drivers/TimerDxe/TimerDxe.inf {
+    <LibraryClasses>
+      DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  }
+
 !ifdef CONFIG_ARM_WATCHDOG
   ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf {
     <LibraryClasses>
