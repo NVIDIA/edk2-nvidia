@@ -66,6 +66,7 @@
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
 
 [Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
   gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString

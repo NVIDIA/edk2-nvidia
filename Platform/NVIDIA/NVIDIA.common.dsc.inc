@@ -350,10 +350,15 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
   PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
   PL011UartClockLib|ArmPlatformPkg/Library/PL011UartClockLib/PL011UartClockLib.inf
+
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_MDEMODULE
+  SerialPortLib|ArmPlatformPkg/Library/PL011SerialPortLib/PL011SerialPortLib.inf
+!else
   TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
   TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
   TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
+!endif
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
   FloorSweepingLib|Silicon/NVIDIA/Library/FloorSweepingLib/FloorSweepingLib.inf
@@ -904,6 +909,14 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdBootManagerConOutAttributes|$(CONFIG_BOOT_MANAGER_CON_OUT_ATTRIBUTES)
 
 [PcdsFixedAtBuild]
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_MDEMODULE
+  !ifdef CONFIG_SOC_T24X
+    gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0C280000
+  !endif
+!else
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0
+!endif
+
   #
   # Variable Services PCDs.
   #

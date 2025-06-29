@@ -73,6 +73,7 @@
   gServerPowerControlProtocolGuid               ## SOMETIMES CONSUMES
 
 [Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpiConfigNeeded
   gNVIDIATokenSpaceGuid.PcdPcieEntryInAcpi

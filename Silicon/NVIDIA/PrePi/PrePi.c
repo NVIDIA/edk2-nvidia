@@ -254,6 +254,8 @@ CEntryPoint (
   VOID                          *MmuFuncPtr;
   VOID                          *MmuFuncHob;
 
+  Mapping = NULL;
+
   if (PerformanceMeasurementEnabled ()) {
     // We cannot call yet the PerformanceLib because the HOB List has not been initialized
     StartTimeStamp = GetPerformanceCounter ();
@@ -423,6 +425,9 @@ CEntryPoint (
   MapCorePlatformMemory ();
   StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
 
+ #if FixedPcdGet64 (PcdSerialRegisterBase) != 0
+  ArmSetMemoryAttributes (PcdGet64 (PcdSerialRegisterBase), SIZE_4KB, EFI_MEMORY_UC, 0);
+ #else
   SerialPortIdentify (&Mapping);
   while (Mapping->Type != TEGRA_UART_TYPE_NONE) {
     if (Mapping->IsFound) {
@@ -431,6 +436,8 @@ CEntryPoint (
 
     Mapping++;
   }
+
+ #endif
 
   // Initialize the Serial Port
   SerialPortInitialize ();

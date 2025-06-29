@@ -3653,7 +3653,9 @@ UpdateSerialPcds (
   VOID
   )
 {
-  UINT8           SerialPortType;
+  UINT8  SerialPortType;
+
+ #if FixedPcdGet64 (PcdSerialRegisterBase) == 0
   EFI_STATUS      Status;
   UINTN           SerialPortVarLen;
   SERIAL_MAPPING  *SerialMapping;
@@ -3678,6 +3680,14 @@ UpdateSerialPcds (
   if (Status == EFI_NOT_FOUND) {
     PcdSet8S (PcdSerialPortConfig, mDefaultPortConfig);
   }
+
+ #else
+  SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_SBSA;
+  mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
+
+  PcdSet8S (PcdSerialTypeConfig, SerialPortType);
+  PcdSet8S (PcdSerialPortConfig, mDefaultPortConfig);
+ #endif
 
   return EFI_SUCCESS;
 }
