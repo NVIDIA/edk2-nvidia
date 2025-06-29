@@ -990,6 +990,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   !ifdef CONFIG_SOC_T24X
     gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0C280000
   !endif
+  !ifdef CONFIG_SOC_T41X
+    gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0xFE1501E00000
+  !endif
 !else
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0
 !endif
