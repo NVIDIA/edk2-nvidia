@@ -102,7 +102,7 @@ InstallSmbiosType9Cm (
                   &HandleBuf
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: locate EFI_REGULAR_EXPRESSION_PROTOCOL failure: %r\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: locate PCI IO protocol failure: %r\n", __FUNCTION__, Status));
     HandleCount = 0;
   }
 
