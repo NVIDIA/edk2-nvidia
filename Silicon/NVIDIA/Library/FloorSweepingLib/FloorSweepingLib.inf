@@ -33,7 +33,6 @@
   MceAriLib
   MemoryAllocationLib
   MpCoreInfoLib
-  NvgLib
   TegraPlatformInfoLib
   DeviceTreeHelperLib
 

@@ -68,7 +68,6 @@
   StackCheckFailureHookLib|MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
-  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   HashApiLib|CryptoPkg/Library/BaseHashApiLib/BaseHashApiLib.inf
   NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
   MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf

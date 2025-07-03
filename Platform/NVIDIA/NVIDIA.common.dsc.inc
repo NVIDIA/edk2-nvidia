@@ -356,7 +356,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
-  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   FloorSweepingLib|Silicon/NVIDIA/Library/FloorSweepingLib/FloorSweepingLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
   DisplayDeviceTreeHelperLib|Silicon/NVIDIA/Library/DisplayDeviceTreeHelperLib/DisplayDeviceTreeHelperLib.inf

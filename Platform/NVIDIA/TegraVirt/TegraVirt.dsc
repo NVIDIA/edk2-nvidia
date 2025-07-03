@@ -91,7 +91,6 @@
   FwVariableLib|Silicon/NVIDIA/Library/FwVariableLibNull/FwVariableLib.inf
 
   # AndroidBootDxe Libraries
-  NvgLib|Silicon/NVIDIA/Library/NvgLib/NvgLib.inf
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLibNull/PlatformResourceLibNull.inf
