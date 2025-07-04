@@ -126,7 +126,7 @@
 #string STR_UPHY5_SOCKET1_PROMPT                #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket1UPHY5config"
 #string STR_UPHY5_SOCKET2_PROMPT                #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket2UPHY5config"
 #string STR_UPHY5_SOCKET3_PROMPT                #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket3UPHY5config"
-#string STR_PCIE_C9_X2                          #language x-UEFI-redfish-Bios.v1_2_0 "PCIeC0x2"
+#string STR_PCIE_C9_X2                          #language x-UEFI-redfish-Bios.v1_2_0 "PCIeC9x2"
 
 #string STR_PCIE_MAX_SPEED_SOCKET0_PCIE0_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie0MaxPCIespeed"
 #string STR_PCIE_MAX_SPEED_SOCKET0_PCIE1_TITLE        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/Socket0Pcie1MaxPCIespeed"
