@@ -1015,7 +1015,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
 
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
-  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|1024
 
 !ifdef CONFIG_L4T
   gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE

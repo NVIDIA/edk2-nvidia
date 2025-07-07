@@ -131,7 +131,7 @@ gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x4f
   #  If this is changed the boot watchdog value should be reevaluated.
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000000F
 
-  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
+  gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|1024
 
 [Components.common]
   #
