@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -9,7 +9,6 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
-#include <Library/DeviceTreeHelperLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/PrintLib.h>
 
@@ -443,7 +442,8 @@ UpdateDeviceTreeSimpleFramebufferInfo (
 
   NodeCount = 0;
   fdt_for_each_subnode (NodeOffset, DeviceTree, Result) {
-    if (EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("simple-framebuffer", NodeOffset))) {
+    Result = fdt_node_check_compatible (DeviceTree, NodeOffset, "simple-framebuffer");
+    if (Result != 0) {
       continue;
     }
 
