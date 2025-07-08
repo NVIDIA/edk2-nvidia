@@ -747,6 +747,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   # CPU Frequency support
   #
   INF Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+  INF Silicon/NVIDIA/Drivers/CpuFreqMonitor/CpuFreqMonitorDxe.inf
 
   #
   # Tegra Controller Enable Driver

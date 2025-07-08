@@ -1,0 +1,40 @@
+#/** @file
+#
+#  CPU Frequency Monitor Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = CpuFreqMonitorDxe
+  FILE_GUID                      = 8f7c8e9a-1234-5678-9abc-def012345678
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = CpuFreqMonitorInitialize
+
+[Sources]
+  CpuFreqMonitorDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+
+[LibraryClasses]
+  ArmLib
+  BaseLib
+  UefiLib
+  UefiDriverEntryPoint
+  DebugLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIATegraCpuFrequencyProtocolGuid
+
+[Depex]
+  gNVIDIATegraCpuFrequencyProtocolGuid

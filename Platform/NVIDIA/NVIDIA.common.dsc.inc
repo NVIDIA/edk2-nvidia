@@ -2374,6 +2374,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   # CPU Frequency support
   #
   Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+  Silicon/NVIDIA/Drivers/CpuFreqMonitor/CpuFreqMonitorDxe.inf
 
   #
   # Tegra Controller Enable Driver
