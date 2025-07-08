@@ -2342,6 +2342,7 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
   # CPU Frequency support
   #
   Silicon/NVIDIA/Drivers/TegraCpuFreqDxe/TegraCpuFreqDxe.inf
+  Silicon/NVIDIA/Drivers/CpuFreqMonitor/CpuFreqMonitorDxe.inf
 
   #
   # Tegra Controller Enable Driver
