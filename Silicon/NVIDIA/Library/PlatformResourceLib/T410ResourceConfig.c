@@ -341,6 +341,14 @@ T410BuildDramRegions (
       continue;
     }
 
+    DEBUG ((
+      DEBUG_ERROR,
+      "Socket: %u Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
+      Socket,
+      CpuBootloaderParams->SdramInfo[Socket].Base,
+      CpuBootloaderParams->SdramInfo[Socket].Size
+      ));
+
     Base = CpuBootloaderParams->SdramInfo[Socket].Base;
     Size = CpuBootloaderParams->SdramInfo[Socket].Size;
 
