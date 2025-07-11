@@ -2,7 +2,7 @@
 #
 #  Component description file for TegraSerialPortLib module
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -23,7 +23,6 @@
   PcdLib
   DebugLib
   TegraSbsaSerialPortLib
-  Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
   TegraUtcSerialPortLib
   TegraPlatformInfoLib

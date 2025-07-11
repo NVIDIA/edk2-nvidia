@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port library functions with no library constructor/destructor
 
-  Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.
   Copyright (c) 2012 - 2016, ARM Ltd. All rights reserved.
   Copyright (c) 2015, Intel Corporation. All rights reserved.
@@ -254,7 +254,7 @@ TEGRA_UART_OBJ  TegraSbsaUart = {
 
 /**
 
-  Retrieve the object of tegra 16550 serial port library.
+  Retrieve the object of tegra SBSA serial port library.
 
   @param[out]  Tegra combined uart library object
 

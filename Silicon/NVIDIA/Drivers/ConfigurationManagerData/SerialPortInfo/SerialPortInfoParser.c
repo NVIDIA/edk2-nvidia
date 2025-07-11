@@ -1,7 +1,7 @@
 /** @file
   Serial port info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -10,21 +10,13 @@
 #include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/DeviceTreeHelperLib.h>
-#include <Library/TegraPlatformInfoLib.h>
+// #include <Library/TegraPlatformInfoLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <NVIDIAConfiguration.h>
 
 #include <IndustryStandard/DebugPort2Table.h>
 #include <IndustryStandard/SerialPortConsoleRedirectionTable.h>
-
-STATIC
-CONST CHAR8  *TegraSerialPortCompatibility[] = {
-  "nvidia,tegra20-uart",
-  "nvidia,tegra186-hsuart",
-  "nvidia,tegra194-hsuart",
-  NULL
-};
 
 STATIC
 CONST CHAR8  *ArmSerialPortCompatibility[] = {
@@ -76,7 +68,6 @@ SerialPortInfoParser (
   CM_STD_OBJ_ACPI_TABLE_INFO         AcpiTableHeader;
   CONST CHAR8                        **Map;
   CM_OBJ_DESCRIPTOR                  Desc;
-  UINTN                              ChipID;
   INT32                              NodeOffset;
 
   SpcrSerialPort = NULL;
@@ -92,39 +83,10 @@ SerialPortInfoParser (
   }
 
   SerialTypeConfig = PcdGet8 (PcdSerialTypeConfig);
-  ChipID           = TegraGetChipID ();
-
-  switch (ChipID) {
-    case T234_CHIP_ID: // JDS TODO - confirm that this is correct
-      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_16550) {
-        Map = TegraSerialPortCompatibility;
-      } else {
-        Map = ArmSerialPortCompatibility;
-      }
-
-      break;
-
-    case T264_CHIP_ID:
-      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
-        Map = ArmSerialPortCompatibility;
-      } else {
-        return EFI_SUCCESS;
-      }
-
-      break;
-
-    case TH500_CHIP_ID:
-      if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
-        Map = ArmSerialPortCompatibility;
-      } else {
-        return EFI_SUCCESS;
-      }
-
-      break;
-
-    default:
-      DEBUG ((DEBUG_ERROR, "%a: Unable to determine how to handle SerialPort for ChipID 0x%x\n", __FUNCTION__, ChipID));
-      return EFI_UNSUPPORTED;
+  if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
+    Map = ArmSerialPortCompatibility;
+  } else {
+    return EFI_SUCCESS;
   }
 
   Status = DeviceTreeGetCompatibleNodeCount (Map, &NumberOfSerialPorts);
@@ -163,23 +125,13 @@ SerialPortInfoParser (
     SpcrSerialPort[Index].Interrupt         = DEVICETREE_TO_ACPI_INTERRUPT_NUM (InterruptData);
     SpcrSerialPort[Index].BaudRate          = FixedPcdGet64 (PcdUartDefaultBaudRate);
     SpcrSerialPort[Index].Clock             = FixedPcdGet32 (PL011UartClkInHz);
-    if (SerialTypeConfig == NVIDIA_SERIAL_PORT_TYPE_SBSA) {
-      SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART;
-    } else {
-      if (SerialPortConfig == NVIDIA_SERIAL_PORT_SPCR_FULL_16550) {
-        SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550;
-      } else {
-        SpcrSerialPort[Index].PortSubtype = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_NVIDIA_16550_UART;
-      }
-    }
+    SpcrSerialPort[Index].PortSubtype       = EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART;
 
     Index++;
   }
 
   // Extend ACPI table list with the new table header
-  if ((SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) ||
-      (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550))
-  {
+  if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) {
     AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
     AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
@@ -201,9 +153,7 @@ SerialPortInfoParser (
   }
 
   // Create the new Serial entries
-  if ((SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) ||
-      (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550))
-  {
+  if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) {
     Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjSerialDebugPortInfo);
   } else {
     Desc.ObjectId = CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjConsolePortInfo);

@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,18 +24,13 @@
 #include <NVIDIAConfiguration.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
-  { "nvidia,*-uart",   &gNVIDIANonDiscoverable16550UartDeviceGuid    },
-  { "nvidia,*-hsuart", &gNVIDIANonDiscoverable16550UartDeviceGuid    },
-  { "nvidia,*-tcu",    &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
-  { "arm,sbsa-uart",   &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
-  { "arm,pl011",       &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
-  { "nvidia,*-utc",    &gNVIDIANonDiscoverableUtcUartDeviceGuid      },
-  { NULL,              NULL                                          }
+  { "nvidia,*-tcu",  &gNVIDIANonDiscoverableCombinedUartDeviceGuid },
+  { "arm,sbsa-uart", &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { "arm,pl011",     &gNVIDIANonDiscoverableSbsaUartDeviceGuid     },
+  { "nvidia,*-utc",  &gNVIDIANonDiscoverableUtcUartDeviceGuid      },
+  { NULL,            NULL                                          }
 };
 
-CONST CHAR8  *g16550UartCompatible[] = {
-  "nvidia,*-uart", "nvidia,*-hsuart", NULL
-};
 CONST CHAR8  *gSbsaUartCompatible[] = {
   "arm,sbsa-uart", "arm,pl011", NULL
 };
@@ -90,13 +85,7 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
-      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (g16550UartCompatible, DeviceTreeNode->NodeOffset))) {
-        if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550) ||
-            (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
-        {
-          return EFI_UNSUPPORTED;
-        }
-      } else if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
+      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {
@@ -107,35 +96,7 @@ DeviceDiscoveryNotify (
       return EFI_SUCCESS;
 
     case DeviceDiscoveryDriverBindingStart:
-      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (g16550UartCompatible, DeviceTreeNode->NodeOffset))) {
-        if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_16550) ||
-            (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
-        {
-          return EFI_UNSUPPORTED;
-        }
-
-        Status = DeviceDiscoveryGetClockId (ControllerHandle, UART_CLOCK_NAME, &ClockId);
-        if (!EFI_ERROR (Status)) {
-          Status = DeviceDiscoverySetClockFreq (ControllerHandle, UART_CLOCK_NAME, UART_CLOCK_RATE);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Unable to set clock frequency\n", __FUNCTION__));
-            return Status;
-          }
-        }
-
-        Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &RegionSize);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Unable to locate address range\n", __FUNCTION__));
-          return Status;
-        }
-
-        Interface = Serial16550IoInitialize (BaseAddress);
-        if (Interface == NULL) {
-          return EFI_NOT_STARTED;
-        }
-
-        InstallSerialIO = (SerialConfig != NVIDIA_SERIAL_PORT_DBG2_NVIDIA_16550);
-      } else if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
+      if (!EFI_ERROR (DeviceTreeCheckNodeCompatibility (gSbsaUartCompatible, DeviceTreeNode->NodeOffset))) {
         if ((PcdGet8 (PcdSerialTypeConfig) != NVIDIA_SERIAL_PORT_TYPE_SBSA) ||
             (SerialConfig == NVIDIA_SERIAL_PORT_DISABLED))
         {

@@ -95,7 +95,6 @@
 
   #UART device
   gNVIDIANonDiscoverableSbsaUartDeviceGuid    = { 0x76a54667, 0x2c0e, 0x48e8, { 0x84, 0x36, 0x34, 0xce, 0xba, 0xad, 0x4b, 0x88 } }
-  gNVIDIANonDiscoverable16550UartDeviceGuid    = { 0x2bf75281, 0xf836, 0x47e2, { 0x86, 0xc3, 0xa8, 0xde, 0x1b, 0x11, 0xb3, 0x1b } }
   gNVIDIANonDiscoverableCombinedUartDeviceGuid = { 0xcdaa1cdd, 0x2fb3, 0x4b5c, { 0x86, 0x2a, 0x58, 0x1d, 0xd7, 0xe0, 0x0c, 0x5a } }
   gNVIDIANonDiscoverableUtcUartDeviceGuid      = { 0x4b36b7a4, 0xf4fc, 0x498d, { 0x90, 0xed, 0xcb, 0x1d, 0x41, 0x35, 0x03, 0x5d } }
 
@@ -326,9 +325,6 @@
 
 #Name of Kernel DTB partition
   gNVIDIATokenSpaceGuid.PcdKernelDtbPartitionName|L"kernel-dtb"|VOID*|0x00000016
-
-#Tegra 16550 UART T234 Base
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234|0x03100000|UINT64|0x00000001E
 
 #TH500 Sbsa UART Base
   gNVIDIATokenSpaceGuid.PcdSbsaUartBaseTH500|0x0C280000|UINT64|0x0000001F
@@ -570,16 +566,12 @@
 
 #Option to configure serial port
 ##Supported UART Type Values
-  #0   - 16550 UART
-  #1   - SBSA UART
+  #0   - SBSA UART
   #255 - Undefined
   gNVIDIATokenSpaceGuid.PcdSerialTypeConfig|0xFF|UINT8|0x00000038
 ##Supported UART Port Values
-  #0   - SPCR Full 16550 UART
-  #1   - SPCR NVIDIA 16550 UART
-  #3   - DBG2 NVIDIA 16550 UART
-  #4   - SPCR SBSA UART
-  #5   - DBG2 SBSA UART
+  #0   - SPCR SBSA UART
+  #1   - DBG2 SBSA UART
   #255 - Disabled
   gNVIDIATokenSpaceGuid.PcdSerialPortConfig|0xFF|UINT8|0x00000039
 

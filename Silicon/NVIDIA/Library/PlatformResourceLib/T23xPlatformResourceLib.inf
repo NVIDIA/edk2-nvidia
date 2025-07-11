@@ -40,7 +40,6 @@
   gNVIDIAPlatformResourceDataGuid
 
 [FixedPcd]
-  gNVIDIATokenSpaceGuid.PcdTegra16550UartBaseT234
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
   gNVIDIATokenSpaceGuid.PcdTegraMceAriApertureBaseAddress
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem

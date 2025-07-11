@@ -351,7 +351,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   PL011UartLib|ArmPlatformPkg/Library/PL011UartLib/PL011UartLib.inf
   PL011UartClockLib|ArmPlatformPkg/Library/PL011UartClockLib/PL011UartClockLib.inf
   TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
-  Tegra16550SerialPortLib|Silicon/NVIDIA/Library/Tegra16550SerialPortLib/Tegra16550SerialPortLib.inf
   TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
   SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
   TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
@@ -851,17 +850,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   #
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
-
-  #
-  # UART 16550 parameters
-  #
-  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialClockRate|407347200
-
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterStride|4
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseHardwareFlowControl|TRUE
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialFifoControl|0x27
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialExtendedTxFifoSize|1
 
   #
   # PL011 UART Parameters

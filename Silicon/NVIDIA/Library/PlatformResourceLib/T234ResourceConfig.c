@@ -60,10 +60,6 @@ TEGRA_MMIO_INFO  T234MmioInfo[] = {
     T234_SCRATCH_BASE,
     SIZE_64KB
   },
-  {
-    FixedPcdGet64 (PcdTegra16550UartBaseT234),
-    SIZE_4KB
-  },
   // Placeholder for memory in DRAM CO CARVEOUT_DISP_EARLY_BOOT_FB
   // that would be treated as MMIO memory.
   {

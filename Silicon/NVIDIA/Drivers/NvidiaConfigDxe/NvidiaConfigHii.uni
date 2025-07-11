@@ -1168,10 +1168,7 @@
 #string STR_IPV6                         #language en-US  "IPv6"
 
 #string STR_SP_DISABLED                  #language en-US  "Port Disabled"
-#string STR_SP_ENABLED_SPCR_FULL_16550   #language en-US  "Console Enabled - 16550"
-#string STR_SP_ENABLED_SPCR_NVIDIA_16550 #language en-US  "Console Enabled - NVIDIA 16550"
 #string STR_SP_ENABLED_SPCR_SBSA         #language en-US  "Console Enabled - SBSA"
-#string STR_SP_ENABLED_DBG2_NVIDIA_16550 #language en-US  "Serial Debug Enabled - NVIDIA 16550"
 #string STR_SP_ENABLED_DBG2_SBSA         #language en-US  "Serial Debug Enabled - SBSA"
 
 #string STR_OS_PART_A                    #language en-US  "A Partition"

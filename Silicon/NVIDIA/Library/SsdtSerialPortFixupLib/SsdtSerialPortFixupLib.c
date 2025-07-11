@@ -2,7 +2,7 @@
   SSDT Serial Port Fixup Library.
 
   Copyright (c) 2019 - 2021, Arm Limited. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -82,13 +82,7 @@ ValidateSerialPortInfo (
         (SerialPortInfo->PortSubtype !=
          EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART_2X) &&
         (SerialPortInfo->PortSubtype !=
-         EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_NVIDIA_16550_UART) &&
-        (SerialPortInfo->PortSubtype !=
-         EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART) &&
-        (SerialPortInfo->PortSubtype !=
-         EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_DCC) &&
-        (SerialPortInfo->PortSubtype !=
-         EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550))
+         EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_SBSA_GENERIC_UART))
     {
       DEBUG ((
         DEBUG_ERROR,
@@ -148,13 +142,6 @@ FixupIds (
 
   // Get the _CID and _HID value to write.
   switch (SerialPortInfo->PortSubtype) {
-    case EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_FULL_16550:
-    case EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_NVIDIA_16550_UART:
-    {
-      HidString = "NVDA0100";
-      CidString = "";
-      break;
-    }
     case EFI_ACPI_DBG2_PORT_SUBTYPE_SERIAL_ARM_PL011_UART:
     {
       HidString = "ARMH0011";

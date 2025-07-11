@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -223,18 +223,6 @@ TegraCombinedSerialPortGetObject (
   );
 
 /**
-  Retrieve the object of tegra 16650 serial port library.
-
-  @param[out]  Tegra 16650 uart library object
-
-**/
-TEGRA_UART_OBJ *
-EFIAPI
-Tegra16550SerialPortGetObject (
-  VOID
-  );
-
-/**
   Initialize SBSA Serial Console
 
 **/
@@ -251,16 +239,6 @@ SerialSbsaIoInitialize (
 EFI_SERIAL_IO_PROTOCOL *
 EFIAPI
 SerialUtcIoInitialize (
-  IN UINTN  SerialBaseAddress
-  );
-
-/**
-  Initialize 16550 Serial Console
-
-**/
-EFI_SERIAL_IO_PROTOCOL *
-EFIAPI
-Serial16550IoInitialize (
   IN UINTN  SerialBaseAddress
   );
 

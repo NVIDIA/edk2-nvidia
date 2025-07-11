@@ -3663,11 +3663,7 @@ UpdateSerialPcds (
   SerialPortIdentify (&SerialMapping);
   for ( ; SerialMapping->Type != TEGRA_UART_TYPE_NONE; SerialMapping++) {
     if (SerialMapping->IsFound) {
-      if (SerialMapping->Type == TEGRA_UART_TYPE_16550) {
-        SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_16550;
-        mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_FULL_16550;
-        break;
-      } else if (SerialMapping->Type == TEGRA_UART_TYPE_SBSA) {
+      if (SerialMapping->Type == TEGRA_UART_TYPE_SBSA) {
         SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_SBSA;
         mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
         break;

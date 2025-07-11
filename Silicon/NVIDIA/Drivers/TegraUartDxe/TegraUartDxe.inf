@@ -2,7 +2,7 @@
 #
 #  TegraUart Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,7 +19,6 @@
 
 [Sources.common]
   TegraUartDxe.c
-  Serial16550.c
   SerialSbsa.c
   SerialTCU.c
   SerialUtc.c
@@ -44,7 +43,6 @@
   MemoryAllocationLib
   SerialPortLib
   TegraSbsaSerialPortLib
-  Tegra16550SerialPortLib
   TegraCombinedSerialPortLib
 
 [Pcd]
@@ -62,6 +60,5 @@
 
 [Guids]
   gNVIDIANonDiscoverableSbsaUartDeviceGuid
-  gNVIDIANonDiscoverable16550UartDeviceGuid
   gNVIDIANonDiscoverableCombinedUartDeviceGuid
   gNVIDIANonDiscoverableUtcUartDeviceGuid
