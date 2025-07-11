@@ -938,6 +938,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0
 !endif
 
+  #Option to boot android image
+!ifdef CONFIG_BUILD_ANDROID
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|TRUE
+!endif
+
   #
   # Variable Services PCDs.
   #

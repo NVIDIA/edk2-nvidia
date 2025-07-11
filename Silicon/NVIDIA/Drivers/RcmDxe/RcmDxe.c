@@ -1,7 +1,7 @@
 /** @file
 *  RCM Boot Dxe
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -84,10 +84,6 @@ RcmDxeInitialize (
 
   PcdSet64S (PcdRcmKernelBase, (UINT64)RcmBlobHeader + RcmBlobHeader->BlobInfo[Count].Offset);
   PcdSet64S (PcdRcmKernelSize, RcmBlobHeader->BlobInfo[Count].Size);
-
-  if (PcdGetBool (PcdRcmUseDtbCmdline)) {
-    PcdSetBoolS (PcdBootAndroidImage, TRUE);
-  }
 
   OsCarveoutBase = PlatformResourceInfo->RamdiskOSInfo.Base;
   OsCarveoutSize = PlatformResourceInfo->RamdiskOSInfo.Size;

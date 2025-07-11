@@ -785,13 +785,5 @@ TegraPlatformInitialize (
     SetOemTableIdPcdForTh500 ();
   }
 
-  // Set PCD to reflect android kernel boot for later stages
-  NodeOffset = fdt_path_offset (DtbBase, "/chosen");
-  if (NodeOffset >= 0) {
-    if (fdt_getprop (DtbBase, NodeOffset, "use_dts_cmdline", NULL) != NULL) {
-      PcdSetBoolS (PcdBootAndroidImage, TRUE);
-    }
-  }
-
   return EFI_SUCCESS;
 }

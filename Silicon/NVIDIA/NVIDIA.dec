@@ -460,6 +460,9 @@
   #Application to launch when RCM boot occurs
   gNVIDIATokenSpaceGuid.PcdRcmBootApplicationGuid|{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}|VOID*|0x00010002
 
+  #Option to boot android image
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|FALSE|BOOLEAN|0x00000114
+
   #Build Epoch
   gNVIDIATokenSpaceGuid.PcdBuildEpoch|0|UINT64|0x00000119
 
@@ -765,9 +768,6 @@
 
 #Option to boot board in recovery mode
   gNVIDIATokenSpaceGuid.PcdBoardRecoveryBoot|FALSE|BOOLEAN|0x00000113
-
-#Option to boot android image
-  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|FALSE|BOOLEAN|0x00000114
 
 #Specify UFS refclk freq from EDKII_UFS_CARD_REF_CLK_FREQ_ATTRIBUTE enum
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|0|UINT32|0x000000A6

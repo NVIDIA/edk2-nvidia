@@ -146,6 +146,7 @@
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString|L"$(BUILDID_STRING)"
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareReleaseDateString|L"$(BUILD_DATE_TIME)"
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|TRUE
 
   #
   # Enable emulated variable NV mode in variable driver.
@@ -236,7 +237,6 @@
 !endif
 
 [PcdsDynamicDefault.common]
-  gNVIDIATokenSpaceGuid.PcdBootAndroidImage|TRUE
   gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerIntrNum|0x0
   gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum|0x0
