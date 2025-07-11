@@ -41,7 +41,8 @@ NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[BOOT_ORDER_TEMPLATE_CLASS_COUN
   { "cdrom",    MAX_INT32, MEDIA_DEVICE_PATH,     MEDIA_CDROM_DP,        MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
   { "boot.img", MAX_INT32, MAX_UINT8,             MAX_UINT8,             NVIDIA_BOOT_TYPE_BOOTIMG, MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
   { "virtual",  MAX_INT32, MESSAGING_DEVICE_PATH, MSG_USB_DP,            NVIDIA_BOOT_TYPE_VIRTUAL, MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
-  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN }
+  { "shell",    MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN },
+  { "fastboot", MAX_INT32, MAX_UINT8,             MAX_UINT8,             MAX_UINT8,                MAX_UINTN, MAX_UINTN, MAX_UINTN, MAX_UINTN }
 };
 
 STATIC  NVIDIA_BOOT_ORDER_PRIORITY  *mBootPriorityTable = NULL;
@@ -337,6 +338,13 @@ GetBootClassOfOption (
   if (StrCmp (Option->Description, L"UEFI Shell") == 0) {
     for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
       if (AsciiStrCmp (Table[BootPriorityIndex].OrderName, "shell") == 0) {
+        Result = &Table[BootPriorityIndex];
+        goto ReturnResult;
+      }
+    }
+  } else if (StrCmp (Option->Description, L"Android Fastboot") == 0) {
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if (AsciiStrCmp (Table[BootPriorityIndex].OrderName, "fastboot") == 0) {
         Result = &Table[BootPriorityIndex];
         goto ReturnResult;
       }

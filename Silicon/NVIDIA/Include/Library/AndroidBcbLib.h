@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -49,16 +49,19 @@ typedef struct {
 } BootloaderMessage;
 
 typedef enum {
-  MISC_CMD_TYPE_RECOVERY           = 1,
-  MISC_CMD_TYPE_FASTBOOT_USERSPACE = 2,
-  MISC_CMD_TYPE_INVALID            = 3,
+  MISC_CMD_TYPE_RECOVERY            = 1,
+  MISC_CMD_TYPE_FASTBOOT_USERSPACE  = 2,
+  MISC_CMD_TYPE_FASTBOOT_BOOTLOADER = 3,
+  MISC_CMD_TYPE_INVALID             = 4,
   MISC_CMD_TYPE_MAX,
 } MiscCmdType;
 
 /**
   Get BCB command type from BCB blob lodated in MISC partition
 
+  @param[in]               Image Handle to access block device
   @param[out]              Type Pointer to BCB cmd type
+  @param[in]               Clean bootonce cmd if True
 
   @retval EFI_SUCCESS      Operation successful.
   @retval others           Error occurred.
@@ -68,7 +71,8 @@ EFI_STATUS
 EFIAPI
 GetCmdFromMiscPartition (
   IN  EFI_HANDLE   Handle,
-  OUT MiscCmdType  *Type
+  OUT MiscCmdType  *Type,
+  IN  BOOLEAN      CleanBootOnceCmd
   );
 
 #endif /* __BOOTLOADER_MESSAGE_H_ */

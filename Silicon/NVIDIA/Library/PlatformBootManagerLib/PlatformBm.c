@@ -38,6 +38,7 @@
 #include <Library/TpmPlatformHierarchyLib.h>
 #include <Library/UefiRuntimeLib.h>
 #include <Library/StatusRegLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/BootChainProtocol.h>
 #include <Protocol/DeferredImageLoad.h>
@@ -1985,6 +1986,11 @@ PlatformBootManagerBeforeConsole (
   BOOLEAN                       SingleBoot;
   EFI_GUID                      *SingleBootAppGuid;
 
+ #if FixedPcdGetBool (PcdBootAndroidImage) == 1
+  MiscCmdType  MiscCmd;
+  BOOLEAN      FastBoot = FALSE;
+ #endif
+
   if (FeaturePcdGet (PcdMemoryTestsSupported)) {
     // Attempt to delete variable to prevent forced allocation at targeted address.
     // This can fail causing memory promotion to fail.
@@ -2113,6 +2119,30 @@ PlatformBootManagerBeforeConsole (
           }
         }
       }
+
+ #if FixedPcdGetBool (PcdBootAndroidImage) == 1
+      //
+      // Register UEFI Fastboot
+      //
+      Status = GetCmdFromMiscPartition (NULL, &MiscCmd, TRUE);
+      if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_FASTBOOT_BOOTLOADER))) {
+        FastBoot = TRUE;
+      }
+
+      if (TRUE == FastBoot) {
+        PlatformRegisterFvBootOption (
+          &gAndroidFastbootFileGuid,
+          L"Android Fastboot",
+          LOAD_OPTION_ACTIVE,
+          LoadOptionTypeBoot
+          );
+        Status = EfiBootManagerGetStaticApp (&BootOption, &gAndroidFastbootFileGuid);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Fastboot app\n", __FUNCTION__, Status));
+        }
+      }
+
+ #endif
 
       //
       // Set Boot Order

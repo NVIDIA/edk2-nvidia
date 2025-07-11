@@ -75,7 +75,7 @@ PlatformLoadFileBootDescriptionHandler (
     RecoveryBoot = TRUE;
   }
 
-  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, TRUE);
   if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE))) {
     RecoveryBoot = TRUE;
   }

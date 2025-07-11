@@ -1,7 +1,7 @@
 /**
   Implementation for AndroidBcbLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,8 +11,9 @@
 
 #define COMPARE_MSG_COMMAND(Msg, Target)  (AsciiStrCmp (Msg.command, Target))
 
-#define MSG_COMMAND_BOOT_RECOVERY            "boot-recovery"
-#define MSG_COMMAND_BOOT_FASTBOOT_USERSPACE  "boot-fastboot"
+#define MSG_COMMAND_BOOT_RECOVERY             "boot-recovery"
+#define MSG_COMMAND_BOOT_FASTBOOT_USERSPACE   "boot-fastboot"
+#define MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER  "bootonce-bootloader"
 
 static MiscCmdType  CacheCmdType = MISC_CMD_TYPE_MAX;
 
@@ -20,7 +21,8 @@ EFI_STATUS
 EFIAPI
 GetCmdFromMiscPartition (
   EFI_HANDLE   Handle,
-  MiscCmdType  *Type
+  MiscCmdType  *Type,
+  BOOLEAN      CleanBootOnceCmd
   )
 {
   EFI_STATUS                   Status = EFI_SUCCESS;
@@ -128,6 +130,23 @@ GetCmdFromMiscPartition (
     *Type = MISC_CMD_TYPE_RECOVERY;
   } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_FASTBOOT_USERSPACE) == 0) {
     *Type = MISC_CMD_TYPE_FASTBOOT_USERSPACE;
+  } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER) == 0) {
+    *Type = MISC_CMD_TYPE_FASTBOOT_BOOTLOADER;
+    // bootonce-bootloader, clean the field to avoid boot into fastboot again
+    if (CleanBootOnceCmd == TRUE) {
+      SetMem (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, 0x00);
+      Status = DiskIo->WriteDisk (
+                         DiskIo,
+                         BlockIo->Media->MediaId,
+                         0,
+                         sizeof (BootloaderMessage),
+                         (VOID *)&Message
+                         );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r tring to clean BCB %a\r\n", __FUNCTION__, Status, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER));
+        goto Exit;
+      }
+    }
   } else {
     *Type = MISC_CMD_TYPE_INVALID;
   }

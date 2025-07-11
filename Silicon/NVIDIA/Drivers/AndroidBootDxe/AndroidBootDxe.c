@@ -258,7 +258,7 @@ AndroidBootOnConnectCompleteHandler (
                 Private->ControllerHandle,
                 MISC_PARTITION_BASE_NAME
                 );
-  Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd);
+  Status = GetCmdFromMiscPartition (MscHandle, &MiscCmd, FALSE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: no misc partition cmd: %r\n", __FUNCTION__, Status));
     return;
@@ -1413,7 +1413,7 @@ AndroidBootLoadFile (
 
   // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
   // if kernel boot and vendor_boot ramdisk exists
-  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
   if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
      && (VendorImgData != NULL))
   {
@@ -1440,7 +1440,7 @@ AndroidBootLoadFile (
   BufSizeRamdisk = BufSize - BootConfigReservedSize;
 
   // recovery kernel has dedicated ramdisk in recovery.img
-  Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
   if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
      && (VendorImgData != NULL))
   {
@@ -1515,7 +1515,7 @@ AndroidBootLoadFile (
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
   if (ImgData->HeaderVersion >= 3) {
-    Status = GetCmdFromMiscPartition (NULL, &MiscCmd);
+    Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
     if (  !EFI_ERROR (Status) && (VendorImgData != NULL)) {
       // load BootConfig right behind the ramdisk memory
       BufBase += BufSize;

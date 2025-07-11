@@ -65,6 +65,7 @@
   TpmPlatformHierarchyLib
   TimerLib
   StatusRegLib
+  AndroidBcbLib
 
 [FeaturePcd]
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
@@ -98,6 +99,7 @@
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs
   gNVIDIATokenSpaceGuid.PcdBootManagerConOutAttributes
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage
 
 [Guids]
   gEfiFileInfoGuid
@@ -109,6 +111,7 @@
   gEfiAcpiTableGuid
   gFdtTableGuid
   gUefiShellFileGuid
+  gAndroidFastbootFileGuid
   gNVIDIAPublicVariableGuid
   gNVIDIATokenSpaceGuid
   gEfiRtPropertiesTableGuid

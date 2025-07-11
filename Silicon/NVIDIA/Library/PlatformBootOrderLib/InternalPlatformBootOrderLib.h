@@ -1,7 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-*
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
@@ -45,7 +44,7 @@ typedef struct {
 #define BOOT_ORDER_SBDF_STARTER     '|'
 #define BOOT_ORDER_TERMINATOR       '\0'
 
-#define BOOT_ORDER_TEMPLATE_CLASS_COUNT  15
+#define BOOT_ORDER_TEMPLATE_CLASS_COUNT  16
 extern NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[BOOT_ORDER_TEMPLATE_CLASS_COUNT];
 
 VOID
