@@ -25,6 +25,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/DtbUpdateLib.h>
 #include <Library/AndroidBcbLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Eeprom.h>
@@ -546,6 +547,10 @@ UpdateFdt (
     return;
   }
 
+  // reset pointer in case new fdt was installed
+  SetDeviceTreePointer (0, 0);
+  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+
   // Check if overlays from fw media are already applied
   FirmwareMediaOverlaysApplied = FALSE;
   NodeOffset                   = fdt_path_offset (Dtb, "/firmware/uefi");
@@ -666,10 +671,14 @@ DtPlatformLoadDtb (
   OUT   UINTN  *DtbSize
   )
 {
-  EFI_STATUS  Status;
-  VOID        *UefiDtb;
-  VOID        *DtbCopy;
+  STATIC BOOLEAN  RanOnce = FALSE;
+  EFI_STATUS      Status;
+  VOID            *UefiDtb;
+  VOID            *DtbCopy;
 
+  NV_ASSERT_RETURN (!RanOnce, return EFI_UNSUPPORTED, "%a: second load attempt!\n", __FUNCTION__);
+
+  RanOnce = TRUE;
   UefiDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
   if (fdt_check_header (UefiDtb) != 0) {
     DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\r\n", __FUNCTION__));

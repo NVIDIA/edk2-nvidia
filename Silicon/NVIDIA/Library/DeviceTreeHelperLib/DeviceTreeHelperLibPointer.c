@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -9,7 +9,7 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 
@@ -32,6 +32,16 @@ SetDeviceTreePointer (
   IN  UINTN  DeviceTreeSize
   )
 {
+  NV_ASSERT_RETURN ((DeviceTreeSize != 0) || (DeviceTree == NULL), return , "%a: size=0\n", __FUNCTION__);
+  NV_ASSERT_RETURN (
+    (LocalDeviceTree == NULL) || (LocalDeviceTree == DeviceTree) || (DeviceTree == NULL),
+    return ,
+    "%a: set would switch tree from 0x%p to 0x%p\n",
+    __FUNCTION__,
+    LocalDeviceTree,
+    DeviceTree
+    );
+
   LocalDeviceTree     = DeviceTree;
   LocalDeviceTreeSize = DeviceTreeSize;
 }
@@ -60,11 +70,13 @@ GetDeviceTreePointer (
   }
 
   Status = EFI_SUCCESS;
-  if ((LocalDeviceTree == NULL) || (LocalDeviceTreeSize == 0)) {
+  if ((LocalDeviceTree == NULL)) {
     Status = DtPlatformLoadDtb (&LocalDeviceTree, &LocalDeviceTreeSize);
   }
 
   if (!EFI_ERROR (Status)) {
+    NV_ASSERT_RETURN (LocalDeviceTreeSize != 0, return EFI_DEVICE_ERROR, "%a: size=0\n", __FUNCTION__);
+
     *DeviceTree = LocalDeviceTree;
     if (DeviceTreeSize != NULL) {
       *DeviceTreeSize = LocalDeviceTreeSize;

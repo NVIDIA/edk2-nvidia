@@ -328,7 +328,9 @@ TEST_F (PointerTestPlatform, DeviceTreePointer) {
   EXPECT_EQ (EFI_SUCCESS, GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize));
   EXPECT_EQ (DeviceTree, TEST_PLATFORM_DEVICE_TREE_ADDRESS);
   EXPECT_EQ (DeviceTreeSize, TEST_PLATFORM_DEVICE_TREE_SIZE);
+  EXPECT_ANY_THROW (SetDeviceTreePointer (TEST_DEVICE_TREE_ADDRESS, TEST_DEVICE_TREE_SIZE));
 
+  SetDeviceTreePointer (0, 0);
   SetDeviceTreePointer (TEST_DEVICE_TREE_ADDRESS, TEST_DEVICE_TREE_SIZE);
   DeviceTree     = NULL;
   DeviceTreeSize = 0;
@@ -336,19 +338,8 @@ TEST_F (PointerTestPlatform, DeviceTreePointer) {
   EXPECT_EQ (DeviceTree, TEST_DEVICE_TREE_ADDRESS);
   EXPECT_EQ (DeviceTreeSize, TEST_DEVICE_TREE_SIZE);
 
-  SetDeviceTreePointer (TEST_DEVICE_TREE_ADDRESS, 0);
-  DeviceTree     = NULL;
-  DeviceTreeSize = 0;
-  EXPECT_EQ (EFI_SUCCESS, GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize));
-  EXPECT_EQ (DeviceTree, TEST_PLATFORM_DEVICE_TREE_ADDRESS);
-  EXPECT_EQ (DeviceTreeSize, TEST_PLATFORM_DEVICE_TREE_SIZE);
-
   SetDeviceTreePointer (0, 0);
-  DeviceTree     = NULL;
-  DeviceTreeSize = 0;
-  EXPECT_EQ (EFI_SUCCESS, GetDeviceTreePointer (&DeviceTree, &DeviceTreeSize));
-  EXPECT_EQ (DeviceTree, TEST_PLATFORM_DEVICE_TREE_ADDRESS);
-  EXPECT_EQ (DeviceTreeSize, TEST_PLATFORM_DEVICE_TREE_SIZE);
+  EXPECT_ANY_THROW (SetDeviceTreePointer (TEST_DEVICE_TREE_ADDRESS, 0));
 
   SetDeviceTreePointer (0, 0);
   DeviceTree = NULL;
