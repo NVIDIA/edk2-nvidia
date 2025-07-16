@@ -924,6 +924,7 @@ FixupSocketClusterCoreFields (
   CACHE_NODE  *Node;
   CACHE_NODE  *Next;
   UINT32      SocketRootZeroed; // Bitmask of sockets that have had their root cache zeroed
+  UINT32      ValidNodes;
 
   if (CacheTracker == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: CacheTracker is NULL\n", __FUNCTION__));
@@ -1028,6 +1029,21 @@ FixupSocketClusterCoreFields (
       Next = FindpHandleInTracker (Next->CacheData.NextLevelCache, CacheTracker);
     }
   }
+
+  // re-write the cache node array, skipping nodes unconnected to enabled CPUs
+  ValidNodes = 0;
+  Next       = Node = CacheTracker->CacheNodes;
+  for (Index = 0; Index < CacheTracker->CacheNodeCount; Index++, Node++) {
+    if (Node->Socket != UNDEFINED_SOCKET) {
+      *Next++ = *Node;
+      ValidNodes++;
+    } else {
+      DEBUG ((DEBUG_INFO, "%a: skipping cache tracker node %u, type=%d\n", __FUNCTION__, Index, Node->CacheData.Type));
+      continue;
+    }
+  }
+
+  CacheTracker->CacheNodeCount = ValidNodes;
 
   return EFI_SUCCESS;
 }
