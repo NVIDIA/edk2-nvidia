@@ -1546,7 +1546,7 @@ typedef struct {
            endcheckbox;                                                                           \
   numeric varid = NVIDIA_CONFIG_HII_CONTROL.DelayAfterPERST##socket[pcie],                        \
           questionid = KEY_SOCKET##socket##_PCIE##pcie##_DELAY_AFTER_PERST,                       \
-          prompt = STRING_TOKEN(STR_PCIE_DELAY_AFTER_PERST_TITLE),                                \
+          prompt = STRING_TOKEN(STR_PCIE_DELAY_AFTER_PERST_SOCKET##socket##_PCIE##pcie##_TITLE),  \
           help = STRING_TOKEN(STR_PCIE_DELAY_AFTER_PERST_HELP),                                   \
           flags = INTERACTIVE | RESET_REQUIRED | DISPLAY_UINT_DEC,                                \
           minimum = 0,                                                                            \
