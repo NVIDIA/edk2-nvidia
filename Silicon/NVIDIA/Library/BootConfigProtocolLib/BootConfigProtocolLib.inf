@@ -21,6 +21,7 @@
 [LibraryClasses]
   MemoryAllocationLib
   NctLib
+  BootChainInfoLib
 
 [Sources.common]
   BootConfigProtocolLib.c

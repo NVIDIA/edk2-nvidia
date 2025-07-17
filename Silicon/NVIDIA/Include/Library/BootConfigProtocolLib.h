@@ -27,4 +27,10 @@ BootConfigAddSerialNumber (
   UINT32       OutStrSnLen
   );
 
+EFI_STATUS
+EFIAPI
+BootConfigAddSlotSuffix (
+  VOID
+  );
+
 #endif /* __BOOTCONFIG_PROTOCOL_LIB_H_ */

@@ -12,12 +12,20 @@
 #include <Library/PrintLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/NctLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
 
 #define BOOTCONFIG_DUMMY_SERIALNO    "DummySN"
 #define BOOTCONFIG_DEFAULT_SERIALNO  "0123456789ABCDEF"
 #define MAX_NCT_SN_LEN               30
+
+#define MAX_SLOT_SUFFIX_LEN          3
+#define MAX_BOOT_CHAIN_INFO_MAPPING  2
+CHAR8  *SlotSuffixNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
+  "_a",
+  "_b",
+};
 
 /**
  * Appends androidboot.newArgs=newValue to the bootconfig string.
@@ -211,4 +219,38 @@ BootConfigAddSerialNumber (
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+ * Adds a slot_suffix to the boot configuration.
+ *
+ * @retval EFI_SUCCESS The slot_suffix was added successfully.
+ * @retval Other The operation failed with an error status.
+ */
+EFI_STATUS
+EFIAPI
+BootConfigAddSlotSuffix (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+  UINT32                             SlotIndex                       = 0;
+  CHAR8                              SlotSuffix[MAX_SLOT_SUFFIX_LEN] = { 0 };
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig update protocol\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  SlotIndex = GetBootChainForGpt ();
+
+  AsciiStrCpyS (SlotSuffix, MAX_SLOT_SUFFIX_LEN, SlotSuffixNameId[SlotIndex]);
+  Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "slot_suffix", SlotSuffix);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add slot_suffix to bootconfig\n", __FUNCTION__, Status));
+  }
+
+  return Status;
 }

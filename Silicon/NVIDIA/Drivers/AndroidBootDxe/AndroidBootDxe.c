@@ -518,6 +518,12 @@ AndroidBootDxeLoadDtb (
             }
           }
 
+          // Modify /chosen/bootconfig
+          Status = BootConfigAddSlotSuffix ();
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add slot_suffix to BootConfigProtocol\n", __FUNCTION__, Status));
+          }
+
           Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
           if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
             BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
