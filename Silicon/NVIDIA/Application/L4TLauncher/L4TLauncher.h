@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -53,6 +53,9 @@
 #define EXTLINUX_CBOOT_ARG  L"${cbootargs}"
 
 #define MAX_EXTLINUX_OPTIONS  10
+
+#define SIG_FILE_SIZE_2KB  SIZE_2KB
+#define SIG_FILE_SIZE_4KB  SIZE_4KB
 
 typedef struct {
   CHAR16    *Label;
