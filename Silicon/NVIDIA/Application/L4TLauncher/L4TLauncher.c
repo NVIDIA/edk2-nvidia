@@ -1854,8 +1854,8 @@ ReadAndroidStyleKernelPartition (
   UINTN                   EncryptedImageBufferSize;
   UINTN                   DecryptedImageBufferSize;
   UINTN                   SignatureOffset;
-  UINT8                   Signature[SIZE_2KB];
-  UINTN                   SignatureSize = sizeof (Signature);
+  UINTN                   SignatureSize    = SIG_FILE_SIZE_4KB;
+  VOID                    *SignatureBuffer = NULL;
   UINT8                   BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   Status = FindPartitionInfo (
@@ -1934,9 +1934,41 @@ ReadAndroidStyleKernelPartition (
       goto Exit;
     }
 
+    // Verify signature with 4KB alignment
+    DEBUG ((DEBUG_ERROR, "%a: Verify signature with 4KB alignment\r\n", __FUNCTION__));
+    SignatureBuffer = AllocatePool (SignatureSize);
+    if (SignatureBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for boot image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
     SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
     SignatureSize   = DecryptedImageBufferSize - SignatureOffset;
-    memcpy (Signature, ImageBuffer + SignatureOffset, SignatureSize);
+    memcpy (SignatureBuffer, ImageBuffer + SignatureOffset, SignatureSize);
+    Status = VerifyDetachedSignature (
+               SignatureBuffer,
+               SignatureSize,
+               ImageBuffer,
+               ImageBufferSize
+               );
+    if (EFI_ERROR (Status)) {
+      // Verify signature with 2KB alignment if 4KB alignment failed
+      DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
+      SignatureSize   = SIG_FILE_SIZE_2KB;
+      SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+      memcpy (SignatureBuffer, (VOID *)(ImageBuffer + SignatureOffset), SignatureSize);
+      Status = VerifyDetachedSignature (
+                 SignatureBuffer,
+                 SignatureSize,
+                 ImageBuffer,
+                 ImageBufferSize
+                 );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to verify kernel image signature\r\n");
+        goto Exit;
+      }
+    }
   } else {
     Status = DiskIo->ReadDisk (
                        DiskIo,
@@ -1976,31 +2008,62 @@ ReadAndroidStyleKernelPartition (
     }
 
     if (IsSecureBootEnabled ()) {
+      // Verify signature with 4KB alignment
+      DEBUG ((DEBUG_ERROR, "%a: Verify signature with 4KB alignment\r\n", __FUNCTION__));
+      SignatureBuffer = AllocatePool (SignatureSize);
+      if (SignatureBuffer == NULL) {
+        ErrorPrint (L"Failed to allocate buffer for boot image\r\n");
+        Status = EFI_OUT_OF_RESOURCES;
+        goto Exit;
+      }
+
       SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
       Status          = DiskIo->ReadDisk (
                                   DiskIo,
                                   BlockIo->Media->MediaId,
                                   SignatureOffset,
                                   SignatureSize,
-                                  Signature
+                                  SignatureBuffer
                                   );
       if (EFI_ERROR (Status)) {
-        ErrorPrint (L"Failed to read kernel image signature\r\n");
+        ErrorPrint (L"Failed to read kernel image signature with 4KB alignment\r\n");
         goto Exit;
       }
-    }
-  }
 
-  if (IsSecureBootEnabled ()) {
-    Status = VerifyDetachedSignature (
-               Signature,
-               SignatureSize,
-               ImageBuffer,
-               ImageBufferSize
-               );
-    if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to verify kernel image signature\r\n");
-      goto Exit;
+      Status = VerifyDetachedSignature (
+                 SignatureBuffer,
+                 SignatureSize,
+                 ImageBuffer,
+                 ImageBufferSize
+                 );
+      if (EFI_ERROR (Status)) {
+        // Verify signature with 2KB alignment if 4KB alignment failed
+        DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
+        SignatureSize   = SIG_FILE_SIZE_2KB;
+        SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+        Status          = DiskIo->ReadDisk (
+                                    DiskIo,
+                                    BlockIo->Media->MediaId,
+                                    SignatureOffset,
+                                    SignatureSize,
+                                    SignatureBuffer
+                                    );
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"Failed to read kernel image signature with 2KB alignment\r\n");
+          goto Exit;
+        }
+
+        Status = VerifyDetachedSignature (
+                   SignatureBuffer,
+                   SignatureSize,
+                   ImageBuffer,
+                   ImageBufferSize
+                   );
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"Failed to verify kernel image signature\r\n");
+          goto Exit;
+        }
+      }
     }
   }
 
@@ -2011,6 +2074,10 @@ ReadAndroidStyleKernelPartition (
 Exit:
   if (ImageBuffer != NULL) {
     FreePool (ImageBuffer);
+  }
+
+  if (SignatureBuffer != NULL) {
+    FreePool (SignatureBuffer);
   }
 
   return Status;
@@ -2052,7 +2119,7 @@ ReadAndroidStyleDtbPartition (
   UINT64                 EncryptedDtbBufferSize;
   UINTN                  Size;
   UINTN                  SignatureOffset;
-  UINTN                  SignatureSize = SIZE_2KB;
+  UINTN                  SignatureSize = SIG_FILE_SIZE_4KB;
   UINT8                  BCH[MAX_BOOT_COMPONENT_HEADER_SIZE];
 
   DtbBuffer = NULL;
@@ -2165,7 +2232,7 @@ ReadAndroidStyleDtbPartition (
     if (IsSecureBootEnabled ()) {
       SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
       if (SignatureOffset + SignatureSize > DtbBufferSize) {
-        ErrorPrint (L"DTB signature missing\r\n");
+        ErrorPrint (L"DTB signature missing with 4KB alignment\r\n");
         Status = EFI_SECURITY_VIOLATION;
         goto Exit;
       }
@@ -2173,6 +2240,8 @@ ReadAndroidStyleDtbPartition (
   }
 
   if (IsSecureBootEnabled ()) {
+    // Verify signature with 4KB alignment
+    DEBUG ((DEBUG_ERROR, "%a: Verify signature with 4KB alignment\r\n", __FUNCTION__));
     Status = VerifyDetachedSignature (
                (UINT8 *)DtbBuffer + SignatureOffset,
                SignatureSize,
@@ -2180,8 +2249,26 @@ ReadAndroidStyleDtbPartition (
                Size
                );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"DTB signature invalid\r\n");
-      goto Exit;
+      // Verify signature with 2KB alignment if 4KB alignment failed
+      DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
+      SignatureSize   = SIG_FILE_SIZE_2KB;
+      SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
+      if (SignatureOffset + SignatureSize > DtbBufferSize) {
+        ErrorPrint (L"DTB signature missing with 2KB alignment\r\n");
+        Status = EFI_SECURITY_VIOLATION;
+        goto Exit;
+      }
+
+      Status = VerifyDetachedSignature (
+                 (UINT8 *)DtbBuffer + SignatureOffset,
+                 SignatureSize,
+                 (UINT8 *)DtbBuffer,
+                 Size
+                 );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"DTB signature invalid\r\n");
+        goto Exit;
+      }
     }
   }
 
@@ -2344,8 +2431,8 @@ BootAndroidStyleImage (
   ANDROID_BOOTIMG_HEADER  ImageHeader;
   UINTN                   ImageBufferSize;
   UINTN                   SignatureOffset;
-  UINT8                   Signature[SIZE_2KB];
-  UINTN                   SignatureSize = sizeof (Signature);
+  VOID                    *SignatureBuffer = NULL;
+  UINTN                   SignatureSize;
 
   memcpy (&ImageHeader, (VOID *)ImageBase, sizeof (ANDROID_BOOTIMG_HEADER));
   Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
@@ -2359,17 +2446,40 @@ BootAndroidStyleImage (
   }
 
   if (IsSecureBootEnabled ()) {
+    // Verify signature with 4KB alignment
+    DEBUG ((DEBUG_ERROR, "%a: Verify signature with 4KB alignment\r\n", __FUNCTION__));
+    SignatureSize   = SIG_FILE_SIZE_4KB;
+    SignatureBuffer = AllocatePool (SignatureSize);
+    if (SignatureBuffer == NULL) {
+      ErrorPrint (L"Failed to allocate buffer for boot image\r\n");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
+
     SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
-    memcpy (Signature, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
+    memcpy (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
     Status = VerifyDetachedSignature (
-               Signature,
+               SignatureBuffer,
                SignatureSize,
                (VOID *)ImageBase,
                ImageBufferSize
                );
     if (EFI_ERROR (Status)) {
-      ErrorPrint (L"Failed to verify kernel image signature\r\n");
-      goto Exit;
+      // Verify signature with 2KB alignment if 4KB alignment failed
+      DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
+      SignatureSize   = SIG_FILE_SIZE_2KB;
+      SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
+      memcpy (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
+      Status = VerifyDetachedSignature (
+                 SignatureBuffer,
+                 SignatureSize,
+                 (VOID *)ImageBase,
+                 ImageBufferSize
+                 );
+      if (EFI_ERROR (Status)) {
+        ErrorPrint (L"Failed to verify kernel image signature\r\n");
+        goto Exit;
+      }
     }
   }
 
@@ -2383,6 +2493,9 @@ BootAndroidStyleImage (
   }
 
 Exit:
+  if (SignatureBuffer != NULL) {
+    FreePool (SignatureBuffer);
+  }
 
   return Status;
 }
