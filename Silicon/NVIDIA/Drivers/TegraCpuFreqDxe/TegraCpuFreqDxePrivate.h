@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver Private header.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,10 +15,14 @@
 #include <Library/BaseLib.h>
 
 #define T234_SCRATCH_FREQ_CORE_REG(cluster, core)      (0x2000 + ((cluster * 4 + core) * 8))
+#define T264_CLUSTER_OFFSET(cluster)                   ((cluster % 2) * 0x10000)
+#define T264_SWITCH_OFFSET(cluster)                    (0x40000 + ((cluster / 2) * 0x400000))
+#define T264_SCRATCH_FREQ_CORE_REG(cluster)            (T264_SWITCH_OFFSET(cluster) + T264_CLUSTER_OFFSET(cluster))
 #define TH500_SCRATCH_FREQ_CORE_REG(cluster)           (((cluster >> 1) << 14) | ((cluster & 0x1) << 12))
 #define T234_CLUSTER_ACTMON_REFCLK_REG(cluster, core)  (0x30000 + (cluster * 0x10000) + 0x9000 + (core * 8) + 0x20)
 #define T234_CLUSTER_ACTMON_CORE_REG(cluster, core)    (0x30000 + (cluster * 0x10000) + 0x9000 + (core * 8) + 0x40)
 #define T234_REFCLK_FREQ   408000000
+#define T264_REFCLK_FREQ   1000000000
 #define TH500_REFCLK_FREQ  1000000000
 #define HZ_TO_MHZ(x)  (x/1000000)
 

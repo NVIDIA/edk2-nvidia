@@ -37,6 +37,7 @@
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra234-ccplex-cluster", &gNVIDIACpuFreqT234  },
   { "nvidia,th500-cpufreq",           &gNVIDIACpuFreqTH500 },
+  { "nvidia,tegra264-ccplex-cluster", &gNVIDIACpuFreqT264  },
   { NULL,                             NULL                 }
 };
 
@@ -316,6 +317,9 @@ GetCpuCppcOffsets (
   } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqTH500)) {
     CppcOffsets->DesiredPerformance   = TH500_SCRATCH_FREQ_CORE_REG (Cluster);
     CppcBitWidths->DesiredPerformance = 32;
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT264)) {
+    CppcOffsets->DesiredPerformance   = T264_SCRATCH_FREQ_CORE_REG (Cluster);
+    CppcBitWidths->DesiredPerformance = 32;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
     return EFI_UNSUPPORTED;
@@ -359,6 +363,8 @@ GetRefClockFreq (
     *RefClockFreq = T234_REFCLK_FREQ;
   } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqTH500)) {
     *RefClockFreq = TH500_REFCLK_FREQ;
+  } else if (CompareGuid (DeviceGuid, &gNVIDIACpuFreqT264)) {
+    *RefClockFreq = T264_REFCLK_FREQ;
   } else {
     DEBUG ((DEBUG_ERROR, "%a: Unsupported CPU frequency controller.\n", __func__));
     return EFI_UNSUPPORTED;
