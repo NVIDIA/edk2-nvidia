@@ -109,12 +109,13 @@ CheckAcpiMode (
   )
 {
   EFI_STATUS  Status;
-  UINTN       Data, DataSize;
+  UINT8       Data[4];
+  UINTN       DataSize;
 
   DataSize = sizeof (Data);
-  Status   = gRT->GetVariable (L"DtAcpiPref", &gDtPlatformFormSetGuid, NULL, &DataSize, &Data);
+  Status   = gRT->GetVariable (L"DtAcpiPref", &gDtPlatformFormSetGuid, NULL, &DataSize, Data);
   if (!EFI_ERROR (Status)) {
-    return Data != 0;
+    return Data[0] != 0;
   }
 
   DEBUG ((DEBUG_WARN, "%a: failed to retrieve DT/ACPI preference variable: %r\r\n", __FUNCTION__, Status));
