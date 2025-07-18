@@ -539,6 +539,13 @@ GetProcessorVersion (
           }
 
           break;
+        case T264_CHIP_ID:
+          ProcessorVersion = AllocateZeroPool (CPUVERSTATIC);
+          if (ProcessorVersion != NULL) {
+            UnicodeSPrint (ProcessorVersion, CPUVERSTATIC, L"Thor");
+          }
+
+          break;
         default:
           DEBUG ((DEBUG_ERROR, "%a:%d Unhandled Chip %u\n", __FUNCTION__, __LINE__, ChipId));
           break;
