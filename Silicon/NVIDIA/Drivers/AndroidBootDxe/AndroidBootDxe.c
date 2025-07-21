@@ -1796,6 +1796,12 @@ AndroidBootDxeLoadFile (
   // Vendor_boot requires boot_img header version to be at least 3
   if (ImgData.HeaderVersion >= 3) {
     if ((PcdGetBool (PcdBootAndroidImage))) {
+      Status = AndroidBcbLockChain (NULL);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to lock Bcb boot chain\n", __FUNCTION__, Status));
+        return Status;
+      }
+
       Status = AvbVerifyBoot (Private->RecoveryMode, Private->ControllerHandle, &AvbCmdline);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to AVB verify\n", __FUNCTION__, Status));
