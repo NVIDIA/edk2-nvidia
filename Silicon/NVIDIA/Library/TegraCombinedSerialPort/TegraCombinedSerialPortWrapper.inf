@@ -1,0 +1,38 @@
+#/** @file
+#
+#  Component description file for TegraCombinedSerialPortWrapper module.
+#  This module provides the standard SerialPortLib interface by wrapping
+#  TegraCombinedSerialPortLib functions.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = TegraCombinedSerialPortWrapper
+  FILE_GUID                      = 6bb04fe3-8cc7-4350-9460-b8d5b003d75e
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SerialPortLib
+
+[Sources.common]
+  TegraCombinedSerialPortWrapper.c
+  TegraCombinedSerialPortLib.c
+
+[LibraryClasses]
+  PcdLib
+  IoLib
+  DebugLib
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox

@@ -690,6 +690,33 @@ menu "Hardware support"
       No serial port console
   endchoice
 
+  config SUPPORTS_TCU_DEBUG_SERIAL_PORT
+  bool
+  config SUPPORTS_UTC_DEBUG_SERIAL_PORT
+  bool
+  config DEFAULT_DEBUG_SERIAL_PORT_TCU
+  bool
+  config DEFAULT_DEBUG_SERIAL_PORT_UTC
+  bool
+
+  choice DEBUG_SERIAL_PORT
+  prompt "Debug serial port"
+    default DEBUG_SERIAL_PORT_TCU if DEFAULT_DEBUG_SERIAL_PORT_TCU
+    default DEBUG_SERIAL_PORT_UTC if DEFAULT_DEBUG_SERIAL_PORT_UTC
+
+    config DEBUG_SERIAL_PORT_TCU
+    depends on SUPPORTS_TCU_DEBUG_SERIAL_PORT
+    bool "TCU"
+    help
+      Use TCU serial port driver
+
+    config DEBUG_SERIAL_PORT_UTC
+    depends on SUPPORTS_UTC_DEBUG_SERIAL_PORT
+    bool "UTC"
+    help
+      Use UTC serial port driver
+  endchoice
+
   config DEFAULT_REAL_TIME_CLOCK_MAXIM
   bool
   config DEFAULT_REAL_TIME_CLOCK_NUVOTON

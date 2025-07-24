@@ -425,20 +425,6 @@ CEntryPoint (
   MapCorePlatformMemory ();
   StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
 
- #if FixedPcdGet64 (PcdSerialRegisterBase) != 0
-  ArmSetMemoryAttributes (PcdGet64 (PcdSerialRegisterBase), SIZE_4KB, EFI_MEMORY_UC, 0);
- #else
-  SerialPortIdentify (&Mapping);
-  while (Mapping->Type != TEGRA_UART_TYPE_NONE) {
-    if (Mapping->IsFound) {
-      ArmSetMemoryAttributes (Mapping->BaseAddress, Mapping->Size, EFI_MEMORY_UC, 0);
-    }
-
-    Mapping++;
-  }
-
- #endif
-
   // Initialize the Serial Port
   SerialPortInitialize ();
   CharCount = AsciiSPrint (

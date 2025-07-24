@@ -353,11 +353,19 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
 !ifdef CONFIG_SERIAL_PORT_CONSOLE_MDEMODULE
   SerialPortLib|ArmPlatformPkg/Library/PL011SerialPortLib/PL011SerialPortLib.inf
-!else
-  TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
-  TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
-  SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
-  TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
+!endif
+!ifdef CONFIG_SERIAL_PORT_CONSOLE_TEGRA
+  !ifdef CONFIG_DEBUG_SERIAL_PORT_TCU
+    SerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortWrapper.inf
+  !endif
+  !ifdef CONFIG_DEBUG_SERIAL_PORT_UTC
+    # Temporarily, use TegraSerialPortLib for UTC instead of TegraUtcSerialPortWrapper
+    #SerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortWrapper.inf
+    TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+    TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
+    TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
+    SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+  !endif
 !endif
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
@@ -849,11 +857,24 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdResetOnMemoryTypeInformationChange|FALSE
 
+!ifdef CONFIG_DEBUG_SERIAL_PORT_TCU
   #
   # TCUart - Serial Terminal
   #
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
   gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
+!endif
+
+!ifdef CONFIG_DEBUG_SERIAL_PORT_UTC
+  #
+  # UTC - Serial Terminal
+  #
+  gNVIDIATokenSpaceGuid.PcdTegraUtcUartAddress|0x0C4E0000
+  !ifdef CONFIG_BUILD_ANDROID
+    # Android uses SBSA as well as UTC based on the platform
+    gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0C5F0000
+  !endif
+!endif
 
   #
   # PL011 UART Parameters
@@ -1855,7 +1876,13 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
 !endif
 !ifdef CONFIG_SERIAL_PORT_CONSOLE_TEGRA
-  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf
+  Silicon/NVIDIA/Drivers/TegraUartDxe/TegraUartDxe.inf {
+    <LibraryClasses>
+      TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
+      TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
+      TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
+      SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+  }
 !endif
 
   #

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2013-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -189,7 +189,19 @@ MapCorePlatformMemory (
   ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), SIZE_4KB, EFI_MEMORY_UC, 0);
   ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
   ArmSetMemoryAttributes (GetDTBBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
-  ArmSetMemoryAttributes ((UINTN)FixedPcdGet64 (PcdTegraCombinedUartRxMailbox), SIZE_4KB, EFI_MEMORY_UC, 0);
+ #if FixedPcdGet64 (PcdSerialRegisterBase) != 0
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdSerialRegisterBase), SIZE_4KB, EFI_MEMORY_UC, 0);
+ #endif
+ #if FixedPcdGet64 (PcdTegraCombinedUartRxMailbox) != 0
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdTegraCombinedUartRxMailbox), SIZE_4KB, EFI_MEMORY_UC, 0);
+ #endif
+ #if FixedPcdGet64 (PcdTegraCombinedUartTxMailbox) != 0
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdTegraCombinedUartTxMailbox), SIZE_4KB, EFI_MEMORY_UC, 0);
+ #endif
+ #if FixedPcdGet64 (PcdTegraUtcUartAddress) != 0
+  ArmSetMemoryAttributes (FixedPcdGet64 (PcdTegraUtcUartAddress), SIZE_64KB, EFI_MEMORY_UC, 0);
+ #endif
+
   DramPageBlacklistInfo = GetDramPageBlacklistInfoAddress ();
   if (DramPageBlacklistInfo != NULL) {
     while (DramPageBlacklistInfo->MemoryBaseAddress != 0 &&

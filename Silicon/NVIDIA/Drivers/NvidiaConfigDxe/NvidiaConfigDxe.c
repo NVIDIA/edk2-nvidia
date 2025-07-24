@@ -3708,7 +3708,7 @@ OnEndOfDxe (
 }
 
 /**
-  Update Serial Port PCDs.
+  Update Serial Port PCDs. This function is soon to be deprecated.
 **/
 STATIC
 EFI_STATUS
@@ -3718,39 +3718,11 @@ UpdateSerialPcds (
 {
   UINT8  SerialPortType;
 
- #if FixedPcdGet64 (PcdSerialRegisterBase) == 0
-  EFI_STATUS      Status;
-  UINTN           SerialPortVarLen;
-  SERIAL_MAPPING  *SerialMapping;
-
-  SerialPortType = NVIDIA_SERIAL_PORT_TYPE_UNDEFINED;
-
-  SerialPortIdentify (&SerialMapping);
-  for ( ; SerialMapping->Type != TEGRA_UART_TYPE_NONE; SerialMapping++) {
-    if (SerialMapping->IsFound) {
-      if (SerialMapping->Type == TEGRA_UART_TYPE_SBSA) {
-        SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_SBSA;
-        mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
-        break;
-      }
-    }
-  }
-
-  PcdSet8S (PcdSerialTypeConfig, SerialPortType);
-
-  SerialPortVarLen = 0;
-  Status           = gRT->GetVariable (L"SerialPortConfig", &gNVIDIATokenSpaceGuid, NULL, &SerialPortVarLen, NULL);
-  if (Status == EFI_NOT_FOUND) {
-    PcdSet8S (PcdSerialPortConfig, mDefaultPortConfig);
-  }
-
- #else
   SerialPortType     = NVIDIA_SERIAL_PORT_TYPE_SBSA;
   mDefaultPortConfig = NVIDIA_SERIAL_PORT_SPCR_SBSA;
 
   PcdSet8S (PcdSerialTypeConfig, SerialPortType);
   PcdSet8S (PcdSerialPortConfig, mDefaultPortConfig);
- #endif
 
   return EFI_SUCCESS;
 }
