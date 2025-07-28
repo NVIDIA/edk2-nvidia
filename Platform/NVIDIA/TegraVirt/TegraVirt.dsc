@@ -107,12 +107,6 @@
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
   AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
 
-  # Override the ResetSystemLib used by ArmVirt with a Null implementation.
-  # ArmVirtPsciResetSystemLib is not compatible with our DTB.  It expects
-  # arm,psci-0.2 and we have arm,psci-1.0.  For now, we'll use the Null lib and
-  # not support reset.
-  ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
-
   DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/StatusRegLibNull/StatusRegLibNull.inf
 
