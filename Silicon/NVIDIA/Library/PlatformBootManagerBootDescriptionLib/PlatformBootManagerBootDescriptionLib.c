@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerBootDescriptionLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -52,6 +52,7 @@ PlatformLoadFileBootDescriptionHandler (
   UINT32                    BootMode;
   MiscCmdType               MiscCmd;
   BOOLEAN                   RecoveryBoot;
+  BOOLEAN                   FlashMediaBoot;
 
   Status = gBS->HandleProtocol (
                   Handle,
@@ -79,50 +80,68 @@ PlatformLoadFileBootDescriptionHandler (
     RecoveryBoot = TRUE;
   }
 
+  FlashMediaBoot    = FALSE;
   DescriptionString = NULL;
   Desc              = NULL;
+
   CurrentDevicePath = DevicePath;
   while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
-    if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
-      if (RecoveryBoot) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_EMMC_RECOVERY_BOOT_DESCRIPTION), NULL);
-      } else {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_EMMC_KERNEL_BOOT_DESCRIPTION), NULL);
-      }
-
+    if (CurrentDevicePath->Type == MEDIA_DEVICE_PATH) {
+      FlashMediaBoot = TRUE;
       break;
-    } else if (CurrentDevicePath->SubType == MSG_SD_DP) {
-      if (RecoveryBoot) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_SD_RECOVERY_BOOT_DESCRIPTION), NULL);
-      } else {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_SD_KERNEL_BOOT_DESCRIPTION), NULL);
-      }
-
-      break;
-    } else if (CurrentDevicePath->SubType == MSG_UFS_DP) {
-      if (RecoveryBoot) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_RECOVERY_BOOT_DESCRIPTION), NULL);
-      } else {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_KERNEL_BOOT_DESCRIPTION), NULL);
-      }
-    } else if (CurrentDevicePath->SubType == MSG_USB_DP) {
-      if (RecoveryBoot) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_RECOVERY_BOOT_DESCRIPTION), NULL);
-      } else {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_KERNEL_BOOT_DESCRIPTION), NULL);
-      }
-    } else if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
-      VENDOR_DEVICE_PATH  *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
-      if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_RCM_BOOT_DESCRIPTION), NULL);
-        break;
-      } else if (CompareGuid (&VendorPath->Guid, &gEfiPersistentVirtualDiskGuid)) {
-        DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_VIRTUAL_STORAGE_KERNEL_BOOT_DESCRIPTION), NULL);
-        break;
-      }
     }
 
     CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
+  }
+
+  if (FlashMediaBoot == TRUE) {
+    CurrentDevicePath = DevicePath;
+    while (IsDevicePathEnd (CurrentDevicePath) == FALSE) {
+      if (CurrentDevicePath->Type == MESSAGING_DEVICE_PATH) {
+        if (CurrentDevicePath->SubType == MSG_EMMC_DP) {
+          if (RecoveryBoot) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_EMMC_RECOVERY_BOOT_DESCRIPTION), NULL);
+          } else {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_EMMC_KERNEL_BOOT_DESCRIPTION), NULL);
+          }
+
+          break;
+        } else if (CurrentDevicePath->SubType == MSG_SD_DP) {
+          if (RecoveryBoot) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_SD_RECOVERY_BOOT_DESCRIPTION), NULL);
+          } else {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_SD_KERNEL_BOOT_DESCRIPTION), NULL);
+          }
+
+          break;
+        } else if (CurrentDevicePath->SubType == MSG_UFS_DP) {
+          if (RecoveryBoot) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_RECOVERY_BOOT_DESCRIPTION), NULL);
+          } else {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_UFS_KERNEL_BOOT_DESCRIPTION), NULL);
+          }
+        } else if (CurrentDevicePath->SubType == MSG_USB_DP) {
+          if (RecoveryBoot) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_RECOVERY_BOOT_DESCRIPTION), NULL);
+          } else {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_USB_KERNEL_BOOT_DESCRIPTION), NULL);
+          }
+        }
+      } else if (CurrentDevicePath->Type == HARDWARE_DEVICE_PATH) {
+        if (CurrentDevicePath->SubType == HW_VENDOR_DP) {
+          VENDOR_DEVICE_PATH  *VendorPath = (VENDOR_DEVICE_PATH *)CurrentDevicePath;
+          if (CompareGuid (&VendorPath->Guid, &gNVIDIARcmKernelGuid)) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_RCM_BOOT_DESCRIPTION), NULL);
+            break;
+          } else if (CompareGuid (&VendorPath->Guid, &gEfiPersistentVirtualDiskGuid)) {
+            DescriptionString = HiiGetString (mHiiHandle, STRING_TOKEN (STR_LOAD_FILE_VIRTUAL_STORAGE_KERNEL_BOOT_DESCRIPTION), NULL);
+            break;
+          }
+        }
+      }
+
+      CurrentDevicePath = NextDevicePathNode (CurrentDevicePath);
+    }
   }
 
   if (DescriptionString != NULL) {
