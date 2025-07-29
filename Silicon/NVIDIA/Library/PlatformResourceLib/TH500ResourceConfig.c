@@ -1301,6 +1301,9 @@ SocGetPlatformResourceInformation (
 
   PlatformResourceInfo->PcieAddressBits = TH500_PCIE_ADDRESS_BITS;
 
+  PlatformResourceInfo->CpuSlcSnoopOutstandingLocal  = CPUBL_PARAMS (CpuBootloaderParams, CpuSlcSnoopOutstandingLocal);
+  PlatformResourceInfo->CpuSlcSnoopOutstandingRemote = CPUBL_PARAMS (CpuBootloaderParams, CpuSlcSnoopOutstandingRemote);
+
   return EFI_SUCCESS;
 }
 

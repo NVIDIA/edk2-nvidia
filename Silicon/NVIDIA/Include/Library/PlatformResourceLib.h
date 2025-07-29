@@ -190,6 +190,8 @@ typedef struct {
   TEGRA_BPMP_PG_VOTES_TACKER    BpmpPgVotesTracker;
   UINT8                         PcieAddressBits;
   TEGRA_FLOOR_SWEEPING_INFO     *FloorSweepingInfo;
+  UINT8                         CpuSlcSnoopOutstandingLocal;
+  UINT8                         CpuSlcSnoopOutstandingRemote;
 } TEGRA_PLATFORM_RESOURCE_INFO;
 
 /**

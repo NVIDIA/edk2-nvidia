@@ -234,7 +234,9 @@ typedef struct {
          * 1: GPIO Mode
          */
         UINT64 BootChainSelectionMode: 1;
-        UINT64 FeatureFlagRaw1Reserved: 63;
+        UINT64 CpuSlcSnoopOutstandingLocal: 8;
+        UINT64 CpuSlcSnoopOutstandingRemote: 8;
+        UINT64 FeatureFlagRaw1Reserved: 47;
       };
     };
 
@@ -305,7 +307,9 @@ typedef struct {
          * 1: GPIO Mode
          */
         UINT64 BootChainSelectionMode: 1;
-        UINT64 FeatureFlagRaw1Reserved: 63;
+        UINT64 CpuSlcSnoopOutstandingLocal: 8;
+        UINT64 CpuSlcSnoopOutstandingRemote: 8;
+        UINT64 FeatureFlagRaw1Reserved: 47;
       };
     };
 
