@@ -1615,6 +1615,68 @@ WriteAndLockPublicVariables (
 }
 
 /**
+  Exposes the CPU Slc Snoop settings passed from MB1 as volatile variables
+**/
+STATIC
+VOID
+WriteCpuSlcSnoopVariables (
+  VOID
+  )
+{
+  EFI_STATUS                    Status;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo = NULL;
+  UINT8                         VariableData;
+  CHAR16                        VariableName[(MAX_VARIABLE_NAME/sizeof (CHAR16))];
+  UINTN                         VariableSize;
+  UINT32                        Attributes;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get platform resource data\n"));
+    ASSERT (FALSE);
+  }
+
+  if (PlatformResourceInfo->CpuSlcSnoopOutstandingLocal > 0) {
+    VariableData = PlatformResourceInfo->CpuSlcSnoopOutstandingLocal;
+    VariableSize = sizeof (UINT8);
+    Attributes   = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
+    UnicodeSPrint (VariableName, sizeof (VariableName), L"CpuSlcSnoopOutstandingLocal");
+    Status = gRT->SetVariable (
+                    VariableName,
+                    &gNVIDIAPublicVariableGuid,
+                    Attributes,
+                    VariableSize,
+                    &VariableData
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to set variable %s\r\n", VariableName));
+    }
+  }
+
+  if (PlatformResourceInfo->CpuSlcSnoopOutstandingRemote > 0) {
+    VariableData = PlatformResourceInfo->CpuSlcSnoopOutstandingRemote;
+    VariableSize = sizeof (UINT8);
+    Attributes   = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS;
+    UnicodeSPrint (VariableName, sizeof (VariableName), L"CpuSlcSnoopOutstandingRemote");
+    Status = gRT->SetVariable (
+                    VariableName,
+                    &gNVIDIAPublicVariableGuid,
+                    Attributes,
+                    VariableSize,
+                    &VariableData
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to set variable %s\r\n", VariableName));
+    }
+  }
+}
+
+/**
   Exposes the floorsweeping registers as volatile variables
 **/
 STATIC
@@ -2335,6 +2397,7 @@ InitializeSettings (
   }
 
   if (mHiiControlSettings.TH500Config) {
+    WriteCpuSlcSnoopVariables ();
     WriteFloorsweepingVariables ();
 
     DiscardVariableOverrides = FALSE;
