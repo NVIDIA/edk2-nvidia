@@ -337,7 +337,7 @@ InstallSmbiosType19Cm (
   for (Index = 0; Index < SocketCount; Index++) {
     CmMemArrayMappedAddress[Index].StartingAddress = ResourceInfo->DramRegions[Index].MemoryBaseAddress;
     CmMemArrayMappedAddress[Index].EndingAddress   =
-      (ResourceInfo->DramRegions[Index].MemoryBaseAddress + ResourceInfo->DramRegions[Index].MemoryLength);
+      (ResourceInfo->DramRegions[Index].MemoryBaseAddress + ResourceInfo->DramRegions[Index].MemoryLength - 1);
     CmMemArrayMappedAddress[Index].PhysMemArrayToken = PhysMemArrayToken;
   }
 
