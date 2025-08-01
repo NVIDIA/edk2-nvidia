@@ -63,8 +63,10 @@
 [Protocols]
   gEdkiiNonDiscoverableDeviceProtocolGuid
   gEfiGraphicsOutputProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
   gNVIDIAClockNodeProtocolGuid
   gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIAPowerGateNodeProtocolGuid
   gNVIDIAI2cExpanderGpioProtocolGuid            ## CONSUMES
   gNVIDIADeviceTreeNodeProtocolGuid             ## CONSUMES
   gNVIDIAGraphicsOutputForceBltOnlyProtocolGuid

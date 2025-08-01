@@ -10,8 +10,44 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+
+#include <Protocol/BpmpIpc.h>
+#include <Protocol/PowerGateNodeProtocol.h>
+
 #include "NvDisplay.h"
 #include "NvDisplayController.h"
+
+#define TEGRA264_BWMGR_DISPLAY  11
+
+typedef enum {
+  CmdBwmgrIntQueryAbi   = 1,
+  CmdBwmgrIntCalcAndSet = 2,
+  CmdBwmgrIntCapSet     = 3,
+  CmdBwmgrIntMax
+} MRQ_BWMGR_INT_COMMANDS;
+
+typedef enum {
+  BwmgrIntUnitKbps = 0,
+  BwmgrIntUnitKhz  = 1,
+} BWMGR_INT_UNIT;
+
+#pragma pack (push, 1)
+typedef struct {
+  UINT32    Command;
+  UINT32    ClientId;
+  UINT32    NonIsoBandwidthKbps;
+  UINT32    IsoBandwidthKbps;
+  UINT32    MemclockFloor;
+  UINT8     MemclockFloorUnit;
+} MRQ_BWMGR_INT_CALC_AND_SET_REQUEST;
+
+typedef struct {
+  UINT64    MemclockRateHz;
+} MRQ_BWMGR_INT_CALC_AND_SET_RESPONSE;
+#pragma pack (pop)
 
 /**
   Assert or deassert T264 display resets.
@@ -150,6 +186,117 @@ Disable:
 }
 
 /**
+  Set EMC frequency floor.
+
+  @param[in] DriverHandle       Handle to the driver.
+  @param[in] ControllerHandle   Handle to the controller.
+  @param[in] IsoBandwidthKbps   ISO bandwidth is kBps.
+  @param[in] MemclockFloorKbps  Memory clock floor in kBps.
+
+  @return EFI_SUCCESS      EMC frequency successfully set.
+  @return EFI_NOT_READY    Could not retrieve one or more required protocols.
+  @return EFI_UNSUPPORTED  BPMP BWMGR is disabled.
+  @return !=EFI_SUCCESS    Error occurred.
+*/
+STATIC
+EFI_STATUS
+SetupEmcFrequency (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST UINT32      IsoBandwidthKbps,
+  IN CONST UINT32      MemclockFloorKbps
+  )
+{
+  EFI_STATUS                           Status;
+  NVIDIA_BPMP_IPC_PROTOCOL             *BpmpIpc;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL      *PgNode;
+  INT32                                MessageError;
+  MRQ_BWMGR_INT_CALC_AND_SET_REQUEST   Request;
+  MRQ_BWMGR_INT_CALC_AND_SET_RESPONSE  Response;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to locate BPMP IPC protocol: %r\r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIAPowerGateNodeProtocolGuid,
+                  (VOID **)&PgNode,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to retrieve powergate node protocol: %r\r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  ZeroMem (&Request, sizeof (Request));
+  Request.Command           = CmdBwmgrIntCalcAndSet;
+  Request.ClientId          = TEGRA264_BWMGR_DISPLAY;
+  Request.IsoBandwidthKbps  = IsoBandwidthKbps;
+  Request.MemclockFloor     = MemclockFloorKbps;
+  Request.MemclockFloorUnit = BwmgrIntUnitKbps;
+
+  Status = BpmpIpc->Communicate (
+                      BpmpIpc,
+                      NULL,
+                      PgNode->BpmpPhandle,
+                      MRQ_BWMGR_INT,
+                      &Request,
+                      sizeof (Request),
+                      &Response,
+                      sizeof (Response),
+                      &MessageError
+                      );
+  if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_ENODEV)) {
+    return EFI_UNSUPPORTED;     /* BWMGR is disabled. */
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: BPMP IPC Communicate failed: %r (MessageError = %d)\r\n", __FUNCTION__, Status, MessageError));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Hands off T264 display hardware.
+
+  @param[in] DriverHandle      The driver handle.
+  @param[in] ControllerHandle  The controller handle.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Operation failed.
+*/
+STATIC
+EFI_STATUS
+HandoffHwT264 (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS    Status;
+  CONST UINT32  IsoBandwidthKbps20Gbps = 20 << 20;
+  CONST UINT32  MemclockFloorKbpsMax   = MAX_UINT32;
+
+  Status = SetupEmcFrequency (
+             DriverHandle,
+             ControllerHandle,
+             IsoBandwidthKbps20Gbps,
+             MemclockFloorKbpsMax
+             );
+  if (Status == EFI_UNSUPPORTED) {
+    /* BWMGR is disabled, in which case EMC is already running at max
+       frequency, so return success. */
+    Status = EFI_SUCCESS;
+  }
+
+  return Status;
+}
+
+/**
   Starts the NV T264 display controller driver on the given
   controller handle.
 
@@ -169,6 +316,7 @@ NvDisplayControllerStartT264 (
   return NvDisplayControllerStart (
            DriverHandle,
            ControllerHandle,
-           EnableHwT264
+           EnableHwT264,
+           HandoffHwT264
            );
 }
