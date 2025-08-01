@@ -1,7 +1,7 @@
 /** @file
   BPMP IPC Protocol
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -61,6 +61,7 @@
 #define MRQ_UPHY              69
 #define MRQ_TELEMETRY         80
 #define MRQ_PWR_LIMIT         81
+#define MRQ_BWMGR_INT         83
 #define MRQ_C2C               85
 #define MRQ_PWR_CNTRL         89
 
