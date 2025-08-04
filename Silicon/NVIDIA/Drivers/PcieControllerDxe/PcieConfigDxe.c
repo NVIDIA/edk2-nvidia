@@ -116,16 +116,10 @@ PciTreeTraverseGetMaxpayload (
     }
   }
 
-  // No device behind the bridge
-  if (!DeviceFound) {
-    *NextBus = *NextBus - 1;
-    MmioWrite8 (CfgBase + PCI_BRIDGE_PRIMARY_BUS_REGISTER_OFFSET, 0);
-    MmioWrite8 (CfgBase + PCI_BRIDGE_SECONDARY_BUS_REGISTER_OFFSET, 0);
-    MmioWrite8 (CfgBase + PCI_BRIDGE_SUBORDINATE_BUS_REGISTER_OFFSET, 0);
-  } else {
-    // Update the sub-ordinate bus used so as to set maxpayload value in next recursive call
-    MmioWrite8 (CfgBase + PCI_BRIDGE_SUBORDINATE_BUS_REGISTER_OFFSET, *NextBus);
-  }
+  //
+  // Set the subordinate bus for this device to the next bus to continue enumeration
+  //
+  MmioWrite8 (CfgBase + PCI_BRIDGE_SUBORDINATE_BUS_REGISTER_OFFSET, *NextBus);
 
   return;
 }
