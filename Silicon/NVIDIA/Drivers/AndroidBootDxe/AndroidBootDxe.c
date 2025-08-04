@@ -1796,9 +1796,16 @@ AndroidBootDxeLoadFile (
   // Vendor_boot requires boot_img header version to be at least 3
   if (ImgData.HeaderVersion >= 3) {
     if ((PcdGetBool (PcdBootAndroidImage))) {
+      // Update Bcb BootloaderControl metadata
       Status = AndroidBcbLockChain (NULL);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Got %r trying to lock Bcb boot chain\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      Status = AndroidBcbCheckAndUpdateRetryCount (NULL);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to update Bcb SlotInfo retry count\n", __FUNCTION__, Status));
         return Status;
       }
 

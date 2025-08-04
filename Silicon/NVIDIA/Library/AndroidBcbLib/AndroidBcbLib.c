@@ -23,6 +23,40 @@ CONST UINT32  kDefaultBootAttempts = 3;
 static MiscCmdType  CacheCmdType = MISC_CMD_TYPE_MAX;
 
 /**
+  Dump the BootCtrl Metadata for debug purpose.
+
+  @param[in]    BootCtrl    Start address of BootCtrl
+**/
+STATIC
+VOID
+BcbDumpSlotInfo (
+  IN BootloaderControl  *BootCtrl
+  )
+{
+  UINT32  Idx;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: magic:0x%x, version: %d, num_slots: %d\r\n",
+    __FUNCTION__,
+    BootCtrl->Magic,
+    BootCtrl->Version,
+    BootCtrl->NbSlot
+    ));
+  for (Idx = 0; Idx < BootCtrl->NbSlot; Idx++) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: slot: %u, pri: %u, retry: %u, boot_successful: %u\r\n",
+      __FUNCTION__,
+      Idx,
+      BootCtrl->SlotInfo[Idx].Priority,
+      BootCtrl->SlotInfo[Idx].TriesRemaining,
+      BootCtrl->SlotInfo[Idx].SuccessfulBoot
+      ));
+  }
+}
+
+/**
   Get the BlockIo & DiskIo for accessing Misc.
 
   @param[in]  Handle      Image Handle to access block device.
@@ -231,14 +265,14 @@ BcbGetActiveBootSlot (
   )
 {
   UINT32  ActiveBootSlot = 0;
-  UINT32  i;
+  UINT32  Idx;
   UINT32  MaxPriority = BootCtrl->SlotInfo[0].Priority;
 
   // Find the slot with the highest priority.
-  for (i = 0; i < BootCtrl->NbSlot; ++i) {
-    if (BootCtrl->SlotInfo[i].Priority > MaxPriority) {
-      MaxPriority    = BootCtrl->SlotInfo[i].Priority;
-      ActiveBootSlot = i;
+  for (Idx = 0; Idx < BootCtrl->NbSlot; ++Idx) {
+    if (BootCtrl->SlotInfo[Idx].Priority > MaxPriority) {
+      MaxPriority    = BootCtrl->SlotInfo[Idx].Priority;
+      ActiveBootSlot = Idx;
     }
   }
 
@@ -315,6 +349,91 @@ AndroidBcbLockChain (
       return Status;
     }
   }
+
+  DEBUG_CODE_BEGIN ();
+  DEBUG ((DEBUG_ERROR, "%a: Dump Bcb BootCtrl:\r\n", __FUNCTION__));
+  BcbDumpSlotInfo (&BootCtrl);
+  DEBUG_CODE_END ();
+
+  return Status;
+}
+
+EFI_STATUS
+EFIAPI
+AndroidBcbCheckAndUpdateRetryCount (
+  EFI_HANDLE  Handle
+  )
+{
+  EFI_STATUS             Status = EFI_SUCCESS;
+  EFI_BLOCK_IO_PROTOCOL  *MscBlockIo;
+  EFI_DISK_IO_PROTOCOL   *MscDiskIo;
+  BootloaderControl      BootCtrl;
+  UINT32                 MscActiveSlotIndex;
+  UINT32                 BootCtrlOffset;
+  UINT32                 ComputedCrc;
+
+  Status = GetMiscIoProtocolFromHandle (Handle, &MscBlockIo, &MscDiskIo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to fetch IO protocols\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BootCtrlOffset = NV_OFFSETOF (BootloaderMessageAb, BootCtrl);
+
+  Status = MscDiskIo->ReadDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        BootCtrlOffset,
+                        sizeof (BootloaderControl),
+                        (VOID *)&BootCtrl
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read bootcontrol from Misc\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ComputedCrc = BootloaderControlLeCrc (&BootCtrl);
+  if (ComputedCrc != BootCtrl.Crc32Le) {
+    // Skip as this is the first boot after factory flash
+    // Just boot current chain
+    DEBUG ((DEBUG_ERROR, "%a: BootCtrl Crc mismatch, considering first boot and skip update retry count\r\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  MscActiveSlotIndex = BcbGetActiveBootSlot (&BootCtrl);
+
+  // On vUEFI:
+  // if no more TriesRemaining left, vUEFI has no ability to change DOS chain, hence just fail boot and wait for DU timeout
+  // On native UEFI
+  // TODO: if no more TriesRemaining left, issue a bct chain switch
+  if (BootCtrl.SlotInfo[MscActiveSlotIndex].TriesRemaining == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Run out of TriesRemaining, always fail boot and wait for DOS to revert chain\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // TriesRemaining-- if current boot chain is not boot_successful yet
+  if ((BootCtrl.SlotInfo[MscActiveSlotIndex].SuccessfulBoot == 0) &&
+      (BootCtrl.SlotInfo[MscActiveSlotIndex].TriesRemaining != 0))
+  {
+    BootCtrl.SlotInfo[MscActiveSlotIndex].TriesRemaining--;
+    BootCtrl.Crc32Le = BootloaderControlLeCrc (&BootCtrl);
+    Status           = MscDiskIo->WriteDisk (
+                                    MscDiskIo,
+                                    MscBlockIo->Media->MediaId,
+                                    BootCtrlOffset,
+                                    sizeof (BootloaderControl),
+                                    (VOID *)&BootCtrl
+                                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to flush bootcontrol to Misc\r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  DEBUG_CODE_BEGIN ();
+  DEBUG ((DEBUG_ERROR, "%a: Dump Bcb BootCtrl:\r\n", __FUNCTION__));
+  BcbDumpSlotInfo (&BootCtrl);
+  DEBUG_CODE_END ();
 
   return Status;
 }

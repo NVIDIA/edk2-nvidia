@@ -168,4 +168,18 @@ AndroidBcbLockChain (
   EFI_HANDLE  Handle
   );
 
+/**
+  Update retry count if Bcb active boot chain is not boot_successful.
+
+  @param[in]               Image Handle to access block device
+
+  @retval EFI_SUCCESS      Operation successful.
+  @retval others           Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+AndroidBcbCheckAndUpdateRetryCount (
+  EFI_HANDLE  Handle
+  );
+
 #endif /* __BOOTLOADER_MESSAGE_H_ */
