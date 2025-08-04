@@ -359,12 +359,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
     SerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortWrapper.inf
   !endif
   !ifdef CONFIG_DEBUG_SERIAL_PORT_UTC
-    # Temporarily, use TegraSerialPortLib for UTC instead of TegraUtcSerialPortWrapper
-    #SerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortWrapper.inf
-    TegraCombinedSerialPortLib|Silicon/NVIDIA/Library/TegraCombinedSerialPort/TegraCombinedSerialPortLib.inf
-    TegraUtcSerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortLib.inf
-    TegraSbsaSerialPortLib|Silicon/NVIDIA/Library/TegraSbsaSerialPortLib/TegraSbsaSerialPortLib.inf
-    SerialPortLib|Silicon/NVIDIA/Library/TegraSerialPortLib/TegraSerialPortLib.inf
+    SerialPortLib|Silicon/NVIDIA/Library/TegraUtcSerialPortLib/TegraUtcSerialPortWrapper.inf
   !endif
 !endif
 
@@ -870,10 +865,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   # UTC - Serial Terminal
   #
   gNVIDIATokenSpaceGuid.PcdTegraUtcUartAddress|0x0C4E0000
-  !ifdef CONFIG_BUILD_ANDROID
-    # Android uses SBSA as well as UTC based on the platform
-    gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x0C5F0000
-  !endif
 !endif
 
   #
