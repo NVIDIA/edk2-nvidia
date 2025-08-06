@@ -1,0 +1,49 @@
+## @file
+#  USB LAN Janitor driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UsbLanJanitorDxe
+  FILE_GUID                      = F9AF0C48-9F89-4C84-8125-4821339E4796
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UsbLanJanitorEntryPoint
+  UNLOAD_IMAGE                   = UsbLanJanitorUnload
+
+[Sources]
+  UsbLanJanitorDxe.c
+  UsbLanJanitorDxe.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  UefiLib
+  BaseMemoryLib
+  BaseLib
+  MemoryAllocationLib
+  PrintLib
+
+[Protocols]
+  gNVIDIAUsbNicInfoProtocolGuid  # PROTOCOL ALWAYS_CONSUMES
+  gEfiIp4Config2ProtocolGuid     # PROTOCOL SOMETIMES_CONSUMES
+  gEfiIp6ConfigProtocolGuid      # PROTOCOL SOMETIMES_CONSUMES
+
+[Guids]
+  gNVIDIATokenSpaceGuid
+
+[Depex]
+  TRUE

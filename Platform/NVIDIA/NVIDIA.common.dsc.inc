@@ -1857,6 +1857,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
       # Disable VERBOSE, PAGE and POOL
       gNVIDIATokenSpaceGuid.PcdDebugOutputMask|0xFFBFFFCF
   }
+  Silicon/NVIDIA/Drivers/BmcNic/UsbLanJanitor/UsbLanJanitorDxe.inf
 !endif
 
   # Filesystems
