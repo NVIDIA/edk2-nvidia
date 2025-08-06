@@ -544,6 +544,7 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 !ifdef CONFIG_NETWORKING_DEVICE_USB_RNDIS
   INF Silicon/NVIDIA/Drivers/BmcNic/UsbRndisDxe/UsbRndisDxe.inf
+  INF Silicon/NVIDIA/Drivers/BmcNic/UsbLanJanitor/UsbLanJanitorDxe.inf
 !endif
 
   #
