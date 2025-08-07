@@ -2549,37 +2549,50 @@ ConfigureConsole (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  UINTN       ModeIndex;
-  UINTN       MaxMode;
-  UINTN       ModeWidth;
-  UINTN       ModeHeight;
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+  UINTN                         ModeIndex;
+  UINTN                         MaxMode;
+  UINTN                         ModeWidth;
+  UINTN                         ModeHeight;
+  UINTN                         SelectedMode;
+  UINTN                         SelectedWidth;
+  UINTN                         SelectedHeight;
 
-  UINTN  SelectedMode   = 0;
-  UINTN  SelectedWidth  = 0;
-  UINTN  SelectedHeight = 0;
+  // Change to maximum resolution only if GOP is present
+  Gop    = NULL;
+  Status = gBS->LocateProtocol (
+                  &gEfiGraphicsOutputProtocolGuid,
+                  NULL,
+                  (VOID **)&Gop
+                  );
+  if (!EFI_ERROR (Status)) {
+    SelectedMode   = 0;
+    SelectedWidth  = 0;
+    SelectedHeight = 0;
+    MaxMode        = gST->ConOut->Mode->MaxMode;
 
-  MaxMode = gST->ConOut->Mode->MaxMode;
-  for (ModeIndex = 0; ModeIndex < MaxMode; ModeIndex++) {
-    Status = gST->ConOut->QueryMode (gST->ConOut, ModeIndex, &ModeWidth, &ModeHeight);
+    for (ModeIndex = 0; ModeIndex < MaxMode; ModeIndex++) {
+      Status = gST->ConOut->QueryMode (gST->ConOut, ModeIndex, &ModeWidth, &ModeHeight);
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      // Maximize width then pick largest height
+      if (ModeWidth >= SelectedWidth) {
+        SelectedWidth  = ModeWidth;
+        SelectedHeight = ModeHeight;
+        SelectedMode   = ModeIndex;
+      } else if ((ModeWidth == SelectedWidth) && (ModeHeight > SelectedHeight)) {
+        SelectedHeight = ModeHeight;
+        SelectedMode   = ModeIndex;
+      }
+    }
+
+    Status = gST->ConOut->SetMode (gST->ConOut, SelectedMode);
     if (EFI_ERROR (Status)) {
-      continue;
+      DEBUG ((DEBUG_ERROR, "Failed to set mode %d: %r\n", SelectedMode, Status));
     }
-
-    // Maximize width then pick largest height
-    if (ModeWidth >= SelectedWidth) {
-      SelectedWidth  = ModeWidth;
-      SelectedHeight = ModeHeight;
-      SelectedMode   = ModeIndex;
-    } else if ((ModeWidth == SelectedWidth) && (ModeHeight > SelectedHeight)) {
-      SelectedHeight = ModeHeight;
-      SelectedMode   = ModeIndex;
-    }
-  }
-
-  Status = gST->ConOut->SetMode (gST->ConOut, SelectedMode);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to set mode %d: %r\n", SelectedMode, Status));
   }
 
   Status = gST->ConOut->SetAttribute (gST->ConOut, PcdGet16 (PcdBootManagerConOutAttributes));
