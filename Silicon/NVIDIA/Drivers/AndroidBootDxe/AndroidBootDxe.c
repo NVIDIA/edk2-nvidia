@@ -373,6 +373,91 @@ Exit:
 }
 
 /**
+  Recursively copy a DTB node with all its properties and subnodes
+
+  @param[in]   SrcDtb       Source DTB containing the node to copy
+  @param[in]   SrcOffset    Offset of the source node in SrcDtb
+  @param[in]   DstDtb       Destination DTB to copy the node to
+  @param[in]   DstOffset    Offset of the destination node in DstDtb
+
+  @retval EFI_SUCCESS             Operation successful.
+  @retval others                  Error occurred
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CopyDtbNodeRecursive (
+  IN VOID   *SrcDtb,
+  IN INT32  SrcOffset,
+  IN VOID   *DstDtb,
+  IN INT32  DstOffset
+  )
+{
+  INT32        PropOffset;
+  CONST CHAR8  *PropName;
+  CONST CHAR8  *PropStr;
+  INT32        PropLen;
+  INT32        SubnodeOffset;
+  INT32        NewSubnodeOffset;
+  CONST CHAR8  *SubnodeName;
+  CONST CHAR8  *NodeName;
+  INT32        FdtErr;
+
+  // Get node name for debugging
+  NodeName = fdt_get_name (SrcDtb, SrcOffset, NULL);
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: Processing node %a (src_offset=%d, dst_offset=%d)\n",
+    __FUNCTION__,
+    (NodeName ? NodeName : "<unknown>"),
+    SrcOffset,
+    DstOffset
+    ));
+
+  // Copy all properties from source node to destination node
+  fdt_for_each_property_offset (PropOffset, SrcDtb, SrcOffset) {
+    PropStr = fdt_getprop_by_offset (SrcDtb, PropOffset, &PropName, &PropLen);
+    if (PropStr != NULL) {
+      FdtErr = fdt_setprop (DstDtb, DstOffset, PropName, PropStr, PropLen);
+      if (FdtErr < 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to set property %a, err=%d\n", __FUNCTION__, PropName, FdtErr));
+        return EFI_DEVICE_ERROR;
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Copied property %a (len=%d)\n", __FUNCTION__, PropName, PropLen));
+      }
+    }
+  }
+
+  // Recursively copy all subnodes
+  fdt_for_each_subnode (SubnodeOffset, SrcDtb, SrcOffset) {
+    SubnodeName = fdt_get_name (SrcDtb, SubnodeOffset, NULL);
+    if (SubnodeName != NULL) {
+      DEBUG ((DEBUG_INFO, "%a: Copying subnode %a\n", __FUNCTION__, SubnodeName));
+
+      // Create the subnode in destination DTB
+      NewSubnodeOffset = fdt_add_subnode (DstDtb, DstOffset, SubnodeName);
+      if (NewSubnodeOffset < 0) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to create subnode %a, err=%d\n", __FUNCTION__, SubnodeName, NewSubnodeOffset));
+        return EFI_DEVICE_ERROR;
+      }
+
+      // Recursively copy the subnode's contents
+      EFI_STATUS  Status = CopyDtbNodeRecursive (SrcDtb, SubnodeOffset, DstDtb, NewSubnodeOffset);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to recursively copy subnode %a, Status=%r\n", __FUNCTION__, SubnodeName, Status));
+        return Status;
+      } else {
+        DEBUG ((DEBUG_INFO, "%a: Successfully copied subnode %a\n", __FUNCTION__, SubnodeName));
+      }
+    }
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Successfully processed node %a\n", __FUNCTION__, (NodeName ? NodeName : "<unknown>")));
+  return EFI_SUCCESS;
+}
+
+/**
   Locate and install associated device tree
 
   @param[in]   Private       Private driver data for android kernel instance
@@ -391,9 +476,6 @@ AndroidBootDxeLoadDtb (
   VOID                               *CurrentDtb = NULL;
   INT32                              UefiDtbNodeOffset;
   INT32                              KernelDtbNodeOffset;
-  INT32                              PropOffset;
-  CONST CHAR8                        *PropName;
-  CONST CHAR8                        *PropStr;
   INT32                              PropLen;
   CHAR16                             DtbPartitionName[MAX_PARTITION_NAME_LEN];
   EFI_HANDLE                         DtbPartitionHandle;
@@ -511,10 +593,12 @@ AndroidBootDxeLoadDtb (
         if (CurrentDtb != NULL) {
           KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
           UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
-          if (fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL)) {
-            fdt_for_each_property_offset (PropOffset, CurrentDtb, UefiDtbNodeOffset) {
-              PropStr = fdt_getprop_by_offset (CurrentDtb, PropOffset, &PropName, &PropLen);
-              fdt_setprop (DtbCopy, KernelDtbNodeOffset, PropName, PropStr, PropLen);
+          if ((KernelDtbNodeOffset >= 0) && (UefiDtbNodeOffset >= 0) &&
+              fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
+          {
+            Status = CopyDtbNodeRecursive (CurrentDtb, UefiDtbNodeOffset, DtbCopy, KernelDtbNodeOffset);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((DEBUG_ERROR, "%a: Failed to copy chosen node contents, Status=%r\n", __FUNCTION__, Status));
             }
           }
 
