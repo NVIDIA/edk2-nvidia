@@ -22,6 +22,7 @@
   MemoryAllocationLib
   NctLib
   BootChainInfoLib
+  AndroidBcbLib
 
 [Sources.common]
   BootConfigProtocolLib.c

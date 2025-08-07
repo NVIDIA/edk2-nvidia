@@ -798,9 +798,9 @@ AndroidBootDxeLoadDtb (
           }
 
           // Modify /chosen/bootconfig
-          Status = BootConfigAddSlotSuffix ();
+          Status = BootConfigPrepareBootTimeArgs ();
           if (EFI_ERROR (Status)) {
-            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add slot_suffix to BootConfigProtocol\n", __FUNCTION__, Status));
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add boottime BootConfig\n", __FUNCTION__, Status));
           }
 
           Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);

@@ -14,6 +14,7 @@
 #define NV_OFFSETOF(type, member)         ((UINT32)(UINT64)&(((type *)0)->member))
 
 #define MSG_COMMAND_BOOT_RECOVERY             "boot-recovery"
+#define MSG_COMMAND_BOOT_QUIESCENT            "boot-quiescent"
 #define MSG_COMMAND_BOOT_FASTBOOT_USERSPACE   "boot-fastboot"
 #define MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER  "bootonce-bootloader"
 
@@ -208,6 +209,8 @@ GetCmdFromMiscPartition (
     *Type = MISC_CMD_TYPE_RECOVERY;
   } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_FASTBOOT_USERSPACE) == 0) {
     *Type = MISC_CMD_TYPE_FASTBOOT_USERSPACE;
+  } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_QUIESCENT) == 0) {
+    *Type = MISC_CMD_TYPE_BOOT_QUIESCENT;
   } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER) == 0) {
     *Type = MISC_CMD_TYPE_FASTBOOT_BOOTLOADER;
     // bootonce-bootloader, clean the field to avoid boot into fastboot again

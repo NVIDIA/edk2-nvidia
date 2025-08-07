@@ -33,4 +33,10 @@ BootConfigAddSlotSuffix (
   VOID
   );
 
+EFI_STATUS
+EFIAPI
+BootConfigPrepareBootTimeArgs (
+  VOID
+  );
+
 #endif /* __BOOTCONFIG_PROTOCOL_LIB_H_ */

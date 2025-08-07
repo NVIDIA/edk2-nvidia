@@ -13,6 +13,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/NctLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
 
@@ -253,4 +254,71 @@ BootConfigAddSlotSuffix (
   }
 
   return Status;
+}
+
+/**
+ * Adds quiescent boot info to the boot configuration.
+ *
+ * @retval EFI_SUCCESS The slot_suffix was added successfully.
+ * @retval Other The operation failed with an error status.
+ */
+EFI_STATUS
+EFIAPI
+BootConfigAddQuiescentBootInfo (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  MiscCmdType                        MiscCmd;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Bcb Cmd from Misc\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (MiscCmd != MISC_CMD_TYPE_BOOT_QUIESCENT) {
+    return EFI_SUCCESS;
+  }
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig update protocol\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "quiescent", "1");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add quiescent boot to bootconfig\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+/**
+ * Adds boot time boot configuration.
+ *
+ * @retval EFI_SUCCESS The slot_suffix was added successfully.
+ * @retval Other The operation failed with an error status.
+ */
+EFI_STATUS
+EFIAPI
+BootConfigPrepareBootTimeArgs (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = BootConfigAddSlotSuffix ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = BootConfigAddQuiescentBootInfo ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  return EFI_SUCCESS;
 }
