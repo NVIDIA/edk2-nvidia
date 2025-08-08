@@ -43,6 +43,7 @@ FvNameGuid         = $(PLATFORM_GUID)
     INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
     INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
     INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
+    INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
     INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 !ifdef CONFIG_SDHCI
     INF MdeModulePkg/Bus/Pci/SdMmcPciHcDxe/SdMmcPciHcDxe.inf
