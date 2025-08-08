@@ -140,8 +140,8 @@ RegisterFirmwareVolume (
         }
       }
 
-      // Mark the memory covering the Firmware Device as boot services data
-      BuildMemoryAllocationHob (FvBase, FvSize, EfiBootServicesData);
+      // Mark the memory covering the Firmware Device as boot services code
+      BuildMemoryAllocationHob (FvBase, FvSize, EfiBootServicesCode);
 
       Found = TRUE;
       break;
@@ -251,6 +251,8 @@ CEntryPoint (
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
   SERIAL_MAPPING                *Mapping;
+  VOID                          *MmuFuncPtr;
+  VOID                          *MmuFuncHob;
 
   if (PerformanceMeasurementEnabled ()) {
     // We cannot call yet the PerformanceLib because the HOB List has not been initialized
@@ -531,6 +533,17 @@ CEntryPoint (
 
   // Create the Stacks HOB (reserve the memory for all stacks)
   BuildStackHob (StackBase, StackSize + SIZE_4KB);
+
+  // Save pointer to PrePi version of the ArmReplaceLiveTranslationEntry()
+  // routine in a HOB so CpuDxe's ArmMmuLib instance can use it to replace
+  // live translation entries without disabling the MMU.
+  MmuFuncPtr = (VOID *)ArmReplaceLiveTranslationEntry;
+  MmuFuncHob = BuildGuidDataHob (
+                 &gArmMmuReplaceLiveTranslationEntryFuncGuid,
+                 &MmuFuncPtr,
+                 sizeof (MmuFuncPtr)
+                 );
+  ASSERT (MmuFuncHob != NULL);
 
   // TODO: Call CpuPei as a library
   BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
