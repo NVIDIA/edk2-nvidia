@@ -60,6 +60,7 @@
   gFdtHobGuid
   gDtPlatformDefaultDtbFileGuid
   gNVIDIAPlatformResourceDataGuid
+  gArmMmuReplaceLiveTranslationEntryFuncGuid
 
 [FeaturePcd]
   gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
