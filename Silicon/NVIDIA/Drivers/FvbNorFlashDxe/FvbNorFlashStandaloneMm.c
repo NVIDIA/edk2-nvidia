@@ -27,6 +27,14 @@ STATIC UINT64                   ReservedPartitionOffset;
 STATIC UINT64                   ReservedPartitionSize;
 STATIC NOR_FLASH_ATTRIBUTES     NorFlashAttributes;
 
+STATIC
+EFI_STATUS
+EraseMeasurementPartition (
+  IN NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashProto,
+  IN UINT64                     PartitionOffset,
+  IN UINT64                     PartitionSize
+  );
+
 /**
   The GetAttributes() function retrieves the attributes and
   current settings of the block.
@@ -749,6 +757,21 @@ InitializeFvAndVariableStoreHeaders (
     ASSERT (IsErasedFlashBuffer ((UINT8 *)FirmwareVolumeHeader, PartitionSize));
   }
 
+  // If the VarStore Integrity is enabled, erase the Measurement Partition.
+  if (CheckVarStoreIntegrity == TRUE) {
+    // Erase the Measeurement Partition.
+    Status = EraseMeasurementPartition (NorFlashProtocol, ReservedPartitionOffset, ReservedPartitionSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to Erase Partition %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      return Status;
+    }
+  }
+
   //
   // EFI_FIRMWARE_VOLUME_HEADER
   //
@@ -868,6 +891,7 @@ EraseMeasurementPartition (
     return Status;
   }
 
+  DEBUG ((DEBUG_ERROR, "%a: Successfully erased Measurement Partition\n", __FUNCTION__));
   return EFI_SUCCESS;
 }
 
