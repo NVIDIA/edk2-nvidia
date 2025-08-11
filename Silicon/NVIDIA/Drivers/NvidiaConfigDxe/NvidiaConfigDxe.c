@@ -19,7 +19,7 @@
 #include <Protocol/ServerPowerControl.h>
 
 #include <Library/PrintLib.h>
-#include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -1636,10 +1636,9 @@ WriteCpuSlcSnoopVariables (
       (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
   {
     PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
-  } else {
-    DEBUG ((DEBUG_ERROR, "Failed to get platform resource data\n"));
-    ASSERT (FALSE);
   }
+
+  NV_ASSERT_RETURN (PlatformResourceInfo != NULL, return , "Failed to get platform resource data\n");
 
   if (PlatformResourceInfo->CpuSlcSnoopOutstandingLocal > 0) {
     VariableData = PlatformResourceInfo->CpuSlcSnoopOutstandingLocal;
