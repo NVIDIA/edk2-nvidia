@@ -84,6 +84,16 @@ STATIC CHAR16  *pRecoveryKernelPartitionDtbMapping[][2] = {
   }
 };
 
+//
+// Static array of DTB node paths whose reg properties need to be copied
+// from UEFI DTB to kernel DTB during hypervisor mode patching.
+// Add additional node paths here as needed.
+//
+STATIC CONST CHAR8  *mRegPropertyNodePaths[] = {
+  "/reserved-memory/vpr-carveout",
+  NULL  // Null terminator - do not remove
+};
+
 /**
   Copy the new KernelArgs into the KernelArgsProtocol, freeing up the old string if necessary
 
@@ -458,6 +468,188 @@ CopyDtbNodeRecursive (
 }
 
 /**
+  Copy reg properties from specified UEFI DTB nodes to kernel DTB nodes.
+
+  This function iterates through a predefined list of node paths and copies
+  the 'reg' property from each node in the UEFI DTB to the corresponding
+  node in the kernel DTB. Only source nodes with status "okay" (or missing
+  status) are processed. After successful copying, the destination node's
+  status is set to "okay".
+
+  ASSUMPTIONS:
+  - The #address-cells and #size-cells properties are identical for the
+    parent nodes in both UEFI DTB and kernel DTB. This ensures that the
+    'reg' property format and interpretation remain consistent between
+    the source and destination.
+  - The kernel DTB is expected to already have the nodes (as specified in
+    mRegPropertyNodePaths) present with the same node structure as in the
+    UEFI DTB. This function only patches the 'reg' property data and does
+    not create new nodes.
+
+  @param[in]   UefiDtb       UEFI DTB containing source reg properties
+  @param[in]   KernelDtb     Kernel DTB to receive reg properties
+
+  @retval EFI_SUCCESS             All reg properties copied successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid DTB pointers provided.
+  @retval others                  Error occurred during copying.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CopyRegPropertiesFromNodePaths (
+  IN VOID  *UefiDtb,
+  IN VOID  *KernelDtb
+  )
+{
+  UINTN        Index;
+  INT32        UefiNodeOffset;
+  INT32        KernelNodeOffset;
+  CONST VOID   *RegProperty;
+  INT32        RegPropertyLen;
+  INT32        FdtErr;
+  CONST CHAR8  *NodePath;
+
+  if ((UefiDtb == NULL) || (KernelDtb == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Iterate through all node paths in the static array
+  for (Index = 0; mRegPropertyNodePaths[Index] != NULL; Index++) {
+    NodePath = mRegPropertyNodePaths[Index];
+
+    // Find the node in both DTBs
+    UefiNodeOffset   = fdt_path_offset (UefiDtb, NodePath);
+    KernelNodeOffset = fdt_path_offset (KernelDtb, NodePath);
+
+    if ((UefiNodeOffset < 0) || (KernelNodeOffset < 0)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Node %a not found in one or both DTBs (UEFI: %d, Kernel: %d)\n",
+        __FUNCTION__,
+        NodePath,
+        UefiNodeOffset,
+        KernelNodeOffset
+        ));
+      continue;  // Skip this node if not found in either DTB
+    }
+
+    // Check source node status - must be "okay" or missing (defaults to okay)
+    CONST CHAR8  *UefiStatus = (CONST CHAR8 *)fdt_getprop (UefiDtb, UefiNodeOffset, "status", NULL);
+    if ((UefiStatus != NULL) && (AsciiStrCmp (UefiStatus, "okay") != 0)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Source node %a status is '%a', skipping\n",
+        __FUNCTION__,
+        NodePath,
+        UefiStatus
+        ));
+      continue;  // Skip if source status is not okay
+    }
+
+    // Get the reg property from UEFI DTB
+    RegProperty = fdt_getprop (UefiDtb, UefiNodeOffset, "reg", &RegPropertyLen);
+    if (RegProperty == NULL) {
+      DEBUG ((DEBUG_INFO, "%a: No 'reg' property found in UEFI DTB node %a\n", __FUNCTION__, NodePath));
+      continue;  // Skip if no reg property in source
+    }
+
+    // Copy the reg property to kernel DTB
+    FdtErr = fdt_setprop (KernelDtb, KernelNodeOffset, "reg", RegProperty, RegPropertyLen);
+    if (FdtErr < 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to set 'reg' property for node %a, err=%d\n",
+        __FUNCTION__,
+        NodePath,
+        FdtErr
+        ));
+      return EFI_DEVICE_ERROR;
+    } else {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Successfully copied 'reg' property for node %a (len=%d)\n",
+        __FUNCTION__,
+        NodePath,
+        RegPropertyLen
+        ));
+    }
+
+    // Set destination node status to "okay" after successful patching
+    FdtErr = fdt_setprop_string (KernelDtb, KernelNodeOffset, "status", "okay");
+    if (FdtErr < 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to set 'status' property to 'okay' for node %a, err=%d\n",
+        __FUNCTION__,
+        NodePath,
+        FdtErr
+        ));
+      return EFI_DEVICE_ERROR;
+    } else {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Successfully set status to 'okay' for node %a\n",
+        __FUNCTION__,
+        NodePath
+        ));
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Patch kernel DTB with UEFI DTB data.
+
+  This function copies data from the UEFI DTB /chosen node to the kernel DTB /chosen node.
+  This function should only be called when both DTBs have chosen nodes and
+  nvidia,tegra-hypervisor-mode property is present.
+
+  @param[in]   UefiDtb       UEFI DTB containing source data
+  @param[in]   KernelDtb     Kernel DTB to be patched
+
+  @retval EFI_SUCCESS             DTB patching completed successfully.
+  @retval EFI_INVALID_PARAMETER   Invalid DTB pointers provided.
+  @retval others                  Error occurred during patching.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+PatchKernelDtbWithUefiData (
+  IN VOID  *UefiDtb,
+  IN VOID  *KernelDtb
+  )
+{
+  EFI_STATUS  Status;
+  INT32       UefiDtbNodeOffset;
+  INT32       KernelDtbNodeOffset;
+
+  if ((UefiDtb == NULL) || (KernelDtb == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  KernelDtbNodeOffset = fdt_path_offset (KernelDtb, "/chosen");
+  UefiDtbNodeOffset   = fdt_path_offset (UefiDtb, "/chosen");
+
+  Status = CopyDtbNodeRecursive (UefiDtb, UefiDtbNodeOffset, KernelDtb, KernelDtbNodeOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to copy chosen node contents, Status=%r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  // Copy reg properties from predefined node paths
+  Status = CopyRegPropertiesFromNodePaths (UefiDtb, KernelDtb);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to copy reg properties from node paths, Status=%r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
   Locate and install associated device tree
 
   @param[in]   Private       Private driver data for android kernel instance
@@ -474,8 +666,6 @@ AndroidBootDxeLoadDtb (
   EFI_STATUS                         Status;
   VOID                               *AcpiBase   = NULL;
   VOID                               *CurrentDtb = NULL;
-  INT32                              UefiDtbNodeOffset;
-  INT32                              KernelDtbNodeOffset;
   INT32                              PropLen;
   CHAR16                             DtbPartitionName[MAX_PARTITION_NAME_LEN];
   EFI_HANDLE                         DtbPartitionHandle;
@@ -591,14 +781,19 @@ AndroidBootDxeLoadDtb (
         DtbCopy = NULL;
       } else {
         if (CurrentDtb != NULL) {
+          INT32  KernelDtbNodeOffset;
+          INT32  UefiDtbNodeOffset;
+
           KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
           UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
+
+          // Only patch DTB if both have chosen nodes and hypervisor mode is detected
           if ((KernelDtbNodeOffset >= 0) && (UefiDtbNodeOffset >= 0) &&
               fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
           {
-            Status = CopyDtbNodeRecursive (CurrentDtb, UefiDtbNodeOffset, DtbCopy, KernelDtbNodeOffset);
+            Status = PatchKernelDtbWithUefiData (CurrentDtb, DtbCopy);
             if (EFI_ERROR (Status)) {
-              DEBUG ((DEBUG_ERROR, "%a: Failed to copy chosen node contents, Status=%r\n", __FUNCTION__, Status));
+              DEBUG ((DEBUG_ERROR, "%a: Failed to patch kernel DTB with UEFI data, Status=%r\n", __FUNCTION__, Status));
             }
           }
 
