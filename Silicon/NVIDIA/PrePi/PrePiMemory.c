@@ -168,6 +168,14 @@ MigrateHobList (
   NewHob->EfiMemoryTop        = RegionStart + RegionSize;
 
   PrePeiSetHobList ((VOID *)NewHob);
+
+  // Mark old HOB list as allocated to protect existing AllocatePool entries
+  BuildMemoryAllocationHob (
+    OldHob->EfiMemoryBottom,
+    ALIGN_VALUE ((OldHob->EfiEndOfHobList - OldHobAddress), EFI_PAGE_SIZE),
+    EfiBootServicesData
+    );
+
   return EFI_SUCCESS;
 }
 
