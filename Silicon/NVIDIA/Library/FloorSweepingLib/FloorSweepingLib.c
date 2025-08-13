@@ -29,24 +29,6 @@
 #define THERMAL_COOLING_DEVICE_ENTRY_SIZE  (3 * sizeof (INT32))
 #define MAX_CHILD_NODES_FOR_RENAME         100
 
-STATIC
-EFI_STATUS
-EFIAPI
-NopAndRenumberCpuMap (
-  VOID   *Dtb,
-  INT32  CpusOffset
-  );
-
-STATIC
-EFI_STATUS
-EFIAPI
-NopCpuAndCacheNodes (
-  VOID   *Dtb,
-  INT32  CpusOffset,
-  UINTN  Cpu,
-  INT32  *NodeOffsetPtr
-  );
-
 /**
   Get socket mask
 
@@ -315,89 +297,6 @@ AreValidCpuNodesInCluster (
   return HasValidCpuNodes;
 }
 
-/**
-  Floorsweep CPUs in DTB
-
-**/
-EFI_STATUS
-EFIAPI
-UpdateCpuFloorsweepingConfig (
-  IN INT32  CpusOffset,
-  IN VOID   *Dtb
-  )
-{
-  UINTN       Cpu;
-  UINT64      Mpidr;
-  INT32       FdtErr;
-  UINT64      Tmp64;
-  UINT32      Tmp32;
-  INT32       NodeOffset;
-  EFI_STATUS  Status;
-
-  Cpu        = 0;
-  NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
-  while (NodeOffset > 0) {
-    CONST VOID  *Property;
-    INT32       Length;
-
-    Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
-    if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-      continue;
-    }
-
-    // retrieve mpidr for this cpu node
-    Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
-    if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "Failed to get MPIDR for /cpus/%a, len=%d\n",
-        fdt_get_name (Dtb, NodeOffset, NULL),
-        Length
-        ));
-      return EFI_DEVICE_ERROR;
-    }
-
-    if (Length == sizeof (Tmp64)) {
-      Tmp64 = *(CONST UINT64 *)Property;
-      Mpidr = fdt64_to_cpu (Tmp64);
-    } else {
-      Tmp32 = *(CONST UINT32 *)Property;
-      Mpidr = fdt32_to_cpu (Tmp32);
-    }
-
-    if (MpCoreInfoIsProcessorEnabled (Mpidr) != EFI_SUCCESS) {
-      if (!PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-        FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
-        if (FdtErr < 0) {
-          DEBUG ((DEBUG_ERROR, "Failed to disable %a node: %a\r\n", fdt_get_name (Dtb, NodeOffset, NULL), fdt_strerror (FdtErr)));
-
-          return EFI_DEVICE_ERROR;
-        }
-      } else {
-        Status = NopCpuAndCacheNodes (Dtb, CpusOffset, Cpu, &NodeOffset);
-        if (EFI_ERROR (Status)) {
-          return Status;
-        }
-
-        Cpu++;
-        continue;
-      }
-    }
-
-    NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
-  }
-
-  if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
-    Status = NopAndRenumberCpuMap (Dtb, CpusOffset);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-  }
-
-  return EFI_SUCCESS;
-}
-
 STATIC
 EFI_STATUS
 EFIAPI
@@ -574,6 +473,89 @@ NopAndRenumberCpuMap (
   Status = RenameChildNodesSequentially (Dtb, CpuMapOffset, "cluster%u", ClusterNodeStr, sizeof (ClusterNodeStr), MAX_CHILD_NODES_FOR_RENAME);
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Floorsweep CPUs in DTB
+
+**/
+EFI_STATUS
+EFIAPI
+UpdateCpuFloorsweepingConfig (
+  IN INT32  CpusOffset,
+  IN VOID   *Dtb
+  )
+{
+  UINTN       Cpu;
+  UINT64      Mpidr;
+  INT32       FdtErr;
+  UINT64      Tmp64;
+  UINT32      Tmp32;
+  INT32       NodeOffset;
+  EFI_STATUS  Status;
+
+  Cpu        = 0;
+  NodeOffset = fdt_first_subnode (Dtb, CpusOffset);
+  while (NodeOffset > 0) {
+    CONST VOID  *Property;
+    INT32       Length;
+
+    Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
+    if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
+      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+      continue;
+    }
+
+    // retrieve mpidr for this cpu node
+    Property = fdt_getprop (Dtb, NodeOffset, "reg", &Length);
+    if ((Property == NULL) || ((Length != sizeof (Tmp64)) && (Length != sizeof (Tmp32)))) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed to get MPIDR for /cpus/%a, len=%d\n",
+        fdt_get_name (Dtb, NodeOffset, NULL),
+        Length
+        ));
+      return EFI_DEVICE_ERROR;
+    }
+
+    if (Length == sizeof (Tmp64)) {
+      Tmp64 = *(CONST UINT64 *)Property;
+      Mpidr = fdt64_to_cpu (Tmp64);
+    } else {
+      Tmp32 = *(CONST UINT32 *)Property;
+      Mpidr = fdt32_to_cpu (Tmp32);
+    }
+
+    if (MpCoreInfoIsProcessorEnabled (Mpidr) != EFI_SUCCESS) {
+      if (!PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
+        FdtErr = fdt_setprop (Dtb, NodeOffset, "status", "fail", sizeof ("fail"));
+        if (FdtErr < 0) {
+          DEBUG ((DEBUG_ERROR, "Failed to disable %a node: %a\r\n", fdt_get_name (Dtb, NodeOffset, NULL), fdt_strerror (FdtErr)));
+
+          return EFI_DEVICE_ERROR;
+        }
+      } else {
+        Status = NopCpuAndCacheNodes (Dtb, CpusOffset, Cpu, &NodeOffset);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
+        Cpu++;
+        continue;
+      }
+    }
+
+    NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+  }
+
+  if (PcdGetBool (PcdFloorsweepCpusByDtbNop)) {
+    Status = NopAndRenumberCpuMap (Dtb, CpusOffset);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
   }
 
   return EFI_SUCCESS;
