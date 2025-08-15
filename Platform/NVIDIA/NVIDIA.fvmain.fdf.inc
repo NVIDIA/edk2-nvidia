@@ -41,8 +41,8 @@ FvNameGuid         = $(PLATFORM_GUID)
     INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
     INF Silicon/NVIDIA/Drivers/DebugStatusCodeDxe/DebugStatusCodeDxe.inf
     INF Silicon/NVIDIA/Drivers/TegraPlatformInit/TegraPlatformInitDxe.inf
-    INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
     INF ArmPkg/Drivers/CpuDxe/CpuDxe.inf
+    INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
     INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
     INF MdeModulePkg/Bus/Pci/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
 !ifdef CONFIG_SDHCI
@@ -236,7 +236,7 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 !endif
 
-  INF ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
+  INF ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
   INF ArmPkg/Drivers/TimerDxe/TimerDxe.inf
 !ifdef CONFIG_ARM_WATCHDOG
   INF ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf

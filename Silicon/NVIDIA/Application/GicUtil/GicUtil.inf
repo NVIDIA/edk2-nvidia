@@ -46,7 +46,7 @@
   UefiHiiServicesLib
   HiiLib
   MemoryAllocationLib
-  ArmGicLib
+  IoLib
   PcdLib
   UefiApplicationEntryPoint
 

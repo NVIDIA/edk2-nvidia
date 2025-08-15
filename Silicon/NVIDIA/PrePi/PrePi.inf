@@ -45,7 +45,6 @@
   HobLib
   PrePiHobListPointerLib
   ArmMmuLib
-  ArmGicLib
   FdtLib
   TegraPlatformInfoLib
   GoldenRegisterLib

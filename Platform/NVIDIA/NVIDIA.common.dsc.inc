@@ -174,8 +174,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !endif
   CpuExceptionHandlerLib|ArmPkg/Library/ArmExceptionLib/ArmExceptionLib.inf
   ArmDisassemblerLib|ArmPkg/Library/ArmDisassemblerLib/ArmDisassemblerLib.inf
-  ArmGicLib|ArmPkg/Drivers/ArmGic/ArmGicLib.inf
-  ArmGicArchLib|ArmPkg/Library/ArmGicArchLib/ArmGicArchLib.inf
   ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmPsciResetSystemLib/ArmPsciResetSystemLib.inf
@@ -519,7 +517,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   MemoryAllocationLib|EmbeddedPkg/Library/PrePiMemoryAllocationLib/PrePiMemoryAllocationLib.inf
   HobLib|EmbeddedPkg/Library/PrePiHobLib/PrePiHobLib.inf
   PerformanceLib|MdeModulePkg/Library/PeiPerformanceLib/PeiPerformanceLib.inf
-  ArmGicArchLib|ArmPkg/Library/ArmGicArchSecLib/ArmGicArchSecLib.inf
   SortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
   DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
 
@@ -1722,8 +1719,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
   MdeModulePkg/Universal/HiiDatabaseDxe/HiiDatabaseDxe.inf
 
-  ArmPkg/Drivers/ArmGic/ArmGicDxe.inf
+  ArmPkg/Drivers/ArmGicDxe/ArmGicDxe.inf
   ArmPkg/Drivers/TimerDxe/TimerDxe.inf
+
 !ifdef CONFIG_ARM_WATCHDOG
   ArmPkg/Drivers/GenericWatchdogDxe/GenericWatchdogDxe.inf {
     <LibraryClasses>
