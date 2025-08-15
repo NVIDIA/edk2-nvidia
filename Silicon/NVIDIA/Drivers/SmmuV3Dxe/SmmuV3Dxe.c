@@ -665,12 +665,12 @@ SetupSmmuV3StrTable (
   DEBUG ((DEBUG_INFO, "%a: Total STRTAB entries: %d\n", __FUNCTION__, (1 << Private->Features.StreamNBits)));
 
   TblBase = (EFI_PHYSICAL_ADDRESS)AllocateAlignedPages (EFI_SIZE_TO_PAGES (StrtabSize), StrtabSize);
-  ZeroMem ((VOID *)TblBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (StrtabSize)));
-
   if (!TblBase) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for STRTAB\n", __FUNCTION__));
     return EFI_OUT_OF_RESOURCES;
   }
+
+  ZeroMem ((VOID *)TblBase, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (StrtabSize)));
 
   DEBUG ((DEBUG_INFO, "%a: Memory allocated at %lx for STRTAB\n", __FUNCTION__, TblBase));
 
