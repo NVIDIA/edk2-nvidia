@@ -1,0 +1,50 @@
+## @file
+#  Gpio Boot Complete Dxe
+#
+#  This driver toggles a GPIO pin on ReadyToBoot event to signal
+#  boot completion to the BMC.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = GpioBootCompleteDxe
+  FILE_GUID                      = 78574a00-7a24-11f0-a52d-0b125d193fdc
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = GpioBootCompleteDxeInitialize
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  GpioBootCompleteDxe.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  DeviceTreeHelperLib
+  FdtLib
+
+[Protocols]
+  gEmbeddedGpioProtocolGuid
+
+[Guids]
+  gEfiEventReadyToBootGuid
+
+[Depex]
+  gEmbeddedGpioProtocolGuid

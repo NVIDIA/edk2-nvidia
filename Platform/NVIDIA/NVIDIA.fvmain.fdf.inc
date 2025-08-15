@@ -834,6 +834,11 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
   INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
 
+  #
+  # Gpio Boot Complete Driver
+  #
+  INF Silicon/NVIDIA/Drivers/GpioBootCompleteDxe/GpioBootCompleteDxe.inf
+
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
   #
   # NS ERoT

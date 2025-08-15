@@ -2531,6 +2531,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf
 
+  #
+  # Gpio Boot Complete Driver
+  #
+  Silicon/NVIDIA/Drivers/GpioBootCompleteDxe/GpioBootCompleteDxe.inf
+
 !ifdef CONFIG_REDFISH
 #
   # Redfish Host Interface Support
