@@ -811,7 +811,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   #
 !ifdef CONFIG_BOOT_ANDROID_FASTBOOT
   INF Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
-  INF EmbeddedPkg/Application/AndroidFastboot/AndroidFastbootApp.inf
+  INF Silicon/NVIDIA/Application/AndroidFastboot/AndroidFastbootApp.inf
   INF EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf
   INF Silicon/NVIDIA/Drivers/TegraFastBootDxe/TegraFastBootDxe.inf
 !endif
