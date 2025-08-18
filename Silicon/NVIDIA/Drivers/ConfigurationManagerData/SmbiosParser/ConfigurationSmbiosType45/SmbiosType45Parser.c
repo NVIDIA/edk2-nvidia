@@ -1,7 +1,7 @@
 /**
   Configuration Manager Data of SMBIOS Type 45 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -834,150 +834,6 @@ Exit:
 }
 
 /**
-  Appending Tpm firmware inventory info elements.
-
-  @param[in]                TpmInfo
-  @param[in, out]           FirmwareInventoryInfo
-  @param[in, out]           NumFirmwareComponents
-
-  @return EFI_SUCCESS       Successful installation
-  @retval !(EFI_SUCCESS)    Other errors
-
-**/
-EFI_STATUS
-EFIAPI
-TpmFirmwareInventoryUpdate (
-  CM_SMBIOS_TPM_DEVICE_INFO          *TpmInfo,
-  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  **FirmwareInventoryInfo,
-  UINT32                             *NumFirmwareComponents
-  )
-{
-  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  *FirmwareInventoryInfoElement;
-  CM_SMBIOS_FIRMWARE_INVENTORY_INFO  *NewFirmwareInventoryInfo;
-  EFI_TCG2_PROTOCOL                  *Tcg2Protocol;
-  EFI_TCG2_BOOT_SERVICE_CAPABILITY   ProtocolCapability;
-  CHAR8                              TpmFirmwareComponentName[] = "TPM Firmware";
-
-  if (TpmInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: TpmInfo pointer is NULL\n", __FUNCTION__));
-    return EFI_INVALID_PARAMETER;
-  }
-
-  //
-  // Update associated component information.
-  //
-  NewFirmwareInventoryInfo = NULL;
-  NewFirmwareInventoryInfo = ReallocatePool (
-                               ((*NumFirmwareComponents)) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
-                               ((*NumFirmwareComponents) + 1) * (sizeof (CM_SMBIOS_FIRMWARE_INVENTORY_INFO)),
-                               *FirmwareInventoryInfo
-                               );
-  if (NewFirmwareInventoryInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Unable to realloc space for a new component in FirmwareInventoryInfo\n", __FUNCTION__));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  *FirmwareInventoryInfo = NewFirmwareInventoryInfo;
-
-  FirmwareInventoryInfoElement = (*FirmwareInventoryInfo) + *NumFirmwareComponents;
-  ZeroMem (FirmwareInventoryInfoElement, sizeof (*FirmwareInventoryInfoElement));
-
-  FirmwareInventoryInfoElement->FirmwareComponentName =  (CHAR8 *)AllocateZeroPool (sizeof (TpmFirmwareComponentName) + 1);
-  if (FirmwareInventoryInfoElement->FirmwareComponentName != NULL) {
-    CopyMem (FirmwareInventoryInfoElement->FirmwareComponentName, TpmFirmwareComponentName, sizeof (TpmFirmwareComponentName));
-  }
-
-  //
-  // If LowestSupportedImageVersion is invalid in image descriptor, FirmwareVersion in FirmwareInventoryInfo
-  // will use VersionName field. FirmwareVersionFormat turns to VersionFormatTypeFreeForm.
-  //
-  FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeFreeForm;
-
-  //
-  // Update Firmware ID and ID format.
-  //
-  FirmwareInventoryInfoElement->FirmwareIdFormat = FirmwareIdFormatTypeFreeForm;
-  FirmwareInventoryInfoElement->FirmwareId       =  AllocateCopyString (TpmFirmwareComponentName);
-
-  //
-  // FirmwareVersionFormat turns to VersionFormatTypeMajorMinor.
-  // FirmwareVersion1 : The upper 16 bits of this field SHALL contain the TPM
-  // major firmware version (Version Major). The lower 16 bits of this field SHALL
-  // contain the TPM minor firmware version (Version Minor).
-  // FirmwareVersion2 : This is an OEM extension, and there is not standard format.
-  //
-  FirmwareInventoryInfoElement->FirmwareVersionFormat = VersionFormatTypeMajorMinor;
-  FirmwareInventoryInfoElement->FirmwareVersion       =  (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (MAX_TPM_VERSION_LEN + 1));
-  if (FirmwareInventoryInfoElement->FirmwareVersion != NULL) {
-    AsciiSPrint (
-      FirmwareInventoryInfoElement->FirmwareVersion,
-      MAX_TPM_VERSION_LEN,
-      "%u.%u",
-      TpmInfo->FirmwareVersion1 >> 16,
-      TpmInfo->FirmwareVersion1 & 0xFFFF
-      );
-  }
-
-  //
-  // Update lowest supported image version.
-  //
-  FirmwareInventoryInfoElement->LowestSupportedVersion = (CHAR8 *)AllocateZeroPool (sizeof (CHAR8) * (MAX_TPM_VERSION_LEN + 1));
-  if (FirmwareInventoryInfoElement->LowestSupportedVersion != NULL) {
-    AsciiSPrint (
-      FirmwareInventoryInfoElement->LowestSupportedVersion,
-      MAX_TPM_VERSION_LEN,
-      "%u.%u",
-      TpmInfo->FirmwareVersion1 >> 16,
-      TpmInfo->FirmwareVersion1 & 0xFFFF
-      );
-  }
-
-  //
-  // Update Firmware release date.
-  // There is no such info in UEFI FMP, so leave it as default.
-  //
-  FirmwareInventoryInfoElement->ReleaseDate = AllocateCopyString ((CHAR8 *)mDefaultReleaseDate);
-
-  FirmwareInventoryInfoElement->Characteristics.Updatable      = 1;
-  FirmwareInventoryInfoElement->Characteristics.WriteProtected = 1;
-
-  //
-  // Update Firmware State.
-  //
-  FirmwareInventoryInfoElement->State = FirmwareInventoryStateDisabled;
-
-  if (!EFI_ERROR (gBS->LocateProtocol (&gEfiTcg2ProtocolGuid, NULL, (VOID **)&Tcg2Protocol))) {
-    ProtocolCapability.Size = sizeof (ProtocolCapability);
-
-    if (!EFI_ERROR (Tcg2Protocol->GetCapability (Tcg2Protocol, &ProtocolCapability))) {
-      if (ProtocolCapability.TPMPresentFlag) {
-        FirmwareInventoryInfoElement->State = FirmwareInventoryStateEnabled;
-      }
-    }
-  }
-
-  FirmwareInventoryInfoElement->Manufacturer =  (CHAR8 *)AllocateZeroPool (sizeof (TpmInfo->VendorID) + 1);
-  if (FirmwareInventoryInfoElement->Manufacturer != NULL) {
-    CopyMem (FirmwareInventoryInfoElement->Manufacturer, &TpmInfo->VendorID, sizeof (TpmInfo->VendorID));
-  }
-
-  FirmwareInventoryInfoElement->AssociatedComponentHandles =
-    AllocateZeroPool (
-      sizeof (CM_OBJECT_TOKEN) * FirmwareInventoryInfoElement->AssociatedComponentCount
-      );
-  if (FirmwareInventoryInfoElement->AssociatedComponentHandles == NULL) {
-    FirmwareInventoryInfoElement->AssociatedComponentCount = 0;
-  } else {
-    FirmwareInventoryInfoElement->AssociatedComponentCount      = 1;
-    FirmwareInventoryInfoElement->AssociatedComponentHandles[0] = TpmInfo->TpmDeviceInfoToken;
-  }
-
-  (*NumFirmwareComponents)++;
-
-  return EFI_SUCCESS;
-}
-
-/**
   Install CM object for SMBIOS Type 45
   @param [in]  ParserHandle A handle to the parser instance.
   @param[in, out] Private   Pointer to the private data of SMBIOS creators,
@@ -998,7 +854,6 @@ InstallSmbiosType45Cm (
   EFI_STATUS                         Status;
   CM_SMBIOS_SYSTEM_SLOTS_INFO        *SystemSlotInfo;
   CM_SMBIOS_BIOS_INFO                *BiosInfo;
-  CM_SMBIOS_TPM_DEVICE_INFO          *TpmInfo;
   UINT32                             NumSystemSlots;
   CM_OBJ_DESCRIPTOR                  Desc;
   CM_OBJ_DESCRIPTOR                  *DescPtr;
@@ -1008,7 +863,6 @@ InstallSmbiosType45Cm (
   NumFirmwareComponents = 0;
   BiosInfo              = NULL;
   SystemSlotInfo        = NULL;
-  TpmInfo               = NULL;
   FirmwareInventoryInfo = NULL;
 
   Status = NvFindEntry (ParserHandle, CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjBiosInfo), CM_NULL_TOKEN, &DescPtr);
@@ -1026,13 +880,6 @@ InstallSmbiosType45Cm (
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the SystemSlotInfo \n", __FUNCTION__, Status));
   }
 
-  Status = NvFindEntry (ParserHandle, CREATE_CM_SMBIOS_OBJECT_ID (ESmbiosObjTpmDeviceInfo), CM_NULL_TOKEN, &DescPtr);
-  if (!EFI_ERROR (Status)) {
-    TpmInfo = (CM_SMBIOS_TPM_DEVICE_INFO *)DescPtr->Data;
-  } else {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to find the TpmDeviceInfo \n", __FUNCTION__, Status));
-  }
-
   Status = IndividualFirmwareInventoryUpdate (BiosInfo, SystemSlotInfo, NumSystemSlots, &FirmwareInventoryInfo, &NumFirmwareComponents);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: installing type 45 for individual firmware. Status = %r\n", __FUNCTION__, Status));
@@ -1041,11 +888,6 @@ InstallSmbiosType45Cm (
   Status = FmpFirmwareInventoryUpdate (BiosInfo, SystemSlotInfo, NumSystemSlots, &FirmwareInventoryInfo, &NumFirmwareComponents);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: installing type 45 for FMP. Status = %r\n", __FUNCTION__, Status));
-  }
-
-  Status = TpmFirmwareInventoryUpdate (TpmInfo, &FirmwareInventoryInfo, &NumFirmwareComponents);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: installing type 45 for Tpm. Status = %r\n", __FUNCTION__, Status));
   }
 
   if (NumFirmwareComponents > 0) {
