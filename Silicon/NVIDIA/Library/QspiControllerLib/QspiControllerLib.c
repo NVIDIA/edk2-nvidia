@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -615,12 +615,19 @@ IsQspiControllerReset (
   IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
   )
 {
-  UINT32   CmdReg;
   BOOLEAN  IsReset;
+  UINT32   SwCs;
 
   IsReset = FALSE;
-  CmdReg  = MmioRead32 (QspiBaseAddress + QSPI_COMMAND_0);
-  if (CmdReg == QSPI_COMMAND_0_RESET_VALUE) {
+
+  // Check if CS is software controlled.
+  // This is another way to check if the controller is reset.
+  SwCs = MmioBitFieldRead32 (
+           QspiBaseAddress + QSPI_COMMAND_0,
+           QSPI_COMMAND_0_CS_SW_HW_BIT,
+           QSPI_COMMAND_0_CS_SW_HW_BIT
+           );
+  if (SwCs != QSPI_COMMAND_0_CS_SW_HW_SOFTWARE) {
     IsReset = TRUE;
   }
 
