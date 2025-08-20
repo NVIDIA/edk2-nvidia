@@ -15,7 +15,7 @@ tegra-misc {
 };
 
 tegra-scratch {
-  base-address = < 0x00000000 0x00C3903DC >;
+  base-address = < 0x00000000 0x00C390000 >;
   pages-count  = < 4 >;
   attributes   = < 0x3 >;                   // read-write
 };
