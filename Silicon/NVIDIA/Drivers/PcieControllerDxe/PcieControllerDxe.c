@@ -716,6 +716,12 @@ InitializeController (
       PciExpCap->LinkStatus.Bits.NegotiatedLinkWidth
       ));
 
+    /**
+     * Added a 100 ms delay after Link training completion
+     * before issuing Configuration Requests, as required
+     * for Downstream Ports supporting link speeds > 5.0 GT/s
+     */
+    MicroSecondDelay (100 * 1000);
     if (ChipId == TH500_CHIP_ID) {
       /**
        * Re-train link if disable_ltssm_auto_train set in BCT.
