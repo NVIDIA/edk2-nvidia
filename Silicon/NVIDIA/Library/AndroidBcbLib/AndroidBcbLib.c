@@ -164,6 +164,32 @@ Exit:
   return Status;
 }
 
+STATIC
+EFI_STATUS
+EFIAPI
+ClearCmdFromMiscPartition (
+  EFI_BLOCK_IO_PROTOCOL  *MscBlockIo,
+  EFI_DISK_IO_PROTOCOL   *MscDiskIo
+  )
+{
+  EFI_STATUS         Status = EFI_SUCCESS;
+  BootloaderMessage  Message;
+
+  SetMem (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, 0x00);
+  Status = MscDiskIo->WriteDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        0,
+                        sizeof (BootloaderMessage),
+                        (VOID *)&Message
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r tring to clean BCB %a\r\n", __FUNCTION__, Status, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER));
+  }
+
+  return Status;
+}
+
 EFI_STATUS
 EFIAPI
 GetCmdFromMiscPartition (
@@ -211,20 +237,19 @@ GetCmdFromMiscPartition (
     *Type = MISC_CMD_TYPE_FASTBOOT_USERSPACE;
   } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_QUIESCENT) == 0) {
     *Type = MISC_CMD_TYPE_BOOT_QUIESCENT;
+    // boot-quiescent, clean the field to avoid boot into quiescent mode again
+    if (CleanBootOnceCmd == TRUE) {
+      Status = ClearCmdFromMiscPartition (MscBlockIo, MscDiskIo);
+      if (EFI_ERROR (Status)) {
+        goto Exit;
+      }
+    }
   } else if (COMPARE_MSG_COMMAND (Message, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER) == 0) {
     *Type = MISC_CMD_TYPE_FASTBOOT_BOOTLOADER;
     // bootonce-bootloader, clean the field to avoid boot into fastboot again
     if (CleanBootOnceCmd == TRUE) {
-      SetMem (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, 0x00);
-      Status = MscDiskIo->WriteDisk (
-                            MscDiskIo,
-                            MscBlockIo->Media->MediaId,
-                            0,
-                            sizeof (BootloaderMessage),
-                            (VOID *)&Message
-                            );
+      Status = ClearCmdFromMiscPartition (MscBlockIo, MscDiskIo);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: Got %r tring to clean BCB %a\r\n", __FUNCTION__, Status, MSG_COMMAND_BOOT_FASTBOOT_BOOTLOADER));
         goto Exit;
       }
     }
