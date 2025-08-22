@@ -1,4 +1,7 @@
 /** @file
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
 
@@ -19,6 +22,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiApplicationEntryPoint.h>
 #include <Library/PrintLib.h>
+#include <Library/AndroidBcbLib.h>
 
 /*
  * UEFI Application using the FASTBOOT_TRANSPORT_PROTOCOL and
@@ -286,6 +290,12 @@ AcceptCmd (
       // having to do whatever they did to get here again.
       // Here we just reboot normally.
       SEND_LITERAL ("INFOreboot-bootloader not supported, rebooting normally.");
+    } else if (MATCH_CMD_LITERAL ("reboot-recovery", Command)) {
+      DEBUG ((DEBUG_ERROR, "Fastboot: setting boot-recovery to BCB\n"));
+      SetCmdToMiscPartition (NULL, MISC_CMD_TYPE_RECOVERY);
+    } else if (MATCH_CMD_LITERAL ("reboot-fastboot", Command)) {
+      DEBUG ((DEBUG_ERROR, "Fastboot: setting boot-fastboot to BCB\n"));
+      SetCmdToMiscPartition (NULL, MISC_CMD_TYPE_FASTBOOT_USERSPACE);
     }
 
     SEND_LITERAL ("OKAY");

@@ -1,4 +1,7 @@
 #/** @file
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #  Copyright (c) 2013-2015, ARM Ltd. All rights reserved.<BR>
 #
@@ -35,6 +38,7 @@
   UefiBootServicesTableLib
   UefiLib
   UefiRuntimeServicesTableLib
+  AndroidBcbLib
 
 [Protocols]
   gAndroidFastbootTransportProtocolGuid
@@ -47,6 +51,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [Packages.ARM, Packages.AARCH64]
   ArmPkg/ArmPkg.dec

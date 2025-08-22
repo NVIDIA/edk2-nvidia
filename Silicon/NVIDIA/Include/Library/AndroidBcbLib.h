@@ -137,6 +137,22 @@ typedef enum {
 } MiscCmdType;
 
 /**
+  Set BCB command type to BCB blob lodated in MISC partition
+
+  @param[in]               Image Handle to access block device
+  @param[in]               Type Pointer to BCB cmd type
+
+  @retval EFI_SUCCESS      Operation successful.
+  @retval others           Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+SetCmdToMiscPartition (
+  IN  EFI_HANDLE   Handle,
+  IN  MiscCmdType  Type
+  );
+
+/**
   Get BCB command type from BCB blob lodated in MISC partition
 
   @param[in]               Image Handle to access block device

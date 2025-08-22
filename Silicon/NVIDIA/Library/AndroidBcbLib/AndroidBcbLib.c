@@ -238,6 +238,66 @@ Exit:
   return Status;
 }
 
+EFI_STATUS
+EFIAPI
+SetCmdToMiscPartition (
+  EFI_HANDLE   Handle,
+  MiscCmdType  Type
+  )
+{
+  EFI_STATUS             Status = EFI_SUCCESS;
+  EFI_BLOCK_IO_PROTOCOL  *MscBlockIo;
+  EFI_DISK_IO_PROTOCOL   *MscDiskIo;
+  BootloaderMessage      Message = { 0 };
+
+  Status = GetMiscIoProtocolFromHandle (Handle, &MscBlockIo, &MscDiskIo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to fetch IO protocols\r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  Status = MscDiskIo->ReadDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        0,
+                        sizeof (BootloaderMessage),
+                        (VOID *)&Message
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read BCB\r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  // bootloader only support boot-fastboot & boot-recovery
+  SetMem (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, 0x00);
+  if (Type == MISC_CMD_TYPE_RECOVERY) {
+    AsciiStrCpyS (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, MSG_COMMAND_BOOT_RECOVERY);
+  } else if (Type == MISC_CMD_TYPE_FASTBOOT_USERSPACE) {
+    AsciiStrCpyS (Message.command, BOOTLOADER_MESSAGE_COMMAND_BYTES, MSG_COMMAND_BOOT_FASTBOOT_USERSPACE);
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid cmd type \r\n", __FUNCTION__, Type));
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
+  }
+
+  Status = MscDiskIo->WriteDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        0,
+                        sizeof (BootloaderMessage),
+                        (VOID *)&Message
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write BCB\r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  CacheCmdType = Type;
+
+Exit:
+  return Status;
+}
+
 /**
   Calculate CRC32 sum of BootCtrl struct
 
