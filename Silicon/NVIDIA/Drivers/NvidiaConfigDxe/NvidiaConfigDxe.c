@@ -991,6 +991,49 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_OS_NATIVE_AER_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_OS_NATIVE_AER_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_OS_NATIVE_AER_HELP),
+
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET0_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET1_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET2_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_SOCKET3_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_OS_NATIVE_PME_HELP),
+
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET0_PCIE0_TITLE),
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET0_PCIE1_TITLE),
   STRING_TOKEN (STR_PCIE_DISABLE_L23_AT_WARM_RESET_SOCKET0_PCIE3_TITLE),
@@ -1908,6 +1951,7 @@ SyncHiiSettings (
       mHiiControlSettings.SupportsPRSNT_0[Index]          = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SupportsPRSNT;
       mHiiControlSettings.AdvertiseACS_0[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].AdvertiseACS;
       mHiiControlSettings.OsNativeAER_0[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].OsNativeAER;
+      mHiiControlSettings.OsNativePME_0[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].OsNativePME;
       mHiiControlSettings.DisableL23AtWarmReset_0[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[0][Index].DisableL23AtWarmReset;
       mHiiControlSettings.MaxSpeed1[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxSpeed;
       mHiiControlSettings.MaxWidth1[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxWidth;
@@ -1926,6 +1970,7 @@ SyncHiiSettings (
       mHiiControlSettings.SupportsPRSNT_1[Index]          = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SupportsPRSNT;
       mHiiControlSettings.AdvertiseACS_1[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].AdvertiseACS;
       mHiiControlSettings.OsNativeAER_1[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].OsNativeAER;
+      mHiiControlSettings.OsNativePME_1[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].OsNativePME;
       mHiiControlSettings.DisableL23AtWarmReset_1[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[1][Index].DisableL23AtWarmReset;
       mHiiControlSettings.MaxSpeed2[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxSpeed;
       mHiiControlSettings.MaxWidth2[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxWidth;
@@ -1944,6 +1989,7 @@ SyncHiiSettings (
       mHiiControlSettings.SupportsPRSNT_2[Index]          = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SupportsPRSNT;
       mHiiControlSettings.AdvertiseACS_2[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].AdvertiseACS;
       mHiiControlSettings.OsNativeAER_2[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].OsNativeAER;
+      mHiiControlSettings.OsNativePME_2[Index]            = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].OsNativePME;
       mHiiControlSettings.DisableL23AtWarmReset_2[Index]  = mMb1Config.Data.Mb1Data.PcieConfig[2][Index].DisableL23AtWarmReset;
       mHiiControlSettings.MaxSpeed3[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxSpeed;
       mHiiControlSettings.MaxWidth3[Index]                = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxWidth;
@@ -1982,6 +2028,7 @@ SyncHiiSettings (
       mHiiControlSettings.Extended10bitTagEnable3[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (3, Index))) != 0ULL;
 
       mHiiControlSettings.OsNativeAER_3[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER;
+      mHiiControlSettings.OsNativePME_3[Index]           = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativePME;
       mHiiControlSettings.DisableL23AtWarmReset_3[Index] = mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableL23AtWarmReset;
     }
 
@@ -2066,6 +2113,7 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].SupportsPRSNT          = mHiiControlSettings.SupportsPRSNT_0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].AdvertiseACS           = mHiiControlSettings.AdvertiseACS_0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_0[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[0][Index].OsNativePME            = mHiiControlSettings.OsNativePME_0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].DisableL23AtWarmReset  = mHiiControlSettings.DisableL23AtWarmReset_0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed1[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].MaxWidth               = mHiiControlSettings.MaxWidth1[Index];
@@ -2084,6 +2132,7 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].SupportsPRSNT          = mHiiControlSettings.SupportsPRSNT_1[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].AdvertiseACS           = mHiiControlSettings.AdvertiseACS_1[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_1[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[1][Index].OsNativePME            = mHiiControlSettings.OsNativePME_1[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[1][Index].DisableL23AtWarmReset  = mHiiControlSettings.DisableL23AtWarmReset_1[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed2[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].MaxWidth               = mHiiControlSettings.MaxWidth2[Index];
@@ -2102,6 +2151,7 @@ SyncHiiSettings (
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].SupportsPRSNT          = mHiiControlSettings.SupportsPRSNT_2[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].AdvertiseACS           = mHiiControlSettings.AdvertiseACS_2[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_2[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[2][Index].OsNativePME            = mHiiControlSettings.OsNativePME_2[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[2][Index].DisableL23AtWarmReset  = mHiiControlSettings.DisableL23AtWarmReset_2[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].MaxWidth               = mHiiControlSettings.MaxWidth3[Index];
@@ -2137,6 +2187,7 @@ SyncHiiSettings (
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable3[Index] ? (1ULL << PCIE_SEG (3, Index)) : 0ULL;
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativeAER            = mHiiControlSettings.OsNativeAER_3[Index];
+      mMb1Config.Data.Mb1Data.PcieConfig[3][Index].OsNativePME            = mHiiControlSettings.OsNativePME_3[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[3][Index].DisableL23AtWarmReset  = mHiiControlSettings.DisableL23AtWarmReset_3[Index];
     }
 
@@ -2443,6 +2494,10 @@ InitializeSettings (
           }
         }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 21) {
+      mHiiControlSettings.PCIeOSNativePMESupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 20) {
@@ -3195,6 +3250,18 @@ GetDefaultValue (
         }
 
         Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].OsNativeAER;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_OS_NATIVE_PME) && (QuestionId <= KEY_SOCKET3_PCIE9_OS_NATIVE_PME)) {
+        //
+        // PCIE OS_NATIVE_PME
+        //
+        SocketIndex = (QuestionId - KEY_SOCKET0_PCIE0_OS_NATIVE_PME) / TEGRABL_MAX_PCIE_PER_SOCKET;
+        PcieIndex   = (QuestionId - KEY_SOCKET0_PCIE0_OS_NATIVE_PME) % TEGRABL_MAX_PCIE_PER_SOCKET;
+        if ((SocketIndex >= TEGRABL_SOC_MAX_SOCKETS) || (PcieIndex >= TEGRABL_MAX_PCIE_PER_SOCKET)) {
+          ASSERT (FALSE);
+          return EFI_PROTOCOL_ERROR;
+        }
+
+        Data = mMb1DefaultConfig.Data.Mb1Data.PcieConfig[SocketIndex][PcieIndex].OsNativePME;
       } else {
         //
         // Unsupported question ID.

@@ -1025,6 +1025,47 @@
 #define KEY_SOCKET3_PCIE8_DISABLE_L23_AT_WARM_RESET  0x2427
 #define KEY_SOCKET3_PCIE9_DISABLE_L23_AT_WARM_RESET  0x2428
 
+#define KEY_SOCKET0_PCIE0_OS_NATIVE_PME  0x2501
+#define KEY_SOCKET0_PCIE1_OS_NATIVE_PME  0x2502
+#define KEY_SOCKET0_PCIE2_OS_NATIVE_PME  0x2503
+#define KEY_SOCKET0_PCIE3_OS_NATIVE_PME  0x2504
+#define KEY_SOCKET0_PCIE4_OS_NATIVE_PME  0x2505
+#define KEY_SOCKET0_PCIE5_OS_NATIVE_PME  0x2506
+#define KEY_SOCKET0_PCIE6_OS_NATIVE_PME  0x2507
+#define KEY_SOCKET0_PCIE7_OS_NATIVE_PME  0x2508
+#define KEY_SOCKET0_PCIE8_OS_NATIVE_PME  0x2509
+#define KEY_SOCKET0_PCIE9_OS_NATIVE_PME  0x250A
+#define KEY_SOCKET1_PCIE0_OS_NATIVE_PME  0x250B
+#define KEY_SOCKET1_PCIE1_OS_NATIVE_PME  0x250C
+#define KEY_SOCKET1_PCIE2_OS_NATIVE_PME  0x250D
+#define KEY_SOCKET1_PCIE3_OS_NATIVE_PME  0x250E
+#define KEY_SOCKET1_PCIE4_OS_NATIVE_PME  0x250F
+#define KEY_SOCKET1_PCIE5_OS_NATIVE_PME  0x2510
+#define KEY_SOCKET1_PCIE6_OS_NATIVE_PME  0x2511
+#define KEY_SOCKET1_PCIE7_OS_NATIVE_PME  0x2512
+#define KEY_SOCKET1_PCIE8_OS_NATIVE_PME  0x2513
+#define KEY_SOCKET1_PCIE9_OS_NATIVE_PME  0x2514
+#define KEY_SOCKET2_PCIE0_OS_NATIVE_PME  0x2515
+#define KEY_SOCKET2_PCIE1_OS_NATIVE_PME  0x2516
+#define KEY_SOCKET2_PCIE2_OS_NATIVE_PME  0x2517
+#define KEY_SOCKET2_PCIE3_OS_NATIVE_PME  0x2518
+#define KEY_SOCKET2_PCIE4_OS_NATIVE_PME  0x2519
+#define KEY_SOCKET2_PCIE5_OS_NATIVE_PME  0x251A
+#define KEY_SOCKET2_PCIE6_OS_NATIVE_PME  0x251B
+#define KEY_SOCKET2_PCIE7_OS_NATIVE_PME  0x251C
+#define KEY_SOCKET2_PCIE8_OS_NATIVE_PME  0x251D
+#define KEY_SOCKET2_PCIE9_OS_NATIVE_PME  0x251E
+#define KEY_SOCKET3_PCIE0_OS_NATIVE_PME  0x251F
+#define KEY_SOCKET3_PCIE1_OS_NATIVE_PME  0x2520
+#define KEY_SOCKET3_PCIE2_OS_NATIVE_PME  0x2521
+#define KEY_SOCKET3_PCIE3_OS_NATIVE_PME  0x2522
+#define KEY_SOCKET3_PCIE4_OS_NATIVE_PME  0x2523
+#define KEY_SOCKET3_PCIE5_OS_NATIVE_PME  0x2524
+#define KEY_SOCKET3_PCIE6_OS_NATIVE_PME  0x2525
+#define KEY_SOCKET3_PCIE7_OS_NATIVE_PME  0x2526
+#define KEY_SOCKET3_PCIE8_OS_NATIVE_PME  0x2527
+#define KEY_SOCKET3_PCIE9_OS_NATIVE_PME  0x2528
+
 #define LABEL_DBG2_PCIE_DEVICE_START  0x3000
 #define LABEL_DBG2_PCIE_DEVICE_END    0x3001
 #define MAX_DBG2_STRING_LENGTH        128
@@ -1115,6 +1156,7 @@ typedef struct {
   BOOLEAN    PCIePRSNTConfigSupported;
   BOOLEAN    PCIeACSConfigSupported;
   BOOLEAN    PCIeOSNativeAERSupported;
+  BOOLEAN    PCIeOSNativePMESupported;
   BOOLEAN    PCIeDisableL23AtWarmResetSupported;
   BOOLEAN    MemoryTestsSupported;
   BOOLEAN    ActiveCoresSettingSupported;
@@ -1231,6 +1273,10 @@ typedef struct {
   BOOLEAN    OsNativeAER_1[MAX_PCIE];
   BOOLEAN    OsNativeAER_2[MAX_PCIE];
   BOOLEAN    OsNativeAER_3[MAX_PCIE];
+  BOOLEAN    OsNativePME_0[MAX_PCIE];
+  BOOLEAN    OsNativePME_1[MAX_PCIE];
+  BOOLEAN    OsNativePME_2[MAX_PCIE];
+  BOOLEAN    OsNativePME_3[MAX_PCIE];
   UINT16     CporWayMask[MAX_MPAM_PARTID];
   UINT8      MaxBw[MAX_MPAM_PARTID];
   UINT8      MinBw[MAX_MPAM_PARTID];
@@ -1518,6 +1564,14 @@ typedef struct {
            questionid = KEY_SOCKET##socket##_PCIE##pcie##_OS_NATIVE_AER,                          \
            prompt = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_SOCKET##socket##_PCIE##pcie##_TITLE),     \
            help = STRING_TOKEN(STR_PCIE_OS_NATIVE_AER_HELP),                                      \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
+  endif;                                                                                          \
+  suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.PCIeOSNativePMESupported == 0;                     \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.OsNativePME_##socket[pcie],                          \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_OS_NATIVE_PME,                          \
+           prompt = STRING_TOKEN(STR_PCIE_OS_NATIVE_PME_SOCKET##socket##_PCIE##pcie##_TITLE),     \
+           help = STRING_TOKEN(STR_PCIE_OS_NATIVE_PME_HELP),                                      \
            flags = INTERACTIVE | RESET_REQUIRED,                                                  \
            endcheckbox;                                                                           \
   endif;                                                                                          \

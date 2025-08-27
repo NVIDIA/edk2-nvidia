@@ -2249,6 +2249,11 @@ DeviceDiscoveryNotify (
           Private->PcieRootBridgeConfigurationIo.OSCCtrl |= (PCIE_FW_OSC_CTRL_PCIE_AER |
                                                              PCIE_FW_OSC_CTRL_PCIE_DPC);
         }
+
+        if (Mb1Config->Data.Mb1Data.PcieConfig[Private->SocketId][Private->CtrlId].OsNativePME) {
+          /* Enable OS native handling of PME */
+          Private->PcieRootBridgeConfigurationIo.OSCCtrl |= PCIE_FW_OSC_CTRL_PCIE_NATIVE_PME;
+        }
       }
 
       RootBridge->Segment               = Private->PcieRootBridgeConfigurationIo.SegmentNumber;

@@ -19,7 +19,7 @@
 #define TEGRABL_MAX_MPAM_PARTID           5
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  20
+#define TEGRABL_MB1_BCT_MINOR_VERSION  21
 
 #pragma pack(1)
 
@@ -99,8 +99,10 @@ typedef struct {
       UINT64    DisableL23AtWarmReset  : 1;
       /* Disable DPC */
       UINT64    DisableDPC             : 1;
+      /* Enable OS native handling of PME */
+      UINT64    OsNativePME            : 1;
       /* Reserved */
-      UINT64    FeaturesReserved       : 48;
+      UINT64    FeaturesReserved       : 47;
     };
   };
 
