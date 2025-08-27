@@ -2,7 +2,7 @@
 #  Memory Allocation Library instance dedicated to running before the HOBs are setup and
 #  specifically meant during the early StMM boot to setup the MMU translations.
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -28,7 +28,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]

@@ -4,6 +4,7 @@
 # Copyright (c) 2015 - 2024, Intel Corporation. All rights reserved.<BR>
 # Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
 # Copyright (C) Microsoft Corporation<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -45,22 +46,22 @@
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
   ExtractGuidedSectionLib|EmbeddedPkg/Library/PrePiExtractGuidedSectionLib/PrePiExtractGuidedSectionLib.inf
-  FvLib|StandaloneMmPkg/Library/FvLib/FvLib.inf
-  HobLib|StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
+  FvLib|Silicon/StandaloneMmPkgLegacy/Library/FvLib/FvLib.inf
+  HobLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
   IoLib|MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
-  MemLib|StandaloneMmPkg/Library/StandaloneMmMemLib/StandaloneMmMemLib.inf
-  MemoryAllocationLib|StandaloneMmPkg/Library/StandaloneMmCoreMemoryAllocationLib/StandaloneMmCoreMemoryAllocationLib.inf
+  MemLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmMemLib/StandaloneMmMemLib.inf
+  MemoryAllocationLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreMemoryAllocationLib/StandaloneMmCoreMemoryAllocationLib.inf
   MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
   PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
   PeCoffExtraActionLib|MdePkg/Library/BasePeCoffExtraActionLibNull/BasePeCoffExtraActionLibNull.inf
   PeCoffLib|MdePkg/Library/BasePeCoffLib/BasePeCoffLib.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
   ReportStatusCodeLib|MdePkg/Library/BaseReportStatusCodeLibNull/BaseReportStatusCodeLibNull.inf
-  StandaloneMmCoreEntryPoint|StandaloneMmPkg/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
+  StandaloneMmCoreEntryPoint|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
   StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
-  VariableMmDependency|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+  VariableMmDependency|Silicon/StandaloneMmPkgLegacy/Library/VariableMmDependency/VariableMmDependency.inf
   HobPrintLib|MdeModulePkg/Library/HobPrintLib/HobPrintLib.inf
-  MmPlatformHobProducerLib|StandaloneMmPkg/Library/MmPlatformHobProducerLibNull/MmPlatformHobProducerLibNull.inf
+  MmPlatformHobProducerLib|Silicon/StandaloneMmPkgLegacy/Library/MmPlatformHobProducerLibNull/MmPlatformHobProducerLibNull.inf
   ImagePropertiesRecordLib|MdeModulePkg/Library/ImagePropertiesRecordLib/ImagePropertiesRecordLib.inf
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
 
@@ -77,13 +78,13 @@
   StandaloneMmMmuLib|ArmPkg/Library/StandaloneMmMmuLib/ArmMmuStandaloneMmLib.inf
   ArmSvcLib|ArmPkg/Library/ArmSvcLib/ArmSvcLib.inf
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
-  PeCoffExtraActionLib|StandaloneMmPkg/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
+  PeCoffExtraActionLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
 
 [LibraryClasses.common.MM_CORE_STANDALONE]
-  HobLib|StandaloneMmPkg/Library/StandaloneMmCoreHobLib/StandaloneMmCoreHobLib.inf
+  HobLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreHobLib/StandaloneMmCoreHobLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
-  MemoryAllocationLib|StandaloneMmPkg/Library/StandaloneMmMemoryAllocationLib/StandaloneMmMemoryAllocationLib.inf
+  MemoryAllocationLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmMemoryAllocationLib/StandaloneMmMemoryAllocationLib.inf
 
 [LibraryClasses.common.DXE_RUNTIME_DRIVER]
   UefiRuntimeLib|MdePkg/Library/UefiRuntimeLib/UefiRuntimeLib.inf
@@ -127,25 +128,25 @@
   #
   # MM Core
   #
-  StandaloneMmPkg/Core/StandaloneMmCore.inf
-  StandaloneMmPkg/Library/FvLib/FvLib.inf
-  StandaloneMmPkg/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
-  StandaloneMmPkg/Library/StandaloneMmCoreHobLib/StandaloneMmCoreHobLib.inf
-  StandaloneMmPkg/Library/StandaloneMmCoreMemoryAllocationLib/StandaloneMmCoreMemoryAllocationLib.inf
-  StandaloneMmPkg/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
-  StandaloneMmPkg/Library/StandaloneMmMemLib/StandaloneMmMemLib.inf
-  StandaloneMmPkg/Library/StandaloneMmMemoryAllocationLib/StandaloneMmMemoryAllocationLib.inf
-  StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
-  StandaloneMmPkg/Library/SmmLockBoxMmDependency/SmmLockBoxMmDependency.inf
-  StandaloneMmPkg/Library/MmPlatformHobProducerLibNull/MmPlatformHobProducerLibNull.inf
-  StandaloneMmPkg/Drivers/MmCommunicationDxe/MmCommunicationDxe.inf
+  Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
+  Silicon/StandaloneMmPkgLegacy/Library/FvLib/FvLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreHobLib/StandaloneMmCoreHobLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmCoreMemoryAllocationLib/StandaloneMmCoreMemoryAllocationLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmMemLib/StandaloneMmMemLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmMemoryAllocationLib/StandaloneMmMemoryAllocationLib.inf
+  Silicon/StandaloneMmPkgLegacy/Library/VariableMmDependency/VariableMmDependency.inf
+  Silicon/StandaloneMmPkgLegacy/Library/SmmLockBoxMmDependency/SmmLockBoxMmDependency.inf
+  Silicon/StandaloneMmPkgLegacy/Library/MmPlatformHobProducerLibNull/MmPlatformHobProducerLibNull.inf
+  Silicon/StandaloneMmPkgLegacy/Drivers/MmCommunicationDxe/MmCommunicationDxe.inf
 
 [Components.AARCH64, Components.ARM]
-  StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
-  StandaloneMmPkg/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
+  Silicon/StandaloneMmPkgLegacy/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+  Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
 
 [Components.X64]
-  StandaloneMmPkg/Drivers/StandaloneMmIplPei/StandaloneMmIplPei.inf
+  Silicon/StandaloneMmPkgLegacy/Drivers/StandaloneMmIplPei/StandaloneMmIplPei.inf
 
 ###################################################################################################
 #

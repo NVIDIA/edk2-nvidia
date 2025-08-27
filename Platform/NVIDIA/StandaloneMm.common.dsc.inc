@@ -40,7 +40,6 @@
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
-  StandaloneMmMmuLib|ArmPkg/Library/StandaloneMmMmuLib/ArmMmuStandaloneMmLib.inf
   ArmSvcLib|ArmPkg/Library/ArmSvcLib/ArmSvcLib.inf
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
   PeCoffExtraActionLib|StandaloneMmPkg/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
@@ -60,7 +59,6 @@
   SerialPortLib|MdePkg/Library/BaseSerialPortLibNull/BaseSerialPortLibNull.inf
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
 
-  StandaloneMmCoreEntryPoint|StandaloneMmPkg/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
   StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
 
   NULL|MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
@@ -140,41 +138,3 @@
 
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING) $(BUILD_DATE_TIME)"
-
-
-###################################################################################################
-#
-# Components Section - list of the modules and components that will be processed by compilation
-#                      tools and the EDK II tools to generate PE32/PE32+/Coff image files.
-#
-# Note: The EDK II DSC file is not used to specify how compiled binary images get placed
-#       into firmware volume images. This section is just a list of modules to compile from
-#       source into UEFI-compliant binaries.
-#       It is the FDF file that contains information on combining binary files into firmware
-#       volume images, whose concept is beyond UEFI and is described in PI specification.
-#       Binary modules do not need to be listed in this section, as they should be
-#       specified in the FDF file. For example: Shell binary (Shell_Full.efi), FAT binary (Fat.efi),
-#       Logo (Logo.bmp), and etc.
-#       There may also be modules listed in this section that are not required in the FDF file,
-#       When a module listed here is excluded from FDF file, then UEFI-compliant binary will be
-#       generated for it, but the binary will not be put into any firmware volume.
-#
-###################################################################################################
-[Components.common]
-  #
-  # MM Core
-  #
-  StandaloneMmPkg/Core/StandaloneMmCore.inf
-
-  #
-  # MM Variable Driver
-  #
-  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
-    <LibraryClasses>
-      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
-      VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
-      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
-      NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
-  }
-
-[Components.AARCH64]

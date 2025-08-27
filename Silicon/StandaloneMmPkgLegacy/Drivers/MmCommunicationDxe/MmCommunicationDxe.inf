@@ -3,6 +3,7 @@
 # create the notifications of some protocols and event.
 #
 # Copyright (c) 2024, Intel Corporation. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -11,7 +12,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = MmCommunicationDxe
-  FILE_GUID                      = 8d4b8bc7-e66b-4be2-add8-4988e08743ed
+  FILE_GUID                      = ef62a564-4528-41a2-a539-7b921c96e146
   MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
@@ -25,7 +26,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   UefiCpuPkg/UefiCpuPkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
 
 [LibraryClasses]
   UefiDriverEntryPoint

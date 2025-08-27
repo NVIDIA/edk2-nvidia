@@ -2,6 +2,7 @@
 #  This module provide a Standalone MM compliant implementation of MM IPL PEIM.
 #
 #  Copyright (c) 2024, Intel Corporation. All rights reserved.<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -10,7 +11,7 @@
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = StandaloneMmIplPei
-  FILE_GUID                      = 578A0D17-2DC0-4C7D-A121-D8D771923BB0
+  FILE_GUID                      = 9b2a14b3-d104-40a6-9b2d-ca90e17e1052
   MODULE_TYPE                    = PEIM
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x0001000A
@@ -30,7 +31,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
   UefiCpuPkg/UefiCpuPkg.dec
 
 [LibraryClasses]

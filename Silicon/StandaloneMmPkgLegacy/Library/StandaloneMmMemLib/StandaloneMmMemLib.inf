@@ -9,6 +9,7 @@
 #  Copyright (c) 2015 - 2024, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
 #  Copyright (c) Microsoft Corporation.
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,7 +18,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = MemLib
-  FILE_GUID                      = EA355F14-6409-4716-829F-37B3BC7C7F26
+  FILE_GUID                      = 82f29e30-ee47-43f5-a315-64f12cf5d759
   MODULE_TYPE                    = MM_STANDALONE
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
@@ -43,7 +44,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
 
 [LibraryClasses]
   BaseMemoryLib

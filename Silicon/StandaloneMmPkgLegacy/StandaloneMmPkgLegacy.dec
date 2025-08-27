@@ -4,6 +4,7 @@
 #
 # Copyright (c) 2016-2021, Arm Ltd. All rights reserved.<BR>
 # Copyright (c) 2024, Intel Corporation. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -11,8 +12,8 @@
 
 [Defines]
   DEC_SPECIFICATION              = 0x0001001A
-  PACKAGE_NAME                   = StandaloneMmPkg
-  PACKAGE_GUID                   = 2AE82968-7769-4A85-A5BC-A0954CE54A5C
+  PACKAGE_NAME                   = StandaloneMmPkgLegacy
+  PACKAGE_GUID                   = 4fb5bde5-7815-411d-a444-07850b65ce29
   PACKAGE_VERSION                = 1.0
 
 [Includes]

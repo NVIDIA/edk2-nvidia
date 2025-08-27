@@ -5,6 +5,7 @@
 #  it signals that the LockBox API is fully operational and ready for use.
 #
 # Copyright (c) 2024, Intel Corporation. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -13,7 +14,7 @@
 [Defines]
   INF_VERSION                    = 0x00010006
   BASE_NAME                      = SmmLockBoxMmDependency
-  FILE_GUID                      = c45ce910-7f8b-4f49-88e2-2c26c5743ee2
+  FILE_GUID                      = 5fe69c06-356f-4427-b0d5-19db9bad691f
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = NULL

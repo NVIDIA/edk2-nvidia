@@ -13,6 +13,7 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
 !include Platform/NVIDIA/StandaloneMm.common.dsc.inc
+!include Platform/NVIDIA/StandaloneMm.legacy.dsc.inc
 
 ################################################################################
 #
@@ -86,6 +87,11 @@
 #
 ###################################################################################################
 [Components.common]
+  #
+  # MM Core
+  #
+  Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
+
   #
   # MM Qspi Driver
   #

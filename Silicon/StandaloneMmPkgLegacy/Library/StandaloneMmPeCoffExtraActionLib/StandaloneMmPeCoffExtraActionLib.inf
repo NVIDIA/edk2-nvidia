@@ -4,6 +4,7 @@
 # Lib to provide memory journal status code reporting Routines
 # Copyright (c) 2007 - 2010, Intel Corporation. All rights reserved.<BR>
 # Portions copyright (c) 2010, Apple Inc. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
@@ -12,7 +13,7 @@
 [Defines]
   INF_VERSION                    = 0x0001000A
   BASE_NAME                      = StandaloneMmPeCoffExtraActionLib
-  FILE_GUID                      = 8B40543B-9588-48F8-840C-5A60E6DB1B03
+  FILE_GUID                      = d326e47c-e7f8-4f92-bfaa-48da06ec92ff
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = PeCoffExtraActionLib
@@ -29,7 +30,7 @@
 [Packages]
   ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
 
 [LibraryClasses]
   StandaloneMmMmuLib

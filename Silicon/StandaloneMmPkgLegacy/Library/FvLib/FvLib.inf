@@ -2,6 +2,7 @@
 #
 #  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -15,7 +16,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = FvLib
-  FILE_GUID                      = C20085E9-E3AB-4938-A727-C10935FEEE2B
+  FILE_GUID                      = ab2c7932-03ab-4cb4-aeec-431f5b812a79
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = FvLib
@@ -44,7 +45,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
 
 [LibraryClasses]
   BaseLib

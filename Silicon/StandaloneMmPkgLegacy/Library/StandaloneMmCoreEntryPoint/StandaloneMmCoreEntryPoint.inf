@@ -2,6 +2,7 @@
 # Module entry point library for DXE core.
 #
 # Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -11,7 +12,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = StandaloneMmCoreEntryPoint
-  FILE_GUID                      = C97AC593-109A-4C63-905C-675FDE2689E8
+  FILE_GUID                      = f9e06482-d2df-489d-8b3c-30009868ad4b
   MODULE_TYPE                    = MM_CORE_STANDALONE
   VERSION_STRING                 = 1.0
   PI_SPECIFICATION_VERSION       = 0x00010032
@@ -32,7 +33,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
 
 [Packages.ARM, Packages.AARCH64]
   ArmPkg/ArmPkg.dec

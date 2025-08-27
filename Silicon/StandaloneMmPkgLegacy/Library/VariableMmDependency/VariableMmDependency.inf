@@ -5,6 +5,8 @@
 #  to StandaloneMM runtime variable service.
 #
 # Copyright (c) 2019 - 2021, Arm Ltd. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -12,7 +14,7 @@
 [Defines]
   INF_VERSION                    = 0x0001001A
   BASE_NAME                      = VariableMmDependency
-  FILE_GUID                      = 64BC4129-778E-4867-BA07-13999A4DEC3F
+  FILE_GUID                      = 79e2958f-1b45-4939-9387-0acc4b256167
   MODULE_TYPE                    = DXE_DRIVER
   LIBRARY_CLASS                  = NULL
   CONSTRUCTOR                    = VariableMmDependencyLibConstructor

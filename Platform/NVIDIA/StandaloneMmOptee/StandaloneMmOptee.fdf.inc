@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -42,12 +42,12 @@
   #
   # MM Core
   #
-  INF StandaloneMmPkg/Core/StandaloneMmCore.inf
+  INF Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
 
   #
   # MM CPU Driver
   #
-  INF StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+  INF Silicon/NVIDIA/StandaloneMm/Drivers/StandaloneMmCpuOptee/StandaloneMmCpu.inf
 
   #
   # MM Variable Driver

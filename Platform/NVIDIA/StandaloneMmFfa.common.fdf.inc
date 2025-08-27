@@ -36,7 +36,7 @@
   #
   # MM Core
   #
-  INF StandaloneMmPkg/Core/StandaloneMmCore.inf
+  INF Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
 
   #
   # MM CPU Driver

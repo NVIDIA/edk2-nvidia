@@ -1,13 +1,14 @@
 ## @file
-#  CI configuration for StandaloneMmPkg
+#  CI configuration for StandaloneMmPkgLegacy
 #
 #  Copyright (c) 2024, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) 2020 - 2021, Arm Limited. All rights reserved.<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
 {
     "PrEval": {
-        "DscPath": "StandaloneMmPkg.dsc",
+        "DscPath": "StandaloneMmPkgLegacy.dsc",
     },
     "EccCheck": {
         ## Exception sample looks like below:
@@ -23,7 +24,7 @@
     },
     ## options defined .pytool/Plugin/CompilerPlugin
     "CompilerPlugin": {
-        "DscPath": "StandaloneMmPkg.dsc"
+        "DscPath": "StandaloneMmPkgLegacy.dsc"
     },
 
     ## options defined .pytool/Plugin/HostUnitTestCompilerPlugin
@@ -41,7 +42,7 @@
         "AcceptableDependencies": [
             "ArmPkg/ArmPkg.dec",
             "EmbeddedPkg/EmbeddedPkg.dec",
-            "StandaloneMmPkg/StandaloneMmPkg.dec",
+            "Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec",
             "MdeModulePkg/MdeModulePkg.dec",
             "MdePkg/MdePkg.dec",
             "UefiCpuPkg/UefiCpuPkg.dec"
@@ -58,7 +59,7 @@
     ## options defined .pytool/Plugin/DscCompleteCheck
     "DscCompleteCheck": {
         "IgnoreInf": [],
-        "DscPath": "StandaloneMmPkg.dsc"
+        "DscPath": "StandaloneMmPkgLegacy.dsc"
     },
 
     ## options defined .pytool/Plugin/HostUnitTestDscCompleteCheck

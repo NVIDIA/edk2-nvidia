@@ -13,6 +13,7 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
 !include Platform/NVIDIA/StandaloneMm.common.dsc.inc
+!include Platform/NVIDIA/StandaloneMm.legacy.dsc.inc
 
 ################################################################################
 #
@@ -30,6 +31,7 @@
   DebugLib|MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T23xPlatformResourceLib.inf
+  StandaloneMmMmuLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmOpteeMmuLib/ArmMmuStandaloneMmLib.inf
 
 [LibraryClasses.common.MM_STANDALONE]
 
@@ -81,6 +83,10 @@
 #
 ###################################################################################################
 [Components.common]
+  #
+  # MM Core
+  #
+  Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
 
   #
   # MM Qspi Driver
@@ -148,7 +154,7 @@
   #
   # MM CPU Driver
   #
-  StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+  Silicon/NVIDIA/StandaloneMm/Drivers/StandaloneMmCpuOptee/StandaloneMmCpu.inf
 
 ###################################################################################################
 #
