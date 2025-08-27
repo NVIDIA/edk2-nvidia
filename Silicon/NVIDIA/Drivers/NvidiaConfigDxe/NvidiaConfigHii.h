@@ -928,6 +928,48 @@
 #define KEY_SOCKET3_PCIE8_DELAY_AFTER_PERST  0x219F
 #define KEY_SOCKET3_PCIE9_DELAY_AFTER_PERST  0x21A0
 
+// DPC Fatal Only Configuration Keys
+#define KEY_SOCKET0_PCIE0_DPC_FATAL_ONLY  0x21A1
+#define KEY_SOCKET0_PCIE1_DPC_FATAL_ONLY  0x21A2
+#define KEY_SOCKET0_PCIE2_DPC_FATAL_ONLY  0x21A3
+#define KEY_SOCKET0_PCIE3_DPC_FATAL_ONLY  0x21A4
+#define KEY_SOCKET0_PCIE4_DPC_FATAL_ONLY  0x21A5
+#define KEY_SOCKET0_PCIE5_DPC_FATAL_ONLY  0x21A6
+#define KEY_SOCKET0_PCIE6_DPC_FATAL_ONLY  0x21A7
+#define KEY_SOCKET0_PCIE7_DPC_FATAL_ONLY  0x21A8
+#define KEY_SOCKET0_PCIE8_DPC_FATAL_ONLY  0x21A9
+#define KEY_SOCKET0_PCIE9_DPC_FATAL_ONLY  0x21AA
+#define KEY_SOCKET1_PCIE0_DPC_FATAL_ONLY  0x21AB
+#define KEY_SOCKET1_PCIE1_DPC_FATAL_ONLY  0x21AC
+#define KEY_SOCKET1_PCIE2_DPC_FATAL_ONLY  0x21AD
+#define KEY_SOCKET1_PCIE3_DPC_FATAL_ONLY  0x21AE
+#define KEY_SOCKET1_PCIE4_DPC_FATAL_ONLY  0x21AF
+#define KEY_SOCKET1_PCIE5_DPC_FATAL_ONLY  0x21B0
+#define KEY_SOCKET1_PCIE6_DPC_FATAL_ONLY  0x21B1
+#define KEY_SOCKET1_PCIE7_DPC_FATAL_ONLY  0x21B2
+#define KEY_SOCKET1_PCIE8_DPC_FATAL_ONLY  0x21B3
+#define KEY_SOCKET1_PCIE9_DPC_FATAL_ONLY  0x21B4
+#define KEY_SOCKET2_PCIE0_DPC_FATAL_ONLY  0x21B5
+#define KEY_SOCKET2_PCIE1_DPC_FATAL_ONLY  0x21B6
+#define KEY_SOCKET2_PCIE2_DPC_FATAL_ONLY  0x21B7
+#define KEY_SOCKET2_PCIE3_DPC_FATAL_ONLY  0x21B8
+#define KEY_SOCKET2_PCIE4_DPC_FATAL_ONLY  0x21B9
+#define KEY_SOCKET2_PCIE5_DPC_FATAL_ONLY  0x21BA
+#define KEY_SOCKET2_PCIE6_DPC_FATAL_ONLY  0x21BB
+#define KEY_SOCKET2_PCIE7_DPC_FATAL_ONLY  0x21BC
+#define KEY_SOCKET2_PCIE8_DPC_FATAL_ONLY  0x21BD
+#define KEY_SOCKET2_PCIE9_DPC_FATAL_ONLY  0x21BE
+#define KEY_SOCKET3_PCIE0_DPC_FATAL_ONLY  0x21BF
+#define KEY_SOCKET3_PCIE1_DPC_FATAL_ONLY  0x21C0
+#define KEY_SOCKET3_PCIE2_DPC_FATAL_ONLY  0x21C1
+#define KEY_SOCKET3_PCIE3_DPC_FATAL_ONLY  0x21C2
+#define KEY_SOCKET3_PCIE4_DPC_FATAL_ONLY  0x21C3
+#define KEY_SOCKET3_PCIE5_DPC_FATAL_ONLY  0x21C4
+#define KEY_SOCKET3_PCIE6_DPC_FATAL_ONLY  0x21C5
+#define KEY_SOCKET3_PCIE7_DPC_FATAL_ONLY  0x21C6
+#define KEY_SOCKET3_PCIE8_DPC_FATAL_ONLY  0x21C7
+#define KEY_SOCKET3_PCIE9_DPC_FATAL_ONLY  0x21C8
+
 #define KEY_SOCKET0_PCIE0_OS_NATIVE_AER  0x2201
 #define KEY_SOCKET0_PCIE1_OS_NATIVE_AER  0x2202
 #define KEY_SOCKET0_PCIE2_OS_NATIVE_AER  0x2203
@@ -1289,6 +1331,10 @@ typedef struct {
   UINT8      DelayAfterPERST1[MAX_PCIE];
   UINT8      DelayAfterPERST2[MAX_PCIE];
   UINT8      DelayAfterPERST3[MAX_PCIE];
+  BOOLEAN    DpcFatalOnly0[MAX_PCIE];
+  BOOLEAN    DpcFatalOnly1[MAX_PCIE];
+  BOOLEAN    DpcFatalOnly2[MAX_PCIE];
+  BOOLEAN    DpcFatalOnly3[MAX_PCIE];
   BOOLEAN    NvDisplayHandoffControlSupported;
 } NVIDIA_CONFIG_HII_CONTROL;
 
@@ -1608,6 +1654,12 @@ typedef struct {
           step = 1,                                                                               \
           default = 0,                                                                            \
           endnumeric;                                                                             \
+  checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DpcFatalOnly##socket[pcie],                          \
+           questionid = KEY_SOCKET##socket##_PCIE##pcie##_DPC_FATAL_ONLY,                         \
+           prompt = STRING_TOKEN(STR_PCIE_DPC_FATAL_ONLY_SOCKET##socket##_PCIE##pcie##_TITLE),    \
+           help = STRING_TOKEN(STR_PCIE_DPC_FATAL_ONLY_HELP),                                     \
+           flags = INTERACTIVE | RESET_REQUIRED,                                                  \
+           endcheckbox;                                                                           \
   endif;                                                                                          \
   endif;                                                                                          \
   endform;

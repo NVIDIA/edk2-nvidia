@@ -1120,6 +1120,51 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_DELAY_AFTER_PERST_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_DELAY_AFTER_PERST_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_DELAY_AFTER_PERST_HELP),
+
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET0_PCIE9_TITLE),
+
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET1_PCIE9_TITLE),
+
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET2_PCIE9_TITLE),
+
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE0_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE1_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE2_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE3_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE4_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE5_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE6_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE7_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE8_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE9_TITLE),
+  STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_HELP),
 };
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
@@ -1172,6 +1217,7 @@ STATIC VOID                            *mMmCommunicationBuffer                 =
 UINT64                                 mOpRomDisMask                           = 0;
 UINT32                                 mMaxPayloadSize[MAX_SOCKETS]            = { 0 };
 UINT8                                  mDelayAfterPERST[MAX_SOCKETS][MAX_PCIE] = { 0 };
+BOOLEAN                                mDpcFatalOnly[MAX_SOCKETS][MAX_PCIE]    = { 0 };
 UINT64                                 mExt10bitTagReqEnable                   = 0;
 EFI_HII_HANDLE                         mHiiHandle;
 UINT8                                  mDefaultPortConfig = NVIDIA_SERIAL_PORT_DISABLED;
@@ -2023,6 +2069,11 @@ SyncHiiSettings (
       mHiiControlSettings.DelayAfterPERST2[Index] = mDelayAfterPERST[2][Index];
       mHiiControlSettings.DelayAfterPERST3[Index] = mDelayAfterPERST[3][Index];
 
+      mHiiControlSettings.DpcFatalOnly0[Index] = mDpcFatalOnly[0][Index];
+      mHiiControlSettings.DpcFatalOnly1[Index] = mDpcFatalOnly[1][Index];
+      mHiiControlSettings.DpcFatalOnly2[Index] = mDpcFatalOnly[2][Index];
+      mHiiControlSettings.DpcFatalOnly3[Index] = mDpcFatalOnly[3][Index];
+
       mHiiControlSettings.Extended10bitTagEnable0[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (0, Index))) != 0ULL;
       mHiiControlSettings.Extended10bitTagEnable1[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (1, Index))) != 0ULL;
       mHiiControlSettings.Extended10bitTagEnable2[Index] = (mExt10bitTagReqEnable & (1ULL << PCIE_SEG (2, Index))) != 0ULL;
@@ -2096,6 +2147,7 @@ SyncHiiSettings (
     mExt10bitTagReqEnable = 0ULL;
     ZeroMem (mMaxPayloadSize, sizeof (mMaxPayloadSize));
     ZeroMem (mDelayAfterPERST, sizeof (mDelayAfterPERST));
+    ZeroMem (mDpcFatalOnly, sizeof (mDpcFatalOnly));
     for (Index = 0; Index < TEGRABL_MAX_PCIE_PER_SOCKET; Index++) {
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxSpeed               = mHiiControlSettings.MaxSpeed0[Index];
       mMb1Config.Data.Mb1Data.PcieConfig[0][Index].MaxWidth               = mHiiControlSettings.MaxWidth0[Index];
@@ -2183,6 +2235,10 @@ SyncHiiSettings (
       mDelayAfterPERST[1][Index]                                          = mHiiControlSettings.DelayAfterPERST1[Index];
       mDelayAfterPERST[2][Index]                                          = mHiiControlSettings.DelayAfterPERST2[Index];
       mDelayAfterPERST[3][Index]                                          = mHiiControlSettings.DelayAfterPERST3[Index];
+      mDpcFatalOnly[0][Index]                                             = mHiiControlSettings.DpcFatalOnly0[Index];
+      mDpcFatalOnly[1][Index]                                             = mHiiControlSettings.DpcFatalOnly1[Index];
+      mDpcFatalOnly[2][Index]                                             = mHiiControlSettings.DpcFatalOnly2[Index];
+      mDpcFatalOnly[3][Index]                                             = mHiiControlSettings.DpcFatalOnly3[Index];
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable0[Index] ? (1ULL << PCIE_SEG (0, Index)) : 0ULL;
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable1[Index] ? (1ULL << PCIE_SEG (1, Index)) : 0ULL;
       mExt10bitTagReqEnable                                              |= mHiiControlSettings.Extended10bitTagEnable2[Index] ? (1ULL << PCIE_SEG (2, Index)) : 0ULL;
@@ -2392,6 +2448,18 @@ InitializeSettings (
                       );
   if (EFI_ERROR (Status)) {
     ZeroMem (mDelayAfterPERST, sizeof (mDelayAfterPERST));
+  }
+
+  BufferSize = sizeof (mDpcFatalOnly);
+  Status     = gRT->GetVariable (
+                      L"DpcFatalOnly",
+                      &gNVIDIAPublicVariableGuid,
+                      NULL,
+                      &BufferSize,
+                      &mDpcFatalOnly
+                      );
+  if (EFI_ERROR (Status)) {
+    ZeroMem (mDpcFatalOnly, sizeof (mDpcFatalOnly));
   }
 
   BufferSize = sizeof (mExt10bitTagReqEnable);
@@ -2848,6 +2916,17 @@ ConfigRouteConfig (
   }
 
   Status = gRT->SetVariable (
+                  L"DpcFatalOnly",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  sizeof (mDpcFatalOnly),
+                  &mDpcFatalOnly
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gRT->SetVariable (
                   L"Ext10bitTagReq",
                   &gNVIDIAPublicVariableGuid,
                   EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
@@ -3223,6 +3302,11 @@ GetDefaultValue (
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DELAY_AFTER_PERST) && (QuestionId <= KEY_SOCKET3_PCIE9_DELAY_AFTER_PERST)) {
         //
         // PCIE DELAY_AFTER_PERST
+        //
+        Data = 0x0;
+      } else if ((QuestionId >= KEY_SOCKET0_PCIE0_DPC_FATAL_ONLY) && (QuestionId <= KEY_SOCKET3_PCIE9_DPC_FATAL_ONLY)) {
+        //
+        // PCIE DPC_FATAL_ONLY
         //
         Data = 0x0;
       } else if ((QuestionId >= KEY_SOCKET0_PCIE0_EXTENDED_10BIT_TAG_ENABLE) && (QuestionId <= KEY_SOCKET3_PCIE9_EXTENDED_10BIT_TAG_ENABLE)) {

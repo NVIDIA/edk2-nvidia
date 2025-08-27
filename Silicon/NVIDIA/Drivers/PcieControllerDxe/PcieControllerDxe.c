@@ -92,6 +92,10 @@ UINT8    gDelayAfterPERST[TEGRABL_SOC_MAX_SOCKETS][TEGRABL_MAX_PCIE_PER_SOCKET] 
 BOOLEAN                           gPciPltProtInstalled = FALSE;
 extern EFI_PCI_PLATFORM_PROTOCOL  mPciPlatformProtocol;
 
+// UEFI variable for DPC configuration
+BOOLEAN  gDpcFatalOnlyRead                                                   = FALSE;
+UINT8    gDpcFatalOnly[TEGRABL_SOC_MAX_SOCKETS][TEGRABL_MAX_PCIE_PER_SOCKET] = { 0 };
+
 /**
   PCI configuration space access.
 
@@ -569,6 +573,47 @@ CheckAndAddDelayAfterPERST (
 }
 
 STATIC
+VOID
+CheckAndGetDpcConfiguration (
+  IN UINT32  SocketId,
+  IN UINT32  CtrlId
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
+
+  /* Check if user has set DPC configuration */
+  if (gDpcFatalOnlyRead == FALSE) {
+    BufferSize = sizeof (gDpcFatalOnly);
+    Status     = gRT->GetVariable (
+                        L"DpcFatalOnly",
+                        &gNVIDIAPublicVariableGuid,
+                        NULL,
+                        &BufferSize,
+                        &gDpcFatalOnly
+                        );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_VERBOSE, "DPC configuration has not been set (Status = %r)\r\n", Status));
+      /* Initialize to default values (FALSE = both fatal and non-fatal) */
+      ZeroMem (gDpcFatalOnly, sizeof (gDpcFatalOnly));
+    }
+
+    gDpcFatalOnlyRead = TRUE;
+  }
+
+  /* Log DPC configuration for this socket/controller */
+  if ((SocketId < TEGRABL_SOC_MAX_SOCKETS) && (CtrlId < TEGRABL_MAX_PCIE_PER_SOCKET)) {
+    if (gDpcFatalOnly[SocketId][CtrlId] != 0) {
+      DEBUG ((DEBUG_INFO, "PCIe Socket-0x%x:Ctrl-0x%x: DPC configured for fatal errors only\r\n", SocketId, CtrlId));
+    } else {
+      DEBUG ((DEBUG_INFO, "PCIe Socket-0x%x:Ctrl-0x%x: DPC configured for fatal and non-fatal errors\r\n", SocketId, CtrlId));
+    }
+  } else {
+    DEBUG ((DEBUG_ERROR, "PCIe Socket-0x%x:Ctrl-0x%x: Invalid socket/controller ID for DPC configuration\r\n", SocketId, CtrlId));
+  }
+}
+
+STATIC
 EFI_STATUS
 EFIAPI
 InitializeController (
@@ -652,6 +697,9 @@ InitializeController (
 
   /* Add a delay after PERST if requested by the user */
   CheckAndAddDelayAfterPERST (Private->SocketId, Private->CtrlId, Private->C2cInitRequired);
+
+  /* Check and get DPC configuration for this socket/controller */
+  CheckAndGetDpcConfiguration (Private->SocketId, Private->CtrlId);
 
   /* Wait for link up */
   PciExpCap = (PCI_CAPABILITY_PCIEXP *)(Private->EcamBase + Private->PCIeCapOff);
@@ -1003,6 +1051,9 @@ PcieEnableErrorReporting (
   Socket = PcieIdToSocket (Segment);
   Ctrl   = PcieIdToInterface (Segment);
 
+  /* Check and get DPC configuration for this socket/controller */
+  CheckAndGetDpcConfiguration (Socket, Ctrl);
+
   PciExpCapOffset = PcieFindCap (PciIo, EFI_PCI_CAPABILITY_ID_PCIEXP);
 
   if (!PciExpCapOffset) {
@@ -1186,7 +1237,13 @@ PcieEnableErrorReporting (
         }
 
         if (!SkipDPCEnable) {
-          Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
+          if (gDpcFatalOnly[Socket][Ctrl]) {
+            /* Enable DPC for fatal errors only (01b) */
+            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
+          } else {
+            /* Enable DPC for both fatal and non-fatal errors (10b) - default behavior */
+            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
+          }
         }
 
         DevCapOffset = PciExpCapOffset + OFFSET_OF (PCI_CAPABILITY_PCIEXP, DeviceCapability);
@@ -1245,8 +1302,10 @@ PcieEnableErrorReporting (
               return EFI_DEVICE_ERROR;
             }
 
-            Val_16 &= ~(PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_INT_EN |
-                        PCIE_DPC_CTL_DPC_ERR_COR_EN);
+            Val_16 &= ~(PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F |
+                        PCIE_DPC_CTL_DPC_INT_EN |
+                        PCIE_DPC_CTL_DPC_ERR_COR_EN |
+                        PCIE_DPC_CTL_DPC_TRIGGER_EN_F);
 
             Status = RPPciIo->Pci.Write (
                                     RPPciIo,
