@@ -3,6 +3,7 @@
 
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -240,8 +241,7 @@ FreeDstBuffer:
 
 /**
   Dispatch Standalone MM FVs.
-  The FVs will be shadowed into MMRAM, caller is responsible for calling
-  MmFreeShadowedFvs() to free the shadowed MM FVs.
+  The FVs will not be shadowed into MMRAM.
 
 **/
 VOID
@@ -249,51 +249,35 @@ MmDispatchFvs (
   VOID
   )
 {
-  UINTN                       Index;
-  EFI_PEI_HOB_POINTERS        FvHob;
-  EFI_FIRMWARE_VOLUME_HEADER  *Fv;
+  EFI_HOB_FIRMWARE_VOLUME  *BfvHob;
 
   ZeroMem (mMmFv, sizeof (mMmFv));
 
-  Index     = 0;
-  FvHob.Raw = GetHobList ();
-  while ((FvHob.Raw = GetNextHob (EFI_HOB_TYPE_FV, FvHob.Raw)) != NULL) {
-    if (Index == ARRAY_SIZE (mMmFv)) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: The number of FV Hobs exceed the max supported FVs (%d) in StandaloneMmCore\n",
-        __func__,
-        ARRAY_SIZE (mMmFv)
-        ));
-      return;
+  //
+  // Do not shadow into MMRAM.
+  //
+  // Avoid doing this our deployments as it increases the heap usage by an
+  // additional 2MB and we don't have the memory resources to handle this extra
+  // heap.
+  //
+
+  //
+  // Get Boot Firmware Volume address from the BFV Hob
+  //
+  BfvHob = GetFirstHob (EFI_HOB_TYPE_FV);
+  DEBUG ((DEBUG_ERROR, "%a: BfvHob - 0x%x\n", __func__, BfvHob));
+  if (BfvHob != NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: BFV address - 0x%x\n", __func__, BfvHob->BaseAddress));
+    DEBUG ((DEBUG_ERROR, "%a: BFV size    - 0x%x\n", __func__, BfvHob->Length));
+    //
+    // Dispatch standalone BFV
+    //
+    if (BfvHob->BaseAddress != 0) {
+      MmCoreFfsFindMmDriver ((EFI_FIRMWARE_VOLUME_HEADER *)(UINTN)BfvHob->BaseAddress, 0);
+      DEBUG ((DEBUG_ERROR, "%a: Dispatching...\n", __func__));
+      MmDispatcher ();
     }
-
-    DEBUG ((DEBUG_INFO, "%a: FV[%d] address - 0x%x\n", __func__, Index, FvHob.FirmwareVolume->BaseAddress));
-    DEBUG ((DEBUG_INFO, "%a: FV[%d] size    - 0x%x\n", __func__, Index, FvHob.FirmwareVolume->Length));
-    Fv = AllocatePool (FvHob.FirmwareVolume->Length);
-    if (Fv == NULL) {
-      DEBUG ((DEBUG_ERROR, "Fail to allocate memory for Fv\n"));
-      CpuDeadLoop ();
-      return;
-    }
-
-    CopyMem (
-      (VOID *)Fv,
-      (VOID *)(UINTN)FvHob.FirmwareVolume->BaseAddress,
-      FvHob.FirmwareVolume->Length
-      );
-    MmCoreFfsFindMmDriver (Fv, 0);
-    mMmFv[Index++] = Fv;
-
-    FvHob.Raw = GET_NEXT_HOB (FvHob);
   }
-
-  if (Index == 0) {
-    DEBUG ((DEBUG_ERROR, "No FV hob is found\n"));
-    return;
-  }
-
-  MmDispatcher ();
 }
 
 /**
