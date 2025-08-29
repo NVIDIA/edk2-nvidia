@@ -3,6 +3,7 @@
 
   Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -882,8 +883,6 @@ StandaloneMmMain (
                );
     DEBUG ((DEBUG_INFO, "MmiHandlerRegister - GUID %g - Status %d\n", mMmCoreMmiHandlers[Index].HandlerType, Status));
   }
-
-  MmCorePrepareCommunicationBuffer ();
 
   //
   // Install Loaded Image Protocol form MM Core
