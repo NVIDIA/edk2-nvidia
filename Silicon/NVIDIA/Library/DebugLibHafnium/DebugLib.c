@@ -3,7 +3,7 @@
   It is based on the original, serial enabled, DebugLib.
 
   Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -258,11 +258,9 @@ DebugAssert (
   CHAR8                Buffer[MAX_DEBUG_MESSAGE_LENGTH];
   UINT32               ResetDelay;
   EFI_VIRTUAL_ADDRESS  ScratchRegBase;
-  UINTN                ScratchRegSize;
   UINT64               FileNameScratchBase;
   UINT64               LineNumScratchBase;
   UINT64               FwNameScratchBase;
-  EFI_STATUS           Status;
 
   //
   // Generate the ASSERT() message in Ascii format
@@ -278,12 +276,7 @@ DebugAssert (
   // Should we log the information to scratch registers.
   //
   if (PcdGetBool (PcdNvLogToScratchRegs) == TRUE) {
-    Status = GetDeviceRegion ("tegra-scratch", &ScratchRegBase, &ScratchRegSize);
-    if (EFI_ERROR (Status)) {
-      AsciiSPrint (Buffer, sizeof (Buffer), "Failed to get Scratch Reg Base %u\n", Status);
-      goto bkpt;
-    }
-
+    ScratchRegBase      = PcdGet64 (PcdNvScratchRegBase);
     FwNameScratchBase   = ScratchRegBase + (PcdGet32 (PcdNvFwNameStartReg) * sizeof (UINT32));
     FileNameScratchBase = ScratchRegBase + (PcdGet32 (PcdNvFileNameStartReg) * sizeof (UINT32));
     LineNumScratchBase  = ScratchRegBase + (PcdGet32 (PcdNvLineNumStartReg) * sizeof (UINT32));
@@ -301,7 +294,6 @@ DebugAssert (
       );
   }
 
-bkpt:
   //
   // Generate a Breakpoint, DeadLoop, or NOP based on PCD settings
   //
