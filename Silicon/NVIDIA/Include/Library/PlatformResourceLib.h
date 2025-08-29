@@ -77,6 +77,7 @@ typedef struct {
   NVDA_MEMORY_REGION    RamOopsRegion;
   NVDA_MEMORY_REGION    *BpmpIpcRegions;
   NVDA_MEMORY_REGION    XusbRegion;
+  NVDA_MEMORY_REGION    FdtCarveoutRegion;
 } TEGRA_RESOURCE_INFO;
 
 typedef struct {
@@ -359,6 +360,13 @@ EFI_STATUS
 EFIAPI
 GetPlatformResourceInformation (
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+  );
+
+EFI_STATUS
+EFIAPI
+GetCcplexInterworldCarveoutInfo (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
   );
 
 /**

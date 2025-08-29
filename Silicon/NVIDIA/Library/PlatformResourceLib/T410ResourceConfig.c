@@ -18,12 +18,15 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/FdtLib.h>
 
 #include <T410/T410Definitions.h>
 #include "CommonResourceConfig.h"
 
+#include "Library/DeviceTreeHelperLibFdtBoot.h"
 #include "PlatformResourceConfig.h"
 #include "T410ResourceConfigPrivate.h"
+#include <Library/HobLib.h>
 
 #define T410_MAX_CORE_DISABLE_WORDS       4
 #define T410_MAX_SCF_CACHE_DISABLE_WORDS  4
@@ -276,21 +279,25 @@ TEGRA_DRAM_DEVICE_INFO  T410DramDeviceInfo[T410_MAX_SOCKETS] = { };
 UINT8                   T410C2cMode[T410_MAX_SOCKETS]        = { };
 
 /**
-  Get Socket Mask
+  Get Socket Mask from the FDT blob.
+
+  @param[in] FdtBase Base address of the FDT blob.
+
+  @retval SocketMask socket mask from the FDT.
+                     ASSERT on failure.
 
 **/
 UINT32
 EFIAPI
 SocGetSocketMask (
-  IN UINTN  CpuBootloaderAddress
+  IN UINTN  FdtBase
   )
 {
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  UINT32              SocketMask;
+  UINT32      SocketMask = 0;
+  EFI_STATUS  Status;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  SocketMask = CpuBootloaderParams->SocketMask;
+  Status = DeviceTreeGetSocketMask (FdtBase, &SocketMask);
+  ASSERT_EFI_ERROR (Status);
   ASSERT (SocketMask != 0);
   ASSERT (HighBitSet32 (SocketMask) < T410_MAX_SOCKETS);
 
@@ -300,7 +307,7 @@ SocGetSocketMask (
 /**
    Builds a list of DRAM memory regions.
 
-   @param[in]  CpuBootloaderParams  CPU BL params.
+   @param[in]  FdtBase              FDT base address.
    @param[out] DramRegions          The list of DRAM regions.
    @param[out] DramRegionCount      Number of DRAM regions in the list.
 
@@ -310,17 +317,18 @@ SocGetSocketMask (
 STATIC
 EFI_STATUS
 T410BuildDramRegions (
-  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  IN  UINTN                            FdtBase,
   OUT NVDA_MEMORY_REGION      **CONST  DramRegions,
   OUT UINTN                    *CONST  DramRegionCount
   )
 {
+  EFI_STATUS            Status;
   NVDA_MEMORY_REGION    *Regions;
   UINTN                 RegionCount, RegionCountMax;
   UINTN                 Socket;
   EFI_PHYSICAL_ADDRESS  Base;
   UINT64                Size;
-  CONST UINT32          SocketMask = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          SocketMask = SocGetSocketMask (FdtBase);
   CONST UINT32          MaxSocket  = HighBitSet32 (SocketMask);
 
   RegionCountMax = MaxSocket + 1;
@@ -341,16 +349,8 @@ T410BuildDramRegions (
       continue;
     }
 
-    DEBUG ((
-      DEBUG_ERROR,
-      "Socket: %u Dram Region: Base: 0x%016lx, Size: 0x%016lx\n",
-      Socket,
-      CpuBootloaderParams->SdramInfo[Socket].Base,
-      CpuBootloaderParams->SdramInfo[Socket].Size
-      ));
-
-    Base = CpuBootloaderParams->SdramInfo[Socket].Base;
-    Size = CpuBootloaderParams->SdramInfo[Socket].Size;
+    Status = DeviceTreeGetSocketDramRegion (FdtBase, Socket, &Base, &Size);
+    ASSERT_EFI_ERROR (Status);
 
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
@@ -379,10 +379,11 @@ T410AddBootloaderCarveouts (
   IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
   IN OUT UINTN                       *CONST  UsableRegionCount,
   IN     CONST UINTN                         Socket,
-  IN     CONST TEGRABL_CARVEOUT_INFO *CONST  Carveouts,
+  IN     UINTN                               FdtBase,
   IN     CONST UINTN                         CarveoutCount
   )
 {
+  EFI_STATUS            Status;
   UINTN                 Index;
   EFI_PHYSICAL_ADDRESS  Base;
   UINT64                Size, Pages;
@@ -391,10 +392,8 @@ T410AddBootloaderCarveouts (
     &T410MmioInfo[T410_CCPLEX_INTERWORLD_SHMEM_MMIO_INFO_INDEX];
 
   for (Index = 0; Index < CarveoutCount; ++Index) {
-    Base = Carveouts[Index].Base;
-    Size = Carveouts[Index].Size;
-
-    if ((Base == 0) || (Size == 0)) {
+    Status = DeviceTreeGetSocketCarveoutRegionByIndex (FdtBase, Index, Socket, &Base, &Size);
+    if (EFI_ERROR (Status) || (Base == 0) || (Size == 0)) {
       continue;
     }
 
@@ -407,6 +406,7 @@ T410AddBootloaderCarveouts (
       Size
       ));
 
+    /* Switch to looking up based on matching compat string. */
     switch (Index) {
       case CARVEOUT_UEFI:
       case CARVEOUT_OS:
@@ -440,7 +440,7 @@ T410AddBootloaderCarveouts (
 /**
    Builds a list of carveout memory regions.
 
-   @param[in]  CpuBootloaderParams        CPU BL params.
+   @param[in]  FdtBase                    FDT base address.
    @param[out] CarveoutRegions            The list of carveout regions.
    @param[out] CarveoutRegionCount        Number of carveout regions in the list.
    @param[out] UsableCarveoutRegions      The list of usable carveout regions.
@@ -452,7 +452,7 @@ T410AddBootloaderCarveouts (
 STATIC
 EFI_STATUS
 T410BuildCarveoutRegions (
-  IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
+  IN  UINTN                            FdtBase,
   OUT NVDA_MEMORY_REGION      **CONST  CarveoutRegions,
   OUT UINTN                    *CONST  CarveoutRegionCount,
   OUT NVDA_MEMORY_REGION      **CONST  UsableCarveoutRegions,
@@ -462,13 +462,16 @@ T410BuildCarveoutRegions (
   NVDA_MEMORY_REGION    *Regions, *UsableRegions;
   UINTN                 RegionCount, UsableRegionCount;
   UINTN                 Socket;
-  EFI_PHYSICAL_ADDRESS  *RetiredDramPageList;
-  CONST UINT32          SocketMask            = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  EFI_PHYSICAL_ADDRESS  RetiredDramPageList;
+  EFI_PHYSICAL_ADDRESS  RetiredDramPageListHead;
+  UINT64                RetiredDramPageListSize;
+  CONST UINT32          SocketMask            = SocGetSocketMask (FdtBase);
   CONST UINT32          MaxSocket             = HighBitSet32 (SocketMask);
   CONST UINTN           RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
   CONST UINTN           RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
   CONST UINTN           UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
   CONST UINTN           UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
+  EFI_STATUS            Status;
 
   Regions = (NVDA_MEMORY_REGION *)AllocatePages (RegionsPagesMax);
   NV_ASSERT_RETURN (
@@ -500,7 +503,7 @@ T410BuildCarveoutRegions (
         UsableRegions,
         &UsableRegionCount,
         Socket,
-        CpuBootloaderParams->CarveoutInfo[Socket],
+        FdtBase,
         CARVEOUT_OEM_COUNT
         );
     }
@@ -508,16 +511,25 @@ T410BuildCarveoutRegions (
 
   for (Socket = T410_PRIMARY_SOCKET; Socket < T410_MAX_SOCKETS; Socket++) {
     if ((SocketMask & (1 << Socket)) != 0) {
-      RetiredDramPageList = (EFI_PHYSICAL_ADDRESS *)CpuBootloaderParams->RetiredDramPageListAddr[Socket];
+      RetiredDramPageList = 0;
+      Status              = DeviceTreeGetBootParamsSubnodePhysAddrSize (FdtBase, Socket, "retired-page-list", &RetiredDramPageList, &RetiredDramPageListSize);
+      DEBUG ((DEBUG_ERROR, "Retired Page List for socket 0 %p\n", RetiredDramPageList));
+      if (EFI_ERROR (Status) || (RetiredDramPageList == 0)) {
+        continue;
+      }
 
-      if (RetiredDramPageList != NULL) {
-        PlatformResourceAddRetiredDramPages (
-          Regions,
-          &RegionCount,
-          RetiredDramPageList,
-          MAX_RETIRED_DRAM_PAGES,
-          SIZE_64KB
-          );
+      DEBUG ((DEBUG_ERROR, "Retired Page List for socket %u %p %lu %lu\n", Socket, RetiredDramPageList, RetiredDramPageListSize, (RetiredDramPageListSize / sizeof (UINT64))));
+      if (RetiredDramPageList != 0) {
+        RetiredDramPageListHead = *(EFI_PHYSICAL_ADDRESS *)RetiredDramPageList;
+        if (RetiredDramPageListHead != 0) {
+          PlatformResourceAddRetiredDramPages (
+            Regions,
+            &RegionCount,
+            (CONST EFI_PHYSICAL_ADDRESS *)RetiredDramPageListHead,
+            MAX_RETIRED_DRAM_PAGES,
+            SIZE_64KB
+            );
+        }
       }
     }
   }
@@ -530,32 +542,38 @@ T410BuildCarveoutRegions (
 }
 
 /**
-  Installs resources into the HOB list
+    Installs resources into the HOB list
 
-  This function install all memory regions into the HOB list.
-  This function is called by the platform memory initialization library.
+    This function install all memory regions into the HOB list.
+    This function is called by the PrePi code.
 
-  @param  NumberOfMemoryRegions Number of regions installed into HOB list.
+    @param  FdtBase               FDT base address.
+    @param  PlatformInfo          Platform information.
 
-  @retval EFI_SUCCESS           Resources have been installed
-  @retval EFI_DEVICE_ERROR      Error setting up memory
+    @retval EFI_SUCCESS           Resources have been installed
+    @retval EFI_DEVICE_ERROR      Error setting up memory
 
 **/
 EFI_STATUS
 T410GetResourceConfig (
-  IN UINTN                 CpuBootloaderAddress,
+  IN UINTN                 FdtBase,
   OUT TEGRA_RESOURCE_INFO  *PlatformInfo
   )
 {
   EFI_STATUS          Status;
+  UINTN               Socket;
+  UINT32              SocketMask;
+  NVDA_MEMORY_REGION  *BpmpIpcRegions;
   NVDA_MEMORY_REGION  *DramRegions, *CarveoutRegions, *UsableCarveoutRegions;
   UINTN               DramRegionCount, CarveoutRegionCount, UsableCarveoutRegionCount;
 
-  TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams =
-    (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  Status = DeviceTreeCheckFdtBoot (FdtBase);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   Status = T410BuildDramRegions (
-             CpuBootloaderParams,
+             FdtBase,
              &DramRegions,
              &DramRegionCount
              );
@@ -564,7 +582,7 @@ T410GetResourceConfig (
   }
 
   Status = T410BuildCarveoutRegions (
-             CpuBootloaderParams,
+             FdtBase,
              &CarveoutRegions,
              &CarveoutRegionCount,
              &UsableCarveoutRegions,
@@ -584,8 +602,22 @@ T410GetResourceConfig (
   PlatformInfo->UsableCarveoutRegions      = UsableCarveoutRegions;
   PlatformInfo->UsableCarveoutRegionsCount = UsableCarveoutRegionCount;
 
-  if (CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
-    CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+  PlatformInfo->FdtCarveoutRegion.MemoryBaseAddress = FdtBase;
+  PlatformInfo->FdtCarveoutRegion.MemoryLength      = ALIGN_VALUE (FdtTotalSize ((VOID *)FdtBase), SIZE_64KB);
+
+  BpmpIpcRegions               = (NVDA_MEMORY_REGION *)AllocateZeroPool (sizeof (NVDA_MEMORY_REGION) * T410_MAX_SOCKETS);
+  PlatformInfo->BpmpIpcRegions = BpmpIpcRegions;
+
+  SocketMask = SocGetSocketMask (FdtBase);
+  for (Socket = T410_PRIMARY_SOCKET; Socket < T410_MAX_SOCKETS; Socket++) {
+    if (!(SocketMask & (1UL << Socket))) {
+      continue;
+    }
+
+    Status = DeviceTreeGetSocketCarveoutRegionByIndex (FdtBase, CARVEOUT_BPMP_CPUNS, Socket, &BpmpIpcRegions[Socket].MemoryBaseAddress, &BpmpIpcRegions[Socket].MemoryLength);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "BPMP CPUNS Carveout Not Defined\n"));
+    }
   }
 
   return EFI_SUCCESS;
@@ -601,34 +633,17 @@ GetDramPageBlacklistInfoAddress (
   VOID
   )
 {
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  UINTN               CpuBootloaderAddress;
-  UINT32              SocketMask;
-  UINTN               Socket;
-  UINTN               Index;
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  SocketMask           = SocGetSocketMask (CpuBootloaderAddress);
-
-  Index = 0;
-  for (Socket = T410_PRIMARY_SOCKET; Socket < T410_MAX_SOCKETS; Socket++) {
-    if (!(SocketMask & (1UL << Socket))) {
-      continue;
-    }
-
-    if (CpuBootloaderParams->RetiredDramPageListAddr[Socket] != 0) {
-      T410DramPageBlacklistInfoAddress[Index].MemoryBaseAddress = CpuBootloaderParams->RetiredDramPageListAddr[Socket] & ~EFI_PAGE_MASK;
-      T410DramPageBlacklistInfoAddress[Index].MemoryLength      = SIZE_64KB;
-      Index++;
-    }
-  }
-
-  return T410DramPageBlacklistInfoAddress;
+  /* Function not implemented as PrePiMemory will map the entire CCPLEX_INTERWORLD
+   * carveout which contains all the boot related parameters.
+   */
+  return NULL;
 }
 
 /**
-  Retrieve DTB Address
+  Retrieve DTB Address.
+  NOTE: This function should be only called from PrePi code.
+
+  @return DTB base address
 
 **/
 UINT64
@@ -637,20 +652,16 @@ GetDTBBaseAddress (
   VOID
   )
 {
-  TEGRA_CPUBL_PARAMS          *CpuBootloaderParams;
-  UINTN                       CpuBootloaderAddress;
   UINT64                      MemoryBase;
   UINT64                      MemorySize;
   EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
   UINT64                      FvOffset;
   UINT64                      FvSize;
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase           = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-  MemorySize           = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
-  FvHeader             = NULL;
-  FvOffset             = 0;
+  FvHeader   = NULL;
+  FvOffset   = 0;
+  MemoryBase = PcdGet64 (PcdUefiCoBase);
+  MemorySize = PcdGet64 (PcdUefiCoSize);
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -720,7 +731,6 @@ T410GetMmioBaseAndSize (
 EFI_STATUS
 EFIAPI
 T410GetActiveBootChain (
-  IN  UINTN   CpuBootloaderAddress,
   IN  UINTN   Socket,
   OUT UINT32  *BootChain
   )
@@ -752,21 +762,34 @@ ValidateActiveBootChain (
   VOID
   )
 {
-  UINTN       CpuBootloaderAddress;
-  UINT32      SocketMask;
-  UINTN       Socket;
-  UINT64      ScratchAddr;
-  EFI_STATUS  Status;
-  UINT32      BootChain;
+  UINT32                        SocketMask;
+  UINTN                         Socket;
+  UINT64                        ScratchAddr;
+  EFI_STATUS                    Status;
+  UINT32                        BootChain;
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+  UINTN                         FdtBase;
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-  SocketMask           = SocGetSocketMask (CpuBootloaderAddress);
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob != NULL) &&
+      (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  } else {
+    DEBUG ((DEBUG_ERROR, "Failed to get PlatformResourceInfo\n"));
+    return EFI_NOT_FOUND;
+  }
+
+  FdtBase = PlatformResourceInfo->ResourceInfo->FdtCarveoutRegion.MemoryBaseAddress;
+
+  SocketMask = SocGetSocketMask (FdtBase);
   for (Socket = 0; Socket < T410_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
     }
 
-    Status = T410GetActiveBootChain (CpuBootloaderAddress, Socket, &BootChain);
+    Status = T410GetActiveBootChain (Socket, &BootChain);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: GetActiveBootChain failed socket %u: %r\n", __FUNCTION__, Socket, Status));
       continue;
@@ -796,7 +819,23 @@ SocGetEnabledCoresBitMap (
   IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
-  SocCoreBitmapInfo->ThreadsPerCore       = 1;
+  EFI_STATUS  Status;
+  UINT32      SmtEnabled;
+
+  SmtEnabled = 0;
+  Status     = DeviceTreeGetSmtEnabled (CpuBootloaderAddress, &SmtEnabled);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: SmtEnabled property not found %r.Assume Disabled\n", __FUNCTION__, Status));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: SmtEnabled = %u\n", __FUNCTION__, SmtEnabled));
+  }
+
+  if (SmtEnabled) {
+    SocCoreBitmapInfo->ThreadsPerCore = 2;
+  } else {
+    SocCoreBitmapInfo->ThreadsPerCore = 1;
+  }
+
   T410CommonResourceConfigInfo.SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
   return CommonConfigGetEnabledCoresBitMap (&T410CommonResourceConfigInfo, SocCoreBitmapInfo);
@@ -888,7 +927,23 @@ T410InitFloorSweepingInfo (
 }
 
 /**
-  Get Platform Resource Information
+ * Get CCPLEX_INTERWORLD carveout region.
+ */
+EFI_STATUS
+EFIAPI
+SocGetCcplexInterworldCarveout (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DeviceTreeGetSocketCarveoutRegionByIndex (PcdGet64 (PcdNvFdtBlobBase), CARVEOUT_CCPLEX_INTERWORLD_SHMEM, 0, Base, Size);
+  return Status;
+}
+
+/**
+  Get Platform Resource Information using only FDT.
 
 **/
 EFI_STATUS
@@ -899,13 +954,19 @@ SocGetPlatformResourceInformation (
   IN BOOLEAN                       InMm
   )
 {
-  EFI_STATUS          Status;
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  UINT32              SocketMask;
-  UINTN               Index;
-  UINTN               Count;
-
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  EFI_STATUS  Status;
+  UINT32      SocketMask;
+  // UINTN                         Index;
+  // UINTN                         Count;
+  TEGRABL_EARLY_BOOT_VARIABLES  *EarlyBootVariables;
+  TEGRABL_EARLY_BOOT_VARIABLES  *FdtEarlyBootVarsPtr;
+  TEGRABL_EARLY_BOOT_VARIABLES  *FdtDefEarlyBootVarsPtr;
+  EFI_PHYSICAL_ADDRESS          EarlyBootBase;
+  UINT64                        EarlyBootSize;
+  EFI_PHYSICAL_ADDRESS          DefaultEarlyBootBase;
+  UINT64                        DefaultEarlyBootSize;
+  EFI_PHYSICAL_ADDRESS          TpmAddr;
+  UINT64                        TpmSize;
 
   SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
@@ -913,7 +974,7 @@ SocGetPlatformResourceInformation (
 
   /* Avoid this step when called from MM */
   if (InMm == FALSE) {
-    Status = T410GetActiveBootChain (CpuBootloaderAddress, 0, &PlatformResourceInfo->ActiveBootChain);
+    Status = T410GetActiveBootChain (0, &PlatformResourceInfo->ActiveBootChain);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -926,11 +987,13 @@ SocGetPlatformResourceInformation (
     PlatformResourceInfo->MmioInfo = T410GetMmioBaseAndSize (SocketMask);
   }
 
-  PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_OS].Base;
-  PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_OS].Size;
+  Status = DeviceTreeGetSocketCarveoutRegionByIndex (CpuBootloaderAddress, CARVEOUT_OS, T410_PRIMARY_SOCKET, &PlatformResourceInfo->RamdiskOSInfo.Base, &PlatformResourceInfo->RamdiskOSInfo.Size);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a:Failed to get OS carveout %r\n", __FUNCTION__, Status));
+  }
 
-  PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-  PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+  Status = DeviceTreeGetSocketCarveoutRegionByIndex (CpuBootloaderAddress, CARVEOUT_UEFI, T410_PRIMARY_SOCKET, &PlatformResourceInfo->CpublCoInfo.Base, &PlatformResourceInfo->CpublCoInfo.Size);
+  ASSERT_EFI_ERROR (Status);
 
   // T410 has no RCM carveout; keep the blob info defined so BootType does not
   // depend on whatever the caller left in the structure.
@@ -947,6 +1010,9 @@ SocGetPlatformResourceInformation (
 
   PlatformResourceInfo->PhysicalDramSize = 0;
   PlatformResourceInfo->DramDeviceInfo   = T410DramDeviceInfo;
+
+  /* TODO: Need to implement this. On TH500 this came via CPUBL params.
+     MBx will pass this up via an FDT node.
   // Populate Total Memory.
   for (Index = 0; Index < T410_MAX_SOCKETS; Index++) {
     if (!(SocketMask & (1UL << Index))) {
@@ -961,10 +1027,9 @@ SocGetPlatformResourceInformation (
     T410DramDeviceInfo[Index].TotalWidth     = CpuBootloaderParams->DramInfo[Index].TotalWidth;
     T410DramDeviceInfo[Index].Size           = CpuBootloaderParams->SdramInfo[Index].Size;
     T410DramDeviceInfo[Index].SpeedKhz       = 0;
-  }
+  }*/
 
-  PlatformResourceInfo->IsSMTAvailable = CpuBootloaderParams->IsSMT2Enabled;
-
+  /*
   for (Index = 0; Index < T410_MAX_SOCKETS; Index++) {
     if (!(SocketMask & (1UL << Index))) {
       continue;
@@ -973,17 +1038,49 @@ SocGetPlatformResourceInformation (
     for (Count = 0; Count < UID_NUM_DWORDS; Count++) {
       PlatformResourceInfo->UniqueId[Index][Count] += CpuBootloaderParams->UniqueId[Index][Count];
     }
+  }*/
+
+  Status = DeviceTreeGetBootParamsSubnodePhysAddrSize (CpuBootloaderAddress, 0, "early-boot-vars", &EarlyBootBase, &EarlyBootSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate EarlyBootVariables Node %r\n", __FUNCTION__, Status));
+  } else {
+    FdtEarlyBootVarsPtr = (TEGRABL_EARLY_BOOT_VARIABLES *)EarlyBootBase;
+    DEBUG ((DEBUG_ERROR, "%a: Found EarlyBootVariables Node Addr %p\n", __FUNCTION__, FdtEarlyBootVarsPtr));
+
+    if (FdtEarlyBootVarsPtr != 0) {
+      EarlyBootVariables = BuildGuidDataHob (&gNVIDIAT410MB1DataGuid, FdtEarlyBootVarsPtr, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+      DEBUG ((DEBUG_ERROR, "%a: EarlyBootVariables %p\n", __FUNCTION__, EarlyBootVariables));
+      if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
+        EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+      }
+    }
   }
 
-  BuildGuidDataHob (&gNVIDIAT410MB1DataGuid, &CpuBootloaderParams->EarlyBootVariables, sizeof (CpuBootloaderParams->EarlyBootVariables));
-  BuildGuidDataHob (&gNVIDIAT410MB1DefaultDataGuid, &CpuBootloaderParams->EarlyBootVariablesDefaults, sizeof (CpuBootloaderParams->EarlyBootVariablesDefaults));
+  Status = DeviceTreeGetBootParamsSubnodePhysAddrSize (CpuBootloaderAddress, 0, "default-early-boot-vars", &DefaultEarlyBootBase, &DefaultEarlyBootSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate Default EarlyBootVariables Node %r\n", __FUNCTION__, Status));
+  } else {
+    FdtDefEarlyBootVarsPtr = (TEGRABL_EARLY_BOOT_VARIABLES *)DefaultEarlyBootBase;
+    if (FdtDefEarlyBootVarsPtr != 0) {
+      EarlyBootVariables = BuildGuidDataHob (&gNVIDIAT410MB1DefaultDataGuid, FdtDefEarlyBootVarsPtr, sizeof (TEGRABL_EARLY_BOOT_VARIABLES));
+      DEBUG ((DEBUG_ERROR, "%a: DefEarlyBootVariables %p\n", __FUNCTION__, EarlyBootVariables));
+      if (EarlyBootVariables->Data.Mb1Data.UefiDebugLevel == 0) {
+        EarlyBootVariables->Data.Mb1Data.UefiDebugLevel = PcdGet32 (PcdDebugPrintErrorLevel);
+      }
+    }
+  }
 
-  /*
-    Status = T410BuildTcgEventHob ((UINTN)&CpuBootloaderParams->EarlyTpmCommitLog);
+  Status = DeviceTreeGetBootParamsSubnodePhysAddrSize (CpuBootloaderAddress, 0, "tpm-event-log", &TpmAddr, &TpmSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: TPM Event Log not Found %r\n", __FUNCTION__, Status));
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: TPM Event Log Found %p\n", __FUNCTION__, TpmAddr));
+
+    /*Status = T410BuildTcgEventHob ((UINTN)TpmAddr);
     if (EFI_ERROR (Status)) {
       return Status;
-    }
-  */
+    }*/
+  }
 
   PlatformResourceInfo->PcieAddressBits = T410_PCIE_ADDRESS_BITS;
 
@@ -993,7 +1090,6 @@ SocGetPlatformResourceInformation (
 /**
  * Get Partition information.
 **/
-STATIC
 EFI_STATUS
 EFIAPI
 T410GetPartitionInfo (
@@ -1004,46 +1100,61 @@ T410GetPartitionInfo (
   OUT UINT64  *PartitionSizeBytes
   )
 {
-  TEGRA_CPUBL_PARAMS      *CpuBootloaderParams;
-  TEGRABL_PARTITION_DESC  *PartitionDesc;
+  return EFI_UNSUPPORTED;
+}
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+/**
+ * Get Partition Info in Dxe.
+ *
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  // TODO: Need to implement this. On TH500 this came via CPUBL params.
+  return EFI_UNSUPPORTED;
+}
 
-  if (PcdGetBool (PcdCapsulePartitionEnabled)) {
-    if (PartitionIndex == TEGRAUEFI_CAPSULE) {
-      *PartitionSizeBytes =  PcdGet64 (PcdCapsulePartitionSize);
-      PartitionDesc       = &CpuBootloaderParams->PartitionInfo[TEGRABL_RAS_ERROR_LOGS][PRIMARY_COPY];
-      *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
-      return EFI_SUCCESS;
-    }
-  }
-
-  if (PartitionIndex >= TEGRABL_BINARY_MAX) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a, Partition Index is invalid %u (Max %u)\n",
-      __FUNCTION__,
-      PartitionIndex,
-      TEGRABL_BINARY_MAX
-      ));
-    return EFI_INVALID_PARAMETER;
-  }
-
-  PartitionDesc       = &CpuBootloaderParams->PartitionInfo[PartitionIndex][PRIMARY_COPY];
-  *DeviceInstance     = PartitionDesc->DeviceInstance;
-  *PartitionStartByte = PartitionDesc->StartBlock * BLOCK_SIZE;
-  *PartitionSizeBytes = PartitionDesc->Size;
-  if (PcdGetBool (PcdCapsulePartitionEnabled)) {
-    if (PartitionIndex == TEGRABL_RAS_ERROR_LOGS) {
-      if (PcdGet64 (PcdCapsulePartitionSize) < *PartitionSizeBytes) {
-        *PartitionStartByte += PcdGet64 (PcdCapsulePartitionSize);
-        *PartitionSizeBytes -= PcdGet64 (PcdCapsulePartitionSize);
-        DEBUG ((DEBUG_ERROR, "%a: capsule partition allocated 0x%x\n", __FUNCTION__, PcdGet64 (PcdCapsulePartitionSize)));
-      }
-    }
-  }
-
-  return EFI_SUCCESS;
+/**
+ * Get Partition Info in Standalone MM image.
+ *
+ * @param[in] CpuBlAddress          Address of the CPU BL params.
+ * @param[in] PartitionIndex        Index into the Partition info array, usually
+ *                                  defined by the early BLs..
+ * @param[out] DeviceInstance       Value that conveys the device/CS for the
+ *                                  partition..
+ * @param[out] PartitionStartByte   Start byte offset for the partition..
+ * @param[out] PartitionSizeBytes   Size of the partition in bytes.
+ *
+ * @retval  EFI_SUCCESS             Success in looking up partition.
+ * @retval  EFI_INVALID_PARAMETER   Invalid partition Index.
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  // TODO: Need to implement this. On TH500 this came via CPUBL params.
+  return EFI_UNSUPPORTED;
 }
 
 /**
@@ -1055,13 +1166,8 @@ IsTpmToBeEnabled (
   VOID
   )
 {
-  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
-  UINTN               CpuBootloaderAddress;
-
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-
-  return CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable;
+  // TODO: Need EarlyBootVariables to be populated.
+  return FALSE;
 }
 
 EFI_STATUS
@@ -1152,51 +1258,6 @@ ClearUpdateBrBctFlag (
   VOID
   )
 {
-}
-
-/**
-  Get Partition information.
-
-**/
-EFI_STATUS
-EFIAPI
-GetPartitionInfo (
-  IN  UINT32  PartitionIndex,
-  OUT UINT16  *DeviceInstance,
-  OUT UINT64  *PartitionStartByte,
-  OUT UINT64  *PartitionSizeBytes
-  )
-{
-  return T410GetPartitionInfo (
-           GetCPUBLBaseAddress (),
-           PartitionIndex,
-           DeviceInstance,
-           PartitionStartByte,
-           PartitionSizeBytes
-           );
-}
-
-/**
-  Get Partition information in Standalone MM image.
-
-**/
-EFI_STATUS
-EFIAPI
-GetPartitionInfoStMm (
-  IN  UINTN   CpuBlAddress,
-  IN  UINT32  PartitionIndex,
-  OUT UINT16  *DeviceInstance,
-  OUT UINT64  *PartitionStartByte,
-  OUT UINT64  *PartitionSizeBytes
-  )
-{
-  return T410GetPartitionInfo (
-           CpuBlAddress,
-           PartitionIndex,
-           DeviceInstance,
-           PartitionStartByte,
-           PartitionSizeBytes
-           );
 }
 
 /**

@@ -693,8 +693,9 @@ CEntryPoint (
   UINT64                        DtbOffset;
   UINT64                        DtbNext;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
-  ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
+  ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[3];
   SERIAL_MAPPING                *Mapping;
+  UINT32                        MmuIndex;
 
   Mapping = NULL;
 
@@ -855,20 +856,44 @@ CEntryPoint (
               );
   PrePeiSetHobList (HobList);
 
-  InitialMemory[0].PhysicalBase = MemoryBase;
-  InitialMemory[0].VirtualBase  = MemoryBase;
-  InitialMemory[0].Length       = MemorySize;
-  InitialMemory[0].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
-  InitialMemory[1].PhysicalBase = 0;
-  InitialMemory[1].VirtualBase  = 0;
-  InitialMemory[1].Length       = 0;
-  InitialMemory[1].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
+  MmuIndex                             = 0;
+  InitialMemory[MmuIndex].PhysicalBase = MemoryBase;
+  InitialMemory[MmuIndex].VirtualBase  = MemoryBase;
+  InitialMemory[MmuIndex].Length       = MemorySize;
+  InitialMemory[MmuIndex].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+  MmuIndex++;
+  if (PcdGet64 (PcdNvFdtBlobBase) != 0) {
+    InitialMemory[MmuIndex].PhysicalBase = PcdGet64 (PcdNvFdtBlobBase);
+    InitialMemory[MmuIndex].VirtualBase  = PcdGet64 (PcdNvFdtBlobBase);
+    InitialMemory[MmuIndex].Length       = FDT_BLOB_MAX_SIZE;
+    InitialMemory[MmuIndex].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK;
+    MmuIndex++;
+  }
+
+  InitialMemory[MmuIndex].PhysicalBase = 0;
+  InitialMemory[MmuIndex].VirtualBase  = 0;
+  InitialMemory[MmuIndex].Length       = 0;
+  InitialMemory[MmuIndex].Attributes   = (ARM_MEMORY_REGION_ATTRIBUTES)0;
+
   InitMmu (InitialMemory);
   MapCorePlatformMemory ();
   StatusRegSetPhase (STATUS_REG_PHASE_PREPI, STATUS_REG_PREPI_STARTED);
 
   // Initialize the Serial Port
   SerialPortInitialize ();
+  if (PcdGet64 (PcdNvFdtBlobBase) != 0) {
+    CharCount = AsciiSPrint (
+                  Buffer,
+                  sizeof (Buffer),
+                  "Booting with FDT Boot Blob: FdtBase/Size: 0x%lx/0x%lx - UefiCo/Size: 0x%lx/0x%lx\n\r",
+                  PcdGet64 (PcdNvFdtBlobBase),
+                  FDT_BLOB_MAX_SIZE,
+                  PcdGet64 (PcdUefiCoBase),
+                  PcdGet64 (PcdUefiCoSize)
+                  );
+    SerialPortWrite ((UINT8 *)Buffer, CharCount);
+  }
+
   CharCount = AsciiSPrint (
                 Buffer,
                 sizeof (Buffer),

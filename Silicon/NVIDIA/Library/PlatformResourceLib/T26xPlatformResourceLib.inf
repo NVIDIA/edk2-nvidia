@@ -44,3 +44,6 @@
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize
   gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase

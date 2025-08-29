@@ -206,14 +206,16 @@ MapCorePlatformMemory (
   VOID
   )
 {
-  UINTN               ChipID;
-  NVDA_MEMORY_REGION  *DramPageBlacklistInfo;
+  UINTN                 ChipID;
+  NVDA_MEMORY_REGION    *DramPageBlacklistInfo;
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Addr;
+  UINTN                 Size;
+
+  ChipID = TegraGetChipID ();
 
   ArmSetMemoryAttributes (FixedPcdGet64 (PcdSipMiscRegBaseAddress), SIZE_4KB, EFI_MEMORY_UC, 0);
-  ChipID = TegraGetChipID ();
-  ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), SIZE_4KB, EFI_MEMORY_UC, 0);
-  ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
-  ArmSetMemoryAttributes (GetDTBBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
+  ArmSetMemoryAttributes ((TegraGetBLInfoLocationAddress (ChipID) & ~EFI_PAGE_MASK), ChipID == T410_CHIP_ID ? SIZE_8KB : SIZE_4KB, EFI_MEMORY_UC, 0);
  #if FixedPcdGet64 (PcdSerialRegisterBase) != 0
   ArmSetMemoryAttributes (FixedPcdGet64 (PcdSerialRegisterBase), SIZE_4KB, EFI_MEMORY_UC, 0);
  #endif
@@ -227,13 +229,26 @@ MapCorePlatformMemory (
   ArmSetMemoryAttributes (FixedPcdGet64 (PcdTegraUtcUartAddress), SIZE_64KB, EFI_MEMORY_UC, 0);
  #endif
 
-  DramPageBlacklistInfo = GetDramPageBlacklistInfoAddress ();
-  if (DramPageBlacklistInfo != NULL) {
-    while (DramPageBlacklistInfo->MemoryBaseAddress != 0 &&
-           DramPageBlacklistInfo->MemoryLength != 0)
-    {
-      ArmSetMemoryAttributes (DramPageBlacklistInfo->MemoryBaseAddress, DramPageBlacklistInfo->MemoryLength, EFI_MEMORY_WB, 0);
-      DramPageBlacklistInfo++;
+  /* If we're booting with an FDT Blob instead of the CPUBL data then map the entire ccplex_interworld carveout,
+   * as this will contain the memory regions that the FDT points to for certain subnodes such as retired-pages-list
+   * or early-boot-variables.
+   */
+  if (PcdGet64 (PcdNvFdtBlobBase) != 0) {
+    Status = GetCcplexInterworldCarveoutInfo (&Addr, &Size);
+    ASSERT_EFI_ERROR (Status);
+    Status = ArmSetMemoryAttributes (Addr, Size, EFI_MEMORY_WB, 0);
+    ASSERT_EFI_ERROR (Status);
+  } else {
+    ArmSetMemoryAttributes (GetCPUBLBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
+    ArmSetMemoryAttributes (GetDTBBaseAddress (), SIZE_64KB, EFI_MEMORY_WB, 0);
+    DramPageBlacklistInfo = GetDramPageBlacklistInfoAddress ();
+    if (DramPageBlacklistInfo != NULL) {
+      while (DramPageBlacklistInfo->MemoryBaseAddress != 0 &&
+             DramPageBlacklistInfo->MemoryLength != 0)
+      {
+        ArmSetMemoryAttributes (DramPageBlacklistInfo->MemoryBaseAddress, DramPageBlacklistInfo->MemoryLength, EFI_MEMORY_WB, 0);
+        DramPageBlacklistInfo++;
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -82,6 +82,13 @@ EFIAPI
 SocSupportsSoftwareCoreDisable (
   IN UINT32   Socket,
   OUT UINT32  *TotalCoreCount
+  );
+
+EFI_STATUS
+EFIAPI
+SocGetCcplexInterworldCarveout (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
   );
 
 #endif

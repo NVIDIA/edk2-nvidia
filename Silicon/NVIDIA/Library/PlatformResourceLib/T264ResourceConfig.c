@@ -709,6 +709,24 @@ T264GetMmioBaseAndSize (
   return MmioInfo;
 }
 
+EFI_STATUS
+EFIAPI
+SocGetCcplexInterworldCarveout (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)CpuBootloaderAddress;
+
+  *Base = (EFI_PHYSICAL_ADDRESS)CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base;
+  *Size = (UINT64)CpuBootloaderParams->CarveoutInfo[0][CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size;
+  return EFI_SUCCESS;
+}
+
 /**
   Fills in the EnabledCoresBitMap
 

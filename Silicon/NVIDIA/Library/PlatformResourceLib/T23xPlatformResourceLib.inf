@@ -52,3 +52,6 @@
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase

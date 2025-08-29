@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -88,6 +88,17 @@ PlatformResourceAddRetiredDramPages (
     Base = RetiredDramPageList[Index];
     if (Base == 0) {
       break;
+    }
+
+    if (!ADDRESS_IS_ALIGNED (Base, RetiredDramPageSize)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Retired DRAM page address 0x%lx is not aligned to page size 0x%lx, aligning down\r\n",
+        __FUNCTION__,
+        Base,
+        RetiredDramPageSize
+        ));
+      Base = Base & ~(RetiredDramPageSize - 1);
     }
 
     PlatformResourceAddMemoryRegion (

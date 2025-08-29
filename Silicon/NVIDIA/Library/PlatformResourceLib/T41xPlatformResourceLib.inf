@@ -7,7 +7,7 @@
 [Defines]
   INF_VERSION                    = 0x00010005
   BASE_NAME                      = PlatformResourceLib
-  FILE_GUID                      = 8c672523-24b5-4035-a5f3-13d289d20f35
+  FILE_GUID                      = 9be1e2c3-c4e7-4f28-ba5a-fca1f666ac6a
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = PlatformResourceLib
@@ -24,16 +24,17 @@
 [LibraryClasses]
   TegraPlatformInfoLib
   BaseMemoryLib
-  GoldenRegisterLib
   HobLib
   BaseLib
+  ArmMmuLib
+  FdtLib
+  DeviceTreeFdtBootHelperLib
 
 [Sources.common]
   PlatformResourceConfig.c
   PlatformResourceLib.c
-  T410ResourceConfig.c
-  T410ResourceConfigPrivate.h
   CommonResourceConfig.c
+  T410ResourceConfig.c
 
 [Guids]
   gArmMpCoreInfoGuid
@@ -41,8 +42,19 @@
   gNVIDIAT410MB1DataGuid
   gNVIDIAT410MB1DefaultDataGuid
 
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase
+  gNVIDIATokenSpaceGuid.PcdUefiCoBase
+  gNVIDIATokenSpaceGuid.PcdUefiCoSize
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
+
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdExposeCcplexInterworldShmem
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionEnabled
   gNVIDIATokenSpaceGuid.PcdCapsulePartitionSize
+
+[Guids]
+  gNVIDIAT410MB1DataGuid
+  gNVIDIAT410MB1DefaultDataGuid

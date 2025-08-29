@@ -1147,6 +1147,11 @@ menu "Boot Options"
   comment "INVALID CONFIG - a selected config requires L4T, but L4T has been disabled"
   depends on !L4T && NEED_L4T
 
+  config BOOT_FDT_SUPPORT
+  bool "Boot with FDT Blob from early bootloaders"
+  help
+    Support for FDT blob from early bootloaders.
+
 endmenu
 
 menu "Debug Options"

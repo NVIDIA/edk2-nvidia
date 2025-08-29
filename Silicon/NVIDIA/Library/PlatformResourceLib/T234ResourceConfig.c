@@ -701,6 +701,26 @@ SocGetEnabledCoresBitMap (
   return MceAriGetEnabledCoresBitMap (SocCoreBitmapInfo->EnabledCoresBitMap, SocCoreBitmapInfo->MaxPossibleCoresPerCluster);
 }
 
+EFI_STATUS
+EFIAPI
+SocGetCcplexInterworldCarveout (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
+  )
+{
+  TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
+
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+
+  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)CpuBootloaderAddress;
+
+  *Base = (EFI_PHYSICAL_ADDRESS)CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Base);
+  *Size = (UINT64)CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[CARVEOUT_CCPLEX_INTERWORLD_SHMEM].Size);
+
+  return EFI_SUCCESS;
+}
+
 /**
   Get Platform Resource Information
 

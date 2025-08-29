@@ -26,7 +26,11 @@ READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
 !ifdef CONFIG_PREPI_MODE
+!ifdef CONFIG_BOOT_FDT_SUPPORT
+  INF Silicon/NVIDIA/PrePi/PrePiFdt.inf
+!else
   INF Silicon/NVIDIA/PrePi/PrePi.inf
+!endif
 !endif
 
   FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {

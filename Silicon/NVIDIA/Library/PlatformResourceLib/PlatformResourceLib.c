@@ -298,6 +298,19 @@ GetMpidrFromCoreIndex (
   return Mpidr;
 }
 
+EFI_STATUS
+EFIAPI
+GetCcplexInterworldCarveoutInfo (
+  OUT EFI_PHYSICAL_ADDRESS  *Base,
+  OUT UINT64                *Size
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = SocGetCcplexInterworldCarveout (Base, Size);
+  return Status;
+}
+
 /**
   Get Platform Resource Information
   Does not update the CPU info structures.
@@ -321,7 +334,13 @@ GetPlatformResourceInformation (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  // If we are in FDT based boot, use the FDT base address that the PrePiFdt module
+  // patches in.
+  if (PcdGet64 (PcdNvFdtBlobBase) != 0) {
+    CpuBootloaderAddress = PcdGet64 (PcdNvFdtBlobBase);
+  } else {
+    CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  }
 
   return SocGetPlatformResourceInformation (CpuBootloaderAddress, PlatformResourceInfo, FALSE);
 }
@@ -369,8 +388,13 @@ UpdatePlatformResourceInformation (
 
   DEBUG ((DEBUG_ERROR, "DTB maximums: sockets=%u clusters=%u cores=%u\n", SocCoreBitmapInfo.MaxPossibleSockets, SocCoreBitmapInfo.MaxPossibleClustersPerSystem, SocCoreBitmapInfo.MaxPossibleCoresPerSystem));
 
-  CpuBootloaderAddress = GetCPUBLBaseAddress ();
-  Status               = SocGetEnabledCoresBitMap (CpuBootloaderAddress, &SocCoreBitmapInfo);
+  if (PlatformResourceInfo->ResourceInfo->FdtCarveoutRegion.MemoryBaseAddress != 0) {
+    CpuBootloaderAddress = PlatformResourceInfo->ResourceInfo->FdtCarveoutRegion.MemoryBaseAddress;
+  } else {
+    CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  }
+
+  Status = SocGetEnabledCoresBitMap (CpuBootloaderAddress, &SocCoreBitmapInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }

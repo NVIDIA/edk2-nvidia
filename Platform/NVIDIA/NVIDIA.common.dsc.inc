@@ -277,7 +277,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T26xPlatformResourceLib.inf
 !endif
 !ifdef CONFIG_SOC_T41X
+!ifdef CONFIG_BOOT_FDT_SUPPORT
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T41xPlatformResourceLib.inf
+!endif
 !endif
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
@@ -1460,6 +1462,12 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 
 [PcdsPatchableInModule]
   gArmTokenSpaceGuid.PcdFvBaseAddress|0x0
+  ## Save the Fdt Blob Base from MBx
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase|0x0
+  ## Save the UEFI Carveout base from MBx
+  gNVIDIATokenSpaceGuid.PcdUefiCoBase|0x0
+  ## Save the UEFI Carveout size from MBx
+  gNVIDIATokenSpaceGuid.PcdUefiCoSize|0x0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID)")}
   !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
@@ -1629,10 +1637,17 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   # PEI Phase modules
   #
 !ifdef CONFIG_PREPI_MODE
+!ifdef CONFIG_BOOT_FDT_SUPPORT
+  Silicon/NVIDIA/PrePi/PrePiFdt.inf {
+    <LibraryClasses>
+      DefaultExceptionHandlerLib|Silicon/NVIDIA/Library/PrePiDefaultExceptionHandlerLib/PrePiDefaultExceptionHandlerLib.inf
+  }
+!else
   Silicon/NVIDIA/PrePi/PrePi.inf {
     <LibraryClasses>
       DefaultExceptionHandlerLib|Silicon/NVIDIA/Library/PrePiDefaultExceptionHandlerLib/PrePiDefaultExceptionHandlerLib.inf
   }
+!endif
 !endif
 
   #

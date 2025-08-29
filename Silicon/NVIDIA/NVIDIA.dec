@@ -1014,3 +1014,16 @@
 
 # MPAM
   gNVIDIATokenSpaceGuid.PcdMpamSocketShift|0x0|UINT8|0x00000178
+#
+## These PCDs are also defined as 'PcdsDynamic' or 'PcdsPatchableInModule' to be
+## redefined when using UEFI in a context of virtual machine.
+##
+[PcdsFixedAtBuild, PcdsPatchableInModule]
+  ## Save the address of the FDT blob
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase|0|UINT64|0x000001A2
+  ## Save the FDT blob magic
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobMagic|0|UINT64|0x000001A3
+  ## Save the UEFI Carveout Base Address
+  gNVIDIATokenSpaceGuid.PcdUefiCoBase|0|UINT64|0x000001A4
+  ## Save the UEFI Carveout Size
+  gNVIDIATokenSpaceGuid.PcdUefiCoSize|0|UINT64|0x000001A5

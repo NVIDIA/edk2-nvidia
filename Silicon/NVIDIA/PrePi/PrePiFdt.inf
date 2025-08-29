@@ -1,0 +1,105 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
+#  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PrePi
+  FILE_GUID                      = cd9499a0-34af-4bc8-8163-44b1536a556a
+  MODULE_TYPE                    = SEC
+  VERSION_STRING                 = 1.0
+
+[Sources]
+  PrePi.c
+  PrePiMemory.c
+
+[Sources.AArch64]
+  AArch64/ArchPrePi.c
+  AArch64/ModuleEntryPointFdt.S
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  ArmPkg/ArmPkg.dec
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  DebugAgentLib
+  ArmLib
+  IoLib
+  SerialPortLib
+  ExtractGuidedSectionLib
+  DebugAgentLib
+  PrePiLib
+  MemoryAllocationLib
+  HobLib
+  PrePiHobListPointerLib
+  ArmMmuLib
+  FdtLib
+  TegraPlatformInfoLib
+  GoldenRegisterLib
+  SystemResourceLib
+  DtPlatformDtbLoaderLib
+  CpuExceptionHandlerLib
+  CacheMaintenanceLib
+  StatusRegLib
+  PlatformResourceLib
+  StackCheckLib
+  DeviceTreeFdtBootHelperLib
+
+[Guids]
+  gEfiFirmwarePerformanceGuid
+  gFdtHobGuid
+  gDtPlatformDefaultDtbFileGuid
+  gNVIDIAPlatformResourceDataGuid
+  gArmMmuReplaceLiveTranslationEntryFuncGuid
+
+[FeaturePcd]
+  gEmbeddedTokenSpaceGuid.PcdPrePiProduceMemoryTypeInformationHob
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdPlatformFamilyName
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
+  gArmTokenSpaceGuid.PcdFvBaseAddress
+  gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobBase
+  gNVIDIATokenSpaceGuid.PcdNvFdtBlobMagic
+  gNVIDIATokenSpaceGuid.PcdUefiCoBase
+  gNVIDIATokenSpaceGuid.PcdUefiCoSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase
+
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdArmNonSecModeTransition
+  gArmTokenSpaceGuid.PcdArmScr
+  gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz
+  gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize
+  gEmbeddedTokenSpaceGuid.PcdPrePiCpuIoSize
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderData
+  gNVIDIATokenSpaceGuid.PcdSipMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox
+  gNVIDIATokenSpaceGuid.PcdTegraUtcUartAddress
+
+[BuildOptions]
+  *_GCC_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds
+  *_CLANGDWARF_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE-clang.lds
