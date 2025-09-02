@@ -71,7 +71,8 @@ CommonFloorSweepIps (
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
-  IN  VOID  *Dtb
+  IN  VOID                             *Dtb,
+  OUT CONST TEGRA_FLOOR_SWEEPING_INFO  **FloorSweepingInfo
   );
 
 #endif // __COMMON_FLOOR_SWEEPING_LIB_H__

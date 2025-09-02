@@ -53,7 +53,8 @@ STATIC TEGRA_PLATFORM_RESOURCE_INFO  *mPlatformResourceInfo = NULL;
 EFI_STATUS
 EFIAPI
 CommonInitializeGlobalStructures (
-  IN  VOID  *Dtb
+  IN  VOID                             *Dtb,
+  OUT CONST TEGRA_FLOOR_SWEEPING_INFO  **FloorSweepingInfo
   )
 {
   EFI_STATUS  Status;
@@ -87,6 +88,10 @@ CommonInitializeGlobalStructures (
 
   if (mPlatformResourceInfo->FloorSweepingInfo == NULL) {
     Status = EFI_UNSUPPORTED;
+  }
+
+  if (!EFI_ERROR (Status)) {
+    *FloorSweepingInfo = mPlatformResourceInfo->FloorSweepingInfo;
   }
 
   return Status;
