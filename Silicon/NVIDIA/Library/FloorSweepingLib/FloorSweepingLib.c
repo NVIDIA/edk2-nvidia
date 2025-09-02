@@ -741,9 +741,10 @@ FloorSweepDtb (
   IN VOID  *Dtb
   )
 {
-  UINT32      SocketMask;
-  UINTN       ChipId;
-  EFI_STATUS  Status;
+  UINT32                           SocketMask;
+  UINTN                            ChipId;
+  EFI_STATUS                       Status;
+  CONST TEGRA_FLOOR_SWEEPING_INFO  *FloorSweepingInfo;
 
   SocketMask = GetSocketMask (NULL);
   if (SocketMask == 0) {
@@ -762,7 +763,7 @@ FloorSweepDtb (
   }
 
   // common floorsweeping flow
-  Status = CommonInitializeGlobalStructures (Dtb);
+  Status = CommonInitializeGlobalStructures (Dtb, &FloorSweepingInfo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -784,6 +785,10 @@ FloorSweepDtb (
 
   if (!EFI_ERROR (Status)) {
     Status = CommonFloorSweepIps ();
+  }
+
+  if (!EFI_ERROR (Status) && FloorSweepingInfo->HasGlobalThermals) {
+    Status = FloorSweepGlobalThermals (Dtb);
   }
 
   return Status;

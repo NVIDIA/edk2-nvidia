@@ -158,6 +158,7 @@ typedef struct {
   UINT8                             PcieNumParentNodes;
   TEGRA_FLOOR_SWEEPING_SCF_CACHE    *ScfCacheInfo;
   TEGRA_FLOOR_SWEEPING_IP_ENTRY     *IpTable;
+  BOOLEAN                           HasGlobalThermals;
 } TEGRA_FLOOR_SWEEPING_INFO;
 
 typedef struct {

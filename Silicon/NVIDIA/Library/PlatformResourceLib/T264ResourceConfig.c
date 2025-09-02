@@ -1024,6 +1024,7 @@ T264InitFloorSweepingInfo (
   Info->PcieParentNameFormat = "/bus@0";
   Info->PcieNumParentNodes   = 1;
   Info->IpTable              = TegraIpTable;
+  Info->HasGlobalThermals    = TRUE;
 
   PlatformResourceInfo->FloorSweepingInfo = Info;
 
