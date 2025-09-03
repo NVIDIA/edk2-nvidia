@@ -726,6 +726,15 @@ formset
     endoneof;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.SlcEnableForcedSnoopPromotionSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.SlcEnableForcedSnoopPromotion,
+        questionid = KEY_FORCED_SNOOP_PROMOTION,
+        prompt = STRING_TOKEN(STR_FORCED_SNOOP_PROMOTION_PROMPT),
+        help   = STRING_TOKEN(STR_FORCED_SNOOP_PROMOTION_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
         questionid = KEY_MAX_CORES,

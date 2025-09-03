@@ -99,6 +99,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_ECC_ALGORITHM_HELP),
   STRING_TOKEN (STR_MAX_ALLOWED_NUM_SPARES_PROMPT),
   STRING_TOKEN (STR_MAX_ALLOWED_NUM_SPARES_HELP),
+  STRING_TOKEN (STR_FORCED_SNOOP_PROMOTION_PROMPT),
+  STRING_TOKEN (STR_FORCED_SNOOP_PROMOTION_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
@@ -1956,11 +1958,13 @@ SyncHiiSettings (
       mHiiControlSettings.UartBaudRate = mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate;
     }
 
-    mHiiControlSettings.EInjEnable            = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
-    mHiiControlSettings.DisableChannelSparing = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
-    mHiiControlSettings.MaxAllowedNumSpares   = mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
-    mHiiControlSettings.PerfVersion           = mMb1Config.Data.Mb1Data.PerfVersion;
-    mHiiControlSettings.UefiDebugLevel        = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+    mHiiControlSettings.EInjEnable                    = mMb1Config.Data.Mb1Data.FeatureData.EInjEnable;
+    mHiiControlSettings.DisableChannelSparing         = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
+    mHiiControlSettings.MaxAllowedNumSpares           = mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
+    mHiiControlSettings.SlcEnableForcedSnoopPromotion = mMb1Config.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion;
+    mHiiControlSettings.PerfVersion                   = mMb1Config.Data.Mb1Data.PerfVersion;
+    mHiiControlSettings.UefiDebugLevel                = mMb1Config.Data.Mb1Data.UefiDebugLevel;
+
     if (mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm > ECC_ALGORITHM_RS) {
       mHiiControlSettings.EccAlgorithm = ECC_ALGORITHM_HSIAO;
     } else {
@@ -2090,21 +2094,22 @@ SyncHiiSettings (
       mHiiControlSettings.MinBw[Index]       = mMb1Config.Data.Mb1Data.MpamConfig[Index-MPAM_PARTID_OFFSET].MinBw;
     }
   } else {
-    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable             = mHiiControlSettings.EgmEnabled;
-    mMb1Config.Data.Mb1Data.HvRsvdMemSize                     = mHiiControlSettings.EgmHvSizeMb;
-    mMb1Config.Data.Mb1Data.HvMinEgmSize                      = mHiiControlSettings.HvMinEgmSize;
-    mMb1Config.Data.Mb1Data.HvVirtUefiSize                    = mHiiControlSettings.HvVirtUefiSize;
-    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable      = mHiiControlSettings.SpreadSpectrumEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable          = mHiiControlSettings.ModsSpEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable             = mHiiControlSettings.TpmEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable   = mHiiControlSettings.GpuSmmuBypassEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate          = mHiiControlSettings.UartBaudRate;
-    mMb1Config.Data.Mb1Data.FeatureData.EInjEnable            = mHiiControlSettings.EInjEnable;
-    mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing = mHiiControlSettings.DisableChannelSparing;
-    mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm          = mHiiControlSettings.EccAlgorithm;
-    mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares   = mHiiControlSettings.MaxAllowedNumSpares;
-    mMb1Config.Data.Mb1Data.PerfVersion                       = mHiiControlSettings.PerfVersion;
-    mMb1Config.Data.Mb1Data.UefiDebugLevel                    = mHiiControlSettings.UefiDebugLevel;
+    mMb1Config.Data.Mb1Data.FeatureData.EgmEnable                     = mHiiControlSettings.EgmEnabled;
+    mMb1Config.Data.Mb1Data.HvRsvdMemSize                             = mHiiControlSettings.EgmHvSizeMb;
+    mMb1Config.Data.Mb1Data.HvMinEgmSize                              = mHiiControlSettings.HvMinEgmSize;
+    mMb1Config.Data.Mb1Data.HvVirtUefiSize                            = mHiiControlSettings.HvVirtUefiSize;
+    mMb1Config.Data.Mb1Data.FeatureData.SpreadSpecEnable              = mHiiControlSettings.SpreadSpectrumEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.ModsSpEnable                  = mHiiControlSettings.ModsSpEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.TpmEnable                     = mHiiControlSettings.TpmEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.GpuSmmuBypassEnable           = mHiiControlSettings.GpuSmmuBypassEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.UartBaudRate                  = mHiiControlSettings.UartBaudRate;
+    mMb1Config.Data.Mb1Data.FeatureData.EInjEnable                    = mHiiControlSettings.EInjEnable;
+    mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing         = mHiiControlSettings.DisableChannelSparing;
+    mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm                  = mHiiControlSettings.EccAlgorithm;
+    mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares           = mHiiControlSettings.MaxAllowedNumSpares;
+    mMb1Config.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion = mHiiControlSettings.SlcEnableForcedSnoopPromotion;
+    mMb1Config.Data.Mb1Data.PerfVersion                               = mHiiControlSettings.PerfVersion;
+    mMb1Config.Data.Mb1Data.UefiDebugLevel                            = mHiiControlSettings.UefiDebugLevel;
 
     if (mHiiControlSettings.ActiveCores < AvailableSockets) {
       mHiiControlSettings.ActiveCores = 0;
@@ -2565,6 +2570,10 @@ InitializeSettings (
           }
         }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 22) {
+      mHiiControlSettings.SlcEnableForcedSnoopPromotionSupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 21) {
@@ -3042,6 +3051,9 @@ GetDefaultValue (
       break;
     case KEY_MAX_ALLOWED_NUM_SPARES:
       Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
+      break;
+    case KEY_FORCED_SNOOP_PROMOTION:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

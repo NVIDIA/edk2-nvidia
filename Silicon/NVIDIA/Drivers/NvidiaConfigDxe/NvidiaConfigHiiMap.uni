@@ -67,6 +67,7 @@
 #string STR_MAX_ALLOWED_0_SPARES                #language x-UEFI-redfish-Bios.v1_2_0 "Spare0Channels"
 #string STR_MAX_ALLOWED_1_SPARES                #language x-UEFI-redfish-Bios.v1_2_0 "Spare1Channel"
 #string STR_MAX_ALLOWED_2_SPARES                #language x-UEFI-redfish-Bios.v1_2_0 "Spare2Channels"
+#string STR_FORCED_SNOOP_PROMOTION_PROMPT       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/SlcEnableForcedSnoopPromotion"
 #string STR_UEFI_DEBUG_LEVEL_PROMPT             #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/UefiDebugLogLevel"
 #string STR_HOST_INTERFACE_ENABLED_PROMPT       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/RedfishHostInterface"
 #string STR_PRODUCT_ASSET_TAG_PROTECTION        #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/AssetTagProtection"

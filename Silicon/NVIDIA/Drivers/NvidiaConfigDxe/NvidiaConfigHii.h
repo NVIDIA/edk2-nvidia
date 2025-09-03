@@ -123,6 +123,7 @@
 #define KEY_ECC_ALGORITHM               0x1029
 #define KEY_MAX_ALLOWED_NUM_SPARES      0x102A
 #define KEY_SOC_DISPLAY_HANDOFF_METHOD  0x102B
+#define KEY_FORCED_SNOOP_PROMOTION      0x102C
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -1193,6 +1194,7 @@ typedef struct {
   BOOLEAN    EccAlgorithmSupported;
   BOOLEAN    MaxAllowedNumSparesSupported;
   BOOLEAN    DisplayAllMaxAllowedNumSparesOptions;
+  BOOLEAN    SlcEnableForcedSnoopPromotionSupported;
   BOOLEAN    PCIeASPML1SSConfigSupported;
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
@@ -1231,6 +1233,7 @@ typedef struct {
   BOOLEAN    DisableChannelSparing;
   UINT8      EccAlgorithm;
   UINT8      MaxAllowedNumSpares;
+  BOOLEAN    SlcEnableForcedSnoopPromotion;
   UINT32     ActiveCores;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

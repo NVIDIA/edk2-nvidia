@@ -103,6 +103,8 @@
 #string STR_ECC_ALGORITHM_RS                 #language en-US "Reed-Solomon"
 #string STR_MAX_CORES_PROMPT                 #language en-US "Max Enabled Cores"
 #string STR_MAX_CORES_HELP                   #language en-US "Specify Desired Number Of Cores For System.\r\nEnter 0 for system default.\r\nInput greater than system maximum would be rejected."
+#string STR_FORCED_SNOOP_PROMOTION_PROMPT    #language en-US "Enable SLC Forced Snoop Promotion"
+#string STR_FORCED_SNOOP_PROMOTION_HELP      #language en-US "This option allows the SLC Forced Snoop Promotion to be configured."
 
 #string STR_SERVER_POWER_CONTROL_PROMPT                 #language en-US "Select Power Control Setting"
 #string STR_SERVER_POWER_CONTROL_HELP                   #language en-US "Helps choose input power capping timescale"
