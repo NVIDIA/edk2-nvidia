@@ -122,70 +122,6 @@ EnableClocks (
 }
 
 /**
-  Enables or disables T264 display hardware.
-
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-  @param[in] Enable            TRUE to enable, FALSE to disable.
-
-  @retval EFI_SUCCESS    Operation successful.
-  @retval !=EFI_SUCCESS  Operation failed.
-*/
-STATIC
-EFI_STATUS
-EnableHwT264 (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle,
-  IN CONST BOOLEAN     Enable
-  )
-{
-  EFI_STATUS  Status, Status1;
-  BOOLEAN     ResetsDeasserted = !Enable;
-  BOOLEAN     ClocksEnabled    = !Enable;
-
-  if (Enable) {
-    Status = AssertResets (DriverHandle, ControllerHandle, FALSE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
-    }
-
-    ResetsDeasserted = TRUE;
-
-    Status = EnableClocks (DriverHandle, ControllerHandle, TRUE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
-    }
-
-    ClocksEnabled = TRUE;
-  } else {
-    /* Shutdown display HW if and only if we were called to disable
-       the display. */
-    Status = NvDisplayHwShutdown (DriverHandle, ControllerHandle);
-
-Disable:
-    if (ClocksEnabled) {
-      Status1 = EnableClocks (DriverHandle, ControllerHandle, FALSE);
-      if (!EFI_ERROR (Status)) {
-        Status = Status1;
-      }
-
-      ClocksEnabled = FALSE;
-    }
-
-    if (ResetsDeasserted) {
-      Status1 = AssertResets (DriverHandle, ControllerHandle, TRUE);
-      if (!EFI_ERROR (Status)) {
-        Status = Status1;
-      }
-
-      ResetsDeasserted = FALSE;
-    }
-  }
-
-  return Status;
-}
-
-/**
   Set EMC frequency floor.
 
   @param[in] DriverHandle       Handle to the driver.
@@ -262,35 +198,125 @@ SetupEmcFrequency (
 }
 
 /**
-  Hands off T264 display hardware.
+  Force maximum EMC frequency.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] Enable            Enable/disable the forced max frequency.
+
+  @return EFI_SUCCESS    EMC frequency successfully forced.
+  @return !=EFI_SUCCESS  Error occurred.
+*/
+STATIC
+EFI_STATUS
+ForceMaxEmcFrequency (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Enable
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      IsoBandwidthKbps, MemclockFloorKbps;
+
+  if (Enable) {
+    IsoBandwidthKbps  = 20 << 20; /* 20 GB/s */
+    MemclockFloorKbps = MAX_UINT32;
+  } else {
+    IsoBandwidthKbps  = 0;
+    MemclockFloorKbps = 0;
+  }
+
+  Status = SetupEmcFrequency (
+             DriverHandle,
+             ControllerHandle,
+             IsoBandwidthKbps,
+             MemclockFloorKbps
+             );
+  if (Status == EFI_UNSUPPORTED) {
+    /* If BWMGR is disabled, we cannot control the EMC frequency; in
+       this case, just return success. */
+    Status = EFI_SUCCESS;
+  }
+
+  return Status;
+}
+
+/**
+  Enables or disables T264 display hardware.
 
   @param[in] DriverHandle      The driver handle.
   @param[in] ControllerHandle  The controller handle.
+  @param[in] Enable            TRUE to enable, FALSE to disable.
 
   @retval EFI_SUCCESS    Operation successful.
   @retval !=EFI_SUCCESS  Operation failed.
 */
 STATIC
 EFI_STATUS
-HandoffHwT264 (
+EnableHwT264 (
   IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Enable
   )
 {
-  EFI_STATUS    Status;
-  CONST UINT32  IsoBandwidthKbps20Gbps = 20 << 20;
-  CONST UINT32  MemclockFloorKbpsMax   = MAX_UINT32;
+  EFI_STATUS  Status, Status1;
+  BOOLEAN     MaxEmcFrequencyForced = !Enable;
+  BOOLEAN     ResetsDeasserted      = !Enable;
+  BOOLEAN     ClocksEnabled         = !Enable;
 
-  Status = SetupEmcFrequency (
-             DriverHandle,
-             ControllerHandle,
-             IsoBandwidthKbps20Gbps,
-             MemclockFloorKbpsMax
-             );
-  if (Status == EFI_UNSUPPORTED) {
-    /* BWMGR is disabled, in which case EMC is already running at max
-       frequency, so return success. */
-    Status = EFI_SUCCESS;
+  if (Enable) {
+    Status = ForceMaxEmcFrequency (DriverHandle, ControllerHandle, TRUE);
+    if (EFI_ERROR (Status)) {
+      goto Disable;
+    }
+
+    MaxEmcFrequencyForced = TRUE;
+
+    Status = AssertResets (DriverHandle, ControllerHandle, FALSE);
+    if (EFI_ERROR (Status)) {
+      goto Disable;
+    }
+
+    ResetsDeasserted = TRUE;
+
+    Status = EnableClocks (DriverHandle, ControllerHandle, TRUE);
+    if (EFI_ERROR (Status)) {
+      goto Disable;
+    }
+
+    ClocksEnabled = TRUE;
+  } else {
+    /* Shutdown display HW if and only if we were called to disable
+       the display. */
+    Status = NvDisplayHwShutdown (DriverHandle, ControllerHandle);
+
+Disable:
+    if (ClocksEnabled) {
+      Status1 = EnableClocks (DriverHandle, ControllerHandle, FALSE);
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+
+      ClocksEnabled = FALSE;
+    }
+
+    if (ResetsDeasserted) {
+      Status1 = AssertResets (DriverHandle, ControllerHandle, TRUE);
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+
+      ResetsDeasserted = FALSE;
+    }
+
+    if (MaxEmcFrequencyForced) {
+      Status1 = ForceMaxEmcFrequency (DriverHandle, ControllerHandle, FALSE);
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+
+      MaxEmcFrequencyForced = FALSE;
+    }
   }
 
   return Status;
@@ -316,7 +342,6 @@ NvDisplayControllerStartT264 (
   return NvDisplayControllerStart (
            DriverHandle,
            ControllerHandle,
-           EnableHwT264,
-           HandoffHwT264
+           EnableHwT264
            );
 }

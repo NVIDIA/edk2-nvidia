@@ -30,29 +30,12 @@ EFI_STATUS
   );
 
 /**
-  Hands off chip-specific display hardware.
-
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-
-  @retval EFI_SUCCESS    Operation successful.
-  @retval !=EFI_SUCCESS  Operation failed.
-*/
-typedef
-EFI_STATUS
-(*NV_DISPLAY_CONTROLLER_HW_HANDOFF)(
-  IN EFI_HANDLE  DriverHandle,
-  IN EFI_HANDLE  ControllerHandle
-  );
-
-/**
   Starts the NV display controller driver on the given controller
   handle.
 
   @param[in] DriverHandle      The driver handle.
   @param[in] ControllerHandle  The controller handle.
   @param[in] HwEnable          Chip-specific display HW control function.
-  @param[in] HwHandoff         Chip-specific display HW handoff function.
 
   @retval EFI_SUCCESS          Operation successful.
   @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
@@ -60,10 +43,9 @@ EFI_STATUS
 */
 EFI_STATUS
 NvDisplayControllerStart (
-  IN EFI_HANDLE                        DriverHandle,
-  IN EFI_HANDLE                        ControllerHandle,
-  IN NV_DISPLAY_CONTROLLER_HW_ENABLE   HwEnable,
-  IN NV_DISPLAY_CONTROLLER_HW_HANDOFF  HwHandoff
+  IN EFI_HANDLE                       DriverHandle,
+  IN EFI_HANDLE                       ControllerHandle,
+  IN NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
   );
 
 /**
