@@ -425,25 +425,6 @@ Disable:
 }
 
 /**
-  Hands off T234 display hardware.
-
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-
-  @retval EFI_SUCCESS    Operation successful.
-  @retval !=EFI_SUCCESS  Operation failed.
-*/
-STATIC
-EFI_STATUS
-HandoffHwT234 (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle
-  )
-{
-  return EFI_SUCCESS;
-}
-
-/**
    Starts the NV T234 display controller driver on the given
    controller handle.
 
@@ -462,7 +443,6 @@ NvDisplayControllerStartT234 (
   return NvDisplayControllerStart (
            DriverHandle,
            ControllerHandle,
-           EnableHwT234,
-           HandoffHwT234
+           EnableHwT234
            );
 }

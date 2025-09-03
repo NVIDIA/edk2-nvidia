@@ -28,18 +28,17 @@
 #define NV_DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
 typedef struct {
-  UINT32                              Signature;
-  EFI_HANDLE                          DriverHandle;
-  EFI_HANDLE                          ControllerHandle;
-  NV_DISPLAY_CONTROLLER_HW_ENABLE     HwEnable;
-  NV_DISPLAY_CONTROLLER_HW_HANDOFF    HwHandoff;
-  UINT8                               HandoffMode;
-  UINT8                               HandoffMethod;
-  NON_DISCOVERABLE_DEVICE             Device;
-  BOOLEAN                             HwEnabled;
-  BOOLEAN                             PerformHandoff;
-  EFI_EVENT                           OnFdtInstalledEvent;
-  EFI_EVENT                           OnReadyToBootEvent;
+  UINT32                             Signature;
+  EFI_HANDLE                         DriverHandle;
+  EFI_HANDLE                         ControllerHandle;
+  NV_DISPLAY_CONTROLLER_HW_ENABLE    HwEnable;
+  UINT8                              HandoffMode;
+  UINT8                              HandoffMethod;
+  NON_DISCOVERABLE_DEVICE            Device;
+  BOOLEAN                            HwEnabled;
+  BOOLEAN                            PerformHandoff;
+  EFI_EVENT                          OnFdtInstalledEvent;
+  EFI_EVENT                          OnReadyToBootEvent;
 } NV_DISPLAY_CONTROLLER_PRIVATE;
 
 #define NV_DISPLAY_CONTROLLER_PRIVATE_FROM_DEVICE(a)  CR(\
@@ -349,7 +348,6 @@ DestroyControllerPrivate (
   @param[in]  DriverHandle      Handle of the driver.
   @param[in]  ControllerHandle  Handle of the controller.
   @param[in]  HwEnable          Chip-specific display HW control function.
-  @param[in]  HwHandoff         Chip-specific display HW handoff function.
 
   @retval EFI_SUCCESS            Operation successful.
   @retval EFI_INVALID_PARAMETER  Private is NULL.
@@ -358,11 +356,10 @@ DestroyControllerPrivate (
 STATIC
 EFI_STATUS
 CreateControllerPrivate (
-  OUT NV_DISPLAY_CONTROLLER_PRIVATE **CONST   Private,
-  IN  CONST EFI_HANDLE                        DriverHandle,
-  IN  CONST EFI_HANDLE                        ControllerHandle,
-  IN  CONST NV_DISPLAY_CONTROLLER_HW_ENABLE   HwEnable,
-  IN  CONST NV_DISPLAY_CONTROLLER_HW_HANDOFF  HwHandoff
+  OUT NV_DISPLAY_CONTROLLER_PRIVATE **CONST  Private,
+  IN  CONST EFI_HANDLE                       DriverHandle,
+  IN  CONST EFI_HANDLE                       ControllerHandle,
+  IN  CONST NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
   )
 {
   EFI_STATUS                     Status;
@@ -416,7 +413,6 @@ CreateControllerPrivate (
   Result->DriverHandle     = DriverHandle;
   Result->ControllerHandle = ControllerHandle;
   Result->HwEnable         = HwEnable;
-  Result->HwHandoff        = HwHandoff;
   Result->HandoffMode      = IsAcpiMode ? NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS : PcdGet8 (PcdSocDisplayHandoffMode);
   Result->HandoffMethod    = IsAcpiMode ? NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_EFIFB : PcdGet8 (PcdSocDisplayHandoffMethod);
 
@@ -510,7 +506,6 @@ Exit:
   @param[in] DriverHandle      The driver handle.
   @param[in] ControllerHandle  The controller handle.
   @param[in] HwEnable          Chip-specific display HW control function.
-  @param[in] HwHandoff         Chip-specific display HW handoff function.
 
   @retval EFI_SUCCESS          Operation successful.
   @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
@@ -518,10 +513,9 @@ Exit:
 */
 EFI_STATUS
 NvDisplayControllerStart (
-  IN CONST EFI_HANDLE                        DriverHandle,
-  IN CONST EFI_HANDLE                        ControllerHandle,
-  IN CONST NV_DISPLAY_CONTROLLER_HW_ENABLE   HwEnable,
-  IN CONST NV_DISPLAY_CONTROLLER_HW_HANDOFF  HwHandoff
+  IN CONST EFI_HANDLE                       DriverHandle,
+  IN CONST EFI_HANDLE                       ControllerHandle,
+  IN CONST NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
   )
 {
   EFI_STATUS                     Status;
@@ -536,7 +530,7 @@ NvDisplayControllerStart (
     return Status;
   }
 
-  Status = CreateControllerPrivate (&Private, DriverHandle, ControllerHandle, HwEnable, HwHandoff);
+  Status = CreateControllerPrivate (&Private, DriverHandle, ControllerHandle, HwEnable);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -660,13 +654,8 @@ NvDisplayControllerOnExitBootServices (
   }
 
   if (CheckPerformHandoff (Private)) {
-    Status = Private->HwHandoff (DriverHandle, ControllerHandle);
-    if (!EFI_ERROR (Status)) {
-      /* We should perform hand-off, leave the display running. */
-      return EFI_ABORTED;
-    }
-
-    DEBUG ((DEBUG_WARN, "%a: HwHandoff failed: %r\r\n", __FUNCTION__, Status));
+    /* We should perform hand-off, leave the display running. */
+    return EFI_ABORTED;
   }
 
   /* No hand-off, reset the display to a known good state. */
