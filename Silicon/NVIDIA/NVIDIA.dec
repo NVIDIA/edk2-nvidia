@@ -797,6 +797,9 @@
 #Specify UFS HS Series (RATE_A=1 RATE_B=2)
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x1|UINT32|0x000000AE
 
+#Skip UFS re-init if HCE already set
+  gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|FALSE|BOOLEAN|0x000000B5
+
 #Option to configure SOC display hand-off mode
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode|0x00|UINT8|0x00000115
 

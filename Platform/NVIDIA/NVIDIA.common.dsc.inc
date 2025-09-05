@@ -1339,6 +1339,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
+  gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|TRUE
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000

@@ -57,6 +57,10 @@ typedef enum {
   UfsUicDmeTestMode       = 0x1A
 } UFS_UIC_OPCODE;
 
+// Host Controller Enable
+#define UFS_HC_ENABLE_OFFSET  0x0034
+#define UFS_HC_HCE_EN         0x00000001U
+
 /** UIC MIB Attributes */
 #define PA_AVAIL_TX_DATA_LANES      0x1520U
 #define PA_AVAIL_RX_DATA_LANES      0x1540U
@@ -356,9 +360,12 @@ UfsCallback (
 }
 
 EDKII_UFS_HC_PLATFORM_PROTOCOL  gUfsOverride = {
-  EDKII_UFS_HC_PLATFORM_PROTOCOL_VERSION,
-  NULL,
-  UfsCallback
+  // fields may be updated during BindingStart if initialization is required
+  .Version         = EDKII_UFS_HC_PLATFORM_PROTOCOL_VERSION,
+  .OverrideHcInfo  = NULL,
+  .Callback        = NULL,
+  .SkipHceReenable = TRUE,
+  .SkipLinkStartup = TRUE,
 };
 
 STATIC
@@ -381,6 +388,10 @@ UfsDriverBindingStart (
   EFI_ACPI_END_TAG_DESCRIPTOR        *EdkiiEnd;
   UINTN                              Index;
   UINTN                              ResourcesSize;
+  BOOLEAN                            HceEnabled;
+  BOOLEAN                            SkipReinit;
+
+  SkipReinit = PcdGetBool (PcdUfsSkipReinit);
 
   Status = gBS->HandleProtocol (
                   ControllerHandle,
@@ -406,17 +417,32 @@ UfsDriverBindingStart (
     return EFI_UNSUPPORTED;
   }
 
-  Status = DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", TRUE);
-  if (!EFI_ERROR (Status)) {
-    MicroSecondDelay (1000);
-    DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
-  }
+  HceEnabled = (MmioRead32 (BaseAddress + UFS_HC_ENABLE_OFFSET) & UFS_HC_HCE_EN) != 0;
 
-  MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
-  MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
-  MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
-  MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
-  MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
+  // if HCE is already set, then skip all initialization if not required
+  if (HceEnabled && SkipReinit) {
+    DEBUG ((DEBUG_INFO, "%a: HCE is already set, skipping initialization\n", __FUNCTION__));
+  } else {
+    if (SkipReinit) {
+      DEBUG ((DEBUG_WARN, "%a: WARNING: UFS HCE is not set, initializing\n", __FUNCTION__));
+    }
+
+    gUfsOverride.Callback        = UfsCallback;
+    gUfsOverride.SkipHceReenable = FALSE;
+    gUfsOverride.SkipLinkStartup = FALSE;
+
+    Status = DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", TRUE);
+    if (!EFI_ERROR (Status)) {
+      MicroSecondDelay (1000);
+      DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
+    }
+
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_CLK_EN);
+    MmioAnd32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, ~UFSHC_DEV_RESET);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_CLK_EN);
+    MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
+    MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
+  }
 
   // create new device for edk2 with only 2 registers to meet PciIo limits
   EdkiiResources = NULL;
