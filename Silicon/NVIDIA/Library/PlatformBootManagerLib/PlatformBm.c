@@ -2027,6 +2027,11 @@ PlatformBootManagerBeforeConsole (
     // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
     //
     RestoreBootOrder (NULL, NULL);
+  } else {
+    //
+    // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
+    //
+    CheckIPMIForBootOrderUpdates ();
   }
 
   //
