@@ -466,11 +466,10 @@ FwPartitionNorFlashStmmInitialize (
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_INFO,
-        "%a: Error initializing NorFlash devices: %r\n",
+        "%a: Error initializing NorFlash2 devices: %r\n",
         __FUNCTION__,
         Status
         ));
-      goto Done;
     }
   }
 
