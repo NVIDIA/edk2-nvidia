@@ -21,7 +21,6 @@
 ################################################################################
 [LibraryClasses]
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DebugLib|Silicon/NVIDIA/Library/DebugLibHafnium/DebugLibHafnium.inf
   ArmSvcLib|Silicon/NVIDIA/Library/ArmSvcHvcLibHafnium/ArmSvcHvcLibHafnium.inf
@@ -138,10 +137,7 @@
 
 
 [Components.AARCH64]
-  #
-  # MM CPU Driver
-  #
-  Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
+
 
 ###################################################################################################
 #

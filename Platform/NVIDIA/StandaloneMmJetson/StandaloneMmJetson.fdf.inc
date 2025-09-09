@@ -11,6 +11,11 @@
   #
   INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
 
+  #
+  # MM CPU Driver
+  #
+  INF Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
+
 ################################################################################
 #
 # Rules are use with the [FV] section's module INF type to define

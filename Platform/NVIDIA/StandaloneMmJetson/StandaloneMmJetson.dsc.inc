@@ -20,6 +20,7 @@
 #
 ################################################################################
 [LibraryClasses]
+  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLibNull/DebugLogScratchRegLibNull.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T26xPlatformResourceLib.inf

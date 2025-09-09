@@ -20,6 +20,7 @@
 #
 ################################################################################
 [LibraryClasses]
+  StandaloneMmCoreEntryPoint|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumEntryPoint/StandaloneMmHafniumCoreEntryPoint.inf
   ErotQspiLib|Silicon/NVIDIA/Library/ErotQspiLib/ErotQspiLib.inf
   PldmBaseLib|Silicon/NVIDIA/Library/PldmBaseLib/PldmBaseLib.inf
   ResetSystemLib|Silicon/NVIDIA/StandaloneMm/Library/StandaloneMmHafniumResetLib/StandaloneMmHafniumResetLib.inf
@@ -135,6 +136,10 @@
   Silicon/NVIDIA/Server/TH500/Drivers/OemPartitionDxeMm/OemPartitionMm.inf
 
 [Components.AARCH64]
+  #
+  # MM CPU Driver
+  #
+  Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
 
 ###################################################################################################
 #

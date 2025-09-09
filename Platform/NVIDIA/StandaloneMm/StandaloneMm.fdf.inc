@@ -7,6 +7,11 @@
   !include Platform/NVIDIA/StandaloneMmFfaLegacy.common.fdf.inc
 
   #
+  # MM CPU Driver
+  #
+  INF Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
+
+  #
   # MM MCTP/ERoT Drivers
   #
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf

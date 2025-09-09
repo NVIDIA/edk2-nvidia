@@ -34,11 +34,6 @@
   INF Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
   #
-  # MM CPU Driver
-  #
-  INF Silicon/NVIDIA/StandaloneMm/Drivers/NvMmStandaloneMmCpu/StandaloneMmCpu.inf
-
-  #
   # MM Variable Driver
   #
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
