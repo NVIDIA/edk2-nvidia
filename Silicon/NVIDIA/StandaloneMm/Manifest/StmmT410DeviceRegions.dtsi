@@ -1,0 +1,57 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Device regions for the StandaloneMmT410 SP.
+ *
+ */
+
+tegra-misc {
+  base-address = < 0x00000000 0x00100000 >;
+  pages-count  = < 4 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+tegra-scratch {
+  base-address = < 0x00000000 0x00C390000 >;
+  pages-count  = < 4 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+tegra-scratch_0_secure_l2 {
+  base-address = < 0x0000fe15 0x00389000 >;
+  pages-count  = < 1 >;
+  attributes   = < 0x1 >;                   // read-only
+};
+
+qspi0-socket0 {
+  base-address = < 0x0000fe15 0x01110000 >;
+  pages-count  = < 16 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+qspi0-socket1 {
+  base-address = < 0x0001fe15 0x01110000 >; // confirm socket 1's base.
+  pages-count  = < 16 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+
+th500-gpio0-socket0 {
+  base-address = < 0x0000081 0x0c313000 >;
+  pages-count  = < 16 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+th500-gpio0-socket1 {
+  base-address = < 0x0000181 0x0c313000 >;  // unsure of socket 1's base
+  pages-count  = < 16 >;
+  attributes   = < 0x3 >;                   // read-write
+};
+
+sysram-pt {
+  base-address = <0x0001F00 0x0037C000 >;
+  pages-count  = < 16 >;                   // 64kb
+  attributes   = < 0x1 >;                  // secure ro
+};
