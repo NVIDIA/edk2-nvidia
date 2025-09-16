@@ -67,6 +67,7 @@
   0x2941 - 0x297f = GB100 products in SH mode
   0x31C0 = recovery mode and pre-silicon/unfused parts
   0x31C1 - 0x31FF = GB110 products in endpoint mode
+  0x31A1 = GB110 product in endpoint mode
   0x3340 = recovery mode and pre-silicon/unfused parts
   0x3341 - 0x337F = GB120 products in endpoint mode
 */
@@ -87,7 +88,7 @@
 #define TH500_GB102_GPU_MODE_CHECK_SHH(vid, did) \
     ( ((vid)==0x10de) && (((did)>=0x29C1) && ((did)<=0x29ff)) )
 #define TH500_GB110_GPU_MODE_CHECK_SHH(vid, did) \
-    ( ((vid)==0x10de) && (((did)>=0x31C1) && ((did)<=0x31FF)) )
+    ( ((vid)==0x10de) && ((((did)>=0x31C1) && ((did)<=0x31FF)) || ((did)==0x31A1)) )
 #define TH500_GB120_GPU_MODE_CHECK_SHH(vid, did) \
     ( ((vid)==0x10de) && (((did)>=0x3341) && ((did)<=0x337F)) )
 #define TH500_GB180_GPU_MODE_CHECK_SHH(vid, did) \

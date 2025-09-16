@@ -166,7 +166,7 @@ IdentifyControllerFamily (
 
   /* SH */
   /* TH500+GB110 ranges */
-  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF)) {
+  if ((ui16VendorId == ui16VendorIDMatch) && ((ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF) || (ui16DeviceId == 0x31A1))) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
@@ -236,7 +236,7 @@ IsControllerC2CInitCheckSupported (
 
   /* SH */
   /* TH500+GB110 ranges */
-  if ((ui16VendorId == ui16VendorIDMatch) && (ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF)) {
+  if ((ui16VendorId == ui16VendorIDMatch) && ((ui16DeviceId >= 0x31C1) && (ui16DeviceId <= 0x31FF) || (ui16DeviceId == 0x31A1))) {
     DEBUG_CODE_BEGIN ();
     DEBUG ((DEBUG_INFO, "%a: PCI ID [0x%04x, 0x%04x] [SHH]\n", __FUNCTION__, ui16VendorId, ui16DeviceId));
     DEBUG_CODE_END ();
