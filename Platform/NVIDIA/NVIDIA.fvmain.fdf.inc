@@ -399,6 +399,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/NonDiscoverablePciDeviceDxe/NonDiscoverablePciDeviceDxe.inf
   INF Silicon/NVIDIA/Drivers/NvDisplayControllerDxe/NvDisplayControllerDxe.inf
 !endif
+
 !ifdef CONFIG_ASPEED_2600_DISPLAY
   #
   # AST2600 VGA GOP Support
@@ -508,6 +509,17 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF NetworkPkg/HttpDxe/HttpDxe.inf
   INF NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
   INF NetworkPkg/HttpBootDxe/HttpBootDxe.inf
+!endif
+!endif
+
+  #
+  #  Marvell AQC113 NIC
+  #
+!ifdef CONFIG_NETWORKING_DEVICE_MARVELL
+!ifdef $(ENABLE_MARVELL)
+  FILE DRIVER = e587ef89-65c4-4a8b-8a42-eaa516d7a37d {
+    SECTION PE32 = AqNic/aqnicdxepkg/AArch64/aqnicdxe.efi
+  }
 !endif
 !endif
 

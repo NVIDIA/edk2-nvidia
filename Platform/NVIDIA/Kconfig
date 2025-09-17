@@ -1233,6 +1233,12 @@ depends on NETWORKING
     help
       Support for Realtek NICs
 
+    config NETWORKING_DEVICE_MARVELL
+    bool "Marvell NIC drivers"
+    help
+      Support for Marvell NICs.  In addition, the drivers must be acquired from
+      Marvell and "BLD_*_ENABLE_MARVELL=1" must be added as a build flag.
+
     config NETWORKING_DEVICE_ASIX
     bool "ASIX USB NIC"
     imply NEED_USB
