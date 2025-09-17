@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,8 +9,9 @@
 #ifndef _PHY_MGBE_H__
 #define _PHY_MGBE_H__
 
-#define PHY_AQR113C_OUI  0x31C31C12
-#define PHY_AQR113_OUI   0x31C31C42
+#define PHY_AQR113C_OUI   0x31C31C12
+#define PHY_AQR113C_OUI2  0x31C31C13
+#define PHY_AQR113_OUI    0x31C31C42
 
 /*
  * @brief Configure MGBE PHY

@@ -244,6 +244,7 @@ PhyConfig (
       break;
 
     case PHY_AQR113C_OUI:
+    case PHY_AQR113C_OUI2:
     case PHY_AQR113_OUI:
       PhyDriver->Config       = PhyMGBEConfig;
       PhyDriver->StartAutoNeg = PhyMGBEStartAutoNeg;
