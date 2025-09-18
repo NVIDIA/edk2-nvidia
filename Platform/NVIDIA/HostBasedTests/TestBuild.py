@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,7 @@ class HostBasedTestSettingsManager(NVIDIACiSettingsManager):
     def GetName(self):
         return "HostBasedTests"
 
-    def GetPackagesPath(self):
-        return super().GetPackagesPath() + [
+    def GetSourcePackagesPath(self):
+        return super().GetSourcePackagesPath() + [
             self.GetEdk2NvidiaDir() + "Platform/NVIDIA/"
         ]

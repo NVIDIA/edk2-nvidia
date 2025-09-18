@@ -113,38 +113,42 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         '''
         return str(Path(self.GetNvidiaConfigRoot()) / self.GetName())
 
-    def GetPackagesPath(self):
-        ''' Return paths that should be mapped as edk2 PACKAGE_PATH.
+    def GetSourcePackagesPath(self):
+        ''' Return package source paths that should be mapped as edk2 PACKAGE_PATH.
 
-            This is the list of directories, relative to the workspace, where
-            the build will look for packages.
+            This is the list of directories, relative to the workspace or
+            relative to uefi-source-dir, if provided, where the build will look
+            for packages.
+
+            Generally, subclasses will want to override this method to add
+            directories rather than override GetPackagesPath().
         '''
         # NOTE: These paths must use a trailing slash to ensure stuart treats
         # them properly when computing relative paths.
-        packages_paths = [path + "/" for path in self._insert_pkgs_paths]
+        source_packages_paths = [path + "/" for path in self._insert_pkgs_paths]
 
-        # The Conf directory needs to be in the package path as well.  Since we
-        # move it to a platform-specific directory, we'll need to add it here.
-        # We also need to create it now because Edk2Path verifies it exists.
-        confdir_name = self.GetConfDirName()
-        if confdir_name:
-            ws_dir = Path(self.GetWorkspaceRoot())
-            confdir_path = ws_dir / confdir_name
-            confdir_path.mkdir(parents=True, exist_ok=True)
-            packages_paths.append(confdir_name)
+        source_packages_paths.extend([
+            "edk2/BaseTools/", "edk2/", "edk2-platforms/", self.GetEdk2NvidiaDir(),
+            "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/",
+            "edk2-platforms/Features", "edk2-infineon/", "edk2-redfish-client/"
+        ])
+
+        return source_packages_paths
+
+    def GetPackagesPath(self):
+        ''' Return paths that should be mapped as edk2 PACKAGE_PATH.
+
+            This is the list of directorie where the build will look for
+            packages.  Directories can be relative or absolute.
+        '''
+        packages_paths = []
 
         # Get workspace directory for path checking
         ws_dir = Path(self.GetWorkspaceRoot())
 
-        # List of package paths to add
-        package_paths_to_add = [
-            "edk2/BaseTools/", "edk2/", "edk2-platforms/", self.GetEdk2NvidiaDir(),
-            "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/",
-            "edk2-platforms/Features", "edk2-infineon/", "edk2-redfish-client/"
-        ]
-
-        # Process each path: check if ws_dir + path exists, add relative path if exists, otherwise add under _uefi_source_dir
-        for path in package_paths_to_add:
+        # Process each path: check if ws_dir + path exists, add relative path
+        # if exists, otherwise add under _uefi_source_dir
+        for path in self.GetSourcePackagesPath():
             # Check if the path exists under the workspace directory
             full_path = ws_dir / path
             if full_path.exists():
@@ -163,8 +167,16 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
                 # Path doesn't exist and no uefi_source_dir, add as relative path anyway
                 packages_paths.append(path)
 
+        # The Conf directory needs to be in the package path as well.  Since we
+        # move it to a platform-specific directory, we'll need to add it here.
+        # We also need to create it now because Edk2Path verifies it exists.
+        confdir_name = self.GetConfDirName()
+        if confdir_name:
+            confdir_path = ws_dir / confdir_name
+            confdir_path.mkdir(parents=True, exist_ok=True)
+            packages_paths.append(confdir_name)
+
         if self.GetConfigFiles ():
-            ws_dir = Path(self.GetWorkspaceRoot())
             config_path = self.GetNvidiaConfigDir()
             config_fullpath = ws_dir / config_path
             config_fullpath.mkdir(parents=True, exist_ok=True)
