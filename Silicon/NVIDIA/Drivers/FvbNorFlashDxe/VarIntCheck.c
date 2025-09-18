@@ -25,11 +25,6 @@
 #define HEADER_SZ_BYTES    (1)
 #define MAX_VALID_RECORDS  (2)
 
-#if !defined (MDE_CPU_AARCH64) && !defined (MDE_CPU_ARM)
-#define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ   ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64
-#define ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP  ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP_AARCH64
-#endif
-
 typedef struct {
   CHAR16      *VarName;
   EFI_GUID    *VarGuid;

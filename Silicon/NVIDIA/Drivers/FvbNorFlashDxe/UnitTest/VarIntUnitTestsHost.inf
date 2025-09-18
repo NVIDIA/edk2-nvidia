@@ -22,7 +22,7 @@
 
 [Sources]
   VarIntUnitTestsHost.c
-  ../VarIntCheck.c
+  VarIntCheckWrapped.c
 
 [Packages]
   ArmPkg/ArmPkg.dec
