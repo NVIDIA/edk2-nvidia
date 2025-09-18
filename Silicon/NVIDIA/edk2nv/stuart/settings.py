@@ -74,7 +74,28 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             Don't assume it's named edk2-nvidia.  Instead, discover it relative
             to this python module.
         '''
-        return Path(__file__).parent.parent.parent.parent.parent.name + "/"
+        # Get the absolute path to the edk2-nvidia directory
+        edk2_nvidia_abs_path = Path(__file__).parent.parent.parent.parent.parent
+
+        # Check if edk2-nvidia exists in workspace first
+        ws_dir = Path(self.GetWorkspaceRoot())
+        workspace_edk2_nvidia = ws_dir / edk2_nvidia_abs_path.name
+        if workspace_edk2_nvidia.exists():
+            return edk2_nvidia_abs_path.name + "/"
+
+        # If not in workspace, try uefi_source_dir directory
+        if self._uefi_source_dir:
+            uefi_source_edk2_nvidia = Path(self._uefi_source_dir) / edk2_nvidia_abs_path.name
+            if uefi_source_edk2_nvidia.exists():
+                # Return relative path from workspace to uefi_source_dir/edk2-nvidia
+                try:
+                    return str(uefi_source_edk2_nvidia.relative_to(ws_dir)) + "/"
+                except ValueError:
+                    # If uefi_source_dir is not under workspace, return absolute path
+                    return str(uefi_source_edk2_nvidia) + "/"
+
+        # If not found in either location, return the absolute path
+        return str(edk2_nvidia_abs_path) + "/"
 
     def GetNvidiaConfigRoot(self):
         ''' Return the root, relative to the workspace root, where
@@ -112,11 +133,35 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             confdir_path.mkdir(parents=True, exist_ok=True)
             packages_paths.append(confdir_name)
 
-        packages_paths.extend([
+        # Get workspace directory for path checking
+        ws_dir = Path(self.GetWorkspaceRoot())
+
+        # List of package paths to add
+        package_paths_to_add = [
             "edk2/BaseTools/", "edk2/", "edk2-platforms/", self.GetEdk2NvidiaDir(),
             "edk2-nvidia-non-osi/", "edk2-non-osi", "edk2-platforms/Features/Intel/OutOfBandManagement/",
             "edk2-platforms/Features", "edk2-infineon/", "edk2-redfish-client/"
-        ])
+        ]
+
+        # Process each path: check if ws_dir + path exists, add relative path if exists, otherwise add under _uefi_source_dir
+        for path in package_paths_to_add:
+            # Check if the path exists under the workspace directory
+            full_path = ws_dir / path
+            if full_path.exists():
+                # Path exists under workspace, add as relative path
+                packages_paths.append(path)
+            elif self._uefi_source_dir:
+                # Path doesn't exist under workspace, check if it exists in UEFI_SOURCE
+                uefi_source_path = Path(self._uefi_source_dir) / path
+                if uefi_source_path.exists():
+                    # Always use absolute path for UEFI_SOURCE to avoid resolution issues
+                    packages_paths.append(str(uefi_source_path))
+                else:
+                    # Path doesn't exist in either location, skip it
+                    continue
+            else:
+                # Path doesn't exist and no uefi_source_dir, add as relative path anyway
+                packages_paths.append(path)
 
         if self.GetConfigFiles ():
             ws_dir = Path(self.GetWorkspaceRoot())
@@ -182,6 +227,10 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
             '--skip-verify', dest='skip_verify',
             help='Skip verification of dependencies.',
             action='store_true', default=False)
+        parserObj.add_argument(
+            '--uefi-source-dir', dest='uefi_source_dir', type=str,
+            help='The source directory for the UEFI firmware if not in workspace.',
+            action='store', default=None)
 
     def RetrieveCommandLineOptions(self, args):
         ''' Retrieve command line options from the argparser namespace '''
@@ -191,6 +240,7 @@ class AbstractNVIDIASettingsManager(UpdateSettingsManager,
         self._skipped_dirs = args.nvidia_skipped_dirs
         self._added_submodules = args.nvidia_submodules
         self._skip_verify = args.skip_verify
+        self._uefi_source_dir = args.uefi_source_dir
 
     #######################################
     # MultiPkgAwareSettingsInterface
