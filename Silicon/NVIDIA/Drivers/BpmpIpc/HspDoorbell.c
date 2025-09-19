@@ -12,21 +12,10 @@
 #include "HspDoorbellPrivate.h"
 #include <Library/IoLib.h>
 
-HSP_MASTER_ID  DoorbellToMaster[HspDoorbellMax] = {
-  HSP_MASTER_DPMU,
-  HSP_MASTER_CCPLEX,
-  HSP_MASTER_SECURE_CCPLEX,
-  HSP_MASTER_BPMP,
-  HSP_MASTER_SPE,
-  HSP_MASTER_SCE,
-  HSP_MASTER_APE,
-};
-
 /**
   This function allows for a remote IPC to the BPMP firmware to be executed.
 
-  @param[in]     DoorbellLocation    A pointer to HSP Doorbell address.
-  @param[in]     Doorbell            Doorbell to ring
+  @param[in]     DoorbellLocation    HSP Doorbell address.
 
   @return EFI_SUCCESS               The doorbell has been rung.
   @return EFI_UNSUPPORTED           The doorbell is not supported.
@@ -35,16 +24,11 @@ HSP_MASTER_ID  DoorbellToMaster[HspDoorbellMax] = {
 **/
 EFI_STATUS
 HspDoorbellRingDoorbell (
-  IN  EFI_PHYSICAL_ADDRESS  *DoorbellLocation,
-  IN  HSP_DOORBELL_ID       Doorbell
+  IN  EFI_PHYSICAL_ADDRESS  DoorbellLocation
   )
 {
-  if (Doorbell >= HspDoorbellMax) {
-    return EFI_UNSUPPORTED;
-  }
-
   if (0 == MmioBitFieldRead32 (
-             DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
+             DoorbellLocation + HSP_DB_REG_ENABLE,
              HSP_MASTER_CCPLEX,
              HSP_MASTER_CCPLEX
              ))
@@ -53,7 +37,7 @@ HspDoorbellRingDoorbell (
   }
 
   // Ring doorbell
-  MmioWrite32 (DoorbellLocation[Doorbell] + HSP_DB_REG_TRIGGER, 1);
+  MmioWrite32 (DoorbellLocation + HSP_DB_REG_TRIGGER, 1);
 
   return EFI_SUCCESS;
 }
@@ -61,8 +45,7 @@ HspDoorbellRingDoorbell (
 /**
   This function enables the channel for communication with the CCPLEX.
 
-  @param[in]     DoorbellLocation    A pointer to HSP Doorbell address.
-  @param[in]     Doorbell            Doorbell of the channel to enable
+  @param[in]     DoorbellLocation    HSP Doorbell address.
 
   @return EFI_SUCCESS               The channel is enabled.
   @return EFI_UNSUPPORTED           The channel is not supported.
@@ -70,29 +53,14 @@ HspDoorbellRingDoorbell (
 **/
 EFI_STATUS
 HspDoorbellEnableChannel (
-  IN  EFI_PHYSICAL_ADDRESS  *DoorbellLocation,
-  IN  HSP_DOORBELL_ID       Doorbell
+  IN  EFI_PHYSICAL_ADDRESS  DoorbellLocation
   )
 {
-  HSP_MASTER_ID  Master;
-  UINT32         Timeout = PcdGet32 (PcdHspDoorbellTimeout) / TIMEOUT_STALL_US;
-
-  if (Doorbell >= HspDoorbellMax) {
-    return EFI_UNSUPPORTED;
-  }
-
-  Master = DoorbellToMaster[Doorbell];
-
-  MmioBitFieldWrite32 (
-    DoorbellLocation[HspDoorbellCcplex] + HSP_DB_REG_ENABLE,
-    Master,
-    Master,
-    1
-    );
+  UINT32  Timeout = PcdGet32 (PcdHspDoorbellTimeout) / TIMEOUT_STALL_US;
 
   DEBUG ((DEBUG_ERROR, "%a: Waiting for HSP Doorbell Channel Enabled.\r\n", __FUNCTION__));
   while (0 == MmioBitFieldRead32 (
-                DoorbellLocation[Doorbell] + HSP_DB_REG_ENABLE,
+                DoorbellLocation + HSP_DB_REG_ENABLE,
                 HSP_MASTER_CCPLEX,
                 HSP_MASTER_CCPLEX
                 ))
@@ -133,7 +101,6 @@ HspDoorbellInit (
   )
 {
   EFI_PHYSICAL_ADDRESS   HspBase;
-  UINTN                  Index;
   HSP_DIMENSIONING_DATA  HspDimensioningData;
 
   // First resource must be MMIO
@@ -154,10 +121,7 @@ HspDoorbellInit (
   HspBase += HspDimensioningData.SharedSemaphores << HSP_SEMAPHORE_SHIFT_SIZE;     /* skip shared semaphores */
   HspBase += HspDimensioningData.ArbitratedSemaphores << HSP_SEMAPHORE_SHIFT_SIZE; /* skip arbitrated semaphores */
 
-  for (Index = HspDoorbellDpmu; Index < HspDoorbellMax; Index++) {
-    DoorbellLocation[Index] = HspBase;
-    HspBase                += PcdGet32 (PcdHspDoorbellRegionSize);
-  }
+  *DoorbellLocation = HspBase + (HSP_TARGET_BPMP_ID * PcdGet32 (PcdHspDoorbellRegionSize));
 
   return EFI_SUCCESS;
 }

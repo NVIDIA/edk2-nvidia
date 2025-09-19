@@ -22,24 +22,8 @@
 
 #define HSP_COMMON_REGION_SIZE  SIZE_64KB
 
-#define HSP_MASTER_SECURE_CCPLEX  1
-#define HSP_MASTER_CCPLEX         FixedPcdGet32 (PcdCcplexNsInitiatorId)
-#define HSP_MASTER_DPMU           18
-#define HSP_MASTER_BPMP           19
-#define HSP_MASTER_SPE            20
-#define HSP_MASTER_SCE            21
-#define HSP_MASTER_APE            27
-
-typedef enum {
-  HspDoorbellDpmu,
-  HspDoorbellCcplex,
-  HspDoorbellCcplexTz,
-  HspDoorbellBpmp,
-  HspDoorbellSpe,
-  HspDoorbellSce,
-  HspDoorbellApe,
-  HspDoorbellMax
-} HSP_DOORBELL_ID;
+#define HSP_TARGET_BPMP_ID  3
+#define HSP_MASTER_CCPLEX   FixedPcdGet32 (PcdCcplexNsInitiatorId)
 
 typedef UINT32 HSP_MASTER_ID;
 
@@ -71,15 +55,14 @@ typedef struct {
   UINT32                  Signature;
 
   //
-  // Array of the doorbell locations
-  EFI_PHYSICAL_ADDRESS    DoorbellLocation[HspDoorbellMax];
+  // Doorbell location
+  EFI_PHYSICAL_ADDRESS    DoorbellLocation;
 } NVIDIA_HSP_DOORBELL_PRIVATE_DATA;
 
 /**
   This function allows for a remote IPC to the BPMP firmware to be executed.
 
-  @param[in]     DoorbellLocation    A pointer to HSP Doorbell address.
-  @param[in]     Doorbell            Doorbell to ring
+  @param[in]     DoorbellLocation    HSP Doorbell address.
 
   @return EFI_SUCCESS               The doorbell has been rung.
   @return EFI_UNSUPPORTED           The doorbell is not supported.
@@ -88,15 +71,13 @@ typedef struct {
 **/
 EFI_STATUS
 HspDoorbellRingDoorbell (
-  IN  EFI_PHYSICAL_ADDRESS  *DoorbellLocation,
-  IN  HSP_DOORBELL_ID       Doorbell
+  IN  EFI_PHYSICAL_ADDRESS  DoorbellLocation
   );
 
 /**
   This function enables the channel for communication with the CCPLEX.
 
-  @param[in]     DoorbellLocation    A pointer to HSP Doorbell address.
-  @param[in]     Doorbell            Doorbell of the channel to enable
+  @param[in]     DoorbellLocation    HSP Doorbell address.
 
   @return EFI_SUCCESS               The channel is enabled.
   @return EFI_UNSUPPORTED           The channel is not supported.
@@ -104,8 +85,7 @@ HspDoorbellRingDoorbell (
 **/
 EFI_STATUS
 HspDoorbellEnableChannel (
-  IN  EFI_PHYSICAL_ADDRESS  *DoorbellLocation,
-  IN  HSP_DOORBELL_ID       Doorbell
+  IN  EFI_PHYSICAL_ADDRESS  DoorbellLocation
   );
 
 /**

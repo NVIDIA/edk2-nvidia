@@ -82,7 +82,7 @@ typedef struct {
 
   UINT32                  HspPhandle;
 
-  EFI_PHYSICAL_ADDRESS    HspDoorbellLocation[HspDoorbellMax];
+  EFI_PHYSICAL_ADDRESS    HspDoorbellLocation;
 } NVIDIA_BPMP_MRQ_CHANNEL;
 
 typedef struct {

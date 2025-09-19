@@ -193,10 +193,10 @@ ProcessTransaction (
   PrivateData->Channels[CIndex].TxChannel->WriteCount++;
   ArmDataMemoryBarrier ();
 
-  Status = HspDoorbellRingDoorbell (
-             PrivateData->Channels[CIndex].HspDoorbellLocation,
-             HspDoorbellBpmp
-             );
+  Status = HspDoorbellRingDoorbell (PrivateData->Channels[CIndex].HspDoorbellLocation);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
+  }
 
   // Wait for done
   if (!Transaction->Blocking) {
@@ -489,10 +489,7 @@ MoveTxChannelState (
   ArmDataMemoryBarrier ();
 
   PrivateData->TxChannel->State = State;
-  Status                        = HspDoorbellRingDoorbell (
-                                    PrivateData->HspDoorbellLocation,
-                                    HspDoorbellBpmp
-                                    );
+  Status                        = HspDoorbellRingDoorbell (PrivateData->HspDoorbellLocation);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to ring doorbell: %r\r\n", __FUNCTION__, Status));
   }
@@ -704,13 +701,13 @@ BpmpIpcProtocolInit (
       goto ErrorExit;
     }
 
-    Status = HspDoorbellInit (&HspNodeInfo[HspIndex], &HspDevice[HspIndex], PrivateData->Channels[Index].HspDoorbellLocation);
+    Status = HspDoorbellInit (&HspNodeInfo[HspIndex], &HspDevice[HspIndex], &PrivateData->Channels[Index].HspDoorbellLocation);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a, Failed to initialize Hsp Doorbell: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
     }
 
-    Status = HspDoorbellEnableChannel (PrivateData->Channels[Index].HspDoorbellLocation, HspDoorbellBpmp);
+    Status = HspDoorbellEnableChannel (PrivateData->Channels[Index].HspDoorbellLocation);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a, Failed to enable Hsp Doorbell channel: %r\n", __FUNCTION__, Status));
       goto ErrorExit;
