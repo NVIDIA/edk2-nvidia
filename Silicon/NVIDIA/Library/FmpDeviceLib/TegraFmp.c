@@ -1153,7 +1153,7 @@ FmpTegraCheckImage (
   UINTN                        Index;
   UINTN                        ImageCount;
   CHAR16                       SingleImageNameBuffer[FW_IMAGE_NAME_LENGTH];
-  CONST CHAR16                 *SingleImageName;
+  CONST CHAR16                 *SingleImageName = NULL;
   NVIDIA_FW_IMAGE_PROTOCOL     **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
@@ -1279,7 +1279,10 @@ FmpTegraCheckImage (
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
 
-    if ((ImageCount == 1) && (StrCmp (ImageName, SingleImageName) != 0)) {
+    if ((ImageCount == 1) &&
+        (SingleImageName != NULL) &&
+        (StrCmp (ImageName, SingleImageName) != 0))
+    {
       continue;
     }
 
