@@ -967,6 +967,9 @@ FvNameGuid         = $(PLATFORM_GUID)
 !ifdef CONFIG_BUILD_ANDROID
   INF Silicon/NVIDIA/Drivers/MmCommunicateNullDxe/MmCommunicateNull.inf
 !endif
+!ifdef CONFIG_SECURITY_MM_FFA_v1_2
+  INF ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf
+!endif
 
   #
   # TPM

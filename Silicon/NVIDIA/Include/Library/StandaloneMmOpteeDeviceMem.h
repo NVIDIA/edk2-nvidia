@@ -47,6 +47,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 /* This is based on the FF-A 1.0 EAC specification */
 #define FFA_OK  0
 
+#define GET_MM_NS_BUFFER_FID  0x1
+
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 #define NVPT_PATITION_NAME_MAX_LEN  36
 #define NVPT_HEADER_MAGIC           0x706172748F9E8D8B

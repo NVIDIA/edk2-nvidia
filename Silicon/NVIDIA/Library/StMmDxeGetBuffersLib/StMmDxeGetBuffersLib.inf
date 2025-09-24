@@ -1,0 +1,48 @@
+## @file
+# Library to get the address of shared buffers from StandaloneMm.
+# This will only work in deployments that support FF-A v1.2 spec version.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StMmDxeGetBuffersLib
+  FILE_GUID                      = 4e40929c-3e11-48d1-9a59-e422b28c8e29
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = StMmDxeGetBuffersLib
+
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  StMmDxeGetBuffersLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  BaseMemoryLib
+  ArmFfaLib
+  ArmSmcLib
+  UefiLib
+
+[Pcd]
+
+[Protocols]
+
+[Guids]
+  gNVIDIAStandaloneMmBuffersGuid

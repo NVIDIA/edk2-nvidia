@@ -195,6 +195,8 @@ menu "Security options"
   bool
   config DEFAULT_SECURITY_MM_OPTEE
   bool
+  config DEFAULT_SECURITY_MM_FFA_v1_2
+  bool
 
   choice SECURITY_MM_TYPE
     prompt "UEFI MM Type"
@@ -204,6 +206,7 @@ menu "Security options"
     default SECURITY_MM_NONE if DEFAULT_SECURITY_MM_NONE
     default SECURITY_MM_FFA if DEFAULT_SECURITY_MM_FFA
     default SECURITY_MM_OPTEE if DEFAULT_SECURITY_MM_OPTEE
+    default SECURITY_MM_FFA_v1_2 if DEFAULT_SECURITY_MM_FFA_v1_2
 
     config SECURITY_MM_NONE
     bool "Not supported"
@@ -219,6 +222,11 @@ menu "Security options"
     bool "OPTEE"
     help
       UEFI MM with OPTEE support
+
+    config SECURITY_MM_FFA_v1_2
+    bool "FFA v1.2"
+    help
+      UEFI MM with FFA v1.2 support
   endchoice
 
   if SECURITY_MM_FFA
@@ -230,10 +238,10 @@ menu "Security options"
 
   config SECURITY_MM_SUPPORT
   bool
-  default y if (SECURITY_MM_FFA || SECURITY_MM_OPTEE)
+  default y if (SECURITY_MM_FFA || SECURITY_MM_OPTEE || SECURITY_MM_FFA_v1_2)
 
-  comment "INVALID CONFIG - only one of SECURITY_MM_[FFA|OPTEE] can be chosen"
-  depends on SECURITY_MM_FFA && SECURITY_MM_OPTEE
+  comment "INVALID CONFIG - only one of SECURITY_MM_[FFA|OPTEE|FFA_v1_2] can be chosen"
+  depends on SECURITY_MM_FFA && SECURITY_MM_OPTEE && SECURITY_MM_FFA_v1_2
 
   config SECURITY_PHYSICAL_PRESENCE
   bool "Physical Presence forced"

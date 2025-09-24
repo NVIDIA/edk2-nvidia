@@ -173,6 +173,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   ArmTrngLib|ArmPkg/Library/ArmTrngLib/ArmTrngLib.inf
   ArmMonitorLib|ArmPkg/Library/ArmMonitorLib/ArmMonitorLib.inf
   ArmHvcLib|ArmPkg/Library/ArmHvcLib/ArmHvcLib.inf
+  ArmFfaLib|MdeModulePkg/Library/ArmFfaLib/ArmFfaDxeLib.inf
 
   # ARM Architectural Libraries
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
@@ -538,6 +539,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   NctLib|Silicon/NVIDIA/Library/NctLib/NctLib.inf
 
   ProtocolHelperLib|Silicon/NVIDIA/Library/ProtocolHelperLib/ProtocolHelperLib.inf
+  StMmDxeGetBuffersLib|Silicon/NVIDIA/Library/StMmDxeGetBuffersLib/StMmDxeGetBuffersLib.inf
 
 [LibraryClasses.common.SEC]
   DebugAgentLib|ArmPkg/Library/DebugAgentSymbolsBaseLib/DebugAgentSymbolsBaseLib.inf
@@ -1271,6 +1273,14 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 
 !ifdef CONFIG_SECURITY_MM_FFA
+  ## MM Communicate
+  ## Used for FFA boots with part of the boot chain skipped
+  gArmTokenSpaceGuid.PcdMmBufferBase|0x8B5FE000
+  gArmTokenSpaceGuid.PcdMmBufferSize|0x20000
+!endif
+
+
+!ifdef CONFIG_SECURITY_MM_FFA_v1_2
   ## MM Communicate
   ## Used for FFA boots with part of the boot chain skipped
   gArmTokenSpaceGuid.PcdMmBufferBase|0x8B5FE000
@@ -2891,6 +2901,16 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Drivers/MmCommunicateNullDxe/MmCommunicateNull.inf {
     <LibraryClasses>
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+  }
+!endif
+!ifdef CONFIG_SECURITY_MM_FFA_v1_2
+  ArmPkg/Drivers/MmCommunicationDxe/MmCommunication.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/StandaloneMmFfav12Lib/StandaloneMmFfaV12Lib.inf
+      ArmSvcLib|MdePkg/Library/ArmSvcLib/ArmSvcLib.inf
+      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
 !endif
 

@@ -1,0 +1,51 @@
+## @file
+# Library for MmCommunicateDxe Driver in FFAv1.2
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = StandaloneMmFfav12Lib
+  FILE_GUID                      = b8759680-4f12-48ba-98eb-d86cbe85c50e
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = StandaloneMmFfav12Lib
+  CONSTRUCTOR                    = StandaloneMmFfav12LibConstructor
+
+#
+#  VALID_ARCHITECTURES           = ARM AARCH64
+#
+
+[Sources]
+  StandaloneMmFfaV12Lib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  ArmPkg/ArmPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  BaseMemoryLib
+  StMmDxeGetBuffersLib
+  UefiLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdMmBufferBase
+  gArmTokenSpaceGuid.PcdMmBufferSize
+
+[Protocols]
+  gEfiMmCommunication2ProtocolGuid
+
+[Guids]
+  gNVIDIAStandaloneMmBuffersGuid
+
