@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -363,8 +363,6 @@ GetAndPrintManifestinformation (
   INT32       NodeOffset     = 0;
   INT32       PrevNodeOffset = 0;
   CONST VOID  *NodeName;
-  UINT64      FfaRxBufferAddr, FfaTxBufferAddr;
-  UINT32      FfaRxBufferSize, FfaTxBufferSize;
   UINT32      ReservedPagesSize;
   UINT64      LoadAddress;
   UINT64      SPMemoryLimit;
@@ -463,11 +461,11 @@ GetAndPrintManifestinformation (
 
       NsRegionIndex++;
     } else if (AsciiStrCmp (NodeName, "rx-buffer") == 0) {
-      FfaRxBufferAddr = RegionAddress;
-      FfaRxBufferSize = RegionSize;
+      StmmCommBuffers.FfaRxBufferAddr = RegionAddress;
+      StmmCommBuffers.FfaRxBufferSize = RegionSize;
     } else if (AsciiStrCmp (NodeName, "tx-buffer") == 0) {
-      FfaTxBufferAddr = RegionAddress;
-      FfaTxBufferSize = RegionSize;
+      StmmCommBuffers.FfaTxBufferAddr = RegionAddress;
+      StmmCommBuffers.FfaTxBufferSize = RegionSize;
     } else if (AsciiStrCmp (NodeName, "stmmsec-memory") == 0) {
       StmmCommBuffers.SecBufferAddr = RegionAddress;
       StmmCommBuffers.SecBufferSize = RegionSize;
@@ -512,10 +510,10 @@ GetAndPrintManifestinformation (
   DEBUG ((DEBUG_ERROR, "  SP image size   = 0x%llx \n", PayloadBootInfo.SpImageSize));
   DEBUG ((DEBUG_ERROR, "SP mem limit      = 0x%llx \n", PayloadBootInfo.SpMemLimit));
   DEBUG ((DEBUG_ERROR, "Core-Heap limit   = 0x%llx \n", PayloadBootInfo.SpMemLimit + ReservedPagesSize));
-  DEBUG ((DEBUG_ERROR, "FFA rx buf base   = 0x%llx \n", FfaRxBufferAddr));
-  DEBUG ((DEBUG_ERROR, "FFA rx buf size   = 0x%llx \n", FfaRxBufferSize));
-  DEBUG ((DEBUG_ERROR, "FFA tx buf base   = 0x%llx \n", FfaTxBufferAddr));
-  DEBUG ((DEBUG_ERROR, "FFA tx buf size   = 0x%llx \n", FfaTxBufferSize));
+  DEBUG ((DEBUG_ERROR, "FFA rx buf base   = 0x%llx \n", StmmCommBuffers.FfaRxBufferAddr));
+  DEBUG ((DEBUG_ERROR, "FFA rx buf size   = 0x%llx \n", StmmCommBuffers.FfaRxBufferSize));
+  DEBUG ((DEBUG_ERROR, "FFA tx buf base   = 0x%llx \n", StmmCommBuffers.FfaTxBufferAddr));
+  DEBUG ((DEBUG_ERROR, "FFA tx buf size   = 0x%llx \n", StmmCommBuffers.FfaTxBufferSize));
   DEBUG ((DEBUG_ERROR, "Driver-Heap base  = 0x%llx \n", PayloadBootInfo.SpHeapBase));
   DEBUG ((DEBUG_ERROR, "Driver-Heap size  = 0x%llx \n", PayloadBootInfo.SpHeapSize));
   DEBUG ((DEBUG_ERROR, "SP real mem limit = 0x%llx \n", SPMemoryLimit));
@@ -535,7 +533,7 @@ GetAndPrintManifestinformation (
   DEBUG ((DEBUG_ERROR, "StmmNsPRM0 buf size = 0x%llx \n", StmmCommBuffers.NsPrm0BufferSize));
 
   /* Core will take all the memory from SpMemBase to CoreHeapLimit and should not reach the first memory-region */
-  ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= FfaRxBufferAddr);
+  ASSERT ((PayloadBootInfo.SpMemLimit + ReservedPagesSize) <= StmmCommBuffers.FfaRxBufferAddr);
 
   if (ADDRESS_IN_RANGE (
         PayloadBootInfo.SpNsRegions[0].DeviceRegionStart,
@@ -963,9 +961,9 @@ GetSpmVersion (
   if (FeaturePcdGet (PcdFfaEnable)) {
     SpmVersionArgs.Arg0  = ARM_SVC_ID_FFA_VERSION_AARCH32;
     SpmVersionArgs.Arg1  = mSpmMajorVerFfa << SPM_MAJOR_VER_SHIFT;
-    SpmVersionArgs.Arg1 |= mSpmMinorVerFfa;
+    SpmVersionArgs.Arg1 |= (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
     CallerSpmMajorVer    = mSpmMajorVerFfa;
-    CallerSpmMinorVer    = mSpmMinorVerFfa;
+    CallerSpmMinorVer    = (FeaturePcdGet (PcdFfaMinorV2Supported) ? 2 : 1);
   } else {
     SpmVersionArgs.Arg0 = ARM_SVC_ID_SPM_VERSION_AARCH32;
     CallerSpmMajorVer   = mSpmMajorVer;

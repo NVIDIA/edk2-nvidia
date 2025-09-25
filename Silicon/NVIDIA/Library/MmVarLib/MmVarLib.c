@@ -2,7 +2,7 @@
   The StMM Library provides functions to get EFI Variables. This is meant for use from
   StMM Drivers and Libraries.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -101,7 +101,7 @@ DoesVariableExist (
     }
   } else {
     DEBUG ((
-      DEBUG_ERROR,
+      DEBUG_INFO,
       "Var %s Doesn't exist %r\n",
       Name,
       Status

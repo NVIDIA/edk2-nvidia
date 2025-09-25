@@ -65,11 +65,13 @@
 
 [FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable
+  gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS = -fpie

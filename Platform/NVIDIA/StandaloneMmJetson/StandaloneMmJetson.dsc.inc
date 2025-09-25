@@ -23,6 +23,8 @@
   ResetSystemLib|MdeModulePkg/Library/BaseResetSystemLibNull/BaseResetSystemLibNull.inf
   DebugLogScratchRegLib|Silicon/NVIDIA/Library/DebugLogScratchRegLibNull/DebugLogScratchRegLibNull.inf
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T26xPlatformResourceLib.inf
+  VarSetCallbacksLib|Silicon/NVIDIA/Library/VarSetCallbacksLib/VarSetCallbacksLib.inf
+
 [LibraryClasses.common.MM_STANDALONE]
 
 ################################################################################
@@ -42,6 +44,8 @@
   gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
 
 [PcdsFeatureFlag]
+ gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
+ gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|TRUE
 
 [PcdsPatchableInModule]
 

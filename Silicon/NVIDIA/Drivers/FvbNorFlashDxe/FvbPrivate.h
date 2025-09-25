@@ -2,7 +2,7 @@
 
   Fvb Driver Private Data
 
-  SPDX-FileCopyrightText: Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -38,6 +38,7 @@
 #define UEFI_VARIABLE_PARTITION_NAME  L"uefi_variables"
 #define FTW_PARTITION_NAME            L"uefi_ftw"
 #define RESERVED_PARTITION_NAME       L"reserved_partition"
+#define UEFI_VAR_MEAS_PARTITION       L"uefi_var_measurement"
 #define NVIDIA_FVB_SIGNATURE          SIGNATURE_32('N','F','V','B')
 #define NVIDIA_FWB_SIGNATURE          SIGNATURE_32('N','F','W','B')
 #define NVIDIA_FSB_SIGNATURE          SIGNATURE_32('N','F','S','B')
