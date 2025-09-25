@@ -510,6 +510,9 @@
 #User Authentication for BIOS Setup Menu feature - This PCD specifies whether StatusCode is reported via USB3 Serial port.
   gUserAuthFeaturePkgTokenSpaceGuid.PcdUserAuthenticationFeatureEnable|FALSE|BOOLEAN|0x00000103
 
+# Supported FFA Version
+  gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported|FALSE|BOOLEAN|0x0000016A
+
 #Debug HII Menu support
   gNVIDIATokenSpaceGuid.PcdDebugMenuSupport|FALSE|BOOLEAN|0x00000105
 
