@@ -8,7 +8,10 @@
 **/
 #include <Library/MmServicesTableLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
+#include "Base.h"
 #include "FvbPrivate.h"
+#include "Library/DebugLib.h"
+#include "Library/MemoryAllocationLib.h"
 #include <Guid/ImageAuthentication.h>
 #include <Protocol/SmmVariable.h>
 #include <IndustryStandard/Tpm20.h>
@@ -41,6 +44,9 @@ NVIDIA_VAR_INT_PROTOCOL  *VarIntProto = NULL;
 STATIC MEASURE_REC_TYPE  *LastMeasurements[MAX_VALID_RECORDS];
 STATIC UINT8             *CurMeas;
 STATIC CONST UINT16      VarAuthTa = 5U;
+STATIC UINT16            OpteeVmId = 0;
+STATIC UINT16            MmVmId    = 0;
+STATIC UINT64            FfaHandle = 0;
 
 STATIC MEASURE_VAR_TYPE  SecureVars[] = {
   { EFI_SECURE_BOOT_MODE_NAME,    &gEfiGlobalVariableGuid        },
@@ -49,6 +55,22 @@ STATIC MEASURE_VAR_TYPE  SecureVars[] = {
   { EFI_IMAGE_SECURITY_DATABASE,  &gEfiImageSecurityDatabaseGuid },
   { EFI_IMAGE_SECURITY_DATABASE1, &gEfiImageSecurityDatabaseGuid }
 };
+
+STATIC
+VOID
+PrintMeas (
+  IN UINT8  *Meas,
+  IN UINTN  Size
+  )
+{
+  DEBUG_CODE_BEGIN ();
+  for (int i = 0; i < Size - 1; i++) {
+    DEBUG ((DEBUG_INFO, "PrintMeas: Meas[%d] 0x%x  ", i, Meas[i]));
+  }
+
+  DEBUG ((DEBUG_INFO, "\n"));
+  DEBUG_CODE_END ();
+}
 
 STATIC
 BOOLEAN
@@ -61,8 +83,62 @@ IsDigitCharacter (
 }
 
 /*
- * SendOptee Cmd
- * Send a command to the Jetson User Key PTA to get the measurement signed.
+ * FfaInit
+ * Initialize the FFA communication with the Optee VM.
+ * Use the FFA_SHARE_MEM_REQ_64/32 to share the memory with the Optee VM.
+ *
+ * @param[out] OpteeVmId  Optee VM ID.
+ *
+ */
+STATIC
+EFI_STATUS
+FfaInit (
+  IN NVIDIA_VAR_INT_PROTOCOL  *VarInt
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      FfaTxBufferAddr;
+  UINT32      FfaTxBufferSize;
+  UINT64      FfaRxBufferAddr;
+  UINT32      FfaRxBufferSize;
+  UINT32      TotalLength;
+
+  Status = FfaGetOpteeVmId (&OpteeVmId);
+  ASSERT_EFI_ERROR (Status);
+
+  Status = FfaGetMmVmId (&MmVmId);
+  ASSERT_EFI_ERROR (Status);
+
+  Status = FfaGetTxRxBuffer (&FfaTxBufferAddr, &FfaTxBufferSize, &FfaRxBufferAddr, &FfaRxBufferSize);
+  ASSERT_EFI_ERROR (Status);
+
+  DEBUG ((DEBUG_ERROR, "FfaTxBufferAddr: 0x%lx\n", FfaTxBufferAddr));
+  DEBUG ((DEBUG_ERROR, "FfaTxBufferSize: 0x%x\n", FfaTxBufferSize));
+  DEBUG ((DEBUG_ERROR, "FfaRxBufferAddr: 0x%lx\n", FfaRxBufferAddr));
+  DEBUG ((DEBUG_ERROR, "FfaRxBufferSize: 0x%x\n", FfaRxBufferSize));
+
+  Status = PrepareFfaMemoryDescriptor (
+             FfaTxBufferAddr,
+             FfaTxBufferSize,
+             VarInt->CurMeasurement,
+             VarInt->MeasurementSize,
+             MmVmId,
+             OpteeVmId,
+             &TotalLength
+             );
+  ASSERT_EFI_ERROR (Status);
+
+  Status = FfaSendShareCommand (TotalLength, TotalLength, FfaTxBufferAddr, EFI_SIZE_TO_PAGES (VarInt->MeasurementSize), &FfaHandle);
+  ASSERT_EFI_ERROR (Status);
+
+  return Status;
+}
+
+/*
+ * SendOpteeFfaCmd
+ * Send a command to the Optee VM to get the measurement signed.
+ * This function is for deployments where StMM is run as Optee TA, the message
+ * is sent to the Optee PTA.
  *
  * @param[in,out] Meas  Measurement buffer to be signed.
  * @param[in]     Size  Size of the measurement.
@@ -72,7 +148,71 @@ IsDigitCharacter (
  */
 STATIC
 EFI_STATUS
-SendOpteeCmd (
+SendFfaCmd (
+  IN OUT UINT8   *Meas,
+  IN     UINT32  Size
+  )
+{
+  EFI_STATUS    Status;
+  UINT16        OpteeVmId;
+  ARM_SVC_ARGS  SvcArgs;
+  UINT16        MmId = 0x8002;
+
+  Status = FfaGetOpteeVmId (&OpteeVmId);
+  ASSERT_EFI_ERROR (Status);
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+
+  SvcArgs.Arg0 = ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ_AARCH64;
+  SvcArgs.Arg1 = OpteeVmId | MmId << 16;
+  SvcArgs.Arg2 = 0;
+  SvcArgs.Arg3 = OPTEE_FFA_SERVICE_ID;
+  SvcArgs.Arg4 = OPTEE_FFA_SIGN_FID;
+  SvcArgs.Arg5 = Size;
+  SvcArgs.Arg6 = FfaHandle;
+
+  PrintMeas (Meas, Size);
+  DEBUG ((DEBUG_INFO, "SendFfaCmd: Sending COMMAND to OPTEE VM ID 0x%x\n", OpteeVmId));
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 == ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP)) {
+    Status = EFI_SUCCESS;
+    DEBUG ((DEBUG_INFO, "Command successful\n"));
+    DEBUG ((DEBUG_INFO, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
+    DEBUG ((DEBUG_INFO, "SvcArgs.Arg4 0x%lx Arg5 0x%lx Arg6 0x%lx Arg7 0x%lx\n", SvcArgs.Arg4, SvcArgs.Arg5, SvcArgs.Arg6, SvcArgs.Arg7));
+
+    PrintMeas (Meas, Size);
+  } else {
+    Status = EFI_UNSUPPORTED;
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: FFA Command failed 0x%x\n",
+      __FUNCTION__,
+      SvcArgs.Arg0
+      ));
+    DEBUG ((DEBUG_ERROR, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
+    DEBUG ((DEBUG_ERROR, "SvcArgs.Arg4 0x%lx Arg5 0x%lx Arg6 0x%lx Arg7 0x%lx\n", SvcArgs.Arg4, SvcArgs.Arg5, SvcArgs.Arg6, SvcArgs.Arg7));
+  }
+
+  return Status;
+}
+
+/*
+ * SendOpteeFfaCmd
+ * Send a command to the Optee VM to get the measurement signed.
+ * This function is for deployments where StMM is run as Optee TA, the message
+ * is sent to the Optee PTA.
+ *
+ * @param[in,out] Meas  Measurement buffer to be signed.
+ * @param[in]     Size  Size of the measurement.
+ *
+ * @result  EFI_SUCCESS Succesfully signed the measurement
+ *          Other       Optee PTA returned failure.
+ */
+STATIC
+EFI_STATUS
+SendOpteeFfaCmd (
   IN OUT UINT8   *Meas,
   IN     UINT32  Size
   )
@@ -99,6 +239,34 @@ SendOpteeCmd (
       __FUNCTION__,
       SvcArgs.Arg3
       ));
+  }
+
+  return Status;
+}
+
+/*
+ * SendOptee Cmd
+ * Send a command to the Jetson User Key PTA to get the measurement signed.
+ *
+ * @param[in,out] Meas  Measurement buffer to be signed.
+ * @param[in]     Size  Size of the measurement.
+ *
+ * @result  EFI_SUCCESS Succesfully signed the measurement
+ *          Other       Optee PTA returned failure.
+ */
+STATIC
+EFI_STATUS
+SendOpteeCmd (
+  IN OUT UINT8   *Meas,
+  IN     UINT32  Size
+  )
+{
+  EFI_STATUS  Status;
+
+  if (IsOpteePresent ()) {
+    Status = SendOpteeFfaCmd (Meas, Size);
+  } else {
+    Status = SendFfaCmd (Meas, Size);
   }
 
   return Status;
@@ -198,7 +366,7 @@ GetMeasurementSize (
   EFI_STATUS  Status;
 
   Status    = EFI_SUCCESS;
-  *MeasSize = HEADER_SZ_BYTES;
+  *MeasSize = 0;
   switch (PcdGet32 (PcdHashApiLibPolicy)) {
     case HASH_ALG_SHA256:
     case HASH_ALG_SM3_256:
@@ -328,6 +496,8 @@ PartitionWrite (
     goto ExitPartitionWrite;
   }
 
+  DEBUG ((DEBUG_INFO, "PartitionWrite: Buffer 0x%lx Size %u\n", Buffer, Size));
+  PrintMeas (Buffer, Size);
   /* Update the Partition Data*/
   CopyMem ((This->PartitionData + BufferOffset), Buffer, Size);
 
@@ -924,7 +1094,7 @@ InitPartition (
   UINT64      WriteOffset;
 
   if (VarInt->CurMeasurement[0] == FVB_ERASED_BYTE) {
-    DEBUG ((DEBUG_INFO, "Initializing Partition\n"));
+    DEBUG ((DEBUG_ERROR, "Initializing Partition\n"));
     VarInt->CurMeasurement[0] = VAR_INT_VALID;
     Status                    = GetWriteOffset (VarInt, &WriteOffset);
     if (EFI_ERROR (Status)) {
@@ -1141,6 +1311,8 @@ VarIntValidate (
   for (Index = 0; Index < NumValidRecords; Index++) {
     ReadMeas = LastMeasurements[Index];
 
+    DEBUG ((DEBUG_INFO, "ReadMeas: 0x%lx\n", ReadMeas));
+    PrintMeas (ReadMeas->Measurement, This->MeasurementSize);
     if (CompareMem (Meas, &ReadMeas->Measurement[1], (This->MeasurementSize - 1)) == 0) {
       Matched = TRUE;
       DEBUG ((
@@ -1156,7 +1328,7 @@ VarIntValidate (
       Status = EFI_SUCCESS;
     } else {
       DEBUG ((
-        DEBUG_ERROR,
+        DEBUG_INFO,
         " %a:ERROR Failed to match Stored Measurement with computed.\n",
         __FUNCTION__
         ));
@@ -1261,7 +1433,7 @@ VarIntInit (
   }
 
   DEBUG ((
-    DEBUG_INFO,
+    DEBUG_ERROR,
     "%a: Partition Start 0x%lx %lu Size %u\n",
     __FUNCTION__,
     PartitionStartOffset,
@@ -1277,7 +1449,7 @@ VarIntInit (
   VarIntProto->Validate              = VarIntValidate;
   VarIntProto->NorFlashProtocol      = NorFlashProto;
   VarIntProto->MeasurementSize       = MeasSize + HEADER_SZ_BYTES;
-  VarIntProto->CurMeasurement        = AllocateRuntimeZeroPool (MeasSize);
+  VarIntProto->CurMeasurement        = AllocateAlignedPages (EFI_SIZE_TO_PAGES (MeasSize), EFI_PAGE_SIZE);
   if (VarIntProto->CurMeasurement == NULL) {
     DEBUG ((
       DEBUG_ERROR,
@@ -1350,6 +1522,11 @@ VarIntInit (
   if (CurMeas == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Not Enough Resources to allocate Buffer\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  if (!IsOpteePresent ()) {
+    Status = FfaInit (VarIntProto);
     ASSERT_EFI_ERROR (Status);
   }
 

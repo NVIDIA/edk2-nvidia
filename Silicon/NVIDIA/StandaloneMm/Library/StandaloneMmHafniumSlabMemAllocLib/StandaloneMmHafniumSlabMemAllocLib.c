@@ -2,7 +2,7 @@
   Memory Allocation Library instance dedicated to running before the HOBs are setup and
   specifically meant during the early StMM boot to setup the MMU translations.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -58,8 +58,8 @@ AllocatePagesFromSlab (
   AllocatedPages      += RequestedPages;
   LastAllocatedSlabPtr = SlabPointer;
 
-  DEBUG ((DEBUG_ERROR, "%a: Allocated %u Pages Max-Pages %u \n", __FUNCTION__, AllocatedPages, MaxPages));
-  DEBUG ((DEBUG_ERROR, "%a: SlabPointer %p LastAllocated %p \n", __FUNCTION__, AllocationSlab, LastAllocatedSlabPtr));
+  DEBUG ((DEBUG_INFO, "%a: Allocated %u Pages Max-Pages %u \n", __FUNCTION__, AllocatedPages, MaxPages));
+  DEBUG ((DEBUG_INFO, "%a: SlabPointer %p LastAllocated %p \n", __FUNCTION__, AllocationSlab, LastAllocatedSlabPtr));
   return SlabPointer;
 }
 
@@ -73,7 +73,7 @@ AllocatePagesSlabMmSt (
   VOID                  *Buf;
 
   if (gMmst != NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: MmSt Allocate %u Pages \n", __FUNCTION__, Pages));
+    DEBUG ((DEBUG_INFO, "%a: MmSt Allocate %u Pages \n", __FUNCTION__, Pages));
     gMmst->MmAllocatePages (AllocateAnyPages, EfiRuntimeServicesData, Pages, &Memory);
     Buf = (VOID *)Memory;
   } else {

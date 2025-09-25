@@ -416,7 +416,7 @@ FvbWrite (
   if (CheckVarStoreIntegrity == TRUE) {
     if (VarInt->CurMeasurement[0] == FVB_ERASED_BYTE) {
       DEBUG ((
-        DEBUG_ERROR,
+        DEBUG_INFO,
         "%a: Writing Measurement 0x%x\n",
         __FUNCTION__,
         VarInt->CurMeasurement[0]
@@ -1487,6 +1487,20 @@ FvbInitializeGpt (
     if (PartitionEntry != NULL) {
       *ResvdPartitionOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
       *ResvdPartitionSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+    } else {
+      DEBUG ((DEBUG_INFO, "Reserved partition not found Trying uefi_var_measurement\r\n"));
+      PartitionEntry = GptFindPartitionByName (
+                         &PartitionHeader,
+                         PartitionEntryArray,
+                         UEFI_VAR_MEAS_PARTITION
+                         );
+      if (PartitionEntry != NULL) {
+        *ResvdPartitionOffset = PartitionEntry->StartingLBA * GPT_PARTITION_BLOCK_SIZE;
+        *ResvdPartitionSize   = GptPartitionSizeInBlocks (PartitionEntry) * GPT_PARTITION_BLOCK_SIZE;
+      } else {
+        DEBUG ((DEBUG_INFO, "uefi_var_measurement partition not found\r\n"));
+        return EFI_DEVICE_ERROR;
+      }
     }
   }
 

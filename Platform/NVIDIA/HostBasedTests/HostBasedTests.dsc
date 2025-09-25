@@ -175,6 +175,7 @@
   Silicon/NVIDIA/Drivers/FvbNorFlashDxe/UnitTest/VarIntUnitTestsHost.inf {
     <LibraryClasses>
      NvVarIntLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/NvVarIntStubLib/NvVarIntStubLib.inf
+     StandaloneMmOpteeLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StandaloneMmOpteeStubLib/StandaloneMmOpteeStubLib.inf
     <PcdsFixedAtBuild>
       gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x16
   }

@@ -2,7 +2,7 @@
 #
 #  Nor Flash Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -44,6 +44,8 @@
   PlatformResourceLib
   NvVarIntLib
 
+[FeaturePcd.AARCH64]
+  gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64

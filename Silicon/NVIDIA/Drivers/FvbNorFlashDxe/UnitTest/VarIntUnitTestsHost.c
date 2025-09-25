@@ -1,7 +1,7 @@
 /** @file
   Unit tests for the Var Store Integrity module of FvbNorFlashStandaloneMm.c
 
-  SPDX-FileCopyrightText: Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,6 +18,7 @@
 #include <HostBasedTestStubLib/NorFlashStubLib.h>
 #include <HostBasedTestStubLib/NorFlashStubLib.h>
 #include <Library/MmVarLib.h>
+#include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <HostBasedTestStubLib/MmServicesTableStubLib.h>
 #include <HostBasedTestStubLib/NvVarIntStubLib.h>
 #include <HostBasedTestStubLib/ArmSvcStubLib.h>
