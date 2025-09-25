@@ -7,6 +7,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include "Library/DebugLib.h"
 #include <Base.h>
 #include <PiMm.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
@@ -998,5 +999,422 @@ CorruptFvHeader (
   }
 
 ExitCorruptFvHeader:
+  return Status;
+}
+
+/**
+ * Get the FFA TX/RX buffer addresses and sizes. This API only applies to Hafnium deployments.
+ *
+ * @param[out] FfaTxBufferAddr  FFA TX buffer address.
+ * @param[out] FfaTxBufferSize  FFA TX buffer size.
+ * @param[out] FfaRxBufferAddr  FFA RX buffer address.
+ * @param[out] FfaRxBufferSize  FFA RX buffer size.
+ */
+EFI_STATUS
+EFIAPI
+FfaGetTxRxBuffer (
+  UINT64  *FfaTxBufferAddr,
+  UINT32  *FfaTxBufferSize,
+  UINT64  *FfaRxBufferAddr,
+  UINT32  *FfaRxBufferSize
+  )
+{
+  EFI_STATUS         Status;
+  EFI_HOB_GUID_TYPE  *GuidHob;
+  STMM_COMM_BUFFERS  *StmmCommBuffers;
+
+  Status = EFI_UNSUPPORTED;
+
+  if (IsOpteePresent ()) {
+    goto ExitGetFfaTxRxBuffer;
+  }
+
+  GuidHob = GetFirstGuidHob (&gNVIDIAStMMBuffersGuid);
+  NV_ASSERT_RETURN (
+    GuidHob != NULL,
+    goto ExitGetFfaTxRxBuffer,
+    "Failed to find Buffers GUID HOB"
+    );
+
+  StmmCommBuffers  = (STMM_COMM_BUFFERS *)GET_GUID_HOB_DATA (GuidHob);
+  *FfaTxBufferAddr = StmmCommBuffers->FfaTxBufferAddr;
+  *FfaTxBufferSize = StmmCommBuffers->FfaTxBufferSize;
+  *FfaRxBufferAddr = StmmCommBuffers->FfaRxBufferAddr;
+  *FfaRxBufferSize = StmmCommBuffers->FfaRxBufferSize;
+  Status           = EFI_SUCCESS;
+
+ExitGetFfaTxRxBuffer:
+  return Status;
+}
+
+/*
+ * GetOpteeVmId
+ * Get the Optee VM ID from the SPMC.
+ *
+ * @param[out] OpteeVmId  Optee VM ID.
+ *
+ */
+EFI_STATUS
+EFIAPI
+FfaGetOpteeVmId (
+  OUT UINT16  *OpteeVmId
+  )
+{
+  ARM_SVC_ARGS  SvcArgs;
+  EFI_STATUS    Status;
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+
+  SvcArgs.Arg0 = FFA_PARTITION_INFO_GET_REGS_64;
+  SvcArgs.Arg1 = OPTEE_UID01;
+  SvcArgs.Arg2 = OPTEE_UID23;
+  SvcArgs.Arg3 = 0;
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 != FFA_SUCCESS_AARCH64) && (SvcArgs.Arg0 != FFA_SUCCESS_AARCH32)) {
+    Status = EFI_UNSUPPORTED;
+    DEBUG ((DEBUG_ERROR, "FFA_PARTITION_INFO_GET_REGS_64 failed Arg0 0x%lx\n", SvcArgs.Arg0));
+    goto ExitGetOpteeVmId;
+  }
+
+  *OpteeVmId = (UINT16)(SvcArgs.Arg3 & 0xFFFF);
+  DEBUG ((DEBUG_INFO, "Got Optee VM ID: 0x%x\n", *OpteeVmId));
+  DEBUG ((DEBUG_INFO, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
+  DEBUG ((DEBUG_INFO, "SvcArgs.Arg4 0x%lx Arg5 0x%lx Arg6 0x%lx Arg7 0x%lx\n", SvcArgs.Arg4, SvcArgs.Arg5, SvcArgs.Arg6, SvcArgs.Arg7));
+  Status = EFI_SUCCESS;
+
+ExitGetOpteeVmId:
+  return Status;
+}
+
+/*
+* GetMmVmId
+* Get the MM VM ID from the SPMC.
+*
+* @param[out] MmVmId  MM VM ID.
+*
+*/
+EFI_STATUS
+EFIAPI
+FfaGetMmVmId (
+  OUT UINT16  *MmVmId
+  )
+{
+  ARM_SVC_ARGS  SvcArgs;
+  EFI_STATUS    Status;
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+
+  SvcArgs.Arg0 = FFA_ID_GET;
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 != FFA_SUCCESS_AARCH64) && (SvcArgs.Arg0 != FFA_SUCCESS_AARCH32)) {
+    Status = EFI_UNSUPPORTED;
+    DEBUG ((DEBUG_ERROR, "FFA_ID_GET failed Arg0 0x%lx\n", SvcArgs.Arg0));
+    goto ExitGetMmVmId;
+  }
+
+  *MmVmId = (UINT16)(SvcArgs.Arg2 & 0xFFFF);
+  DEBUG ((DEBUG_INFO, "Got MM VM ID: 0x%x\n", *MmVmId));
+  DEBUG ((DEBUG_INFO, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
+  DEBUG ((DEBUG_INFO, "SvcArgs.Arg4 0x%lx Arg5 0x%lx Arg6 0x%lx Arg7 0x%lx\n", SvcArgs.Arg4, SvcArgs.Arg5, SvcArgs.Arg6, SvcArgs.Arg7));
+  Status = EFI_SUCCESS;
+
+ExitGetMmVmId:
+  return Status;
+}
+
+/*
+ * DumpFfaMemoryDescriptor
+ * Dump the FfaMemoryDescriptor. Debug only.
+ *
+ * @param[in] FfaMemoryTransactionDescriptor  FfaMemoryTransactionDescriptor.
+ * @param[in] FfaTxBufferAddr                 FfaTxBufferAddr.
+ */
+STATIC
+VOID
+DumpFfaMemoryDescriptor (
+  IN FFA_MEMORY_TRANSACTION_DESCRIPTOR  *FfaMemoryTransactionDescriptor,
+  IN UINT64                             FfaTxBufferAddr
+  )
+{
+  DEBUG_CODE_BEGIN ();
+  FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR  *FfaEndpointMemoryAccessDescriptor;
+  FFA_COMPOSITE_MEMORY_REGION            *FfaCompositeMemoryRegion;
+  FFA_MEMORY_REGION_CONSTITUENT          *FfaConstituentMemoryRegion;
+
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->SenderId: 0x%x\n", FfaMemoryTransactionDescriptor->SenderId));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Attributes.Reserved: 0x%x\n", FfaMemoryTransactionDescriptor->Attributes.Reserved));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Attributes.Shareability: 0x%x\n", FfaMemoryTransactionDescriptor->Attributes.Shareability));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Attributes.Cacheability: 0x%x\n", FfaMemoryTransactionDescriptor->Attributes.Cacheability));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Attributes.Security: 0x%x\n", FfaMemoryTransactionDescriptor->Attributes.Security));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Attributes.Type: 0x%x\n", FfaMemoryTransactionDescriptor->Attributes.Type));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Flags: 0x%x\n", FfaMemoryTransactionDescriptor->Flags));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Handle: 0x%lx\n", FfaMemoryTransactionDescriptor->Handle));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->Tag: 0x%lx\n", FfaMemoryTransactionDescriptor->Tag));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->ReceiverCount: 0x%x\n", FfaMemoryTransactionDescriptor->ReceiverCount));
+  DEBUG ((
+    DEBUG_ERROR,
+    "FfaMemoryTransactionDescriptor->ReceiversOffset: 0x%lx(FfaTxBuffer %p size %x)\n",
+    FfaMemoryTransactionDescriptor->ReceiversOffset,
+    FfaTxBufferAddr,
+    sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR)
+    ));
+  DEBUG ((DEBUG_ERROR, "FfaMemoryTransactionDescriptor->MemoryAccessDescSize: 0x%x\n", FfaMemoryTransactionDescriptor->MemoryAccessDescSize));
+
+  FfaEndpointMemoryAccessDescriptor = (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR *)(FfaTxBufferAddr + FfaMemoryTransactionDescriptor->ReceiversOffset);
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor: 0x%lx\n", FfaEndpointMemoryAccessDescriptor));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->CompositeMemoryRegionOffset: 0x%x\n", FfaEndpointMemoryAccessDescriptor->CompositeMemoryRegionOffset));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.ReceiverId: 0x%x\n", FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.ReceiverId));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.DataAccess: 0x%x\n", FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.DataAccess));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.InstructionAccess: 0x%x\n", FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.InstructionAccess));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.Reservd: 0x%x\n", FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.Reservd));
+  DEBUG ((DEBUG_ERROR, "FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Flags: 0x%x\n", FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Flags));
+
+  FfaCompositeMemoryRegion = (FFA_COMPOSITE_MEMORY_REGION *)(FfaTxBufferAddr + FfaEndpointMemoryAccessDescriptor->CompositeMemoryRegionOffset);
+  DEBUG ((DEBUG_ERROR, "FfaCompositeMemoryRegion: 0x%lx\n", FfaCompositeMemoryRegion));
+  DEBUG ((DEBUG_ERROR, "FfaCompositeMemoryRegion->TotalPageCount: 0x%x\n", FfaCompositeMemoryRegion->TotalPageCount));
+  DEBUG ((DEBUG_ERROR, "FfaCompositeMemoryRegion->ConstituentCount: 0x%x\n", FfaCompositeMemoryRegion->ConstituentCount));
+  DEBUG ((DEBUG_ERROR, "FfaCompositeMemoryRegion->Reserved: 0x%lx\n", FfaCompositeMemoryRegion->Reserved));
+  DEBUG ((DEBUG_ERROR, "FfaCompositeMemoryRegion->Constituents: 0x%lx\n", FfaCompositeMemoryRegion->Constituents));
+
+  FfaConstituentMemoryRegion = (FFA_MEMORY_REGION_CONSTITUENT *)(FfaCompositeMemoryRegion->Constituents);
+  DEBUG ((DEBUG_ERROR, "FfaConstituentMemoryRegion: 0x%lx\n", FfaConstituentMemoryRegion));
+  DEBUG ((DEBUG_ERROR, "FfaConstituentMemoryRegion->Address: 0x%lx\n", FfaConstituentMemoryRegion->Address));
+  DEBUG ((DEBUG_ERROR, "FfaConstituentMemoryRegion->PageCount: 0x%x\n", FfaConstituentMemoryRegion->PageCount));
+  DEBUG ((DEBUG_ERROR, "FfaConstituentMemoryRegion->Reserved: 0x%x\n", FfaConstituentMemoryRegion->Reserved));
+  DEBUG_CODE_END ();
+}
+
+/*
+ * PrepareFfaMemoryDescriptor
+ * Prepare the FfaMemoryDescriptor for the measurement.
+ *
+ * @param[in] Meas  Measurement buffer to be signed.
+ * @param[in] Size  Size of the measurement.
+ *
+ * @result EFI_SUCCESS Succesfully prepared the FfaMemoryDescriptor.
+ */
+EFI_STATUS
+EFIAPI
+PrepareFfaMemoryDescriptor (
+  IN   UINT64  FfaTxBufferAddr,
+  IN   UINT64  FfaTxBufferSize,
+  IN   UINT8   *MeasurementBuffer,
+  IN   UINT32  MeasurementBufferSize,
+  IN   UINT16  SenderId,
+  IN   UINT16  ReceiverId,
+  OUT  UINT32  *TotalLength
+  )
+{
+  EFI_STATUS                         Status;
+  FFA_MEMORY_TRANSACTION_DESCRIPTOR  *FfaMemoryTransactionDescriptor;
+
+ #if FixedPcdGetBool (PcdFfaMinorV2Supported)
+  FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR  *FfaEndpointMemoryAccessDescriptor;
+ #else
+  FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1  *FfaEndpointMemoryAccessDescriptorV1_1;
+ #endif
+  FFA_COMPOSITE_MEMORY_REGION    *FfaCompositeMemoryRegion;
+  FFA_MEMORY_REGION_CONSTITUENT  *FfaConstituentMemoryRegion;
+
+  *TotalLength = 0;
+
+  FfaMemoryTransactionDescriptor = (FFA_MEMORY_TRANSACTION_DESCRIPTOR *)FfaTxBufferAddr;
+  ZeroMem (FfaMemoryTransactionDescriptor, sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR));
+
+  FfaMemoryTransactionDescriptor->SenderId            = SenderId;
+  FfaMemoryTransactionDescriptor->Attributes.Reserved = 0;
+
+  FfaMemoryTransactionDescriptor->Attributes.Shareability = FFA_MEMORY_INNER_SHAREABLE;
+  FfaMemoryTransactionDescriptor->Attributes.Cacheability = FFA_MEMORY_CACHE_WRITE_BACK;
+  FfaMemoryTransactionDescriptor->Attributes.Security     = FFA_MEMORY_SECURITY_SECURE;
+  FfaMemoryTransactionDescriptor->Attributes.Type         = FFA_MEMORY_NORMAL_MEM;
+
+  FfaMemoryTransactionDescriptor->Flags  = 0;
+  FfaMemoryTransactionDescriptor->Handle = 0;
+  FfaMemoryTransactionDescriptor->Tag    = 0;  // Zero this for now, we could use this as a transaction id.
+
+  FfaMemoryTransactionDescriptor->ReceiverCount   = 1;
+  FfaMemoryTransactionDescriptor->ReceiversOffset = sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR);
+
+  *TotalLength += sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR);
+  /* Add this section incase Hafnium won't accept the FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1.*/
+ #if FixedPcdGetBool (PcdFfaMinorV2Supported)
+  FfaMemoryTransactionDescriptor->MemoryAccessDescSize = sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR);
+  FfaEndpointMemoryAccessDescriptor                    = (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR *)(FfaTxBufferAddr + FfaMemoryTransactionDescriptor->ReceiversOffset);
+  ZeroMem (FfaEndpointMemoryAccessDescriptor, sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR));
+
+  FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.ReceiverId                    = ReceiverId;
+  FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.DataAccess        = FFA_DATA_ACCESS_RW;
+  FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.InstructionAccess = FFA_INSTRUCTION_ACCESS_NOT_SPECIFIED;
+  FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Permissions.Reservd           = 0;
+  FfaEndpointMemoryAccessDescriptor->ReceiverPermissions.Flags                         = 0;
+
+  *TotalLength += sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR);
+
+  FfaEndpointMemoryAccessDescriptor->CompositeMemoryRegionOffset = sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR) + sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR);
+  *TotalLength                                                  += sizeof (FFA_COMPOSITE_MEMORY_REGION);
+  FfaCompositeMemoryRegion                                       = (FFA_COMPOSITE_MEMORY_REGION *)(FfaTxBufferAddr + FfaEndpointMemoryAccessDescriptor->CompositeMemoryRegionOffset);
+ #else
+  FfaMemoryTransactionDescriptor->MemoryAccessDescSize = sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1);
+  FfaEndpointMemoryAccessDescriptorV1_1                = (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1 *)(FfaTxBufferAddr + FfaMemoryTransactionDescriptor->ReceiversOffset);
+  ZeroMem (FfaEndpointMemoryAccessDescriptorV1_1, sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1));
+
+  FfaEndpointMemoryAccessDescriptorV1_1->ReceiverPermissions.ReceiverId                    = ReceiverId;
+  FfaEndpointMemoryAccessDescriptorV1_1->ReceiverPermissions.Permissions.DataAccess        = FFA_DATA_ACCESS_RW;
+  FfaEndpointMemoryAccessDescriptorV1_1->ReceiverPermissions.Permissions.InstructionAccess = FFA_INSTRUCTION_ACCESS_NOT_SPECIFIED;
+  FfaEndpointMemoryAccessDescriptorV1_1->ReceiverPermissions.Permissions.Reservd           = 0;
+  FfaEndpointMemoryAccessDescriptorV1_1->ReceiverPermissions.Flags                         = 0;
+  FfaEndpointMemoryAccessDescriptorV1_1->CompositeMemoryRegionOffset                       = sizeof (FFA_MEMORY_TRANSACTION_DESCRIPTOR) + sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1);
+  *TotalLength                                                                            += sizeof (FFA_ENDPOINT_MEMORY_ACCESS_DESCRIPTOR_V1_1);
+  FfaCompositeMemoryRegion                                                                 = (FFA_COMPOSITE_MEMORY_REGION *)(FfaTxBufferAddr + FfaEndpointMemoryAccessDescriptorV1_1->CompositeMemoryRegionOffset);
+ #endif
+
+  ZeroMem (FfaCompositeMemoryRegion, sizeof (FFA_COMPOSITE_MEMORY_REGION));
+  *TotalLength += sizeof (FFA_COMPOSITE_MEMORY_REGION);
+
+  FfaCompositeMemoryRegion->TotalPageCount   = EFI_SIZE_TO_PAGES (MeasurementBufferSize);
+  FfaCompositeMemoryRegion->ConstituentCount = 1;
+
+  FfaConstituentMemoryRegion = (FFA_MEMORY_REGION_CONSTITUENT *)(FfaCompositeMemoryRegion->Constituents);
+  ZeroMem (FfaConstituentMemoryRegion, sizeof (FFA_MEMORY_REGION_CONSTITUENT));
+
+  FfaConstituentMemoryRegion->Address   = (UINT64)MeasurementBuffer;
+  FfaConstituentMemoryRegion->PageCount = EFI_SIZE_TO_PAGES (MeasurementBufferSize);
+  FfaConstituentMemoryRegion->Reserved  = 0;
+
+  *TotalLength += sizeof (FFA_MEMORY_REGION_CONSTITUENT);
+  Status        = EFI_SUCCESS;
+  DumpFfaMemoryDescriptor (FfaMemoryTransactionDescriptor, FfaTxBufferAddr);
+
+  return Status;
+}
+
+/*
+ * IsFfaMemShareSupported
+ * Check if the FFA_SHARE_MEM_REQ_64/32 is supported.
+ *
+ * @param[out] FfaMemShareSupportedId  FFA_SHARE_MEM_REQ_64/32 supported ID.
+ *
+ * @return  TRUE  FFA_SHARE_MEM_REQ_64/32 is supported.
+ *          FALSE FFA_SHARE_MEM_REQ_64/32 is not supported.
+ */
+BOOLEAN
+EFIAPI
+IsFfaMemShareSupported (
+  OUT UINTN  *FfaMemShareSupportedId
+  )
+{
+  ARM_SVC_ARGS  SvcArgs;
+  BOOLEAN       Supported = FALSE;
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+  SvcArgs.Arg0 = ARM_FID_FFA_FEATURES;
+  SvcArgs.Arg1 = FFA_SHARE_MEM_REQ_64;
+  SvcArgs.Arg2 = 0;
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 == FFA_ERROR)) {
+    DEBUG ((DEBUG_INFO, "FFA_SHARE_MEM_REQ_64 not supported 0x%lx\n", SvcArgs.Arg0));
+  } else {
+    Supported               = TRUE;
+    *FfaMemShareSupportedId = FFA_SHARE_MEM_REQ_64;
+    goto ExitIsFfaMemShareSupported;
+  }
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+  SvcArgs.Arg0 = ARM_FID_FFA_FEATURES;
+  SvcArgs.Arg1 = FFA_SHARE_MEM_REQ_32;
+  SvcArgs.Arg2 = 0;
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 == FFA_ERROR)) {
+    DEBUG ((DEBUG_ERROR, "FFA_SHARE_MEM_REQ_32/64 not supported 0x%lx\n", SvcArgs.Arg0));
+  } else {
+    Supported               = TRUE;
+    *FfaMemShareSupportedId = FFA_SHARE_MEM_REQ_32;
+    goto ExitIsFfaMemShareSupported;
+  }
+
+ExitIsFfaMemShareSupported:
+  return Supported;
+}
+
+/*
+ * SendFfaShareCommand
+ * Send the FFA_SHARE_MEM_REQ_64/32 command.
+ *
+ * @param[in] TotalLength      Total length of the message.
+ * @param[in] FragmentLength   Fragment length of the message.
+ * @param[in] BufferAddr       Buffer address to share.
+ * @param[in] PageCount        Page count of the buffer.
+ * @param[out] Handle         Handle of the shared memory.
+ */
+EFI_STATUS
+EFIAPI
+FfaSendShareCommand (
+  IN UINT32   TotalLength,
+  IN UINT32   FragmentLength,
+  IN UINT64   BufferAddr,
+  IN UINT32   PageCount,
+  OUT UINT64  *Handle
+  )
+{
+  EFI_STATUS    Status;
+  ARM_SVC_ARGS  SvcArgs;
+  UINTN         FfaMemShareSupportedId;
+
+  /* Check which FFA_SHARE_MEM_REQ is supported, 64 or 32 */
+  if (IsFfaMemShareSupported (&FfaMemShareSupportedId) == FALSE) {
+    DEBUG ((DEBUG_ERROR, "FFA_SHARE_MEM_REQ_64/32 not supported\n"));
+    *Handle = 0U;
+    Status  = EFI_UNSUPPORTED;
+    goto ExitSendFfaShareCommand;
+  }
+
+  if ((FfaMemShareSupportedId == FFA_SHARE_MEM_REQ_32) && (BufferAddr > MAX_UINT32)) {
+    DEBUG ((DEBUG_ERROR, " WARNING: BufferAddr 0x%lx is greater than MAX_UINT32\n", BufferAddr));
+  }
+
+  DEBUG ((DEBUG_INFO, "FFA_SHARE_MEM_REQ_64/32 supported ID 0x%x\n", FfaMemShareSupportedId));
+
+  ZeroMem (&SvcArgs, sizeof (SvcArgs));
+
+  SvcArgs.Arg0 = FfaMemShareSupportedId;
+  SvcArgs.Arg1 = TotalLength;
+  SvcArgs.Arg2 = FragmentLength;
+  SvcArgs.Arg3 = 0;
+  SvcArgs.Arg4 = 0;
+
+  DEBUG ((DEBUG_INFO, "Making FFA_SHARE_MEM_REQ call\n"));
+  DEBUG ((
+    DEBUG_INFO,
+    "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx Arg4 0x%lx\n",
+    SvcArgs.Arg0,
+    SvcArgs.Arg1,
+    SvcArgs.Arg2,
+    SvcArgs.Arg3,
+    SvcArgs.Arg4
+    ));
+
+  ArmCallSvc (&SvcArgs);
+
+  if ((SvcArgs.Arg0 == FFA_ERROR)) {
+    *Handle = 0U;
+    DEBUG ((DEBUG_ERROR, "FFA_SHARE_MEM_REQ_64 failed Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg2, SvcArgs.Arg3));
+    Status = EFI_UNSUPPORTED;
+    goto ExitSendFfaShareCommand;
+  }
+
+  *Handle = ((UINT64)SvcArgs.Arg3 << 32) | SvcArgs.Arg2;
+  Status  = EFI_SUCCESS;
+  DEBUG ((DEBUG_INFO, "FFA_SHARE_MEM_REQ_64 successful Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx Arg4 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3, SvcArgs.Arg4));
+  DEBUG ((DEBUG_INFO, "Storing Handle 0x%lx\n", *Handle));
+ExitSendFfaShareCommand:
   return Status;
 }

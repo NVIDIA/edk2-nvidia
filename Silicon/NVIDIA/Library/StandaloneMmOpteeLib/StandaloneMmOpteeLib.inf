@@ -1,9 +1,9 @@
 ## @file
 # Misc Lib for OP-TEE in StandaloneMm
 #
-# Copyright (c) 2022, NVIDIA Corporation. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-#  SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
 ##
@@ -42,6 +42,9 @@
 
 [FeaturePcd]
   gNVIDIATokenSpaceGuid.PcdOpteePresent
+
+[FeaturePcd.AARCH64]
+  gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported
 
 [Protocols]
   gNVIDIASocketIdProtocolGuid
