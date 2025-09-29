@@ -2,7 +2,7 @@
 
   Bpmp I2c Controller Driver private structures
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -107,6 +107,7 @@ typedef struct {
   EFI_I2C_REQUEST_PACKET                           *RequestPacket;
   EFI_EVENT                                        TransactionEvent;
   EFI_STATUS                                       *TransactionStatus;
+  EFI_STATUS                                       PrivateTransactionStatus; // Used for async transactions with NULL I2cStatus
   BPMP_I2C_REQUEST                                 Request;
   BPMP_I2C_RESPONSE                                Response;
   INT32                                            MessageError;
