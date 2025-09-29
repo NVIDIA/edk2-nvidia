@@ -736,6 +736,7 @@ PlatformRegisterFvBootOption (
              );
   ASSERT_EFI_ERROR (Status);
   FreePool (DevicePath);
+  DevicePath = NULL;
 
   BootOptions = EfiBootManagerGetLoadOptions (
                   &BootOptionCount,
@@ -1015,6 +1016,7 @@ BmRegisterBootMenuApp (
   //
   if (DevicePath != NULL) {
     FreePool (DevicePath);
+    DevicePath = NULL;
   }
 
   if (Description != NULL) {
