@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -348,6 +348,7 @@ BpmpI2cStartRequest (
   NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private = NULL;
   EFI_STATUS                    Status;
 
+  Status = EFI_SUCCESS;
   if ((This == NULL) ||
       (RequestPacket == NULL))
   {
@@ -363,10 +364,15 @@ BpmpI2cStartRequest (
   Private->SlaveAddress     = SlaveAddress;
   Private->RequestPacket    = RequestPacket;
   Private->TransactionEvent = Event;
-  if ((NULL == Event) || (NULL == I2cStatus)) {
+  if (NULL == Event) {
     Private->TransactionStatus = &Status;
   } else {
-    Private->TransactionStatus = I2cStatus;
+    if (NULL == I2cStatus) {
+      Private->PrivateTransactionStatus = EFI_SUCCESS;
+      Private->TransactionStatus        = &Private->PrivateTransactionStatus;
+    } else {
+      Private->TransactionStatus = I2cStatus;
+    }
   }
 
   Private->TransferInProgress = FALSE;
@@ -380,7 +386,7 @@ BpmpI2cStartRequest (
   if (NULL != Event) {
     return EFI_SUCCESS;
   } else {
-    return *Private->TransactionStatus;
+    return Status;
   }
 }
 
