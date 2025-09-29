@@ -705,6 +705,9 @@ PlatformRegisterFvBootOption (
   EFI_LOADED_IMAGE_PROTOCOL          *LoadedImage;
   EFI_DEVICE_PATH_PROTOCOL           *DevicePath;
 
+  // Zero memory for to make sure the memory is initialized
+  ZeroMem (&NewOption, sizeof (EFI_BOOT_MANAGER_LOAD_OPTION));
+
   Status = gBS->HandleProtocol (
                   gImageHandle,
                   &gEfiLoadedImageProtocolGuid,
@@ -1131,6 +1134,8 @@ PlatformRegisterOptionsAndKeys (
   EFI_INPUT_KEY                 F11;
   EFI_INPUT_KEY                 Esc;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
+
+  ZeroMem (&BootOption, sizeof (EFI_BOOT_MANAGER_LOAD_OPTION));
 
   GetPlatformOptions ();
 
