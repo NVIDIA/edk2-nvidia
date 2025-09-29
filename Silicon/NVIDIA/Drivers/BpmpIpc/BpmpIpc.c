@@ -354,6 +354,8 @@ BpmpIpcCommunicate (
     return EFI_INVALID_PARAMETER;
   }
 
+  ZeroMem (&LocalToken, sizeof (NVIDIA_BPMP_IPC_TOKEN));
+
   PrivateData = BPMP_IPC_PRIVATE_DATA_FROM_THIS (This);
 
   if ((Token != NULL) && (Token->Event == NULL)) {
