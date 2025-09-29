@@ -728,7 +728,7 @@ SnpStatistics (
   SIMPLE_NETWORK_DRIVER   *Snp;
   EFI_STATUS              Status;
   struct osi_ioctl        ioctl_data;
-  EFI_NETWORK_STATISTICS  LocalStats;
+  EFI_NETWORK_STATISTICS  LocalStats = { 0 };
 
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
