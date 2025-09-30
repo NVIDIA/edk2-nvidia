@@ -27,9 +27,9 @@
 [Defines.AARCH64]
   DEFINE ACPIVIEW_ENABLE         = TRUE
 
-!include ArmVirtPkg/ArmVirt.dsc.inc
-
+!include ArmVirtPkg/ArmVirtStackCookies.dsc.inc
 !include MdePkg/MdeLibs.dsc.inc
+!include ArmVirtPkg/ArmVirt.dsc.inc
 !include Silicon/NVIDIA/TegraVirt/IvcClient.dsc.inc
 
 [BuildOptions.common.EDKII.DXE_CORE,BuildOptions.common.EDKII.DXE_DRIVER,BuildOptions.common.EDKII.UEFI_DRIVER,BuildOptions.common.EDKII.UEFI_APPLICATION]
