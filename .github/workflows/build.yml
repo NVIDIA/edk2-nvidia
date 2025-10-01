@@ -92,35 +92,60 @@ jobs:
           edk2-nvidia/Platform/NVIDIA/HostBasedTests/test.sh
       - name: Build
         run: |
+          mkdir -p ${{ github.workspace }}/package/Build
           cd ${{ github.workspace }}/workspace
-          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_general.defconfig
-          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_embedded.defconfig
-          edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t23x_android.defconfig
-          ([ -d edk2-redfish-client ] && edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/t24x_datacenter.defconfig) || true
+
+          # Build all defconfigs
+          for defconfig in edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/*.defconfig; do
+            # Skip t24x images if we do not have edk2-redfish-client in the combo.
+            if [[ ${defconfig} =~ "t24x_datacenter" ]] && [ ! -d edk2-redfish-client ]; then
+              continue
+            fi
+
+            # Remove build output to avoid running out of space.  The image is kept.
+            echo "Removing Build directory"
+            rm -rf Build
+
+            echo "Building defconfig: ${defconfig}"
+            edk2-nvidia/Platform/NVIDIA/Tegra/build.sh --init-defconfig ${defconfig}
+
+            # Keep the build logs
+            cp -v Build/*.txt ${{ github.workspace }}/package/Build
+          done
+
+          # Build all non-Kconfig images
           edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/build.sh
           edk2-nvidia/Platform/NVIDIA/StandaloneMm/build.sh
+          edk2-nvidia/Platform/NVIDIA/StandaloneMmJetson/build.sh
           edk2-nvidia/Platform/NVIDIA/DeviceTree/build.sh
           edk2-nvidia/Platform/NVIDIA/L4TLauncher/build.sh
+
+          # Copy the build logs from non-Kconfig images
+          cp -v Build/*.txt ${{ github.workspace }}/package/Build
       - name: Package
         id: package
         run: |
-          mkdir package
+          mkdir -p package
+
           # Extract details about the build (BUILDID, sha, etc.)
-          grep -m 1 BUILDID_STRING= workspace/Build/BUILDLOG_t23x_general.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
+          grep -m 1 BUILDID_STRING= package/Build/BUILDLOG_t26x_general.txt | sed -e 's/.*BUILDID_STRING=\([^ ]*\)/\1/' > package/buildid
           BUILDID=$(cat package/buildid)
           echo "version=${BUILDID}"
           echo "version=${BUILDID}" >> $GITHUB_OUTPUT
           echo ${{ github.ref_name }} > package/ref_name
           echo ${{ github.sha }} > package/sha
+
           # Copy the images
-          ls -l workspace/images
-          cp -R workspace/images package/images
-          # Copy the build logs
-          mkdir package/Build
-          cp workspace/Build/*.txt package/Build
+          cp -vR workspace/images package/images
+
+          # Prune the buildid and builddir files
+          rm -f package/images/buildid_*
+          rm -f package/images/builddir_*
+
           # Move it to a directory with a useful name.
           mkdir upload
           mv package upload/edk2-nvidia-${BUILDID}
+
           # Tar it up as a release
           cd upload
           tar -czvf ../edk2-nvidia-${BUILDID}.tar.gz edk2-nvidia-${BUILDID}
