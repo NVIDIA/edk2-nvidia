@@ -222,6 +222,20 @@ ForceMaxEmcFrequency (
     IsoBandwidthKbps  = 20 << 20; /* 20 GB/s */
     MemclockFloorKbps = MAX_UINT32;
   } else {
+    /*
+     * WAR: Do not remove the EMC frequency floor in case an active
+     * child GOP protocol is installed.
+     *
+     * In this case, the display should already be shut down, have its
+     * clocks disabled and be in reset. However, removing the floor
+     * after the display was active in UEFI is causing problems in
+     * BPMP-FW.
+     */
+    Status = NvDisplayLocateActiveChildGop (DriverHandle, ControllerHandle, NULL);
+    if (!EFI_ERROR (Status)) {
+      return EFI_SUCCESS;
+    }
+
     IsoBandwidthKbps  = 0;
     MemclockFloorKbps = 0;
   }
