@@ -12,13 +12,18 @@
 
 #include <Library/DebugLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
-#include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
 #include <Protocol/KernelCmdLineUpdate.h>
 
 #include "NvDisplay.h"
+
+///
+/// Maximum number of EFI handles with the GOP protocol installed that
+/// are checked when searching for an active child GOP.
+///
+#define MAX_GOP_EFI_HANDLE_COUNT  8
 
 /* Extra command-line arguments passed to the kernel when EFIFB
    support is enabled.
@@ -129,6 +134,9 @@ IsGopModeActive (
 /**
   Locates a child handle with an active GOP instance installed.
 
+  This function does not allocate any memory, hence it is safe to call
+  during ExitBootServices.
+
   @param[in]  DriverHandle      Handle of the driver.
   @param[in]  ControllerHandle  Handle of the controller.
   @param[out] Protocol          The located active GOP instance.
@@ -144,27 +152,40 @@ NvDisplayLocateActiveChildGop (
   )
 {
   EFI_STATUS                    Status;
-  UINTN                         Index, Count;
-  EFI_HANDLE                    GopHandle, *Handles = NULL;
+  UINTN                         Index, Count, BufferSize;
+  EFI_HANDLE                    GopHandle, Handles[MAX_GOP_EFI_HANDLE_COUNT];
   EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
 
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiGraphicsOutputProtocolGuid,
-                  NULL,
-                  &Count,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
+  BufferSize = sizeof (Handles);
+  Status     = gBS->LocateHandle (
+                      ByProtocol,
+                      &gEfiGraphicsOutputProtocolGuid,
+                      NULL,
+                      &BufferSize,
+                      Handles
+                      );
+  if (Status == EFI_NOT_FOUND) {
+    BufferSize = 0;
+  } else if (Status == EFI_BUFFER_TOO_SMALL) {
+    DEBUG ((
+      DEBUG_WARN,
+      "%a: expected at most %u handles, but got %u; ignoring the rest\r\n",
+      __FUNCTION__,
+      MAX_GOP_EFI_HANDLE_COUNT,
+      BufferSize / sizeof (*Handles)
+      ));
+    BufferSize = sizeof (Handles);
+  } else if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to enumerate graphics output device handles: %r\r\n",
       __FUNCTION__,
       Status
       ));
-    goto Exit;
+    return Status;
   }
 
+  Count = BufferSize / sizeof (*Handles);
   for (Index = 0; Index < Count; ++Index) {
     GopHandle = Handles[Index];
 
@@ -185,29 +206,21 @@ NvDisplayLocateActiveChildGop (
           GopHandle,
           Status
           ));
-        goto Exit;
+        ASSERT_EFI_ERROR (Status);
+        continue;
       }
 
       if (IsGopModeActive (Gop)) {
-        Status = EFI_SUCCESS;
-
         if (Protocol != NULL) {
           *Protocol = Gop;
         }
 
-        goto Exit;
+        return EFI_SUCCESS;
       }
     }
   }
 
-  Status = EFI_NOT_FOUND;
-
-Exit:
-  if (Handles != NULL) {
-    FreePool (Handles);
-  }
-
-  return Status;
+  return EFI_NOT_FOUND;
 }
 
 /**

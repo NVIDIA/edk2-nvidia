@@ -123,6 +123,9 @@ NvDisplayHwShutdown (
 /**
   Locates a child handle with an active GOP instance installed.
 
+  This function does not allocate any memory, hence it is safe to call
+  during ExitBootServices.
+
   @param[in]  DriverHandle      Handle of the driver.
   @param[in]  ControllerHandle  Handle of the controller.
   @param[out] Protocol          The located active GOP instance.
