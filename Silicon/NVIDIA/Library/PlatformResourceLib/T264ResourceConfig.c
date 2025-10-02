@@ -40,9 +40,11 @@ typedef struct {
 } T264_FLOOR_SWEEPING_IP_ENTRY;
 
 STATIC TEGRA_FUSE_INFO  T264FuseList[] = {
-  { "fuse-prod-mode",  T264_FUSE_PROD_MODE_OFFSET,  T264_FUSE_PROD_MODE_ENABLED },
-  { "fuse-ate-priv-1", T264_FUSE_ATE_PRIV_1_OFFSET, BIT0                        },
-  { "fuse-ate-priv-2", T264_FUSE_ATE_PRIV_2_OFFSET, BIT0                        },
+  { "fuse-prod-mode",        T264_FUSE_PROD_MODE_OFFSET,   T264_FUSE_PROD_MODE_ENABLED },
+  { "fuse-ate-priv-1",       T264_FUSE_ATE_PRIV_1_OFFSET,  BIT0                        },
+  { "fuse-ate-priv-2",       T264_FUSE_ATE_PRIV_2_OFFSET,  BIT0                        },
+  { "fuse-isp-disable-isp0", T264_FUSE_ISP_DISABLE_OFFSET, BIT0                        },
+  { "fuse-isp-disable-isp1", T264_FUSE_ISP_DISABLE_OFFSET, BIT1                        },
 };
 
 STATIC UINT64  T264SocketFuseBaseAddr[TEGRABL_MAX_SOCKETS] = {
