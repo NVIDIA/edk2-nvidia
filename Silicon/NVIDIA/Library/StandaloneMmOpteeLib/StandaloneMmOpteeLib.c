@@ -549,6 +549,10 @@ GetVarStoreCs (
         *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
         Status = EFI_SUCCESS;
         break;
+      case T410_CHIP_ID:
+        *VarCs = NOR_FLASH_CHIP_SELECT_JETSON;
+        Status = EFI_SUCCESS;
+        break;
       default:
         Status = GetVarStoreCsBlParams (VarCs);
         break;
