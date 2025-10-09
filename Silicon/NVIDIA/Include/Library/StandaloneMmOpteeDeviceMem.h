@@ -42,7 +42,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #define OPTEE_SIGNER_TA_UUID0  0xed32d53399e64209
 #define OPTEE_SIGNER_TA_UUID1  0x9cc02d72cdd998a7
-#define OPTEE_FFA_SERVICE_ID   0x6
+#define OPTEE_FFA_SERVICE_ID   0xF
 #define OPTEE_FFA_SIGN_FID     0x1
 
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
