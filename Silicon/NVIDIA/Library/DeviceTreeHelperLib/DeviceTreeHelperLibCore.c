@@ -275,7 +275,6 @@ DeviceTreeGetNextDeviceTypeNode (
   INT32        SearchNodeOffset;
   VOID         *DeviceTree;
   CONST CHAR8  *PropertyString;
-  CONST CHAR8  *StatusString;
 
   if ((DeviceType == NULL) || (NodeOffset == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -297,23 +296,9 @@ DeviceTreeGetNextDeviceTypeNode (
                );
     if (!EFI_ERROR (Status)) {
       if (AsciiStrCmp (DeviceType, PropertyString) == 0) {
-        // Compatible node found, check for status node, if defined needs to be "okay"
-        Status = DeviceTreeGetNodeProperty (
-                   SearchNodeOffset,
-                   "status",
-                   (CONST VOID **)&StatusString,
-                   NULL
-                   );
-        if (Status == EFI_NOT_FOUND) {
-          // Treat missing node as valid
-          Status = EFI_SUCCESS;
+        Status = DeviceTreeNodeIsEnabled (SearchNodeOffset);
+        if (!EFI_ERROR (Status)) {
           break;
-        } else if (!EFI_ERROR (Status)) {
-          if (AsciiStrCmp (StatusString, "okay") == 0) {
-            break;
-          } else {
-            Status = EFI_NOT_FOUND;
-          }
         }
       }
     }
@@ -1055,10 +1040,9 @@ DeviceTreeCheckNodeCompatibility (
   IN            INT32  NodeOffset
   )
 {
-  EFI_STATUS   Status;
-  UINT32       CompatiblityIndex;
-  UINT32       StringIndex;
-  CONST CHAR8  *StatusString;
+  EFI_STATUS  Status;
+  UINT32      CompatiblityIndex;
+  UINT32      StringIndex;
 
   Status = EFI_NOT_FOUND;
   for (CompatiblityIndex = 0; CompatibleInfo[CompatiblityIndex] != NULL; CompatiblityIndex++) {
@@ -1080,22 +1064,7 @@ DeviceTreeCheckNodeCompatibility (
   }
 
   if (!EFI_ERROR (Status)) {
-    // Compatible node found, check for status node, if defined needs to be "okay"
-    Status = DeviceTreeGetNodeProperty (
-               NodeOffset,
-               "status",
-               (CONST VOID **)&StatusString,
-               NULL
-               );
-    if (Status == EFI_NOT_FOUND) {
-      // Treat missing status as enabled
-      Status = EFI_SUCCESS;
-    } else if (!EFI_ERROR (Status)) {
-      if (AsciiStrCmp (StatusString, "okay") == 0) {
-      } else {
-        Status = EFI_NOT_FOUND;
-      }
-    }
+    Status = DeviceTreeNodeIsEnabled (NodeOffset);
   }
 
   return Status;
@@ -1186,4 +1155,42 @@ DeviceTreeGetNodeName (
   }
 
   return FdtGetName (DeviceTree, NodeOffset, NULL);
+}
+
+/**
+    Check if node is enabled - status property missing or set to "okay"
+
+  @param [in]  NodeOffset       Node offset to check.
+
+  @retval EFI_SUCCESS            The node is enabled.
+  @retval EFI_NOT_FOUND          The node is not enabled.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeNodeIsEnabled (
+  IN            INT32  NodeOffset
+  )
+{
+  EFI_STATUS   Status;
+  CONST CHAR8  *StatusString;
+
+  Status = DeviceTreeGetNodeProperty (
+             NodeOffset,
+             "status",
+             (CONST VOID **)&StatusString,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    if (Status == EFI_NOT_FOUND) {
+      // Treat missing status property as valid
+      Status = EFI_SUCCESS;
+    } else {
+      Status = EFI_NOT_FOUND;
+    }
+  } else if (AsciiStrCmp (StatusString, "okay") != 0) {
+    Status = EFI_NOT_FOUND;
+  }
+
+  return Status;
 }

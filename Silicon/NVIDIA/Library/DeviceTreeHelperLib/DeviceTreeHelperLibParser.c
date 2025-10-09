@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -1520,7 +1520,7 @@ DeviceTreeFindRegisterByName (
   NV_ASSERT_RETURN ((RegisterName != NULL) && (RegisterArray != NULL) && (RegisterIndex != NULL), return EFI_INVALID_PARAMETER, "%a: bad parameter\n", __FUNCTION__);
 
   for (Index = 0; Index < NumberOfRegisters; Index++, RegisterArray++) {
-    if (AsciiStrCmp (RegisterName, RegisterArray->Name) == 0) {
+    if ((RegisterArray->Name != NULL) && (AsciiStrCmp (RegisterName, RegisterArray->Name) == 0)) {
       DEBUG ((DEBUG_INFO, "%a: index %u reg %a base 0x%llx size 0x%llx\n", __FUNCTION__, Index, RegisterName, RegisterArray->BaseAddress, RegisterArray->Size));
 
       *RegisterIndex = Index;

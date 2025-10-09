@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -1056,6 +1056,21 @@ UINT64
 EFIAPI
 DeviceTreeGetNodeUnitAddress (
   IN  INT32  NodeOffset
+  );
+
+/**
+  Check if node is enabled - status property missing or set to "okay"
+
+  @param [in]  NodeOffset       Node offset to check.
+
+  @retval EFI_SUCCESS            The node is enabled.
+  @retval EFI_NOT_FOUND          The node is not enabled.
+
+**/
+EFI_STATUS
+EFIAPI
+DeviceTreeNodeIsEnabled (
+  IN            INT32  NodeOffset
   );
 
 #endif //__DEVICE_TREE_HELPER_LIB_H__
