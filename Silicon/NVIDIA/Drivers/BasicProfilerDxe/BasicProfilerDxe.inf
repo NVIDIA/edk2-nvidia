@@ -1,7 +1,7 @@
 ## @file
 #  Basic Profiler Dxe
 #
-#  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -26,6 +26,7 @@
 [LibraryClasses]
   DebugLib
   UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   UefiDriverEntryPoint
   UefiLib
   PlatformResourceLib
@@ -37,6 +38,7 @@
   gNVIDIAKernelCmdLineUpdateGuid
   gNVIDIAPlatformResourceDataGuid
   gEfiFirmwarePerformanceGuid
+  gNVIDIAPublicVariableGuid
 
 [Depex]
-  TRUE
+  gEfiVariableArchProtocolGuid

@@ -1,7 +1,7 @@
 /** @file
  *  Basic Profiler Dxe
  *
- *  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -13,6 +13,7 @@
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/DxeServicesTableLib.h>
@@ -117,6 +118,30 @@ BasicProfilerDxeInitialize (
                   &ExitBootServicesEvent
                   );
   if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = gRT->SetVariable (
+                  L"ProfilerBase",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  sizeof (ProfilerBase),
+                  &ProfilerBase
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set ProfilerBase variable: %r\n", Status));
+    return Status;
+  }
+
+  Status = gRT->SetVariable (
+                  L"ProfilerSize",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  sizeof (ProfilerSize),
+                  &ProfilerSize
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to set ProfilerSize variable: %r\n", Status));
     return Status;
   }
 
