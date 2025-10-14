@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -18,7 +18,8 @@
 
 #include "QspiControllerLibPrivate.h"
 
-BOOLEAN  TimeOutMessage = FALSE;
+BOOLEAN  TimeOutMessage   = FALSE;
+UINT32   QspiCommand2Data = 0;
 
 /**
   Flush QSPI Controller FIFO.
@@ -528,6 +529,11 @@ QspiInitialize (
 {
   EFI_STATUS  Status;
 
+  // Save prior configuration
+  if (QspiCommand2Data == 0) {
+    QspiCommand2Data = MmioRead32 (QspiBaseAddress + QSPI_COMMAND2_0);
+  }
+
   // Configure master mode.
   MmioBitFieldWrite32 (
     QspiBaseAddress + QSPI_COMMAND_0,
@@ -589,7 +595,12 @@ QspiInitialize (
     return Status;
   }
 
-  DEBUG ((EFI_D_INFO, "QSPI Initialized.\n"));
+  // Restore prior configuration
+  if (QspiCommand2Data != 0) {
+    MmioWrite32 (QspiBaseAddress + QSPI_COMMAND2_0, QspiCommand2Data);
+  }
+
+  DEBUG ((DEBUG_INFO, "QSPI Initialized.\n"));
 
   return EFI_SUCCESS;
 }

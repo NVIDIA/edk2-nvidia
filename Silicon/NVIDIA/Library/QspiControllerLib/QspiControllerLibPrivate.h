@@ -2,7 +2,7 @@
 
   QSPI Controller Library Private Structures
 
-  Copyright (c) 2019-2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -52,6 +52,8 @@
 #define QSPI_COMMAND_0_SDR_DDR_SEL_SDR         0
 #define QSPI_COMMAND_0_INTERFACE_WIDTH_SINGLE  0
 #define QSPI_COMMAND_0_PACKED_ENABLE           1
+
+#define QSPI_COMMAND2_0  0x4
 
 #define QSPI_TRANSFER_STATUS_0  0x10
 
