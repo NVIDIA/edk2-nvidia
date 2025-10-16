@@ -2,7 +2,7 @@
 #
 #  OEM Status code handling unit test
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -25,6 +25,7 @@
   Silicon/NVIDIA/NVIDIA.dec
   IpmiFeaturePkg/IpmiFeaturePkg.dec
   UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -40,6 +41,7 @@
 [Guids]
   gEfiStatusCodeSpecificDataGuid
   gEfiEventExitBootServicesGuid
+  gEfiStatusCodeDataTypeDebugGuid
 
 [Protocols]
   gIpmiTransportProtocolGuid

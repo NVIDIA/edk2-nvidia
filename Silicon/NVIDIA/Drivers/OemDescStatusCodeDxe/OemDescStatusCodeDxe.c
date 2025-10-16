@@ -105,6 +105,11 @@ OemDescStatusCodeCallback (
     return EFI_SUCCESS;
   }
 
+  // ignore debug messages
+  if (CompareGuid (&Data->Type, &gEfiStatusCodeDataTypeDebugGuid)) {
+    return EFI_SUCCESS;
+  }
+
   ASSERT (DataSize <= IPMI_OEM_DESC_MAX_LEN);
   if (DataSize > IPMI_OEM_DESC_MAX_LEN) {
     DataSize = IPMI_OEM_DESC_MAX_LEN;

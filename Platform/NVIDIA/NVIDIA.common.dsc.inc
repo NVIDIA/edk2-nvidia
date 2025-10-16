@@ -1643,7 +1643,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_IPMI_BMC
   Silicon/NVIDIA/Drivers/I2cIoBmcSsifDxe/I2cIoBmcSsifDxe.inf
   Silicon/NVIDIA/Drivers/ArmSbmrStatusCodeDxe/ArmSbmrStatusCodeDxe.inf
-  Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf
+  Silicon/NVIDIA/Drivers/OemDescStatusCodeDxe/OemDescStatusCodeDxe.inf {
+    <LibraryClasses>
+      DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  }
+
   Silicon/NVIDIA/Drivers/ResetNotifyRuntimeDxe/ResetNotifyRuntimeDxe.inf
   IpmiFeaturePkg/Frb/FrbDxe.inf
 
