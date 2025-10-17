@@ -93,7 +93,17 @@
 #define CARVEOUT_RAM_OOPS                 71
 #define CARVEOUT_TEMP_TSECFW_LOAD         72
 #define CARVEOUT_CCPLEX_LA_BUFFERS        73
-#define CARVEOUT_OEM_COUNT                74
+#define CARVEOUT_TEMP_RCE_DTB             74
+#define CARVEOUT_RESERVED1                75
+#define CARVEOUT_RESERVED2                76
+#define CARVEOUT_RESERVED3                77
+#define CARVEOUT_RESERVED4                78
+#define CARVEOUT_RESERVED5                79
+#define CARVEOUT_RESERVED6                80
+#define CARVEOUT_RESERVED7                81
+#define CARVEOUT_RESERVED8                82
+#define CARVEOUT_RESERVED9                83
+#define CARVEOUT_OEM_COUNT                84
 
 typedef struct {
   UINT64    Base;
