@@ -35,7 +35,7 @@
 	entrypoint-offset = <0x52415346>; /* Magic value to get sptool.py to patch it */
 	reserved-pages-count = <0>;
 	xlat-granule = <0>; /* 4KiB */
-	boot-order = <0>;
+	boot-order = <1>;
 	messaging-method = <3>; /* Direct messaging with managed exit */
 	run-time-model = <0>; /* Run to completion */
 	ns-interrupts-action = <0>; /* Non-secure interrupt is queued */
