@@ -243,7 +243,8 @@ PhyConfig (
       PhyDriver->DetectLink   = PhyMicrelDetectLink;
       break;
 
-    case PHY_AQR113C_OUI:
+    case PHY_AQR113C_B0_OUI:
+    case PHY_AQR113C_B1_OUI:
     case PHY_AQR113_OUI:
       PhyDriver->Config       = PhyMGBEConfig;
       PhyDriver->StartAutoNeg = PhyMGBEStartAutoNeg;
