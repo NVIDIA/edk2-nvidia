@@ -7,8 +7,8 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#ifndef THERMAL_ZONE_INFO_PARSER_H_
-#define THERMAL_ZONE_INFO_PARSER_H_
+#ifndef THERMAL_ZONE_TH500_INFO_PARSER_H_
+#define THERMAL_ZONE_TH500_INFO_PARSER_H_
 
 #include <Library/NvCmObjectDescUtility.h>
 
@@ -39,9 +39,9 @@
 **/
 EFI_STATUS
 EFIAPI
-ThermalZoneInfoParser (
+ThermalZoneTH500InfoParser (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN        INT32                  FdtBranch
   );
 
-#endif // THERMAL_ZONE_INFO_PARSER_H_
+#endif // THERMAL_ZONE_TH500_INFO_PARSER_H_

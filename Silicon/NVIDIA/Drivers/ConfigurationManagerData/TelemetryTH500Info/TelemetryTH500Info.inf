@@ -1,5 +1,5 @@
 ## @file
-#  ThermalZoneInfo
+#  TelemetryInfo
 #
 #  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -8,34 +8,34 @@
 
 [Defines]
   INF_VERSION    = 0x00010019
-  BASE_NAME      = ThermalZoneInfoParser
-  FILE_GUID      = ae623085-110c-4988-9799-52cbc1898f6a
+  BASE_NAME      = TelemetryTH500InfoParser
+  FILE_GUID      = 62b897e2-7408-4104-ba69-4f9982443a87
   VERSION_STRING = 1.0
   MODULE_TYPE    = DXE_DRIVER
   LIBRARY_CLASS  = NULL|DXE_DRIVER
-  CONSTRUCTOR    = RegisterThermalZoneInfoParser
+  CONSTRUCTOR    = RegisterTelemetryTH500InfoParser
 
 [Sources]
-  ThermalZoneInfoParser.c
-  ThermalZoneInfoParser.h
+  TelemetryTH500InfoParser.c
+  TelemetryTH500InfoParser.h
 
 [Packages]
   DynamicTablesPkg/DynamicTablesPkg.dec
   EmbeddedPkg/EmbeddedPkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
-  AmlLib
+  AcpiTableListParser
   ConfigurationManagerDataRepoLib
-  PlatformAslTablesLib
 
 [Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
-  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
+  gNVIDIATokenSpaceGuid.PcdAcpiTimerEnabled
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
 
 [Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Protocols]
+  gNVIDIABpmpIpcProtocolGuid
+  gEfiNVIDIAGpuDSDAMLGenerationProtocolGuid

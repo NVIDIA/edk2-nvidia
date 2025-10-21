@@ -1,5 +1,5 @@
 /** @file
-  Patches the SSDT with ThermalZoneInfo
+  Patches the SSDT with ThermalZoneInfo for TH500
 
   SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
@@ -7,7 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "ThermalZoneInfoParser.h"
+#include "ThermalZoneTH500InfoParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/AmlLib/AmlLib.h>
@@ -102,7 +102,7 @@ STATIC CONST THERMAL_ZONE_DATA  ThermalZoneData[] = {
 **/
 EFI_STATUS
 EFIAPI
-ThermalZoneInfoParser (
+ThermalZoneTH500InfoParser (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN        INT32                  FdtBranch
   )
@@ -438,4 +438,4 @@ ThermalZoneInfoParser (
   return EFI_SUCCESS;
 }
 
-REGISTER_PARSER_FUNCTION (ThermalZoneInfoParser, NULL)
+REGISTER_PARSER_FUNCTION (ThermalZoneTH500InfoParser, NULL)

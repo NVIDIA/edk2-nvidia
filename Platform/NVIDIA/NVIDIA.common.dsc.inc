@@ -1608,9 +1608,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/DsdtPatcher/DsdtPatcher.inf
 !ifdef CONFIG_SOC_DATACENTER
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/EthernetInfo/EthernetInfo.inf
-      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TelemetryInfo/TelemetryInfo.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TpmInfo/TpmInfo.inf
-      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ThermalZoneInfo/ThermalZoneInfo.inf
+!endif
+!ifdef CONFIG_SOC_T24X
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/TelemetryTH500Info/TelemetryTH500Info.inf
+      NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ThermalZoneTH500Info/ThermalZoneTH500Info.inf
 !endif
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProtocolBasedObjects/ProtocolBasedObjects.inf
       NULL|Silicon/NVIDIA/Drivers/ConfigurationManagerData/SdhciInfo/SdhciInfo.inf

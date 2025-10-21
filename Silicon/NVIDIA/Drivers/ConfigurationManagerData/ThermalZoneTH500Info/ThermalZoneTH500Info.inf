@@ -1,0 +1,41 @@
+## @file
+#  ThermalZoneTH500Info
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010019
+  BASE_NAME      = ThermalZoneTH500InfoParser
+  FILE_GUID      = ae623085-110c-4988-9799-52cbc1898f6a
+  VERSION_STRING = 1.0
+  MODULE_TYPE    = DXE_DRIVER
+  LIBRARY_CLASS  = NULL|DXE_DRIVER
+  CONSTRUCTOR    = RegisterThermalZoneTH500InfoParser
+
+[Sources]
+  ThermalZoneTH500InfoParser.c
+  ThermalZoneTH500InfoParser.h
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  AmlLib
+  ConfigurationManagerDataRepoLib
+  PlatformAslTablesLib
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gNVIDIATokenSpaceGuid.PcdUseSinglePassiveThermalZone
+
+[Guids]
+
+[Protocols]

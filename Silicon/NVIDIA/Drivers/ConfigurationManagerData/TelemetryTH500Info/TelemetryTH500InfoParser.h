@@ -1,18 +1,18 @@
 /** @file
-  Patches the DSDT with Telemetry info
+  Patches the DSDT with Telemetry info for TH500
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#ifndef TELEMETRY_INFO_PARSER_H_
-#define TELEMETRY_INFO_PARSER_H_
+#ifndef TELEMETRY_TH500_INFO_PARSER_H_
+#define TELEMETRY_TH500_INFO_PARSER_H_
 
 #include <Library/NvCmObjectDescUtility.h>
 
-/** DSDT patcher for Telemetry info.
+/** DSDT patcher for Telemetry info for TH500.
 
   The DSDT table is potentially patched with the following information:
     "_SB_.BPM0.TBUF",
@@ -67,9 +67,9 @@
 **/
 EFI_STATUS
 EFIAPI
-TelemetryInfoParser (
+TelemetryTH500InfoParser (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN        INT32                  FdtBranch
   );
 
-#endif // TELEMETRY_INFO_PARSER_H_
+#endif // TELEMETRY_TH500_INFO_PARSER_H_

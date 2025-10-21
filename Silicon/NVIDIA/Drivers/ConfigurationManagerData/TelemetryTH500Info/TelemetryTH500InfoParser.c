@@ -1,5 +1,5 @@
 /** @file
-  Patches the DSDT with Telemetry info
+  Patches the DSDT with Telemetry info for TH500
 
   SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
@@ -7,7 +7,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "TelemetryInfoParser.h"
+#include "TelemetryTH500InfoParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/ConfigurationManagerDataLib.h>
@@ -446,7 +446,7 @@ STATIC CONST CHAR8  *TelemetryCompatibleInfo[] = {
 **/
 EFI_STATUS
 EFIAPI
-TelemetryInfoParser (
+TelemetryTH500InfoParser (
   IN  CONST HW_INFO_PARSER_HANDLE  ParserHandle,
   IN        INT32                  FdtBranch
   )
@@ -615,4 +615,4 @@ ErrorExit:
   return Status;
 }
 
-REGISTER_PARSER_FUNCTION (TelemetryInfoParser, NULL)
+REGISTER_PARSER_FUNCTION (TelemetryTH500InfoParser, NULL)
