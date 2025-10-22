@@ -9,10 +9,18 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/DisplayDeviceTreeHelperLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
 
 #include <libfdt.h>
+
+///
+/// Maximum number of maximum clock rates supported by
+/// DisplayDeviceTreeUpdateMaxClockRates.
+///
+#define MAX_CLK_RATE_MAX_COUNT  4
 
 /**
    Updates Device Tree framebuffer region node at given offset with
@@ -480,4 +488,272 @@ UpdateDeviceTreeSimpleFramebufferInfo (
   }
 
   return NodeCount > 0;
+}
+
+/**
+  Update node property data if the property itself exists.
+
+  @param[in] NodeOffset    Node offset.
+  @param[in] Property      Property name.
+  @param[in] PropertyData  Data of the property.
+  @param[in] PropertySize  Size of the property data.
+
+  @retval EFI_SUCCESS            Property data successfully updated.
+  @retval EFI_SUCCESS            The property does not exist.
+  @retval EFI_INVALID_PARAMETER  Property is NULL.
+  @retval EFI_INVALID_PARAMETER  PropertySize is positive, but PropertyData is NULL.
+  @retval EFI_DEVICE_ERROR       Other errors.
+*/
+STATIC
+EFI_STATUS
+SetNodePropertyIfExists (
+  IN CONST INT32         NodeOffset,
+  IN CONST CHAR8 *CONST  Property,
+  IN CONST VOID  *CONST  PropertyData,
+  IN CONST UINT32        PropertySize
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, Property, NULL, NULL);
+  if (!EFI_ERROR (Status)) {
+    Status = DeviceTreeSetNodeProperty (NodeOffset, Property, PropertyData, PropertySize);
+  } else if (Status == EFI_NOT_FOUND) {
+    Status = EFI_SUCCESS;
+  }
+
+  return Status;
+}
+
+/**
+  Update Device Tree display node with maximum dispclk/hubclk rates.
+
+  This function does not allocate any memory, hence it is safe to call
+  during ExitBootServices.
+
+  @param[in,opt] DeviceTree           Base of the Device Tree to update.
+  @param[in]     DisplayNodePath      Path to the display node.
+  @param[in]     MaxDispClkRateKhz    Maximum dispclk rates in kHz.
+  @param[in]     MaxDispClkRateCount  Number of maximum dispclk rates.
+  @param[in]     MaxHubClkRateKhz     Maximum hubclk rates in kHz.
+  @param[in]     MaxHubClkRateCount   Number of maximum hubclk rates.
+
+  @retval EFI_SUCCESS            Node successfully updated.
+  @retval EFI_INVALID_PARAMETER  DisplayNodePath is NULL.
+  @retval EFI_INVALID_PARAMETER  MaxDispClkRateCount is non-zero, but
+                                 MaxDispClkRateKhz is NULL.
+  @retval EFI_INVALID_PARAMETER  MaxHubClkRateCount is non-zero, but
+                                 MaxHubClkRateKhz is NULL.
+  @retval EFI_OUT_OF_RESOURCES   MaxDispClkRateCount is too large.
+  @retval EFI_OUT_OF_RESOURCES   MaxHubClkRateCount is too large.
+  @retval EFI_NOT_FOUND          Node specified by DevicePath not found.
+  @retval EFI_DEVICE_ERROR       Other errors.
+*/
+EFI_STATUS
+EFIAPI
+DisplayDeviceTreeUpdateMaxClockRates (
+  IN VOID         *CONST  DeviceTree  OPTIONAL,
+  IN CONST CHAR8  *CONST  DisplayNodePath,
+  IN CONST UINT32 *CONST  MaxDispClkRateKhz,
+  IN CONST UINTN          MaxDispClkRateCount,
+  IN CONST UINT32 *CONST  MaxHubClkRateKhz,
+  IN CONST UINTN          MaxHubClkRateCount
+  )
+{
+  EFI_STATUS  Status;
+  INT32       NodeOffset;
+  VOID        *OldDeviceTree;
+  UINTN       OldDeviceTreeSize;
+  UINTN       Index, Count;
+  UINT32      PropertyData[MAX_CLK_RATE_MAX_COUNT];
+
+  NV_ASSERT_RETURN (
+    DisplayNodePath != NULL,
+    return EFI_INVALID_PARAMETER,
+    "%a: DisplayNodePath is NULL",
+    __FUNCTION__
+    );
+  NV_ASSERT_RETURN (
+    (MaxDispClkRateKhz != NULL) || (MaxDispClkRateCount == 0),
+    return EFI_INVALID_PARAMETER,
+    "%a: MaxDispClkRateCount is non-zero, but MaxDispClkRateKhz is NULL",
+    __FUNCTION__
+    );
+  NV_ASSERT_RETURN (
+    (MaxHubClkRateKhz != NULL) || (MaxHubClkRateCount == 0),
+    return EFI_INVALID_PARAMETER,
+    "%a: MaxHubClkRateCount is non-zero, but MaxHubClkRateKhz is NULL",
+    __FUNCTION__
+    );
+  NV_ASSERT_RETURN (
+    MaxDispClkRateCount <= MAX_CLK_RATE_MAX_COUNT,
+    return EFI_OUT_OF_RESOURCES,
+    "%a: MaxDispClkRateCount is too large: %lu\r\n",
+    __FUNCTION__,
+    (UINT64)MaxDispClkRateCount
+    );
+  NV_ASSERT_RETURN (
+    MaxHubClkRateCount <= MAX_CLK_RATE_MAX_COUNT,
+    return EFI_OUT_OF_RESOURCES,
+    "%a: MaxHubClkRateCount is too large: %lu\r\n",
+    __FUNCTION__,
+    (UINT64)MaxHubClkRateCount
+    );
+
+  if (DeviceTree != NULL) {
+    Status = GetDeviceTreePointer (&OldDeviceTree, &OldDeviceTreeSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_WARN,
+        "%a: failed to retrieve Device Tree pointer: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+      OldDeviceTree     = NULL;
+      OldDeviceTreeSize = 0;
+    }
+
+    SetDeviceTreePointer (NULL, 0);
+    SetDeviceTreePointer (DeviceTree, fdt_totalsize (DeviceTree));
+  }
+
+  Status = DeviceTreeGetNodeByPath (DisplayNodePath, &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Count = MaxDispClkRateCount;
+  for (Index = 0; Index < Count; ++Index) {
+    PropertyData[Index] = cpu_to_fdt32 (MaxDispClkRateKhz[Index]);
+  }
+
+  Status = SetNodePropertyIfExists (
+             NodeOffset,
+             "nvidia,max-disp-clk-rate-khz",
+             PropertyData,
+             Count * sizeof (*PropertyData)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Count = MaxHubClkRateCount;
+  for (Index = 0; Index < Count; ++Index) {
+    PropertyData[Index] = cpu_to_fdt32 (MaxHubClkRateKhz[Index]);
+  }
+
+  Status = SetNodePropertyIfExists (
+             NodeOffset,
+             "nvidia,max-hub-clk-rate-khz",
+             PropertyData,
+             Count * sizeof (*PropertyData)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  if (DeviceTree != NULL) {
+    SetDeviceTreePointer (NULL, 0);
+    SetDeviceTreePointer (OldDeviceTree, OldDeviceTreeSize);
+  }
+
+  return Status;
+}
+
+/**
+  Update Device Tree display node with allocated ISO bandwidth and
+  memory clock floor.
+
+  This function does not allocate any memory, hence it is safe to call
+  during ExitBootServices.
+
+  @param[in,opt] DisplayNodePath            Path to the display node.
+  @param[in]     IsoBandwidthKbytesPerSec   Requested ISO bandwidth.
+  @param[in]     MemclockFloorKbytesPerSec  Requested memory clock floor.
+
+  @retval EFI_SUCCESS            Node successfully updated.
+  @retval EFI_INVALID_PARAMETER  DisplayNodePath is NULL.
+  @retval EFI_NOT_FOUND          Node specified by DevicePath not found.
+  @retval EFI_DEVICE_ERROR       Other errors.
+*/
+EFI_STATUS
+EFIAPI
+DisplayDeviceTreeUpdateIsoBandwidth (
+  IN VOID        *CONST  DeviceTree  OPTIONAL,
+  IN CONST CHAR8 *CONST  DisplayNodePath,
+  IN CONST UINT32        IsoBandwidthKbytesPerSec,
+  IN CONST UINT32        MemclockFloorKbytesPerSec
+  )
+{
+  EFI_STATUS  Status;
+  INT32       NodeOffset;
+  VOID        *OldDeviceTree;
+  UINTN       OldDeviceTreeSize;
+  UINT32      PropertyData;
+
+  NV_ASSERT_RETURN (
+    DisplayNodePath != NULL,
+    return EFI_INVALID_PARAMETER,
+    "%a: DisplayNodePath is NULL",
+    __FUNCTION__
+    );
+
+  if (DeviceTree != NULL) {
+    Status = GetDeviceTreePointer (&OldDeviceTree, &OldDeviceTreeSize);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_WARN,
+        "%a: failed to retrieve Device Tree pointer: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+      OldDeviceTree     = NULL;
+      OldDeviceTreeSize = 0;
+    }
+
+    SetDeviceTreePointer (NULL, 0);
+    SetDeviceTreePointer (DeviceTree, fdt_totalsize (DeviceTree));
+  }
+
+  Status = DeviceTreeGetNodeByPath (DisplayNodePath, &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  PropertyData = cpu_to_fdt32 (IsoBandwidthKbytesPerSec);
+
+  Status = SetNodePropertyIfExists (
+             NodeOffset,
+             "nvidia,iso-bandwidth-kbps",
+             &PropertyData,
+             sizeof (PropertyData)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  PropertyData = cpu_to_fdt32 (MemclockFloorKbytesPerSec);
+
+  Status = SetNodePropertyIfExists (
+             NodeOffset,
+             "nvidia,dram-floor-kbps",
+             &PropertyData,
+             sizeof (PropertyData)
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = EFI_SUCCESS;
+
+Exit:
+  if (DeviceTree != NULL) {
+    SetDeviceTreePointer (NULL, 0);
+    SetDeviceTreePointer (OldDeviceTree, OldDeviceTreeSize);
+  }
+
+  return Status;
 }
