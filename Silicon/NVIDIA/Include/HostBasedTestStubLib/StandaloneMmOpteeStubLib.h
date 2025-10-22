@@ -2,7 +2,7 @@
 
 StandaloneMmOpteeStubLib definitions.
 
-Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,6 +20,17 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Uefi.h>
 #include <Protocol/NorFlash.h>
+
+/**
+ * Setup the check for OP-TEE return
+ *
+ * @param[in] ReturnStatus Return status for the call to give
+ *
+**/
+VOID
+MockIsOpteePresent (
+  IN BOOLEAN  ReturnStatus
+  );
 
 /**
  * Setup the CPU BL Params Address.

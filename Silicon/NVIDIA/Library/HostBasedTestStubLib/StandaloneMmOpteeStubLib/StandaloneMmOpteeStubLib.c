@@ -43,15 +43,14 @@ IsOpteePresent (
 }
 
 /**
- * Setup the CPU BL Params Address.
+ * Setup the check for OP-TEE return
  *
- * @param[in] CpuBlAddr    Address for the CPU Bootloader Params.
  * @param[in] ReturnStatus Return status for the call to give
  *
 **/
 VOID
 MockIsOpteePresent (
-  IN BOOLEAN  *ReturnStatus
+  IN BOOLEAN  ReturnStatus
   )
 {
   will_return (IsOpteePresent, ReturnStatus);

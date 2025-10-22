@@ -22,6 +22,7 @@
 #include <HostBasedTestStubLib/MmServicesTableStubLib.h>
 #include <HostBasedTestStubLib/NvVarIntStubLib.h>
 #include <HostBasedTestStubLib/ArmSvcStubLib.h>
+#include <HostBasedTestStubLib/StandaloneMmOpteeStubLib.h>
 
 // So that we can reference FvbPrivate declarations
 #include "../FvbPrivate.h"
@@ -172,6 +173,7 @@ VarIntComputeTest_1 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
@@ -201,6 +203,7 @@ VarIntComputeTest_1 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -269,6 +272,8 @@ VarIntComputeTest_2 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
@@ -367,6 +372,7 @@ VarIntComputeTest_3 (
       TestData->ComputeReturnStatus
       );
     MockArmCallSvc (TestData->TestArgs);
+    MockIsOpteePresent (TRUE);
 
     Status = VarIntProto->ComputeNewMeasurement (
                             VarIntProto,
@@ -397,6 +403,7 @@ VarIntComputeTest_3 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -462,6 +469,7 @@ VarIntComputeTest_4 (
       TestData->ComputeReturnStatus
       );
     MockArmCallSvc (TestData->TestArgs);
+    MockIsOpteePresent (TRUE);
 
     Status = VarIntProto->ComputeNewMeasurement (
                             VarIntProto,
@@ -492,6 +500,7 @@ VarIntComputeTest_4 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -555,6 +564,7 @@ VarIntComputeTest_5 (
     TestData->ComputeReturnStatus
     );
   MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
@@ -631,6 +641,7 @@ InitSuiteTestData (
     (EFI_HANDLE)Handle,
     EFI_SUCCESS
     );
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntInit (
              ResPartitionOffset,

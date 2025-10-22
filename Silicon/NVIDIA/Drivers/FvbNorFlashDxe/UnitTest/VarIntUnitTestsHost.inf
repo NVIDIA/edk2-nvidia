@@ -33,6 +33,7 @@
   CryptoPkg/CryptoPkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
   SecurityPkg/SecurityPkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
 
 [LibraryClasses]
   BaseLib
