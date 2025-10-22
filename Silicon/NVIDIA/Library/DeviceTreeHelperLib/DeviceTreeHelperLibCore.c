@@ -1106,7 +1106,8 @@ DeviceTreeCheckNodeSingleCompatibility (
   @param[in]      PropertySize  - Size of the property node.
 
   @retval EFI_SUCCESS           - Property returned
-  @retval EFI_INVALID_PARAMETER - Property or PropertyData is NULL
+  @retval EFI_INVALID_PARAMETER - Property is NULL
+  @retval EFI_INVALID_PARAMETER - PropertySize is positive, but PropertyData is NULL
   @retval EFI_DEVICE_ERROR      - Other Errors
 
 **/
@@ -1123,7 +1124,7 @@ DeviceTreeSetNodeProperty (
   VOID        *DeviceTree;
   INT32       FdtErr;
 
-  if ((Property == NULL) || (PropertyData == NULL)) {
+  if ((Property == NULL) || ((PropertyData == NULL) && (PropertySize > 0))) {
     return EFI_INVALID_PARAMETER;
   }
 

@@ -968,7 +968,8 @@ DeviceTreeCheckNodeSingleCompatibility (
   @param[in]      PropertySize  - Size of the property node.
 
   @retval EFI_SUCCESS           - Property returned
-  @retval EFI_INVALID_PARAMETER - Property or PropertyData is NULL
+  @retval EFI_INVALID_PARAMETER - Property is NULL
+  @retval EFI_INVALID_PARAMETER - PropertySize is positive, but PropertyData is NULL
   @retval EFI_DEVICE_ERROR      - Other Errors
 
 **/
