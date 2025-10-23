@@ -74,6 +74,140 @@ NvDisplayAssertResets (
 }
 
 /**
+  Reset given clock parent to safe osc clock. In addition, set the
+  child clock frequency to match osc in order to ensure any clock
+  divider configuration is reset to 1:1 as well.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] ClockName         Name of the clock.
+
+  @retval EFI_SUCCESS    Clock reset successfully.
+  @retval EFI_NOT_FOUND  The osc clock was not found on the controller.
+  @retval EFI_NOT_FOUND  The clock name not found on controller.
+  @retval others         Other errors occurred.
+*/
+STATIC
+EFI_STATUS
+ResetClockToOsc (
+  IN CONST EFI_HANDLE    DriverHandle,
+  IN CONST EFI_HANDLE    ControllerHandle,
+  IN CONST CHAR8 *CONST  Clock
+  )
+{
+  EFI_STATUS  Status;
+  UINT64      OscRateHz;
+
+  Status = DeviceDiscoveryGetClockFreq (ControllerHandle, "osc_clk", &OscRateHz);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve frequency of 'osc_clk': %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  Status = DeviceDiscoverySetClockParent (ControllerHandle, Clock, "osc_clk");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to switch parent of '%a' to 'osc_clk': %r\r\n",
+      __FUNCTION__,
+      Clock,
+      Status
+      ));
+    return Status;
+  }
+
+  Status = DeviceDiscoverySetClockFreq (ControllerHandle, Clock, OscRateHz);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to set frequency of '%a' to %lu Hz: %r\r\n",
+      __FUNCTION__,
+      Clock,
+      OscRateHz,
+      Status
+      ));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Retrieve rates of the given clock with specified parent clocks, then
+  reset the clock parent and rate to safe osc clock.
+
+  @param[in]  DriverHandle      Handle to the driver.
+  @param[in]  ControllerHandle  Handle to the controller.
+  @param[in]  ClockName         Name of the clock.
+  @param[in]  ParentClockNames  Name of the parent clocks.
+  @param[out] RatesKhz          Rates of the clock with corresponding parents.
+
+  @retval EFI_SUCCESS    Rates retrieved successfully.
+  @retval EFI_NOT_FOUND  The osc clock was not found on the controller.
+  @retval EFI_NOT_FOUND  The clock name not found on controller.
+  @retval EFI_NOT_FOUND  Parent clock name not found on controller.
+  @retval others         Other errors occurred.
+*/
+EFI_STATUS
+NvDisplayGetClockRatesWithParentsAndReset (
+  IN  CONST EFI_HANDLE           DriverHandle,
+  IN  CONST EFI_HANDLE           ControllerHandle,
+  IN  CONST CHAR8        *CONST  ClockName,
+  IN  CONST CHAR8 *CONST *CONST  ParentClockNames,
+  OUT UINT32             *CONST  RatesKhz
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Index;
+  UINT64      RateHz;
+
+  for (Index = 0; ParentClockNames[Index] != NULL; ++Index) {
+    Status = ResetClockToOsc (DriverHandle, ControllerHandle, ClockName);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    Status = DeviceDiscoverySetClockParent (
+               ControllerHandle,
+               ClockName,
+               ParentClockNames[Index]
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to switch parent of '%a' to '%a': %r\r\n",
+        __FUNCTION__,
+        ClockName,
+        ParentClockNames[Index],
+        Status
+        ));
+      return Status;
+    }
+
+    Status = DeviceDiscoveryGetClockFreq (ControllerHandle, ClockName, &RateHz);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to retrieve frequency of '%a': %r\r\n",
+        __FUNCTION__,
+        ClockName,
+        Status
+        ));
+      return Status;
+    }
+
+    RatesKhz[Index] = RateHz / 1000;
+  }
+
+  return ResetClockToOsc (DriverHandle, ControllerHandle, ClockName);
+}
+
+/**
   Enable or disable display clocks. In addition, set given clock
   parents before enable.
 

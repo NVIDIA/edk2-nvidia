@@ -39,6 +39,7 @@
   DeviceDiscoveryDriverLib
   DeviceTreeHelperLib
   DisplayDeviceTreeHelperLib
+  FdtLib
   HobLib
   IoLib
   MemoryAllocationLib

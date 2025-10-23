@@ -60,6 +60,8 @@ typedef struct {
   BOOLEAN                     MaxEmcFrequencyForced;
   BOOLEAN                     ResetsDeasserted;
   BOOLEAN                     ClocksEnabled;
+  UINT32                      MaxDispClkRateKhz[2];
+  UINT32                      MaxHubClkRateKhz[1];
 } NV_DISPLAY_CONTROLLER_HW_PRIVATE;
 
 #define NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS(a)  CR(\
@@ -230,9 +232,11 @@ SetupEmcFrequency (
 STATIC
 EFI_STATUS
 ForceMaxEmcFrequency (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle,
-  IN CONST BOOLEAN     Enable
+  IN  CONST EFI_HANDLE  DriverHandle,
+  IN  CONST EFI_HANDLE  ControllerHandle,
+  IN  CONST BOOLEAN     Enable,
+  OUT UINT32 *CONST     IsoBandwidthKbytesPerSec   OPTIONAL,
+  OUT UINT32 *CONST     MemclockFloorKbytesPerSec  OPTIONAL
   )
 {
   EFI_STATUS  Status;
@@ -266,7 +270,15 @@ ForceMaxEmcFrequency (
              IsoBandwidthKbps,
              MemclockFloorKbps
              );
-  if (Status == EFI_UNSUPPORTED) {
+  if (!EFI_ERROR (Status)) {
+    if (IsoBandwidthKbytesPerSec != NULL) {
+      *IsoBandwidthKbytesPerSec = IsoBandwidthKbps;
+    }
+
+    if (MemclockFloorKbytesPerSec != NULL) {
+      *MemclockFloorKbytesPerSec = MemclockFloorKbps;
+    }
+  } else if (Status == EFI_UNSUPPORTED) {
     /* If BWMGR is disabled, we cannot control the EMC frequency; in
        this case, just return success. */
     Status = EFI_SUCCESS;
@@ -321,7 +333,9 @@ EnableHwT264 (
       Status = ForceMaxEmcFrequency (
                  Private->DriverHandle,
                  Private->ControllerHandle,
-                 TRUE
+                 TRUE,
+                 &Private->Hw.IsoBandwidthKbytesPerSec,
+                 &Private->Hw.MemclockFloorKbytesPerSec
                  );
       if (EFI_ERROR (Status)) {
         goto Disable;
@@ -394,7 +408,9 @@ Disable:
       Status1 = ForceMaxEmcFrequency (
                   Private->DriverHandle,
                   Private->ControllerHandle,
-                  FALSE
+                  FALSE,
+                  &Private->Hw.IsoBandwidthKbytesPerSec,
+                  &Private->Hw.MemclockFloorKbytesPerSec
                   );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
@@ -424,22 +440,64 @@ NvDisplayControllerStartT264 (
   IN CONST EFI_HANDLE  ControllerHandle
   )
 {
-  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
+  STATIC CONST CHAR8 *CONST  DispRootParents[] = {
+    "disppll_clk",
+    "sppll0_clkouta_clk",
+    NULL
+  };
+  STATIC CONST CHAR8 *CONST  HubClkParents[] = {
+    "sppll0_clkoutb_clk",
+    NULL
+  };
+
+  EFI_STATUS                        Status;
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private = NULL;
 
   Private = AllocateZeroPool (sizeof (*Private));
   if (Private == NULL) {
-    return EFI_OUT_OF_RESOURCES;
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
   }
 
-  Private->Signature        = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
-  Private->Hw.Destroy       = DestroyHwT264;
-  Private->Hw.Enable        = EnableHwT264;
-  Private->DriverHandle     = DriverHandle;
-  Private->ControllerHandle = ControllerHandle;
+  Private->Signature              = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
+  Private->Hw.Destroy             = DestroyHwT264;
+  Private->Hw.Enable              = EnableHwT264;
+  Private->Hw.MaxDispClkRateKhz   = Private->MaxDispClkRateKhz;
+  Private->Hw.MaxDispClkRateCount = ARRAY_SIZE (Private->MaxDispClkRateKhz);
+  Private->Hw.MaxHubClkRateKhz    = Private->MaxHubClkRateKhz;
+  Private->Hw.MaxHubClkRateCount  = ARRAY_SIZE (Private->MaxHubClkRateKhz);
+  Private->DriverHandle           = DriverHandle;
+  Private->ControllerHandle       = ControllerHandle;
 
-  return NvDisplayControllerStart (
-           DriverHandle,
-           ControllerHandle,
-           &Private->Hw
-           );
+  Status = NvDisplayGetClockRatesWithParentsAndReset (
+             DriverHandle,
+             ControllerHandle,
+             "disp_root",
+             DispRootParents,
+             Private->MaxDispClkRateKhz
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = NvDisplayGetClockRatesWithParentsAndReset (
+             DriverHandle,
+             ControllerHandle,
+             "nvdisplayhub_clk",
+             HubClkParents,
+             Private->MaxHubClkRateKhz
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status  = NvDisplayControllerStart (DriverHandle, ControllerHandle, &Private->Hw);
+  Private = NULL;
+
+Exit:
+  if (Private != NULL) {
+    Private->Hw.Destroy (&Private->Hw);
+  }
+
+  return Status;
 }

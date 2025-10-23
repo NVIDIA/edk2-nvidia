@@ -80,6 +80,31 @@ NvDisplayAssertResets (
   );
 
 /**
+  Retrieve rates of the given clock with specified parent clocks, then
+  reset the clock parent and rate to safe osc clock.
+
+  @param[in]  DriverHandle      Handle to the driver.
+  @param[in]  ControllerHandle  Handle to the controller.
+  @param[in]  ClockName         Name of the clock.
+  @param[in]  ParentClockNames  Name of the parent clocks.
+  @param[out] RatesKhz          Rates of the clock with corresponding parents.
+
+  @retval EFI_SUCCESS    Rates retrieved successfully.
+  @retval EFI_NOT_FOUND  The osc clock was not found on the controller.
+  @retval EFI_NOT_FOUND  The clock name not found on controller.
+  @retval EFI_NOT_FOUND  Parent clock name not found on controller.
+  @retval others         Other errors occurred.
+*/
+EFI_STATUS
+NvDisplayGetClockRatesWithParentsAndReset (
+  IN  EFI_HANDLE          DriverHandle,
+  IN  EFI_HANDLE          ControllerHandle,
+  IN  CONST CHAR8         *ClockName,
+  IN  CONST CHAR8 *CONST  *ParentClockNames,
+  OUT UINT32              *RatesKhz
+  );
+
+/**
   Enable or disable display clocks. In addition, set given clock
   parents before enable.
 
