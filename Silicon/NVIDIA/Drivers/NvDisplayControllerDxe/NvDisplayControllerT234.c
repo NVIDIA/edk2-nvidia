@@ -33,6 +33,8 @@ typedef struct {
   BOOLEAN                     ResetsDeasserted;
   BOOLEAN                     ClocksEnabled;
   BOOLEAN                     GpiosConfigured;
+  UINT32                      MaxDispClkRateKhz[2];
+  UINT32                      MaxHubClkRateKhz[1];
 } NV_DISPLAY_CONTROLLER_HW_PRIVATE;
 
 #define NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS(a)  CR(\
@@ -513,22 +515,64 @@ NvDisplayControllerStartT234 (
   IN CONST EFI_HANDLE  ControllerHandle
   )
 {
+  STATIC CONST CHAR8 *CONST  DispClkParents[] = {
+    "disppll_clk",
+    "sppll0_clkouta_clk",
+    NULL
+  };
+  STATIC CONST CHAR8 *CONST  HubClkParents[] = {
+    "sppll0_clkoutb_clk",
+    NULL
+  };
+
+  EFI_STATUS                        Status;
   NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
 
   Private = AllocateZeroPool (sizeof (*Private));
   if (Private == NULL) {
-    return EFI_OUT_OF_RESOURCES;
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Exit;
   }
 
-  Private->Signature        = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
-  Private->Hw.Destroy       = DestroyHwT234;
-  Private->Hw.Enable        = EnableHwT234;
-  Private->DriverHandle     = DriverHandle;
-  Private->ControllerHandle = ControllerHandle;
+  Private->Signature              = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
+  Private->Hw.Destroy             = DestroyHwT234;
+  Private->Hw.Enable              = EnableHwT234;
+  Private->Hw.MaxDispClkRateKhz   = Private->MaxDispClkRateKhz;
+  Private->Hw.MaxDispClkRateCount = ARRAY_SIZE (Private->MaxDispClkRateKhz);
+  Private->Hw.MaxHubClkRateKhz    = Private->MaxHubClkRateKhz;
+  Private->Hw.MaxHubClkRateCount  = ARRAY_SIZE (Private->MaxHubClkRateKhz);
+  Private->DriverHandle           = DriverHandle;
+  Private->ControllerHandle       = ControllerHandle;
 
-  return NvDisplayControllerStart (
-           DriverHandle,
-           ControllerHandle,
-           &Private->Hw
-           );
+  Status = NvDisplayGetClockRatesWithParentsAndReset (
+             DriverHandle,
+             ControllerHandle,
+             "nvdisplay_disp_clk",
+             DispClkParents,
+             Private->MaxDispClkRateKhz
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status = NvDisplayGetClockRatesWithParentsAndReset (
+             DriverHandle,
+             ControllerHandle,
+             "nvdisplayhub_clk",
+             HubClkParents,
+             Private->MaxHubClkRateKhz
+             );
+  if (EFI_ERROR (Status)) {
+    goto Exit;
+  }
+
+  Status  = NvDisplayControllerStart (DriverHandle, ControllerHandle, &Private->Hw);
+  Private = NULL;
+
+Exit:
+  if (Private != NULL) {
+    Private->Hw.Destroy (&Private->Hw);
+  }
+
+  return Status;
 }

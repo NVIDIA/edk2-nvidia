@@ -12,12 +12,15 @@
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceTreeHelperLib.h>
+#include <Library/DisplayDeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 
+#include <Protocol/DeviceTreeNode.h>
 #include <Protocol/NonDiscoverableDevice.h>
 
 #include <NVIDIAConfiguration.h>
@@ -31,6 +34,7 @@ typedef struct {
   UINT32                      Signature;
   EFI_HANDLE                  DriverHandle;
   EFI_HANDLE                  ControllerHandle;
+  CHAR8                       *DtNodePath;
   NV_DISPLAY_CONTROLLER_HW    *Hw;
   UINT8                       HandoffMode;
   UINT8                       HandoffMethod;
@@ -99,12 +103,13 @@ GetControllerPrivate (
 /**
   Check if ACPI mode is enabled.
 
-  @return TRUE   Force BLT-only mode.
-  @return FALSE  Do not force BLT-only mode.
+  @return TRUE   ACPI mode is enabled.
+  @return FALSE  ACPI mode is disabled.
 */
 STATIC
 BOOLEAN
 CheckAcpiMode (
+  VOID
   )
 {
   EFI_STATUS  Status;
@@ -171,6 +176,83 @@ CheckPerformHandoff (
 }
 
 /**
+  Update the Device Tree with HW-specific display info.
+
+  @param[in] Private  Display controller private data.
+*/
+STATIC
+VOID
+UpdateDisplayDeviceTreeHwInfo (
+  IN NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *Fdt;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &Fdt);
+  if (!EFI_ERROR (Status)) {
+    Status = DisplayDeviceTreeUpdateMaxClockRates (
+               Fdt,
+               Private->DtNodePath,
+               Private->Hw->MaxDispClkRateKhz,
+               Private->Hw->MaxDispClkRateCount,
+               Private->Hw->MaxHubClkRateKhz,
+               Private->Hw->MaxHubClkRateCount
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_WARN,
+        "%a: failed to update maximum clock rates: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+
+    Status = DisplayDeviceTreeUpdateIsoBandwidth (
+               Fdt,
+               Private->DtNodePath,
+               Private->Hw->IsoBandwidthKbytesPerSec,
+               Private->Hw->MemclockFloorKbytesPerSec
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_WARN,
+        "%a: failed to update requested ISO bandwidth: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+    }
+  }
+}
+
+/**
+  Enable or disable the chip-specific HW.
+
+  @param[in] Private  Display controller private data.
+  @param[in] Enable   TRUE = enable; FALSE = disable.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Operation failed.
+*/
+STATIC
+EFI_STATUS
+EnableHw (
+  IN NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private,
+  IN CONST BOOLEAN                         Enable
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = Private->Hw->Enable (Private->Hw, Enable);
+  if (!EFI_ERROR (Status)) {
+    /* HW info may have changed, try to update the Device Tree. */
+    UpdateDisplayDeviceTreeHwInfo (Private);
+  }
+
+  return Status;
+}
+
+/**
   Event notification function for whenever the FDT table is updated.
 
   @param[in] Event    Event used for the notification.
@@ -187,15 +269,18 @@ FdtTableNotifyFunction (
   NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private =
     (NV_DISPLAY_CONTROLLER_PRIVATE *)Context;
 
-  ASSERT (Private->HandoffMode != NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER);
-  ASSERT (Private->HandoffMethod == NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB);
+  UpdateDisplayDeviceTreeHwInfo (Private);
 
-  /* Since the FDT was just reinstalled, we must always run the update
-     routine. */
-  Private->PerformHandoff = NvDisplayUpdateFdtTableActiveChildGop (
-                              Private->DriverHandle,
-                              Private->ControllerHandle
-                              );
+  if (  (Private->HandoffMode != NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER)
+     && (Private->HandoffMethod == NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB))
+  {
+    /* Since the FDT was just reinstalled, we must always run the update
+       routine. */
+    Private->PerformHandoff = NvDisplayUpdateFdtTableActiveChildGop (
+                                Private->DriverHandle,
+                                Private->ControllerHandle
+                                );
+  }
 }
 
 /**
@@ -215,27 +300,29 @@ ReadyToBootNotifyFunction (
   NV_DISPLAY_CONTROLLER_PRIVATE *CONST  Private =
     (NV_DISPLAY_CONTROLLER_PRIVATE *)Context;
 
-  ASSERT (Private->HandoffMode != NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER);
+  UpdateDisplayDeviceTreeHwInfo (Private);
 
-  switch (Private->HandoffMethod) {
-    case NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB:
-      /* Only run the FDT update routine if the FDT has not been
-         updated yet. */
-      if (!Private->PerformHandoff) {
-        Private->PerformHandoff = NvDisplayUpdateFdtTableActiveChildGop (
+  if (Private->HandoffMode != NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER) {
+    switch (Private->HandoffMethod) {
+      case NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB:
+        /* Only run the FDT update routine if the FDT has not been
+           updated yet. */
+        if (!Private->PerformHandoff) {
+          Private->PerformHandoff = NvDisplayUpdateFdtTableActiveChildGop (
+                                      Private->DriverHandle,
+                                      Private->ControllerHandle
+                                      );
+        }
+
+        break;
+
+      case NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_EFIFB:
+        Private->PerformHandoff = NvDisplayEnableEfifbActiveChildGop (
                                     Private->DriverHandle,
                                     Private->ControllerHandle
                                     );
-      }
-
-      break;
-
-    case NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_EFIFB:
-      Private->PerformHandoff = NvDisplayEnableEfifbActiveChildGop (
-                                  Private->DriverHandle,
-                                  Private->ControllerHandle
-                                  );
-      break;
+        break;
+    }
   }
 }
 
@@ -298,7 +385,7 @@ DestroyControllerPrivateOnExitBootServices (
     Private->OnReadyToBootEvent = NULL;
   }
 
-  Status1 = Private->Hw->Enable (Private->Hw, FALSE);
+  Status1 = EnableHw (Private, FALSE);
   if (!EFI_ERROR (Status)) {
     Status = Status1;
   }
@@ -358,12 +445,16 @@ CreateControllerPrivate (
   IN  NV_DISPLAY_CONTROLLER_HW       *CONST  Hw
   )
 {
-  EFI_STATUS                     Status;
-  UINTN                          ResourcesSize;
-  BOOLEAN                        IsAcpiMode;
-  NON_DISCOVERABLE_DEVICE        *Device;
-  NV_DISPLAY_CONTROLLER_HW       *Hw1    = Hw;
-  NV_DISPLAY_CONTROLLER_PRIVATE  *Result = NULL;
+  EFI_STATUS                        Status;
+  UINTN                             Size;
+  UINTN                             ResourcesSize;
+  CHAR8                             *DtNodePath = NULL;
+  UINT32                            DtNodePathSize;
+  BOOLEAN                           IsAcpiMode;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *NodeProtocol;
+  NON_DISCOVERABLE_DEVICE           *Device;
+  NV_DISPLAY_CONTROLLER_HW          *Hw1    = Hw;
+  NV_DISPLAY_CONTROLLER_PRIVATE     *Result = NULL;
 
   if (Private == NULL) {
     Status = EFI_INVALID_PARAMETER;
@@ -388,18 +479,49 @@ CreateControllerPrivate (
     goto Exit;
   }
 
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIADeviceTreeNodeProtocolGuid,
+                  (VOID **)&NodeProtocol,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to open NVIDIA device tree node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto Exit;
+  }
+
   Status = NvDisplayGetMmioRegions (DriverHandle, ControllerHandle, NULL, &ResourcesSize);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
 
-  Result = (NV_DISPLAY_CONTROLLER_PRIVATE *)AllocateZeroPool (sizeof (*Result) + ResourcesSize);
+  Status = DeviceTreeGetNodePath (NodeProtocol->NodeOffset, &DtNodePath, &DtNodePathSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve path of Device Tree node at offset 0x%x: %r\r\n",
+      __FUNCTION__,
+      NodeProtocol->NodeOffset,
+      Status
+      ));
+    goto Exit;
+  }
+
+  Size   = sizeof (*Result) + ResourcesSize + DtNodePathSize;
+  Result = (NV_DISPLAY_CONTROLLER_PRIVATE *)AllocateZeroPool (Size);
   if (Result == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: could not allocate %u bytes for display controller private data\r\n",
       __FUNCTION__,
-      sizeof (*Result) + ResourcesSize
+      Size
       ));
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
@@ -431,59 +553,52 @@ CreateControllerPrivate (
     goto Exit;
   }
 
-  Status = Result->Hw->Enable (Result->Hw, TRUE);
+  Result->DtNodePath = (CHAR8 *)((UINT8 *)Result->Device.Resources + ResourcesSize);
+  CopyMem (Result->DtNodePath, DtNodePath, DtNodePathSize);
+
+  Status = EnableHw (Result, TRUE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
 
-  switch (Result->HandoffMode) {
-    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
-    default:
-      break;
+  if (!IsAcpiMode) {
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    FdtTableNotifyFunction,
+                    Result,
+                    &gFdtTableGuid,
+                    &Result->OnFdtInstalledEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to create OnFdtInstalled event: %r\r\n",
+        __FUNCTION__,
+        Status
+        ));
+      Result->OnFdtInstalledEvent = NULL;
+      goto Exit;
+    }
+  }
 
-    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS:
-    case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO:
-      if (Result->HandoffMethod == NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_SIMPLEFB) {
-        Status = gBS->CreateEventEx (
-                        EVT_NOTIFY_SIGNAL,
-                        TPL_CALLBACK,
-                        FdtTableNotifyFunction,
-                        Result,
-                        &gFdtTableGuid,
-                        &Result->OnFdtInstalledEvent
-                        );
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: failed to create OnFdtInstalled event: %r\r\n",
-            __FUNCTION__,
-            Status
-            ));
-          Result->OnFdtInstalledEvent = NULL;
-          goto Exit;
-        }
-      }
-
-      Status = gBS->CreateEventEx (
-                      EVT_NOTIFY_SIGNAL,
-                      TPL_CALLBACK,
-                      ReadyToBootNotifyFunction,
-                      Result,
-                      &gEfiEventReadyToBootGuid,
-                      &Result->OnReadyToBootEvent
-                      );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to create OnReadyToBoot event: %r\r\n",
-          __FUNCTION__,
-          Status
-          ));
-        Result->OnReadyToBootEvent = NULL;
-        goto Exit;
-      }
-
-      break;
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  ReadyToBootNotifyFunction,
+                  Result,
+                  &gEfiEventReadyToBootGuid,
+                  &Result->OnReadyToBootEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to create OnReadyToBoot event: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    Result->OnReadyToBootEvent = NULL;
+    goto Exit;
   }
 
   *Private = Result;
@@ -492,6 +607,10 @@ CreateControllerPrivate (
 Exit:
   if (Result != NULL) {
     DestroyControllerPrivate (Result);
+  }
+
+  if (DtNodePath != NULL) {
+    FreePool (DtNodePath);
   }
 
   if (Hw1 != NULL) {

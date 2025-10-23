@@ -43,6 +43,13 @@ EFI_STATUS
 struct _NV_DISPLAY_CONTROLLER_HW {
   NV_DISPLAY_CONTROLLER_HW_DESTROY    Destroy;
   NV_DISPLAY_CONTROLLER_HW_ENABLE     Enable;
+
+  UINT32                              *MaxDispClkRateKhz;
+  UINTN                               MaxDispClkRateCount;
+  UINT32                              *MaxHubClkRateKhz;
+  UINTN                               MaxHubClkRateCount;
+  UINT32                              IsoBandwidthKbytesPerSec;
+  UINT32                              MemclockFloorKbytesPerSec;
 };
 
 /**
