@@ -2512,6 +2512,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 
   #
+  # Android Support
+  #
+!ifdef CONFIG_BUILD_ANDROID
+  Silicon/NVIDIA/Drivers/AndroidFmpInitDxe/AndroidFmpInitDxe.inf
+!endif
+
+  #
   # Gpio Power Off Driver
   #
   Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf

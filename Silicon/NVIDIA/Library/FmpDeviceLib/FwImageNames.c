@@ -21,9 +21,20 @@ STATIC CONST CHAR16  *SystemFwImageNamesCommon[] = {
   L"MB1_BCT",
   L"mb2",
   L"MEM_BCT",
-  L"rce-fw",
   L"sc7",
-  L"VER",
+  NULL
+};
+
+STATIC CONST CHAR16  *SystemFwImageNamesAndroidT234[] = {
+  L"adsp-fw",
+  L"mb2rf",
+  L"mts-mce",
+  L"nvdec",
+  L"psc_bl1",
+  L"psc-fw",
+  L"pscrf",
+  L"secure-os",
+  L"spe-fw",
   NULL
 };
 
@@ -39,6 +50,8 @@ STATIC CONST CHAR16  *SystemFwImageNamesT234[] = {
   L"pva-fw",
   L"secure-os",
   L"spe-fw",
+  L"rce-fw",
+  L"VER",
   NULL
 };
 
@@ -47,6 +60,8 @@ STATIC CONST CHAR16  *SystemFwImageNamesT264[] = {
   L"adsp1-fw",
   L"psc_bl1",
   L"psc-fw",
+  L"rce-fw",
+  L"VER",
   NULL
 };
 
@@ -143,11 +158,20 @@ FwImageGetRequiredList (
 
   switch (ChipId) {
     case T234_CHIP_ID:
-      ImageList = CombineLists (
-                    SystemFwImageNamesT234,
-                    SystemFwImageNamesCommon,
-                    ImageCount
-                    );
+      if ((PcdGetBool (PcdBootAndroidImage))) {
+        ImageList = CombineLists (
+                      SystemFwImageNamesAndroidT234,
+                      SystemFwImageNamesCommon,
+                      ImageCount
+                      );
+      } else {
+        ImageList = CombineLists (
+                      SystemFwImageNamesT234,
+                      SystemFwImageNamesCommon,
+                      ImageCount
+                      );
+      }
+
       break;
     case T264_CHIP_ID:
       ImageList = CombineLists (

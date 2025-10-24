@@ -59,6 +59,7 @@
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage
 
 [Protocols]
   gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES

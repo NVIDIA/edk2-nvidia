@@ -818,6 +818,13 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 
   #
+  # Android Support
+  #
+!ifdef CONFIG_BUILD_ANDROID
+  INF Silicon/NVIDIA/Drivers/AndroidFmpInitDxe/AndroidFmpInitDxe.inf
+!endif
+
+  #
   # Gpio Power Off Driver
   #
   INF Silicon/NVIDIA/Drivers/GpioPowerOffDxe/GpioPowerOffDxe.inf

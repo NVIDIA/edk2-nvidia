@@ -1,0 +1,49 @@
+## @file
+#  Android FMP Initialization Dxe
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = AndroidFmpInitDxe
+  FILE_GUID                      = a492f9d8-9df3-4d38-be16-98b34781fc76
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = AndroidFmpInitDxeInitialize
+
+[Sources.common]
+  AndroidFmpInitDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+  UefiRuntimeServicesTableLib
+  DeviceTreeHelperLib
+
+[Protocols]
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
+  gNVIDIASavedCapsuleProtocolGuid
+  gNVIDIAAndroidFmpInitCompleteProtocolGuid
+
+[Guids]
+  gNVIDIAPublicVariableGuid
+  gEfiFmpCapsuleGuid
+
+[Pcd]
+
+[Depex]
+  gEfiBlockIoProtocolGuid
