@@ -1940,6 +1940,9 @@ protected:
 
     std::tie (test_type, ParentAddress64BBit, ChildAddressCells, Size64Bit, NumberOfEntries, NumberOfNames) = GetParam ();
 
+    ParentAddressCells = ParentAddress64BBit ? 2 : 1;
+    SizeCells          = Size64Bit ? 2 : 1;
+
     TestProperty = test_type;
     if (strcmp (test_type, "reg") == 0) {
       SizeOfEntry            = sizeof (NVIDIA_DEVICE_TREE_REGISTER_DATA);
@@ -2012,11 +2015,14 @@ protected:
            )
          );
 
-    ParentAddressCells                        = ParentAddress64BBit ? 2 : 1;
+    memset (&ParentAddressCellsProperty, 0, sizeof (ParentAddressCellsProperty));
+    memset (&ChildAddressCellsProperty, 0, sizeof (ChildAddressCellsProperty));
+    memset (&SizeCellsProperty, 0, sizeof (SizeCellsProperty));
+
     ParentAddressCellsProperty.ValueBigEndian = htobe32 (ParentAddressCells);
     ChildAddressCellsProperty.ValueBigEndian  = htobe32 (ChildAddressCells);
-    SizeCells                                 = Size64Bit ? 2 : 1;
     SizeCellsProperty.ValueBigEndian          = htobe32 (SizeCells);
+
     EXPECT_CALL (
       FdtMock,
       FdtGetProperty (
