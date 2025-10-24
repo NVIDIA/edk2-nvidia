@@ -891,6 +891,9 @@ EraseMeasurementPartition (
     return Status;
   }
 
+  /* Reset the Partition Data after the measurement partition is erased */
+  SetMem (VarInt->PartitionData, VarInt->PartitionSize, 0xFF);
+
   DEBUG ((DEBUG_ERROR, "%a: Successfully erased Measurement Partition\n", __FUNCTION__));
   return EFI_SUCCESS;
 }
@@ -921,21 +924,6 @@ MmFvbSmmVarReady (
   EFI_STATUS                 Status;
   EFI_SMM_VARIABLE_PROTOCOL  *SmmVariable;
   UINT32                     VarIntCheckFail;
-
-  Status = gMmst->MmLocateProtocol (
-                    &gNVIDIAVarIntGuid,
-                    NULL,
-                    (VOID **)&VarInt
-                    );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get VarInt Proto%r\n",
-      __FUNCTION__,
-      Status
-      ));
-    return Status;
-  }
 
   Status          = VarInt->Validate (VarInt);
   VarIntCheckFail = 0;
@@ -1733,6 +1721,21 @@ FVBNORInitialize (
       // If enabled VarStore Integrity feature is a must have.
       ASSERT (FALSE);
       goto Exit;
+    }
+
+    Status = gMmst->MmLocateProtocol (
+                      &gNVIDIAVarIntGuid,
+                      NULL,
+                      (VOID **)&VarInt
+                      );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to get VarInt Proto%r\n",
+        __FUNCTION__,
+        Status
+        ));
+      ASSERT_EFI_ERROR (Status);
     }
 
     /* Register a callback for when the SmmVariable Protocol is installed
