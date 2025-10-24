@@ -2,7 +2,7 @@
 #
 #  Nor Flash Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -23,11 +23,9 @@
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec
-  ArmPkg/ArmPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  StandaloneMmPkg/StandaloneMmPkg.dec
   CryptoPkg/CryptoPkg.dec
   SecurityPkg/SecurityPkg.dec
 
@@ -39,7 +37,6 @@
   MmServicesTableLib
   StandaloneMmDriverEntryPoint
   GptLib
-  ArmSvcLib
   StandaloneMmOpteeLib
   PlatformResourceLib
   NvVarIntLib

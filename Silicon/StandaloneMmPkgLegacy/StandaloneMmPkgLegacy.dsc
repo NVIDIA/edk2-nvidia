@@ -4,9 +4,9 @@
 # Copyright (c) 2015 - 2024, Intel Corporation. All rights reserved.<BR>
 # Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
 # Copyright (C) Microsoft Corporation<BR>
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-#    SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -76,7 +76,7 @@
 [LibraryClasses.AARCH64, LibraryClasses.ARM]
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
   StandaloneMmMmuLib|ArmPkg/Library/StandaloneMmMmuLib/ArmMmuStandaloneMmLib.inf
-  ArmSvcLib|ArmPkg/Library/ArmSvcLib/ArmSvcLib.inf
+  ArmSvcLib|MdePkg/Library/ArmSvcLib/ArmSvcLib.inf
   CacheMaintenanceLib|ArmPkg/Library/ArmCacheMaintenanceLib/ArmCacheMaintenanceLib.inf
   PeCoffExtraActionLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmPeCoffExtraActionLib/StandaloneMmPeCoffExtraActionLib.inf
 

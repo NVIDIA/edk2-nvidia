@@ -1,7 +1,7 @@
 /** @file
   Unit tests for the implementation of DeviceTreeHelperLib.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 #include <Library/GoogleTestLib.h>
@@ -2136,7 +2136,7 @@ protected:
 
       EXPECT_CALL (
         FdtMock,
-        FdtSetProperty (
+        FdtSetProp (
           Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
           TEST_NODE_OFFSET,
           StrEq (TestProperty),
@@ -2149,7 +2149,7 @@ protected:
            );
       EXPECT_CALL (
         FdtMock,
-        FdtSetProperty (
+        FdtSetProp (
           Eq (TEST_PLATFORM_DEVICE_TREE_ADDRESS),
           TEST_NODE_OFFSET,
           StrEq (NameProperty),

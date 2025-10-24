@@ -179,7 +179,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   DefaultExceptionCallbackLib|ArmPkg/Library/DefaultExceptionCallbackLibNull/DefaultExceptionCallbackLibNull.inf
 !endif
   CpuExceptionHandlerLib|ArmPkg/Library/ArmExceptionLib/ArmExceptionLib.inf
-  ArmSmcLib|ArmPkg/Library/ArmSmcLib/ArmSmcLib.inf
+  ArmSmcLib|MdePkg/Library/ArmSmcLib/ArmSmcLib.inf
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmPsciResetSystemLib/ArmPsciResetSystemLib.inf
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
