@@ -1,0 +1,31 @@
+/** @file
+*  Set the FMP Image Type ID GUID for t234 platform.
+*
+*  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Set T234 FMP Image Type ID. This is an NVIDIA internal GUID not for production.";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					/* Set your platform-specific GUID */
+					fmp-image-type-id-guid = "bf0d4599-20d4-414e-b2c5-3595b1cda402";
+				};
+			};
+		};
+	};
+};
