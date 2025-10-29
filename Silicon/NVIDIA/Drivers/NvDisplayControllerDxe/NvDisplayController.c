@@ -28,17 +28,16 @@
 #define NV_DISPLAY_CONTROLLER_SIGNATURE  SIGNATURE_32('N','V','D','C')
 
 typedef struct {
-  UINT32                             Signature;
-  EFI_HANDLE                         DriverHandle;
-  EFI_HANDLE                         ControllerHandle;
-  NV_DISPLAY_CONTROLLER_HW_ENABLE    HwEnable;
-  UINT8                              HandoffMode;
-  UINT8                              HandoffMethod;
-  NON_DISCOVERABLE_DEVICE            Device;
-  BOOLEAN                            HwEnabled;
-  BOOLEAN                            PerformHandoff;
-  EFI_EVENT                          OnFdtInstalledEvent;
-  EFI_EVENT                          OnReadyToBootEvent;
+  UINT32                      Signature;
+  EFI_HANDLE                  DriverHandle;
+  EFI_HANDLE                  ControllerHandle;
+  NV_DISPLAY_CONTROLLER_HW    *Hw;
+  UINT8                       HandoffMode;
+  UINT8                       HandoffMethod;
+  NON_DISCOVERABLE_DEVICE     Device;
+  BOOLEAN                     PerformHandoff;
+  EFI_EVENT                   OnFdtInstalledEvent;
+  EFI_EVENT                   OnReadyToBootEvent;
 } NV_DISPLAY_CONTROLLER_PRIVATE;
 
 #define NV_DISPLAY_CONTROLLER_PRIVATE_FROM_DEVICE(a)  CR(\
@@ -299,13 +298,9 @@ DestroyControllerPrivateOnExitBootServices (
     Private->OnReadyToBootEvent = NULL;
   }
 
-  if (Private->HwEnabled) {
-    Status1 = Private->HwEnable (Private->DriverHandle, Private->ControllerHandle, FALSE);
-    if (!EFI_ERROR (Status)) {
-      Status = Status1;
-    }
-
-    Private->HwEnabled = FALSE;
+  Status1 = Private->Hw->Enable (Private->Hw, FALSE);
+  if (!EFI_ERROR (Status)) {
+    Status = Status1;
   }
 
   return Status;
@@ -336,6 +331,7 @@ DestroyControllerPrivate (
   }
 
   Status = DestroyControllerPrivateOnExitBootServices (Private);
+  Private->Hw->Destroy (Private->Hw);
   FreePool (Private);
 
   return Status;
@@ -347,7 +343,7 @@ DestroyControllerPrivate (
   @param[out] Private           Display controller private data.
   @param[in]  DriverHandle      Handle of the driver.
   @param[in]  ControllerHandle  Handle of the controller.
-  @param[in]  HwEnable          Chip-specific display HW control function.
+  @param[in]  Hw                Chip-specific display HW context.
 
   @retval EFI_SUCCESS            Operation successful.
   @retval EFI_INVALID_PARAMETER  Private is NULL.
@@ -359,17 +355,19 @@ CreateControllerPrivate (
   OUT NV_DISPLAY_CONTROLLER_PRIVATE **CONST  Private,
   IN  CONST EFI_HANDLE                       DriverHandle,
   IN  CONST EFI_HANDLE                       ControllerHandle,
-  IN  CONST NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
+  IN  NV_DISPLAY_CONTROLLER_HW       *CONST  Hw
   )
 {
   EFI_STATUS                     Status;
   UINTN                          ResourcesSize;
   BOOLEAN                        IsAcpiMode;
   NON_DISCOVERABLE_DEVICE        *Device;
+  NV_DISPLAY_CONTROLLER_HW       *Hw1    = Hw;
   NV_DISPLAY_CONTROLLER_PRIVATE  *Result = NULL;
 
   if (Private == NULL) {
-    return EFI_INVALID_PARAMETER;
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
   }
 
   Status = gBS->OpenProtocol (
@@ -412,9 +410,11 @@ CreateControllerPrivate (
   Result->Signature        = NV_DISPLAY_CONTROLLER_SIGNATURE;
   Result->DriverHandle     = DriverHandle;
   Result->ControllerHandle = ControllerHandle;
-  Result->HwEnable         = HwEnable;
   Result->HandoffMode      = IsAcpiMode ? NVIDIA_SOC_DISPLAY_HANDOFF_MODE_ALWAYS : PcdGet8 (PcdSocDisplayHandoffMode);
   Result->HandoffMethod    = IsAcpiMode ? NVIDIA_SOC_DISPLAY_HANDOFF_METHOD_EFIFB : PcdGet8 (PcdSocDisplayHandoffMethod);
+
+  Result->Hw = Hw;
+  Hw1        = NULL;
 
   CopyMem (&Result->Device, Device, sizeof (*Device));
 
@@ -431,12 +431,10 @@ CreateControllerPrivate (
     goto Exit;
   }
 
-  Status = Result->HwEnable (DriverHandle, ControllerHandle, TRUE);
+  Status = Result->Hw->Enable (Result->Hw, TRUE);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
-
-  Result->HwEnabled = TRUE;
 
   switch (Result->HandoffMode) {
     case NVIDIA_SOC_DISPLAY_HANDOFF_MODE_NEVER:
@@ -496,6 +494,10 @@ Exit:
     DestroyControllerPrivate (Result);
   }
 
+  if (Hw1 != NULL) {
+    Hw1->Destroy (Hw1);
+  }
+
   return Status;
 }
 
@@ -505,7 +507,7 @@ Exit:
 
   @param[in] DriverHandle      The driver handle.
   @param[in] ControllerHandle  The controller handle.
-  @param[in] HwEnable          Chip-specific display HW control function.
+  @param[in] Hw                Chip-specific display HW context.
 
   @retval EFI_SUCCESS          Operation successful.
   @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
@@ -513,26 +515,30 @@ Exit:
 */
 EFI_STATUS
 NvDisplayControllerStart (
-  IN CONST EFI_HANDLE                       DriverHandle,
-  IN CONST EFI_HANDLE                       ControllerHandle,
-  IN CONST NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
+  IN CONST EFI_HANDLE                 DriverHandle,
+  IN CONST EFI_HANDLE                 ControllerHandle,
+  IN NV_DISPLAY_CONTROLLER_HW *CONST  Hw
   )
 {
   EFI_STATUS                     Status;
-  NV_DISPLAY_CONTROLLER_PRIVATE  *Private;
+  NV_DISPLAY_CONTROLLER_HW       *Hw1           = Hw;
+  NV_DISPLAY_CONTROLLER_PRIVATE  *Private       = NULL;
   CONST EFI_GUID                 *Protocols[2]  = { NULL, NULL };
   VOID                           *Interfaces[2] = { NULL, NULL };
 
   Status = GetControllerPrivate (NULL, DriverHandle, ControllerHandle);
-  if (!EFI_ERROR (Status)) {
-    return EFI_ALREADY_STARTED;
-  } else if (Status != EFI_UNSUPPORTED) {
-    return Status;
+  if (Status != EFI_UNSUPPORTED) {
+    if (!EFI_ERROR (Status)) {
+      Status = EFI_ALREADY_STARTED;
+    }
+
+    goto Exit;
   }
 
-  Status = CreateControllerPrivate (&Private, DriverHandle, ControllerHandle, HwEnable);
+  Status = CreateControllerPrivate (&Private, DriverHandle, ControllerHandle, Hw1);
+  Hw1    = NULL;
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
   Protocols[0]  = &gEdkiiNonDiscoverableDeviceProtocolGuid;
@@ -558,11 +564,21 @@ NvDisplayControllerStart (
       __FUNCTION__,
       Status
       ));
-    DestroyControllerPrivate (Private);
-    return Status;
+    goto Exit;
   }
 
-  return EFI_SUCCESS;
+  Private = NULL;
+
+Exit:
+  if (Private != NULL) {
+    DestroyControllerPrivate (Private);
+  }
+
+  if (Hw1 != NULL) {
+    Hw1->Destroy (Hw1);
+  }
+
+  return Status;
 }
 
 /**

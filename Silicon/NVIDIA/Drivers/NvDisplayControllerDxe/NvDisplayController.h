@@ -11,23 +11,39 @@
 #ifndef __NV_DISPLAY_CONTROLLER_H__
 #define __NV_DISPLAY_CONTROLLER_H__
 
+typedef struct _NV_DISPLAY_CONTROLLER_HW NV_DISPLAY_CONTROLLER_HW;
+
+/**
+  Destroys chip-specific display hardware context.
+
+  @param[in] This  Chip-specific display HW context.
+*/
+typedef
+VOID
+(EFIAPI *NV_DISPLAY_CONTROLLER_HW_DESTROY)(
+  IN NV_DISPLAY_CONTROLLER_HW  *This
+  );
+
 /**
   Enables or disables chip-specific display hardware.
 
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-  @param[in] Enable            TRUE to enable, FALSE to disable.
+  @param[in] This    Chip-specific display HW context.
+  @param[in] Enable  TRUE to enable, FALSE to disable.
 
   @retval EFI_SUCCESS    Operation successful.
   @retval !=EFI_SUCCESS  Operation failed.
 */
 typedef
 EFI_STATUS
-(*NV_DISPLAY_CONTROLLER_HW_ENABLE)(
-  IN EFI_HANDLE  DriverHandle,
-  IN EFI_HANDLE  ControllerHandle,
-  IN BOOLEAN     Enable
+(EFIAPI *NV_DISPLAY_CONTROLLER_HW_ENABLE)(
+  IN NV_DISPLAY_CONTROLLER_HW  *This,
+  IN BOOLEAN                   Enable
   );
+
+struct _NV_DISPLAY_CONTROLLER_HW {
+  NV_DISPLAY_CONTROLLER_HW_DESTROY    Destroy;
+  NV_DISPLAY_CONTROLLER_HW_ENABLE     Enable;
+};
 
 /**
   Starts the NV display controller driver on the given controller
@@ -35,7 +51,7 @@ EFI_STATUS
 
   @param[in] DriverHandle      The driver handle.
   @param[in] ControllerHandle  The controller handle.
-  @param[in] HwEnable          Chip-specific display HW control function.
+  @param[in] Hw                Chip-specific display HW context.
 
   @retval EFI_SUCCESS          Operation successful.
   @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
@@ -43,9 +59,9 @@ EFI_STATUS
 */
 EFI_STATUS
 NvDisplayControllerStart (
-  IN EFI_HANDLE                       DriverHandle,
-  IN EFI_HANDLE                       ControllerHandle,
-  IN NV_DISPLAY_CONTROLLER_HW_ENABLE  HwEnable
+  IN EFI_HANDLE                DriverHandle,
+  IN EFI_HANDLE                ControllerHandle,
+  IN NV_DISPLAY_CONTROLLER_HW  *Hw
   );
 
 /**

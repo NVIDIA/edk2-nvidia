@@ -12,6 +12,7 @@
 
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/BpmpIpc.h>
@@ -48,6 +49,25 @@ typedef struct {
   UINT64    MemclockRateHz;
 } MRQ_BWMGR_INT_CALC_AND_SET_RESPONSE;
 #pragma pack (pop)
+
+#define NV_DISPLAY_CONTROLLER_HW_SIGNATURE  SIGNATURE_32('T','2','6','4')
+
+typedef struct {
+  UINT32                      Signature;
+  NV_DISPLAY_CONTROLLER_HW    Hw;
+  EFI_HANDLE                  DriverHandle;
+  EFI_HANDLE                  ControllerHandle;
+  BOOLEAN                     MaxEmcFrequencyForced;
+  BOOLEAN                     ResetsDeasserted;
+  BOOLEAN                     ClocksEnabled;
+} NV_DISPLAY_CONTROLLER_HW_PRIVATE;
+
+#define NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS(a)  CR(\
+    a,                                                    \
+    NV_DISPLAY_CONTROLLER_HW_PRIVATE,                     \
+    Hw,                                                   \
+    NV_DISPLAY_CONTROLLER_HW_SIGNATURE                    \
+    )
 
 /**
   Assert or deassert T264 display resets.
@@ -256,80 +276,131 @@ ForceMaxEmcFrequency (
 }
 
 /**
+  Destroys T264 display hardware context.
+
+  @param[in] This  Chip-specific display HW context.
+*/
+STATIC
+VOID
+EFIAPI
+DestroyHwT264 (
+  IN NV_DISPLAY_CONTROLLER_HW *CONST  This
+  )
+{
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
+
+  if (This != NULL) {
+    Private = NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS (This);
+
+    FreePool (Private);
+  }
+}
+
+/**
   Enables or disables T264 display hardware.
 
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-  @param[in] Enable            TRUE to enable, FALSE to disable.
+  @param[in] This    Chip-specific display HW context.
+  @param[in] Enable  TRUE to enable, FALSE to disable.
 
   @retval EFI_SUCCESS    Operation successful.
   @retval !=EFI_SUCCESS  Operation failed.
 */
 STATIC
 EFI_STATUS
+EFIAPI
 EnableHwT264 (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle,
-  IN CONST BOOLEAN     Enable
+  IN NV_DISPLAY_CONTROLLER_HW *CONST  This,
+  IN CONST BOOLEAN                    Enable
   )
 {
-  EFI_STATUS  Status, Status1;
-  BOOLEAN     MaxEmcFrequencyForced = !Enable;
-  BOOLEAN     ResetsDeasserted      = !Enable;
-  BOOLEAN     ClocksEnabled         = !Enable;
+  EFI_STATUS                               Status, Status1;
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE *CONST  Private = NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS (This);
 
   if (Enable) {
-    Status = ForceMaxEmcFrequency (DriverHandle, ControllerHandle, TRUE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+    if (!Private->MaxEmcFrequencyForced) {
+      Status = ForceMaxEmcFrequency (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 TRUE
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
+
+      Private->MaxEmcFrequencyForced = TRUE;
     }
 
-    MaxEmcFrequencyForced = TRUE;
+    if (!Private->ResetsDeasserted) {
+      Status = AssertResets (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 FALSE
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
 
-    Status = AssertResets (DriverHandle, ControllerHandle, FALSE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+      Private->ResetsDeasserted = TRUE;
     }
 
-    ResetsDeasserted = TRUE;
+    if (!Private->ClocksEnabled) {
+      Status = EnableClocks (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 TRUE
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
 
-    Status = EnableClocks (DriverHandle, ControllerHandle, TRUE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+      Private->ClocksEnabled = TRUE;
     }
-
-    ClocksEnabled = TRUE;
   } else {
     /* Shutdown display HW if and only if we were called to disable
        the display. */
-    Status = NvDisplayHwShutdown (DriverHandle, ControllerHandle);
+    Status = NvDisplayHwShutdown (
+               Private->DriverHandle,
+               Private->ControllerHandle
+               );
 
 Disable:
-    if (ClocksEnabled) {
-      Status1 = EnableClocks (DriverHandle, ControllerHandle, FALSE);
+    if (Private->ClocksEnabled) {
+      Status1 = EnableClocks (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  FALSE
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      ClocksEnabled = FALSE;
+      Private->ClocksEnabled = FALSE;
     }
 
-    if (ResetsDeasserted) {
-      Status1 = AssertResets (DriverHandle, ControllerHandle, TRUE);
+    if (Private->ResetsDeasserted) {
+      Status1 = AssertResets (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  TRUE
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      ResetsDeasserted = FALSE;
+      Private->ResetsDeasserted = FALSE;
     }
 
-    if (MaxEmcFrequencyForced) {
-      Status1 = ForceMaxEmcFrequency (DriverHandle, ControllerHandle, FALSE);
+    if (Private->MaxEmcFrequencyForced) {
+      Status1 = ForceMaxEmcFrequency (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  FALSE
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      MaxEmcFrequencyForced = FALSE;
+      Private->MaxEmcFrequencyForced = FALSE;
     }
   }
 
@@ -349,13 +420,26 @@ Disable:
 */
 EFI_STATUS
 NvDisplayControllerStartT264 (
-  IN EFI_HANDLE  DriverHandle,
-  IN EFI_HANDLE  ControllerHandle
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
   )
 {
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
+
+  Private = AllocateZeroPool (sizeof (*Private));
+  if (Private == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Private->Signature        = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
+  Private->Hw.Destroy       = DestroyHwT264;
+  Private->Hw.Enable        = EnableHwT264;
+  Private->DriverHandle     = DriverHandle;
+  Private->ControllerHandle = ControllerHandle;
+
   return NvDisplayControllerStart (
            DriverHandle,
            ControllerHandle,
-           EnableHwT264
+           &Private->Hw
            );
 }
