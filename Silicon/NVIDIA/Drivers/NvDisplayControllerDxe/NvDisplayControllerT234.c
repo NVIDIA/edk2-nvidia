@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/DeviceTreeNode.h>
@@ -20,6 +21,26 @@
 
 #include "NvDisplay.h"
 #include "NvDisplayController.h"
+
+#define NV_DISPLAY_CONTROLLER_HW_SIGNATURE  SIGNATURE_32('T','2','3','4')
+
+typedef struct {
+  UINT32                      Signature;
+  NV_DISPLAY_CONTROLLER_HW    Hw;
+  EFI_HANDLE                  DriverHandle;
+  EFI_HANDLE                  ControllerHandle;
+  BOOLEAN                     UseDpOutput;
+  BOOLEAN                     ResetsDeasserted;
+  BOOLEAN                     ClocksEnabled;
+  BOOLEAN                     GpiosConfigured;
+} NV_DISPLAY_CONTROLLER_HW_PRIVATE;
+
+#define NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS(a)  CR(\
+    a,                                                    \
+    NV_DISPLAY_CONTROLLER_HW_PRIVATE,                     \
+    Hw,                                                   \
+    NV_DISPLAY_CONTROLLER_HW_SIGNATURE                    \
+    )
 
 /**
   Assert or deassert display resets.
@@ -343,81 +364,133 @@ ConfigureGpios (
 }
 
 /**
+  Destroys T234 display hardware context.
+
+  @param[in] This  Chip-specific display HW context.
+*/
+STATIC
+VOID
+EFIAPI
+DestroyHwT234 (
+  IN NV_DISPLAY_CONTROLLER_HW *CONST  This
+  )
+{
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
+
+  if (This != NULL) {
+    Private = NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS (This);
+
+    FreePool (Private);
+  }
+}
+
+/**
   Enables or disables T234 display hardware.
 
-  @param[in] DriverHandle      The driver handle.
-  @param[in] ControllerHandle  The controller handle.
-  @param[in] Enable            TRUE to enable, FALSE to disable.
+  @param[in] This    Chip-specific display HW context.
+  @param[in] Enable  TRUE to enable, FALSE to disable.
 
   @retval EFI_SUCCESS    Operation successful.
   @retval !=EFI_SUCCESS  Operation failed.
 */
 STATIC
 EFI_STATUS
+EFIAPI
 EnableHwT234 (
-  IN CONST EFI_HANDLE  DriverHandle,
-  IN CONST EFI_HANDLE  ControllerHandle,
-  IN CONST BOOLEAN     Enable
+  IN NV_DISPLAY_CONTROLLER_HW *CONST  This,
+  IN CONST BOOLEAN                    Enable
   )
 {
-  EFI_STATUS     Status, Status1;
-  BOOLEAN        ResetsDeasserted = !Enable;
-  BOOLEAN        ClocksEnabled    = !Enable;
-  BOOLEAN        GpiosConfigured  = !Enable;
-  CONST BOOLEAN  UseDpOutput      = FALSE;
+  EFI_STATUS                               Status, Status1;
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE *CONST  Private = NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS (This);
 
   if (Enable) {
-    Status = AssertResets (DriverHandle, ControllerHandle, FALSE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+    if (!Private->ResetsDeasserted) {
+      Status = AssertResets (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 FALSE
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
+
+      Private->ResetsDeasserted = TRUE;
     }
 
-    ResetsDeasserted = TRUE;
+    if (!Private->ClocksEnabled) {
+      Status = EnableClocks (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 TRUE
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
 
-    Status = EnableClocks (DriverHandle, ControllerHandle, TRUE);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+      Private->ClocksEnabled = TRUE;
     }
 
-    ClocksEnabled = TRUE;
+    if (!Private->GpiosConfigured) {
+      Status = ConfigureGpios (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 TRUE,
+                 Private->UseDpOutput
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
 
-    Status = ConfigureGpios (DriverHandle, ControllerHandle, TRUE, UseDpOutput);
-    if (EFI_ERROR (Status)) {
-      goto Disable;
+      Private->GpiosConfigured = TRUE;
     }
-
-    GpiosConfigured = TRUE;
   } else {
     /* Shutdown display HW if and only if we were called to disable
        the display. */
-    Status = NvDisplayHwShutdown (DriverHandle, ControllerHandle);
+    Status = NvDisplayHwShutdown (
+               Private->DriverHandle,
+               Private->ControllerHandle
+               );
 
 Disable:
-    if (GpiosConfigured) {
-      Status1 = ConfigureGpios (DriverHandle, ControllerHandle, FALSE, UseDpOutput);
+    if (Private->GpiosConfigured) {
+      Status1 = ConfigureGpios (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  FALSE,
+                  Private->UseDpOutput
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      GpiosConfigured = FALSE;
+      Private->GpiosConfigured = FALSE;
     }
 
-    if (ClocksEnabled) {
-      Status1 = EnableClocks (DriverHandle, ControllerHandle, FALSE);
+    if (Private->ClocksEnabled) {
+      Status1 = EnableClocks (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  FALSE
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      ClocksEnabled = FALSE;
+      Private->ClocksEnabled = FALSE;
     }
 
-    if (ResetsDeasserted) {
-      Status1 = AssertResets (DriverHandle, ControllerHandle, TRUE);
+    if (Private->ResetsDeasserted) {
+      Status1 = AssertResets (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  TRUE
+                  );
       if (!EFI_ERROR (Status)) {
         Status = Status1;
       }
 
-      ResetsDeasserted = FALSE;
+      Private->ResetsDeasserted = FALSE;
     }
   }
 
@@ -440,9 +513,22 @@ NvDisplayControllerStartT234 (
   IN CONST EFI_HANDLE  ControllerHandle
   )
 {
+  NV_DISPLAY_CONTROLLER_HW_PRIVATE  *Private;
+
+  Private = AllocateZeroPool (sizeof (*Private));
+  if (Private == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  Private->Signature        = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
+  Private->Hw.Destroy       = DestroyHwT234;
+  Private->Hw.Enable        = EnableHwT234;
+  Private->DriverHandle     = DriverHandle;
+  Private->ControllerHandle = ControllerHandle;
+
   return NvDisplayControllerStart (
            DriverHandle,
            ControllerHandle,
-           EnableHwT234
+           &Private->Hw
            );
 }
