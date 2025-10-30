@@ -2349,6 +2349,9 @@ InitializeSettings (
   // Initialize SOC display hand-off mode
   PcdSet8S (PcdSocDisplayHandoffMode, PcdGet8 (PcdSocDisplayHandoffMode));
 
+  // Initialize Lock-All-Variables settings
+  PcdSet8S (PcdLockAllVariables, PcdGet8 (PcdLockAllVariables));
+
   // Initialize SOC display hand-off method
   PcdSet8S (PcdSocDisplayHandoffMethod, PcdGet8 (PcdSocDisplayHandoffMethod));
 

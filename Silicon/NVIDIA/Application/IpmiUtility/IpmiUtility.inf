@@ -3,9 +3,9 @@
 #
 #  This application is used to test IPMI command between BIOS an BMC.
 #
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# SPDX-License-Identifier: BSD-2-Clause-Patent
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -46,9 +46,13 @@
   HiiLib
   UefiLib
   IpmiBaseLib
+  PcdLib
 
 [Protocols]
   gEfiHiiPackageListProtocolGuid                ##CONSUMES
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdLockAllVariables
 
 [UserExtensions.TianoCore."ExtraFiles"]
   IpmiUtilityExtra.uni

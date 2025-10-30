@@ -1,10 +1,9 @@
 /** @file
-  The main process for IPMI utility application.
-
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-
-  SPDX-License-Identifier: BSD-2-Clause-Patent
-
+*
+*  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
 **/
 
 #include <Library/BaseMemoryLib.h>
@@ -16,6 +15,7 @@
 #include <Library/UefiHiiServicesLib.h>
 #include <Library/HiiLib.h>
 #include <Library/IpmiBaseLib.h>
+#include <Library/PcdLib.h>
 
 //
 // Used for ShellCommandLineParseEx only
@@ -241,6 +241,27 @@ InitializeIpmiUtility (
   //
   ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_IPMI_UTILITY_INPUT_DATA), mHiiHandle, NetFunction, Command, InputDataSize);
   DumpBuffer (InputData, InputDataSize);
+
+  //
+  // Check if variable locking is active and block dangerous IPMI commands
+  //
+  if (PcdGet8 (PcdLockAllVariables) != 0) {
+    //
+    // Check for SET_SYSTEM_BOOT_OPTIONS with CmosClear bit
+    //
+    if ((NetFunction == 0x00) &&                    // IPMI_NETFN_CHASSIS
+        (Command == 0x08) &&                        // IPMI_CHASSIS_SET_SYSTEM_BOOT_OPTIONS
+        (InputDataSize >= 3) &&
+        (InputData[0] == 0x05) &&                    // IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS
+        (InputData[2] & 0x80))                       // BOOT_OPTIONS_CMOS_CLEAR_BIT
+    {
+      ShellPrintEx (-1, -1, L"*** BLOCKING SETTING CHANGE VIA INBAND IPMI - Variable locking is active ***\n");
+      ShellPrintEx (-1, -1, L"In order to use inband IPMI to change settings, turn off variable locking.\n");
+      DEBUG ((DEBUG_INFO, "%a: Blocked IPMI CMOS clear - variable locking is active\n", __FUNCTION__));
+      Status = EFI_WRITE_PROTECTED;
+      goto Done;
+    }
+  }
 
   Status = IpmiSubmitCommand (
              NetFunction,

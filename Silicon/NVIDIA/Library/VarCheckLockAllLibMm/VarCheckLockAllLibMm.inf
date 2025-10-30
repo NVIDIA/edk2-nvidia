@@ -1,0 +1,36 @@
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = VarCheckLockAllLibMm
+  FILE_GUID                      = 77d29782-6e0b-11ee-b8c3-dbf7d427e2fb
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NULL|MM_STANDALONE
+  CONSTRUCTOR                    = VarCheckLockAllLibMmConstructor
+
+[Sources]
+  VarCheckLockAllLibMm.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  MmServicesTableLib
+  VarCheckLib
+
+[Guids]
+  gVarCheckLockAllGuid
+
+[Protocols]
+  gEfiSmmVariableProtocolGuid                        ## CONSUMES

@@ -52,6 +52,7 @@
 #string STR_MODS_SP_ENABLE_PROMPT               #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/ModsSpEnable"
 #string STR_TPM_ENABLE_PROMPT                   #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/TPM"
 #string STR_GPU_SMMU_BYPASS_ENABLE_PROMPT       #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/GpuSmmuBypassEnable"
+#string STR_LOCK_ALL_VARIABLES_PROMPT           #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/LockAllVariables"
 #string STR_UART_BAUD_RATE_PROMPT               #language x-UEFI-redfish-Bios.v1_2_0 "/Bios/Attributes/UartBaudRate"
 #string STR_UART_BAUD_RATE_115200               #language x-UEFI-redfish-Bios.v1_2_0 "115200"
 #string STR_UART_BAUD_RATE_57600                #language x-UEFI-redfish-Bios.v1_2_0 "57600"

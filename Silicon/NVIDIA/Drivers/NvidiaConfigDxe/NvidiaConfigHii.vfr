@@ -140,6 +140,11 @@ formset
     name  = ServerPowerControlSetting,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+  efivarstore NVIDIA_LOCK_ALL_VARS_CONFIG,
+    attribute = EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE,  // EFI variable attributes
+    name  = LockAllVarsConfig,
+    guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -296,6 +301,15 @@ formset
         option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = DEFAULT;
     endoneof;
     endif;
+
+    oneof varid = LockAllVarsConfig.Enabled,
+        questionid = KEY_LOCK_ALL_VARS_CONFIG,
+        prompt = STRING_TOKEN(STR_LOCK_ALL_VARIABLES_PROMPT),
+        help   = STRING_TOKEN(STR_LOCK_ALL_VARIABLES_HELP),
+        flags  = INTERACTIVE | NUMERIC_SIZE_1 | RESET_REQUIRED,
+        option text = STRING_TOKEN(STR_DISABLED), value = 0x00, flags = DEFAULT;
+        option text = STRING_TOKEN(STR_ENABLED),  value = 0x01, flags = 0;
+    endoneof;
 
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmPresent == 0;
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.TpmEnableSettingSupported == 0;

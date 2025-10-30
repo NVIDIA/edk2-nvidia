@@ -479,6 +479,11 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 
   #
+  # Lock all variables
+  #
+  INF Silicon/NVIDIA/Drivers/VarCheckLockAllDxe/VarCheckLockAllDxe.inf
+
+  #
   # Networking stack
   #
 !ifdef CONFIG_NETWORKING

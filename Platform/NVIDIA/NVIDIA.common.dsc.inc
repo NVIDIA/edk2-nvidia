@@ -1273,6 +1273,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
   # Memory Test options
   gNVIDIATokenSpaceGuid.PcdMemoryTest|L"MemoryTestControl"|gNVIDIAPublicVariableGuid|0x0|{0}|BS,NV,RT
+  gNVIDIATokenSpaceGuid.PcdLockAllVariables|L"LockAllVarsConfig"|gNVIDIAPublicVariableGuid|0x00|0x00|BS,NV
 !ifdef CONFIG_MEMORY_TEST
   !ifdef CONFIG_MEMORY_TEST_LEVEL_IGNORE
     gNVIDIATokenSpaceGuid.PcdMemoryTest.TestLevel|MEMORY_TEST_LEVEL_IGNORE
@@ -2100,6 +2101,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   Silicon/NVIDIA/Drivers/FpgaI2c/FpgaI2c.inf
 !endif
+
+  #
+  # Lock all variables
+  #
+  Silicon/NVIDIA/Drivers/VarCheckLockAllDxe/VarCheckLockAllDxe.inf
 
   #
   # UEFI application (Shell Embedded Boot Loader)

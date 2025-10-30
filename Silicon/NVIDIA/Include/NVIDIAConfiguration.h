@@ -172,4 +172,8 @@ typedef struct {
   UINT8    PowerControl;
 } NVIDIA_SERVER_POWER_CONTROL;
 
+typedef struct {
+  UINT8    Enabled;
+} NVIDIA_LOCK_ALL_VARS_CONFIG;
+
 #endif //__NVIDIA_CONFIGURATION_H__

@@ -130,6 +130,7 @@
     <LibraryClasses>
       DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
       VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+      NULL|Silicon/NVIDIA/Library/VarCheckLockAllLibMm/VarCheckLockAllLibMm.inf
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
       NULL|MdeModulePkg/Library/VarCheckPolicyLib/VarCheckPolicyLibStandaloneMm.inf
       GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf

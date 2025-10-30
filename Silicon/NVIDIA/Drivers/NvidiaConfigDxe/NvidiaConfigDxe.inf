@@ -102,6 +102,7 @@
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod
   gNVIDIATokenSpaceGuid.PcdServerPowerControlSetting
   gNVIDIATokenSpaceGuid.PcdNvGopSupported
+  gNVIDIATokenSpaceGuid.PcdLockAllVariables
 
 [Depex]
   gEfiVariableArchProtocolGuid        AND

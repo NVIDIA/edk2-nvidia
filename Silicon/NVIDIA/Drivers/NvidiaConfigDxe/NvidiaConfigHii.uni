@@ -1372,7 +1372,8 @@
 
 #string STR_SOC_DISPLAY_HANDOFF_METHOD_PROMPT #language en-US "SOC Display Hand-Off Method"
 #string STR_SOC_DISPLAY_HANDOFF_METHOD_HELP   #language en-US "The method of SOC display hand-off: simplefb - update simple-framebuffer node in the Device Tree; efifb - expose framebuffer address in EFI Graphics Output Protocol."
-
+#string STR_LOCK_ALL_VARIABLES_PROMPT       #language en-US "Lock All Variables"
+#string STR_LOCK_ALL_VARIABLES_HELP         #language en-US "If enabled, all non-volatile UEFI variables will be write-protected in UEFI shell and OS runtime. In band and OOB CMOS clear support will be disabled. Capsule updates will also be blocked."
 #string STR_NONE                     #language en-US "None"
 #string STR_DBG2_NETWORK_DEVICE      #language en-US "DBG2 Network Device"
 #string STR_DBG2_NETWORK_DEVICE_HELP #language en-US "Select the network device to use for DBG2 output."

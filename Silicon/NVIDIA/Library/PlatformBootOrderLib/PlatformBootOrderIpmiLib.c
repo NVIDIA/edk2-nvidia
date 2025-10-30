@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -22,6 +22,7 @@
 #include <Library/StatusRegLib.h>
 #include <IndustryStandard/Ipmi.h>
 #include <Guid/GlobalVariable.h>
+#include <Library/PcdLib.h>
 #include "InternalPlatformBootOrderIpmiLib.h"
 
 STATIC  IPMI_GET_BOOT_OPTIONS_RESPONSE  *mBootOptionsResponse = NULL;
@@ -171,6 +172,25 @@ CheckIPMIForBootOrderUpdates (
 
     if (BootOptionsResponseParameters->Parm5.Data2.Bits.CmosClear) {
       DEBUG ((DEBUG_ERROR, "IPMI requested a CMOS clear\n"));
+
+      //
+      // Check if variable locking is active
+      //
+      if (PcdGet8 (PcdLockAllVariables) != 0) {
+        DEBUG ((DEBUG_ERROR, "%a: *** BLOCKING CMOS CLEAR VIA IPMI - Variable locking is active ***\n", __FUNCTION__));
+        // Clear CmosClear bit to prevent repeated attempts
+        BootOptionsRequestParameters = (IPMI_BOOT_OPTIONS_PARAMETERS *)&mBootOptionsRequest->ParameterData[0];
+        CopyMem (BootOptionsRequestParameters, BootOptionsResponseParameters, sizeof (IPMI_BOOT_OPTIONS_RESPONSE_PARAMETER_5));
+        BootOptionsRequestParameters->Parm5.Data2.Bits.CmosClear = 0;
+
+        Status = SetIPMIBootOrderParameter (IPMI_BOOT_OPTIONS_PARAMETER_BOOT_FLAGS, mBootOptionsRequest);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_WARN, "Error clearing IPMI CmosClear bit after block: %r\n", Status));
+        }
+
+        // Continue boot without clearing CMOS.
+        goto CleanupAndReturn;
+      }
 
       Status = FwVariableDeleteAll ();
       if (EFI_ERROR (Status)) {
