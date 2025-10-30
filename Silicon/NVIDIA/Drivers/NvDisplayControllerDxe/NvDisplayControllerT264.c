@@ -134,13 +134,18 @@ EnableClocks (
     { NULL,               NULL                 }
   };
 
-  return NvDisplayEnableClocks (
-           DriverHandle,
-           ControllerHandle,
-           Clocks,
-           ClockParents,
-           Enable
-           );
+  EFI_STATUS  Status;
+
+  if (Enable) {
+    Status = NvDisplaySetClockParents (DriverHandle, ControllerHandle, ClockParents);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
+    return NvDisplayEnableClocks (DriverHandle, ControllerHandle, Clocks);
+  } else {
+    return NvDisplayDisableAllClocks (DriverHandle, ControllerHandle);
+  }
 }
 
 /**
