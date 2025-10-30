@@ -105,28 +105,56 @@ NvDisplayGetClockRatesWithParentsAndReset (
   );
 
 /**
-  Enable or disable display clocks. In addition, set given clock
-  parents before enable.
+  Enable display clocks.
 
-  Both Clocks and ClockParents arrays must be terminated by NULL
-  entries.
+  The Clocks array must be terminated by a NULL entry.
 
   @param[in] DriverHandle      Handle to the driver.
   @param[in] ControllerHandle  Handle to the controller.
   @param[in] Clocks            Names of the clocks.
-  @param[in] ClockParents      Child-parent clock pairs to set.
-  @param[in] Enable            Enable/disable the clocks.
 
-  @return EFI_SUCCESS    Clocks successfully enabled/disabled.
-  @return !=EFI_SUCCESS  An error occurred.
+  @retval EFI_SUCCESS    Clocks successfully enabled.
+  @retval !=EFI_SUCCESS  An error occurred.
 */
 EFI_STATUS
 NvDisplayEnableClocks (
   IN EFI_HANDLE          DriverHandle,
   IN EFI_HANDLE          ControllerHandle,
-  IN CONST CHAR8 *CONST  Clocks[],
-  IN CONST CHAR8 *CONST  ClockParents[][2],
-  IN BOOLEAN             Enable
+  IN CONST CHAR8 *CONST  Clocks[]
+  );
+
+/**
+  Set display clock parents.
+
+  The ClockParents array must be terminated by NULL entry.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] ClockParents      Child-parent clock pairs to set.
+
+  @retval EFI_SUCCESS    Clock parents successfully configured.
+  @retval !=EFI_SUCCESS  An error occurred.
+*/
+EFI_STATUS
+NvDisplaySetClockParents (
+  IN EFI_HANDLE          DriverHandle,
+  IN EFI_HANDLE          ControllerHandle,
+  IN CONST CHAR8 *CONST  ClockParents[][2]
+  );
+
+/**
+  Disable all display clocks.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+
+  @retval EFI_SUCCESS    Clocks successfully disabled.
+  @retval !=EFI_SUCCESS  An error occurred.
+*/
+EFI_STATUS
+NvDisplayDisableAllClocks (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
   );
 
 /**

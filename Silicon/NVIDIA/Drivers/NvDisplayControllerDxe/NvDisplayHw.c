@@ -208,96 +208,133 @@ NvDisplayGetClockRatesWithParentsAndReset (
 }
 
 /**
-  Enable or disable display clocks. In addition, set given clock
-  parents before enable.
+  Enable display clocks.
 
-  Both Clocks and ClockParents arrays must be terminated by NULL
-  entries.
+  The Clocks array must be terminated by a NULL entry.
 
   @param[in] DriverHandle      Handle to the driver.
   @param[in] ControllerHandle  Handle to the controller.
   @param[in] Clocks            Names of the clocks.
-  @param[in] ClockParents      Child-parent clock pairs to set.
-  @param[in] Enable            Enable/disable the clocks.
 
-  @return EFI_SUCCESS    Clocks successfully enabled/disabled.
-  @return !=EFI_SUCCESS  An error occurred.
+  @retval EFI_SUCCESS    Clocks successfully enabled.
+  @retval !=EFI_SUCCESS  An error occurred.
 */
 EFI_STATUS
 NvDisplayEnableClocks (
   IN CONST EFI_HANDLE    DriverHandle,
   IN CONST EFI_HANDLE    ControllerHandle,
-  IN CONST CHAR8 *CONST  Clocks[],
-  IN CONST CHAR8 *CONST  ClockParents[][2],
-  IN CONST BOOLEAN       Enable
+  IN CONST CHAR8 *CONST  Clocks[]
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Index;
+
+  for (Index = 0; Clocks[Index] != NULL; ++Index) {
+    Status = DeviceDiscoveryEnableClock (ControllerHandle, Clocks[Index], TRUE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to enable clock '%a': %r\r\n",
+        __FUNCTION__,
+        Clocks[Index],
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Set display clock parents.
+
+  The ClockParents array must be terminated by NULL entry.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] ClockParents      Child-parent clock pairs to set.
+
+  @retval EFI_SUCCESS    Clock parents successfully configured.
+  @retval !=EFI_SUCCESS  An error occurred.
+*/
+EFI_STATUS
+NvDisplaySetClockParents (
+  IN EFI_HANDLE          DriverHandle,
+  IN EFI_HANDLE          ControllerHandle,
+  IN CONST CHAR8 *CONST  ClockParents[][2]
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Index;
+
+  for (Index = 0; (ClockParents[Index][0] != NULL) && (ClockParents[Index][1] != NULL); ++Index) {
+    Status = DeviceDiscoverySetClockParent (
+               ControllerHandle,
+               ClockParents[Index][0],
+               ClockParents[Index][1]
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to set parent of clock '%a' to '%a': %r\r\n",
+        __FUNCTION__,
+        ClockParents[Index][0],
+        ClockParents[Index][1],
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Disable all display clocks.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+
+  @retval EFI_SUCCESS    Clocks successfully disabled.
+  @retval !=EFI_SUCCESS  An error occurred.
+*/
+EFI_STATUS
+NvDisplayDisableAllClocks (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
   )
 {
   EFI_STATUS                  Status;
-  UINTN                       Index;
   NVIDIA_CLOCK_NODE_PROTOCOL  *ClockNodeProtocol;
 
-  if (Enable) {
-    for (Index = 0; (ClockParents[Index][0] != NULL) && (ClockParents[Index][1] != NULL); ++Index) {
-      Status = DeviceDiscoverySetClockParent (
-                 ControllerHandle,
-                 ClockParents[Index][0],
-                 ClockParents[Index][1]
-                 );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to set parent of clock '%a' to '%a': %r\r\n",
-          __FUNCTION__,
-          ClockParents[Index][0],
-          ClockParents[Index][1],
-          Status
-          ));
-        return Status;
-      }
-    }
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIAClockNodeProtocolGuid,
+                  (VOID **)&ClockNodeProtocol,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to lookup clock node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
 
-    for (Index = 0; Clocks[Index] != NULL; ++Index) {
-      Status = DeviceDiscoveryEnableClock (ControllerHandle, Clocks[Index], TRUE);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: failed to enable clock '%a': %r\r\n",
-          __FUNCTION__,
-          Clocks[Index],
-          Status
-          ));
-        return Status;
-      }
-    }
-  } else {
-    Status = gBS->OpenProtocol (
-                    ControllerHandle,
-                    &gNVIDIAClockNodeProtocolGuid,
-                    (VOID **)&ClockNodeProtocol,
-                    DriverHandle,
-                    ControllerHandle,
-                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                    );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to lookup clock node protocol: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-      return Status;
-    }
-
-    Status = ClockNodeProtocol->DisableAll (ClockNodeProtocol);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to disable clocks: %r\r\n",
-        __FUNCTION__,
-        Status
-        ));
-      return Status;
-    }
+  Status = ClockNodeProtocol->DisableAll (ClockNodeProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to disable clocks: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
   }
 
   return EFI_SUCCESS;
