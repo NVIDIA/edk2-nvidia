@@ -3129,6 +3129,24 @@ GetDefaultValue (
     case KEY_EGM_HV_VIRT_UEFI_SIZE_MB:
       Data = mMb1DefaultConfig.Data.Mb1Data.HvVirtUefiSize;
       break;
+    case KEY_ENABLE_QUICK_BOOT:
+      Data = QUICK_BOOT_DISABLE;
+      break;
+    case KEY_NEW_DEVICE_HIERARCHY:
+      Data = NEW_DEVICE_HIERARCHY_BOTTOM;
+      break;
+    case KEY_IPMI_NETWORK_BOOT_MODE:
+      Data = IPMI_NETWORK_BOOT_MODE_IPV4;
+      break;
+    case KEY_ENABLE_HOST_INTERFACE:
+      Data = HOST_INTERFACE_ENABLE;
+      break;
+    case KEY_ENABLE_UEFI_SHELL:
+      Data = 0x01;
+      break;
+    case KEY_SOC_DISPLAY_HANDOFF_MODE:
+      Data = NVIDIA_SOC_DISPLAY_HANDOFF_MODE_AUTO;
+      break;
     default:
       //
       // UPHY
