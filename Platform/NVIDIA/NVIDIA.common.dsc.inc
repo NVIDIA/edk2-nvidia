@@ -1801,7 +1801,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
     <LibraryClasses>
       StdLibC|IntelUndiPkg/LibC/LibC.inf
     <BuildOptions>
-      *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros
+      *_*_*_PLATFORM_FLAGS = -Wno-unused-value -Wno-multistatement-macros -Wno-incompatible-pointer-types -Wno-pointer-sign
   }
   #
   # Intel 700 series NIC
