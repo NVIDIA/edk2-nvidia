@@ -20,7 +20,7 @@ class JetsonSettingsManager(NVIDIASettingsManager):
         return super().GetActiveScopes() + ["jetson"]
 
     def GetFirmwareVersionBase(self):
-        return "202210.5.2"
+        return "202210.5.3"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_NS.Fv"
