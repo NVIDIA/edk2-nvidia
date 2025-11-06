@@ -45,6 +45,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define OPTEE_FFA_SERVICE_ID   0xF
 #define OPTEE_FFA_SIGN_FID     0x1
 
+/* This is based on the FF-A 1.0 EAC specification */
+#define FFA_OK  0
+
 #define ADDRESS_IN_RANGE(addr, min, max)  (((addr) > (min)) && ((addr) < (max)))
 
 typedef struct _NVIDIA_VAR_INT_PROTOCOL NVIDIA_VAR_INT_PROTOCOL;
