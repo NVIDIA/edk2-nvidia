@@ -176,7 +176,9 @@ SendFfaCmd (
 
   ArmCallSvc (&SvcArgs);
 
-  if ((SvcArgs.Arg0 == ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP)) {
+  if ((SvcArgs.Arg0 == ARM_SVC_ID_FFA_MSG_SEND_DIRECT_RESP) &&
+      (SvcArgs.Arg3 == FFA_OK))
+  {
     Status = EFI_SUCCESS;
     DEBUG ((DEBUG_INFO, "Command successful\n"));
     DEBUG ((DEBUG_INFO, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
