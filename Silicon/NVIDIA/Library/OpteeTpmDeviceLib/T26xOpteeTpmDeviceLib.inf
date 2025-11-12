@@ -1,7 +1,7 @@
 #/** @file
-#  OP-TEE lib using secure monitor calls to send data to the fTPM TA
+#  OP-TEE lib using FFA to send data to the fTPM TA
 #
-#  Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.<BR>
+#  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -20,9 +20,12 @@
 
 [Sources]
   OpteeTpmDeviceLib.c
+  OpteeTpmDeviceLibFfa.c
+  FfaSmc.S
 
 [Packages]
   MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
   SecurityPkg/SecurityPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
@@ -36,11 +39,15 @@
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize
 
+[FeaturePcd.AARCH64]
+  gNVIDIATokenSpaceGuid.PcdFfaMinorV2Supported
+
 [Protocols]
   gNVIDIAFtpmPresentProtocolGuid
 
 [Guids]
   gNVIDIAFtpmOpteeGuid
+  gNVIDIAOpteeGuid
 
 
 [Depex]

@@ -1,7 +1,7 @@
 /** @file
   OP-TEE specific header file.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -54,9 +54,10 @@
 
 #define OPTEE_SUCCESS               0x00000000
 #define OPTEE_ORIGIN_COMMUNICATION  0x00000002
-#define OPTEE_ERROR_COMMUNICATION   0xFFFF000E
 #define OPTEE_ERROR_BAD_PARAMS      0xFFFF0006
+#define OPTEE_ERROR_ITEM_NOT_FOUND  0xFFFF0008
 #define OPTEE_ERROR_OUT_OF_MEMORY   0xFFFF000C
+#define OPTEE_ERROR_COMMUNICATION   0xFFFF000E
 
 #define OPTEE_MSG_PAGE_SIZE  0x1000
 #define MAX_PAGELIST_ENTRIES \
@@ -67,6 +68,14 @@ typedef struct {
   UINT64    Size;
   UINT64    SharedMemoryReference;
 } OPTEE_MESSAGE_PARAM_MEMORY;
+
+typedef struct {
+  UINT32    OffsLow;
+  UINT16    OffsHigh;
+  UINT16    InternalOffs;
+  UINT64    Size;
+  UINT64    GlobalId;
+} OPTEE_MESSAGE_PARAM_FMEMORY;
 
 typedef struct {
   UINT64    Offset;
@@ -82,6 +91,7 @@ typedef struct {
 
 typedef union {
   OPTEE_MESSAGE_PARAM_MEMORY     Memory;
+  OPTEE_MESSAGE_PARAM_FMEMORY    FMemory;
   OPTEE_MESSAGE_PARAM_RMEMORY    RMemory;
   OPTEE_MESSAGE_PARAM_VALUE      Value;
 } OPTEE_MESSAGE_PARAM_UNION;
