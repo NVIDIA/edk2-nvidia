@@ -2593,7 +2593,12 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
       NULL|Silicon/NVIDIA/Library/Tpm2DeviceLib/Tpm2DeviceLib.inf
 !endif
 !ifdef CONFIG_SECURITY_TPM_FIRMWARE
-      Tpm2DeviceLib|Silicon/NVIDIA/Library/OpteeTpmDeviceLib/OpteeTpmDeviceLib.inf
+!ifdef CONFIG_SOC_T23X
+      Tpm2DeviceLib|Silicon/NVIDIA/Library/OpteeTpmDeviceLib/T23xOpteeTpmDeviceLib.inf
+!endif
+!ifdef CONFIG_SOC_T26X
+      Tpm2DeviceLib|Silicon/NVIDIA/Library/OpteeTpmDeviceLib/T26xOpteeTpmDeviceLib.inf
+!endif
 !endif
   }
   Silicon/NVIDIA/Drivers/Tcg2Config/Tcg2ConfigDxe.inf

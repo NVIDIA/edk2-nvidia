@@ -70,6 +70,14 @@ typedef struct {
 } OPTEE_MESSAGE_PARAM_MEMORY;
 
 typedef struct {
+  UINT32    OffsLow;
+  UINT16    OffsHigh;
+  UINT16    InternalOffs;
+  UINT64    Size;
+  UINT64    GlobalId;
+} OPTEE_MESSAGE_PARAM_FMEMORY;
+
+typedef struct {
   UINT64    Offset;
   UINT64    Size;
   UINT64    SharedMemoryReference;
@@ -83,6 +91,7 @@ typedef struct {
 
 typedef union {
   OPTEE_MESSAGE_PARAM_MEMORY     Memory;
+  OPTEE_MESSAGE_PARAM_FMEMORY    FMemory;
   OPTEE_MESSAGE_PARAM_RMEMORY    RMemory;
   OPTEE_MESSAGE_PARAM_VALUE      Value;
 } OPTEE_MESSAGE_PARAM_UNION;

@@ -1,0 +1,49 @@
+#/** @file
+#  OP-TEE lib using secure monitor calls to send data to the fTPM TA
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2023 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = OpteeTpmDeviceLib
+  FILE_GUID                      = a48d6fdb-672f-47dd-8c20-545399505d05
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Tpm2DeviceLib|DXE_DRIVER DXE_RUNTIME_DRIVER DXE_SMM_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+  CONSTRUCTOR                    = OpteeTpmDeviceLibConstructor
+  DESTRUCTOR                     = OpteeTpmDeviceLibDestructor
+
+[Sources]
+  OpteeTpmDeviceLib.c
+  OpteeTpmDeviceLibSmc.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SecurityPkg/SecurityPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PcdLib
+  OpteeNvLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFtpmShmSize
+
+[Protocols]
+  gNVIDIAFtpmPresentProtocolGuid
+
+[Guids]
+  gNVIDIAFtpmOpteeGuid
+
+
+[Depex]
+  TRUE
