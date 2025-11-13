@@ -1,0 +1,26 @@
+## @file
+#  Library to add dependency for Android FMP initialization complete
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = DepexLib
+  FILE_GUID       = bdca15ba-69f3-43a8-b122-21e5efb0e9c6
+  MODULE_TYPE     = DXE_DRIVER
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = DepexLib|DXE_DRIVER UEFI_DRIVER
+
+[Sources]
+  DepexLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[Depex]
+  gNVIDIAAndroidFmpInitCompleteProtocolGuid

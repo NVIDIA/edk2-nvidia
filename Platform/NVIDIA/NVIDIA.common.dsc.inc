@@ -2202,6 +2202,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
       # FILE_GUID is used as ESRT GUID
       #
       FILE_GUID = $(FMP_SYSTEM_IMAGE_TYPE_ID)
+
+!ifdef CONFIG_BUILD_ANDROID
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/DepexLib/DepexAndroidFmpInitComplete.inf
+!endif
   }
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
