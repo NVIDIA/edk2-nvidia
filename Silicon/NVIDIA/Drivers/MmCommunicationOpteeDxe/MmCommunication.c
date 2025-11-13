@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2022-2023, NVIDIA Corporation. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,7 +26,7 @@
 
 #include <IndustryStandard/ArmStdSmc.h>
 
-#include "MmCommunicate.h"
+#include "MmCommunicateOptee.h"
 typedef struct {
   UINTN                  TotalSize;
   UINTN                  MmCommBufSize;

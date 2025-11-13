@@ -25,7 +25,7 @@
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <IndustryStandard/ArmStdSmc.h>
 
-#include "MmCommunicate.h"
+#include "MmCommunicateFfa.h"
 
 #define STMM_UUID_0                        0x8afb129b
 #define STMM_UUID_1                        0x64ca4760

@@ -1,14 +1,14 @@
 /** @file
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016-2021, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef MM_COMMUNICATE_H_
-#define MM_COMMUNICATE_H_
+#ifndef MM_COMMUNICATE_FFA_H_
+#define MM_COMMUNICATE_FFA_H_
 
 #define MM_MAJOR_VER_MASK   0xEFFF0000
 #define MM_MINOR_VER_MASK   0x0000FFFF
@@ -31,4 +31,4 @@ StmmFfaSmc (
   IN OUT ARM_SMC_ARGS  *Args
   );
 
-#endif /* MM_COMMUNICATE_H_ */
+#endif /* MM_COMMUNICATE_FFA_H_ */

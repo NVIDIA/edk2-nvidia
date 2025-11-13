@@ -25,7 +25,7 @@
 #
 
 [Sources.AARCH64]
-  MmCommunicate.h
+  MmCommunicateFfa.h
   MmCommunication.c
   AArch64/StmmFfa.S
 
