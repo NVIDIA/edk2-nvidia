@@ -19,7 +19,7 @@
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <Library/ArmSvcLib.h>
 #include <Library/PrintLib.h>
-#include <Library/OpteeLib.h>
+#include <Library/OpteeNvLib.h>
 #include <Library/NvVarIntLib.h>
 #include <Library/NVIDIADebugLib.h>
 

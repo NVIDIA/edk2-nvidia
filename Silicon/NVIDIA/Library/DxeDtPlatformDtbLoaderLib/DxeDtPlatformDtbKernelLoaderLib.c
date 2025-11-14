@@ -19,7 +19,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraDeviceTreeOverlayLib.h>
-#include <Library/OpteeLib.h>
+#include <Library/OpteeNvLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
