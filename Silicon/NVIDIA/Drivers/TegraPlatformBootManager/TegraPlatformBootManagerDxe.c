@@ -691,7 +691,13 @@ RefreshAutoEnumeratedBootOptions (
   EFI_STATUS                    Status;
   EFI_BOOT_MANAGER_LOAD_OPTION  *LoadOption;
   EFI_BOOT_MANAGER_LOAD_OPTION  *UpdatedLoadOption;
+  EFI_BOOT_MANAGER_LOAD_OPTION  *NvBootOptions;
+  UINTN                         NvBootOptionsCount;
   UINTN                         Count;
+  UINTN                         NvIndex;
+  UINT32                        UserPreferenceMask;
+  UINT32                        NvramUserPrefs;
+  UINT32                        EnumeratedNonUserPrefs;
 
   DEBUG ((DEBUG_VERBOSE, "%a: entered\n", __FUNCTION__));
   DEBUG ((DEBUG_VERBOSE, "%a: BootOptions is %a\n", __FUNCTION__, BootOptions ? "not NULL" : "NULL"));
@@ -732,6 +738,72 @@ RefreshAutoEnumeratedBootOptions (
 
       (*UpdatedBootOptionsCount)++;
     }
+  }
+
+  //
+  // Preserve LOAD_OPTION_ACTIVE state from existing NVRAM boot options.
+  // This prevents disabled boot options from being re-activated on every boot.
+  // When hardware enumeration creates boot options, they always have LOAD_OPTION_ACTIVE
+  // set, which would cause the standard matching logic to fail and create duplicates.
+  //
+  NvBootOptions = EfiBootManagerGetLoadOptions (&NvBootOptionsCount, LoadOptionTypeBoot);
+  if (NvBootOptions != NULL) {
+    //
+    // For each auto-enumerated option, check if it matches an existing NVRAM option
+    //
+    for (Count = 0; Count < *UpdatedBootOptionsCount; Count++) {
+      for (NvIndex = 0; NvIndex < NvBootOptionsCount; NvIndex++) {
+        //
+        // Match based on OptionType, Description, and FilePath (ignore Attributes)
+        //
+        if ((UpdatedLoadOption[Count].OptionType == NvBootOptions[NvIndex].OptionType) &&
+            (StrCmp (UpdatedLoadOption[Count].Description, NvBootOptions[NvIndex].Description) == 0) &&
+            (CompareMem (
+               UpdatedLoadOption[Count].FilePath,
+               NvBootOptions[NvIndex].FilePath,
+               GetDevicePathSize (UpdatedLoadOption[Count].FilePath)
+               ) == 0))
+        {
+          //
+          // Found a match - preserve user preference bits from NVRAM:
+          // LOAD_OPTION_ACTIVE, LOAD_OPTION_FORCE_RECONNECT, LOAD_OPTION_HIDDEN
+          // These are user settings that shouldn't be reset by hardware enumeration.
+          //
+          UserPreferenceMask = LOAD_OPTION_ACTIVE | LOAD_OPTION_FORCE_RECONNECT | LOAD_OPTION_HIDDEN;
+
+          //
+          // Extract user preferences from NVRAM option
+          //
+          NvramUserPrefs = NvBootOptions[NvIndex].Attributes & UserPreferenceMask;
+
+          //
+          // Keep non-preference bits from enumerated option (e.g., CATEGORY)
+          //
+          EnumeratedNonUserPrefs = UpdatedLoadOption[Count].Attributes & ~UserPreferenceMask;
+
+          //
+          // Combine: NVRAM user prefs + enumerated non-user bits
+          //
+          UpdatedLoadOption[Count].Attributes = NvramUserPrefs | EnumeratedNonUserPrefs;
+
+          if (NvramUserPrefs != (UpdatedLoadOption[Count].Attributes & UserPreferenceMask)) {
+            DEBUG ((
+              DEBUG_INFO,
+              "%a: Preserving user preferences for boot option: %s (Active=%d, ForceReconnect=%d, Hidden=%d)\n",
+              __FUNCTION__,
+              UpdatedLoadOption[Count].Description,
+              (NvramUserPrefs & LOAD_OPTION_ACTIVE) ? 1 : 0,
+              (NvramUserPrefs & LOAD_OPTION_FORCE_RECONNECT) ? 1 : 0,
+              (NvramUserPrefs & LOAD_OPTION_HIDDEN) ? 1 : 0
+              ));
+          }
+
+          break;
+        }
+      }
+    }
+
+    EfiBootManagerFreeLoadOptions (NvBootOptions, NvBootOptionsCount);
   }
 
   DEBUG ((DEBUG_VERBOSE, "%a: *UpdatedBootOptionsCount = %lu\n", __FUNCTION__, *UpdatedBootOptionsCount));
