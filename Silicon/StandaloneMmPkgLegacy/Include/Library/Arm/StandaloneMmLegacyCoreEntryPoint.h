@@ -3,6 +3,7 @@
   phase on ARM platforms
 
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
+SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/

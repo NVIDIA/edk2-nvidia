@@ -3,6 +3,7 @@
 
 Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.<BR>
+SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,7 +14,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/StandaloneMmCoreEntryPoint.h>
+#include <Library/StandaloneMmLegacyCoreEntryPoint.h>
 
 #include <Guid/MemoryAllocationHob.h>
 

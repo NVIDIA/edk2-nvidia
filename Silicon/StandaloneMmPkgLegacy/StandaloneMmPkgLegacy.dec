@@ -25,7 +25,7 @@
   FvLib|Include/Library/FvLib.h
 
   ##  @libraryclass  Defines a set of interfaces for the MM core entrypoint.
-  StandaloneMmCoreEntryPoint|Include/Library/StandaloneMmCoreEntryPoint.h
+  StandaloneMmCoreEntryPoint|Include/Library/StandaloneMmLegacyCoreEntryPoint.h
 
   ##  @libraryclass  Defines a set of interfaces that provides services for
   ##                 MM Memory Operation.
@@ -37,7 +37,7 @@
 [LibraryClasses.AArch64, LibraryClasses.ARM]
   ##  @libraryclass  Defines a set of interfaces for the MM core entrypoint for
   ##                 AArch64 and ARM.
-  StandaloneMmCoreEntryPoint|Include/Library/Arm/StandaloneMmCoreEntryPoint.h
+  StandaloneMmCoreEntryPoint|Include/Library/Arm/StandaloneMmLegacyCoreEntryPoint.h
 
 [Guids]
   gStandaloneMmPkgTokenSpaceGuid           = { 0x18fe7632, 0xf5c8, 0x4e63, { 0x8d, 0xe8, 0x17, 0xa5, 0x5c, 0x59, 0x13, 0xbd }}

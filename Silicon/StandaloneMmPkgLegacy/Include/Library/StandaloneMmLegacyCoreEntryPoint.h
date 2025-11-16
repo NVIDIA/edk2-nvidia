@@ -3,6 +3,7 @@
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
+SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 

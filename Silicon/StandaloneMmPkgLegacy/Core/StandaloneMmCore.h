@@ -4,6 +4,7 @@
 
   Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,7 +34,7 @@
 #include <Guid/MmCommBuffer.h>
 #include <Guid/PiSmmMemoryAttributesTable.h>
 
-#include <Library/StandaloneMmCoreEntryPoint.h>
+#include <Library/StandaloneMmLegacyCoreEntryPoint.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PeCoffLib.h>

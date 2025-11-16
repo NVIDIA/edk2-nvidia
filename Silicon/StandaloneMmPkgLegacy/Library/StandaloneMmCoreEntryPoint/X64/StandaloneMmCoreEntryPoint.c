@@ -3,13 +3,14 @@
 
 Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 Copyright (c) Microsoft Corporation.
+SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiMm.h>
 
-#include <Library/StandaloneMmCoreEntryPoint.h>
+#include <Library/StandaloneMmLegacyCoreEntryPoint.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseLib.h>
 
