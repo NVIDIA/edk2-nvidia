@@ -2558,7 +2558,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_SECURITY_MM_FFA
   Silicon/NVIDIA/Drivers/MmCommunicateFfaDxe/MmCommunicationFfa.inf {
     <LibraryClasses>
-      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/StandaloneMmPkgLegacy/Library/VariableMmDependency/VariableMmDependency.inf
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
@@ -2566,7 +2566,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_SECURITY_MM_OPTEE
   Silicon/NVIDIA/Drivers/MmCommunicationOpteeDxe/MmCommunicationOptee.inf {
     <LibraryClasses>
-      NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
+      NULL|Silicon/StandaloneMmPkgLegacy/Library/VariableMmDependency/VariableMmDependency.inf
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
   }
 !endif
