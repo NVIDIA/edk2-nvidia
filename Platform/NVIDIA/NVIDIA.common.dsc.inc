@@ -309,7 +309,11 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   FmpParamLib|Silicon/NVIDIA/Library/FmpParamLib/FmpParamLib.inf
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_DIRECT
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpDeviceLib/FmpDeviceLib.inf
-  FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPartition.inf
+  !ifdef CONFIG_BUILD_ANDROID
+    FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPcd.inf
+  !else
+    FmpVersionLib|Silicon/NVIDIA/Library/FmpVersionLib/FmpVersionLibPartition.inf
+  !endif
 !endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_EROT
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpErotLib/FmpErotLib.inf
