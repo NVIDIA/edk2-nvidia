@@ -32,7 +32,7 @@ qspi0-socket0 {
 };
 
 qspi0-socket1 {
-  base-address = < 0x0001fe15 0x01110000 >; // confirm socket 1's base.
+  base-address = < 0x0000fe55 0x01110000 >; // confirm socket 1's base.
   pages-count  = < 16 >;
   attributes   = < 0x3 >;                   // read-write
 };
