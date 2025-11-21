@@ -1245,10 +1245,10 @@ PcieEnableErrorReporting (
         if (!SkipDPCEnable) {
           if (gDpcFatalOnly[Socket][Ctrl]) {
             /* Enable DPC for fatal errors only (01b) */
-            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
+            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_F | PCIE_DPC_CTL_DPC_ERR_COR_EN | PCIE_DPC_CTL_DPC_INT_EN);
           } else {
             /* Enable DPC for both fatal and non-fatal errors (10b) - default behavior */
-            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_ERR_COR_EN);
+            Val_16 |= (PCIE_DPC_CTL_DPC_TRIGGER_EN_NF_F | PCIE_DPC_CTL_DPC_ERR_COR_EN | PCIE_DPC_CTL_DPC_INT_EN);
           }
         }
 
