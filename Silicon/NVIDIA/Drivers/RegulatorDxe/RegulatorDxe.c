@@ -303,6 +303,10 @@ RegulatorEnableInternal (
   UINT8               DataOriginal;
   UINT8               DataNew;
 
+  Status       = EFI_SUCCESS;
+  DataOriginal = 0;
+  DataNew      = 0;
+
   if (Entry->Gpio != 0) {
     if (Enable != Entry->ActiveLow) {
       GpioMode = GPIO_MODE_OUTPUT_1;
@@ -419,6 +423,8 @@ RegulatorGetInfo (
       }
     } else if ((Entry->PmicSetting != NULL) && !Entry->AlwaysEnabled) {
       UINT8  Data;
+
+      Data   = 0;
       Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->ConfigRegister, &Data, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a, Failed to read configuration register: %r\r\n", __FUNCTION__, Status));
@@ -707,6 +713,10 @@ RegulatorSetVoltage (
     } else {
       UINT8  DataOriginal;
       UINT8  DataNew;
+
+      DataOriginal = 0;
+      DataNew      = 0;
+
       Status = ReadPmicRegister (Entry->I2cIoProtocol, Entry->PmicSetting->VoltageRegister, &DataOriginal, Entry->I2cDeviceGuid);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a, Failed to read voltage register: %r\r\n", __FUNCTION__, Status));

@@ -1285,6 +1285,9 @@ DeassertPgNodes (
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   UINT32                        Count;
 
+  PowerGateState = 0;
+  Count          = 0;
+
   // Increase the PG active vote count for the resource.
   Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
   NV_ASSERT_RETURN (
@@ -1361,6 +1364,9 @@ AssertPgNodes (
   VOID                          *Hob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   UINT32                        Count;
+
+  PowerGateState = 0;
+  Count          = 0;
 
   Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpcProtocol);
   if (EFI_ERROR (Status)) {

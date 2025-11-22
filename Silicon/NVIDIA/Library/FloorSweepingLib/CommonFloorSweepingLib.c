@@ -373,6 +373,9 @@ CommonFloorSweepPcie (
   CONST CHAR8                      *PcieEpCompatibility;
   CONST TEGRA_FLOOR_SWEEPING_INFO  *Info;
 
+  Status          = EFI_SUCCESS;
+  InterfaceSocket = 0;
+
   Info = mPlatformResourceInfo->FloorSweepingInfo;
 
   // check for PCIe floorsweeping supported
