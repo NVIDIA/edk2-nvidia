@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -1153,6 +1153,8 @@ ParseIommuCells (
   )
 {
   UINT64  Length;
+
+  Length = 0;
 
   DEBUG ((DEBUG_VERBOSE, "%a: Property = 0x%p, Cells = %u, Data = 0x%p\n", __FUNCTION__, Property, Cells, Data));
   NV_ASSERT_RETURN (Property != NULL, return EFI_INVALID_PARAMETER, "%a: Property was NULL\n", __FUNCTION__);

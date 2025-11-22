@@ -63,6 +63,8 @@ ApplyTegraDeviceTreeOverlay (
   EFI_STATUS          Status;
   OVERLAY_BOARD_INFO  BoardInfo;
 
+  ZeroMem (&BoardInfo, sizeof (BoardInfo));
+
   Status = ReadBoardInfo (FdtBase, &BoardInfo);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "Warning: Failed to read board config.\n"));

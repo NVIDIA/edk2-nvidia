@@ -536,6 +536,11 @@ FdtCleanFixups (
 
   NodeLen  = AsciiStrLen (NodeName);
   NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
+  if (NodePath == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to allocate memory for NodePath\n", __FUNCTION__));
+    return EFI_OUT_OF_RESOURCES;
+  }
+
   CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
   NodePath[0] = '/';
 
