@@ -84,6 +84,7 @@ LogStringToScratchRegisters (
   for (Index = 0, RegIndex = 0; ((Index < AsciiStrLen (Name)) && (RegIndex < NumRegs));
        RegIndex++, Index += sizeof (UINT32))
   {
+    Val = 0;
     CopyMem (&Val, &Name[Index], sizeof (UINT32));
     MmioWrite32 (
       (ScratchBase + (RegIndex * 4)),

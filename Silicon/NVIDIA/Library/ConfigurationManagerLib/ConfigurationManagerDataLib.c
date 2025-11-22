@@ -549,6 +549,8 @@ NvHwInfoAdd (
   EFI_STATUS       Status;
   CM_OBJECT_TOKEN  LocalToken;
 
+  LocalToken = CM_NULL_TOKEN;
+
   Status = NvHwInfoAddGetMap (ParserHandle, Context, CmObjDesc, NULL, &LocalToken);
   NV_ASSERT_EFI_ERROR_RETURN (Status, return Status);
 

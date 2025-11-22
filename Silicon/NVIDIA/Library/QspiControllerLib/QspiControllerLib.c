@@ -2,7 +2,7 @@
 
   QSPI Controller Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -527,6 +527,8 @@ QspiPerformTransmit (
   UINT32      Data;
   UINT32      Stride;
 
+  Data        = 0;
+  Stride      = 0;
   BufferTrack = Buffer;
 
   // Clear transaction status

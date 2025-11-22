@@ -45,6 +45,8 @@ WildcardStringMatchAscii (
   BOOLEAN      Result = FALSE; // Default to FALSE
   UINTN        WildcardStringSize;
 
+  ZeroMem (WildcardStackArray, sizeof (WildcardStackArray));
+
   if ((WildcardString == NULL) || (CheckString == NULL)) {
     return FALSE;
   }

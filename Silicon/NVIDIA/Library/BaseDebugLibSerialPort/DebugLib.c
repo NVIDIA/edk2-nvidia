@@ -119,6 +119,9 @@ DebugPrintMarker (
   // If Format is NULL, then ASSERT().
   //
   ASSERT (Format != NULL);
+  if (Format == NULL) {
+    return;
+  }
 
   //
   // Check driver debug mask value and global mask

@@ -235,6 +235,9 @@ UfsCallback (
   UINT32                         Mode;
   UINT32                         MaxGearOverride;
 
+  TxBurstClosureDelay = 0;
+  Value               = 0;
+
   Mode   = (PcdGetBool (PcdUfsEnableHighSpeed)) ?      PWRMODE_FAST_MODE : PWRMODE_SLOW_MODE;
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
   if (EFI_ERROR (Status)) {
