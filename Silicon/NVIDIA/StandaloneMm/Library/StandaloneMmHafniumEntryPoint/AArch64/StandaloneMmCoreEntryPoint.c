@@ -91,17 +91,23 @@ FDTGetProperty32 (
   INT32       Length;
   UINT32      P32;
 
+  P32 = 0;
+
   Property = FdtGetProp (DtbAddress, NodeOffset, PropertyName, &Length);
 
   if (Property == NULL) {
     if (Mandatory == TRUE) {
       ASSERT (Property != NULL);
+      return 0; // Return 0 if ASSERT is compiled out
     } else {
       return 0;
     }
   }
 
   ASSERT (Length == 4);
+  if (Length != 4) {
+    return 0; // Return 0 if length check fails in release build
+  }
 
   CopyMem ((VOID *)&P32, (UINT32 *)Property, sizeof (UINT32));
 
@@ -125,17 +131,23 @@ FDTGetProperty64 (
   INT32       Length;
   UINT64      P64;
 
+  P64 = 0;
+
   Property = FdtGetProp (DtbAddress, NodeOffset, PropertyName, &Length);
 
   if (Property == NULL) {
     if (Mandatory == TRUE) {
       ASSERT (Property != NULL);
+      return 0; // Return 0 if ASSERT is compiled out
     } else {
       return 0;
     }
   }
 
   ASSERT (Length == 8);
+  if (Length != 8) {
+    return 0; // Return 0 if length check fails in release build
+  }
 
   CopyMem ((VOID *)&P64, (UINT64 *)Property, sizeof (UINT64));
 

@@ -1,7 +1,7 @@
 /** @file
 Misc Library for OPTEE related functions in Standalone MM.
 
-SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -860,6 +860,9 @@ IsBufInSecSpMbox (
   EFI_STATUS  Status;
 
   IsBufInSpRange = FALSE;
+  SecBufStart    = 0;
+  SecBufRange    = 0;
+  SecBufEnd      = 0;
 
   Status = GetMboxAddrSize (SpId, &SecBufStart, &SecBufRange);
   NV_ASSERT_RETURN (

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2013-2015, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -238,6 +238,9 @@ UpdateMemoryMap (
   EFI_PHYSICAL_ADDRESS  MaxRegionStart;
   UINTN                 MaxRegionSize;
   EFI_STATUS            Status;
+
+  MaxRegionStart = 0;
+  MaxRegionSize  = 0;
 
   Status = InstallSystemResources (&ResourcesCount, &MaxRegionStart, &MaxRegionSize);
   NV_ASSERT_EFI_ERROR_RETURN (Status, return );
