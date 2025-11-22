@@ -2,7 +2,7 @@
 
   XUDC Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -593,7 +593,7 @@ XudcGetDesc (
   UINT8                desc_index = 0;
   UINT16               wlength, desc_length;
   XUSB_DEVICE_CONTEXT  *p_xusb_dev_context = &s_xusb_device_context;
-  EFI_STATUS           e                   = EFI_SUCCESS;
+  EFI_STATUS           Status              = EFI_SUCCESS;
   UINT8                *desc               = NULL;
 
   desc_type = psetup_data[USB_SETUP_DESCRIPTOR];
@@ -615,22 +615,32 @@ XudcGetDesc (
 
     case USB_DT_CONFIG:
       if (p_xusb_dev_context->port_speed == XUSB_SUPER_SPEED) {
-        desc       = (UINT8 *)g_usbconfig->ss_config.desc;
-        *tx_length = MIN (wlength, g_usbconfig->ss_config.len);
+        desc        = (UINT8 *)g_usbconfig->ss_config.desc;
+        desc_length = g_usbconfig->ss_config.len;
       } else {
-        desc       = (UINT8 *)g_usbconfig->hs_config.desc;
-        *tx_length = MIN (wlength, g_usbconfig->hs_config.len);
+        desc        = (UINT8 *)g_usbconfig->hs_config.desc;
+        desc_length = g_usbconfig->hs_config.len;
       }
+
+      if ((desc == NULL) || (desc_length == 0)) {
+        Status = EFI_INVALID_PARAMETER;
+        break;
+      }
+
+      *tx_length = MIN (wlength, desc_length);
 
       if (p_xusb_dev_context->port_speed == XUSB_FULL_SPEED) {
         /* Apply full speed packet size */
-        /* EP1_IN */
-        desc[22] = 64;
-        desc[23] = 0;
+        /* Ensure descriptor is large enough before modifying */
+        if (desc_length >= 31) {
+          /* EP1_IN */
+          desc[22] = 64;
+          desc[23] = 0;
 
-        /* EP1_OUT */
-        desc[29] = 64;
-        desc[30] = 0;
+          /* EP1_OUT */
+          desc[29] = 64;
+          desc[30] = 0;
+        }
       }
 
       CopyMem ((VOID *)mPrivate->pSetupBuffer, (VOID *)desc, *tx_length);
@@ -648,16 +658,26 @@ XudcGetDesc (
 
         case USB_PROD_ID:
           DEBUG ((EFI_D_ERROR, "%a: Get desc. Prod ID\r\n", __FUNCTION__));
-          desc       = (UINT8 *)g_usbconfig->product.desc;
-          *tx_length = MIN (wlength, g_usbconfig->product.len);
-          CopyMem ((VOID *)mPrivate->pSetupBuffer, (VOID *)desc, *tx_length);
+          desc = (UINT8 *)g_usbconfig->product.desc;
+          if ((desc != NULL) && (g_usbconfig->product.len > 0)) {
+            *tx_length = MIN (wlength, g_usbconfig->product.len);
+            CopyMem ((VOID *)mPrivate->pSetupBuffer, (VOID *)desc, *tx_length);
+          } else {
+            Status = EFI_INVALID_PARAMETER;
+          }
+
           break;
 
         case USB_SERIAL_ID:
           DEBUG ((EFI_D_ERROR, "%a: Get desc. Serial ID\r\n", __FUNCTION__));
-          desc       = (UINT8 *)g_usbconfig->serialno.desc;
-          *tx_length = MIN (wlength, g_usbconfig->serialno.len);
-          CopyMem ((VOID *)mPrivate->pSetupBuffer, (VOID *)desc, *tx_length);
+          desc = (UINT8 *)g_usbconfig->serialno.desc;
+          if ((desc != NULL) && (g_usbconfig->serialno.len > 0)) {
+            *tx_length = MIN (wlength, g_usbconfig->serialno.len);
+            CopyMem ((VOID *)mPrivate->pSetupBuffer, (VOID *)desc, *tx_length);
+          } else {
+            Status = EFI_INVALID_PARAMETER;
+          }
+
           break;
 
         case USB_LANGUAGE_ID:
@@ -711,11 +731,11 @@ XudcGetDesc (
     default:
       DEBUG ((EFI_D_ERROR, "%a: ERR_NOT_SUPPORTED desc_type %u\r\n", __FUNCTION__, desc_type));
       /* stall if any Un supported request comes */
-      e = XudcStallEp (EP0_IN, TRUE);
+      Status = XudcStallEp (EP0_IN, TRUE);
       break;
   }
 
-  return e;
+  return Status;
 }
 
 static VOID

@@ -166,7 +166,7 @@ PcieConfigurationAccess (
   if ((Buffer == NULL) ||
       ((UINT32)Width >= NvidiaPciWidthMaximum) ||
       (Register >= SIZE_4KB) ||
-      (Register + Length > SIZE_4KB))
+      (Register > (SIZE_4KB - Length)))
   {
     Status = EFI_INVALID_PARAMETER;
   } else {
