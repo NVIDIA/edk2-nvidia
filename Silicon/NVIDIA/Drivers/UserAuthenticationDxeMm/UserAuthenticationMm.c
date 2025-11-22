@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2019 - 2021, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -462,6 +462,8 @@ MmPasswordHandler (
     DEBUG ((DEBUG_ERROR, "%a: Input is INVALID", __FUNCTION__));
     return EFI_SUCCESS;
   }
+
+  ZeroMem (&UserPasswordVarStruct, sizeof (UserPasswordVarStruct));
 
   TempCommBufferSize = *CommBufferSize;
   PasswordLen        = 0;

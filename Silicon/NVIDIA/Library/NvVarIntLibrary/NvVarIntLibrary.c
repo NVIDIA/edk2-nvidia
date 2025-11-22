@@ -5,7 +5,7 @@
   The APIs can be called during a variable update (before the FVB Write) or
   at bootup to measure the variables on flash.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -16,6 +16,7 @@
 #include <Library/BaseCryptLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Guid/ImageAuthentication.h>
 #include <Protocol/SmmVariable.h>
 #include <IndustryStandard/Tpm20.h>
@@ -135,7 +136,10 @@ MeasureBootVars (
   }
 
   BootOptions = AllocateZeroPool (BootCount * sizeof (VOID *));
-  ASSERT (BootOptions != NULL);
+  if (BootOptions == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitMeasureBootVars, "%a: Failed to allocate BootOptions - %r", __FUNCTION__, Status);
+  }
 
   for (Index = 0; Index < BootCount; Index++) {
     UnicodeSPrint (
@@ -360,6 +364,8 @@ MeasureSecureDbVars (
   BOOLEAN     AppendWrite;
   UINTN       VarSize;
 
+  CurPtr      = NULL;
+  CopyPtr     = NULL;
   PayloadPtr  = Data;
   PayloadSize = DataSize;
 
@@ -485,7 +491,7 @@ MeasureSecureDbVars (
                    &SecureVars[Index].Size,
                    &SecureVars[Index].Attr
                    );
-        ASSERT_EFI_ERROR (Status);
+        NV_ASSERT_EFI_ERROR_RETURN (Status, goto ExitMeasureSecureBootVars);
       } else {
         ZeroMem (SecureVars[Index].Data, VarSize);
         Status = MmGetVariable (
@@ -494,7 +500,7 @@ MeasureSecureDbVars (
                    SecureVars[Index].Data,
                    SecureVars[Index].Size
                    );
-        ASSERT_EFI_ERROR (Status);
+        NV_ASSERT_EFI_ERROR_RETURN (Status, goto ExitMeasureSecureBootVars);
       }
     } else {
       DEBUG ((
@@ -517,8 +523,8 @@ MeasureSecureDbVars (
     if (AppendWrite == TRUE) {
       CurPtr = AllocateRuntimeZeroPool (PayloadSize);
       if (CurPtr == NULL) {
-        DEBUG ((DEBUG_ERROR, "Failed to Allocate Buf\n"));
-        ASSERT (FALSE);
+        Status = EFI_OUT_OF_RESOURCES;
+        NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitMeasureSecureBootVars, "%a: Failed to Allocate Buf - %r", __FUNCTION__, Status);
       }
 
       CopyMem (CurPtr, PayloadPtr, PayloadSize);
@@ -610,9 +616,8 @@ ComputeVarMeasurement (
   if (HashContext == NULL) {
     HashContext = AllocateRuntimeZeroPool (HashApiGetContextSize ());
     if (HashContext == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: Not Enough Resources to allocate HashContext\n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
-      ASSERT_EFI_ERROR (Status);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitComputeVarMeasurement, "%a: Not Enough Resources to allocate HashContext - %r", __FUNCTION__, Status);
     }
   }
 
@@ -623,9 +628,9 @@ ComputeVarMeasurement (
   }
 
   Status = MeasureBootVars (VarName, VarGuid, Attributes, Data, DataSize);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_EFI_ERROR_RETURN (Status, goto ExitComputeVarMeasurement);
   Status = MeasureSecureDbVars (VarName, VarGuid, Attributes, Data, DataSize);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_EFI_ERROR_RETURN (Status, goto ExitComputeVarMeasurement);
 
   if (HashApiFinal (HashContext, Meas) == FALSE) {
     DEBUG ((DEBUG_ERROR, "Finalizing Hash Failed\n"));
