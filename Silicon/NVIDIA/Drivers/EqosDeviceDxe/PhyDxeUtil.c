@@ -3,7 +3,7 @@
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
-  SPDX-FileCopyrightText: Copyright (c) 2020 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -149,6 +149,8 @@ PhySoftReset (
   UINT32      Data32;
   EFI_STATUS  Status;
 
+  Data32 = 0;
+
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   // PHY Basic Control Register reset
@@ -189,12 +191,23 @@ PhyGetOui (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  OuiMsb;
-  UINT32  OuiLsb;
-  UINT32  Oui;
+  UINT32      OuiMsb;
+  UINT32      OuiLsb;
+  UINT32      Oui;
+  EFI_STATUS  Status;
 
-  PhyRead (PhyDriver, PAGE_PHY, (REG_PHY_IDENTIFIER_1), &OuiMsb);
-  PhyRead (PhyDriver, PAGE_PHY, (REG_PHY_IDENTIFIER_2), &OuiLsb);
+  OuiMsb = 0;
+  OuiLsb = 0;
+
+  Status = PhyRead (PhyDriver, PAGE_PHY, (REG_PHY_IDENTIFIER_1), &OuiMsb);
+  if (EFI_ERROR (Status)) {
+    return 0;
+  }
+
+  Status = PhyRead (PhyDriver, PAGE_PHY, (REG_PHY_IDENTIFIER_2), &OuiLsb);
+  if (EFI_ERROR (Status)) {
+    return 0;
+  }
 
   if (PhyDriver->MgbeDevice) {
     Oui = (OuiMsb << 16) | (OuiLsb);

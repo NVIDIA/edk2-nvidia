@@ -81,12 +81,18 @@ PhyMicrelStartAutoNeg (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
 
   /* Advertise 1000 MBPS full duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32);
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL;
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32);
 
@@ -99,7 +105,12 @@ PhyMicrelStartAutoNeg (
 
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, Data32);
 
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE | REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION;
 
   return PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32);

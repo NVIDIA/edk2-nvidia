@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -97,12 +97,19 @@ PhyMarvellStartAutoNeg (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
 
   PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
-  PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32);
+
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= COPPER_CONTROL_ENABLE_AUTO_NEG | COPPER_RESTART_AUTO_NEG | COPPER_CONTROL_RESET;
 
   return PhyWrite (PhyDriver, PAGE_COPPER, REG_COPPER_CONTROL, Data32);
@@ -265,17 +272,31 @@ PhyMarvellDetectLink (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
+
+  Data32 = 0;
 
   if (PhyDriver->PhyOldLink == LINK_DOWN) {
-    PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32);
+    Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_INTR_STATUS, &Data32);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to read COPPER_INTR_STATUS register: %r\r\n", __FUNCTION__, Status));
+      PhyDriver->PhyCurrentLink = LINK_DOWN;
+      return;
+    }
+
     if ((Data32 & 0xC00) == 0xC00) {
       PhyDriver->StartAutoNeg (PhyDriver);
       PhyDriver->CheckAutoNeg (PhyDriver);
     }
   }
 
-  PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_STATUS1, &Data32);
+  Status = PhyRead (PhyDriver, PAGE_COPPER, REG_COPPER_STATUS1, &Data32);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read COPPER_STATUS1 register: %r\r\n", __FUNCTION__, Status));
+    PhyDriver->PhyCurrentLink = LINK_DOWN;
+    return;
+  }
 
   if ((Data32 & COPPER_STATUS1_LINK_STATUS) == 0) {
     PhyDriver->PhyCurrentLink = LINK_DOWN;

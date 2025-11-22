@@ -1,7 +1,7 @@
 /** @file
   DW EMAC SNP DXE driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -1002,6 +1002,8 @@ SnpGetStatus (
   SIMPLE_NETWORK_DRIVER  *Snp;
   UINT32                 more_data_avail;
 
+  more_data_avail = 0;
+
   Snp = INSTANCE_FROM_SNP_THIS (This);
 
   // Check preliminaries
@@ -1312,8 +1314,9 @@ SnpReceive (
   UINT32                 more_data_avail;
   BOOLEAN                ReleasePacket;
 
-  ReleasePacket = FALSE;
-  Snp           = INSTANCE_FROM_SNP_THIS (This);
+  more_data_avail = 0;
+  ReleasePacket   = FALSE;
+  Snp             = INSTANCE_FROM_SNP_THIS (This);
 
   // Check preliminaries
   if ((This == NULL) || (Data == NULL)) {

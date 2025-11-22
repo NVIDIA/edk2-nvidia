@@ -1,7 +1,7 @@
 /** @file
 
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -59,9 +59,17 @@ PhyMGBEDetectLink (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
-  PhyRead (PhyDriver, 0, REG_COPPER_STATUS, &Data32);
+  Data32 = 0;
+
+  Status = PhyRead (PhyDriver, 0, REG_COPPER_STATUS, &Data32);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read COPPER_STATUS register: %r\r\n", __FUNCTION__, Status));
+    PhyDriver->PhyCurrentLink = LINK_DOWN;
+    return;
+  }
 
   if ((Data32 & BIT2) == 0) {
     PhyDriver->PhyCurrentLink = LINK_DOWN;

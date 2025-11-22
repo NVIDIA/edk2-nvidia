@@ -1,7 +1,7 @@
 /** @file
 
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2019, Intel Corporaton. All rights reserved.
-  Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
 
@@ -56,18 +56,29 @@ PhyRealtekStartAutoNeg (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a ()\r\n", __FUNCTION__));
   PhyDriver->AutoNegState = PHY_AUTONEG_RUNNING;
 
   /* Advertise 1000 MBPS full duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32);
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= REG_PHY_GB_CONTROL_ADVERTISE_1000_BASE_T_FULL;
   PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_GB_CONTROL, Data32);
 
   /* Advertise 100, 10 MBPS with full and half duplex mode */
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32);
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_AUTONEG_ADVERTISE, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= REG_PHY_AUTONEG_ADVERTISE_100_BASE_T4      |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_FULL |
             REG_PHY_AUTONEG_ADVERTISE_100_BASE_TX_HALF |
@@ -77,7 +88,12 @@ PhyRealtekStartAutoNeg (
 
   DEBUG ((DEBUG_INFO, "SNP:PHY: %a: Start auto-negotiation\r\n", __FUNCTION__));
 
-  PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
+  Data32 = 0;
+  Status = PhyRead (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, &Data32);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   Data32 |= REG_PHY_CONTROL_AUTO_NEGOTIATION_ENABLE | REG_PHY_CONTROL_RESTART_AUTO_NEGOTIATION;
 
   return PhyWrite (PhyDriver, PAGE_PHY, REG_PHY_CONTROL, Data32);
@@ -186,9 +202,17 @@ PhyRealtekDetectLink (
   IN  PHY_DRIVER  *PhyDriver
   )
 {
-  UINT32  Data32;
+  UINT32      Data32;
+  EFI_STATUS  Status;
 
-  PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32);
+  Data32 = 0;
+
+  Status = PhyRead (PhyDriver, PAGE_A43, REG_PHYSR, &Data32);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read PHYSR register: %r\r\n", __FUNCTION__, Status));
+    PhyDriver->PhyCurrentLink = LINK_DOWN;
+    return;
+  }
 
   if ((Data32 & PHYSR_LINK) == 0) {
     PhyDriver->PhyCurrentLink = LINK_DOWN;
