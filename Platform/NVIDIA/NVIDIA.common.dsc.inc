@@ -977,11 +977,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultCreatorRevision|1
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiExposedTableVersions|0x20
 
-  #
-  # ARM VFP PCDs
-  #
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-
   # Use Segment numbers as PCI UID
   gEdkiiDynamicTablesPkgTokenSpaceGuid.PcdPciUseSegmentAsUid|FALSE
 

@@ -18,8 +18,13 @@ ASM_FUNC(_ModuleEntryPoint)
   adr   x8, PcdGet64 (PcdDeviceTreeInitialBaseAddress)
   str   x0, [x8]
 
+  // Enable Floating Point. This needs to be done before entering C code, which
+  // may use FP/SIMD registers.  This will trash x0 and x1.
+  bl    ArmEnableVFP
+
   // Discover our MemoryBase and MemorySize from the DTB.
   // This will call a C function, so the sp must be valid.
+  ldr   x0, PcdGet64 (PcdDeviceTreeInitialBaseAddress)
   bl    ASM_PFX(DiscoverDramFromDt)
 
   // Load the MemoryBase and MemorySize discovered from the DTB.

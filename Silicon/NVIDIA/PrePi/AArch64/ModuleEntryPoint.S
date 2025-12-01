@@ -42,6 +42,10 @@ ASM_FUNC(_ModuleEntryPoint)
   b     .Lreloc_loop
 .Lreloc_done:
 
+  // Enable Floating Point. This needs to be done before entering C code, which
+  // may use FP/SIMD registers.  This will trash x0 and x1.
+  bl    ArmEnableVFP
+
   bl ASM_PFX(TegraGetChipID)
   mov w28, w0
 

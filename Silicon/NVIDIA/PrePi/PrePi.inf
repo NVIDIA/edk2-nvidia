@@ -74,7 +74,6 @@
   gNVIDIATokenSpaceGuid.PcdExpectedPeiMemoryUsage
 
 [FixedPcd]
-  gArmTokenSpaceGuid.PcdVFPEnabled
   gArmTokenSpaceGuid.PcdArmNonSecModeTransition
   gArmTokenSpaceGuid.PcdArmScr
   gNVIDIATokenSpaceGuid.PcdTegraArchTimerFreqInHz

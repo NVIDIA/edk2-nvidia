@@ -73,8 +73,6 @@
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
 
-  gArmTokenSpaceGuid.PcdVFPEnabled
-
   gArmTokenSpaceGuid.PcdFvSize
 
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize

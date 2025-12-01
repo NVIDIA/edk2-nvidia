@@ -215,9 +215,6 @@
 
   gEmbeddedTokenSpaceGuid.PcdAndroidKernelCommandLineOverflow|512
 
-[PcdsFixedAtBuild.AARCH64]
-  gArmTokenSpaceGuid.PcdVFPEnabled|1
-
 [PcdsPatchableInModule.common]
   #
   # These will be set at boot time.
