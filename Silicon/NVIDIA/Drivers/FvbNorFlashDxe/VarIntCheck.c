@@ -21,6 +21,7 @@
 #include <Library/PrintLib.h>
 #include <Library/OpteeLib.h>
 #include <Library/NvVarIntLib.h>
+#include <Library/NVIDIADebugLib.h>
 
 #define HEADER_SZ_BYTES    (1)
 #define MAX_VALID_RECORDS  (2)
@@ -104,13 +105,13 @@ FfaInit (
   UINT32      TotalLength;
 
   Status = FfaGetOpteeVmId (&OpteeVmId);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to get Optee VM ID");
 
   Status = FfaGetMmVmId (&MmVmId);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to get MM VM ID");
 
   Status = FfaGetTxRxBuffer (&FfaTxBufferAddr, &FfaTxBufferSize, &FfaRxBufferAddr, &FfaRxBufferSize);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to get Tx/Rx buffer");
 
   DEBUG ((DEBUG_ERROR, "FfaTxBufferAddr: 0x%lx\n", FfaTxBufferAddr));
   DEBUG ((DEBUG_ERROR, "FfaTxBufferSize: 0x%x\n", FfaTxBufferSize));
@@ -126,11 +127,12 @@ FfaInit (
              OpteeVmId,
              &TotalLength
              );
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to prepare FFA memory descriptor");
 
   Status = FfaSendShareCommand (TotalLength, TotalLength, FfaTxBufferAddr, EFI_SIZE_TO_PAGES (VarInt->MeasurementSize), &FfaHandle);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to send FFA share command");
 
+ExitFfaInit:
   return Status;
 }
 
@@ -159,7 +161,7 @@ SendFfaCmd (
   UINT16        MmId = 0x8002;
 
   Status = FfaGetOpteeVmId (&OpteeVmId);
-  ASSERT_EFI_ERROR (Status);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to get Optee VM ID");
 
   ZeroMem (&SvcArgs, sizeof (SvcArgs));
 
@@ -752,13 +754,7 @@ VarIntComputeMeasurement (
    * Unsure if we should assert at this point.
    */
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get signed measurement %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    ASSERT (FALSE);
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to get signed measurement - %r", Status);
   } else {
     This->CurMeasurement[0] = FVB_ERASED_BYTE;
   }
@@ -1275,16 +1271,7 @@ VarIntValidate (
   }
 
   Status = SendOpteeCmd (Meas, (This->MeasurementSize - 1));
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a:Failed to get signed device measurement %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    ASSERT (FALSE);
-    goto ExitVarIntValidate;
-  }
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to get signed device measurement - %r", Status);
 
   This->CurMeasurement[0] = FVB_ERASED_BYTE;
 
@@ -1453,21 +1440,14 @@ VarIntInit (
   VarIntProto->MeasurementSize       = MeasSize + HEADER_SZ_BYTES;
   VarIntProto->CurMeasurement        = AllocateAlignedPages (EFI_SIZE_TO_PAGES (MeasSize), EFI_PAGE_SIZE);
   if (VarIntProto->CurMeasurement == NULL) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a %d Not enough resources to allocate Measurement BUffer\n",
-      __FUNCTION__,
-      __LINE__
-      ));
     Status = EFI_OUT_OF_RESOURCES;
-    ASSERT_EFI_ERROR (Status);
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not enough resources to allocate Measurement Buffer - %r", __FUNCTION__, Status);
   }
 
   VarIntProto->PartitionData = AllocateRuntimeZeroPool (VarIntProto->PartitionSize);
   if (VarIntProto->PartitionData == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
-    ASSERT_EFI_ERROR (Status);
-    goto ExitVarIntInit;
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitVarIntInit, "%a: Not enough resources to allocate Partition Data - %r", __FUNCTION__, Status);
   }
 
   Status = NorFlashProto->Read (
@@ -1477,9 +1457,7 @@ VarIntInit (
                             VarIntProto->PartitionData
                             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to Read from Reserved Partition %r", Status));
-    ASSERT_EFI_ERROR (Status);
-    goto ExitVarIntInit;
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitVarIntInit, "Failed to Read from Reserved Partition - %r", Status);
   }
 
   VarIntHandle = NULL;
@@ -1489,32 +1467,22 @@ VarIntInit (
                           EFI_NATIVE_INTERFACE,
                           VarIntProto
                           );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to install VarInt Protocol %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    ASSERT_EFI_ERROR (Status);
-  }
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitVarIntInit, "Failed to install VarInt Protocol - %r", Status);
 
   /* Allocate these resources one-time */
   for (Index = 0; Index < MAX_VALID_RECORDS; Index++) {
     LastMeasurements[Index] = AllocateRuntimeZeroPool (sizeof (MEASURE_REC_TYPE));
     if (LastMeasurements[Index] == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a:%d  Failed to Allocate Memory\n", __FUNCTION__, __LINE__));
       Status = EFI_OUT_OF_RESOURCES;
-      ASSERT_EFI_ERROR (Status);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitVarIntInit, "%a: Failed to Allocate Memory - %r", __FUNCTION__, Status);
     }
 
     LastMeasurements[Index]->Measurement = AllocateRuntimeZeroPool (
                                              VarIntProto->MeasurementSize * sizeof (UINT8)
                                              );
     if (LastMeasurements[Index]->Measurement == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a Failed to allocate Measurements Buf \n", __FUNCTION__));
       Status = EFI_OUT_OF_RESOURCES;
-      ASSERT_EFI_ERROR (Status);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitVarIntInit, "%a: Failed to Allocate Measurements Buffer - %r", __FUNCTION__, Status);
     }
 
     LastMeasurements[Index]->ByteOffset = 0;
@@ -1522,14 +1490,13 @@ VarIntInit (
 
   CurMeas = AllocateRuntimeZeroPool (VarIntProto->MeasurementSize);
   if (CurMeas == NULL) {
-    DEBUG ((DEBUG_ERROR, "%a: Not Enough Resources to allocate Buffer\n", __FUNCTION__));
     Status = EFI_OUT_OF_RESOURCES;
-    ASSERT_EFI_ERROR (Status);
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not Enough Resources to allocate Buffer - %r", __FUNCTION__, Status);
   }
 
   if (!IsOpteePresent ()) {
     Status = FfaInit (VarIntProto);
-    ASSERT_EFI_ERROR (Status);
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Initialize FFA - %r", Status);
   }
 
 ExitVarIntInit:
