@@ -16,17 +16,11 @@
 #include <Protocol/I2cEnumerate.h>
 #include <Protocol/I2cBusConfigurationManagement.h>
 #include <Protocol/BpmpIpc.h>
+#include <Pi/PiI2c.h>
 
 #define BPMP_I2C_ADDL_SLAVES  1
 #define BPMP_I2C_SLAVE_AND    0
 #define BPMP_I2C_SLAVE_OR     1
-
-typedef struct {
-  CONST CHAR8       *Compatibility;
-  CONST EFI_GUID    *DeviceType;
-  UINTN             AdditionalSlaves;
-  UINTN             SlaveMasks[BPMP_I2C_ADDL_SLAVES][2];
-} BPMP_I2C_DEVICE_TYPE_MAP;
 
 #define BPMP_I2C_CMD_TRANSFER  1
 
@@ -36,6 +30,10 @@ typedef struct {
 
 #define BPMP_I2C_HEADER_LENGTH       6
 #define BPMP_I2C_FULL_HEADER_LENGTH  18
+
+// VRS PSEQ register definitions
+#define VRS_CTL_2         0x29
+#define VRS_CTL_2_EN_PEC  BIT0
 
 typedef struct {
   UINT16    SlaveAddress;
@@ -118,5 +116,70 @@ typedef struct {
 } NVIDIA_BPMP_I2C_PRIVATE_DATA;
 #define BPMP_I2C_PRIVATE_DATA_FROM_MASTER(a)     CR(a, NVIDIA_BPMP_I2C_PRIVATE_DATA, I2cMaster, BPMP_I2C_SIGNATURE)
 #define BPMP_I2C_PRIVATE_DATA_FROM_ENUMERATE(a)  CR(a, NVIDIA_BPMP_I2C_PRIVATE_DATA, I2cEnumerate, BPMP_I2C_SIGNATURE)
+
+/**
+ * Function pointer type for device initialization callbacks
+ *
+ * @param Private      Pointer to I2C private data
+ * @param DeviceIndex  Index of the device in I2cDevices array
+ * @param Node         Device tree node offset
+ *
+ * @return EFI_SUCCESS - Initialization successful
+ * @return others      - Failed to initialize
+ */
+typedef EFI_STATUS (EFIAPI *BPMP_I2C_DEVICE_INIT_FUNC)(
+  IN NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private,
+  IN UINTN                         DeviceIndex,
+  IN INT32                         Node
+  );
+
+typedef struct {
+  CONST CHAR8                  *Compatibility;
+  CONST EFI_GUID               *DeviceType;
+  UINTN                        AdditionalSlaves;
+  UINTN                        SlaveMasks[BPMP_I2C_ADDL_SLAVES][2];
+  BPMP_I2C_DEVICE_INIT_FUNC    InitFunction; ///< Optional initialization function, NULL if not needed
+} BPMP_I2C_DEVICE_TYPE_MAP;
+
+///
+/// I2C request packet helper structures
+///
+/// These structures provide convenient wrappers for common I2C transaction patterns
+/// that can be cast to EFI_I2C_REQUEST_PACKET for use with EFI_I2C_MASTER_PROTOCOL.
+///
+
+/// I2C register write packet
+///
+/// Used for writing to I2C device registers. Contains a single operation that
+/// writes both the register address and data in one transaction.
+/// Typical usage: Operation[0] contains register address followed by data bytes.
+typedef struct {
+  ///
+  /// Number of elements in the operation array
+  ///
+  UINTN                OperationCount;
+
+  ///
+  /// Description of the I2C operation
+  ///
+  EFI_I2C_OPERATION    Operation[1];
+} I2C_REGISTER_WRITE_PACKET;
+
+/// I2C register read packet
+///
+/// Used for reading from I2C device registers. Contains two operations:
+/// Operation[0] writes the register address, Operation[1] reads the data.
+/// Typical usage: Write register address, then read register value.
+typedef struct {
+  ///
+  /// Number of elements in the operation array
+  ///
+  UINTN                OperationCount;
+
+  ///
+  /// Description of the I2C operation
+  ///
+  EFI_I2C_OPERATION    Operation[2];
+} I2C_REGISTER_READ_PACKET;
 
 #endif
