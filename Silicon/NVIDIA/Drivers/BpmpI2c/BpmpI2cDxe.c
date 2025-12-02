@@ -26,35 +26,45 @@
 
 #include "BpmpI2c.h"
 
+//
+// Forward declaration for device initialization functions
+//
+STATIC EFI_STATUS EFIAPI
+InitializeVrsPseq (
+  IN NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private,
+  IN UINTN                         DeviceIndex,
+  IN INT32                         Node
+  );
+
 STATIC BPMP_I2C_DEVICE_TYPE_MAP  mDeviceTypeMap[] = {
   { "maxim,max20024",      &gNVIDIAI2cMaxim20024, 1, {
           { 0x22,                  0x48 }
-        }
-  },
+        },
+        NULL },
   { "maxim,max77620",      &gNVIDIAI2cMaxim77620, 1, {
           { 0x22,                  0x48 }
-        }
-  },
+        },
+        NULL },
   { "maxim,max77851-pmic", &gNVIDIAI2cMaxim77851, 1, {
           { 0x22,                  0x48 }
-        }
-  },
+        },
+        NULL },
   { "nvidia,vrs-pseq",     &gNVIDIAI2cVrsPseq,    0, {
           { 0x00,                  0x00 }
-        }
-  },
+        },
+        InitializeVrsPseq },
   { "ti,tca9539",          &gNVIDIAI2cTca9539,    0, {
           { 0x00,                  0x00 }
-        }
-  },
+        },
+        NULL },
   { "nxp,pca9535",         &gNVIDIAI2cPca9535,    0, {
           { 0x00,                  0x00 }
-        }
-  },
+        },
+        NULL },
   { NULL,                  NULL,                  0, {
           { 0x00,                  0x00 }
-        }
-  }
+        },
+        NULL }
 };
 
 STATIC VENDOR_DEVICE_PATH  mDevicePathNode = {
@@ -627,6 +637,225 @@ BpmpI2cSupported (
 }
 
 /**
+ * Initialize VRS PSEQ device when discovered
+ *
+ * @param Private      Pointer to I2C private data
+ * @param DeviceIndex  Index of the device in I2cDevices array
+ * @param Node         Device tree node offset
+ *
+ * @return EFI_SUCCESS - Initialization successful
+ * @return others      - Failed to initialize
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+InitializeVrsPseq (
+  IN NVIDIA_BPMP_I2C_PRIVATE_DATA  *Private,
+  IN UINTN                         DeviceIndex,
+  IN INT32                         Node
+  )
+{
+  EFI_STATUS                 Status;
+  UINTN                      SlaveAddress;
+  UINT8                      RegisterOffset;
+  UINT8                      RegisterData;
+  UINT8                      VrsCtl2Value;
+  UINT32                     WriteFlags;
+  I2C_REGISTER_READ_PACKET   ReadRequest;
+  I2C_REGISTER_WRITE_PACKET  WriteRequest;
+  UINT8                      WriteBuffer[2];
+  UINT8                      Ctl2Buffer[2];
+  CONST UINT32               *InitProperty;
+  INT32                      InitPropertyLength;
+  UINT32                     InitRegOffset;
+  UINT32                     InitData;
+  UINT32                     InitOperation;
+
+  DEBUG ((DEBUG_INFO, "%a: Initializing VRS PSEQ device (Index: %d)\r\n", __FUNCTION__, DeviceIndex));
+
+  //
+  // Validate input parameters
+  //
+  if (Private == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: Private is NULL\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Private->DeviceTreeBase == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: DeviceTreeBase is NULL\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Private->SlaveAddressArray == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: SlaveAddressArray is NULL\r\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Node < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid device tree node offset: %d\r\n", __FUNCTION__, Node));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Validate DeviceIndex is within bounds
+  //
+  if (DeviceIndex >= Private->NumberOfI2cDevices) {
+    DEBUG ((DEBUG_ERROR, "%a: DeviceIndex %d is out of bounds (max: %d)\r\n", __FUNCTION__, DeviceIndex, Private->NumberOfI2cDevices));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Get the slave address for this device
+  //
+  SlaveAddress = Private->SlaveAddressArray[DeviceIndex * (1 + BPMP_I2C_ADDL_SLAVES)];
+
+  //
+  // Read nvidia,uefi-vrs-pseq-init property from device tree
+  // Property format: <register_offset data operation>
+  //   - register_offset: Register offset to read/write (UINT8, stored as UINT32)
+  //   - data: Data value to use for OR/AND operation (UINT8, stored as UINT32)
+  //   - operation: 0 = OR, 1 = AND (UINT32)
+  //
+  InitProperty = (CONST UINT32 *)fdt_getprop (
+                                   Private->DeviceTreeBase,
+                                   Node,
+                                   "nvidia,uefi-vrs-pseq-init",
+                                   &InitPropertyLength
+                                   );
+  if ((InitProperty == NULL) || (InitPropertyLength < 0) || (InitPropertyLength != (3 * sizeof (UINT32)))) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read nvidia,uefi-vrs-pseq-init property (length: %d)\r\n", __FUNCTION__, InitPropertyLength));
+    return EFI_NOT_FOUND;
+  }
+
+  //
+  // Extract property values (device tree uses big-endian, convert to CPU endianness)
+  //
+  InitRegOffset = SwapBytes32 (InitProperty[0]);
+  InitData      = SwapBytes32 (InitProperty[1]);
+  InitOperation = SwapBytes32 (InitProperty[2]);
+
+  //
+  // Validate property values
+  //
+  if ((InitRegOffset > 0xFF) || (InitData > 0xFF) || (InitOperation > 1)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid property values: offset=0x%02x data=0x%02x operation=%d\r\n", __FUNCTION__, InitRegOffset, InitData, InitOperation));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  RegisterOffset = (UINT8)InitRegOffset;
+  DEBUG ((DEBUG_INFO, "%a: Register offset: 0x%02x, Data: 0x%02x, Operation: %s\r\n", __FUNCTION__, RegisterOffset, (UINT8)InitData, (InitOperation == 0) ? "OR" : "AND"));
+
+  //
+  // Check for PEC support by reading VRS_CTL_2 register (0x29)
+  // VRS_CTL_2 is a VRS device-specific control register that contains the PEC enable bit.
+  // This follows the same pattern as MaximRealTimeClockLib for VRS RTC devices.
+  //
+  Ctl2Buffer[0]                          = VRS_CTL_2;
+  ReadRequest.OperationCount             = 2;
+  ReadRequest.Operation[0].Flags         = 0;    // Write operation
+  ReadRequest.Operation[0].LengthInBytes = sizeof (Ctl2Buffer[0]);
+  ReadRequest.Operation[0].Buffer        = &Ctl2Buffer[0];
+  ReadRequest.Operation[1].Flags         = I2C_FLAG_READ;
+  ReadRequest.Operation[1].LengthInBytes = sizeof (VrsCtl2Value);
+  ReadRequest.Operation[1].Buffer        = &VrsCtl2Value;
+
+  Status = Private->I2cMaster.StartRequest (
+                                &Private->I2cMaster,
+                                SlaveAddress,
+                                (EFI_I2C_REQUEST_PACKET *)&ReadRequest,
+                                NULL,
+                                NULL
+                                );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read VRS_CTL_2 register from VRS PSEQ: %r\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  //
+  // Determine if PEC is enabled by checking bit 0 of VRS_CTL_2 register
+  // When PEC is enabled, the BpmpI2c driver will automatically calculate and append
+  // the PEC byte to the write transaction. The caller's buffer doesn't need to
+  // include space for the PEC byte - the driver handles it internally.
+  //
+  if ((VrsCtl2Value & VRS_CTL_2_EN_PEC) == VRS_CTL_2_EN_PEC) {
+    WriteFlags = I2C_FLAG_SMBUS_PEC;
+    DEBUG ((DEBUG_INFO, "%a: PEC is enabled for VRS PSEQ device\r\n", __FUNCTION__));
+  } else {
+    WriteFlags = 0;
+    DEBUG ((DEBUG_INFO, "%a: PEC is disabled for VRS PSEQ device\r\n", __FUNCTION__));
+  }
+
+  //
+  // Read register at the specified offset
+  //
+  ReadRequest.OperationCount             = 2;
+  ReadRequest.Operation[0].Flags         = 0;  // Write operation
+  ReadRequest.Operation[0].LengthInBytes = sizeof (RegisterOffset);
+  ReadRequest.Operation[0].Buffer        = &RegisterOffset;
+  ReadRequest.Operation[1].Flags         = I2C_FLAG_READ;
+  ReadRequest.Operation[1].LengthInBytes = sizeof (RegisterData);
+  ReadRequest.Operation[1].Buffer        = &RegisterData;
+
+  Status = Private->I2cMaster.StartRequest (
+                                &Private->I2cMaster,
+                                SlaveAddress,
+                                (EFI_I2C_REQUEST_PACKET *)&ReadRequest,
+                                NULL,
+                                NULL
+                                );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read register 0x%02x from VRS PSEQ: %r\r\n", __FUNCTION__, RegisterOffset, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Read register 0x%02x: 0x%02x\r\n", __FUNCTION__, RegisterOffset, RegisterData));
+
+  //
+  // Apply operation: 0 = OR, 1 = AND
+  //
+  if (InitOperation == 0) {
+    UINT8  OriginalValue = RegisterData;
+    RegisterData |= (UINT8)InitData;
+    DEBUG ((DEBUG_INFO, "%a: Applied OR operation: 0x%02x | 0x%02x = 0x%02x\r\n", __FUNCTION__, OriginalValue, (UINT8)InitData, RegisterData));
+  } else {
+    UINT8  OriginalValue = RegisterData;
+    RegisterData &= (UINT8)InitData;
+    DEBUG ((DEBUG_INFO, "%a: Applied AND operation: 0x%02x & 0x%02x = 0x%02x\r\n", __FUNCTION__, OriginalValue, (UINT8)InitData, RegisterData));
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Modified register value: 0x%02x\r\n", __FUNCTION__, RegisterData));
+
+  //
+  // Write the modified value back to the register
+  // Note: When WriteFlags includes I2C_FLAG_SMBUS_PEC, the BpmpI2c driver automatically
+  // calculates and appends the PEC byte. The WriteBuffer[2] size is correct - the
+  // driver handles the PEC byte internally in its own buffer structure.
+  //
+  WriteBuffer[0]                          = RegisterOffset;
+  WriteBuffer[1]                          = RegisterData;
+  WriteRequest.OperationCount             = 1;
+  WriteRequest.Operation[0].Flags         = WriteFlags;           // I2C_FLAG_SMBUS_PEC if PEC enabled, 0 otherwise
+  WriteRequest.Operation[0].LengthInBytes = sizeof (WriteBuffer); // 2 bytes: register offset + data
+  WriteRequest.Operation[0].Buffer        = WriteBuffer;
+
+  Status = Private->I2cMaster.StartRequest (
+                                &Private->I2cMaster,
+                                SlaveAddress,
+                                (EFI_I2C_REQUEST_PACKET *)&WriteRequest,
+                                NULL,
+                                NULL
+                                );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to write register 0x%02x to VRS PSEQ: %r\r\n", __FUNCTION__, RegisterOffset, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Successfully initialized VRS PSEQ device\r\n", __FUNCTION__));
+
+  return EFI_SUCCESS;
+}
+
+/**
  * Builds list of i2c devices found in device tree
  *
  * @param Private  Pointer to i2c private date
@@ -721,6 +950,19 @@ BuildI2cDevices (
             NewSlave                                                                       |= MapEntry->SlaveMasks[SlaveIndex][BPMP_I2C_SLAVE_OR];
             Private->SlaveAddressArray[Index * (1 + BPMP_I2C_ADDL_SLAVES) + SlaveIndex + 1] = NewSlave;
             Private->I2cDevices[Index].SlaveAddressCount++;
+          }
+
+          //
+          // Call device-specific initialization function if available
+          //
+          if (MapEntry->InitFunction != NULL) {
+            EFI_STATUS  Status;
+
+            Status = MapEntry->InitFunction (Private, Index, Node);
+            if (EFI_ERROR (Status)) {
+              DEBUG ((DEBUG_WARN, "%a: Failed to initialize device (GUID: %g): %r\r\n", __FUNCTION__, MapEntry->DeviceType, Status));
+              // Continue even if initialization fails - device is still enumerated
+            }
           }
 
           break;
