@@ -13,6 +13,7 @@
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/IoLib.h>
+#include <Library/NVIDIADebugLib.h>
 
 /* FVB transactions will only be made to socket 0. */
 #define FVB_DEVICE_SOCKET    0
@@ -946,14 +947,10 @@ MmFvbSmmVarReady (
      * to reboot the system. The subsequent reboot should re-initialize the Variable Store.
      */
     if (FeaturePcdGet (PcdAssertOnVarStoreIntegrityCheckFail) == TRUE) {
-      ASSERT (FALSE);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Var Store Validation failed - %r!\r\n", Status);
     } else {
       Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&SmmVariable);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: gEfiSmmVariableProtocolGuid: NOT LOCATED!\n", __FUNCTION__));
-      }
-
-      ASSERT_EFI_ERROR (Status);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Locate SmmVariable Protocol - %r!\r\n", Status);
 
       // Set a Volatile Variable that NS side will check in UEFI.
       Status = SmmVariable->SmmSetVariable (
@@ -963,17 +960,7 @@ MmFvbSmmVarReady (
                               sizeof (UINT32),
                               &VarIntCheckFail
                               );
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Failed to Set %s Variable %r\n",
-          __FUNCTION__,
-          VARINT_CHECK_FAILED,
-          Status
-          ));
-      }
-
-      ASSERT_EFI_ERROR (Status);
+      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Set %s Variable - %r!\r\n", VARINT_CHECK_FAILED, Status);
 
       // Corrupt the FV header which forces a re-init of the Variable store during the next reboot.
       DEBUG ((DEBUG_ERROR, "%a: Corrupting FV Header\n", __FUNCTION__));
@@ -1707,12 +1694,12 @@ FVBNORInitialize (
   PatchPcdSet32 (PcdFlashNvStorageFtwWorkingSize, FvpData[FVB_FTW_WORK_INDEX].PartitionSize);
 
   // Spare needs to hold at least the full variable partition
-  ASSERT (FvpData[FVB_FTW_SPARE_INDEX].PartitionSize >= VariableSize);
+  NV_ASSERT_RETURN (FvpData[FVB_FTW_SPARE_INDEX].PartitionSize >= VariableSize, CpuDeadLoop (), "FtwSpareBuffer is not large enough - %lu < %lu\r\n", FvpData[FVB_FTW_SPARE_INDEX].PartitionSize, VariableSize);
 
   // Verify partitions are big enough
   if ((FvpData[FVB_FTW_WORK_INDEX].PartitionSize + FvpData[FVB_FTW_SPARE_INDEX].PartitionSize) > FtwSize) {
-    DEBUG ((DEBUG_ERROR, "%a: FTW partition not large enough to fit working and spare\r\n", __FUNCTION__));
-    ASSERT (FALSE);
+    Status = EFI_DEVICE_ERROR;
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "FTW partition not large enough to fit working and spare - %lu + %lu > %lu\r\n", FvpData[FVB_FTW_WORK_INDEX].PartitionSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize, FtwSize);
     goto Exit;
   }
 
@@ -1724,33 +1711,16 @@ FVBNORInitialize (
                NorFlashProtocol,
                &NorFlashAttributes
                );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a:%d Failed to init Variable Integrity %r\n",
-        __FUNCTION__,
-        __LINE__,
-        Status
-        ));
-      // If enabled VarStore Integrity feature is a must have.
-      ASSERT (FALSE);
-      goto Exit;
-    }
+    // If enabled VarStore Integrity feature is a must have.
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to init Variable Integrity - %r!\r\n", Status);
 
     Status = gMmst->MmLocateProtocol (
                       &gNVIDIAVarIntGuid,
                       NULL,
                       (VOID **)&VarInt
                       );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to get VarInt Proto%r\n",
-        __FUNCTION__,
-        Status
-        ));
-      ASSERT_EFI_ERROR (Status);
-    }
+
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to get VarInt Proto - %r!\r\n", Status);
 
     /* Register a callback for when the SmmVariable Protocol is installed
      * to validate the measurements.
@@ -1760,15 +1730,8 @@ FVBNORInitialize (
                       MmFvbSmmVarReady,
                       &MmFvbRegistration
                       );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to register callback %r\n",
-        __FUNCTION__,
-        Status
-        ));
-      ASSERT_EFI_ERROR (Status);
-    }
+
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to register callback - %r!\r\n", Status);
   }
 
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {

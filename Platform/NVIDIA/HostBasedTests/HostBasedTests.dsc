@@ -178,6 +178,8 @@
      StandaloneMmOpteeLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StandaloneMmOpteeStubLib/StandaloneMmOpteeStubLib.inf
     <PcdsFixedAtBuild>
       gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x16
+    <BuildOptions>
+      GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=CpuDeadLoop
   }
 
 

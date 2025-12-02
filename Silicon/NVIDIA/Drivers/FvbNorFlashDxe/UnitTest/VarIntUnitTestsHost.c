@@ -7,6 +7,12 @@
 
 **/
 
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <stdint.h>
+#include <cmocka.h>
+
 #include <Uefi.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -54,6 +60,24 @@ extern NVIDIA_VAR_INT_PROTOCOL    *VarIntProto;
 STATIC NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashStub;
 STATIC NOR_FLASH_ATTRIBUTES       NorFlashAttr;
 STATIC UINT32                     *Handle;
+
+/**
+  Mock implementation of CpuDeadLoop for unit testing using cmocka.
+
+  This function overrides the BaseLib CpuDeadLoop to use cmocka's
+  function_called() mechanism for verification in tests.
+
+**/
+VOID
+EFIAPI
+__wrap_CpuDeadLoop (
+  VOID
+  )
+{
+  function_called ();
+  // Mock implementation - do nothing in unit tests
+  // This prevents infinite loops during test execution
+}
 
 /* Assume that the reserved partition is the first partition on the Flash
    Device we mock.
@@ -556,6 +580,9 @@ VarIntComputeTest_5 (
   VAR_INT_TEST_CONTEXT  *TestData;
 
   TestData = (VAR_INT_TEST_CONTEXT *)Context;
+
+  // Expect CpuDeadLoop to be called when OPTEE command fails
+  expect_function_call (__wrap_CpuDeadLoop);
 
   MockComputeVarMeasurement (
     TestData->VarName,

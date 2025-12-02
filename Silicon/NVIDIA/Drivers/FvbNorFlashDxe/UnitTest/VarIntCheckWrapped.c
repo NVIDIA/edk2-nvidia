@@ -8,4 +8,5 @@
 **/
 
 #include <HostBasedTestStubLib/ArmSvcStubLib.h>
+
 #include "../VarIntCheck.c"
