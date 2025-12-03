@@ -1309,7 +1309,7 @@ SetNextBootChain (
 
 EFI_STATUS
 EFIAPI
-T264GetActiveBootChainStMm (
+GetActiveBootChainStMm (
   IN  UINTN   ScratchBase,
   OUT UINT32  *BootChain
   )
