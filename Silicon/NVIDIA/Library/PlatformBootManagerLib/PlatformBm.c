@@ -1891,7 +1891,7 @@ PlatformBootManagerBeforeConsole (
       //
       // Register platform-specific boot options and keyboard shortcuts.
       //
-      PlatformRegisterOptionsAndKeys ();
+      // PlatformRegisterOptionsAndKeys ();
 
       //
       // Register UEFI Shell
@@ -2352,14 +2352,14 @@ PlatformBootManagerAfterConsole (
   //
   // Show the splash screen.
   //
-  BootLogoEnableLogo ();
+  // BootLogoEnableLogo ();
 
   //
   // Display system and hotkey information after console is ready.
   //
-  if (!FeaturePcdGet (PcdSingleBootSupport)) {
-    DisplaySystemAndHotkeyInformation ();
-  }
+  // if (!FeaturePcdGet (PcdSingleBootSupport)) {
+  //  DisplaySystemAndHotkeyInformation ();
+  //}
 
   //
   // Run memory test
