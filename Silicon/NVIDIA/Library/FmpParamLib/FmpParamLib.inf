@@ -2,7 +2,7 @@
 #
 #  FMP parameter library
 #
-#  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -43,3 +43,5 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
   gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion
+  gNVIDIATokenSpaceGuid.PcdSupportFmpCertsInDtb
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr

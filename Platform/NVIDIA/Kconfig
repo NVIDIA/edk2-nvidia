@@ -1208,6 +1208,49 @@ depends on FIRMWARE_MANAGEMENT
   help
     System FW GUID for ESRT table and capsules.
     Must be unique for each platform.
+
+  choice FMP_CERTIFICATES
+    prompt "FMP certificates to validate capsule payload"
+    depends on FIRMWARE_CAPSULE_SUPPORTED
+    help
+      FMP PKCS7 certificates used to authenticate the firmware update capsule.
+      See https://github.com/tianocore/tianocore.github.io/wiki/Capsule-Based-System-Firmware-Update-Generate-Keys
+
+    default FMP_CERTIFICATES_EDK2_TEST_FILE
+
+    config FMP_CERTIFICATES_EDK2_TEST_FILE
+      bool "Use EDK2 test certificate file - DO NOT USE IN PRODUCTION"
+      help
+        Use the EDK2 test certificate file for FMP PKCS7 authentication.
+
+    config FMP_CERTIFICATES_PRODUCTION_FILE
+      bool "Get production FMP PKCS7 certificates from file"
+      help
+        Get production FMP PKCS7 certificates from file for FMP PKCS7 authentication.
+
+    config FMP_CERTIFICATES_DTB
+      bool "Get FMP PKCS7 certificates from DTB"
+      help
+        Get FMP PKCS7 certificates from DTB for FMP PKCS7 authentication.
+    endchoice
+
+    if FMP_CERTIFICATES_PRODUCTION_FILE
+      config FMP_CERTIFICATES_PRODUCTION_FILE_PATH
+      string "Production FMP PKCS7 certificates file path"
+      help
+        Path to the production FMP PKCS7 certificates file.
+
+     comment "INVALID CONFIG - must provide Production FMP PKCS7 certificates file path"
+     depends on FMP_CERTIFICATES_PRODUCTION_FILE_PATH = ""
+    endif
+
+    if FMP_CERTIFICATES_DTB
+      config FMP_CERTIFICATES_DTB_MAX_SIZE
+      int "Maximum size in bytes of FMP PKCS7 certificates in DTB"
+      default 16384
+      help
+        Maximum size in bytes of the FMP PKCS7 certificates in DTB.
+    endif
 endmenu
 
 menu  "Watchdog settings"

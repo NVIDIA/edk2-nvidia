@@ -47,6 +47,12 @@ FMP_SYSTEM_IMAGE_TYPE_ID=0
 !ifndef CONFIG_LOGO_IMPLEMENTER
 CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !endif
+!ifndef CONFIG_FMP_CERTIFICATES_PRODUCTION_FILE_PATH
+CONFIG_FMP_CERTIFICATES_PRODUCTION_FILE_PATH=/dev/null
+!endif
+!ifndef CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE
+CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
+!endif
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   DEFINE FMP_SYSTEM_IMAGE_TYPE_ID = $(CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID)
@@ -304,9 +310,12 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   FwPartitionDeviceLib|Silicon/NVIDIA/Library/FwPartitionDeviceLib/FwPartitionDeviceLib.inf
   BrBctUpdateDeviceLib|Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/BrBctUpdateDeviceLib.inf
   FwImageLib|Silicon/NVIDIA/Library/FwImageLib/FwImageLib.inf
+
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
   FwPackageLib|Silicon/NVIDIA/Library/FwPackageLib/FwPackageLib.inf
   VerPartitionLib|Silicon/NVIDIA/Library/VerPartitionLib/VerPartitionLib.inf
   FmpParamLib|Silicon/NVIDIA/Library/FmpParamLib/FmpParamLib.inf
+!endif
 !ifdef CONFIG_FIRMWARE_MANAGEMENT_DIRECT
   FmpDeviceLib|Silicon/NVIDIA/Library/FmpDeviceLib/FmpDeviceLib.inf
   !ifdef CONFIG_BUILD_ANDROID
@@ -712,6 +721,9 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 !ifdef CONFIG_PCIE_IGNORE_IO_BAR
   gEfiMdeModulePkgTokenSpaceGuid.PcdPciIgnoreIoSpaceBars|TRUE
 !endif
+!ifdef CONFIG_FMP_CERTIFICATES_DTB
+  gNVIDIATokenSpaceGuid.PcdSupportFmpCertsInDtb|TRUE
+!endif
 
 [PcdsFixedAtBuild.common]
 !ifdef CONFIG_ACPI_THERMAL_ZONE_SINGLE
@@ -939,7 +951,6 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName|L"NVIDIA System Firmware"
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion|0x0
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceProgressColor|0x0000FF00   # Green=255
-  !include BaseTools/Source/Python/Pkcs7Sign/TestRoot.cer.gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr.inc
 !endif
 
   #
@@ -1192,6 +1203,18 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
 
 !ifndef CONFIG_SHELL
   gNVIDIATokenSpaceGuid.PcdUefiShellEnabled|0x0
+!endif
+!ifdef CONFIG_FMP_CERTIFICATES_EDK2_TEST_FILE
+  !include BaseTools/Source/Python/Pkcs7Sign/TestRoot.cer.gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr.inc
+!endif
+!ifdef CONFIG_FMP_CERTIFICATES_PRODUCTION_FILE
+  !include $(CONFIG_FMP_CERTIFICATES_PRODUCTION_FILE_PATH)
+!endif
+!ifdef CONFIG_FMP_CERTIFICATES_DTB
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr|{0x0}|VOID*|$(CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE)
+!endif
+!ifndef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr|{0x0}|VOID*
 !endif
 
 [PcdsDynamicHii.common.DEFAULT]

@@ -2,7 +2,7 @@
 
   FMP parameter library
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -53,6 +53,7 @@ FmpParamLibInit (
   UINTN       Index;
   EFI_GUID    *NonUniqueGuid;
   UINTN       NonUniqueGuidCount;
+  UINTN       PcdLength;
 
   Status = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (EFI_ERROR (Status)) {
@@ -80,6 +81,18 @@ FmpParamLibInit (
         DtbGuidValid = TRUE;
       }
     }
+
+    if (FeaturePcdGet (PcdSupportFmpCertsInDtb)) {
+      Property = fdt_getprop (DtbBase, UefiNode, "fmp-pkcs7-cert-buffer-xdr", &Length);
+      if ((Property != NULL) && (Length > 0)) {
+        PcdLength = Length;
+        DEBUG ((DEBUG_INFO, "%a: setting PcdFmpDevicePkcs7CertBufferXdr Length %d\n", __FUNCTION__, PcdLength));
+        Status = PcdSetPtrS (PcdFmpDevicePkcs7CertBufferXdr, &PcdLength, Property);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: set PcdFmpDevicePkcs7CertBufferXdr failed Length %d: %r\n", __FUNCTION__, PcdLength, Status));
+        }
+      }
+    }
   }
 
 Done:
@@ -95,5 +108,9 @@ Done:
       DEBUG ((DEBUG_WARN, "%a: WARNING: Default FMP image type ID GUID is not unique to this platform! (%g)\n", __FUNCTION__, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid)));
       break;
     }
+  }
+
+  if (PcdGetSize (PcdFmpDevicePkcs7CertBufferXdr) == 1) {
+    DEBUG ((DEBUG_WARN, "%a: WARNING: PcdFmpDevicePkcs7CertBufferXdr not set, capsule update not possible.\n", __FUNCTION__));
   }
 }
