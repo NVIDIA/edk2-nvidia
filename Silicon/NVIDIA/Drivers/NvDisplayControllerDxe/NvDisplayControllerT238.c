@@ -1,8 +1,8 @@
 /** @file
 
-  NV Display Controller Driver - T234
+  NV Display Controller Driver - T238
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,7 +10,10 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
@@ -19,14 +22,19 @@
 #include "NvDisplay.h"
 #include "NvDisplayController.h"
 
-/* GPIO pin indices for T234 */
-#define T234_GPIO_PIN_EN_VDD_HDMI        0
-#define T234_GPIO_PIN_DP0_AUX_UART6_SEL  1
-#define T234_GPIO_PIN_HDMI_DP0_MUX_SEL   2
-#define T234_GPIO_PIN_DP0_AUX_I2C8_SEL   3
-#define T234_GPIO_PIN_COUNT              4
+#define DPAUX_HYBRID_SPARE                  0x00000134
+#define DPAUX_HYBRID_SPARE_AUX_USBC_EN_BIT  2
 
-#define NV_DISPLAY_CONTROLLER_HW_SIGNATURE  SIGNATURE_32('T','2','3','4')
+/* GPIO pin indices for T238 */
+#define T238_GPIO_PIN_HDMI_DP_MUX_SEL      0
+#define T238_GPIO_PIN_DP_AUX_I2C8_SEL      1
+#define T238_GPIO_PIN_AUX_I2C6_UART6_SEL0  2
+#define T238_GPIO_PIN_AUX_I2C6_UART6_SEL1  3
+#define T238_GPIO_PIN_DP_AUX_CCG_SEL0      4
+#define T238_GPIO_PIN_DP_AUX_CCG_SEL1      5
+#define T238_GPIO_PIN_COUNT                6
+
+#define NV_DISPLAY_CONTROLLER_HW_SIGNATURE  SIGNATURE_32('T','2','3','8')
 
 typedef struct {
   UINT32                      Signature;
@@ -111,8 +119,10 @@ EnableClocks (
     NULL
   };
   STATIC CONST CHAR8 *CONST  ClockParents[][2] = {
-    { "nvdisplay_disp_clk", "disppll_clk"        },
-    { "nvdisplayhub_clk",   "sppll0_clkoutb_clk" },
+    { "nvdisplay_disp_clk", "disp_root"          },
+    { "disp_root",          "disppll_clk"        },
+    { "nvdisplayhub_clk",   "hub_root"           },
+    { "hub_root",           "sppll0_clkoutb_clk" },
     { NULL,                 NULL                 }
   };
 
@@ -142,29 +152,31 @@ ConfigureGpios (
   IN CONST BOOLEAN     UseDpOutput
   )
 {
-  STATIC CONST CHAR8 *CONST  SubnodeNames[T234_GPIO_PIN_COUNT + 1] = {
-    [T234_GPIO_PIN_EN_VDD_HDMI]       = "en_vdd_hdmi_cvm",
-    [T234_GPIO_PIN_DP0_AUX_UART6_SEL] = "dp0_aux_uart6_sel",
-    [T234_GPIO_PIN_HDMI_DP0_MUX_SEL]  = "hdmi_dp0_mux_sel",
-    [T234_GPIO_PIN_DP0_AUX_I2C8_SEL]  = "dp0_aux_i2c8_sel",
-    [T234_GPIO_PIN_COUNT]             = NULL
+  STATIC CONST CHAR8 *CONST  SubnodeNames[T238_GPIO_PIN_COUNT + 1] = {
+    [T238_GPIO_PIN_HDMI_DP_MUX_SEL]     = "hdmi_dp_mux_sel",
+    [T238_GPIO_PIN_DP_AUX_I2C8_SEL]     = "dp_aux_i2c8_sel",
+    [T238_GPIO_PIN_AUX_I2C6_UART6_SEL0] = "aux_i2c6_uart6_sel0",
+    [T238_GPIO_PIN_AUX_I2C6_UART6_SEL1] = "aux_i2c6_uart6_sel1",
+    [T238_GPIO_PIN_DP_AUX_CCG_SEL0]     = "dp_aux_ccg_sel0",
+    [T238_GPIO_PIN_DP_AUX_CCG_SEL1]     = "dp_aux_ccg_sel1",
+    [T238_GPIO_PIN_COUNT]               = NULL
   };
 
   EFI_STATUS          Status;
   EMBEDDED_GPIO       *EmbeddedGpio;
   UINT32              GpioPhandle;
-  UINT32              Pins[T234_GPIO_PIN_COUNT];
+  UINT32              Pins[T238_GPIO_PIN_COUNT];
   EMBEDDED_GPIO_PIN   GpioPin;
   EMBEDDED_GPIO_MODE  GpioMode;
 
   Status = NvDisplayLookupGpioPins (
              DriverHandle,
              ControllerHandle,
-             "ti,tca9539",
+             "nxp,pca9535",
              SubnodeNames,
              &GpioPhandle,
              Pins,
-             T234_GPIO_PIN_COUNT
+             T238_GPIO_PIN_COUNT
              );
   if (Status == EFI_NOT_FOUND) {
     DEBUG ((
@@ -195,38 +207,8 @@ ConfigureGpios (
     return Status;
   }
 
-  GpioPin  = GPIO (GpioPhandle, Pins[T234_GPIO_PIN_EN_VDD_HDMI]);
-  GpioMode = Enable ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
-  Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-      __FUNCTION__,
-      GpioPin,
-      GpioMode,
-      Status
-      ));
-    return Status;
-  }
-
   if (Enable) {
-    GpioPin  = GPIO (GpioPhandle, Pins[T234_GPIO_PIN_DP0_AUX_UART6_SEL]);
-    GpioMode = GPIO_MODE_OUTPUT_0;
-    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
-        __FUNCTION__,
-        GpioPin,
-        GpioMode,
-        Status
-        ));
-      return Status;
-    }
-
-    GpioPin  = GPIO (GpioPhandle, Pins[T234_GPIO_PIN_HDMI_DP0_MUX_SEL]);
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_HDMI_DP_MUX_SEL]);
     GpioMode = UseDpOutput ? GPIO_MODE_OUTPUT_1 : GPIO_MODE_OUTPUT_0;
     Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
     if (EFI_ERROR (Status)) {
@@ -241,7 +223,67 @@ ConfigureGpios (
       return Status;
     }
 
-    GpioPin  = GPIO (GpioPhandle, Pins[T234_GPIO_PIN_DP0_AUX_I2C8_SEL]);
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_DP_AUX_I2C8_SEL]);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_AUX_I2C6_UART6_SEL0]);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_AUX_I2C6_UART6_SEL1]);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_DP_AUX_CCG_SEL0]);
+    GpioMode = GPIO_MODE_OUTPUT_0;
+    Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: could not set pin 0x%x to mode 0x%x: %r\r\n",
+        __FUNCTION__,
+        GpioPin,
+        GpioMode,
+        Status
+        ));
+      return Status;
+    }
+
+    GpioPin  = GPIO (GpioPhandle, Pins[T238_GPIO_PIN_DP_AUX_CCG_SEL1]);
     GpioMode = GPIO_MODE_OUTPUT_0;
     Status   = EmbeddedGpio->Set (EmbeddedGpio, GpioPin, GpioMode);
     if (EFI_ERROR (Status)) {
@@ -261,14 +303,74 @@ ConfigureGpios (
 }
 
 /**
-  Destroys T234 display hardware context.
+  Enable or disable AUX over USB-C.
+
+  Configures the DPAUX_HYBRID_SPARE register to enable or disable
+  AUX channel routing over USB-C connector.
+
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] Enable            TRUE to enable, FALSE to disable.
+
+  @retval EFI_SUCCESS    Operation successful.
+  @retval !=EFI_SUCCESS  Failed to retrieve DPAUX MMIO region.
+*/
+STATIC
+EFI_STATUS
+EnableAuxOverUsbc (
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST BOOLEAN     Enable
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  DpauxBase;
+  UINTN                 DpauxSize;
+  CONST UINTN           DpauxRegion = 1;
+
+  Status = DeviceDiscoveryGetMmioRegion (
+             ControllerHandle,
+             DpauxRegion,
+             &DpauxBase,
+             &DpauxSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to retrieve dpaux region: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  if (DpauxSize < (DPAUX_HYBRID_SPARE + sizeof (UINT32))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: DPAUX region too small: %u bytes, need at least %u\r\n",
+      __FUNCTION__,
+      (UINT32)DpauxSize,
+      (UINT32)(DPAUX_HYBRID_SPARE + sizeof (UINT32))
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  MmioAndThenOr32 (
+    DpauxBase + DPAUX_HYBRID_SPARE,
+    ~(1U << DPAUX_HYBRID_SPARE_AUX_USBC_EN_BIT),
+    Enable ? (1U << DPAUX_HYBRID_SPARE_AUX_USBC_EN_BIT) : 0
+    );
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Destroys T238 display hardware context.
 
   @param[in] This  Chip-specific display HW context.
 */
 STATIC
 VOID
 EFIAPI
-DestroyHwT234 (
+DestroyHwT238 (
   IN NV_DISPLAY_CONTROLLER_HW *CONST  This
   )
 {
@@ -282,7 +384,7 @@ DestroyHwT234 (
 }
 
 /**
-  Enables or disables T234 display hardware.
+  Enables or disables T238 display hardware.
 
   @param[in] This    Chip-specific display HW context.
   @param[in] Enable  TRUE to enable, FALSE to disable.
@@ -293,7 +395,7 @@ DestroyHwT234 (
 STATIC
 EFI_STATUS
 EFIAPI
-EnableHwT234 (
+EnableHwT238 (
   IN NV_DISPLAY_CONTROLLER_HW *CONST  This,
   IN CONST BOOLEAN                    Enable
   )
@@ -340,6 +442,11 @@ EnableHwT234 (
       }
 
       Private->GpiosConfigured = TRUE;
+    }
+
+    Status = EnableAuxOverUsbc (Private->ControllerHandle, FALSE);
+    if (EFI_ERROR (Status)) {
+      goto Disable;
     }
   } else {
     /* Shutdown display HW if and only if we were called to disable
@@ -395,7 +502,7 @@ Disable:
 }
 
 /**
-   Starts the NV T234 display controller driver on the given
+   Starts the NV T238 display controller driver on the given
    controller handle.
 
    @param[in] DriverHandle      The driver handle.
@@ -405,7 +512,7 @@ Disable:
    @retval !=EFI_SUCCESS  Operation failed.
 */
 EFI_STATUS
-NvDisplayControllerStartT234 (
+NvDisplayControllerStartT238 (
   IN CONST EFI_HANDLE  DriverHandle,
   IN CONST EFI_HANDLE  ControllerHandle
   )
@@ -430,8 +537,8 @@ NvDisplayControllerStartT234 (
   }
 
   Private->Signature              = NV_DISPLAY_CONTROLLER_HW_SIGNATURE;
-  Private->Hw.Destroy             = DestroyHwT234;
-  Private->Hw.Enable              = EnableHwT234;
+  Private->Hw.Destroy             = DestroyHwT238;
+  Private->Hw.Enable              = EnableHwT238;
   Private->Hw.MaxDispClkRateKhz   = Private->MaxDispClkRateKhz;
   Private->Hw.MaxDispClkRateCount = ARRAY_SIZE (Private->MaxDispClkRateKhz);
   Private->Hw.MaxHubClkRateKhz    = Private->MaxHubClkRateKhz;
@@ -442,7 +549,7 @@ NvDisplayControllerStartT234 (
   Status = NvDisplayGetClockRatesWithParentsAndReset (
              DriverHandle,
              ControllerHandle,
-             "nvdisplay_disp_clk",
+             "disp_root",
              DispClkParents,
              Private->MaxDispClkRateKhz
              );
@@ -453,7 +560,7 @@ NvDisplayControllerStartT234 (
   Status = NvDisplayGetClockRatesWithParentsAndReset (
              DriverHandle,
              ControllerHandle,
-             "nvdisplayhub_clk",
+             "hub_root",
              HubClkParents,
              Private->MaxHubClkRateKhz
              );

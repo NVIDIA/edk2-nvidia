@@ -11,12 +11,16 @@
 #include <PiDxe.h>
 
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/ClockNodeProtocol.h>
+#include <Protocol/DeviceTreeNode.h>
+
+#include <libfdt.h>
 
 #define DISPLAY_HEAD_COUNT     8
 #define DISPLAY_SOR_COUNT      8
@@ -401,5 +405,235 @@ NvDisplayHwShutdown (
     }
   }
 
+  return EFI_SUCCESS;
+}
+
+/**
+  Retrieves GPIO pin number from a subnode of the specified node.
+
+  @param[in]  DeviceTreeBase  Base of the Device Tree to read.
+  @param[in]  NodeOffset      Offset of the specified node.
+  @param[in]  SubnodeName     Name of the subnode to look for.
+  @param[out] Pin             Where to store the pin number.
+
+  @retval TRUE     Pin number successfully retrieved.
+  @retval FALSE    An error occurred.
+*/
+STATIC
+BOOLEAN
+GetSubnodeGpioPin (
+  IN  VOID        *CONST  DeviceTreeBase,
+  IN  CONST INT32         NodeOffset,
+  IN  CONST CHAR8 *CONST  SubnodeName,
+  OUT UINT32      *CONST  Pin
+  )
+{
+  INT32                 SubnodeOffset;
+  CONST CHAR8   *CONST  GpiosPropName = "gpios";
+  CONST VOID            *GpiosProp;
+  INT32                 PropSize;
+  UINT32                PinValue;
+
+  SubnodeOffset = fdt_subnode_offset (
+                    DeviceTreeBase,
+                    NodeOffset,
+                    SubnodeName
+                    );
+  if (SubnodeOffset < 0) {
+    if (SubnodeOffset != -FDT_ERR_NOTFOUND) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: could not locate subnode '%a': %a\r\n",
+        __FUNCTION__,
+        SubnodeName,
+        fdt_strerror (SubnodeOffset)
+        ));
+    }
+
+    return FALSE;
+  }
+
+  GpiosProp = fdt_getprop (
+                DeviceTreeBase,
+                SubnodeOffset,
+                GpiosPropName,
+                &PropSize
+                );
+  if (PropSize < 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: fdt_getprop failed for '%a': %a\r\n",
+      __FUNCTION__,
+      GpiosPropName,
+      fdt_strerror (PropSize)
+      ));
+    return FALSE;
+  }
+
+  if ((UINTN)PropSize < sizeof (*Pin)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: property '%a' in subnode '%a' too small: %d bytes\r\n",
+      __FUNCTION__,
+      GpiosPropName,
+      SubnodeName,
+      PropSize
+      ));
+    return FALSE;
+  }
+
+  CopyMem (&PinValue, GpiosProp, sizeof (UINT32));
+  *Pin = SwapBytes32 (PinValue);
+  return TRUE;
+}
+
+/**
+  Lookup GPIO pins from device tree subnodes.
+
+  Searches for a GPIO controller node matching the compatible string,
+  then retrieves the GPIO pin numbers from the specified subnodes.
+  The SubnodeNames array must be terminated by a NULL entry.
+
+  @param[in]  DriverHandle      Handle to the driver.
+  @param[in]  ControllerHandle  Handle to the controller.
+  @param[in]  Compatible        Compatible string of the GPIO controller.
+  @param[in]  SubnodeNames      NULL-terminated array of subnode names.
+  @param[out] Phandle           Phandle of the GPIO controller node.
+  @param[out] Pins              Array to store the GPIO pin numbers.
+  @param[in]  PinsArraySize     Size of the Pins array.
+
+  @retval EFI_SUCCESS            GPIO pins successfully retrieved.
+  @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
+  @retval EFI_NOT_FOUND          No matching GPIO controller node found.
+  @retval EFI_BUFFER_TOO_SMALL   SubnodeNames has more entries than PinsArraySize.
+  @retval !=EFI_SUCCESS          Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayLookupGpioPins (
+  IN  EFI_HANDLE          DriverHandle,
+  IN  EFI_HANDLE          ControllerHandle,
+  IN  CONST CHAR8         *Compatible,
+  IN  CONST CHAR8 *CONST  SubnodeNames[],
+  OUT UINT32              *Phandle,
+  OUT UINT32              Pins[],
+  IN  UINTN               PinsArraySize
+  )
+{
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
+  VOID                              *DeviceTreeBase;
+  INT32                             GpioOffset;
+  UINT32                            GpioPhandle;
+  UINTN                             Index;
+  BOOLEAN                           AllPinsFound;
+  UINTN                             MaxIterations = 100;
+  UINTN                             Iteration     = 0;
+
+  if ((DriverHandle == NULL) || (ControllerHandle == NULL) ||
+      (Compatible == NULL) || (SubnodeNames == NULL) ||
+      (Phandle == NULL) || (Pins == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIADeviceTreeNodeProtocolGuid,
+                  (VOID **)&DeviceTreeNode,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: could not retrieve DT node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  DeviceTreeBase = DeviceTreeNode->DeviceTreeBase;
+  if (DeviceTreeBase == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: DeviceTreeBase is NULL\r\n",
+      __FUNCTION__
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  GpioOffset = -1;
+  while (Iteration < MaxIterations) {
+    Iteration++;
+    GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, Compatible);
+    if (GpioOffset == -FDT_ERR_NOTFOUND) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: could not find compatible GPIO node '%a' in DT\r\n",
+        __FUNCTION__,
+        Compatible
+        ));
+      return EFI_NOT_FOUND;
+    }
+
+    if (GpioOffset < 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: failed to lookup node by compatible '%a': %a\r\n",
+        __FUNCTION__,
+        Compatible,
+        fdt_strerror (GpioOffset)
+        ));
+      return EFI_NOT_FOUND;
+    }
+
+    AllPinsFound = TRUE;
+    for (Index = 0; Index < PinsArraySize && SubnodeNames[Index] != NULL; ++Index) {
+      if (!GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, SubnodeNames[Index], &Pins[Index])) {
+        AllPinsFound = FALSE;
+        break;
+      }
+    }
+
+    if (SubnodeNames[Index] != NULL) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: SubnodeNames has more entries (%u) than PinsArraySize (%u)\r\n",
+        __FUNCTION__,
+        (UINT32)Index,
+        (UINT32)PinsArraySize
+        ));
+      return EFI_BUFFER_TOO_SMALL;
+    }
+
+    if (AllPinsFound) {
+      break;
+    }
+  }
+
+  if (!AllPinsFound) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: could not find all required GPIO pins for '%a'\r\n",
+      __FUNCTION__,
+      Compatible
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  GpioPhandle = fdt_get_phandle (DeviceTreeBase, GpioOffset);
+  if ((GpioPhandle == 0) || (GpioPhandle == 0xFFFFFFFF)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to find phandle of node at offset %d\r\n",
+      __FUNCTION__,
+      (INTN)GpioOffset
+      ));
+    return EFI_NOT_FOUND;
+  }
+
+  *Phandle = GpioPhandle;
   return EFI_SUCCESS;
 }

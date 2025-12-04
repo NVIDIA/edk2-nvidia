@@ -89,6 +89,23 @@ NvDisplayControllerStartT234 (
   );
 
 /**
+  Starts the NV T238 display controller driver on the given
+  controller handle.
+
+  @param[in] DriverHandle      The driver handle.
+  @param[in] ControllerHandle  The controller handle.
+
+  @retval EFI_SUCCESS          Operation successful.
+  @retval EFI_ALREADY_STARTED  Driver has already been started on the given handle.
+  @retval !=EFI_SUCCESS        Operation failed.
+*/
+EFI_STATUS
+NvDisplayControllerStartT238 (
+  IN EFI_HANDLE  DriverHandle,
+  IN EFI_HANDLE  ControllerHandle
+  );
+
+/**
   Starts the NV T264 display controller driver on the given
   controller handle.
 

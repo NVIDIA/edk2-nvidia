@@ -13,10 +13,14 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include "NvDisplayController.h"
+
+#define DISP_SW_SOC_CHIP_ID_T234  0x2350
+#define DISP_SW_SOC_CHIP_ID_T238  0x23b0
 
 /* Discover driver */
 
@@ -31,6 +35,77 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoDeassertPg                  = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE
 };
+
+/**
+  Starts the NV T23x display controller driver on the given
+  controller handle.
+
+  Reads the nvidia,disp-sw-soc-chip-id device tree property to
+  determine the specific chip variant (T234 or T238) and calls
+  the appropriate start function.
+
+  @param[in] DriverHandle      The driver handle.
+  @param[in] ControllerHandle  The controller handle.
+  @param[in] DeviceTreeNode    Pointer to the device tree node protocol.
+
+  @retval EFI_SUCCESS            Operation successful.
+  @retval EFI_INVALID_PARAMETER  DeviceTreeNode is NULL.
+  @retval EFI_NOT_FOUND          nvidia,disp-sw-soc-chip-id property not found.
+  @retval EFI_UNSUPPORTED        Unsupported chip ID.
+  @retval !=EFI_SUCCESS          Operation failed.
+*/
+STATIC
+EFI_STATUS
+NvDisplayControllerStartT23x (
+  IN CONST EFI_HANDLE                        DriverHandle,
+  IN CONST EFI_HANDLE                        ControllerHandle,
+  IN CONST NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      DispSwSocChipId;
+
+  if (DeviceTreeNode == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: DeviceTreeNode is NULL\r\n",
+      __FUNCTION__
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = DeviceTreeGetNodePropertyValue32 (
+             DeviceTreeNode->NodeOffset,
+             "nvidia,disp-sw-soc-chip-id",
+             &DispSwSocChipId
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to get nvidia,disp-sw-soc-chip-id: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  switch (DispSwSocChipId) {
+    case DISP_SW_SOC_CHIP_ID_T234:
+      return NvDisplayControllerStartT234 (DriverHandle, ControllerHandle);
+
+    case DISP_SW_SOC_CHIP_ID_T238:
+      return NvDisplayControllerStartT238 (DriverHandle, ControllerHandle);
+
+    default:
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: unsupported disp-sw-soc-chip-id: 0x%x\r\n",
+        __FUNCTION__,
+        DispSwSocChipId
+        ));
+      return EFI_UNSUPPORTED;
+  }
+}
 
 /**
   Callback that will be invoked at various phases of the driver initialization
@@ -89,7 +164,7 @@ DeviceDiscoveryNotify (
       }
 
       if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
-        return NvDisplayControllerStartT234 (DriverHandle, ControllerHandle);
+        return NvDisplayControllerStartT23x (DriverHandle, ControllerHandle, DeviceTreeNode);
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT264DisplayDeviceGuid)) {
         return NvDisplayControllerStartT264 (DriverHandle, ControllerHandle);
       } else {

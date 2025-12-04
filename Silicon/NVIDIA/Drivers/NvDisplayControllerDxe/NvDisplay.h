@@ -174,6 +174,38 @@ NvDisplayHwShutdown (
   );
 
 /**
+  Lookup GPIO pins from device tree subnodes.
+
+  Searches for a GPIO controller node matching the compatible string,
+  then retrieves the GPIO pin numbers from the specified subnodes.
+  The SubnodeNames array must be terminated by a NULL entry.
+
+  @param[in]  DriverHandle      Handle to the driver.
+  @param[in]  ControllerHandle  Handle to the controller.
+  @param[in]  Compatible        Compatible string of the GPIO controller.
+  @param[in]  SubnodeNames      NULL-terminated array of subnode names.
+  @param[out] Phandle           Phandle of the GPIO controller node.
+  @param[out] Pins              Array to store the GPIO pin numbers.
+  @param[in]  PinsArraySize     Size of the Pins array.
+
+  @retval EFI_SUCCESS            GPIO pins successfully retrieved.
+  @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
+  @retval EFI_NOT_FOUND          No matching GPIO controller node found.
+  @retval EFI_BUFFER_TOO_SMALL   SubnodeNames has more entries than PinsArraySize.
+  @retval !=EFI_SUCCESS          Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayLookupGpioPins (
+  IN  EFI_HANDLE          DriverHandle,
+  IN  EFI_HANDLE          ControllerHandle,
+  IN  CONST CHAR8         *Compatible,
+  IN  CONST CHAR8 *CONST  SubnodeNames[],
+  OUT UINT32              *Phandle,
+  OUT UINT32              Pins[],
+  IN  UINTN               PinsArraySize
+  );
+
+/**
   Locates a child handle with an active GOP instance installed.
 
   This function does not allocate any memory, hence it is safe to call
