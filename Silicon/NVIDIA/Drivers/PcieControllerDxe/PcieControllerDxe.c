@@ -324,6 +324,38 @@ PCIeFindCap (
 }
 
 STATIC
+UINT16
+PCIeFindExtCapMmio (
+  UINT64  CfgBase,
+  UINT16  CapId
+  )
+{
+  UINT32  CapabilityPtr;
+  UINT32  CapabilityEntry;
+  UINT16  CapabilityID;
+
+  CapabilityPtr = EFI_PCIE_CAPABILITY_BASE_OFFSET;
+
+  while (CapabilityPtr != 0) {
+    /* Mask it to DWORD alignment per PCI spec */
+    CapabilityPtr  &= 0xFFC;
+    CapabilityEntry = MmioRead32 (CfgBase + CapabilityPtr);
+    if (CapabilityEntry == MAX_UINT32) {
+      break;
+    }
+
+    CapabilityID = (UINT16)CapabilityEntry;
+    if (CapabilityID == CapId) {
+      return (UINT16)CapabilityPtr;
+    }
+
+    CapabilityPtr = (CapabilityEntry >> 20) & 0xFFF;
+  }
+
+  return 0;
+}
+
+STATIC
 BOOLEAN
 WaitForBit16 (
   PCIE_CONTROLLER_PRIVATE  *Private,
@@ -732,12 +764,55 @@ STATIC
 EFI_STATUS
 EFIAPI
 UninitializeController (
-  IN  EFI_HANDLE  ControllerHandle
+  IN  PCIE_CONTROLLER_PRIVATE  *Private
   )
 {
-  return EFI_SUCCESS;
+  UINTN   ChipId;
+  UINT32  Val;
+  UINT32  DpcCapOffset;
 
-  /* All this is not required at this point in time */
+  ChipId       = TegraGetChipID ();
+  DpcCapOffset = PCIeFindExtCapMmio (Private->EcamBase, PCI_EXPRESS_EXTENDED_CAPABILITY_DPC_ID);
+
+  /* Only perform operation for T264 chip AND nvidia,uefi-exit-reset found */
+  if (ChipId == T264_CHIP_ID) {
+    if (Private->ResetAtExit) {
+      DEBUG ((DEBUG_ERROR, "%a: reset at exit for pcie ctlr %d\n", __FUNCTION__, Private->CtrlId));
+
+      if (DpcCapOffset != 0) {
+        /* Read and modify DPC Control register to disable Trigger Enable*/
+        Val = MmioRead32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_CAP);
+        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Ctl Old Reg = 0x%x\n", Val));
+        Val &= ~PCIE_DPC_CTL_TRIGGER_EN;
+        MmioWrite32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_CAP, Val);
+        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Ctl New Reg = 0x%x\n", Val));
+
+        /* Read and write back DPC Status register */
+        Val = MmioRead32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_STS);
+        MmioWrite32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_STS, Val);
+        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Sta Reg = 0x%x\n", Val));
+      }
+
+      /* Reset XTL_RC_MGMT_PERST_CONTROL */
+      Val = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
+      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* Id=%d  addr=%lx original data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
+
+      Val &= ~XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
+      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* writing PERST=0 Id=%d addr=%lx data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
+
+      MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val);
+      MicroSecondDelay (1000);
+
+      Val = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
+      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* Id=%d  addr=%lx perst=0 data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
+
+      Val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
+      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* writing PERST=1 Id=%d  addr=%lx data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
+
+      MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val);
+      MicroSecondDelay (100 * 1000);
+    }
+  }
 
   return EFI_SUCCESS;
 }
@@ -758,7 +833,7 @@ OnExitBootServices (
   IN      VOID       *Context
   )
 {
-  UninitializeController ((EFI_HANDLE)Context);
+  UninitializeController ((PCIE_CONTROLLER_PRIVATE  *)Context);
 }
 
 STATIC
@@ -2520,11 +2595,22 @@ DeviceDiscoveryNotify (
         }
       }
 
+      if (fdt_get_property (
+            DeviceTreeNode->DeviceTreeBase,
+            DeviceTreeNode->NodeOffset,
+            "nvidia,uefi-exit-reset",
+            NULL
+            ) != NULL)
+      {
+        DEBUG ((DEBUG_INFO, "%a: uefi-exit-reset found ctlr %d\n", __FUNCTION__, Private->CtrlId));
+        Private->ResetAtExit = TRUE;
+      }
+
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
                       TPL_NOTIFY,
                       OnExitBootServices,
-                      ControllerHandle,
+                      Private,
                       &gEfiEventExitBootServicesGuid,
                       &ExitBootServiceEvent
                       );
