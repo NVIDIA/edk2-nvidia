@@ -68,6 +68,7 @@ typedef struct {
   UINT64                                              EcamBase;
   UINT64                                              EcamSize;
   UINT32                                              PCIeCapOff;
+  BOOLEAN                                             ResetAtExit;
 
   UINT64                                              MemBase;
   UINT64                                              MemLimit;
@@ -152,6 +153,9 @@ typedef struct {
 #define PCIE_DPC_CTL_DPC_INT_EN           BIT(3)
 #define PCIE_DPC_CTL_DPC_ERR_COR_EN       BIT(4)
 #define PCIE_DPC_CTL_DPC_SIG_SFW_EN       BIT(8)
+
+/* DPC Control bits 17:16 in 32-bit read from DPC_CAP offset (DPC Trigger Enable) */
+#define PCIE_DPC_CTL_TRIGGER_EN  (BIT(16) | BIT(17))
 
 #define PCIE_DPC_STS                 0x8
 #define PCIE_DPC_STS_TRIGGER_STATUS  BIT(0)
