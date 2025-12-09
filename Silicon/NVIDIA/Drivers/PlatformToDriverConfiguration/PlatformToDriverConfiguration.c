@@ -81,6 +81,7 @@ Query (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to get non discoverable protocol\r\n"));
+    Status = EFI_NOT_FOUND;
     return Status;
   }
 
@@ -91,6 +92,7 @@ Query (
                   );
   if ((EFI_ERROR (Status)) || (DtNode == NULL)) {
     DEBUG ((DEBUG_ERROR, "Failed to get device tree node information\r\n"));
+    Status = EFI_NOT_FOUND;
     return Status;
   }
 
@@ -114,7 +116,7 @@ Query (
     *ParameterTypeGuid = GuidMapper->DeviceGuid;
     IsResponseNeeded   = TRUE;
   } else {
-    Status = EFI_DEVICE_ERROR;
+    Status = EFI_NOT_FOUND;
   }
 
   return Status;
@@ -138,7 +140,7 @@ Response (
 
   if (!IsResponseNeeded) {
     DEBUG ((DEBUG_ERROR, "Response already sent. Cannot send another one!\r\n"));
-    return EFI_DEVICE_ERROR;
+    return EFI_INVALID_PARAMETER;
   }
 
   if ((ControllerHandle == NULL) ||
@@ -169,7 +171,7 @@ Response (
 
     IsResponseNeeded = FALSE;
   } else {
-    Status = EFI_DEVICE_ERROR;
+    Status = EFI_NOT_FOUND;
   }
 
   return Status;
