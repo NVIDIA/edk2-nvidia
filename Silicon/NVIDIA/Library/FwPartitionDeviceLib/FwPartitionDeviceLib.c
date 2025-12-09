@@ -910,6 +910,11 @@ FwPartitionAddFromDeviceGpt (
     goto Done;
   }
 
+  // only support partition table updates when there is one per boot chain
+  if (!PcdGetBool (PcdGptIsPerBootChain)) {
+    goto Done;
+  }
+
   // only add GPT update support for boot device
   if (FwPartitionFindByName (L"BCT") == NULL) {
     goto Done;

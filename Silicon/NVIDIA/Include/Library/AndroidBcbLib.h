@@ -172,6 +172,17 @@ GetCmdFromMiscPartition (
   );
 
 /**
+  Get FW boot chain
+
+  @retval                  FW boot chain index.
+**/
+UINT32
+EFIAPI
+BcbGetActiveFwBootChain (
+  VOID
+  );
+
+/**
   Force Bcb active boot chain metadata to current boot chain if not in sync.
 
   @param[in]               Image Handle to access block device

@@ -7,8 +7,11 @@
 
 **/
 
+#include <PiDxe.h>
 #include <Library/AndroidBcbLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <Library/HobLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #define COMPARE_MSG_COMMAND(Msg, Target)  (AsciiStrCmp (Msg.command, Target))
 #define NV_OFFSETOF(type, member)         ((UINT32)(UINT64)&(((type *)0)->member))
@@ -367,6 +370,25 @@ BcbGetActiveBootSlot (
   return ActiveBootSlot;
 }
 
+UINT32
+EFIAPI
+BcbGetActiveFwBootChain (
+  VOID
+  )
+{
+  VOID  *Hob;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  NV_ASSERT_RETURN (
+    ((Hob != NULL) && (GET_GUID_HOB_DATA_SIZE (Hob) == sizeof (TEGRA_PLATFORM_RESOURCE_INFO))),
+    return BOOT_CHAIN_A,
+    "%a: Error getting boot chain\n",
+    __FUNCTION__
+    );
+
+  return ((TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob))->ActiveBootChain;
+}
+
 EFI_STATUS
 EFIAPI
 AndroidBcbLockChain (
@@ -411,7 +433,7 @@ AndroidBcbLockChain (
   }
 
   MscActiveSlotIndex = BcbGetActiveBootSlot (&BootCtrl);
-  CurrentSlotIndex   = GetBootChainForGpt ();
+  CurrentSlotIndex   = BcbGetActiveFwBootChain ();
 
   // Lock BCB active chain as Current boot chain if not same
   // 1. if SlotInfo[ActiveSlot].TriesRemaining != 0

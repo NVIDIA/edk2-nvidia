@@ -512,6 +512,9 @@
 #Tegra UTC UART address
   gNVIDIATokenSpaceGuid.PcdTegraUtcUartAddress|0x0|UINT64|0x00000169
 
+#Indicate if there is a GPT for each boot chain
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|FALSE|BOOLEAN|0x000000A5
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067
@@ -808,9 +811,6 @@
 
 #Option to configure SOC display hand-off method
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod|0x01|UINT8|0x00000168
-
-#Indicate if there is a GPT for each boot chain
-  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|FALSE|BOOLEAN|0x000000A5
 
 #Timeout in microseconds in hsp doorbell response, 0 for infinite
   gNVIDIATokenSpaceGuid.PcdHspDoorbellTimeout|0|UINT32|0x00000007

@@ -247,7 +247,7 @@ BootConfigAddSlotSuffix (
     return Status;
   }
 
-  SlotIndex = GetBootChainForGpt ();
+  SlotIndex = BcbGetActiveFwBootChain ();
 
   AsciiStrCpyS (SlotSuffix, MAX_SLOT_SUFFIX_LEN, SlotSuffixNameId[SlotIndex]);
   Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "slot_suffix", SlotSuffix);

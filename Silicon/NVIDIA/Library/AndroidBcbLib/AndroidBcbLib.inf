@@ -30,8 +30,12 @@
   UefiLib
   PrintLib
   BootChainInfoLib
+  HobLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
