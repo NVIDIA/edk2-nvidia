@@ -23,6 +23,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
+  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -31,11 +32,16 @@
   PrintLib
   BootChainInfoLib
   HobLib
+  PlatformResourceLib
+  ResetSystemLib
+  StatusRegLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
+  gNVIDIABrBctUpdateProtocolGuid
 
 [Guids]
   gNVIDIAPlatformResourceDataGuid

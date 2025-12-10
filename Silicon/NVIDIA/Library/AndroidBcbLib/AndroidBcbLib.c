@@ -12,6 +12,10 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/HobLib.h>
 #include <Library/PlatformResourceLib.h>
+#include <Library/ResetSystemLib.h>
+#include <Protocol/BrBctUpdateProtocol.h>
+#include <Library/StatusRegLib.h>
+#include <Library/DeviceTreeHelperLib.h>
 
 #define COMPARE_MSG_COMMAND(Msg, Target)  (AsciiStrCmp (Msg.command, Target))
 #define NV_OFFSETOF(type, member)         ((UINT32)(UINT64)&(((type *)0)->member))
@@ -24,7 +28,8 @@
 CONST UINT32  kDefaultPriority     = 15;
 CONST UINT32  kDefaultBootAttempts = 3;
 
-static MiscCmdType  CacheCmdType = MISC_CMD_TYPE_MAX;
+static MiscCmdType             CacheCmdType          = MISC_CMD_TYPE_MAX;
+NVIDIA_BR_BCT_UPDATE_PROTOCOL  *mBrBctUpdateProtocol = NULL;
 
 /**
   Dump the BootCtrl Metadata for debug purpose.
@@ -327,6 +332,36 @@ Exit:
 }
 
 /**
+  Check if UEFI runs in hypervisor mode
+
+  @retval                   True if UEFI is in hypervisor
+**/
+STATIC
+BOOLEAN
+IsHypervisorMode (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  INT32       NodeOffset;
+  BOOLEAN     IsHypervisor = FALSE;
+
+  Status = DeviceTreeGetNodeByPath ("/chosen", &NodeOffset);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r getting /chosen\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  Status = DeviceTreeGetNodeProperty (NodeOffset, "tegra-hypervisor-mode", NULL, NULL);
+  if (!EFI_ERROR (Status)) {
+    IsHypervisor = TRUE;
+  }
+
+Exit:
+  return IsHypervisor;
+}
+
+/**
   Calculate CRC32 sum of BootCtrl struct
 
   @param[in]    BootCtrl    Start address of BootCtrl
@@ -403,6 +438,11 @@ AndroidBcbLockChain (
   UINT32                 MscActiveSlotIndex;
   UINT32                 BootCtrlOffset;
   UINT32                 ComputedCrc;
+
+  if (IsHypervisorMode () == FALSE) {
+    // Native uefi does not rely on DriveUpdate to manage boot chain switch.
+    return EFI_SUCCESS;
+  }
 
   Status = GetMiscIoProtocolFromHandle (Handle, &MscBlockIo, &MscDiskIo);
   if (EFI_ERROR (Status)) {
@@ -515,10 +555,53 @@ AndroidBcbCheckAndUpdateRetryCount (
   // On vUEFI:
   // if no more TriesRemaining left, vUEFI has no ability to change DOS chain, hence just fail boot and wait for DU timeout
   // On native UEFI
-  // TODO: if no more TriesRemaining left, issue a bct chain switch
+  // if no more TriesRemaining left, issue a bct chain switch
+  //
   if (BootCtrl.SlotInfo[MscActiveSlotIndex].TriesRemaining == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: Run out of TriesRemaining, always fail boot and wait for DOS to revert chain\r\n", __FUNCTION__));
-    return EFI_INVALID_PARAMETER;
+    if (IsHypervisorMode ()) {
+      DEBUG ((DEBUG_ERROR, "%a: Run out of TriesRemaining, always fail boot and wait for DOS to revert chain\r\n", __FUNCTION__));
+      return EFI_INVALID_PARAMETER;
+    } else {
+      BootCtrl.SlotInfo[MscActiveSlotIndex].Priority = 0;
+      BootCtrl.Crc32Le                               = BootloaderControlLeCrc (&BootCtrl);
+      Status                                         = MscDiskIo->WriteDisk (
+                                                                    MscDiskIo,
+                                                                    MscBlockIo->Media->MediaId,
+                                                                    BootCtrlOffset,
+                                                                    sizeof (BootloaderControl),
+                                                                    (VOID *)&BootCtrl
+                                                                    );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to invalidate Bcb slot %u\r\n", __FUNCTION__, Status, MscActiveSlotIndex));
+        return Status;
+      }
+
+      Status = gBS->LocateProtocol (
+                      &gNVIDIABrBctUpdateProtocolGuid,
+                      NULL,
+                      (VOID **)&mBrBctUpdateProtocol
+                      );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get BrBctUpdate protocol\n", __FUNCTION__, Status));
+        return Status;
+      }
+
+      // Mark existing boot chain as good.
+      ValidateActiveBootChain ();
+
+      Status = mBrBctUpdateProtocol->UpdateFwChain (mBrBctUpdateProtocol, MscActiveSlotIndex == 0 ? 1 : 0);
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
+
+      // reset into new FW boot chain
+      DEBUG ((DEBUG_ERROR, "%a: Resetting to boot chain=%u\n", __FUNCTION__, MscActiveSlotIndex == 0 ? 1 : 0));
+
+      // BootChainReset
+      StatusRegReset ();
+      ResetCold ();
+      // Should not reach here
+    }
   }
 
   // TriesRemaining-- if current boot chain is not boot_successful yet
@@ -535,7 +618,7 @@ AndroidBcbCheckAndUpdateRetryCount (
                                     (VOID *)&BootCtrl
                                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to flush bootcontrol to Misc\r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to retry_count -- for chain %u\r\n", __FUNCTION__, Status, MscActiveSlotIndex));
       return Status;
     }
   }
