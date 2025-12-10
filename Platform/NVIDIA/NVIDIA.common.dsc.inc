@@ -1348,6 +1348,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
   gNVIDIATokenSpaceGuid.PcdBootChainIsMarkerBased|TRUE
 
 [PcdsDynamicDefault.common.T264Presil]
