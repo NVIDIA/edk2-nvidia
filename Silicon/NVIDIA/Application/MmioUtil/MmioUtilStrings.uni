@@ -1,0 +1,103 @@
+/** @file
+  String definitions for the Shell MmioUtil application.
+
+  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#langdef en-US "English"
+
+#string STR_MMIOUTIL_UNKNOWN_PARAM        #language en-US  "%s: Unknown parameter '%s'.\n"
+
+#string STR_MMIOUTIL_NO_ADDRESS           #language en-US  "%s: Address is required.\n"
+
+#string STR_MMIOUTIL_INVALID_ADDRESS      #language en-US  "%s: Invalid address '%s'.\n"
+
+#string STR_MMIOUTIL_INVALID_VALUE        #language en-US  "%s: Invalid value '%s'.\n"
+
+#string STR_MMIOUTIL_INVALID_WIDTH        #language en-US  "%s: Width must be 1, 2, 4, or 8.\n"
+
+#string STR_MMIOUTIL_ALIGNMENT_ERROR      #language en-US  "%s: Address 0x%lx is not aligned to %d-byte boundary.\n"
+
+#string STR_MMIOUTIL_SIZE_OVERFLOW        #language en-US  "%s: Size overflow - requested region too large.\n"
+
+#string STR_MMIOUTIL_GCD_ERROR            #language en-US  "%s: Failed to get GCD descriptor for 0x%lx: %r\n"
+
+#string STR_MMIOUTIL_ADD_MEMORY_ERROR     #language en-US  "%s: Failed to add memory space (0x%lx, 0x%lx): %r\n"
+
+#string STR_MMIOUTIL_SET_ATTR_ERROR       #language en-US  "%s: Failed to set memory attributes (0x%lx, 0x%lx): %r\n"
+
+#string STR_MMIOUTIL_MAPPING              #language en-US  "[INFO] Mapping 0x%lx - 0x%lx as UC (Uncached Device Memory)\n"
+
+#string STR_MMIOUTIL_ALREADY_MAPPED       #language en-US  "[INFO] Address 0x%lx - 0x%lx already in memory map\n"
+
+#string STR_MMIOUTIL_READ_ERROR           #language en-US  "%s: Failed to read from 0x%lx: %r\n"
+
+#string STR_MMIOUTIL_WRITE_ERROR          #language en-US  "%s: Failed to write to 0x%lx: %r\n"
+
+#string STR_MMIOUTIL_BUS_ERROR            #language en-US  "%s: %s at 0x%lx (ESR=0x%lx)\n"
+
+#string STR_MMIOUTIL_WRITE_SUCCESS        #language en-US  "[INFO] Wrote 0x%lx to address 0x%lx\n"
+
+#string STR_MMIOUTIL_VALUE_8              #language en-US  "0x%016lx: 0x%02x\n"
+
+#string STR_MMIOUTIL_VALUE_16             #language en-US  "0x%016lx: 0x%04x\n"
+
+#string STR_MMIOUTIL_VALUE_32             #language en-US  "0x%016lx: 0x%08x\n"
+
+#string STR_MMIOUTIL_VALUE_64             #language en-US  "0x%016lx: 0x%016lx\n"
+
+#string STR_MMIOUTIL_HELP                 #language en-US  ""
+".TH MmioUtil 0 \"MMIO Read/Write Utility\"\r\n"
+".SH NAME\r\n"
+"MMIO read/write utility - maps unmapped addresses and catches exceptions.\r\n"
+".SH SYNOPSIS\r\n"
+" \r\n"
+"%HMmioUtil <Address> [Value] [-w 1|2|4|8] [-r <count>] [-v]%N\r\n"
+".SH OPTIONS\r\n"
+" \r\n"
+"  Address    - Physical address in hexadecimal (e.g., 0x12340000)\r\n"
+"  Value      - Value to write (if omitted, performs read only)\r\n"
+"  -w <width> - Access width in bytes: 1, 2, 4, or 8 (default: 4)\r\n"
+"  -r <count> - Number of consecutive reads (default: 1)\r\n"
+"  -v         - Verbose mode (show mapping information)\r\n"
+"  -?         - Display this help\r\n"
+".SH DESCRIPTION\r\n"
+" \r\n"
+"  This utility safely reads/writes MMIO addresses even if they are not\r\n"
+"  in the UEFI memory map. It automatically adds unmapped addresses to\r\n"
+"  the GCD memory map with UC (Uncached) attributes before access.\r\n"
+" \r\n"
+"  Unlike the shell 'mm' command, MmioUtil will not crash on unmapped\r\n"
+"  addresses or bus errors. It installs an exception handler to catch\r\n"
+"  Data Aborts (translation faults, permission faults, external aborts)\r\n"
+"  and reports them gracefully.\r\n"
+" \r\n"
+".SH EXAMPLES\r\n"
+" \r\n"
+"  * Read a 32-bit register:\r\n"
+"    MmioUtil 0x12340000\r\n"
+" \r\n"
+"  * Write 0xDEADBEEF to a 32-bit register:\r\n"
+"    MmioUtil 0x12340000 0xDEADBEEF\r\n"
+" \r\n"
+"  * Read 16 consecutive 32-bit values (dump 64 bytes):\r\n"
+"    MmioUtil 0x12340000 -r 16\r\n"
+" \r\n"
+"  * Read an 8-bit register with verbose output:\r\n"
+"    MmioUtil 0x12340000 -w 1 -v\r\n"
+" \r\n"
+"  * Write a 64-bit value:\r\n"
+"    MmioUtil 0x12340000 0x123456789ABCDEF0 -w 8\r\n"
+" \r\n"
+".SH NOTES\r\n"
+" \r\n"
+"  1. Addresses are automatically aligned to 4KB pages for MMU mapping.\r\n"
+"  2. Access addresses must be aligned to the access width.\r\n"
+"  3. Mappings persist until reboot (not removed after access).\r\n"
+"  4. Unmapped regions are added as EfiGcdMemoryTypeMemoryMappedIo.\r\n"
+"  5. Bus errors are caught and reported instead of crashing.\r\n"
+" \r\n"
+

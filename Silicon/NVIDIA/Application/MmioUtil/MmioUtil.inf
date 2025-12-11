@@ -1,0 +1,59 @@
+## @file
+#  Shell application MmioUtil - MMIO Read/Write Utility.
+#
+#  This application safely performs MMIO reads/writes by mapping unmapped
+#  addresses into the GCD memory map before access, and installs exception
+#  handlers to catch Data Aborts gracefully.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = MmioUtil
+  FILE_GUID                      = 7a3c2e1f-8d4b-4f5a-9c6e-0b1d2e3f4a5b
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InitializeMmioUtil
+  MODULE_UNI_FILE                = MmioUtil.uni
+
+#
+#  This flag specifies whether HII resource section is generated into PE image.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  MmioUtilStrings.uni
+  MmioUtil.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiHiiServicesLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  ShellLib
+  MemoryAllocationLib
+  DebugLib
+  HiiLib
+  IoLib
+  DxeServicesTableLib
+
+[Protocols]
+  gEfiHiiPackageListProtocolGuid                ## CONSUMES
+  gEfiCpuArchProtocolGuid                       ## CONSUMES
+
+[Guids]
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  MmioUtilExtra.uni
+

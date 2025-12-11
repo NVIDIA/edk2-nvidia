@@ -2197,6 +2197,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Application/GicUtil/GicUtil.inf
   Silicon/NVIDIA/Application/PcieUtil/PcieUtil.inf
   Silicon/NVIDIA/Application/TimerUtil/TimerUtil.inf
+  Silicon/NVIDIA/Application/MmioUtil/MmioUtil.inf
 !ifdef CONFIG_SOC_USB
   Silicon/NVIDIA/Application/FalconUtil/FalconUtil.inf
 !endif
