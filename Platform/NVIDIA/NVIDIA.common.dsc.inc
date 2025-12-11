@@ -2607,6 +2607,12 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
       NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
   }
 !endif
+!ifdef CONFIG_BUILD_ANDROID
+  Silicon/NVIDIA/Drivers/MmCommunicateNullDxe/MmCommunicateNull.inf {
+    <LibraryClasses>
+      NULL|Silicon/NVIDIA/Library/StandaloneMmUnavailableLib/StandaloneMmUnavailableLib.inf
+  }
+!endif
 
   #
   # TPM

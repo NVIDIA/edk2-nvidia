@@ -1,0 +1,39 @@
+#/** @file
+#
+#  MM Communicate driver for non-MM platforms.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = MmCommunicateNullDxe
+  FILE_GUID                      = 53f82814-615f-44b3-a72c-321610839ce4
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = MmCommunicateNullInitialize
+
+#
+# The following is for reference only and not required by
+# build tools
+#
+# VALID_ARCHITECTURES            = AARCH64
+#
+
+[Sources.common]
+  MmCommunicateNull.c
+
+[Packages]
+  Silicon/NVIDIA/NVIDIA.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiDriverEntryPoint
+
+[Depex]
+  TRUE
