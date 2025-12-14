@@ -1,7 +1,7 @@
 ## @file
 # Module entry point library for DXE core.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 # Copyright (c) 2024, Arm Ltd. All rights reserved.<BR>
 #
@@ -40,9 +40,7 @@
   MdeModulePkg/MdeModulePkg.dec
   SecurityPkg/SecurityPkg.dec
   StandaloneMmPkg/StandaloneMmPkg.dec
-
-[Packages]
-  ArmPkg/ArmPkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]

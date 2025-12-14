@@ -2,7 +2,7 @@
 FDT Boot code for the Standalone MM Foundation.
 Placeholder to consume the DTB and setup the HobList.
 
-SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -241,7 +241,7 @@ ComputeHeapSize (
   UINT64  RegionSize    = 0;
   UINT64  LowestRegion  = 0;
   UINT64  HighestRegion = 0;
-  UINT32  PagesCount    = 0;
+  UINT64  PagesCount    = 0;
 
   ParentOffset = FdtPathOffset (DtbAddress, "/memory-regions");
   if (ParentOffset < 0) {
@@ -258,9 +258,9 @@ ComputeHeapSize (
        NodeOffset = FdtNextSubnode (DtbAddress, NodeOffset))
   {
     RegionAddress = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
-    PagesCount    = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
+    PagesCount    = (UINT64)FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
     if (PagesCount > (MAX_UINT64/EFI_PAGE_SIZE)) {
-      DEBUG ((DEBUG_ERROR, "%a: PagesCount %u is too large Possible DTB corruption\r\n", __FUNCTION__, PagesCount));
+      DEBUG ((DEBUG_ERROR, "%a: PagesCount %lu is too large Possible DTB corruption\r\n", __FUNCTION__, PagesCount));
       return EFI_DEVICE_ERROR;
     }
 
@@ -302,7 +302,7 @@ GetRegionInfo (
   EFI_STATUS  Status       = EFI_SUCCESS;
   INT32       ParentOffset = 0;
   INT32       NodeOffset   = 0;
-  UINT32      PagesCount   = 0;
+  UINT64      PagesCount   = 0;
 
   ParentOffset = FdtPathOffset (DtbAddress, "/memory-regions");
   if (ParentOffset < 0) {
@@ -319,9 +319,9 @@ GetRegionInfo (
   }
 
   *RegionBase = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
-  PagesCount  = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
+  PagesCount  = (UINT64)FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
   if ((PagesCount > (MAX_UINT64/EFI_PAGE_SIZE)) || (PagesCount == 0)) {
-    DEBUG ((DEBUG_ERROR, "%a: PagesCount %u is out of range, max(%u) or zero\r\n", __FUNCTION__, PagesCount, MAX_UINT64/EFI_PAGE_SIZE));
+    DEBUG ((DEBUG_ERROR, "%a: PagesCount %lu is out of range, max(%lu) or zero\r\n", __FUNCTION__, PagesCount, MAX_UINT64/EFI_PAGE_SIZE));
     Status = EFI_DEVICE_ERROR;
     goto ExitGetRegionInfo;
   }
@@ -480,7 +480,7 @@ BuildDeviceMemRegionsHob (
   CONST CHAR8           *DeviceRegionName      = NULL;
   INT32                 DeviceRegionNameLength = 0;
   UINTN                 DeviceIndex            = 0;
-  UINT32                PagesCount             = 0;
+  UINT64                PagesCount             = 0;
 
   ParentOffset = FdtPathOffset (DtbAddress, "/device-regions");
   if (ParentOffset < 0) {
@@ -514,9 +514,9 @@ BuildDeviceMemRegionsHob (
   {
     if (SkipDeviceNode (FdtGetName (DtbAddress, NodeOffset, &DeviceRegionNameLength)) == FALSE) {
       DeviceRegions[DeviceIndex].DeviceRegionStart = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
-      PagesCount                                   = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
+      PagesCount                                   = (UINT64)FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE);
       if ((PagesCount > (MAX_UINT64/EFI_PAGE_SIZE)) || (PagesCount == 0)) {
-        DEBUG ((DEBUG_ERROR, "%a: PagesCount %u is out of range, max(%u) or zero\r\n", __FUNCTION__, PagesCount, MAX_UINT64/EFI_PAGE_SIZE));
+        DEBUG ((DEBUG_ERROR, "%a: PagesCount %lu is out of range, max(%lu) or zero\r\n", __FUNCTION__, PagesCount, MAX_UINT64/EFI_PAGE_SIZE));
         Status = EFI_DEVICE_ERROR;
         goto ExitBuildDeviceMemRegionsHob;
       }

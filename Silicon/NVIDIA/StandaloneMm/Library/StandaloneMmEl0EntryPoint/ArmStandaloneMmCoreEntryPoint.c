@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   Copyright (c) 2017 - 2024, Arm Ltd. All rights reserved.<BR>
 
@@ -324,14 +324,14 @@ GetPhitHobFromTransferList (
 
   Tlh = (TRANSFER_LIST_HEADER *)TlhAddr;
 
-  Te = TlFindFirstEntry (Tlh, TRANSFER_ENTRY_TAG_ID_HOB_LIST);
+  Te = TransferListFindFirstEntry (Tlh, TRANSFER_ENTRY_TAG_ID_HOB_LIST);
   if (Te == NULL) {
     DEBUG ((DEBUG_ERROR, "Error: No Phit hob is present in transfer list...\n"));
 
     return NULL;
   }
 
-  HobStart = TlGetEntryData (Te);
+  HobStart = TransferListGetEntryData (Te);
 
   return HobStart;
 }
