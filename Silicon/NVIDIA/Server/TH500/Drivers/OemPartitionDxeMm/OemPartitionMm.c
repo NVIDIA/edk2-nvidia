@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Oem Partition Sample Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -398,8 +398,12 @@ MmOemPartitionHandler (
   UINTN                             CommBufferPayloadSize;
   UINTN                             TempCommBufferSize;
   OEM_PARTITION_COMMUNICATE_BUFFER  *DataPayload;
+  OEM_PARTITION_COMMUNICATE_READ    *ReadPayload;
+  OEM_PARTITION_COMMUNICATE_WRITE   *WritePayload;
 
-  DataPayload = NULL;
+  DataPayload  = NULL;
+  ReadPayload  = NULL;
+  WritePayload = NULL;
   //
   // If input is invalid, stop processing this SMI
   //
@@ -436,24 +440,36 @@ MmOemPartitionHandler (
       Status                                 = EFI_SUCCESS;
       break;
     case OEM_PARTITION_FUNC_READ:
-      if (CommBufferPayloadSize != sizeof (OEM_PARTITION_COMMUNICATE_READ)) {
+      if (CommBufferPayloadSize < sizeof (OEM_PARTITION_COMMUNICATE_READ)) {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer too small!\n", __FUNCTION__, MmFunctionHeader->Function));
+        Status = EFI_INVALID_PARAMETER;
+        break;
+      }
+
+      ReadPayload = (OEM_PARTITION_COMMUNICATE_READ *)(MmFunctionHeader + 1);
+      if (CommBufferPayloadSize != (sizeof (OEM_PARTITION_COMMUNICATE_READ) + ReadPayload->Length)) {
         DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MmFunctionHeader->Function));
         Status = EFI_INVALID_PARAMETER;
         break;
       }
 
-      DataPayload = (OEM_PARTITION_COMMUNICATE_BUFFER *)(MmFunctionHeader + 1);
-      Status      = mOemPartitionMmProtocol.Read (DataPayload->Read.Data, DataPayload->Read.Offset, DataPayload->Read.Length);
+      Status = mOemPartitionMmProtocol.Read (ReadPayload->Data, ReadPayload->Offset, ReadPayload->Length);
       break;
     case OEM_PARTITION_FUNC_WRITE:
-      if (CommBufferPayloadSize != sizeof (OEM_PARTITION_COMMUNICATE_WRITE)) {
+      if (CommBufferPayloadSize < sizeof (OEM_PARTITION_COMMUNICATE_WRITE)) {
+        DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer too small!\n", __FUNCTION__, MmFunctionHeader->Function));
+        Status = EFI_INVALID_PARAMETER;
+        break;
+      }
+
+      WritePayload = (OEM_PARTITION_COMMUNICATE_WRITE *)(MmFunctionHeader + 1);
+      if (CommBufferPayloadSize != (sizeof (OEM_PARTITION_COMMUNICATE_WRITE) + WritePayload->Length)) {
         DEBUG ((DEBUG_ERROR, "%a: Command [%d], payload buffer invalid!\n", __FUNCTION__, MmFunctionHeader->Function));
         Status = EFI_INVALID_PARAMETER;
         break;
       }
 
-      DataPayload = (OEM_PARTITION_COMMUNICATE_BUFFER *)(MmFunctionHeader + 1);
-      Status      = mOemPartitionMmProtocol.Write (DataPayload->Write.Data, DataPayload->Write.Offset, DataPayload->Write.Length);
+      Status = mOemPartitionMmProtocol.Write (WritePayload->Data, WritePayload->Offset, WritePayload->Length);
       break;
     case OEM_PARTITION_FUNC_ERASE:
       if (CommBufferPayloadSize != sizeof (OEM_PARTITION_COMMUNICATE_ERASE)) {

@@ -1,7 +1,7 @@
 /** @file
   GUID is for Oem partition MM communication.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,15 +31,15 @@ typedef struct {
 } OEM_PARTITION_COMMUNICATE_GET_INFO;
 
 typedef struct {
-  VOID      *Data;
   UINT32    Offset;
   UINT32    Length;
+  UINT8     Data[0];
 } OEM_PARTITION_COMMUNICATE_READ;
 
 typedef struct {
-  VOID      *Data;
   UINT32    Offset;
   UINT32    Length;
+  UINT8     Data[0];
 } OEM_PARTITION_COMMUNICATE_WRITE;
 
 typedef struct {
@@ -54,8 +54,6 @@ typedef struct {
 
 typedef union {
   OEM_PARTITION_COMMUNICATE_GET_INFO     Info;
-  OEM_PARTITION_COMMUNICATE_READ         Read;
-  OEM_PARTITION_COMMUNICATE_WRITE        Write;
   OEM_PARTITION_COMMUNICATE_ERASE        Erase;
   OEM_PARTITION_COMMUNICATE_IS_ERASED    IsErased;
 } OEM_PARTITION_COMMUNICATE_BUFFER;

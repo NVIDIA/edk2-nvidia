@@ -2,7 +2,7 @@
   Oem partition access DXE Sample wrapper.
 
   Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -139,7 +139,7 @@ OemPartitionRead (
   Buffer = NULL;
   Buffer = InitCommunicateBuffer (
              (VOID **)&ReadOemPartition,
-             sizeof (*ReadOemPartition),
+             sizeof (*ReadOemPartition) + Length,
              OEM_PARTITION_FUNC_READ
              );
   if (Buffer == NULL) {
@@ -149,7 +149,7 @@ OemPartitionRead (
   ReadOemPartition->Offset = Offset;
   ReadOemPartition->Length = Length;
 
-  Status = SendCommunicateBuffer (Buffer, sizeof (*ReadOemPartition));
+  Status = SendCommunicateBuffer (Buffer, sizeof (*ReadOemPartition) + Length);
   if (!EFI_ERROR (Status)) {
     CopyMem (Data, ReadOemPartition->Data, Length);
   }
@@ -189,7 +189,7 @@ OemPartitionWrite (
   Buffer = NULL;
   Buffer = InitCommunicateBuffer (
              (VOID **)&WriteOemPartition,
-             sizeof (*WriteOemPartition),
+             sizeof (*WriteOemPartition) + Length,
              OEM_PARTITION_FUNC_WRITE
              );
   if (Buffer == NULL) {
@@ -202,7 +202,7 @@ OemPartitionWrite (
     CopyMem (WriteOemPartition->Data, Data, Length);
   }
 
-  Status = SendCommunicateBuffer (Buffer, sizeof (*WriteOemPartition));
+  Status = SendCommunicateBuffer (Buffer, sizeof (*WriteOemPartition) + Length);
 
   if (Buffer != NULL) {
     FreePool (Buffer);
