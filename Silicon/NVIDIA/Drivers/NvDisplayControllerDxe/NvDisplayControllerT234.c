@@ -10,12 +10,15 @@
 
 #include <PiDxe.h>
 
+#include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/EmbeddedGpio.h>
+#include <Protocol/BpmpIpc.h>
+#include <Protocol/PowerGateNodeProtocol.h>
 
 #include "NvDisplay.h"
 #include "NvDisplayController.h"
@@ -27,6 +30,35 @@
 #define T234_GPIO_PIN_DP0_AUX_I2C8_SEL   3
 #define T234_GPIO_PIN_COUNT              4
 
+#define TEGRA_ICC_DISPLAY  7
+
+typedef enum {
+  CmdBwmgrIntQueryAbi   = 1,
+  CmdBwmgrIntCalcAndSet = 2,
+  CmdBwmgrIntCapSet     = 3,
+  CmdBwmgrIntMax
+} MRQ_BWMGR_INT_COMMANDS;
+
+typedef enum {
+  BwmgrIntUnitKbps = 0,
+  BwmgrIntUnitKhz  = 1,
+} BWMGR_INT_UNIT;
+
+#pragma pack (push, 1)
+typedef struct {
+  UINT32    Command;
+  UINT32    ClientId;
+  UINT32    NonIsoBandwidthKbps;
+  UINT32    IsoBandwidthKbps;
+  UINT32    MemclockFloor;
+  UINT8     MemclockFloorUnit;
+} MRQ_BWMGR_INT_CALC_AND_SET_REQUEST;
+
+typedef struct {
+  UINT64    MemclockRateHz;
+} MRQ_BWMGR_INT_CALC_AND_SET_RESPONSE;
+#pragma pack (pop)
+
 #define NV_DISPLAY_CONTROLLER_HW_SIGNATURE  SIGNATURE_32('T','2','3','4')
 
 typedef struct {
@@ -35,6 +67,7 @@ typedef struct {
   EFI_HANDLE                  DriverHandle;
   EFI_HANDLE                  ControllerHandle;
   BOOLEAN                     UseDpOutput;
+  BOOLEAN                     MaxEmcFrequencyForced;
   BOOLEAN                     ResetsDeasserted;
   BOOLEAN                     ClocksEnabled;
   BOOLEAN                     GpiosConfigured;
@@ -129,6 +162,150 @@ EnableClocks (
   } else {
     return NvDisplayDisableAllClocks (DriverHandle, ControllerHandle);
   }
+}
+
+/**
+  Set EMC frequency floor.
+
+  @param[in] DriverHandle       Handle to the driver.
+  @param[in] ControllerHandle   Handle to the controller.
+  @param[in] IsoBandwidthKbps   ISO bandwidth is kBps.
+  @param[in] MemclockFloorKbps  Memory clock floor in kBps.
+
+  @return EFI_SUCCESS      EMC frequency successfully set.
+  @return EFI_NOT_READY    Could not retrieve one or more required protocols.
+  @return EFI_UNSUPPORTED  BPMP BWMGR is disabled.
+  @return !=EFI_SUCCESS    Error occurred.
+*/
+STATIC
+EFI_STATUS
+SetupEmcFrequency (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle,
+  IN CONST UINT32      IsoBandwidthKbps,
+  IN CONST UINT32      MemclockFloorKbps
+  )
+{
+  EFI_STATUS                           Status;
+  NVIDIA_BPMP_IPC_PROTOCOL             *BpmpIpc;
+  NVIDIA_POWER_GATE_NODE_PROTOCOL      *PgNode;
+  INT32                                MessageError;
+  MRQ_BWMGR_INT_CALC_AND_SET_REQUEST   Request;
+  MRQ_BWMGR_INT_CALC_AND_SET_RESPONSE  Response;
+
+  Status = gBS->LocateProtocol (&gNVIDIABpmpIpcProtocolGuid, NULL, (VOID **)&BpmpIpc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to locate BPMP IPC protocol: %r\r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIAPowerGateNodeProtocolGuid,
+                  (VOID **)&PgNode,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to retrieve powergate node protocol: %r\r\n", __FUNCTION__, Status));
+    return EFI_NOT_READY;
+  }
+
+  ZeroMem (&Request, sizeof (Request));
+  Request.Command           = CmdBwmgrIntCalcAndSet;
+  Request.ClientId          = TEGRA_ICC_DISPLAY;
+  Request.IsoBandwidthKbps  = IsoBandwidthKbps;
+  Request.MemclockFloor     = MemclockFloorKbps;
+  Request.MemclockFloorUnit = BwmgrIntUnitKbps;
+
+  Status = BpmpIpc->Communicate (
+                      BpmpIpc,
+                      NULL,
+                      PgNode->BpmpPhandle,
+                      MRQ_BWMGR_INT,
+                      &Request,
+                      sizeof (Request),
+                      &Response,
+                      sizeof (Response),
+                      &MessageError
+                      );
+  if ((Status == EFI_PROTOCOL_ERROR) && (MessageError == BPMP_ENODEV)) {
+    return EFI_UNSUPPORTED;     /* BWMGR is disabled. */
+  } else if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: BPMP IPC Communicate failed: %r (MessageError = %d)\r\n", __FUNCTION__, Status, MessageError));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Force maximum EMC frequency.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+  @param[in] Enable            Enable/disable the forced max frequency.
+
+  @return EFI_SUCCESS    EMC frequency successfully forced.
+  @return !=EFI_SUCCESS  Error occurred.
+*/
+STATIC
+EFI_STATUS
+ForceMaxEmcFrequency (
+  IN  CONST EFI_HANDLE  DriverHandle,
+  IN  CONST EFI_HANDLE  ControllerHandle,
+  IN  CONST BOOLEAN     Enable,
+  OUT UINT32 *CONST     IsoBandwidthKbytesPerSec   OPTIONAL,
+  OUT UINT32 *CONST     MemclockFloorKbytesPerSec  OPTIONAL
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      IsoBandwidthKbps, MemclockFloorKbps;
+
+  if (Enable) {
+    IsoBandwidthKbps  = 4500 * SIZE_1KB; /* 4.5 GB/s */
+    MemclockFloorKbps = MAX_UINT32;
+  } else {
+    /*
+     * WAR: Do not remove the EMC frequency floor in case an active
+     * child GOP protocol is installed.
+     *
+     * In this case, the display should already be shut down, have its
+     * clocks disabled and be in reset. However, removing the floor
+     * after the display was active in UEFI is causing problems in
+     * BPMP-FW.
+     */
+    Status = NvDisplayLocateActiveChildGop (DriverHandle, ControllerHandle, NULL);
+    if (!EFI_ERROR (Status)) {
+      return EFI_SUCCESS;
+    }
+
+    IsoBandwidthKbps  = 0;
+    MemclockFloorKbps = 0;
+  }
+
+  Status = SetupEmcFrequency (
+             DriverHandle,
+             ControllerHandle,
+             IsoBandwidthKbps,
+             MemclockFloorKbps
+             );
+  if (!EFI_ERROR (Status)) {
+    if (IsoBandwidthKbytesPerSec != NULL) {
+      *IsoBandwidthKbytesPerSec = IsoBandwidthKbps;
+    }
+
+    if (MemclockFloorKbytesPerSec != NULL) {
+      *MemclockFloorKbytesPerSec = MemclockFloorKbps;
+    }
+  } else if (Status == EFI_UNSUPPORTED) {
+    /* If BWMGR is disabled, we cannot control the EMC frequency; in
+       this case, just return success. */
+    Status = EFI_SUCCESS;
+  }
+
+  return Status;
 }
 
 /**
@@ -313,6 +490,21 @@ EnableHwT234 (
   Status1 = EFI_SUCCESS;
 
   if (Enable) {
+    if (!Private->MaxEmcFrequencyForced) {
+      Status = ForceMaxEmcFrequency (
+                 Private->DriverHandle,
+                 Private->ControllerHandle,
+                 TRUE,
+                 &Private->Hw.IsoBandwidthKbytesPerSec,
+                 &Private->Hw.MemclockFloorKbytesPerSec
+                 );
+      if (EFI_ERROR (Status)) {
+        goto Disable;
+      }
+
+      Private->MaxEmcFrequencyForced = TRUE;
+    }
+
     if (!Private->ResetsDeasserted) {
       Status = AssertResets (
                  Private->DriverHandle,
@@ -399,6 +591,21 @@ Disable:
       }
 
       Private->ResetsDeasserted = FALSE;
+    }
+
+    if (Private->MaxEmcFrequencyForced) {
+      Status1 = ForceMaxEmcFrequency (
+                  Private->DriverHandle,
+                  Private->ControllerHandle,
+                  FALSE,
+                  &Private->Hw.IsoBandwidthKbytesPerSec,
+                  &Private->Hw.MemclockFloorKbytesPerSec
+                  );
+      if (!EFI_ERROR (Status)) {
+        Status = Status1;
+      }
+
+      Private->MaxEmcFrequencyForced = FALSE;
     }
   }
 
