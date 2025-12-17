@@ -1223,6 +1223,13 @@ depends on FIRMWARE_MANAGEMENT
     System FW GUID for ESRT table and capsules.
     Must be unique for each platform.
 
+  config DEFAULT_FMP_CERTIFICATES_EDK2_TEST_FILE
+  bool
+  config DEFAULT_FMP_CERTIFICATES_PRODUCTION_FILE
+  bool
+  config DEFAULT_FMP_CERTIFICATES_DTB
+  bool
+
   choice FMP_CERTIFICATES
     prompt "FMP certificates to authenticate capsule payload"
     depends on FIRMWARE_CAPSULE_SUPPORTED
@@ -1230,7 +1237,9 @@ depends on FIRMWARE_MANAGEMENT
       FMP PKCS7 certificates used to authenticate the firmware update capsule.
       See https://github.com/tianocore/tianocore.github.io/wiki/Capsule-Based-System-Firmware-Update-Generate-Keys
 
-    default FMP_CERTIFICATES_EDK2_TEST_FILE
+    default FMP_CERTIFICATES_EDK2_TEST_FILE if DEFAULT_FMP_CERTIFICATES_EDK2_TEST_FILE
+    default FMP_CERTIFICATES_PRODUCTION_FILE if DEFAULT_FMP_CERTIFICATES_PRODUCTION_FILE
+    default FMP_CERTIFICATES_DTB if DEFAULT_FMP_CERTIFICATES_DTB
 
     config FMP_CERTIFICATES_EDK2_TEST_FILE
       bool "Use EDK2 test certificate file - DO NOT USE IN PRODUCTION"
