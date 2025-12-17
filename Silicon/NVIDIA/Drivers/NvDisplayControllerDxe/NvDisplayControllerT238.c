@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - T238
 
-  SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,6 +12,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -169,14 +170,20 @@ ConfigureGpios (
   EMBEDDED_GPIO_PIN   GpioPin;
   EMBEDDED_GPIO_MODE  GpioMode;
 
+  NV_ASSERT_RETURN (
+    SubnodeNames[T238_GPIO_PIN_COUNT] == NULL,
+    return EFI_INVALID_PARAMETER,
+    "%a: SubnodeNames array not properly terminated\n",
+    __FUNCTION__
+    );
+
   Status = NvDisplayLookupGpioPins (
              DriverHandle,
              ControllerHandle,
              "nxp,pca9535",
              SubnodeNames,
              &GpioPhandle,
-             Pins,
-             T238_GPIO_PIN_COUNT
+             Pins
              );
   if (Status == EFI_NOT_FOUND) {
     DEBUG ((

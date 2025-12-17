@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - HW
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -499,13 +499,13 @@ GetSubnodeGpioPin (
   @param[in]  Compatible        Compatible string of the GPIO controller.
   @param[in]  SubnodeNames      NULL-terminated array of subnode names.
   @param[out] Phandle           Phandle of the GPIO controller node.
-  @param[out] Pins              Array to store the GPIO pin numbers.
-  @param[in]  PinsArraySize     Size of the Pins array.
+  @param[out] Pins              Array to receive GPIO pin numbers. Caller must
+                                ensure array size matches number of non-NULL
+                                entries in SubnodeNames.
 
   @retval EFI_SUCCESS            GPIO pins successfully retrieved.
   @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
   @retval EFI_NOT_FOUND          No matching GPIO controller node found.
-  @retval EFI_BUFFER_TOO_SMALL   SubnodeNames has more entries than PinsArraySize.
   @retval !=EFI_SUCCESS          Error(s) occurred.
 */
 EFI_STATUS
@@ -515,8 +515,7 @@ NvDisplayLookupGpioPins (
   IN  CONST CHAR8         *Compatible,
   IN  CONST CHAR8 *CONST  SubnodeNames[],
   OUT UINT32              *Phandle,
-  OUT UINT32              Pins[],
-  IN  UINTN               PinsArraySize
+  OUT UINT32              Pins[]
   )
 {
   EFI_STATUS                        Status;
@@ -525,9 +524,6 @@ NvDisplayLookupGpioPins (
   INT32                             GpioOffset;
   UINT32                            GpioPhandle;
   UINTN                             Index;
-  BOOLEAN                           AllPinsFound;
-  UINTN                             MaxIterations = 100;
-  UINTN                             Iteration     = 0;
 
   if ((DriverHandle == NULL) || (ControllerHandle == NULL) ||
       (Compatible == NULL) || (SubnodeNames == NULL) ||
@@ -565,8 +561,7 @@ NvDisplayLookupGpioPins (
   }
 
   GpioOffset = -1;
-  while (Iteration < MaxIterations) {
-    Iteration++;
+  do {
     GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, Compatible);
     if (GpioOffset == -FDT_ERR_NOTFOUND) {
       DEBUG ((
@@ -589,42 +584,22 @@ NvDisplayLookupGpioPins (
       return EFI_NOT_FOUND;
     }
 
-    AllPinsFound = TRUE;
-    for (Index = 0; Index < PinsArraySize && SubnodeNames[Index] != NULL; ++Index) {
+    for (Index = 0; SubnodeNames[Index] != NULL; ++Index) {
       if (!GetSubnodeGpioPin (DeviceTreeBase, GpioOffset, SubnodeNames[Index], &Pins[Index])) {
-        AllPinsFound = FALSE;
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: failed to get GPIO pin for '%a': %r\r\n",
+          __FUNCTION__,
+          SubnodeNames[Index],
+          Status
+          ));
         break;
       }
     }
-
-    if (SubnodeNames[Index] != NULL) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: SubnodeNames has more entries (%u) than PinsArraySize (%u)\r\n",
-        __FUNCTION__,
-        (UINT32)Index,
-        (UINT32)PinsArraySize
-        ));
-      return EFI_BUFFER_TOO_SMALL;
-    }
-
-    if (AllPinsFound) {
-      break;
-    }
-  }
-
-  if (!AllPinsFound) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: could not find all required GPIO pins for '%a'\r\n",
-      __FUNCTION__,
-      Compatible
-      ));
-    return EFI_NOT_FOUND;
-  }
+  } while (SubnodeNames[Index] != NULL);
 
   GpioPhandle = fdt_get_phandle (DeviceTreeBase, GpioOffset);
-  if ((GpioPhandle == 0) || (GpioPhandle == 0xFFFFFFFF)) {
+  if ((GpioPhandle == 0) || (GpioPhandle == MAX_UINT32)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to find phandle of node at offset %d\r\n",

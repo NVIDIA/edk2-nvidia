@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - T234
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,6 +11,7 @@
 #include <PiDxe.h>
 
 #include <Library/DebugLib.h>
+#include <Library/NVIDIADebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
@@ -157,14 +158,20 @@ ConfigureGpios (
   EMBEDDED_GPIO_PIN   GpioPin;
   EMBEDDED_GPIO_MODE  GpioMode;
 
+  NV_ASSERT_RETURN (
+    SubnodeNames[T234_GPIO_PIN_COUNT] == NULL,
+    return EFI_INVALID_PARAMETER,
+    "%a: SubnodeNames array not properly terminated\n",
+    __FUNCTION__
+    );
+
   Status = NvDisplayLookupGpioPins (
              DriverHandle,
              ControllerHandle,
              "ti,tca9539",
              SubnodeNames,
              &GpioPhandle,
-             Pins,
-             T234_GPIO_PIN_COUNT
+             Pins
              );
   if (Status == EFI_NOT_FOUND) {
     DEBUG ((

@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -185,13 +185,13 @@ NvDisplayHwShutdown (
   @param[in]  Compatible        Compatible string of the GPIO controller.
   @param[in]  SubnodeNames      NULL-terminated array of subnode names.
   @param[out] Phandle           Phandle of the GPIO controller node.
-  @param[out] Pins              Array to store the GPIO pin numbers.
-  @param[in]  PinsArraySize     Size of the Pins array.
+  @param[out] Pins              Array to receive GPIO pin numbers. Caller must
+                                ensure array size matches number of non-NULL
+                                entries in SubnodeNames.
 
   @retval EFI_SUCCESS            GPIO pins successfully retrieved.
   @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
   @retval EFI_NOT_FOUND          No matching GPIO controller node found.
-  @retval EFI_BUFFER_TOO_SMALL   SubnodeNames has more entries than PinsArraySize.
   @retval !=EFI_SUCCESS          Error(s) occurred.
 */
 EFI_STATUS
@@ -201,8 +201,7 @@ NvDisplayLookupGpioPins (
   IN  CONST CHAR8         *Compatible,
   IN  CONST CHAR8 *CONST  SubnodeNames[],
   OUT UINT32              *Phandle,
-  OUT UINT32              Pins[],
-  IN  UINTN               PinsArraySize
+  OUT UINT32              Pins[]
   );
 
 /**
