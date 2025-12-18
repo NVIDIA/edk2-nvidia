@@ -144,22 +144,45 @@ EnableClocks (
     "aza_bit_clk",
     NULL
   };
-  STATIC CONST CHAR8 *CONST  ClockParents[][2] = {
+  STATIC CONST CHAR8 *CONST  EnableClockParents[][2] = {
     { "nvdisplay_disp_clk", "disppll_clk"        },
     { "nvdisplayhub_clk",   "sppll0_clkoutb_clk" },
+    { NULL,                 NULL                 }
+  };
+  STATIC CONST CHAR8 *CONST  DisableClockParents[][2] = {
+    { "rg0_m_clk",          "rg0_clk"            },
+    { "rg0_clk",            "osc_clk"            },
+    { "nvdisplay_p0_clk",   "vpll0_clk"          },
+    { "vpll0_clk",          "vpll0_ref_clk"      },
+    { "nvdisplay_disp_clk", "disppll_clk"        },
+    { "disppll_clk",        "osc_clk"            },
+    { "sf0_clk",            "osc_clk"            },
+    { "sor0_ref_clk",       "osc_clk"            },
+    { "sor0_ref_pll_clk",   "vpll0_clk"          },
+    { "maud_clk",           "sppll0_div10_clk"   },
+    { "sppll0_div10_clk",   "sppll0_vco_clk"     },
+    { "sppll0_vco_clk",     "osc_clk"            },
+    { "nvdisplayhub_clk",   "sppll0_clkoutb_clk" },
+    { "sppll0_clkoutb_clk", "sppll0_vco_clk"     },
+    { "sppll0_vco_clk",     "osc_clk"            },
     { NULL,                 NULL                 }
   };
 
   EFI_STATUS  Status;
 
   if (Enable) {
-    Status = NvDisplaySetClockParents (DriverHandle, ControllerHandle, ClockParents);
+    Status = NvDisplaySetClockParents (DriverHandle, ControllerHandle, EnableClockParents);
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
     return NvDisplayEnableClocks (DriverHandle, ControllerHandle, Clocks);
   } else {
+    Status = NvDisplaySetClockParents (DriverHandle, ControllerHandle, DisableClockParents);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
+
     return NvDisplayDisableAllClocks (DriverHandle, ControllerHandle);
   }
 }
