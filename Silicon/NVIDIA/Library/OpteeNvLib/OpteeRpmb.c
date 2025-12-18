@@ -923,7 +923,7 @@ HandleRpmbDataReq (
   ReqFrame  = RpmbReq;
   RespFrame = RpmbResp;
 
-  if ((ReqSize % RPMB_FRAME_SIZE) || (ReqSize % RPMB_FRAME_SIZE)) {
+  if ((ReqSize % RPMB_FRAME_SIZE) || (RespSize % RPMB_FRAME_SIZE)) {
     DEBUG ((DEBUG_ERROR, "Invalid Size Req(%lu)/Resp(%lu) \n", ReqSize, RespSize));
     Status =  EFI_INVALID_PARAMETER;
     goto Error;
