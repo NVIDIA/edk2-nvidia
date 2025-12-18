@@ -54,6 +54,15 @@ The FMP Capsule Image Type ID GUID is used to uniquely identify the system FW an
 
 **For Jetson platforms, the default FMP Capsule Image Type ID GUID should always be replaced with a platform-specific GUID by updating CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID or overriding it with the DTB property.**
 
+### FMP PKCS7 Certificates
+FMP capsules are authenticated using PKCS7 certificates.  UEFI supports a list of certificates to aid in key management and revocation.  UEFI will attempt to validate an incoming capsule with each certificate in the list. Capsule authentication fails if no certificate in the list can authenticate the signature.
+
+When FIRMWARE_CAPSULE_SUPPORTED is configured, the Kconfig Firmware Options menu "FMP certificates to authenticate capsule payload" setting configures the source of the certificates.  Choices include using the EDK2 test certificate file (**DO NOT USE FOR PRODUCTION**), providing a production certificates file path, or configuring UEFI to retrieve certificates from the DTB /firmware/uefi node's fmp-pkcs7-cert-buffer-xdr property set to the raw bytes of the certificate list.
+
+For details on generating certificates, see https://github.com/tianocore/tianocore.github.io/wiki/Capsule-Based-System-Firmware-Update-Generate-Keys.
+
+The EDK2 capsule generation and signing tool is here: https://github.com/tianocore/edk2/blob/master/BaseTools/Source/Python/Capsule/GenerateCapsule.py.
+
 ## Special Features
 ### Single Image Capsule Update
 The Capsule Update feature updates all system firmware images.  For development purposes, a capsule with a single firmware image may also be used to update that image in one boot chain.

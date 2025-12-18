@@ -1210,7 +1210,7 @@ depends on FIRMWARE_MANAGEMENT
     Must be unique for each platform.
 
   choice FMP_CERTIFICATES
-    prompt "FMP certificates to validate capsule payload"
+    prompt "FMP certificates to authenticate capsule payload"
     depends on FIRMWARE_CAPSULE_SUPPORTED
     help
       FMP PKCS7 certificates used to authenticate the firmware update capsule.
