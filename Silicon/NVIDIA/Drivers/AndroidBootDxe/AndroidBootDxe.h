@@ -98,6 +98,8 @@ typedef struct {
   UINT32    HeaderVersion;
   UINT32    DtbSize;
   UINT32    VendorRamdiskTableSize;
+  UINT32    VendorRamdiskTableEntrySize;
+  UINT32    VendorRamdiskTableEntryNum;
   UINT32    BootConfigSize;
 } VENDOR_BOOT_DATA;
 

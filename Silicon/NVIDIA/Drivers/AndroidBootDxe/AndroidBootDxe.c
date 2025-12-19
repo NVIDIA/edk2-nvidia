@@ -301,6 +301,19 @@ AndroidBootOnConnectCompleteHandler (
       }
     }
 
+    // Fallback to normal boot partition name list
+    if (!RecoveryPartitonFound) {
+      for (Count = 0;
+           Count < sizeof (pKernelPartitionDtbMapping) / sizeof (pKernelPartitionDtbMapping[0]);
+           Count++)
+      {
+        if (StrCmp (Private->PartitionName, pKernelPartitionDtbMapping[Count][0]) == 0) {
+          RecoveryPartitonFound = TRUE;
+          break;
+        }
+      }
+    }
+
     if (!RecoveryPartitonFound) {
       AndroidBootUninstallProtocols (Private);
     }
@@ -863,6 +876,7 @@ AndroidBootDxeLoadDtb (
                  &KernelDtb
                  );
     } else {
+      // Recovery path
       Status = AndroidBootLocateAndReadSiblingPartition (
                  Private->PartitionName,
                  Private->ControllerHandle,
@@ -870,6 +884,16 @@ AndroidBootDxeLoadDtb (
                  (sizeof (pRecoveryKernelPartitionDtbMapping) / sizeof (pRecoveryKernelPartitionDtbMapping[0])),
                  &KernelDtb
                  );
+      // Falling back to use kernel-dtb as Android can move recovery to vendor_boot
+      if (EFI_ERROR (Status)) {
+        Status = AndroidBootLocateAndReadSiblingPartition (
+                   Private->PartitionName,
+                   Private->ControllerHandle,
+                   pKernelPartitionDtbMapping,
+                   (sizeof (pKernelPartitionDtbMapping) / sizeof (pKernelPartitionDtbMapping[0])),
+                   &KernelDtb
+                   );
+      }
     }
 
     if (EFI_ERROR (Status)) {
@@ -1246,13 +1270,15 @@ VendorBootGetVerify (
     // This size will be a reference when boot manger allocates a pool for LoadFile service
     // Kernel image to be loaded to a buffer allocated by boot manager
     // Ramdisk image to be loaded to a buffer allocated by this LoadFile service
-    ImgData->Offset                 = Offset;
-    ImgData->VendorRamdiskSize      = VendorRamdiskSize;
-    ImgData->PageSize               = PageSize;
-    ImgData->HeaderVersion          = Header->HeaderVersion;
-    ImgData->DtbSize                = DtbSize;
-    ImgData->VendorRamdiskTableSize = VendorRamdiskTableSize;
-    ImgData->BootConfigSize         = BootConfigSize;
+    ImgData->Offset                      = Offset;
+    ImgData->VendorRamdiskSize           = VendorRamdiskSize;
+    ImgData->PageSize                    = PageSize;
+    ImgData->HeaderVersion               = Header->HeaderVersion;
+    ImgData->DtbSize                     = DtbSize;
+    ImgData->VendorRamdiskTableSize      = VendorRamdiskTableSize;
+    ImgData->VendorRamdiskTableEntrySize = Header->VendorRamdiskTableEntrySize;
+    ImgData->VendorRamdiskTableEntryNum  = Header->VendorRamdiskTableEntryNum;
+    ImgData->BootConfigSize              = BootConfigSize;
   }
 
   if (KernelArgs != NULL) {
@@ -1777,18 +1803,23 @@ AndroidBootLoadFile (
   IN VOID                    *Buffer
   )
 {
-  EFI_STATUS   Status;
-  EFI_HANDLE   InitrdHandle;
-  EFI_EVENT    InitrdEvent;
-  UINTN        Addr;
-  UINTN        BufSize;
-  UINTN        BufBase;
-  UINTN        BufBaseRamdisk;
-  UINTN        BufSizeRamdisk         = 0;
-  UINTN        BootConfigReservedSize = 0;
-  MiscCmdType  MiscCmd;
-  UINT32       BootConfigAppliedBytes = 0;
-  UINT32       BootConfigSize;
+  EFI_STATUS                        Status;
+  EFI_HANDLE                        InitrdHandle;
+  EFI_EVENT                         InitrdEvent;
+  UINTN                             Addr;
+  UINTN                             BufSize;
+  UINTN                             BufBase;
+  UINTN                             BufBaseRamdisk;
+  UINTN                             BufSizeRamdisk         = 0;
+  UINTN                             BootConfigReservedSize = 0;
+  MiscCmdType                       MiscCmd;
+  UINT32                            BootConfigAppliedBytes = 0;
+  UINT32                            BootConfigSize;
+  UINT32                            Idx;
+  VOID                              *VendorRamdiskTable = NULL;
+  VENDOR_RAMDISK_TABLE_TYPE4_ENTRY  *RamdiskTableEntry  = NULL;
+  UINT32                            RamdiskFragOffset;
+  UINT32                            RamdiskFragSize;
 
   mInitRdBaseAddress = 0;
   mInitRdSize        = 0;
@@ -1848,10 +1879,54 @@ AndroidBootLoadFile (
   // Ramdisk buf size is generic_boot ramdisk + vendor_boot ramdisk
   // if kernel boot and vendor_boot ramdisk exists
   Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
-  if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
-     && (VendorImgData != NULL))
-  {
-    BufSize += VendorImgData->VendorRamdiskSize;
+  if ( !EFI_ERROR (Status) && (VendorImgData != NULL)) {
+    VendorRamdiskTable = AllocatePool (VendorImgData->VendorRamdiskTableSize);
+    if (VendorRamdiskTable == NULL) {
+      DEBUG ((DEBUG_ERROR, "%a: fail to get a buffer for ramdisk table\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    Addr = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize) +
+           ALIGN_VALUE (VendorImgData->VendorRamdiskSize, VendorImgData->PageSize) +
+           ALIGN_VALUE (VendorImgData->DtbSize, VendorImgData->PageSize);
+    Status = AndroidBootRead (
+               VendorBlockIo,
+               VendorDiskIo,
+               Addr,
+               (VOID *)VendorRamdiskTable,
+               VendorImgData->VendorRamdiskTableSize
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Unable to read vendor ramdisk table from %x" \
+        " to %09p: %r\n",
+        __FUNCTION__,
+        Addr,
+        VendorRamdiskTable,
+        Status
+        ));
+    }
+
+    for (Idx = 0; Idx < VendorImgData->VendorRamdiskTableEntryNum; Idx++) {
+      RamdiskTableEntry = VendorRamdiskTable + Idx * VendorImgData->VendorRamdiskTableEntrySize;
+      if ((MiscCmd == MISC_CMD_TYPE_RECOVERY) || (MiscCmd == MISC_CMD_TYPE_FASTBOOT_USERSPACE)) {
+        if (RamdiskTableEntry->RamdiskType == VENDOR_RAMDISK_TYPE_RECOVERY) {
+          DEBUG ((DEBUG_ERROR, "%a: Booted into Recovery Mode\n", __FUNCTION__));
+          RamdiskFragOffset = RamdiskTableEntry->RamdiskOffset;
+          RamdiskFragSize   = RamdiskTableEntry->RamdiskSize;
+        }
+      } else {
+        if (RamdiskTableEntry->RamdiskType == VENDOR_RAMDISK_TYPE_PLATFORM) {
+          DEBUG ((DEBUG_ERROR, "%a: Booted into Normal Mode\n", __FUNCTION__));
+          RamdiskFragOffset = RamdiskTableEntry->RamdiskOffset;
+          RamdiskFragSize   = RamdiskTableEntry->RamdiskSize;
+        }
+      }
+    }
+
+    BufSize += RamdiskFragSize;
+    FreePool (VendorRamdiskTable);
   }
 
   BufSize               += BOOTCONFIG_RESERVED_SIZE;
@@ -1873,17 +1948,13 @@ AndroidBootLoadFile (
   BufBaseRamdisk = BufBase;
   BufSizeRamdisk = BufSize - BootConfigReservedSize;
 
-  // recovery kernel has dedicated ramdisk in recovery.img
-  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
-  if (  !EFI_ERROR (Status) && (MiscCmd != MISC_CMD_TYPE_RECOVERY) && (MiscCmd != MISC_CMD_TYPE_FASTBOOT_USERSPACE)
-     && (VendorImgData != NULL))
-  {
+  if (VendorImgData != NULL) {
     // ramdisk layout in memory
     // - vendor_boot ramdisk, followed by
     // - generic_boot ramdisk, then
     // - boot_config
-    Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize);
-    BufSize = VendorImgData->VendorRamdiskSize;
+    Addr    = ALIGN_VALUE (sizeof (VENDOR_BOOTIMG_TYPE4_HEADER), VendorImgData->PageSize) + RamdiskFragOffset;
+    BufSize = RamdiskFragSize;
     Status  = AndroidBootRead (
                 VendorBlockIo,
                 VendorDiskIo,
@@ -1949,8 +2020,7 @@ AndroidBootLoadFile (
   DEBUG ((DEBUG_INFO, "%a: RamDisk loaded to %09p in size %08x\n", __FUNCTION__, BufBase, BufSize));
 
   if (ImgData->HeaderVersion >= 3) {
-    Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
-    if (  !EFI_ERROR (Status) && (VendorImgData != NULL)) {
+    if (VendorImgData != NULL) {
       // load BootConfig right behind the ramdisk memory
       BufBase += BufSize;
 

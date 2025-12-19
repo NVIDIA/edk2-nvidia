@@ -719,7 +719,7 @@ VerifiedBootGetBootState (
   BOOLEAN              DeviceUnlocked                 = FALSE;
   AvbSlotVerifyFlags   Flags                          = 0;
   const char           *NormalRequestedPartitions[]   = { "boot", "vendor_boot", NULL };
-  const char           *RecoveryRequestedPartitions[] = { "recovery", NULL };
+  const char           *RecoveryRequestedPartitions[] = { NULL };
   const char *const    *RequestedPartitions;
 
   if (ReadIsDeviceUnlocked (&Ops, &DeviceUnlocked) != AVB_IO_RESULT_OK) {
@@ -728,7 +728,6 @@ VerifiedBootGetBootState (
 
   RequestedPartitions = IsRecovery ? RecoveryRequestedPartitions : NormalRequestedPartitions;
   Flags              |= AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR;
-  Flags              |= IsRecovery ? AVB_SLOT_VERIFY_FLAGS_NO_VBMETA_PARTITION : 0;
 
   AvbRes = avb_slot_verify (
              &Ops,
