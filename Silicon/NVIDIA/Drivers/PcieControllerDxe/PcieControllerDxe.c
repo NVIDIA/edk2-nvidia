@@ -825,40 +825,27 @@ UninitializeController (
   /* Only perform operation for T264 chip AND nvidia,uefi-exit-reset found */
   if (ChipId == T264_CHIP_ID) {
     if (Private->ResetAtExit) {
-      DEBUG ((DEBUG_ERROR, "%a: reset at exit for pcie ctlr %d\n", __FUNCTION__, Private->CtrlId));
-
       if (DpcCapOffset != 0) {
         /* Read and modify DPC Control register to disable Trigger Enable*/
-        Val = MmioRead32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_CAP);
-        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Ctl Old Reg = 0x%x\n", Val));
+        Val  = MmioRead32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_CAP);
         Val &= ~PCIE_DPC_CTL_TRIGGER_EN;
         MmioWrite32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_CAP, Val);
-        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Ctl New Reg = 0x%x\n", Val));
 
         /* Read and write back DPC Status register */
         Val = MmioRead32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_STS);
         MmioWrite32 (Private->EcamBase + DpcCapOffset + PCIE_DPC_STS, Val);
-        DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* DPC Sta Reg = 0x%x\n", Val));
       }
 
       /* Reset XTL_RC_MGMT_PERST_CONTROL */
-      Val = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
-      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* Id=%d  addr=%lx original data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
-
+      Val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
       Val &= ~XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
-      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* writing PERST=0 Id=%d addr=%lx data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
-
       MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val);
+
       MicroSecondDelay (1000);
 
-      Val = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
-      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* Id=%d  addr=%lx perst=0 data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
-
+      Val  = MmioRead32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL);
       Val |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
-      DEBUG ((DEBUG_INFO, "PCIe Perst Debug ******* writing PERST=1 Id=%d  addr=%lx data=%x\n", Private->CtrlId, Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val));
-
       MmioWrite32 (Private->XtlPriBase + XTL_RC_MGMT_PERST_CONTROL, Val);
-      MicroSecondDelay (100 * 1000);
     }
   }
 
@@ -2672,7 +2659,7 @@ DeviceDiscoveryNotify (
 
       Status = gBS->CreateEventEx (
                       EVT_NOTIFY_SIGNAL,
-                      TPL_NOTIFY,
+                      TPL_CALLBACK,
                       OnExitBootServices,
                       Private,
                       &gEfiEventExitBootServicesGuid,
