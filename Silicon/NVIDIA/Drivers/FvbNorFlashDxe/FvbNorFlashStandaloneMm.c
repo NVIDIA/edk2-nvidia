@@ -2,7 +2,7 @@
 
   Standalone MM driver Fvb Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1597,6 +1597,11 @@ FVBNORInitialize (
     }
   }
 
+  FvpData          = NULL;
+  VarStoreBuffer   = NULL;
+  FtwSpareBuffer   = NULL;
+  FtwWorkingBuffer = NULL;
+
   CheckVarStoreIntegrity = FeaturePcdGet (PcdVarStoreIntegritySupported);
 
   /* If Variable Store Integrity is enabled, use the reserved partition
@@ -1629,7 +1634,6 @@ FVBNORInitialize (
   }
 
   // Build FVB instances
-  FvpData = NULL;
   FvpData = AllocateRuntimeZeroPool (sizeof (NVIDIA_FVB_PRIVATE_DATA) * FVB_TO_CREATE);
   if (FvpData == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FvpData\r\n"));
@@ -1637,7 +1641,6 @@ FVBNORInitialize (
     goto Exit;
   }
 
-  VarStoreBuffer = NULL;
   VarStoreBuffer = AllocateRuntimePages (EFI_SIZE_TO_PAGES (VariableSize));
   if (VarStoreBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create VarStoreBuffer\r\n"));
@@ -1662,7 +1665,6 @@ FVBNORInitialize (
   PatchPcdSet64 (PcdFlashNvStorageVariableBase64, FvpData[FVB_VARIABLE_INDEX].PartitionAddress);
   PatchPcdSet32 (PcdFlashNvStorageVariableSize, FvpData[FVB_VARIABLE_INDEX].PartitionSize);
 
-  FtwSpareBuffer = NULL;
   FtwSpareBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (VariableSize), NorFlashAttributes.BlockSize);
   if (FtwSpareBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwSpareBuffer\r\n"));
@@ -1678,7 +1680,6 @@ FVBNORInitialize (
   PatchPcdSet64 (PcdFlashNvStorageFtwSpareBase64, FvpData[FVB_FTW_SPARE_INDEX].PartitionAddress);
   PatchPcdSet32 (PcdFlashNvStorageFtwSpareSize, FvpData[FVB_FTW_SPARE_INDEX].PartitionSize);
 
-  FtwWorkingBuffer = NULL;
   FtwWorkingBuffer = AllocateAlignedRuntimePages (EFI_SIZE_TO_PAGES (FtwSize - VariableSize), NorFlashAttributes.BlockSize);
   if (FtwWorkingBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "Failed to create FtwWorkingBuffer\r\n"));
@@ -1834,7 +1835,7 @@ FVBNORInitialize (
 Exit:
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: ERROR!!!!", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: ERROR!!!!: %r\n", __FUNCTION__, Status));
     if (FvpData != NULL) {
       FreePool (FvpData);
     }
