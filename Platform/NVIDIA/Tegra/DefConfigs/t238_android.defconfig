@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+CONFIG_SOC_T23X=y
+CONFIG_BUILD_ANDROID=y
+CONFIG_PLATFORM_GUID="6ca3b63f-7ec5-48b6-bc2f-00d1b3456bab"
+CONFIG_FMP_SYSTEM_IMAGE_TYPE_ID="fb6b995a-2a94-4345-a41a-cc3a2aaeb1a9"
