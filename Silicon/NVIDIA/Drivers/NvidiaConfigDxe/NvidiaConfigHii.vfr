@@ -2,7 +2,7 @@
 *
 *  NVIDIA Config formset.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -145,6 +145,7 @@ formset
     name  = LockAllVarsConfig,
     guid  = NVIDIA_PUBLIC_VARIABLE_GUID;
 
+
   //
   // Main form for NVIDIA Configuration
   //
@@ -224,6 +225,14 @@ formset
         help   = STRING_TOKEN(STR_PRODUCT_INFO_HELP),
         flags  = INTERACTIVE,
         key    = KEY_PRODUCT_INFO;
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.RedfishSupported == 0;
+    goto BMC_CONFIGURATION_FORM_ID,
+        prompt = STRING_TOKEN(STR_BMC_CONFIG_FORM_TITLE),
+        help   = STRING_TOKEN(STR_BMC_CONFIG_FORM_HELP),
+        flags  = INTERACTIVE,
+        key    = KEY_BMC_CONFIG;
+    endif;
 
     text
       help   = STRING_TOKEN(STR_RESET_VARIABLES_HELP),
@@ -882,6 +891,29 @@ formset
           step = 1,
       endnumeric;
     endif; // suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DebugMenuSupported == 0;
+  endform;
+
+  //
+  // BMC Configuration Form
+  //
+  form formid = BMC_CONFIGURATION_FORM_ID,
+    title = STRING_TOKEN(STR_BMC_CONFIG_FORM_TITLE);
+    subtitle text = STRING_TOKEN(STR_NULL);
+
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.RedfishSupported == 0;
+      text
+        help   = STRING_TOKEN(STR_BMC_IP_HELP),
+        text   = STRING_TOKEN(STR_BMC_IP_PROMPT),
+        text   = STRING_TOKEN(STR_BMC_IP_VALUE);
+
+      subtitle text = STRING_TOKEN(STR_NULL);
+
+      text
+        help   = STRING_TOKEN(STR_BMC_FACTORY_RESET_HELP),
+        text   = STRING_TOKEN(STR_BMC_FACTORY_RESET_PROMPT),
+        flags  = INTERACTIVE,
+        key    = KEY_BMC_FACTORY_RESET;
+    endif;
   endform;
 
 endformset;

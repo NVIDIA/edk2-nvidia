@@ -1,7 +1,7 @@
 ## @file
 #  NVIDIA Configuration Dxe
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2017, Linaro, Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -26,6 +26,7 @@
   EmbeddedPkg/EmbeddedPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
+  IpmiFeaturePkg/IpmiFeaturePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -71,6 +72,8 @@
   gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
   gEfiPciIoProtocolGuid                         ## CONSUMES
   gServerPowerControlProtocolGuid               ## SOMETIMES CONSUMES
+  gIpmiTransportProtocolGuid                    ## SOMETIMES CONSUMES
+  gNvidiaBmcResetProtocolGuid                   ## SOMETIMES CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdPcieResourceConfigNeeded

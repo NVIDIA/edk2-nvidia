@@ -2,7 +2,7 @@
 *
 *  String definitions for the NVIDIA Config.
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1375,3 +1375,16 @@
 #string STR_NONE                     #language en-US "None"
 #string STR_DBG2_NETWORK_DEVICE      #language en-US "DBG2 Network Device"
 #string STR_DBG2_NETWORK_DEVICE_HELP #language en-US "Select the network device to use for DBG2 output."
+
+#string STR_BMC_CONFIG_FORM_TITLE    #language en-US "BMC Configuration"
+#string STR_BMC_CONFIG_FORM_HELP     #language en-US "BMC configuration options"
+#string STR_BMC_IP_PROMPT            #language en-US "BMC IP Address"
+#string STR_BMC_IP_HELP              #language en-US "The current IP address of BMC."
+#string STR_BMC_IP_VALUE             #language en-US "N/A"
+#string STR_BMC_FACTORY_RESET_PROMPT #language en-US "Factory Reset BMC"
+#string STR_BMC_FACTORY_RESET_HELP   #language en-US "Reset BMC to factory defaults. You will be prompted to enter BMC credentials securely. WARNING: This will erase all BMC settings!"
+#string STR_BMC_RESET_CONFIRM_TITLE  #language en-US "Confirm BMC Factory Reset"
+#string STR_BMC_RESET_CONFIRM_BODY   #language en-US "Are you sure you want to reset the BMC to factory defaults?"
+#string STR_BMC_RESET_CONFIRM_PROMPT #language en-US "Press 'Y' to confirm, any other key to cancel."
+#string STR_BMC_RESET_SUCCESS        #language en-US "BMC factory reset initiated successfully."
+#string STR_BMC_RESET_FAILED         #language en-US "BMC factory reset failed!"

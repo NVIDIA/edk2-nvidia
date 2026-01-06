@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Configuration Dxe
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -17,6 +17,11 @@
 #include <Protocol/MmCommunication2.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/ServerPowerControl.h>
+#include <Protocol/IpmiTransportProtocol.h>
+
+#include <Protocol/BmcReset.h>
+
+#include <IndustryStandard/Ipmi.h>
 
 #include <Library/PrintLib.h>
 #include <Library/NVIDIADebugLib.h>
@@ -53,6 +58,24 @@
 
 #define OS_CONFIG_VAR_ATTRIBUTES    (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS)
 #define UEFI_CONFIG_VAR_ATTRIBUTES  (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
+
+//
+// Response buffer size for IPMI LAN configuration query
+// Must accommodate response header plus the parameter data (IP address)
+//
+#define IPMI_LAN_CONFIG_RESPONSE_SIZE  \
+  (sizeof (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE) + sizeof (IPMI_LAN_IP_ADDRESS))
+
+//
+// Minimum buffer size for IPv4 address string "xxx.xxx.xxx.xxx" + null
+// Format: 4 octets (3 digits each) + 3 dots + null terminator = 16
+//
+#define IPV4_STRING_MIN_SIZE  (4 * 3 + 3 + 1)
+
+//
+// Maximum length for BMC credentials input
+//
+#define BMC_CREDENTIAL_INPUT_MAX_LEN  64
 
 extern EFI_GUID  gNVIDIAResourceConfigFormsetGuid;
 
@@ -1165,6 +1188,13 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE8_TITLE),
   STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_SOCKET3_PCIE9_TITLE),
   STRING_TOKEN (STR_PCIE_DPC_FATAL_ONLY_HELP),
+  STRING_TOKEN (STR_BMC_CONFIG_FORM_TITLE),
+  STRING_TOKEN (STR_BMC_CONFIG_FORM_HELP),
+  STRING_TOKEN (STR_BMC_IP_PROMPT),
+  STRING_TOKEN (STR_BMC_IP_HELP),
+  STRING_TOKEN (STR_BMC_IP_VALUE),
+  STRING_TOKEN (STR_BMC_FACTORY_RESET_PROMPT),
+  STRING_TOKEN (STR_BMC_FACTORY_RESET_HELP),
 };
 
 STATIC UINT64  TH500SocketScratchBaseAddr[TH500_MAX_SOCKETS] = {
@@ -3486,6 +3516,309 @@ HiiConstructRequestString (
 }
 
 /**
+  Get BMC IPv4 address via IPMI and format it as a string.
+
+  @param[out] IpString      Buffer to receive the IP address string (at least 16 chars).
+  @param[in]  StringSize    Size of the IpString buffer.
+
+  @retval EFI_SUCCESS       IP address retrieved successfully.
+  @retval Others            Error occurred.
+**/
+STATIC
+EFI_STATUS
+GetBmcIpAddressString (
+  OUT CHAR16  *IpString,
+  IN  UINTN   StringSize
+  )
+{
+  EFI_STATUS                                      Status;
+  IPMI_TRANSPORT                                  *IpmiTransport;
+  IPMI_GET_LAN_CONFIGURATION_PARAMETERS_REQUEST   GetLanConfigRequest;
+  UINT8                                           ResponseData[IPMI_LAN_CONFIG_RESPONSE_SIZE];
+  UINT32                                          ResponseDataSize;
+  IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE  *GetLanConfigResponse;
+  IPMI_LAN_IP_ADDRESS                             *IpV4Address;
+
+  if ((IpString == NULL) || (StringSize < IPV4_STRING_MIN_SIZE)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  GetLanConfigResponse = (IPMI_GET_LAN_CONFIGURATION_PARAMETERS_RESPONSE *)ResponseData;
+  IpV4Address          = (IPMI_LAN_IP_ADDRESS *)GetLanConfigResponse->ParameterData;
+
+  Status = gBS->LocateProtocol (&gIpmiTransportProtocolGuid, NULL, (VOID **)&IpmiTransport);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: IPMI Transport not available: %r\n", __FUNCTION__, Status));
+    StrCpyS (IpString, StringSize, L"N/A");
+    return Status;
+  }
+
+  GetLanConfigRequest.ChannelNumber.Uint8 = 1;
+  GetLanConfigRequest.ParameterSelector   = IpmiLanIpAddress;
+  GetLanConfigRequest.SetSelector         = 0;
+  GetLanConfigRequest.BlockSelector       = 0;
+
+  ResponseDataSize = IPMI_LAN_CONFIG_RESPONSE_SIZE;
+  Status           = IpmiTransport->IpmiSubmitCommand (
+                                      IpmiTransport,
+                                      IPMI_NETFN_TRANSPORT,
+                                      0,
+                                      IPMI_TRANSPORT_GET_LAN_CONFIG_PARAMETERS,
+                                      (UINT8 *)&GetLanConfigRequest,
+                                      sizeof (GetLanConfigRequest),
+                                      ResponseData,
+                                      &ResponseDataSize
+                                      );
+  if (EFI_ERROR (Status) || (GetLanConfigResponse->CompletionCode != IPMI_COMP_CODE_NORMAL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get BMC IP: %r, CC=0x%x\n", __FUNCTION__, Status, GetLanConfigResponse->CompletionCode));
+    StrCpyS (IpString, StringSize, L"N/A");
+    return EFI_ERROR (Status) ? Status : EFI_DEVICE_ERROR;
+  }
+
+  //
+  // Verify we received enough data for a complete IP address
+  //
+  if (ResponseDataSize < IPMI_LAN_CONFIG_RESPONSE_SIZE) {
+    DEBUG ((DEBUG_ERROR, "%a: Incomplete response: got %u bytes, expected %u\n", __FUNCTION__, ResponseDataSize, IPMI_LAN_CONFIG_RESPONSE_SIZE));
+    StrCpyS (IpString, StringSize, L"N/A");
+    return EFI_DEVICE_ERROR;
+  }
+
+  UnicodeSPrint (
+    IpString,
+    StringSize,
+    L"%d.%d.%d.%d",
+    IpV4Address->IpAddress[0],
+    IpV4Address->IpAddress[1],
+    IpV4Address->IpAddress[2],
+    IpV4Address->IpAddress[3]
+    );
+
+  DEBUG ((DEBUG_INFO, "%a: BMC IP Address: %s\n", __FUNCTION__, IpString));
+  return EFI_SUCCESS;
+}
+
+/**
+  Update the BMC IP address string in HII.
+
+  @param[in] HiiHandle      HII handle for the package.
+
+  @retval EFI_SUCCESS       String updated successfully.
+  @retval Others            Error occurred.
+**/
+//
+// Cached BMC IP string - queried once per boot to avoid IPMI latency
+//
+STATIC CHAR16   mCachedBmcIpString[IPV4_STRING_MIN_SIZE] = { 0 };
+STATIC BOOLEAN  mBmcIpCached                             = FALSE;
+
+STATIC
+EFI_STATUS
+UpdateBmcIpAddressDisplay (
+  IN EFI_HII_HANDLE  HiiHandle
+  )
+{
+  EFI_STATUS  Status;
+
+  //
+  // Only query IPMI once per boot - BMC IP doesn't change during session
+  // Only cache on success to allow retry on next form open if it failed
+  //
+  if (!mBmcIpCached) {
+    Status = GetBmcIpAddressString (mCachedBmcIpString, sizeof (mCachedBmcIpString));
+    if (!EFI_ERROR (Status)) {
+      mBmcIpCached = TRUE;
+    }
+  }
+
+  HiiSetString (
+    HiiHandle,
+    STRING_TOKEN (STR_BMC_IP_VALUE),
+    mCachedBmcIpString,
+    NULL
+    );
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Prompt user for text input on the console.
+
+  Displays a prompt and reads characters until Enter is pressed.
+  For password input, characters are displayed as asterisks.
+
+  @param[in]   Prompt       The prompt string to display.
+  @param[out]  Buffer       Buffer to receive the input (CHAR16).
+  @param[in]   BufferSize   Size of Buffer in bytes.
+  @param[in]   IsPassword   If TRUE, display asterisks instead of actual characters.
+
+  @retval EFI_SUCCESS       Input received successfully.
+  @retval EFI_ABORTED       User pressed ESC to cancel.
+  @retval Others            Error occurred.
+**/
+STATIC
+EFI_STATUS
+PromptForTextInput (
+  IN  CONST CHAR16  *Prompt,
+  OUT CHAR16        *Buffer,
+  IN  UINTN         BufferSize,
+  IN  BOOLEAN       IsPassword
+  )
+{
+  EFI_STATUS     Status;
+  EFI_INPUT_KEY  Key;
+  UINTN          CharIndex;
+  UINTN          EventIndex;
+  UINTN          MaxChars;
+
+  if ((Prompt == NULL) || (Buffer == NULL) || (BufferSize < sizeof (CHAR16) * 2)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  MaxChars  = (BufferSize / sizeof (CHAR16)) - 1;
+  CharIndex = 0;
+  ZeroMem (Buffer, BufferSize);
+
+  //
+  // Clear screen and show prompt
+  //
+  gST->ConOut->ClearScreen (gST->ConOut);
+  gST->ConOut->SetAttribute (gST->ConOut, EFI_WHITE | EFI_BACKGROUND_BLUE);
+  Print (L"\n\n  %s: ", Prompt);
+
+  //
+  // Read characters until Enter or ESC
+  //
+  while (TRUE) {
+    Status = gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &EventIndex);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    Status = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    if (Key.ScanCode == SCAN_ESC) {
+      //
+      // User cancelled
+      //
+      ZeroMem (Buffer, BufferSize);
+      gST->ConOut->SetAttribute (gST->ConOut, EFI_LIGHTGRAY | EFI_BACKGROUND_BLACK);
+      return EFI_ABORTED;
+    }
+
+    if (Key.UnicodeChar == CHAR_CARRIAGE_RETURN) {
+      //
+      // Enter pressed - done
+      //
+      break;
+    }
+
+    if (Key.UnicodeChar == CHAR_BACKSPACE) {
+      //
+      // Backspace - remove last character
+      //
+      if (CharIndex > 0) {
+        CharIndex--;
+        Buffer[CharIndex] = L'\0';
+        Print (L"\b \b");
+      }
+
+      continue;
+    }
+
+    if ((Key.UnicodeChar >= L' ') && (CharIndex < MaxChars)) {
+      //
+      // Printable character - add to buffer
+      //
+      Buffer[CharIndex] = Key.UnicodeChar;
+      CharIndex++;
+
+      if (IsPassword) {
+        Print (L"*");
+      } else {
+        Print (L"%c", Key.UnicodeChar);
+      }
+    }
+  }
+
+  Buffer[CharIndex] = L'\0';
+  gST->ConOut->SetAttribute (gST->ConOut, EFI_LIGHTGRAY | EFI_BACKGROUND_BLACK);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Perform BMC factory reset via Redfish API.
+
+  This function locates the NVIDIA BMC Reset Protocol and calls it
+  to perform the factory reset with the provided credentials. The
+  actual Redfish communication is handled by the RedfishBmcResetDxe driver.
+
+  SECURITY: Credentials are passed directly and never stored persistently.
+
+  @param[in]  Username  BMC username (ASCII, null-terminated).
+  @param[in]  Password  BMC password (ASCII, null-terminated).
+
+  @retval EFI_SUCCESS             BMC reset initiated successfully.
+  @retval EFI_NOT_READY           BMC Reset Protocol not available.
+  @retval EFI_INVALID_PARAMETER   Username or Password is NULL.
+  @retval Others                  Error occurred.
+**/
+STATIC
+EFI_STATUS
+PerformBmcFactoryReset (
+  IN CONST CHAR8  *Username,
+  IN CONST CHAR8  *Password
+  )
+{
+  EFI_STATUS                 Status;
+  NVIDIA_BMC_RESET_PROTOCOL  *BmcResetProtocol;
+
+  DEBUG ((DEBUG_INFO, "%a: Starting BMC factory reset\n", __FUNCTION__));
+
+  if ((Username == NULL) || (Password == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Invalid credentials (NULL)\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Locate the BMC Reset Protocol
+  //
+  Status = gBS->LocateProtocol (
+                  &gNvidiaBmcResetProtocolGuid,
+                  NULL,
+                  (VOID **)&BmcResetProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate BMC Reset Protocol: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  //
+  // Check if the service is available
+  //
+  if (!BmcResetProtocol->IsAvailable (BmcResetProtocol)) {
+    DEBUG ((DEBUG_ERROR, "%a: BMC Reset service not ready (Redfish not initialized)\n", __FUNCTION__));
+    return EFI_NOT_READY;
+  }
+
+  //
+  // Perform the factory reset with provided credentials
+  //
+  Status = BmcResetProtocol->FactoryReset (BmcResetProtocol, Username, Password);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Factory reset failed: %r\n", __FUNCTION__, Status));
+  } else {
+    DEBUG ((DEBUG_INFO, "%a: BMC Factory Reset successful\n", __FUNCTION__));
+  }
+
+  return Status;
+}
+
+/**
   This function processes the results of changes in configuration.
 
   @param[in]  This           Points to the EFI_HII_CONFIG_ACCESS_PROTOCOL.
@@ -3531,14 +3864,19 @@ ConfigCallback (
   EFI_STRING                 RequestString           = NULL;
   NVIDIA_CONFIG_HII_CONTROL  *NvidiaConfigHiiControl = NULL;
   UINTN                      VarSize                 = sizeof (*NvidiaConfigHiiControl);
+  CHAR16                     UsernameW[BMC_CREDENTIAL_INPUT_MAX_LEN];
+  CHAR16                     PasswordW[BMC_CREDENTIAL_INPUT_MAX_LEN];
+  CHAR8                      UsernameA[BMC_CREDENTIAL_INPUT_MAX_LEN];
+  CHAR8                      PasswordA[BMC_CREDENTIAL_INPUT_MAX_LEN];
 
   Status = EFI_UNSUPPORTED;
-  if ((Action == EFI_BROWSER_ACTION_FORM_OPEN) ||
-      (Action == EFI_BROWSER_ACTION_FORM_CLOSE))
-  {
+  if (Action == EFI_BROWSER_ACTION_FORM_OPEN) {
     //
-    // Do nothing for UEFI OPEN/CLOSE Action
+    // Update dynamic strings when form is opened
     //
+    UpdateBmcIpAddressDisplay (mHiiHandle);
+    Status = EFI_SUCCESS;
+  } else if (Action == EFI_BROWSER_ACTION_FORM_CLOSE) {
     Status = EFI_SUCCESS;
   } else if (Action == EFI_BROWSER_ACTION_CHANGED) {
     switch (QuestionId) {
@@ -3567,6 +3905,113 @@ ConfigCallback (
         StatusRegReset ();
         gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
         break;
+
+      case KEY_BMC_FACTORY_RESET:
+        //
+        // Confirm BMC factory reset with user
+        //
+        CreatePopUp (
+          EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+          &InputKey,
+          L"BMC Factory Reset",
+          L"",
+          L"This will reset BMC to factory defaults!",
+          L"WARNING: Console connection will be lost temporarily.",
+          L"",
+          L"Press 'Y' to confirm, any other key to cancel.",
+          NULL
+          );
+
+        if ((InputKey.UnicodeChar != L'Y') && (InputKey.UnicodeChar != L'y')) {
+          //
+          // User cancelled
+          //
+          Status = EFI_SUCCESS;
+          break;
+        }
+
+        //
+        // Prompt for credentials (never stored, used immediately)
+        //
+        Status = PromptForTextInput (
+                   L"Enter BMC Username",
+                   UsernameW,
+                   sizeof (UsernameW),
+                   FALSE
+                   );
+        if (EFI_ERROR (Status)) {
+          //
+          // User cancelled or error
+          //
+          ZeroMem (UsernameW, sizeof (UsernameW));
+          break;
+        }
+
+        Status = PromptForTextInput (
+                   L"Enter BMC Password",
+                   PasswordW,
+                   sizeof (PasswordW),
+                   TRUE
+                   );
+        if (EFI_ERROR (Status)) {
+          //
+          // User cancelled or error - zero out username too
+          //
+          ZeroMem (UsernameW, sizeof (UsernameW));
+          ZeroMem (PasswordW, sizeof (PasswordW));
+          break;
+        }
+
+        //
+        // Convert Unicode to ASCII
+        //
+        UnicodeStrToAsciiStrS (UsernameW, UsernameA, sizeof (UsernameA));
+        UnicodeStrToAsciiStrS (PasswordW, PasswordA, sizeof (PasswordA));
+
+        //
+        // Zero out Unicode copies immediately
+        //
+        ZeroMem (UsernameW, sizeof (UsernameW));
+        ZeroMem (PasswordW, sizeof (PasswordW));
+
+        //
+        // Perform the reset with credentials
+        //
+        Status = PerformBmcFactoryReset (UsernameA, PasswordA);
+
+        //
+        // Zero out ASCII credentials immediately after use
+        //
+        ZeroMem (UsernameA, sizeof (UsernameA));
+        ZeroMem (PasswordA, sizeof (PasswordA));
+
+        if (EFI_ERROR (Status)) {
+          CreatePopUp (
+            EFI_LIGHTGRAY | EFI_BACKGROUND_RED,
+            &InputKey,
+            L"BMC Factory Reset Failed!",
+            L"",
+            L"Please verify credentials and try again.",
+            L"",
+            L"Press any key to continue.",
+            NULL
+            );
+        } else {
+          CreatePopUp (
+            EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE,
+            &InputKey,
+            L"BMC Factory Reset Initiated",
+            L"",
+            L"The BMC is now resetting to factory defaults.",
+            L"Console connection will be lost shortly.",
+            L"Please reconnect after BMC completes reset.",
+            NULL
+            );
+        }
+
+        Status = EFI_SUCCESS;
+        break;
+
       case KEY_MAX_CORES:
         TotalEnabledCores = GetTotalEnabledCores ();
         if (!IsActiveCoresValid (Value->u32)) {

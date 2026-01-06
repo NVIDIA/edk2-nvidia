@@ -2602,6 +2602,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
   Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
   Silicon/NVIDIA/Drivers/RedfishChassisInfoCollectorDxe/RedfishChassisInfoCollectorDxe.inf
+  Silicon/NVIDIA/Drivers/RedfishBmcResetDxe/RedfishBmcResetDxe.inf
   RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
   RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
   RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf

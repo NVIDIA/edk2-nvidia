@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2013-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -897,6 +897,7 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/PlatformRedfishBootDxe/PlatformRedfishBootDxe.inf
   INF Silicon/NVIDIA/Drivers/PlatformRedfishOverrideDxe/PlatformRedfishOverrideDxe.inf
   INF Silicon/NVIDIA/Drivers/RedfishChassisInfoCollectorDxe/RedfishChassisInfoCollectorDxe.inf
+  INF Silicon/NVIDIA/Drivers/RedfishBmcResetDxe/RedfishBmcResetDxe.inf
   INF RedfishClientPkg/Features/SecureBootDatabaseCollectionDxe/SecureBootDatabaseCollectionDxe.inf
   INF RedfishClientPkg/Converter/SecureBootDatabaseCollection/RedfishSecureBootDatabaseCollection_Dxe.inf
   INF RedfishClientPkg/Features/SecureBootDatabase/v1_0_1/Dxe/SecureBootDatabaseDxe.inf

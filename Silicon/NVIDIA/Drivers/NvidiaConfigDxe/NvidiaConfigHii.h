@@ -1,7 +1,7 @@
 /** @file
  *  Nvidia Configuration Dxe
  *
- *  SPDX-FileCopyrightText: Copyright (c) 2020-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *  Copyright (c) 2017, Linaro Limited. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -78,6 +78,7 @@
 #define TH500_MPAM42_CONFIGURATION_FORM_ID         0x0038
 #define TH500_MPAM43_CONFIGURATION_FORM_ID         0x0039
 #define TH500_MPAM44_CONFIGURATION_FORM_ID         0x003A
+#define BMC_CONFIGURATION_FORM_ID                  0x003B
 
 #define KEY_ENABLE_PCIE_CONFIG          0x1000
 #define KEY_ENABLE_PCIE_IN_OS_CONFIG    0x1001
@@ -125,6 +126,8 @@
 #define KEY_SOC_DISPLAY_HANDOFF_METHOD  0x102B
 #define KEY_FORCED_SNOOP_PROMOTION      0x102C
 #define KEY_LOCK_ALL_VARS_CONFIG        0x102D
+#define KEY_BMC_CONFIG                  0x102E
+#define KEY_BMC_FACTORY_RESET           0x102F
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101

@@ -1,0 +1,51 @@
+## @file
+#  Redfish BMC Reset DXE Driver
+#
+#  This driver provides BMC factory reset capability via Redfish.
+#  It implements the Redfish Config Handler protocol to receive the
+#  Redfish service during boot. Credentials are passed directly at
+#  reset time.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION               = 0x00010005
+  BASE_NAME                 = RedfishBmcResetDxe
+  FILE_GUID                 = 7A9E3F5B-8D2C-4E1F-B6A4-0C5D9E8F7B2A
+  MODULE_TYPE               = DXE_DRIVER
+  VERSION_STRING            = 1.0
+  ENTRY_POINT               = RedfishBmcResetEntryPoint
+  UNLOAD_IMAGE              = RedfishBmcResetUnload
+
+[Sources]
+  RedfishBmcResetDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  RedfishPkg/RedfishPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  NetLib
+  RedfishLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gEdkIIRedfishConfigHandlerProtocolGuid          ## PRODUCES
+  gNvidiaBmcResetProtocolGuid                     ## PRODUCES
+  gEfiRestExServiceBindingProtocolGuid            ## CONSUMES
+  gEfiRestExProtocolGuid                          ## CONSUMES
+  gEfiSmbiosProtocolGuid                          ## CONSUMES
+
+[Depex]
+  TRUE
