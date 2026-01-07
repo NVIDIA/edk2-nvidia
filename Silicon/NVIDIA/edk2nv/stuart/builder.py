@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft Corporation.
-# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -190,18 +190,13 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         '''
         return self._jobs
 
-    def BuildConfigFile(self):
-        ''' Builds the kconfig .config file for platform if needed.
+    def LoadKConfig(self):
+        ''' Create a Kconfig object, load our config, and return it.
 
         '''
         from kconfiglib import Kconfig
 
         ws_dir = Path(self.settings.GetWorkspaceRoot())
-        config_fullpath = ws_dir / self.settings.GetNvidiaConfigDir()
-
-        self.config_out = config_fullpath / ".config"
-        self.defconfig_out = config_fullpath / "defconfig"
-        config_out_dsc = config_fullpath / "config.dsc.inc"
 
         kconf_file = self.settings.GetKConfigFile()
         if (kconf_file == None):
@@ -238,6 +233,21 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         # Keep the config values
         self.kconf_syms.update(kconf.syms)
 
+        return kconf
+
+    def BuildConfigFile(self):
+        ''' Builds the kconfig .config file for platform if needed.
+
+        '''
+        ws_dir = Path(self.settings.GetWorkspaceRoot())
+        config_fullpath = ws_dir / self.settings.GetNvidiaConfigDir()
+
+        self.config_out = config_fullpath / ".config"
+        self.defconfig_out = config_fullpath / "defconfig"
+        config_out_dsc = config_fullpath / "config.dsc.inc"
+
+        kconf = self.LoadKConfig()
+
         if kconf.warnings:
             # Put a blank line between warnings to make them easier to read
             for warning in kconf.warnings:
@@ -258,6 +268,16 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         tmp_config.unlink()
         print(f"Configuration saved to {self.config_out}")
 
+        # If menuconfig was requested, run it now.  It will update .config in
+        # place.
+        if self._menuconfig:
+            from menuconfig import menuconfig
+            os.environ["KCONFIG_CONFIG"] = str(self.config_out)
+            menuconfig(kconf)
+
+            # Reload the config
+            kconf = self.LoadKConfig()
+
         # Generate a minimal config.
         tmp_config = self.defconfig_out.with_suffix(".tmp")
         kconf.write_min_config(tmp_config,
@@ -265,11 +285,6 @@ class NVIDIAPlatformBuilder(UefiBuilder):
         self.ConvertToDos(tmp_config, self.defconfig_out)
         tmp_config.unlink()
         print(f"Minimal configuration saved to {self.defconfig_out}")
-
-        if self._menuconfig:
-            from menuconfig import menuconfig
-            os.environ["KCONFIG_CONFIG"] = str(self.config_out)
-            menuconfig(kconf)
 
         # Create version of config that edk2 can consume
         with open(self.config_out, "r") as f, open(config_out_dsc, "w") as fo:
