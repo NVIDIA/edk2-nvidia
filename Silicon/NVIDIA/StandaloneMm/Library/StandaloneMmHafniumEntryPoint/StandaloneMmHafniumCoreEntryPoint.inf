@@ -1,7 +1,7 @@
 ## @file
 # Module entry point library for DXE core.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
@@ -69,9 +69,9 @@
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
   gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString
   gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
-  gNVIDIATokenSpaceGuid.PcdUefiVersionString
 
 [BuildOptions]
   GCC:*_*_*_CC_FLAGS = -fpie

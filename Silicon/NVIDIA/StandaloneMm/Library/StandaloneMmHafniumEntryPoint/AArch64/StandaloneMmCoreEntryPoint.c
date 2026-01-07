@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -73,8 +73,6 @@ STATIC CONST UINT32  mSpmMinorVer = ARM_SPM_MM_SUPPORT_MINOR_VERSION;
 
 STATIC CONST UINT32  mSpmMajorVerFfa = ARM_FFA_LEGACY_MAJOR_VERSION;
 STATIC CONST UINT32  mSpmMinorVerFfa = ARM_FFA_LEGACY_MINOR_VERSION;
-
-STATIC CHAR8  Version[VERSION_STR_MAX];
 
 /*
  * Helper function get a 32-bit property from the Manifest and accessing it in a way
@@ -1215,15 +1213,29 @@ _ModuleEntryPointC (
   EFI_PHYSICAL_ADDRESS          ImageBase;
   STMM_COMM_BUFFERS             *CommBuffersHob;
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfoHob;
+  CHAR8                         Buffer[150];
 
+  /*
+   * We're limited to 128 characters on some platforms, so output the version
+   * and build date on different lines.
+   */
   AsciiSPrint (
-    Version,
-    sizeof (Version),
+    Buffer,
+    sizeof (Buffer),
     "%s (version %s)\r\n",
     (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
     (CHAR16 *)PcdGetPtr (PcdUefiVersionString)
     );
-  DebugPrint (DEBUG_ERROR, Version);
+  DebugPrint (DEBUG_ERROR, Buffer);
+
+  AsciiSPrint (
+    Buffer,
+    sizeof (Buffer),
+    "%s (built on %s)\r\n",
+    (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
+    (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
+    );
+  DebugPrint (DEBUG_ERROR, Buffer);
 
   DEBUG ((DEBUG_ERROR, "EntryPoint: MemorySize=0x%lx DTB@0x%p\n", TotalSPMemorySize, DTBAddress));
 

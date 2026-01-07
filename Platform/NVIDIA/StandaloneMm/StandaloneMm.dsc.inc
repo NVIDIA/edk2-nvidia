@@ -33,9 +33,6 @@
 #
 ################################################################################
 [PcdsFixedAtBuild]
-  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
-  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"StandaloneMm"
-
   ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
   gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0000C3903DC
   ## Register 21(i = 21) is to log the FW image name.

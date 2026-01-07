@@ -1,6 +1,6 @@
 /** @file
 
-SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define OPTEE_OS_UID1                   0xe7f811e3
 #define OPTEE_OS_UID2                   0xaf630002
 #define OPTEE_OS_UID3                   0xa5d5c51b
-#define VERSION_STR_MAX                 0x100
 #define RASFW_VMID                      0x8003
 #define STMM_VMID                       0x8002
 #define SATMC_VMID                      0x8001

@@ -2,7 +2,7 @@
   Entry point to the Standalone MM Foundation when initialized during the SEC
   phase on ARM platforms
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -21,6 +21,7 @@
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/BaseLib.h>
+#include <Library/PrintLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
@@ -383,6 +384,24 @@ _ModuleEntryPoint (
   // Call the MM Core entry point
   //
   ProcessModuleEntryPointList (HobStart);
+
+  /*
+   * We're limited to 128 characters on some platforms, so output the version
+   * and build date on different lines.
+   */
+  DEBUG ((
+    DEBUG_ERROR,
+    "%s (version %s)\r\n",
+    (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
+    (CHAR16 *)PcdGetPtr (PcdUefiVersionString)
+    ));
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%s (built on %s)\r\n",
+    (CHAR16 *)PcdGetPtr (PcdFirmwareFullNameString),
+    (CHAR16 *)PcdGetPtr (PcdUefiDateTimeBuiltString)
+    ));
 
   DEBUG ((DEBUG_INFO, "Shared Cpu Driver EP %p\n", (VOID *)CpuDriverEntryPoint));
 

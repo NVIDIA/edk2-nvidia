@@ -1,7 +1,7 @@
 ## @file
 # Module entry point library for StMM.
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
@@ -51,6 +51,11 @@
   gEfiStandaloneMmDeviceMemoryRegions
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString
+  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString
 
 #
 # This configuration fails for CLANGPDB, which does not support PIE in the GCC

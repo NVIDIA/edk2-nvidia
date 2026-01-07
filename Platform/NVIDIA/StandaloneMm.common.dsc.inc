@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -91,6 +91,9 @@
 #
 ################################################################################
 [PcdsFixedAtBuild]
+  gNVIDIATokenSpaceGuid.PcdFirmwareNickNameString|L"STMM:"
+  gNVIDIATokenSpaceGuid.PcdFirmwareFullNameString|L"$(BUILD_NAME)"
+
   #  DEBUG_INIT      0x00000001  // Initialization
   #  DEBUG_WARN      0x00000002  // Warnings
   #  DEBUG_LOAD      0x00000004  // Load events
@@ -138,4 +141,5 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableCollectStatistics|TRUE
 
 [PcdsFixedAtBuild.common]
-  gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING) $(BUILD_DATE_TIME)"
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
+  gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
