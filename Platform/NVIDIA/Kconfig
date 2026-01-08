@@ -2,7 +2,7 @@
 #
 #  Config file for NVIDIA UEFI builds
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -716,6 +716,20 @@ menu "Hardware support"
     help
       Use UTC serial port driver
   endchoice
+
+  if DEBUG_SERIAL_PORT_TCU
+    config DEBUG_SERIAL_PORT_TCU_RX_MAILBOX
+    hex "TCU RX Mailbox address"
+    default 0x03C10000
+    help
+      Address of the TCU RX mailbox for serial port communication
+
+    config DEBUG_SERIAL_PORT_TCU_TX_MAILBOX
+    hex "TCU TX Mailbox address"
+    default 0x0C168000
+    help
+      Address of the TCU TX mailbox for serial port communication
+  endif
 
   config DEFAULT_REAL_TIME_CLOCK_MAXIM
   bool

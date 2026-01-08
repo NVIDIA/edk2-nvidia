@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library's Private Structures.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -33,9 +33,6 @@
 #define DEFAULT_BLINFO_LOCATION_ADDRESS  0x0C390154
 
 #define TEGRA_SYSTEM_MEMORY_BASE  0X80000000
-
-#define TEGRA_COMBINED_UART_RX_MAILBOX  0X03C10000
-#define TEGRA_COMBINED_UART_TX_MAILBOX  0X0C168000
 
 UINT64
 GetT264BlCarveoutOffset (

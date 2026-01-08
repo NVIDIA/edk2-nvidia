@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -861,8 +861,8 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   # TCUart - Serial Terminal
   #
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|0x03C10000
-  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|0x0C168000
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartRxMailbox|$(CONFIG_DEBUG_SERIAL_PORT_TCU_RX_MAILBOX)
+  gNVIDIATokenSpaceGuid.PcdTegraCombinedUartTxMailbox|$(CONFIG_DEBUG_SERIAL_PORT_TCU_TX_MAILBOX)
 !endif
 
 !ifdef CONFIG_DEBUG_SERIAL_PORT_UTC
