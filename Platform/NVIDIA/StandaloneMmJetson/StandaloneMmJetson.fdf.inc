@@ -1,10 +1,10 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-  !include Platform/NVIDIA/StandaloneMmFfa.common.fdf.inc
+  !include Platform/NVIDIA/StandaloneMmFfaLegacy.common.fdf.inc
 
 ################################################################################
 #

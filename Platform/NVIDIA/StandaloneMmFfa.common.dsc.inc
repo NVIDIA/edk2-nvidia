@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -13,7 +13,6 @@
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
 
 !include Platform/NVIDIA/StandaloneMm.common.dsc.inc
-!include Platform/NVIDIA/StandaloneMm.legacy.dsc.inc
 
 ################################################################################
 #
@@ -86,11 +85,6 @@
 #
 ###################################################################################################
 [Components.common]
-  #
-  # MM Core
-  #
-  Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
-
   #
   # MM Qspi Driver
   #

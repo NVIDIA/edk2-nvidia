@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -19,3 +19,9 @@
 [LibraryClasses.common.MM_STANDALONE]
   HobLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmHobLib/StandaloneMmHobLib.inf
   MemoryAllocationLib|Silicon/StandaloneMmPkgLegacy/Library/StandaloneMmMemoryAllocationLib/StandaloneMmMemoryAllocationLib.inf
+
+[Components.common]
+  #
+  # MM Core
+  #
+  Silicon/StandaloneMmPkgLegacy/Core/StandaloneMmCore.inf
