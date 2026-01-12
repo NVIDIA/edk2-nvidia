@@ -183,6 +183,17 @@ BcbGetActiveFwBootChain (
   );
 
 /**
+  Check Bcb to see if an OTA is in progress
+
+  @retval                  True if OTA is in progress
+**/
+BOOLEAN
+EFIAPI
+BcbIsInOta (
+  VOID
+  );
+
+/**
   Force Bcb active boot chain metadata to current boot chain if not in sync.
 
   @param[in]               Image Handle to access block device

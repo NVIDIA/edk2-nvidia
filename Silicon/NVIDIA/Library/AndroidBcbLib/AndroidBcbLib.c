@@ -30,6 +30,7 @@ CONST UINT32  kDefaultBootAttempts = 3;
 
 static MiscCmdType             CacheCmdType          = MISC_CMD_TYPE_MAX;
 NVIDIA_BR_BCT_UPDATE_PROTOCOL  *mBrBctUpdateProtocol = NULL;
+STATIC BOOLEAN                 AndroidIsInOta        = FALSE;
 
 /**
   Dump the BootCtrl Metadata for debug purpose.
@@ -621,6 +622,8 @@ AndroidBcbCheckAndUpdateRetryCount (
       DEBUG ((DEBUG_ERROR, "%a: Got %r trying to retry_count -- for chain %u\r\n", __FUNCTION__, Status, MscActiveSlotIndex));
       return Status;
     }
+
+    AndroidIsInOta = TRUE;
   }
 
   DEBUG_CODE_BEGIN ();
@@ -695,4 +698,13 @@ AndroidBcbGetVerityCorrupted (
   DEBUG ((DEBUG_INFO, "%a: Slot %u VerityCorrupted = %u\r\n", __FUNCTION__, MscActiveSlotIndex, *VerityCorrupted));
 
   return EFI_SUCCESS;
+}
+
+BOOLEAN
+EFIAPI
+BcbIsInOta (
+  VOID
+  )
+{
+  return AndroidIsInOta;
 }

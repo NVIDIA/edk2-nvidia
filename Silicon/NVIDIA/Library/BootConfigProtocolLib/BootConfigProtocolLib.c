@@ -1,7 +1,7 @@
 /** @file
   BootConfig Protocol Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -259,6 +259,36 @@ BootConfigAddSlotSuffix (
 }
 
 /**
+ * Adds androidboot.in_OTA to the boot configuration.
+ *
+ * @retval EFI_SUCCESS The androidboot.in_OTA was added successfully.
+ * @retval Other The operation failed with an error status.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+BootConfigAddIfInOta (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig update protocol\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "in_OTA", BcbIsInOta () == TRUE ? "1" : "0");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add androidboot.in_OTA to bootconfig\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+/**
  * Adds quiescent boot info to the boot configuration.
  *
  * @retval EFI_SUCCESS The slot_suffix was added successfully.
@@ -350,6 +380,11 @@ BootConfigPrepareBootTimeArgs (
   EFI_STATUS  Status;
 
   Status = BootConfigAddSlotSuffix ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = BootConfigAddIfInOta ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
