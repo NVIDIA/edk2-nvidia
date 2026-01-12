@@ -1,0 +1,33 @@
+#/** @file
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 1.29
+  BASE_NAME                      = SystemFiberLib
+  FILE_GUID                      = 26ea111e-dbc0-44ae-a4e9-e6b19d0d6810
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SystemFiberLib
+
+
+[Sources]
+  SystemFiberLib.c
+
+[Sources.AARCH64]
+  AArch64/SystemFiberLibAArch64.c
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  MemoryAllocationLib
+  SystemContextLib
+
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
