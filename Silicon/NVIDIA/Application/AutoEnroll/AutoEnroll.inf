@@ -1,0 +1,40 @@
+[Defines]
+  INF_VERSION    = 0x0001001B
+  BASE_NAME      = AutoEnroll
+  FILE_GUID      = AAAAAAAA-AAAA-4AAA-9AAA-AAAAAAAAAAAA
+  MODULE_TYPE    = UEFI_APPLICATION
+  VERSION_STRING = 1.0
+  ENTRY_POINT    = UefiMain
+
+[Sources]
+  AutoEnroll.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  DevicePathLib
+  FileHandleLib
+  ShellCEntryLib
+  DebugLib
+  PcdLib
+  HiiLib
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gEfiFileInfoGuid
+  gEfiImageSecurityDatabaseGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid

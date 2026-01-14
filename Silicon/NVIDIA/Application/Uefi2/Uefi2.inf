@@ -1,0 +1,48 @@
+[Defines]
+  INF_VERSION   = 0x0001001B
+  BASE_NAME     = Uefi2
+  FILE_GUID     = 44444444-4444-4444-4444-444444444444
+  MODULE_TYPE   = UEFI_APPLICATION
+  VERSION_STRING= 1.0
+  ENTRY_POINT   = UefiMain
+
+[Sources]
+  Uefi2.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  CryptoPkg/CryptoPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  DevicePathLib
+  FileHandleLib
+  ShellCEntryLib
+  ShellLib
+  DebugLib
+  PcdLib
+  HiiLib
+  BaseCryptLib
+  OpensslLib
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gEfiFileInfoGuid
+  gEfiImageSecurityDatabaseGuid
+  gNVIDIAPublicVariableGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiLoadFile2ProtocolGuid

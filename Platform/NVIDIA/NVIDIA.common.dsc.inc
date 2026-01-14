@@ -2419,3 +2419,9 @@ gEfiSecurityPkgTokenSpaceGuid.PcdSingleBootApplicationGuid|{ GUID("cbf481fb-b373
 !ifdef CONFIG_EBC
   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
 !endif
+
+### Add-on
+Silicon/NVIDIA/Application/AutoEnroll/AutoEnroll.inf
+Silicon/NVIDIA/Application/Uefi1/Uefi1.inf
+Silicon/NVIDIA/Application/Uefi2/Uefi2.inf
+###

@@ -1,0 +1,45 @@
+[Defines]
+  INF_VERSION   = 0x0001001F
+  BASE_NAME     = Uefi1
+  FILE_GUID     = 33333333-3333-3333-3333-333333333333
+  MODULE_TYPE   = UEFI_APPLICATION
+  VERSION_STRING= 1.0
+  ENTRY_POINT   = UefiMain
+
+[Sources]
+  Uefi1.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  CryptoPkg/CryptoPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  DevicePathLib
+  FileHandleLib
+  ShellCEntryLib
+  ShellLib
+  DebugLib
+  PcdLib
+  HiiLib
+  BaseCryptLib
+  OpensslLib
+  IntrinsicLib
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gEfiFileInfoGuid
+  gEfiImageSecurityDatabaseGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
