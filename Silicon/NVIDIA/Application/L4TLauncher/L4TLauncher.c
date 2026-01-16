@@ -1453,21 +1453,23 @@ ExtLinuxBoot (
   CHAR8                      SWModule[] = "kernel";
   INTN                       FdtStatus;
 
-  // Process Args
-  ArgSize = StrSize (BootOption->BootArgs) + MAX_CBOOTARG_SIZE;
-  NewArgs = AllocateCopyPool (ArgSize, BootOption->BootArgs);
-  if (NewArgs == NULL) {
-    Status = EFI_OUT_OF_RESOURCES;
-    goto Exit;
-  }
+  // Process Args if present
+  if (BootOption->BootArgs != NULL) {
+    ArgSize = StrSize (BootOption->BootArgs) + MAX_CBOOTARG_SIZE;
+    NewArgs = AllocateCopyPool (ArgSize, BootOption->BootArgs);
+    if (NewArgs == NULL) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Exit;
+    }
 
-  Status = gBS->LocateProtocol (&gAndroidBootImgProtocolGuid, NULL, (VOID **)&AndroidBootProtocol);
-  if (!EFI_ERROR (Status)) {
-    if (AndroidBootProtocol->AppendArgs != NULL) {
-      Status = AndroidBootProtocol->AppendArgs (NewArgs, ArgSize);
-      if (EFI_ERROR (Status)) {
-        ErrorPrint (L"%a: Failed to get platform addition arguments\r\n", __FUNCTION__);
-        goto Exit;
+    Status = gBS->LocateProtocol (&gAndroidBootImgProtocolGuid, NULL, (VOID **)&AndroidBootProtocol);
+    if (!EFI_ERROR (Status)) {
+      if (AndroidBootProtocol->AppendArgs != NULL) {
+        Status = AndroidBootProtocol->AppendArgs (NewArgs, ArgSize);
+        if (EFI_ERROR (Status)) {
+          ErrorPrint (L"%a: Failed to get platform addition arguments\r\n", __FUNCTION__);
+          goto Exit;
+        }
       }
     }
   }
