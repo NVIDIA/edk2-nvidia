@@ -24,6 +24,7 @@
 #include <Library/BootConfigProtocolLib.h>
 
 #include <Library/AvbLib.h>
+#include <Library/NctLib.h>
 
 STATIC EFI_PHYSICAL_ADDRESS       mInitRdBaseAddress     = 0;
 STATIC UINT64                     mInitRdSize            = 0;
@@ -976,6 +977,13 @@ AndroidBootDxeLoadDtb (
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add slot_suffix to BootConfigProtocol\n", __FUNCTION__, Status));
         }
 
+        if ((PcdGetBool (PcdBootAndroidImage))) {
+          Status = NctDumpTnspecToDtb ();
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to dump tnspec to Dtb\n", __FUNCTION__, Status));
+          }
+        }
+
         Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
         if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
           BootConfigEntry = (CHAR8 *)FdtGetProp (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
@@ -1007,6 +1015,12 @@ AndroidBootDxeLoadDtb (
           }
         } else {
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
+        }
+
+        Status = NctDumpNctToDtb (DtbCopy);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add nct info\n", __FUNCTION__, Status));
+          goto Exit;
         }
 
         gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (FdtTotalSize (CurrentDtb)));

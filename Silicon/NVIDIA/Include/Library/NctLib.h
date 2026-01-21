@@ -2,7 +2,7 @@
 
   NctLib library
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -268,6 +268,37 @@ EFIAPI
 NctGetSerialNumber (
   OUT CHAR8   *SerialNumber,
   IN  UINT32  BufferSize
+  );
+
+/**
+ * Dump tnspec from Nvidia Configrature Table.
+ *
+ * @retval EFI_SUCCESS            The tnspec was dumpped successfully.
+ */
+EFI_STATUS
+EFIAPI
+NctDumpTnspecToDtb (
+  VOID
+  );
+
+/**
+ * Dump NCT items (spec, factory-mode) into a /nct node of the given DTB.
+ *
+ * Creates the /nct node if it does not already exist, then populates:
+ *   /nct/spec          (string)  from NCT_ID_SPEC
+ *   /nct/factory-mode  (uint32)  from NCT_ID_FACTORY_MODE
+ *
+ * @param[in,out] Dtb  Pointer to a writable Flattened Device Tree blob.
+ *
+ * @retval EFI_SUCCESS            All properties set successfully.
+ * @retval EFI_INVALID_PARAMETER  Dtb is NULL.
+ * @retval EFI_NOT_FOUND          Failed to create /nct node.
+ * @retval EFI_DEVICE_ERROR       fdt_setprop failed.
+ */
+EFI_STATUS
+EFIAPI
+NctDumpNctToDtb (
+  IN OUT VOID  *Dtb
   );
 
 #endif /* _NCT_LIB_H_ */

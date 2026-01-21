@@ -1,7 +1,7 @@
 /** @file
   EDK2 API for NctLib
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,8 +16,12 @@
 #include <Library/PrintLib.h>
 #include <Library/HandleParsingLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Library/SiblingPartitionLib.h>
 #include <Library/NctLib.h>
+#include <Library/FdtLib.h>
+#include <Library/DeviceTreeHelperLib.h>
+#include <Library/PlatformResourceLib.h>
 
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
@@ -28,8 +32,9 @@
 #define NCT_SPEC_ID_NAME   ("\"id\":\"")
 #define NCT_SPEC_CFG_NAME  ("\"config\":\"")
 
-STATIC BOOLEAN  IsNctInitialized = FALSE;
-STATIC VOID     *NctPtr          = NULL;
+STATIC BOOLEAN        IsNctInitialized = FALSE;
+STATIC NCT_PART_HEAD  *NctHead;
+STATIC VOID           *NctPtr = NULL;
 
 /**
  * Get readable spec id/config from NCT
@@ -118,7 +123,6 @@ NctInit (
   EFI_HANDLE                   *HandleBuffer = NULL;
   EFI_BLOCK_IO_PROTOCOL        *BlockIo;
   EFI_DISK_IO_PROTOCOL         *DiskIo;
-  NCT_PART_HEAD                *NctHead;
   UINTN                        NctSize;
 
   DEBUG ((DEBUG_INFO, "%a: Enter NCT init\n", __FUNCTION__));
@@ -363,6 +367,204 @@ NctGetSerialNumber (
   }
 
   AsciiStrCpyS (SerialNumber, BufferSize, Item.SerialNumber.Sn);
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * Get tnspec from Nvidia Configrature Table.
+ *
+ * @param[out] Tnspec  Output buffer to store Tnspec string
+ *
+ * @retval EFI_SUCCESS            The serial number was gotten successfully.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+NctGetTnspec (
+  OUT CHAR8  **Tnspec
+  )
+{
+  EFI_STATUS  Status = EFI_SUCCESS;
+  CHAR8       *NctTnspecPtr;
+  UINT32      Len;
+
+  if (IsNctInitialized == FALSE) {
+    Status = NctInit (NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to initialize NCT\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  // Check if TNS field present is correct
+  if (CompareMem (&NctHead->TnsId, TNS_MAGIC_ID, TNS_MAGIC_ID_LEN)) {
+    DEBUG ((DEBUG_ERROR, "%a: tns ID error (0x%x/0x%p:%s)\n", __FUNCTION__, NctHead->TnsId, TNS_MAGIC_ID, TNS_MAGIC_ID_LEN));
+  }
+
+  // Lenggh of tnspec in NCT
+  Len = NctHead->TnsLen;
+  if ((Len == 0) || (Len > MAX_TNSPEC_LEN)) {
+    DEBUG ((DEBUG_ERROR, "%a: tnspec length is %d, should be between 0 and %d\n", __FUNCTION__, Len, MAX_TNSPEC_LEN));
+    return EFI_BAD_BUFFER_SIZE;
+  }
+
+  NctTnspecPtr = (CHAR8 *)((CHAR8 *)NctPtr + NctHead->TnsOff);
+  if (NctTnspecPtr[Len] != '\0') {
+    DEBUG ((DEBUG_ERROR, "%a: No NULL termination for tnspec\n", __FUNCTION__));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Tnspec = NctTnspecPtr;
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * Dump tnspec from Nvidia Configrature Table.
+ *
+ * @retval EFI_SUCCESS            The tnspec was dumpped successfully.
+ */
+EFI_STATUS
+EFIAPI
+NctDumpTnspecToDtb (
+  VOID
+  )
+{
+  VOID        *DeviceTree;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  INT32       Node;
+  INT32       TnspecNode;
+  INT32       Ret;
+  CHAR8       *Tnspec;
+
+  Status = NctGetTnspec (&Tnspec);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get tnspec from NCT\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTree);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get dtb ptr\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Node = FdtPathOffset (DeviceTree, "/chosen");
+
+  // Find or create /chosen/tnspec subnode
+  TnspecNode = FdtPathOffset (DeviceTree, "/chosen/tnspec");
+  if (TnspecNode < 0) {
+    // /chosen/tnspec subnode doesn't exist, create it
+    DEBUG ((DEBUG_INFO, "%a: /chosen/tnspec subnode not found, creating it\n", __FUNCTION__));
+    TnspecNode = FdtAddSubnode (DeviceTree, Node, "tnspec");
+    if (TnspecNode < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to create /chosen/tnspec subnode: %d\n", __FUNCTION__, TnspecNode));
+      return EFI_NOT_FOUND;
+    }
+  }
+
+  // Set the tnspec property in /chosen/tnspec subnode
+  Ret = FdtSetProp (DeviceTree, TnspecNode, "tnspec", Tnspec, AsciiStrLen (Tnspec) + 1);
+  if (Ret) {
+    DEBUG ((DEBUG_ERROR, "%a: Could not set tnspec property in /chosen/tnspec: %d\n", __FUNCTION__, Ret));
+    return EFI_NOT_FOUND;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * Create a top-level DTB node if it does not already exist.
+ *
+ * @param[in,out] Dtb       Pointer to FDT blob.
+ * @param[in]     NodePath  Absolute path starting with '/'.
+ *
+ * @return  Node offset (>= 0) on success, or negative fdt error code.
+ */
+STATIC
+INT32
+NctCreateNode (
+  IN OUT VOID         *Dtb,
+  IN     CONST CHAR8  *NodePath
+  )
+{
+  INT32  Node;
+
+  Node = FdtPathOffset (Dtb, NodePath);
+  if (Node < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: node %a not found, creating it\n", __FUNCTION__, NodePath));
+    Node = FdtAddSubnode (Dtb, 0, NodePath + 1);
+    if (Node < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: failed to create node %a: %d\n", __FUNCTION__, NodePath, Node));
+    }
+  }
+
+  return Node;
+}
+
+/**
+ * Dump NCT items (spec, factory-mode) into a /nct node of the given DTB.
+ */
+EFI_STATUS
+EFIAPI
+NctDumpNctToDtb (
+  IN OUT VOID  *Dtb
+  )
+{
+  EFI_STATUS  Status;
+  NCT_ITEM    Item;
+  INT32       NctNode;
+  INT32       FdtErr;
+  UINT32      CellValue;
+
+  if (Dtb == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (IsNctInitialized == FALSE) {
+    Status = NctInit (NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: NCT init failed: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  NctNode = NctCreateNode (Dtb, "/nct");
+  if (NctNode < 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  /* /nct/spec (string) from NCT_ID_SPEC */
+  Status = NctReadItem (NCT_ID_SPEC, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read NCT_ID_SPEC: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  FdtErr = FdtSetProp (Dtb, NctNode, "spec", Item.Spec.Data, AsciiStrLen ((CHAR8 *)Item.Spec.Data) + 1);
+  if (FdtErr < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: fdt_setprop spec failed: %d\n", __FUNCTION__, FdtErr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: /nct/spec = %a\n", __FUNCTION__, (CHAR8 *)Item.Spec.Data));
+
+  /* /nct/factory-mode (uint32 cell) from NCT_ID_FACTORY_MODE */
+  Status = NctReadItem (NCT_ID_FACTORY_MODE, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read NCT_ID_FACTORY_MODE: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  CellValue = CpuToFdt32 (Item.FactoryMode.Flag);
+  FdtErr    = FdtSetProp (Dtb, NctNode, "factory-mode", &CellValue, sizeof (CellValue));
+  if (FdtErr < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: fdt_setprop factory-mode failed: %d\n", __FUNCTION__, FdtErr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: /nct/factory-mode = %u\n", __FUNCTION__, Item.FactoryMode.Flag));
 
   return EFI_SUCCESS;
 }
