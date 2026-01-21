@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,8 +22,8 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/SystemFiberLib.h>
 #include <Library/TimerLib.h>
-#include <Library/SystemContextLib.h>
 
 #include <Protocol/AsyncDriverStatus.h>
 #include <Protocol/NonDiscoverableDevice.h>
@@ -40,7 +40,6 @@
 SCMI_CLOCK2_PROTOCOL                           *gScmiClockProtocol    = NULL;
 NVIDIA_CLOCK_PARENTS_PROTOCOL                  *gClockParentsProtocol = NULL;
 STATIC EFI_HANDLE                              mImageHandle           = NULL;
-STATIC EFI_SYSTEM_CONTEXT_AARCH64              MainContext            = { 0 };
 STATIC UINTN                                   SubThreadsRunning      = 0;
 STATIC NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL     *AsyncProtocol         = NULL;
 STATIC NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *CurrentThread         = NULL;
@@ -208,10 +207,7 @@ DeviceDiscoveryThreadCallback (
   )
 {
   CurrentThread = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)Context;
-  SwapSystemContext (
-    (EFI_SYSTEM_CONTEXT)&MainContext,
-    (EFI_SYSTEM_CONTEXT)&CurrentThread->Context
-    );
+  ResumeSystemFiber (CurrentThread->Fiber);
 }
 
 /**
@@ -239,10 +235,7 @@ DeviceDiscoveryThreadMicroSecondDelay (
   ThreadContext = CurrentThread;
   gBS->SetTimer (ThreadContext->Timer, TimerRelative, MicroSeconds*10);
   CurrentThread = NULL;
-  SwapSystemContext (
-    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
-    (EFI_SYSTEM_CONTEXT)&MainContext
-    );
+  YieldSystemFiber (ThreadContext->Fiber);
   return MicroSeconds;
 }
 
@@ -255,12 +248,14 @@ DeviceDiscoveryThreadMicroSecondDelay (
 STATIC
 VOID
 DeviceThreadMain (
-  IN NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext
+  IN VOID  *Context
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                              Status;
+  NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT  *ThreadContext;
 
-  CurrentThread = ThreadContext;
+  ThreadContext = (NVIDIA_DEVICE_DISCOVERY_THREAD_CONTEXT *)Context;
+
   SubThreadsRunning++;
 
   Status = DeviceDiscoveryNotify (
@@ -284,16 +279,10 @@ DeviceThreadMain (
                NULL,
                NULL
                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a, driver returned %r to start notification\r\n", __FUNCTION__, Status));
+    }
   }
-
-  SwapSystemContext (
-    (EFI_SYSTEM_CONTEXT)&ThreadContext->Context,
-    (EFI_SYSTEM_CONTEXT)&MainContext
-    );
-
-  // Should never get here
-  ASSERT (FALSE);
-  CpuDeadLoop ();
 }
 
 /**
@@ -349,17 +338,15 @@ ThreadedDeviceStart (
   NewContext->DriverHandle = DriverHandle;
   NewContext->Node         = Node;
 
-  // Don't change the special registers
-  GetSystemContext ((EFI_SYSTEM_CONTEXT)&MainContext);
-  NewContext->Context.ELR  = MainContext.ELR;
-  NewContext->Context.SPSR = MainContext.SPSR;
-  NewContext->Context.FPSR = MainContext.FPSR;
-  NewContext->Context.ESR  = MainContext.ESR;
-  NewContext->Context.FAR  = MainContext.FAR;
-
-  NewContext->Context.LR = (UINT64)DeviceThreadMain;
-  NewContext->Context.SP = NewContext->StackBase + THREAD_STACK_SIZE;
-  NewContext->Context.X0 = (UINT64)NewContext;
+  Status = CreateSystemFiber (
+             DeviceThreadMain,
+             NewContext,
+             THREAD_STACK_SIZE,
+             &NewContext->Fiber
+             );
+  if (EFI_ERROR (Status)) {
+    goto ErrorExit;
+  }
 
   if (AsyncProtocol == NULL) {
     AsyncProtocol = (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL *)AllocatePool (sizeof (NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL));
@@ -373,10 +360,7 @@ ThreadedDeviceStart (
   }
 
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  SwapSystemContext (
-    (EFI_SYSTEM_CONTEXT)&MainContext,
-    (EFI_SYSTEM_CONTEXT)&NewContext->Context
-    );
+  ResumeSystemFiber (NewContext->Fiber);
   gBS->RestoreTPL (OldTpl);
 
 ErrorExit:
