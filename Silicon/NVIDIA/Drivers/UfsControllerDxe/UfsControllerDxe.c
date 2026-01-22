@@ -2,7 +2,7 @@
 
   UFS Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -167,6 +167,11 @@ STATIC UINT32  TxBurstClosureDelay = 0;
 #define UFS_VNDR_HCLKDIV_1US_TICK_OFFSET  0xFC
 #define REG_UFS_VNDR_HCLKDIV              PcdGet32 (PcdUfsHclkDiv)
 
+// burst length
+#define UFS_VNDR_MAX_BURST_LENGTH_OFFSET     0xc0
+#define UFS_VNDR_MAX_BURST_LENGTH_START_BIT  13
+#define UFS_VNDR_MAX_BURST_LENGTH_END_BIT    15
+
 STATIC
 EFI_STATUS
 UfsDmeCmd (
@@ -261,6 +266,16 @@ UfsCallback (
       MmioOr32 (BaseAddressAux + UFSHC_AUX_UFSHC_DEV_CTRL_OFFSET, UFSHC_DEV_RESET);
       MmioWrite32 (BaseAddress + UFS_VNDR_HCLKDIV_1US_TICK_OFFSET, REG_UFS_VNDR_HCLKDIV);
       DeviceDiscoveryEnableClock (ControllerHandle, "mphy_force_ls_mode", FALSE);
+      if (PcdGet8 (PcdUfsMaxBurstLength) != 0) {
+        DEBUG ((DEBUG_INFO, "%a: set max burst=%u\n", __FUNCTION__, PcdGet8 (PcdUfsMaxBurstLength)));
+        MmioBitFieldWrite32 (
+          BaseAddress + UFS_VNDR_MAX_BURST_LENGTH_OFFSET,
+          UFS_VNDR_MAX_BURST_LENGTH_START_BIT,
+          UFS_VNDR_MAX_BURST_LENGTH_END_BIT,
+          PcdGet8 (PcdUfsMaxBurstLength)
+          );
+      }
+
       break;
 
     case EdkiiUfsHcPreLinkStartup:

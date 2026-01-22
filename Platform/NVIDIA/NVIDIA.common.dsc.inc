@@ -1378,6 +1378,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
+  gNVIDIATokenSpaceGuid.PcdUfsMaxBurstLength|5
   gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|TRUE
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000

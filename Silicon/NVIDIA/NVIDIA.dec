@@ -2,7 +2,7 @@
 #
 #  This Package provides all definitions for NVIDIA silicon
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -811,6 +811,9 @@
 
 #Specify UFS HS Series (RATE_A=1 RATE_B=2)
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x1|UINT32|0x000000AE
+
+#Specify 3-bit UFS max burst length. 0 leaves default value 3->len=16. Length is 2^(value+1)
+  gNVIDIATokenSpaceGuid.PcdUfsMaxBurstLength|0|UINT8|0x000000B2
 
 #Skip UFS re-init if HCE already set
   gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|FALSE|BOOLEAN|0x000000B5

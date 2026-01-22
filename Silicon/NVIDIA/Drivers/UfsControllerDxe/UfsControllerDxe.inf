@@ -2,7 +2,7 @@
 #
 #  UFS Controller Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -47,6 +47,7 @@
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries
   gNVIDIATokenSpaceGuid.PcdUfsSkipReinit
+  gNVIDIATokenSpaceGuid.PcdUfsMaxBurstLength
 
 [Depex]
   TRUE
