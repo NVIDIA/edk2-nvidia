@@ -1,0 +1,48 @@
+## @file
+# Instance of HOB Library for Standalone MM Core.
+#
+# HOB Library implementation for the Standalone MM Core. Does not have a constructor.
+#  Uses gHobList defined in the Standalone MM Core Entry Point Library.
+#
+# Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = HobLib
+  FILE_GUID                      = 7aab363b-85d0-4a60-a53d-9c1f92fdd43f
+  MODULE_TYPE                    = MM_CORE_STANDALONE
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x00010032
+  LIBRARY_CLASS                  = HobLib|MM_CORE_STANDALONE
+
+#
+#  VALID_ARCHITECTURES           = X64 AARCH64 ARM
+#
+[Sources.common]
+  Common.c
+
+[Sources.X64]
+  X64/StandaloneMmCoreHobLib.c
+
+[Sources.AARCH64, Sources.ARM]
+  Arm/StandaloneMmCoreHobLib.c
+  Arm/StandaloneMmCoreHobLibInternal.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
+
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+
+[Guids]
+  gEfiHobListGuid                               ## CONSUMES  ## SystemTable
