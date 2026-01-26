@@ -1,0 +1,44 @@
+## @file
+#  Unit test for CreateHttpBootOption function
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = CreateHttpBootOptionGoogleTest
+  FILE_GUID       = 7a3b2c1d-8e4f-5a6b-9c7d-8e5f6a7b8c9d
+  MODULE_TYPE     = HOST_APPLICATION
+  VERSION_STRING  = 1.0
+
+[Sources]
+  CreateHttpBootOptionTest.cpp
+  CreateHttpBootOptionStub.c
+  ../CreateHttpBootOptionImpl.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PrintLib
+  DevicePathLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiSimpleNetworkProtocolGuid
+
+[Guids]
+  gEfiGlobalVariableGuid
+  gNvidiaHttpBootConfigGuid

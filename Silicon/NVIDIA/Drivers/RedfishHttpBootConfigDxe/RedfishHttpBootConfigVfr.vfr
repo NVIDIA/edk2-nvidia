@@ -1,0 +1,50 @@
+/** @file
+  VFR file for Redfish HTTP Boot Configuration.
+
+  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+#include <Uefi/UefiMultiPhase.h>
+#include <Guid/HiiPlatformSetupFormset.h>
+#include "RedfishHttpBootConfigFormset.h"
+
+formset
+  guid      = REDFISH_HTTP_BOOT_CONFIG_FORMSET_GUID,
+  title     = STRING_TOKEN(STR_FORM_TITLE),
+  help      = STRING_TOKEN(STR_FORM_HELP),
+  classguid = EFI_HII_PLATFORM_SETUP_FORMSET_GUID,
+
+  //
+  // In-memory HII variable storage for HTTP_BOOT_URI
+  // We'll manually read/write the UEFI variable in ExtractConfig/RouteConfig
+  //
+  varstore HTTP_BOOT_URI_STORAGE,
+    varid = HTTP_BOOT_URI_VARSTORE_ID,
+    name  = HttpBootUri,
+    guid  = NVIDIA_HTTP_BOOT_CONFIG_GUID;
+
+  //
+  // Hidden form (no goto from main menu, data-only)
+  // Only accessible via Redfish, not shown in BIOS UI
+  //
+  form formid = FORM_ID_HTTP_BOOT_CONFIG,
+       title = STRING_TOKEN(STR_FORM_TITLE);
+
+    subtitle text = STRING_TOKEN(STR_HTTP_BOOT_SUBTITLE);
+
+    //
+    // Single HTTP_BOOT_URI string question (statically defined for Redfish)
+    //
+    string varid   = HttpBootUri.HttpBootUri,
+           questionid = KEY_HTTP_BOOT_URI,
+           prompt = STRING_TOKEN(STR_HTTP_BOOT_URI_PROMPT),
+           help   = STRING_TOKEN(STR_HTTP_BOOT_URI_HELP),
+           minsize = 0,
+           maxsize = HTTP_BOOT_URI_MAX_SIZE,
+    endstring;
+
+  endform;
+
+endformset;

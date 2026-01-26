@@ -1,0 +1,36 @@
+## @file
+#  Unit test for CompareAndSyncBootOptions function
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = CompareAndSyncBootOptionsGoogleTest
+  FILE_GUID       = 4b2c8d3e-7f6a-5c9b-8d1e-9f7a6b5c4d3e
+  MODULE_TYPE     = HOST_APPLICATION
+  VERSION_STRING  = 1.0
+
+[Sources]
+  CompareAndSyncBootOptionsTest.cpp
+  CompareAndSyncBootOptionsStub.c
+  ../CompareAndSyncBootOptionsImpl.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  PrintLib
+
+[Guids]
+  gNvidiaHttpBootConfigGuid
+  gEfiGlobalVariableGuid

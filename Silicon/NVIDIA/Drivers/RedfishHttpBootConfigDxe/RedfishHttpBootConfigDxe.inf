@@ -1,0 +1,70 @@
+## @file
+#  Redfish HTTP Boot Configuration DXE driver
+#
+#  This driver exposes HTTP boot URI configuration through Redfish using HII.
+#  It creates a single HII question for HTTP_BOOT_URI that supports flexible formats
+#  with optional MAC address and one-time boot flag. Creates HTTP boot options when
+#  Redfish pushes configuration via RouteConfig.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RedfishHttpBootConfigDxe
+  FILE_GUID                      = 8c7d9a1e-5f2b-4a3d-9e1f-6c8b4a2d7e9f
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = RedfishHttpBootConfigEntryPoint
+
+[Sources]
+  RedfishHttpBootConfigDxe.c
+  RedfishHttpBootConfigDxe.h
+  RedfishHttpBootConfigUtils.c
+  RedfishHttpBootConfigUtils.h
+  CreateHttpBootOptionImpl.c
+  CompareAndSyncBootOptionsImpl.c
+  RedfishHttpBootConfigFormset.h
+  RedfishHttpBootConfigVfr.vfr
+  RedfishHttpBootConfigStrings.uni
+  RedfishHttpBootConfigMap.uni
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  RedfishPkg/RedfishPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  PrintLib
+  DevicePathLib
+  HiiLib
+  UefiHiiServicesLib
+  NetLib
+
+[Protocols]
+  gEfiHiiConfigAccessProtocolGuid        ## PRODUCES
+  gEfiHiiConfigRoutingProtocolGuid       ## CONSUMES
+  gEfiDevicePathProtocolGuid             ## CONSUMES
+  gEfiSimpleNetworkProtocolGuid          ## CONSUMES
+
+[Guids]
+  gNvidiaHttpBootConfigGuid              ## CONSUMES
+  gEfiGlobalVariableGuid                 ## CONSUMES
+  gRedfishHttpBootConfigFormsetGuid      ## PRODUCES
+
+[Depex]
+  gEfiHiiConfigRoutingProtocolGuid AND
+  gEfiVariableArchProtocolGuid AND
+  gEfiVariableWriteArchProtocolGuid AND
+  gEfiSimpleNetworkProtocolGuid

@@ -667,6 +667,15 @@ menu "Hardware support"
       imply NETWORKING_IPV6
       help
         Redfish support for BMC communication
+
+      config REDFISH_HTTP_BOOT_CONFIG
+      bool "Redfish HTTP Boot Configuration via HII"
+      depends on REDFISH
+      depends on NETWORKING_HTTP
+      help
+        Enable Redfish-controlled HTTP boot configuration using HII driver.
+        Exposes HTTP boot URI attributes via Redfish OEM extensions.
+        Automatically creates HTTP boot options based on Redfish configuration.
     endmenu
   endif
 

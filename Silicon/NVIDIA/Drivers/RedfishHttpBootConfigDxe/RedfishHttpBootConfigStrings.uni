@@ -1,0 +1,17 @@
+/** @file
+  String definitions for Redfish HTTP Boot Configuration.
+
+  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+
+/=#
+
+#langdef en-US "English"
+
+#string STR_FORM_TITLE              #language en-US  "Redfish HTTP Boot Configuration"
+#string STR_FORM_HELP               #language en-US  "Configure HTTP boot URI via Redfish"
+#string STR_HTTP_BOOT_SUBTITLE      #language en-US  "HTTP Boot URI (configured via Redfish)"
+#string STR_HTTP_BOOT_URI_PROMPT    #language en-US  "HTTP_BOOT_URI"
+#string STR_HTTP_BOOT_URI_HELP      #language en-US  "Format: [MAC||][once|]URI (e.g., 00:11:22:33:44:55|once|http://server/image.img)"

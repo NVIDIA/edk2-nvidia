@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -171,6 +171,28 @@
   }
 
   Silicon/NVIDIA/Library/WildcardStringLib/UnitTest/WildcardStringLibGoogleTest.inf
+
+  #
+  # Redfish HTTP Boot Config Driver GoogleTest
+  #
+  Silicon/NVIDIA/Drivers/RedfishHttpBootConfigDxe/GoogleTest/RedfishHttpBootConfigGoogleTest.inf {
+    <LibraryClasses>
+      UefiBootServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockUefiBootServicesTableLib/MockUefiBootServicesTableLib.inf
+  }
+
+  #
+  # CreateHttpBootOption GoogleTest
+  #
+  Silicon/NVIDIA/Drivers/RedfishHttpBootConfigDxe/GoogleTest/CreateHttpBootOptionGoogleTest.inf {
+    <LibraryClasses>
+      UefiBootServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockUefiBootServicesTableLib/MockUefiBootServicesTableLib.inf
+      UefiRuntimeServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockUefiRuntimeServicesTableLib/MockUefiRuntimeServicesTableLib.inf
+  }
+
+  #
+  # CompareAndSyncBootOptions GoogleTest
+  #
+  Silicon/NVIDIA/Drivers/RedfishHttpBootConfigDxe/GoogleTest/CompareAndSyncBootOptionsGoogleTest.inf
 
   Silicon/NVIDIA/Drivers/FvbNorFlashDxe/UnitTest/VarIntUnitTestsHost.inf {
     <LibraryClasses>

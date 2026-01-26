@@ -1,0 +1,43 @@
+## @file
+#  Unit test for Redfish HTTP Boot Configuration driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = RedfishHttpBootConfigGoogleTest
+  FILE_GUID       = 9c8d1a2e-6f3b-5a4d-8e2f-7c9b5a3d8e0f
+  MODULE_TYPE     = HOST_APPLICATION
+  VERSION_STRING  = 1.0
+
+[Sources]
+  RedfishHttpBootConfigTest.cpp
+  FindNicByMacTest.cpp
+  IsUriIPv6Test.cpp
+  BuildHttpBootDevicePathTest.cpp
+  DevicePathLibStub.c
+  ../RedfishHttpBootConfigUtils.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  NetworkPkg/NetworkPkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  GoogleTestLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiSimpleNetworkProtocolGuid
+
+[Guids]
+  gNvidiaHttpBootConfigGuid

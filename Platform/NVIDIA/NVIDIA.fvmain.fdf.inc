@@ -905,6 +905,14 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF RedfishClientPkg/Converter/SecureBootDatabase/v1_0_1/RedfishSecureBootDatabase_V1_0_1_Dxe.inf
   INF RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
   INF RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
+
+!ifdef CONFIG_REDFISH_HTTP_BOOT_CONFIG
+  #
+  # Redfish HTTP Boot Configuration
+  #
+  INF Silicon/NVIDIA/Drivers/RedfishHttpBootConfigDxe/RedfishHttpBootConfigDxe.inf
+!endif
+
 !endif
 
   #

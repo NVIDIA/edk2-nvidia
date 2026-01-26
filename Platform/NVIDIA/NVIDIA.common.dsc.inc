@@ -2623,6 +2623,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   RedfishClientPkg/RedfishTaskServiceDxe/RedfishTaskServiceDxe.inf
   RedfishClientPkg/RedfishSecureBootKeysDxe/RedfishSecureBootKeysDxe.inf
 
+!ifdef CONFIG_REDFISH_HTTP_BOOT_CONFIG
+  #
+  # Redfish HTTP Boot Configuration
+  #
+  Silicon/NVIDIA/Drivers/RedfishHttpBootConfigDxe/RedfishHttpBootConfigDxe.inf
+!endif
+
 !endif
 
   #
