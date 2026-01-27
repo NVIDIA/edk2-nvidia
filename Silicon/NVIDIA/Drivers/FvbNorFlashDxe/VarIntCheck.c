@@ -2,7 +2,7 @@
 
   Standalone MM Variable Integrity driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024 - 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -362,10 +362,16 @@ GetMeasurementSize (
   UINT32  *MeasSize
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS  Status = EFI_SUCCESS;
 
-  Status    = EFI_SUCCESS;
-  *MeasSize = 0;
+  /* Check if the platform is T234 */
+  if (IsOpteePresent ()) {
+    /* For forward compatibility, the header size is included in the MeaSize for T234. */
+    *MeasSize = HEADER_SZ_BYTES;
+  } else {
+    *MeasSize = 0;
+  }
+
   switch (PcdGet32 (PcdHashApiLibPolicy)) {
     case HASH_ALG_SHA256:
     case HASH_ALG_SM3_256:
@@ -1433,11 +1439,13 @@ VarIntInit (
   VarIntProto->Validate              = VarIntValidate;
   VarIntProto->NorFlashProtocol      = NorFlashProto;
   VarIntProto->MeasurementSize       = MeasSize + HEADER_SZ_BYTES;
-  VarIntProto->CurMeasurement        = AllocateAlignedPages (EFI_SIZE_TO_PAGES (MeasSize), EFI_PAGE_SIZE);
+  VarIntProto->CurMeasurement        = AllocateAlignedPages (EFI_SIZE_TO_PAGES (VarIntProto->MeasurementSize), EFI_PAGE_SIZE);
   if (VarIntProto->CurMeasurement == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not enough resources to allocate Measurement Buffer - %r", __FUNCTION__, Status);
   }
+
+  ZeroMem (VarIntProto->CurMeasurement, VarIntProto->MeasurementSize);
 
   VarIntProto->PartitionData = AllocateRuntimeZeroPool (VarIntProto->PartitionSize);
   if (VarIntProto->PartitionData == NULL) {
