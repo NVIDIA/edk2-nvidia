@@ -2,7 +2,7 @@
 
   Tegra Firmware Management Protocol support
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -533,6 +533,308 @@ GetPackageImageIndex (
   return Status;
 }
 
+STATIC
+BOOLEAN
+EFIAPI
+BufferIsAllFf (
+  IN  CONST VOID  *Buffer,
+  IN  UINTN       Bytes
+  )
+{
+  CONST UINT8  *Ptr;
+  UINTN        Index;
+
+  Ptr = (CONST UINT8 *)Buffer;
+  for (Index = 0; Index < Bytes; Index++) {
+    if (Ptr[Index] != 0xFF) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+  Check if the padding in the last erase block that the FW image occupies is all 0xFF.
+
+  The image may not end on a erase block boundary. This function checks only the bytes
+  from ImageBytes to the end of that last erase block ([ImageBytes, ALIGN_VALUE(ImageBytes, Attributes.EraseBlockSize)))
+  are 0xFF. The rest of the partition is not checked.
+
+  @param[in]  FwImageProtocol       FwImage protocol structure pointer
+  @param[in]  ImageBytes            Image size (bytes) from FW package
+  @param[in]  ReadFlags             FwImage flags for the read. See
+                                    NVIDIA_FW_IMAGE_PROTOCOL.Read()
+  @param[out] TailIsAllFf           TRUE if bytes [ImageBytes, end of last erase block) are all 0xFF
+
+  @retval EFI_SUCCESS               Tail check completed
+  @retval Others                    Error occurred (caller should fall back to write)
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CheckLastBlockTailAllFf (
+  IN  NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol,
+  IN  UINTN                     ImageBytes,
+  IN  UINTN                     ReadFlags,
+  OUT BOOLEAN                   *TailIsAllFf
+  )
+{
+  EFI_STATUS           Status;
+  FW_IMAGE_ATTRIBUTES  Attributes;
+  UINTN                EndOfLastBlock;
+  UINTN                TailInLastBlockBytes;
+  UINTN                Remaining;
+  UINTN                ReadOffset;
+
+  if ((FwImageProtocol == NULL) || (TailIsAllFf == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = FwImageProtocol->GetAttributes (FwImageProtocol, &Attributes);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s GetAttributes failed: %r\n",
+      __FUNCTION__,
+      FwImageProtocol->ImageName,
+      Status
+      ));
+    return Status;
+  }
+
+  if (Attributes.EraseBlockSize == 0) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s Attributes.EraseBlockSize is 0\n",
+      __FUNCTION__,
+      FwImageProtocol->ImageName
+      ));
+    return EFI_UNSUPPORTED;
+  }
+
+  if (ImageBytes > MAX_UINTN - Attributes.EraseBlockSize + 1) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s ImageBytes=%u > MAX_UINTN - Attributes.EraseBlockSize + 1\n",
+      __FUNCTION__,
+      FwImageProtocol->ImageName,
+      ImageBytes
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *TailIsAllFf         = FALSE;
+  EndOfLastBlock       = ALIGN_VALUE (ImageBytes, Attributes.EraseBlockSize);
+  TailInLastBlockBytes = EndOfLastBlock - ImageBytes;
+
+  //
+  // Image ends on a erase block boundary; no padding in the last erase block to check.
+  //
+  if (TailInLastBlockBytes == 0) {
+    *TailIsAllFf = TRUE;
+    return EFI_SUCCESS;
+  }
+
+  Remaining  = TailInLastBlockBytes;
+  ReadOffset = ImageBytes;
+  while (Remaining > 0) {
+    UINTN  CompareSize;
+    UINTN  ReadSize;
+
+    CompareSize = (Remaining > mFmpDataBufferSize) ? mFmpDataBufferSize : Remaining;
+    ReadSize    = ALIGN_VALUE (CompareSize, Attributes.BlockSize);
+
+    //
+    // If the block size is larger than our scratch buffer, we cannot perform
+    // the comparison safely. Let caller fall back to write.
+    //
+    if (ReadSize > mFmpDataBufferSize) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %s tail check failed: readSize=%u > bufSize=%u\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        ReadSize,
+        mFmpDataBufferSize
+        ));
+      return EFI_UNSUPPORTED;
+    }
+
+    //
+    // If the read size is larger than the end of the last block or the read offset is larger than
+    // the end of the last block - read size, we cannot perform the comparison safely. Let caller
+    // fall back to write.
+    //
+    if ((ReadSize > EndOfLastBlock) || (ReadOffset > EndOfLastBlock - ReadSize)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %s tail check failed: readSize=%u + ReadOffset=%u > EndOfLastBlock=%u\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        ReadSize,
+        ReadOffset,
+        EndOfLastBlock
+        ));
+      return EFI_UNSUPPORTED;
+    }
+
+    Status = FwImageProtocol->Read (
+                                FwImageProtocol,
+                                ReadOffset,
+                                ReadSize,
+                                mFmpDataBuffer,
+                                ReadFlags
+                                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %s tail Read failed at offset=%u size=%u flags=0x%x: %r\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        ReadOffset,
+        ReadSize,
+        ReadFlags,
+        Status
+        ));
+      return Status;
+    }
+
+    if (!BufferIsAllFf ((CONST UINT8 *)mFmpDataBuffer, CompareSize)) {
+      *TailIsAllFf = FALSE;
+      return EFI_SUCCESS;
+    }
+
+    ReadOffset += CompareSize;
+    Remaining  -= CompareSize;
+  }
+
+  *TailIsAllFf = TRUE;
+  return EFI_SUCCESS;
+}
+
+/**
+  Compare an image's existing contents against the FW package data buffer.
+
+  @param[in]  FwImageProtocol       FwImage protocol structure pointer
+  @param[in]  Bytes                 Number of bytes to compare
+  @param[in]  DataBuffer            Pointer to FW package image data buffer
+  @param[in]  ReadFlags             FwImage flags for the read. See
+                                    NVIDIA_FW_IMAGE_PROTOCOL.Read()
+  @param[out] Match                 TRUE if image contents match DataBuffer
+
+  @retval EFI_SUCCESS               Comparison completed successfully
+  @retval Others                    An error occurred (caller may fall back to write)
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+CompareImageToBuffer (
+  IN  NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol,
+  IN  UINTN                     Bytes,
+  IN  CONST UINT8               *DataBuffer,
+  IN  UINTN                     ReadFlags,
+  OUT BOOLEAN                   *Match
+  )
+{
+  EFI_STATUS           Status;
+  FW_IMAGE_ATTRIBUTES  Attributes;
+  UINTN                CompareOffset;
+  UINTN                Remaining;
+
+  if ((FwImageProtocol == NULL) || (DataBuffer == NULL) || (Match == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Match = FALSE;
+
+  Status = FwImageProtocol->GetAttributes (FwImageProtocol, &Attributes);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: %s GetAttributes failed: %r\n",
+      __FUNCTION__,
+      FwImageProtocol->ImageName,
+      Status
+      ));
+    return Status;
+  }
+
+  CompareOffset = 0;
+  Remaining     = Bytes;
+  while (Remaining > 0) {
+    UINTN  CompareSize;
+    UINTN  ReadSize;
+
+    CompareSize = (Remaining > mFmpDataBufferSize) ? mFmpDataBufferSize : Remaining;
+    ReadSize    = ALIGN_VALUE (CompareSize, Attributes.BlockSize);
+
+    //
+    // If the block size is larger than our scratch buffer, we cannot perform
+    // the comparison safely. Let caller fall back to write.
+    //
+    if (ReadSize > mFmpDataBufferSize) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %s compare unsupported: readSize=%u > bufSize=%u (blockSize=%u)\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        ReadSize,
+        mFmpDataBufferSize,
+        Attributes.BlockSize
+        ));
+      return EFI_UNSUPPORTED;
+    }
+
+    Status = FwImageProtocol->Read (
+                                FwImageProtocol,
+                                CompareOffset,
+                                ReadSize,
+                                mFmpDataBuffer,
+                                ReadFlags
+                                );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: %s Read failed at offset=%u size=%u flags=0x%x: %r\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        CompareOffset,
+        ReadSize,
+        ReadFlags,
+        Status
+        ));
+      return Status;
+    }
+
+    if (CompareMem (mFmpDataBuffer, DataBuffer + CompareOffset, CompareSize) != 0) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: %s compare mismatch near offset=%u\n",
+        __FUNCTION__,
+        FwImageProtocol->ImageName,
+        CompareOffset
+        ));
+      *Match = FALSE;
+      return EFI_SUCCESS;
+    }
+
+    CompareOffset += CompareSize;
+    Remaining     -= CompareSize;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: %s compare match\n",
+    __FUNCTION__,
+    FwImageProtocol->ImageName
+    ));
+  *Match = TRUE;
+  return EFI_SUCCESS;
+}
+
 /**
   Write a buffer to a FwImage.
 
@@ -620,6 +922,9 @@ WriteImage (
   UINTN                        ImageIndex;
   CONST UINT8                  *DataBuffer;
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
+  UINTN                        ReadFlags;
+  BOOLEAN                      Match;
+  BOOLEAN                      TailAllFf;
 
   FwImageProtocol = FwImageFindProtocol (Name);
   if (FwImageProtocol == NULL) {
@@ -644,6 +949,67 @@ WriteImage (
 
   PkgImageInfo = FwPackageImageInfoPtr (Header, ImageIndex);
   DataBuffer   = (CONST UINT8 *)FwPackageImageDataPtr (Header, ImageIndex);
+
+  // Apply read-before-write optimization to regular images only (exclude GPT/mb1/pseudo)
+  if (  (StrCmp (FwImageProtocol->ImageName, FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != 0)
+     && (StrCmp (FwImageProtocol->ImageName, L"GPT") != 0)
+     && (StrCmp (FwImageProtocol->ImageName, L"mb1") != 0))
+  {
+    //
+    // Read-before-write optimization:
+    // If the destination already matches the FW package image data, skip the write.
+    //
+    if (Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A | FW_IMAGE_RW_FLAG_FORCE_PARTITION_B)) {
+      ReadFlags = Flags & (FW_IMAGE_RW_FLAG_FORCE_PARTITION_A | FW_IMAGE_RW_FLAG_FORCE_PARTITION_B);
+    } else {
+      //
+      // Writes default to inactive partition; compare against the same.
+      //
+      ReadFlags = FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE;
+    }
+
+    Match  = FALSE;
+    Status = CompareImageToBuffer (FwImageProtocol, PkgImageInfo->Bytes, DataBuffer, ReadFlags, &Match);
+    if (!EFI_ERROR (Status) && Match) {
+      TailAllFf = FALSE;
+      Status    = CheckLastBlockTailAllFf (FwImageProtocol, PkgImageInfo->Bytes, ReadFlags, &TailAllFf);
+      if (!EFI_ERROR (Status) && TailAllFf) {
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: %s image match and tail all 0xFF, skipping write\n",
+          __FUNCTION__,
+          Name
+          ));
+        //
+        // Treat skipped write as completed for progress accounting.
+        //
+        ImageWriteProgress (PkgImageInfo->Bytes);
+        return EFI_SUCCESS;
+      }
+
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: %s image match but tail not all 0xFF (or tail check error), will write\n",
+        __FUNCTION__,
+        Name
+        ));
+      //
+      // We intentionally fall back to write in this case. Ensure Status does not
+      // carry a tail-check error into the generic "compare failed" message below.
+      //
+      Status = EFI_SUCCESS;
+    }
+  }
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: %s compare failed (%r), falling back to write\n",
+      __FUNCTION__,
+      Name,
+      Status
+      ));
+  }
 
   Status = WriteImageFromBuffer (
              FwImageProtocol,
