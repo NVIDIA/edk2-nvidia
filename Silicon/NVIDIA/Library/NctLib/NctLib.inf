@@ -23,8 +23,6 @@
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  ShellPkg/ShellPkg.dec
-  EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -33,10 +31,11 @@
   UefiLib
   PrintLib
   FdtLib
-  HandleParsingLib
   DeviceTreeHelperLib
   PlatformResourceLib
-  FdtLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
 
 [Guids]
   gFdtTableGuid

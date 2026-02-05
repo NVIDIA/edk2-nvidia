@@ -1,7 +1,7 @@
 /** @file
   Android FMP Initialization Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,18 +16,27 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/DeviceTreeHelperLib.h>
+#include <Library/NctLib.h>
+#include <Library/PrintLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/BlockIo.h>
 #include <Protocol/DiskIo.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/SavedCapsuleProtocol.h>
+#include <Protocol/EFuse.h>
 
 #define FMP_WRITE_LOOP_SIZE    (64 * 1024)
 #define ANDROID_ESP_PARTITION  L"staging"
 // these can be parsed out from NCT
 #define TEGRA_PLATFORM_SPEC_VARIABLE_NAME  L"TegraPlatformSpec"
 #define AUTO_UPDATE_BRBCT_VARIABLE_NAME    L"AutoUpdateBrBct"
+
+#define T23X_FUSE_PRODUCTION_MODE_OFFSET  0x100
+#define T23X_FUSE_PRODUCTION_MODE_BIT     BIT0
+
+#define NCT_BOARD_INFO_PROC_FAB_LEN  sizeof(((NCT_BOARD_INFO *)0)->ProcFab)
+#define TEGRA_PLATFORM_SPEC_MAX_LEN  128
 
 STATIC NVIDIA_SAVED_CAPSULE_PROTOCOL  mProtocol;
 STATIC EFI_CAPSULE_HEADER             *mCapsuleHeader = NULL;
@@ -128,6 +137,108 @@ Exit:
   }
 
   return Status;
+}
+
+/**
+  Get TegraPlatformSpec string from NCT and Hardware.
+  Format: ${BOARDID}-${FAB}-${BOARDSKU}-${BOARDREV}-${fuselevel_s}-${hwchiprev}-${ext_target_board}
+
+  @param[out]  Buffer         Provided buffer to store platform spec string
+  @param[in]   BufferSize     Size of the buffer in bytes
+
+  @retval EFI_SUCCESS         Operation successful
+  @retval others              Error occurred
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+AndroidFmpGetPlatformSpec (
+  OUT CHAR8  *Buffer,
+  IN  UINTN  BufferSize
+  )
+{
+  EFI_STATUS             Status;
+  NCT_ITEM               NctItem;
+  NCT_BOARD_INFO         *BoardInfo;
+  NVIDIA_EFUSE_PROTOCOL  *EFuse;
+  UINT32                 ChipId;
+  UINT32                 FuseData;
+  UINT32                 ProductionMode;
+  UINT32                 MinorVersion;
+  CHAR8                  FabStr[NCT_BOARD_INFO_PROC_FAB_LEN + 1] = "";
+  CHAR8                  *BoardRevStr;
+  CHAR8                  *ExtTargetBoard = "android";
+  UINTN                  Index;
+
+  if ((Buffer == NULL) || (BufferSize == 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Read BOARD_INFO from NCT
+  Status = NctReadItem (NCT_ID_BOARD_INFO, &NctItem);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read NCT BOARD_INFO: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BoardInfo = &NctItem.BoardInfo;
+  // Convert ProcFab to ASCII string
+  for (Index = 0; Index < NCT_BOARD_INFO_PROC_FAB_LEN; Index++) {
+    FabStr[Index] = (CHAR8)((BoardInfo->ProcFab >> (Index * 8)) & 0xFF);
+  }
+
+  // FAB and BOARDREV have the same source
+  BoardRevStr = FabStr;
+
+  ChipId = TegraGetChipID ();
+  if (ChipId != T234_CHIP_ID) {
+    // Only t23x series are supported
+    DEBUG ((DEBUG_ERROR, "%a: Unsupported chip 0x%x for reading fuselevel\n", __FUNCTION__, ChipId));
+    return EFI_UNSUPPORTED;
+  }
+
+  Status = gBS->LocateProtocol (&gNVIDIAEFuseProtocolGuid, NULL, (VOID **)&EFuse);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate EFuse protocol: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = EFuse->ReadReg (EFuse, T23X_FUSE_PRODUCTION_MODE_OFFSET, &FuseData);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read production mode: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ProductionMode = (FuseData & T23X_FUSE_PRODUCTION_MODE_BIT) ? 1 : 0;
+
+  // Get hardware chip revision
+  MinorVersion = TegraGetMinorVersionNumber ();
+  if (MinorVersion == MAX_UINT32) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read minor version\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
+  }
+
+  /*
+   * Construct platform spec string:
+   * 1. BOARDID & BOARDSKU are zero-padded to 4 digits
+   * 2. BOARDREV is identical to FAB
+   * 3. ext_target_board defaults to "android"
+   */
+  AsciiSPrint (
+    Buffer,
+    BufferSize,
+    "%04u-%a-%04u-%a-%u-%x-%a",
+    BoardInfo->ProcBoardId,
+    FabStr,
+    BoardInfo->ProcSku,
+    BoardRevStr,
+    ProductionMode,
+    MinorVersion,
+    ExtTargetBoard
+    );
+
+  DEBUG ((DEBUG_INFO, "%a: TegraPlatformSpec %a\n", __FUNCTION__, Buffer));
+  return EFI_SUCCESS;
 }
 
 /**
@@ -246,19 +357,12 @@ AndroidFmpSimulateVars (
   )
 {
   EFI_STATUS  Status;
-  CHAR8       *mPlatformSpec       = NULL;
+  CHAR8       PlatformSpec[TEGRA_PLATFORM_SPEC_MAX_LEN];
   UINT32      mAutoUpdateBrBctFlag = 1;
-  INT32       NodeOffset;
 
-  Status = DeviceTreeGetNodeByPath ("/firmware/uefi", &NodeOffset);
+  Status = AndroidFmpGetPlatformSpec (PlatformSpec, sizeof (PlatformSpec));
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r getting /firmware/uefi\n", __FUNCTION__, Status));
-    goto Done;
-  }
-
-  Status = DeviceTreeGetNodeProperty (NodeOffset, "tegra-platform-spec", (CONST VOID **)&mPlatformSpec, NULL);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r getting node TegraPlatformSpec\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Got %r getting TegraPlatformSpec\n", __FUNCTION__, Status));
     goto Done;
   }
 
@@ -266,8 +370,8 @@ AndroidFmpSimulateVars (
                   TEGRA_PLATFORM_SPEC_VARIABLE_NAME,
                   &gNVIDIAPublicVariableGuid,
                   EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
-                  AsciiStrLen (mPlatformSpec) + 1,
-                  mPlatformSpec
+                  AsciiStrLen (PlatformSpec) + 1,
+                  PlatformSpec
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error setting variable %s: %r\n", __FUNCTION__, TEGRA_PLATFORM_SPEC_VARIABLE_NAME, Status));

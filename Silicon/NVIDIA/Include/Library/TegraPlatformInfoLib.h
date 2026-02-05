@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -132,6 +132,19 @@ TegraGetMajorVersion (
 **/
 CHAR8 *
 TegraGetMinorVersion (
+  VOID
+  );
+
+/**
+  Returns the Minor Chip Rev Number of the tegra platform.
+
+  This function returns the raw minor version number of the underlying tegra platform.
+
+  @retval MAX_UINT32  Error
+  @retval Other       Minor version number [0,15]
+**/
+UINT32
+TegraGetMinorVersionNumber (
   VOID
   );
 

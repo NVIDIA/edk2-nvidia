@@ -1,7 +1,7 @@
 ## @file
 #  Android FMP Initialization Dxe
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -20,7 +20,6 @@
 [Packages]
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
-  EmbeddedPkg/EmbeddedPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -30,7 +29,9 @@
   UefiDriverEntryPoint
   UefiLib
   UefiRuntimeServicesTableLib
-  DeviceTreeHelperLib
+  NctLib
+  PrintLib
+  TegraPlatformInfoLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
@@ -38,6 +39,7 @@
   gEfiDiskIoProtocolGuid
   gNVIDIASavedCapsuleProtocolGuid
   gNVIDIAAndroidFmpInitCompleteProtocolGuid
+  gNVIDIAEFuseProtocolGuid
 
 [Guids]
   gNVIDIAPublicVariableGuid
@@ -46,4 +48,4 @@
 [Pcd]
 
 [Depex]
-  gEfiBlockIoProtocolGuid
+  gEfiBlockIoProtocolGuid AND gNVIDIAEFuseProtocolGuid

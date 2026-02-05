@@ -2,7 +2,7 @@
 
   Tegra Platform Info Library.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -148,4 +148,18 @@ TegraGetMinorVersion (
 
 ExitTegraGetMinorVersion:
   return MinorRevEncoding[MinorRev][OptSubRev];
+}
+
+UINT32
+TegraGetMinorVersionNumber (
+  VOID
+  )
+{
+  INT32  SocId;
+
+  if (EFI_ERROR (TegraReadSocId (SMCCC_ARCH_SOC_ID_GET_SOC_REVISION, &SocId))) {
+    return MAX_UINT32;
+  }
+
+  return (SocId & SOC_ID_REVISION_MINORVER_MASK);
 }

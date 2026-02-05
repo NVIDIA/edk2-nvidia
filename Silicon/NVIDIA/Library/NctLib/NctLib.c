@@ -7,17 +7,15 @@
 
 **/
 
-#include <Uefi/UefiBaseType.h>
+#include <Uefi.h>
 
 #include <Library/BaseLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
-#include <Library/HandleParsingLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/SiblingPartitionLib.h>
 #include <Library/NctLib.h>
 #include <Library/FdtLib.h>
 #include <Library/DeviceTreeHelperLib.h>
@@ -277,7 +275,6 @@ Exit:
  * @param[out] Buf      Output buffer to store Nct Item
  *
  * @retval EFI_SUCCESS            All process is successful
- * @retval EFI_NOT_READY          Nct is not initialized
  * @retval EFI_INVALID_PARAMETER  "Id" exceeds limit or output "Buf" is NULL, or integrity broken
  */
 EFI_STATUS
@@ -291,9 +288,11 @@ NctReadItem (
   NCT_ENTRY   *Entry;
 
   if (IsNctInitialized == FALSE) {
-    DEBUG ((DEBUG_ERROR, "%a: Error: NCT has not been initialized\n", __FUNCTION__));
-    Status = EFI_NOT_READY;
-    goto Exit;
+    Status = NctInit (NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to initialize NCT\n", __FUNCTION__, Status));
+      return Status;
+    }
   }
 
   if (Id > NCT_ID_END) {
