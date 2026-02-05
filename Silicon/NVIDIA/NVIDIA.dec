@@ -513,6 +513,8 @@
   gNVIDIATokenSpaceGuid.PcdLogoScreenRatio|400|UINT16|0x00000165
   #Center of Logo Y Position in 1000ths
   gNVIDIATokenSpaceGuid.PcdLogoCenterY|382|UINT16|0x00000166
+  #Display boot information text
+  gNVIDIATokenSpaceGuid.PcdDisplayBootInfo|TRUE|BOOLEAN|0x00000170
 
 #Boot manager colors
   #Foreground color - Light gray

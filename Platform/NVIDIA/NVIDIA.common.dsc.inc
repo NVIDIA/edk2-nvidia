@@ -922,6 +922,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   gNVIDIATokenSpaceGuid.PcdLogoScreenRatio|$(CONFIG_LOGO_SCALED_SCREEN_RATIO)
   gNVIDIATokenSpaceGuid.PcdLogoCenterY|$(CONFIG_LOGO_SCALED_CENTER_Y)
+!ifdef CONFIG_DISPLAY_BOOT_INFO
+  gNVIDIATokenSpaceGuid.PcdDisplayBootInfo|TRUE
+!else
+  gNVIDIATokenSpaceGuid.PcdDisplayBootInfo|FALSE
+!endif
 
   gNVIDIATokenSpaceGuid.PcdBootManagerConOutAttributes|$(CONFIG_BOOT_MANAGER_CON_OUT_ATTRIBUTES)
 

@@ -603,6 +603,15 @@ menu "Hardware support"
       default "Silicon/NVIDIA/Drivers/Logo/LogoSingleBlack.inf" if USE_SINGLE_BLACK_LOGO
       help
         The name of the logo implementer driver.
+
+      config DISPLAY_BOOT_INFO
+      bool "Display Boot Information"
+      depends on LOGO
+      default y
+      help
+        Display system information and hotkey prompts on screen during boot.
+        When disabled, only the logo will be shown without text overlays.
+        This includes firmware version, date, and menu navigation hints.
     endmenu
 
     config USE_BOOT_MANAGER_BLACK_TEXT

@@ -1,7 +1,7 @@
 /** @file
   Implementation for PlatformBootManagerLib library class interfaces.
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (C) 2015-2016, Red Hat, Inc.
   Copyright (c) 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -2684,7 +2684,7 @@ PlatformBootManagerAfterConsole (
   //
   // Display system and hotkey information after console is ready.
   //
-  if (!PlatformGetSingleBootApp (NULL)) {
+  if (!PlatformGetSingleBootApp (NULL) && PcdGetBool (PcdDisplayBootInfo)) {
     DisplaySystemAndHotkeyInformation ();
   }
 
