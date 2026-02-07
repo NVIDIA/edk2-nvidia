@@ -2,7 +2,7 @@
 
   FW Partition Protocol NorFlash Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -390,11 +390,12 @@ FPNorFlashInitDevices (
     NorFlashInfo->NorFlash          = NorFlash;
     NorFlashInfo->UnalignedGptStart = GptGetGptDataOffset (OTHER_BOOT_CHAIN (mActiveBootChain), Attributes.MemoryDensity, Attributes.BlockSize);
 
-    DeviceInfo              = &NorFlashInfo->DeviceInfo;
-    DeviceInfo->DeviceName  = DeviceName;
-    DeviceInfo->DeviceRead  = FPNorFlashRead;
-    DeviceInfo->DeviceWrite = FPNorFlashWrite;
-    DeviceInfo->BlockSize   = Attributes.BlockSize;
+    DeviceInfo                 = &NorFlashInfo->DeviceInfo;
+    DeviceInfo->DeviceName     = DeviceName;
+    DeviceInfo->DeviceRead     = FPNorFlashRead;
+    DeviceInfo->DeviceWrite    = FPNorFlashWrite;
+    DeviceInfo->BlockSize      = Attributes.BlockSize;
+    DeviceInfo->EraseBlockSize = Attributes.BlockSize;
 
     mNumDevices++;
   }

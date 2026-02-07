@@ -2,7 +2,7 @@
 #
 #  FW partition standalone MM
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -41,7 +41,7 @@
 
 [Protocols]
   gNVIDIANorFlashProtocolGuid
-  gNVIDIAFwPartitionProtocolGuid
+  gNVIDIAFwPartitionMmHandlerGuid
   gNVIDIANorFlash2ProtocolGuid
 
 [Pcd]

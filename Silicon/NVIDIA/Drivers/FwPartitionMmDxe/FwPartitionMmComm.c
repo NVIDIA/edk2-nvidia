@@ -2,7 +2,7 @@
 
   MM FW partition protocol communication
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
   Copyright (c) Microsoft Corporation.<BR>
 
@@ -29,7 +29,7 @@ MmInitCommBuffer (
   }
 
   MmCommHeader = (EFI_MM_COMMUNICATE_HEADER *)mMmCommBuffer;
-  CopyGuid (&MmCommHeader->HeaderGuid, &gNVIDIAFwPartitionProtocolGuid);
+  CopyGuid (&MmCommHeader->HeaderGuid, &gNVIDIAFwPartitionMmHandlerGuid);
   MmCommHeader->MessageLength = DataSize + FW_PARTITION_COMM_HEADER_SIZE;
 
   FwImageCommHeader               = (FW_PARTITION_COMM_HEADER *)MmCommHeader->Data;

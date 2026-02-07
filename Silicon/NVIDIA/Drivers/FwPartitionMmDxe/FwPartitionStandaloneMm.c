@@ -2,7 +2,7 @@
 
   FW partition standalone MM
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -281,7 +281,7 @@ FwPartitionStandaloneMmInitialize (
   Handle = NULL;
   Status = gMmst->MmiHandlerRegister (
                     FwPartitionMmHandler,
-                    &gNVIDIAFwPartitionProtocolGuid,
+                    &gNVIDIAFwPartitionMmHandlerGuid,
                     &Handle
                     );
   ASSERT_EFI_ERROR (Status);

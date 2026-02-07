@@ -2,7 +2,7 @@
 
   FW Partition Device Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -138,8 +138,9 @@ FwPartitionGetAttributes (
               );
   PartitionInfo = &Private->PartitionInfo;
 
-  Attributes->Bytes     = PartitionInfo->Bytes;
-  Attributes->BlockSize = Private->DeviceInfo->BlockSize;
+  Attributes->Bytes          = PartitionInfo->Bytes;
+  Attributes->BlockSize      = Private->DeviceInfo->BlockSize;
+  Attributes->EraseBlockSize = Private->DeviceInfo->EraseBlockSize;
 
   return EFI_SUCCESS;
 }
@@ -765,6 +766,7 @@ FwPartitionAddPseudoPartition (
   DeviceInfo->DeviceWrite        = FwPartitionWriteToUpdateInactivePartitions;
   DeviceInfo->DeviceRead         = NULL;
   DeviceInfo->BlockSize          = 1;
+  DeviceInfo->EraseBlockSize     = 1;
 
   Status = FwPartitionAdd (
              Name,

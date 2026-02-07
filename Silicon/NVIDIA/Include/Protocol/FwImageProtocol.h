@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,8 +13,8 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define NVIDIA_FW_IMAGE_PROTOCOL_GUID  {0xd836a4a8, 0xdb25, 0x44a7, \
-  {0x9a, 0x3c, 0x9d, 0xb3, 0xd1, 0xb0, 0x23, 0x04}}
+#define NVIDIA_FW_IMAGE_PROTOCOL_GUID  {0xbeede8bd, 0x9cc0, 0x4bc4, \
+  {0x91, 0xb3, 0x13, 0x56, 0xd2, 0x5b, 0xc8, 0x8e}}
 
 #define FW_IMAGE_MAX_IMAGES  100
 #define FW_IMAGE_NAME_LENGTH                                    \
@@ -34,6 +34,7 @@ typedef struct {
   UINTN     ReadBytes;
   UINTN     WriteBytes;
   UINT32    BlockSize;
+  UINT32    EraseBlockSize;
 } FW_IMAGE_ATTRIBUTES;
 
 /**

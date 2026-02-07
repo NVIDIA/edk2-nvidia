@@ -2,7 +2,7 @@
 
   MM FW partition protocol driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -248,7 +248,8 @@ FPMmAddPartitions (
   }
 
   DEBUG ((DEBUG_INFO, "%a: Got %u image names from MM\n", __FUNCTION__, Count));
-  DeviceInfo = &mMmInfo[FW_PARTITION_MM_DEVICE_INDEX_NORMAL].DeviceInfo;
+  DeviceInfo                 = &mMmInfo[FW_PARTITION_MM_DEVICE_INDEX_NORMAL].DeviceInfo;
+  DeviceInfo->EraseBlockSize = *BrBctEraseBlockSize;
   for (Index = 0; Index < Count; Index++) {
     FW_PARTITION_MM_PARTITION_INFO  *PartitionInfo = &PartitionInfoBuffer[Index];
 
@@ -412,8 +413,8 @@ FwPartitionMmDxeInitialize (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_ERROR,
-      "%a - Failed to locate MmCommunication protocol! %r\n",
+      DEBUG_INFO,
+      "%a - Failed to locate MmPrmCommunication protocol! %r\n",
       __FUNCTION__,
       Status
       ));

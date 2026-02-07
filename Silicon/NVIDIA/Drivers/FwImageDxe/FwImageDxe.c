@@ -1,7 +1,7 @@
 /** @file
   FW Image Protocol Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -34,6 +34,7 @@ typedef struct FW_IMAGE_PRIVATE_DATA {
   UINTN                           ReadBytes;
   UINTN                           WriteBytes;
   UINT32                          BlockSize;
+  UINT32                          EraseBlockSize;
   NVIDIA_FW_PARTITION_PROTOCOL    *FwPartitionA;
   NVIDIA_FW_PARTITION_PROTOCOL    *FwPartitionB;
 
@@ -398,9 +399,10 @@ FwImageGetAttributes (
               FW_IMAGE_PRIVATE_DATA_SIGNATURE
               );
 
-  Attributes->ReadBytes  = Private->ReadBytes;
-  Attributes->WriteBytes = Private->WriteBytes;
-  Attributes->BlockSize  = Private->BlockSize;
+  Attributes->ReadBytes      = Private->ReadBytes;
+  Attributes->WriteBytes     = Private->WriteBytes;
+  Attributes->BlockSize      = Private->BlockSize;
+  Attributes->EraseBlockSize = Private->EraseBlockSize;
 
   return EFI_SUCCESS;
 }
@@ -471,8 +473,9 @@ FwImageGetPartitionAttributes (
       return Status;
     }
 
-    Private->ReadBytes = Attributes.Bytes;
-    Private->BlockSize = Attributes.BlockSize;
+    Private->ReadBytes      = Attributes.Bytes;
+    Private->BlockSize      = Attributes.BlockSize;
+    Private->EraseBlockSize = Attributes.EraseBlockSize;
 
     Partition = InactiveImagePartition (Private);
     Status    = Partition->GetAttributes (Partition, &Attributes);
@@ -480,8 +483,9 @@ FwImageGetPartitionAttributes (
       return Status;
     }
 
-    Private->WriteBytes = Attributes.Bytes;
-    Private->BlockSize  = MAX (Attributes.BlockSize, Private->BlockSize);
+    Private->WriteBytes     = Attributes.Bytes;
+    Private->BlockSize      = MAX (Attributes.BlockSize, Private->BlockSize);
+    Private->EraseBlockSize = MAX (Attributes.EraseBlockSize, Private->EraseBlockSize);
   } else {
     if (HasAImage (Private)) {
       Partition = Private->FwPartitionA;
@@ -495,12 +499,13 @@ FwImageGetPartitionAttributes (
       return Status;
     }
 
-    Private->ReadBytes  = Attributes.Bytes;
-    Private->WriteBytes = Attributes.Bytes;
-    Private->BlockSize  = Attributes.BlockSize;
+    Private->ReadBytes      = Attributes.Bytes;
+    Private->WriteBytes     = Attributes.Bytes;
+    Private->BlockSize      = Attributes.BlockSize;
+    Private->EraseBlockSize = Attributes.EraseBlockSize;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: %s r/w bytes=%u/%u blocksize=%u\n", __FUNCTION__, Private->Name, Private->ReadBytes, Private->WriteBytes, Private->BlockSize));
+  DEBUG ((DEBUG_INFO, "%a: %s r/w bytes=%u/%u blocksize=%u erasesize=%u\n", __FUNCTION__, Private->Name, Private->ReadBytes, Private->WriteBytes, Private->BlockSize, Private->EraseBlockSize));
 
   return EFI_SUCCESS;
 }

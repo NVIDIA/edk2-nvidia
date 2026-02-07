@@ -1,7 +1,7 @@
 /** @file
   FW Partition Protocol
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -13,8 +13,8 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define NVIDIA_FW_PARTITION_PROTOCOL_GUID  {0x52771b87, 0x204a, 0x4d7b, \
-    {0xab, 0x5c, 0xbe, 0xf8, 0x70, 0x1e, 0x84, 0x16}}
+#define NVIDIA_FW_PARTITION_PROTOCOL_GUID  {0x6d380dfb, 0x2cb7, 0x4503, \
+  {0xac, 0xad, 0x43, 0x70, 0xab, 0x2d, 0x76, 0xcd}}
 
 #define FW_PARTITION_NAME_LENGTH                                \
   (sizeof (((EFI_PARTITION_ENTRY *) 0)->PartitionName) /        \
@@ -29,6 +29,7 @@ typedef struct _NVIDIA_FW_PARTITION_PROTOCOL NVIDIA_FW_PARTITION_PROTOCOL;
 typedef struct {
   UINTN     Bytes;
   UINT32    BlockSize;
+  UINT32    EraseBlockSize;
 } FW_PARTITION_ATTRIBUTES;
 
 /**
