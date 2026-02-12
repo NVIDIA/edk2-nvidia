@@ -1,7 +1,7 @@
 /** @file
   Tegra Device Tree Overlay Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -242,7 +242,7 @@ match_type_done:
 
   for (i = 0; i < BoardInfo->IdCount; i++) {
     BoardId    = TegraBoardIdFromPartNumber (&BoardInfo->ProductIds[i]);
-    BoardIdLen = strlen (BoardId);
+    BoardIdLen = AsciiStrLen (BoardId);
     BoardFabId = GetFabId (BoardId, NULL);
     DEBUG ((
       DEBUG_INFO,
@@ -534,7 +534,7 @@ FdtCleanFixups (
 
   FdtBuf = NULL;
 
-  NodeLen  = strlen (NodeName);
+  NodeLen  = AsciiStrLen (NodeName);
   NodePath = (CHAR8 *)AllocateZeroPool (NodeLen+2);
   CopyMem ((VOID *)NodePath+1, (VOID *)NodeName, NodeLen);
   NodePath[0] = '/';

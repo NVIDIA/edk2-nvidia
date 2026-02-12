@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -98,9 +98,9 @@ AddBoardProperties (
         if (NodeOffset >= 0) {
           CameraId = AsciiStrStr (Eeprom->ProductId, CAMERA_EEPROM_PART_NAME);
           if (CameraId == NULL) {
-            fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, strlen (Eeprom->BoardId) + 1);
+            fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, AsciiStrLen (Eeprom->BoardId) + 1);
           } else {
-            fdt_appendprop (Dtb, NodeOffset, "ids", CameraId, strlen (CameraId) + 1);
+            fdt_appendprop (Dtb, NodeOffset, "ids", CameraId, AsciiStrLen (CameraId) + 1);
           }
 
           fdt_appendprop (Dtb, NodeOffset, "ids", " ", 1);

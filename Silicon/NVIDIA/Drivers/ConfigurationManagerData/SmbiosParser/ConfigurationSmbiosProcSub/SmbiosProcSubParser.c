@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 4 and Type 7 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -1009,13 +1009,13 @@ GetL3CacheInfo (
   CacheInfo->InstalledSize2    = CacheSize32;
   // Cache Socket Designation
   if (CacheL3Str != NULL) {
-    CacheInfo->SocketDesignation = AllocateZeroPool (strlen (CacheL3Str) +1);
+    CacheInfo->SocketDesignation = AllocateZeroPool (AsciiStrLen (CacheL3Str) +1);
     if (CacheInfo->SocketDesignation == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Out of Resources.\r\n", __FUNCTION__));
       return EFI_OUT_OF_RESOURCES;
     }
 
-    AsciiSPrint (CacheInfo->SocketDesignation, strlen (CacheL3Str) +1, CacheL3Str);
+    AsciiSPrint (CacheInfo->SocketDesignation, AsciiStrLen (CacheL3Str) +1, CacheL3Str);
   }
 
   CacheInfo->SupportedSRAMType.Other = 1;
