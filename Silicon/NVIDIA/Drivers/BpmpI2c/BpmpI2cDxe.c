@@ -2,7 +2,7 @@
 
   Bpmp I2c Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,7 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/Crc8Lib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Protocol/DeviceTreeNode.h>
 
 #include "BpmpI2c.h"
@@ -716,7 +716,7 @@ InitializeVrsPseq (
   //   - data: Data value to use for OR/AND operation (UINT8, stored as UINT32)
   //   - operation: 0 = OR, 1 = AND (UINT32)
   //
-  InitProperty = (CONST UINT32 *)fdt_getprop (
+  InitProperty = (CONST UINT32 *)FdtGetProp (
                                    Private->DeviceTreeBase,
                                    Node,
                                    "nvidia,uefi-vrs-pseq-init",
@@ -870,17 +870,17 @@ BuildI2cDevices (
 {
   Private->NumberOfI2cDevices = 0;
   INT32  Node        = 0;
-  INT32  ParentDepth = fdt_node_depth (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset);
+  INT32  ParentDepth = FdtNodeDepth (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset);
   UINTN  Index;
 
   if (ParentDepth < 0) {
     return EFI_DEVICE_ERROR;
   }
 
-  fdt_for_each_subnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
+  FdtForEachSubnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
     INT32  ChildDepth = 0;
 
-    ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
+    ChildDepth = FdtNodeDepth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
       continue;
     }
@@ -906,7 +906,7 @@ BuildI2cDevices (
   }
 
   Index = 0;
-  fdt_for_each_subnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
+  FdtForEachSubnode (Node, Private->DeviceTreeBase, Private->DeviceTreeNodeOffset) {
     BPMP_I2C_DEVICE_TYPE_MAP  *MapEntry = mDeviceTypeMap;
     CONST VOID                *Property = NULL;
     CONST UINT32              *RegEntry = NULL;
@@ -915,7 +915,7 @@ BuildI2cDevices (
     UINTN                     AdditionalSlaves = 0;
     UINTN                     SlaveIndex;
 
-    ChildDepth = fdt_node_depth (Private->DeviceTreeBase, Node);
+    ChildDepth = FdtNodeDepth (Private->DeviceTreeBase, Node);
     if ((ParentDepth + 1) != ChildDepth) {
       continue;
     }
@@ -923,15 +923,15 @@ BuildI2cDevices (
     Private->I2cDevices[Index].DeviceGuid = &gNVIDIAI2cUnknown;
     while (MapEntry->Compatibility != NULL) {
       if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility (MapEntry->Compatibility, Node))) {
-        Property = fdt_getprop (Private->DeviceTreeBase, Node, "status", NULL);
+        Property = FdtGetProp (Private->DeviceTreeBase, Node, "status", NULL);
         if ((Property == NULL) || (AsciiStrCmp (Property, "okay") == 0)) {
           DEBUG ((DEBUG_ERROR, "%a: %a detected\r\n", __FUNCTION__, MapEntry->Compatibility));
           Private->I2cDevices[Index].DeviceGuid          = MapEntry->DeviceType;
           AdditionalSlaves                               = MapEntry->AdditionalSlaves;
-          Private->I2cDevices[Index].DeviceIndex         = fdt_get_phandle (Private->DeviceTreeBase, Node);
+          Private->I2cDevices[Index].DeviceIndex         = FdtGetPhandle (Private->DeviceTreeBase, Node);
           Private->I2cDevices[Index].HardwareRevision    = 1;
           Private->I2cDevices[Index].I2cBusConfiguration = 0;
-          RegEntry                                       = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Node, "reg", &RegLength);
+          RegEntry                                       = (CONST UINT32 *)FdtGetProp (Private->DeviceTreeBase, Node, "reg", &RegLength);
           if ((RegEntry == NULL) || (RegLength != sizeof (UINT32))) {
             DEBUG ((DEBUG_ERROR, "%a: Failed to locate reg property\r\n", __FUNCTION__));
             Private->I2cDevices[Index].SlaveAddressCount = 0;
@@ -1096,14 +1096,14 @@ BpmpI2cStart (
     goto ErrorExit;
   }
 
-  Private->BpmpPhandle = fdt_get_phandle (
+  Private->BpmpPhandle = FdtGetPhandle (
                            DeviceTreeBase,
-                           fdt_parent_offset (DeviceTreeBase, Private->DeviceTreeNodeOffset)
+                           FdtParentOffset (DeviceTreeBase, Private->DeviceTreeNodeOffset)
                            );
 
-  Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
+  Adapter = (CONST UINT32 *)FdtGetProp (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "nvidia,bpmp-bus-id", &AdapterLength);
   if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
-    Adapter = (CONST UINT32 *)fdt_getprop (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
+    Adapter = (CONST UINT32 *)FdtGetProp (Private->DeviceTreeBase, Private->DeviceTreeNodeOffset, "adapter", &AdapterLength);
     if ((Adapter == NULL) || (AdapterLength != sizeof (UINT32))) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to locate adapter property\r\n", __FUNCTION__));
       Status = EFI_NOT_FOUND;

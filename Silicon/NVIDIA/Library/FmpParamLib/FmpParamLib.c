@@ -2,7 +2,7 @@
 
   FMP parameter library
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -12,7 +12,9 @@
 #include <Library/FmpParamLib.h>
 #include <Library/PcdLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/FdtLib.h>
 
 STATIC UINT32  mDtbLsv = 0;
 
@@ -61,16 +63,16 @@ FmpParamLibInit (
     goto Done;
   }
 
-  UefiNode = fdt_path_offset (DtbBase, "/firmware/uefi");
+  UefiNode = FdtPathOffset (DtbBase, "/firmware/uefi");
   if (UefiNode >= 0) {
-    Property = fdt_getprop (DtbBase, UefiNode, "fmp-lowest-supported-version", &Length);
+    Property = FdtGetProp (DtbBase, UefiNode, "fmp-lowest-supported-version", &Length);
     if ((Property != NULL) && (Length == sizeof (UINT32))) {
-      mDtbLsv = fdt32_to_cpu (*(UINT32 *)Property);
+      mDtbLsv = Fdt32ToCpu (*(UINT32 *)Property);
 
       DEBUG ((DEBUG_INFO, "%a: Got LSV from dtb=0x%x pcd=0x%x\n", __FUNCTION__, mDtbLsv, PcdGet32 (PcdFmpDeviceBuildTimeLowestSupportedVersion)));
     }
 
-    Property = fdt_getprop (DtbBase, UefiNode, "fmp-image-type-id-guid", &Length);
+    Property = FdtGetProp (DtbBase, UefiNode, "fmp-image-type-id-guid", &Length);
     if ((Property != NULL) && (Length == 37)) {
       Status = AsciiStrToGuid ((CONST CHAR8 *)Property, &DtbImageTypeIdGuid);
       if (!EFI_ERROR (Status)) {
@@ -83,7 +85,7 @@ FmpParamLibInit (
     }
 
     if (FeaturePcdGet (PcdSupportFmpCertsInDtb)) {
-      Property = fdt_getprop (DtbBase, UefiNode, "fmp-pkcs7-cert-buffer-xdr", &Length);
+      Property = FdtGetProp (DtbBase, UefiNode, "fmp-pkcs7-cert-buffer-xdr", &Length);
       if ((Property != NULL) && (Length > 0)) {
         PcdLength = Length;
         DEBUG ((DEBUG_INFO, "%a: setting PcdFmpDevicePkcs7CertBufferXdr Length %d\n", __FUNCTION__, PcdLength));

@@ -2,14 +2,14 @@
 
   Virt Boot Chain Information Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiDxe.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Library/UefiLib.h>
 #include <Library/BaseLib.h>
@@ -72,14 +72,14 @@ GetBootChainFromDtb (
     return INVALID_BOOTCHAIN_INDEX;
   }
 
-  NodeOffset = fdt_path_offset (UefiDtb, "/chosen/update-info");
+  NodeOffset = FdtPathOffset (UefiDtb, "/chosen/update-info");
   if (NodeOffset < 0) {
     return INVALID_BOOTCHAIN_INDEX;
   }
 
-  BootChainIdx = fdt_getprop (UefiDtb, NodeOffset, "active-boot-chain", NULL);
+  BootChainIdx = FdtGetProp (UefiDtb, NodeOffset, "active-boot-chain", NULL);
 
-  return BootChainIdx == NULL ? INVALID_BOOTCHAIN_INDEX : fdt32_to_cpu (*BootChainIdx);
+  return BootChainIdx == NULL ? INVALID_BOOTCHAIN_INDEX : Fdt32ToCpu (*BootChainIdx);
 }
 
 /**

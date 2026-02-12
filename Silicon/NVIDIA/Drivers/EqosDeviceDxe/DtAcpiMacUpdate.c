@@ -5,7 +5,7 @@
 
   The original software modules are licensed as follows:
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2014, Applied Micro Curcuit Corporation. All rights reserved.<BR>
@@ -21,7 +21,6 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/NetLib.h>
 #include <Library/UefiLib.h>
-#include <libfdt.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DebugLib.h>
 #include <Library/TimerLib.h>

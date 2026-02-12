@@ -20,7 +20,6 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <libfdt.h>
 
 #include <Protocol/UfsHostControllerPlatform.h>
 

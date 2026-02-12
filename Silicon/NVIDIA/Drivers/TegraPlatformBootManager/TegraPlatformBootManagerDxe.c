@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -15,7 +15,7 @@
 #include <Library/UefiBootManagerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/PciIo.h>
@@ -350,13 +350,13 @@ GetDtbCommandLine (
     }
   }
 
-  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
+  NodeOffset = FdtPathOffset (DeviceTreeBase, "/chosen");
   if (NodeOffset < 0) {
     return EFI_NOT_FOUND;
   }
 
   CommandLineEntry = NULL;
-  CommandLineEntry = (CONST CHAR8 *)fdt_getprop (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
+  CommandLineEntry = (CONST CHAR8 *)FdtGetProp (DeviceTreeBase, NodeOffset, "bootargs", &CommandLineLength);
   if (NULL == CommandLineEntry) {
     return EFI_NOT_FOUND;
   }

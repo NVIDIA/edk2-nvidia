@@ -1,7 +1,7 @@
 /** @file
   SMBIOS Type 0 table Parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -14,7 +14,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/IpmiBaseLib.h>
 #include <Library/PcdLib.h>
 
@@ -160,17 +160,17 @@ InstallSmbiosType0Cm (
 
   // Fill Type00 data
   // Fill SytemBiosMajorRelease and SytemBiosMinorRelease info from DTB
-  DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type0");
+  DtbOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, "type0");
   if (DtbOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 0 not found.\n", __FUNCTION__));
     BiosPhysicalSize = 0x00;
   } else {
-    Property = fdt_getprop (DtbBase, DtbOffset, "rom_size", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "rom_size", &Length);
     if ((Property == NULL) || (Length == 0)) {
       DEBUG ((DEBUG_ERROR, "%a: Device tree property 'rom_size' not found.\n", __FUNCTION__));
       BiosPhysicalSize = 0x00;
     } else {
-      BiosPhysicalSize = (UINT64)fdt32_to_cpu (*(UINT32 *)Property);
+      BiosPhysicalSize = (UINT64)Fdt32ToCpu (*(UINT32 *)Property);
     }
   }
 

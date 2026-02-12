@@ -2,7 +2,7 @@
 
   USB Pad Control Driver Platform Specific Definitions/Functions
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,7 @@
 #include <Protocol/Regulator.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/PinMux.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include "UsbPadCtlPrivate.h"
 
 #define USB2_OTG_PADX_CTL_0(i)  (0x88 + (i) * 0x40)
@@ -746,19 +746,19 @@ FindUsb2PadClocks (
   INT32         ClocksLength, Index;
   UINT32        BpmpPhandle;
 
-  NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pads");
+  NodeOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pads");
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Couldn't find pads subnode in DT\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
-  NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, NodeOffset, "usb2");
+  NodeOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, NodeOffset, "usb2");
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Couldn't find pads->usb2 subnode in DT\n", __FUNCTION__));
     return EFI_UNSUPPORTED;
   }
 
-  ClockIds = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "clocks", &ClocksLength);
+  ClockIds = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "clocks", &ClocksLength);
   if ((ClockIds == 0) || (ClocksLength == 0)) {
     PlatConfig->NumUsb2Clocks = 0;
     DEBUG ((DEBUG_ERROR, "%a: Couldn't find usb2 pad's clocks property in DT\n", __FUNCTION__));
@@ -818,7 +818,7 @@ InitPlatInfo234 (
   }
 
   /* Finding the USB2 Ports that are enabled on the Platform */
-  PortsOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "ports");
+  PortsOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "ports");
   if (PortsOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Couldn't find USB Ports\n"));
     FreePool (Ports);
@@ -832,12 +832,12 @@ InitPlatInfo234 (
     Usb2Ports[i].VbusSupply  = VBUS_SUPPLY_INVALID;
 
     CharCount  = AsciiSPrint (Name, sizeof (Name), "usb2-%u", i);
-    NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
+    NodeOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
     }
 
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
     if (Property == NULL) {
       DEBUG ((DEBUG_ERROR, "Couldnt Find the USB Port Status\n"));
       continue;
@@ -848,7 +848,7 @@ InitPlatInfo234 (
       continue;
     }
 
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "mode", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "mode", &PropertySize);
     if (Property == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Couldn't Find the %a Port Mode\n", __FUNCTION__, Name));
       continue;
@@ -860,7 +860,7 @@ InitPlatInfo234 (
     }
 
     /* Now get the VBUS Supply of the Port */
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "vbus-supply", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "vbus-supply", &PropertySize);
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Usb2Ports[i].VbusSupply = SwapBytes32 (*(UINT32 *)Property);
     } else {
@@ -868,7 +868,7 @@ InitPlatInfo234 (
     }
 
     /* Check if OverCurrent Handling is Enabled on Port */
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "nvidia,oc-pin", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "nvidia,oc-pin", &PropertySize);
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Usb2Ports[i].OcPin     = SwapBytes32 (*(UINT32 *)Property);
       Usb2Ports[i].OcEnabled = TRUE;
@@ -887,12 +887,12 @@ InitPlatInfo234 (
     Usb3Ports[i].PortEnabled = FALSE;
 
     CharCount  = AsciiSPrint (Name, sizeof (Name), "usb3-%u", i);
-    NodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
+    NodeOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, PortsOffset, Name);
     if (NodeOffset < 0) {
       continue;
     }
 
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "status", &PropertySize);
     if (Property == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Couldnt Find the %a Port Status\n", __FUNCTION__, Name));
       continue;
@@ -908,7 +908,7 @@ InitPlatInfo234 (
      * together on same port and Vbus-supply for the port is provided through the USB2 Companion
      * Port's DT Entry
      */
-    Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, NodeOffset, "nvidia,usb2-companion", &PropertySize);
+    Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, NodeOffset, "nvidia,usb2-companion", &PropertySize);
     if ((Property != NULL) && (PropertySize == sizeof (UINT32))) {
       Usb3Ports[i].CompanionPort = SwapBytes32 (*(UINT32 *)Property);
 

@@ -11,7 +11,7 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <ConfigurationManagerObject.h>
 #include <Library/FloorSweepingLib.h>
 #include <Library/ArmLib.h>
@@ -272,7 +272,7 @@ GetPropertyFromDT (
   CHAR8        *ProcessorStep = NULL;
   UINTN        ProcessorStrLen;
 
-  PropertyStr = fdt_getprop (DtbBase, NodeOffset, String, &Length);
+  PropertyStr = FdtGetProp (DtbBase, NodeOffset, String, &Length);
 
   // check whether the property is processor-version
   if ((AsciiStrCmp (String, "processor-version") == 0)) {
@@ -401,7 +401,7 @@ InstallSmbiosType4Cm (
     FruDesc                                                = NULL;
 
     AsciiSPrint (Type4NodeStr, sizeof (Type4NodeStr), "/firmware/smbios/type4@%u", SocketId);
-    NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type4NodeStr);
     if (NodeOffset < 0) {
       DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 4 not found.\n", __FUNCTION__));
     } else {
@@ -416,7 +416,7 @@ InstallSmbiosType4Cm (
 
       MaxSpeedVarName   = NULL;
       ProcessorMaxSpeed = 0;
-      Property          = fdt_getprop (DtbBase, NodeOffset, "uefivar-maxspeed", &DataSize);
+      Property          = FdtGetProp (DtbBase, NodeOffset, "uefivar-maxspeed", &DataSize);
       if (Property != NULL) {
         MaxSpeedVarName = AllocateZeroPool ((DataSize + 1) * sizeof (CHAR16));
         if (MaxSpeedVarName != NULL) {
@@ -438,7 +438,7 @@ InstallSmbiosType4Cm (
       //
       // Get data from FRU
       //
-      Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+      Property = FdtGetProp (DtbBase, NodeOffset, "fru-desc", NULL);
       if (Property != NULL) {
         FruDesc      = (CHAR8 *)Property;
         Type4FruInfo = FindFruByDescription (Private, FruDesc);
@@ -1144,7 +1144,7 @@ InstallSmbiosType7Cm (
     }
 
     AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", Socket);
-    SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
+    SocketOffset = FdtPathOffset (Dtb, SocketNodeStr);
 
     for (CacheLevel = 1; CacheLevel <= MaxCacheLevel; CacheLevel++) {
       SeparateCaches = ProcessorHasSeparateCaches (CacheLevel);

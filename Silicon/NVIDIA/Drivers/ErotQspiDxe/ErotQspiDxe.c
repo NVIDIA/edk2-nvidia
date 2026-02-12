@@ -2,7 +2,7 @@
 
   ERoT over NS SPI driver
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,7 +17,7 @@
 #include <Protocol/MctpProtocol.h>
 #include <Protocol/QspiController.h>
 #include <Protocol/DeviceTreeNode.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 /**
   Check if qspi DT node has erot subnode.
@@ -34,10 +34,10 @@ STATIC
 BOOLEAN
 EFIAPI
 ErotQspiNodeHasErot (
-  IN CONST VOID  *DeviceTreeBase,
-  IN INT32       QspiOffset,
-  IN UINT8       NumChipSelects,
-  OUT UINT8      *ChipSelect
+  IN VOID    *DeviceTreeBase,
+  IN INT32   QspiOffset,
+  IN UINT8   NumChipSelects,
+  OUT UINT8  *ChipSelect
   )
 {
   CONST CHAR8  *NodeName;
@@ -47,11 +47,11 @@ ErotQspiNodeHasErot (
   INT32        SubNode;
   INT32        Length;
 
-  QspiName = fdt_get_name (DeviceTreeBase, QspiOffset, NULL);
+  QspiName = FdtGetName (DeviceTreeBase, QspiOffset, NULL);
 
   SubNode = 0;
-  fdt_for_each_subnode (SubNode, DeviceTreeBase, QspiOffset) {
-    NodeName = fdt_get_name (DeviceTreeBase, SubNode, NULL);
+  FdtForEachSubnode (SubNode, DeviceTreeBase, QspiOffset) {
+    NodeName = FdtGetName (DeviceTreeBase, SubNode, NULL);
     if (AsciiStrnCmp (NodeName, "erot@", AsciiStrLen ("erot@")) == 0) {
       break;
     }
@@ -61,15 +61,15 @@ ErotQspiNodeHasErot (
     return FALSE;
   }
 
-  Property = fdt_getprop (DeviceTreeBase, SubNode, "status", NULL);
+  Property = FdtGetProp (DeviceTreeBase, SubNode, "status", NULL);
   if ((Property != NULL) && (AsciiStrCmp (Property, "disabled") == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: %a disabled\n", __FUNCTION__, NodeName));
     return FALSE;
   }
 
-  Property = fdt_getprop (DeviceTreeBase, SubNode, "reg", &Length);
+  Property = FdtGetProp (DeviceTreeBase, SubNode, "reg", &Length);
   if ((Property != NULL) && (Length == sizeof (UINT32))) {
-    NodeChipSelect = (UINT8)fdt32_to_cpu (*(CONST UINT32 *)Property);
+    NodeChipSelect = (UINT8)Fdt32ToCpu (*(CONST UINT32 *)Property);
     if (NodeChipSelect < NumChipSelects) {
       *ChipSelect = (UINT8)NodeChipSelect;
       DEBUG ((DEBUG_INFO, "%a: %a has %a CS=%u\n", __FUNCTION__, QspiName, NodeName, *ChipSelect));
@@ -130,7 +130,7 @@ ErotQspiHasErot (
     return FALSE;
   }
 
-  SocketOffset = fdt_parent_offset (
+  SocketOffset = FdtParentOffset (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset
                    );
@@ -139,7 +139,7 @@ ErotQspiHasErot (
     return FALSE;
   }
 
-  SocketName = fdt_get_name (DeviceTreeNode->DeviceTreeBase, SocketOffset, NULL);
+  SocketName = FdtGetName (DeviceTreeNode->DeviceTreeBase, SocketOffset, NULL);
   if ((AsciiStrnCmp (SocketName, SocketPrefix, AsciiStrLen (SocketPrefix)) != 0) ||
       (AsciiStrLen (SocketName) != AsciiStrLen (SocketPrefix) + 1))
   {

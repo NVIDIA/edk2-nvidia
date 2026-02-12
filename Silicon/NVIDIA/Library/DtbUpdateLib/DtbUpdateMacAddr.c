@@ -2,7 +2,7 @@
 
   DTB update for MAC addresses
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,7 @@
 #include <Library/NetLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "DtbUpdateLibPrivate.h"
 
@@ -129,7 +129,7 @@ DtbUpdateMacToBEValue (
   UINT64  Mac
   )
 {
-  return cpu_to_fdt64 (Mac) >> 16;
+  return CpuToFdt64 (Mac) >> 16;
 }
 
 /**

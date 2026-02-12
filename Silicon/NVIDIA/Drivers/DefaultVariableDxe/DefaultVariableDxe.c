@@ -1,7 +1,7 @@
 /** @file
   Provides support for default variable creation.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
@@ -21,7 +21,7 @@
 #include <Library/DevicePathLib.h>
 #include <Library/PcdLib.h>
 #include <Protocol/PartitionInfo.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Guid/ImageAuthentication.h>
 #include <UefiSecureBoot.h>
 #include <Library/SecureBootVariableLib.h>
@@ -193,7 +193,7 @@ ProcessVariable (
   Locked              = FALSE;
   RequestedAttributes = EFI_VARIABLE_BOOTSERVICE_ACCESS;
 
-  NodeName = fdt_get_name (Dtb, Offset, NULL);
+  NodeName = FdtGetName (Dtb, Offset, NULL);
   if (NodeName == NULL) {
     DEBUG ((DEBUG_ERROR, "Node has no name at offset %x\r\n", Offset));
     return;
@@ -210,19 +210,19 @@ ProcessVariable (
     *UnitAddress = L'\0';
   }
 
-  if (fdt_getprop (Dtb, Offset, VARIABLE_RUNTIME_PROP, NULL) != NULL) {
+  if (FdtGetProp (Dtb, Offset, VARIABLE_RUNTIME_PROP, NULL) != NULL) {
     RequestedAttributes |= EFI_VARIABLE_RUNTIME_ACCESS;
   }
 
-  if (fdt_getprop (Dtb, Offset, VARIABLE_LOCKED_PROP, NULL) != NULL) {
+  if (FdtGetProp (Dtb, Offset, VARIABLE_LOCKED_PROP, NULL) != NULL) {
     Locked = TRUE;
   }
 
-  if (fdt_getprop (Dtb, Offset, VARIABLE_NV_PROP, NULL) != NULL) {
+  if (FdtGetProp (Dtb, Offset, VARIABLE_NV_PROP, NULL) != NULL) {
     RequestedAttributes |= EFI_VARIABLE_NON_VOLATILE;
   }
 
-  Data = fdt_getprop (Dtb, Offset, VARIABLE_DATA_PROP, &Length);
+  Data = FdtGetProp (Dtb, Offset, VARIABLE_DATA_PROP, &Length);
   if ((Data == NULL) || (Length < 0)) {
     DEBUG ((DEBUG_ERROR, "No data property, %s\r\n", VariableName));
     return;
@@ -728,14 +728,14 @@ VariableReady (
     goto EspVar;
   }
 
-  NodeOffset = fdt_path_offset (Dtb, VARIABLE_NODE_PATH);
+  NodeOffset = FdtPathOffset (Dtb, VARIABLE_NODE_PATH);
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to get Variable Node - %r\r\n", Status));
     goto EspVar;
   }
 
-  fdt_for_each_subnode (SubNodeOffset, Dtb, NodeOffset) {
-    NodeName = fdt_get_name (Dtb, SubNodeOffset, NULL);
+  FdtForEachSubnode (SubNodeOffset, Dtb, NodeOffset) {
+    NodeName = FdtGetName (Dtb, SubNodeOffset, NULL);
     if (NodeName == NULL) {
       DEBUG ((DEBUG_ERROR, "Node has no name at offset %x\r\n", SubNodeOffset));
       continue;
@@ -759,9 +759,9 @@ VariableReady (
       continue;
     }
 
-    fdt_for_each_subnode (VariableNodeOffset, Dtb, SubNodeOffset) {
+    FdtForEachSubnode (VariableNodeOffset, Dtb, SubNodeOffset) {
       if (GuidBased) {
-        GuidStr = (CONST CHAR8 *)fdt_getprop (Dtb, VariableNodeOffset, VARIABLE_GUID_PROP, NULL);
+        GuidStr = (CONST CHAR8 *)FdtGetProp (Dtb, VariableNodeOffset, VARIABLE_GUID_PROP, NULL);
         if (GuidStr == NULL) {
           DEBUG ((DEBUG_ERROR, "No Guid found\r\n"));
           continue;

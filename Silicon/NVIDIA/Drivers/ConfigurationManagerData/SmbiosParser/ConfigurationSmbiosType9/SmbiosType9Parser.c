@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 9 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -17,7 +17,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/FruLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 
@@ -114,7 +114,7 @@ InstallSmbiosType9Cm (
 
   for (Index = 0; Index < 100; Index++) {
     AsciiSPrint (Type9tNodeStr, sizeof (Type9tNodeStr), "/firmware/smbios/type9@%u", Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type9tNodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type9tNodeStr);
     if (NodeOffset < 0) {
       continue;
     }
@@ -139,7 +139,7 @@ InstallSmbiosType9Cm (
       goto CleanupAndReturn;
     }
 
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "slot-designation", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "slot-designation", &Length);
     if (PropertyStr != NULL) {
       SystemSlotInfo[NumSystemSlots].SlotDesignation = AllocateZeroPool (Length + 1);
       if (SystemSlotInfo[NumSystemSlots].SlotDesignation != NULL) {
@@ -149,79 +149,79 @@ InstallSmbiosType9Cm (
       SystemSlotInfo[NumSystemSlots].SlotDesignation = NULL;
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-type", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotType = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotType = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-data-bus-width", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-data-bus-width", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotDataBusWidth = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotDataBusWidth = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-length", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-length", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotLength = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotLength = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-id", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-id", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotID = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotID = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-characteristics1", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-characteristics1", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotCharacteristics1 = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotCharacteristics1 = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-characteristics2", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-characteristics2", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotCharacteristics2 = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotCharacteristics2 = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "segment-group-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "segment-group-number", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SegmentGroupNum = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SegmentGroupNum = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "bus-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "bus-number", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].BusNum = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].BusNum = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "device-function-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "device-function-number", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].DevFuncNum = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].DevFuncNum = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "data-bus-width", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "data-bus-width", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].DataBusWidth = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].DataBusWidth = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "peer-grouping-count", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "peer-grouping-count", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].PeerGroupingCount = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].PeerGroupingCount = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-information", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-information", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotInformation = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotInformation = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-physical-width", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-physical-width", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotPhysicalWidth = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotPhysicalWidth = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-pitch", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-pitch", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotPitch = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotPitch = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "slot-height", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "slot-height", &Length);
     if (Property != NULL) {
-      SystemSlotInfo[NumSystemSlots].SlotHeight = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SystemSlotInfo[NumSystemSlots].SlotHeight = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     SocketNum = (SystemSlotInfo[NumSystemSlots].SegmentGroupNum) >> 4;

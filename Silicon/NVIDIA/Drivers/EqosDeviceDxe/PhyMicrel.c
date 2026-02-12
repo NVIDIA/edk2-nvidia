@@ -4,7 +4,7 @@
   Copyright (c) 2012 - 2014, ARM Limited. All rights reserved.
   Copyright (c) 2004 - 2010, Intel Corporation. All rights reserved.
   Copyright (c) 2023, Connect Tech Inc. All rights reserved.
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
 
 /***************************************************************/
 #define REG_PHY_CTRL          0x1F

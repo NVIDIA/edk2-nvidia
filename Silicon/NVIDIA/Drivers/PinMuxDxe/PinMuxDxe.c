@@ -2,7 +2,7 @@
 
   PINMUX Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,7 +19,6 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/ResetNodeProtocol.h>
-#include <libfdt.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include "PinMuxDxePrivate.h"
 

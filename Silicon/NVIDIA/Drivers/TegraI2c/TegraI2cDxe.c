@@ -2,7 +2,7 @@
 
   Tegra I2c Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,7 +25,7 @@
 #include <Library/IoLib.h>
 #include <Library/PrintLib.h>
 #include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Protocol/DeviceTreeNode.h>
 #include <Protocol/PinControl.h>
 
@@ -1058,14 +1058,14 @@ TegraI2CDriverBindingStart (
   Private->HighSpeed                                      = FALSE;
 
   Private->PinControlConfigured = FALSE;
-  Property                      = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pinctrl-0", NULL);
+  Property                      = FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pinctrl-0", NULL);
   if (Property != NULL) {
     Private->PinControlId = SwapBytes32 (*(CONST UINT32 *)Property);
   } else {
     Private->PinControlId = 0;
   }
 
-  DtControllerId = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
+  DtControllerId = (CONST UINT32 *)FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
   if (NULL != DtControllerId) {
     Private->ControllerId = SwapBytes32 (*DtControllerId);
     if (Private->ControllerId > 0x3f) {
@@ -1175,7 +1175,7 @@ TegraI2CDriverBindingStart (
   MmioWrite32 (Private->BaseAddress + I2C_I2C_DEBUG_CONTROL_0_OFFSET, 0);
   MmioWrite32 (Private->BaseAddress + I2C_I2C_INTERRUPT_SET_REGISTER_0_OFFSET, 0);
 
-  DtClockHertz = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "clock-frequency", NULL);
+  DtClockHertz = (CONST UINT32 *)FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "clock-frequency", NULL);
   if (NULL != DtClockHertz) {
     Private->BusClockHertz = SwapBytes32 (*DtClockHertz);
   } else {
@@ -1193,7 +1193,7 @@ TegraI2CDriverBindingStart (
     Data32 |= (0x2 << I2C_I2C_CNFG_0_DEBOUNCE_CNT_SHIFT);
   }
 
-  if (NULL != fdt_get_property (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "multi-master", NULL)) {
+  if (NULL != FdtGetProperty (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "multi-master", NULL)) {
     Data32 |= I2C_I2C_CNFG_0_MULTI_MASTER_MODE;
   }
 
@@ -1209,9 +1209,9 @@ TegraI2CDriverBindingStart (
   PropertyLen                 = 0;
   Private->NumberOfI2cDevices = 0;
 
-  I2cNodeHandle = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+  I2cNodeHandle = FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
   Count         = 0;
-  fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+  FdtForEachSubnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (!EFI_ERROR (
            DeviceTreeCheckNodeSingleCompatibility (
              "atmel,24c02",
@@ -1219,7 +1219,7 @@ TegraI2CDriverBindingStart (
              )
            ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1245,7 +1245,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1255,7 +1255,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1270,7 +1270,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1280,7 +1280,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1295,7 +1295,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1305,7 +1305,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1318,7 +1318,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1328,7 +1328,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1341,7 +1341,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1351,7 +1351,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1367,7 +1367,7 @@ TegraI2CDriverBindingStart (
                     )
                   ))
     {
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "reg", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
         I2cAddress = SwapBytes32 (I2cAddress);
@@ -1377,7 +1377,7 @@ TegraI2CDriverBindingStart (
                        Private,
                        I2cAddress,
                        DeviceGuid,
-                       fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
+                       FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset)
                        );
         if (EFI_ERROR (Status)) {
           goto ErrorExit;
@@ -1387,12 +1387,12 @@ TegraI2CDriverBindingStart (
   }
 
   Count                   = 0;
-  EepromManagerNodeOffset = fdt_path_offset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
+  EepromManagerNodeOffset = FdtPathOffset (DeviceTreeNode->DeviceTreeBase, "/eeprom-manager");
   if (EepromManagerNodeOffset >= 0) {
-    fdt_for_each_subnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
+    FdtForEachSubnode (EepromManagerBusNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerNodeOffset) {
       I2cBusProperty     = NULL;
       I2cBusHandleLength = 0;
-      I2cBusProperty     = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
+      I2cBusProperty     = FdtGetProp (DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset, "i2c-bus", &I2cBusHandleLength);
       if ((I2cBusProperty == NULL) || (I2cBusHandleLength != sizeof (UINT32))) {
         continue;
       }
@@ -1403,8 +1403,8 @@ TegraI2CDriverBindingStart (
         continue;
       }
 
-      fdt_for_each_subnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
-        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "slave-address", &PropertyLen);
+      FdtForEachSubnode (EepromNodeOffset, DeviceTreeNode->DeviceTreeBase, EepromManagerBusNodeOffset) {
+        Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, EepromNodeOffset, "slave-address", &PropertyLen);
         if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
           gBS->CopyMem (&I2cAddress, (VOID *)Property, PropertyLen);
           I2cAddress = SwapBytes32 (I2cAddress);

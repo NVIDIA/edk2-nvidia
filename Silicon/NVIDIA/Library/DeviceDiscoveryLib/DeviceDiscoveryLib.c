@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Device Discovery Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,7 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/DxeServicesTableLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
@@ -152,8 +152,8 @@ GetResources (
     return EFI_INVALID_PARAMETER;
   }
 
-  AddressCells = fdt_address_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, NodeOffset));
-  SizeCells    = fdt_size_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, NodeOffset));
+  AddressCells = FdtAddressCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, NodeOffset));
+  SizeCells    = FdtSizeCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, NodeOffset));
 
   if ((AddressCells > 2) ||
       (AddressCells == 0) ||
@@ -164,7 +164,7 @@ GetResources (
     return EFI_UNSUPPORTED;
   }
 
-  RegProperty = fdt_getprop (
+  RegProperty = FdtGetProp (
                   DeviceTreeBase,
                   NodeOffset,
                   "reg",
@@ -176,7 +176,7 @@ GetResources (
     NumberOfRegRegions = PropertySize / EntrySize;
   }
 
-  SharedMemProperty = fdt_getprop (
+  SharedMemProperty = FdtGetProp (
                         DeviceTreeBase,
                         NodeOffset,
                         "shmem",
@@ -187,7 +187,7 @@ GetResources (
     NumberOfSharedMemRegions = PropertySize / sizeof (UINT32);
   }
 
-  MemRegionProperty = fdt_getprop (
+  MemRegionProperty = FdtGetProp (
                         DeviceTreeBase,
                         NodeOffset,
                         "memory-region",
@@ -262,7 +262,7 @@ GetResources (
   for (SharedMemoryIndex = 0; SharedMemoryIndex < NumberOfSharedMemRegions; SharedMemoryIndex++) {
     UINT32  *HandleArray    = (UINT32 *)SharedMemProperty;
     UINT32  Handle          = SwapBytes32 (HandleArray[SharedMemoryIndex]);
-    INT32   SharedMemOffset = fdt_node_offset_by_phandle (DeviceTreeBase, Handle);
+    INT32   SharedMemOffset = FdtNodeOffsetByPhandle (DeviceTreeBase, Handle);
     INT32   ParentOffset;
     UINT64  ParentAddressBase = 0;
     UINT64  AddressBase       = 0;
@@ -280,7 +280,7 @@ GetResources (
       return EFI_DEVICE_ERROR;
     }
 
-    ParentOffset = fdt_parent_offset (DeviceTreeBase, SharedMemOffset);
+    ParentOffset = FdtParentOffset (DeviceTreeBase, SharedMemOffset);
     if (ParentOffset < 0) {
       DEBUG ((
         DEBUG_ERROR,
@@ -293,8 +293,8 @@ GetResources (
       return EFI_DEVICE_ERROR;
     }
 
-    AddressCells = fdt_address_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, NodeOffset));
-    SizeCells    = fdt_size_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, NodeOffset));
+    AddressCells = FdtAddressCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, NodeOffset));
+    SizeCells    = FdtSizeCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, NodeOffset));
 
     if ((AddressCells > 2) ||
         (AddressCells == 0) ||
@@ -305,7 +305,7 @@ GetResources (
       return EFI_UNSUPPORTED;
     }
 
-    RegProperty = fdt_getprop (
+    RegProperty = FdtGetProp (
                     DeviceTreeBase,
                     ParentOffset,
                     "reg",
@@ -335,8 +335,8 @@ GetResources (
       }
     }
 
-    AddressCells = fdt_address_cells (DeviceTreeBase, ParentOffset);
-    SizeCells    = fdt_size_cells (DeviceTreeBase, ParentOffset);
+    AddressCells = FdtAddressCells (DeviceTreeBase, ParentOffset);
+    SizeCells    = FdtSizeCells (DeviceTreeBase, ParentOffset);
 
     if ((AddressCells > 2) ||
         (AddressCells == 0) ||
@@ -347,7 +347,7 @@ GetResources (
       return EFI_UNSUPPORTED;
     }
 
-    RegProperty = fdt_getprop (
+    RegProperty = FdtGetProp (
                     DeviceTreeBase,
                     SharedMemOffset,
                     "reg",
@@ -419,7 +419,7 @@ GetResources (
   for (MemoryRegionIndex = 0; MemoryRegionIndex < NumberOfMemRegions; MemoryRegionIndex++) {
     UINT32  *HandleArray    = (UINT32 *)MemRegionProperty;
     UINT32  Handle          = SwapBytes32 (HandleArray[MemoryRegionIndex]);
-    INT32   MemRegionOffset = fdt_node_offset_by_phandle (DeviceTreeBase, Handle);
+    INT32   MemRegionOffset = FdtNodeOffsetByPhandle (DeviceTreeBase, Handle);
     UINT64  AddressBase     = 0;
     UINT64  RegionSize      = 0;
 
@@ -435,8 +435,8 @@ GetResources (
       return EFI_DEVICE_ERROR;
     }
 
-    AddressCells = fdt_address_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, MemRegionOffset));
-    SizeCells    = fdt_size_cells (DeviceTreeBase, fdt_parent_offset (DeviceTreeBase, MemRegionOffset));
+    AddressCells = FdtAddressCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, MemRegionOffset));
+    SizeCells    = FdtSizeCells (DeviceTreeBase, FdtParentOffset (DeviceTreeBase, MemRegionOffset));
 
     if ((AddressCells > 2) ||
         (AddressCells == 0) ||
@@ -447,7 +447,7 @@ GetResources (
       return EFI_UNSUPPORTED;
     }
 
-    RegProperty = fdt_getprop (
+    RegProperty = FdtGetProp (
                     DeviceTreeBase,
                     MemRegionOffset,
                     "reg",
@@ -925,7 +925,7 @@ GetResetNodeProtocol (
     return;
   }
 
-  ResetIds = (CONST UINT32 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "resets", &ResetsLength);
+  ResetIds = (CONST UINT32 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "resets", &ResetsLength);
 
   if ((ResetIds == 0) ||
       (ResetsLength == 0))
@@ -961,7 +961,7 @@ GetResetNodeProtocol (
 
   ResetNode->Resets = NumberOfResets;
 
-  ResetNames = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
+  ResetNames = (CONST CHAR8 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "reset-names", &ResetNamesLength);
   if (ResetNamesLength == 0) {
     ResetNames = NULL;
   }
@@ -1137,7 +1137,7 @@ GetClockNodeProtocol (
     return;
   }
 
-  ClockIds = (CONST UINT32 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clocks", &ClocksLength);
+  ClockIds = (CONST UINT32 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "clocks", &ClocksLength);
 
   if ((ClockIds == 0) ||
       (ClocksLength == 0))
@@ -1168,12 +1168,12 @@ GetClockNodeProtocol (
   }
 
   ClockNode->Clocks = NumberOfClocks;
-  ClockNames        = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
+  ClockNames        = (CONST CHAR8 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "clock-names", &ClockNamesLength);
   if (ClockNamesLength == 0) {
     ClockNames = NULL;
   }
 
-  ClockParentNames = (CONST CHAR8 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "pll_source", &ClockParentsLength);
+  ClockParentNames = (CONST CHAR8 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "pll_source", &ClockParentsLength);
   if (ClockParentsLength == 0) {
     ClockParentNames = NULL;
   }
@@ -1495,7 +1495,7 @@ GetC2cNodeProtocol (
     return;
   }
 
-  Partitions = (CONST UINT32 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "c2c-partitions", &PartitionsLength);
+  Partitions = (CONST UINT32 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "c2c-partitions", &PartitionsLength);
 
   if (Partitions == NULL) {
     return;
@@ -1572,7 +1572,7 @@ GetPowerGateNodeProtocol (
     return;
   }
 
-  PgIds = (CONST UINT32 *)fdt_getprop (Node->DeviceTreeBase, Node->NodeOffset, "power-domains", &PgLength);
+  PgIds = (CONST UINT32 *)FdtGetProp (Node->DeviceTreeBase, Node->NodeOffset, "power-domains", &PgLength);
 
   if (PgIds == NULL) {
     PgLength = 0;
@@ -1656,7 +1656,7 @@ ProcessDeviceTreeNodeWithHandle (
   Device->Resources  = NULL;
 
   // Check if DMA is coherent
-  if (NULL != fdt_get_property (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "dma-coherent", NULL)) {
+  if (NULL != FdtGetProperty (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "dma-coherent", NULL)) {
     Device->DmaType = NonDiscoverableDeviceDmaTypeCoherent;
   } else {
     Device->DmaType = NonDiscoverableDeviceDmaTypeNonCoherent;
@@ -1831,7 +1831,7 @@ GetNextSupportedDeviceTreeNode (
   }
 
   while (DeviceInfo->NodeOffset >= 0) {
-    DeviceInfo->NodeOffset = fdt_next_node (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, NULL);
+    DeviceInfo->NodeOffset = FdtNextNode (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, NULL);
     if (DeviceInfo->NodeOffset < 0) {
       break;
     }
@@ -1841,7 +1841,7 @@ GetNextSupportedDeviceTreeNode (
       continue;
     }
 
-    Property = fdt_getprop (
+    Property = FdtGetProp (
                  DeviceInfo->DeviceTreeBase,
                  DeviceInfo->NodeOffset,
                  "status",
@@ -1901,7 +1901,7 @@ GetSupportedDeviceTreeNodes (
 
   NodeInfo.DeviceTreeBase = DTBase;
   do {
-    NodeOffset = fdt_next_node (DTBase, NodeOffset, NULL);
+    NodeOffset = FdtNextNode (DTBase, NodeOffset, NULL);
     if (NodeOffset < 0) {
       break;
     }
@@ -1912,7 +1912,7 @@ GetSupportedDeviceTreeNodes (
       continue;
     }
 
-    Property = fdt_getprop (
+    Property = FdtGetProp (
                  DTBase,
                  NodeOffset,
                  "status",
@@ -1922,7 +1922,7 @@ GetSupportedDeviceTreeNodes (
         (AsciiStrCmp (Property, "okay") == 0))
     {
       if (NodeCount < *DeviceCount) {
-        NodeInfo.Phandle      = fdt_get_phandle (DTBase, NodeOffset);
+        NodeInfo.Phandle      = FdtGetPhandle (DTBase, NodeOffset);
         DTNodeInfo[NodeCount] = NodeInfo;
       }
 

@@ -2,7 +2,7 @@
 
   Tegra Pin Control Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,7 +19,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/ResetNodeProtocol.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 
 #include "TegraPinControlPrivate.h"
@@ -158,12 +158,12 @@ DeviceDiscoveryNotify (
       }
 
       // Locate the pinmux child.
-      SubNodeOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pinmux@0");
+      SubNodeOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "pinmux@0");
       if (SubNodeOffset < 0) {
         return EFI_NOT_FOUND;
       }
 
-      DpAuxPrivate->PinControlId = fdt_get_phandle (DeviceTreeNode->DeviceTreeBase, SubNodeOffset);
+      DpAuxPrivate->PinControlId = FdtGetPhandle (DeviceTreeNode->DeviceTreeBase, SubNodeOffset);
       DEBUG ((DEBUG_ERROR, "!!!!PinCtr -%x\r\n", DpAuxPrivate->PinControlId));
 
       Status = gBS->InstallMultipleProtocolInterfaces (

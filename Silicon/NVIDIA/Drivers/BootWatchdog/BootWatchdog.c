@@ -1,7 +1,7 @@
 /** @file
   This driver registers a 5 minute watchdog between when it starts and ReadyToBoot.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -13,7 +13,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Library/StatusRegLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 /**
   Event notification function called when the gEfiWatchdogTimerArchProtocolGuid
@@ -45,15 +45,15 @@ WatchDogTimerReady (
   WatchdogPrintLevelEnableMask = PcdGet32 (PcdDebugPrintErrorLevel);
   Status                       = DtPlatformLoadDtb (&DtbBase, &DtbSize);
   if (!EFI_ERROR (Status)) {
-    NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
+    NodeOffset = FdtPathOffset (DtbBase, "/firmware/uefi");
     if (NodeOffset > 0) {
       Property = NULL;
-      Property = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-boot-watchdog-seconds", &PropertyLen);
+      Property = (CONST UINT32 *)FdtGetProp (DtbBase, NodeOffset, "override-boot-watchdog-seconds", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         WatchdogTimout = SwapBytes32 (*Property);
       }
 
-      Property = (CONST UINT32 *)fdt_getprop (DtbBase, NodeOffset, "override-boot-watchdog-print-level-mask", &PropertyLen);
+      Property = (CONST UINT32 *)FdtGetProp (DtbBase, NodeOffset, "override-boot-watchdog-print-level-mask", &PropertyLen);
       if ((Property != NULL) && (PropertyLen == sizeof (UINT32))) {
         WatchdogPrintLevelEnableMask = SwapBytes32 (*Property);
       }

@@ -2,7 +2,7 @@
 
   Android Boot Loader Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2017, Linaro. All rights reserved.
 
@@ -13,7 +13,7 @@
 #include "AndroidBootDxe.h"
 #include "AndroidBootConfig.h"
 #include "AndroidBootDtbImgParser.h"
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/PcdLib.h>
 #include <PiDxe.h>
 #include <Library/HandleParsingLib.h>
@@ -347,17 +347,17 @@ AndroidLocateKernelDtb (
 
 retry:
 
-  if (fdt_check_header (*Dtb) == 0) {
+  if (FdtCheckHeader (*Dtb) == 0) {
     return EFI_SUCCESS;
   }
 
   Status = ExtractDtbfromDtbImg (Dtb);
 
   if (!EFI_ERROR (Status)) {
-    if (fdt_check_header (*Dtb) == 0) {
+    if (FdtCheckHeader (*Dtb) == 0) {
       return EFI_SUCCESS;
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtb, fdt_check_header (*Dtb)));
+      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtb, FdtCheckHeader (*Dtb)));
       return EFI_NOT_FOUND;
     }
   } else if (Status == EFI_INVALID_PARAMETER) {
@@ -389,10 +389,10 @@ retry:
   Status = ExtractDtbofromDtboImg (Dtbo, DtboCount);
 
   if (!EFI_ERROR (Status)) {
-    if (fdt_check_header (*Dtbo) == 0) {
+    if (FdtCheckHeader (*Dtbo) == 0) {
       return EFI_SUCCESS;
     } else {
-      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtbo, fdt_check_header (*Dtbo)));
+      DEBUG ((DEBUG_ERROR, "%a: Malformed dtb.img or header at %p. Error %d\r\n", __FUNCTION__, *Dtbo, FdtCheckHeader (*Dtbo)));
       return EFI_NOT_FOUND;
     }
   } else if (Status == EFI_INVALID_PARAMETER) {
@@ -431,14 +431,14 @@ AndroidApplyOverlays (
         Count < DtboCount;
         Count++ )
   {
-    Status =  fdt_check_header (FdtNext);
+    Status =  FdtCheckHeader (FdtNext);
     if (Status != 0) {
       DEBUG ((DEBUG_ERROR, "%a: Invalid overlay. Count = %u. Error = %d Returning\r\n", __FUNCTION__, Count, Status));
       continue;
     }
 
     // Backup current DTB before attempting overlay
-    DtbSize   = fdt_totalsize (Dtb);
+    DtbSize   = FdtTotalSize (Dtb);
     DtbBackup = AllocatePool (DtbSize);
     if (DtbBackup == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate DTB backup buffer\r\n", __FUNCTION__));
@@ -447,7 +447,7 @@ AndroidApplyOverlays (
 
     CopyMem (DtbBackup, Dtb, DtbSize);
 
-    Status = fdt_overlay_apply (Dtb, FdtNext);
+    Status = FdtOverlayApply (Dtb, FdtNext);
     if (Status != 0) {
       DEBUG ((DEBUG_ERROR, "%a:Could not apply overlay to kernel dtb. Error = %d\r\n", __FUNCTION__, Status));
       CopyMem (Dtb, DtbBackup, DtbSize);
@@ -472,7 +472,7 @@ AndroidApplyOverlays (
       }
     }
 
-    FdtSize = fdt_totalsize (FdtNext);
+    FdtSize = FdtTotalSize (FdtNext);
     FdtNext = (VOID *)((UINT64)FdtNext + FdtSize);
   }
 
@@ -532,13 +532,13 @@ AndroidBootDxeUpdateDtbCmdLine (
 
   UnicodeStrToAsciiStrS (CmdLine, CmdLineDtb, CommandLineLength);
 
-  NodeOffset = fdt_path_offset (DeviceTreeBase, "/chosen");
+  NodeOffset = FdtPathOffset (DeviceTreeBase, "/chosen");
   if (NodeOffset < 0) {
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
 
-  Ret = fdt_setprop (DeviceTreeBase, NodeOffset, "bootargs", CmdLineDtb, CommandLineLength);
+  Ret = FdtSetProp (DeviceTreeBase, NodeOffset, "bootargs", CmdLineDtb, CommandLineLength);
   if (Ret < 0) {
     Status = EFI_DEVICE_ERROR;
     goto Exit;
@@ -585,7 +585,7 @@ CopyDtbNodeRecursive (
   INT32        FdtErr;
 
   // Get node name for debugging
-  NodeName = fdt_get_name (SrcDtb, SrcOffset, NULL);
+  NodeName = FdtGetName (SrcDtb, SrcOffset, NULL);
   DEBUG ((
     DEBUG_INFO,
     "%a: Processing node %a (src_offset=%d, dst_offset=%d)\n",
@@ -596,10 +596,10 @@ CopyDtbNodeRecursive (
     ));
 
   // Copy all properties from source node to destination node
-  fdt_for_each_property_offset (PropOffset, SrcDtb, SrcOffset) {
-    PropStr = fdt_getprop_by_offset (SrcDtb, PropOffset, &PropName, &PropLen);
+  for (PropOffset = FdtFirstPropertyOffset (SrcDtb, SrcOffset); PropOffset >= 0; PropOffset = FdtNextPropertyOffset (SrcDtb, PropOffset)) {
+    PropStr = FdtGetPropertyValueByOffset (SrcDtb, PropOffset, &PropName, &PropLen);
     if (PropStr != NULL) {
-      FdtErr = fdt_setprop (DstDtb, DstOffset, PropName, PropStr, PropLen);
+      FdtErr = FdtSetProp (DstDtb, DstOffset, PropName, PropStr, PropLen);
       if (FdtErr < 0) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to set property %a, err=%d\n", __FUNCTION__, PropName, FdtErr));
         return EFI_DEVICE_ERROR;
@@ -610,13 +610,13 @@ CopyDtbNodeRecursive (
   }
 
   // Recursively copy all subnodes
-  fdt_for_each_subnode (SubnodeOffset, SrcDtb, SrcOffset) {
-    SubnodeName = fdt_get_name (SrcDtb, SubnodeOffset, NULL);
+  FdtForEachSubnode (SubnodeOffset, SrcDtb, SrcOffset) {
+    SubnodeName = FdtGetName (SrcDtb, SubnodeOffset, NULL);
     if (SubnodeName != NULL) {
       DEBUG ((DEBUG_INFO, "%a: Copying subnode %a\n", __FUNCTION__, SubnodeName));
 
       // Create the subnode in destination DTB
-      NewSubnodeOffset = fdt_add_subnode (DstDtb, DstOffset, SubnodeName);
+      NewSubnodeOffset = FdtAddSubnode (DstDtb, DstOffset, SubnodeName);
       if (NewSubnodeOffset < 0) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to create subnode %a, err=%d\n", __FUNCTION__, SubnodeName, NewSubnodeOffset));
         return EFI_DEVICE_ERROR;
@@ -689,8 +689,8 @@ CopyRegPropertiesFromNodePaths (
     NodePath = mRegPropertyNodePaths[Index];
 
     // Find the node in both DTBs
-    UefiNodeOffset   = fdt_path_offset (UefiDtb, NodePath);
-    KernelNodeOffset = fdt_path_offset (KernelDtb, NodePath);
+    UefiNodeOffset   = FdtPathOffset (UefiDtb, NodePath);
+    KernelNodeOffset = FdtPathOffset (KernelDtb, NodePath);
 
     if ((UefiNodeOffset < 0) || (KernelNodeOffset < 0)) {
       DEBUG ((
@@ -705,7 +705,7 @@ CopyRegPropertiesFromNodePaths (
     }
 
     // Check source node status - must be "okay" or missing (defaults to okay)
-    CONST CHAR8  *UefiStatus = (CONST CHAR8 *)fdt_getprop (UefiDtb, UefiNodeOffset, "status", NULL);
+    CONST CHAR8  *UefiStatus = (CONST CHAR8 *)FdtGetProp (UefiDtb, UefiNodeOffset, "status", NULL);
     if ((UefiStatus != NULL) && (AsciiStrCmp (UefiStatus, "okay") != 0)) {
       DEBUG ((
         DEBUG_INFO,
@@ -718,14 +718,14 @@ CopyRegPropertiesFromNodePaths (
     }
 
     // Get the reg property from UEFI DTB
-    RegProperty = fdt_getprop (UefiDtb, UefiNodeOffset, "reg", &RegPropertyLen);
+    RegProperty = FdtGetProp (UefiDtb, UefiNodeOffset, "reg", &RegPropertyLen);
     if (RegProperty == NULL) {
       DEBUG ((DEBUG_INFO, "%a: No 'reg' property found in UEFI DTB node %a\n", __FUNCTION__, NodePath));
       continue;  // Skip if no reg property in source
     }
 
     // Copy the reg property to kernel DTB
-    FdtErr = fdt_setprop (KernelDtb, KernelNodeOffset, "reg", RegProperty, RegPropertyLen);
+    FdtErr = FdtSetProp (KernelDtb, KernelNodeOffset, "reg", RegProperty, RegPropertyLen);
     if (FdtErr < 0) {
       DEBUG ((
         DEBUG_ERROR,
@@ -746,7 +746,7 @@ CopyRegPropertiesFromNodePaths (
     }
 
     // Set destination node status to "okay" after successful patching
-    FdtErr = fdt_setprop_string (KernelDtb, KernelNodeOffset, "status", "okay");
+    FdtErr = FdtSetPropString (KernelDtb, KernelNodeOffset, "status", "okay");
     if (FdtErr < 0) {
       DEBUG ((
         DEBUG_ERROR,
@@ -800,8 +800,8 @@ PatchKernelDtbWithUefiData (
     return EFI_INVALID_PARAMETER;
   }
 
-  KernelDtbNodeOffset = fdt_path_offset (KernelDtb, "/chosen");
-  UefiDtbNodeOffset   = fdt_path_offset (UefiDtb, "/chosen");
+  KernelDtbNodeOffset = FdtPathOffset (KernelDtb, "/chosen");
+  UefiDtbNodeOffset   = FdtPathOffset (UefiDtb, "/chosen");
 
   Status = CopyDtbNodeRecursive (UefiDtb, UefiDtbNodeOffset, KernelDtb, KernelDtbNodeOffset);
   if (EFI_ERROR (Status)) {
@@ -940,9 +940,9 @@ AndroidBootDxeLoadDtb (
 
   DtbCopy = NULL;
   // Allowing space for overlays
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (fdt_totalsize (Dtb) + 4 * fdt_totalsize (Dtb)));
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (FdtTotalSize (Dtb) + 4 * FdtTotalSize (Dtb)));
   if ((DtbCopy != NULL) &&
-      (fdt_open_into (Dtb, DtbCopy, (fdt_totalsize (Dtb)+ 4 * fdt_totalsize (Dtb))) == 0))
+      (FdtOpenInto (Dtb, DtbCopy, (FdtTotalSize (Dtb)+ 4 * FdtTotalSize (Dtb))) == 0))
   {
     if (SkipOverlays == FALSE) {
       AndroidApplyOverlays (DtbCopy, Dtbo, DtboCount, AndroidbootDtboIdx);
@@ -950,19 +950,19 @@ AndroidBootDxeLoadDtb (
 
     Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
     if (EFI_ERROR (Status)) {
-      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (FdtTotalSize (DtbCopy)));
       DtbCopy = NULL;
     } else {
       if (CurrentDtb != NULL) {
         INT32  KernelDtbNodeOffset;
         INT32  UefiDtbNodeOffset;
 
-        KernelDtbNodeOffset = fdt_path_offset (DtbCopy, "/chosen");
-        UefiDtbNodeOffset   = fdt_path_offset (CurrentDtb, "/chosen");
+        KernelDtbNodeOffset = FdtPathOffset (DtbCopy, "/chosen");
+        UefiDtbNodeOffset   = FdtPathOffset (CurrentDtb, "/chosen");
 
         // Only patch DTB if both have chosen nodes and hypervisor mode is detected
         if ((KernelDtbNodeOffset >= 0) && (UefiDtbNodeOffset >= 0) &&
-            fdt_get_property (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
+            FdtGetProperty (CurrentDtb, UefiDtbNodeOffset, "nvidia,tegra-hypervisor-mode", NULL))
         {
           Status = PatchKernelDtbWithUefiData (CurrentDtb, DtbCopy);
           if (EFI_ERROR (Status)) {
@@ -978,7 +978,7 @@ AndroidBootDxeLoadDtb (
 
         Status = GetBootConfigUpdateProtocol (&BootConfigUpdate);
         if (!EFI_ERROR (Status) && (BootConfigUpdate->BootConfigs != NULL)) {
-          BootConfigEntry = (CHAR8 *)fdt_getprop (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
+          BootConfigEntry = (CHAR8 *)FdtGetProp (CurrentDtb, UefiDtbNodeOffset, "bootconfig", &PropLen);
           if (NULL == BootConfigEntry) {
             // Not fatal
             DEBUG ((DEBUG_ERROR, "%a: /chosen/bootconfig not found, creating..\n", __FUNCTION__));
@@ -1000,7 +1000,7 @@ AndroidBootDxeLoadDtb (
           }
 
           PropLen = AsciiStrLen (NewBootConfigStr) + 1;
-          FdtErr  = fdt_setprop (DtbCopy, KernelDtbNodeOffset, "bootconfig", NewBootConfigStr, PropLen);
+          FdtErr  = FdtSetProp (DtbCopy, KernelDtbNodeOffset, "bootconfig", NewBootConfigStr, PropLen);
           if (FdtErr < 0) {
             // Not fatal
             DEBUG ((DEBUG_ERROR, "%a: Got err=%d trying to set bootconfig\n", __FUNCTION__, FdtErr));
@@ -1009,7 +1009,7 @@ AndroidBootDxeLoadDtb (
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
         }
 
-        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (fdt_totalsize (CurrentDtb)));
+        gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (FdtTotalSize (CurrentDtb)));
       }
     }
   }
@@ -3246,14 +3246,14 @@ AndroidBootDxeDriverEntryPoint (
     }
 
     // Copy the kernel DTB.  We need to provide a modified version.
-    NewKernelDtbPages = EFI_SIZE_TO_PAGES (2 * fdt_totalsize ((VOID *)KernelDtbStart));
+    NewKernelDtbPages = EFI_SIZE_TO_PAGES (2 * FdtTotalSize ((VOID *)KernelDtbStart));
     NewKernelDtb      = AllocatePages (NewKernelDtbPages);
     if (NewKernelDtb == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: failed to allocate pages for expanded kernel DTB\r\n", __FUNCTION__));
       goto Done;
     }
 
-    if (fdt_open_into ((UINT8 *)KernelDtbStart, NewKernelDtb, EFI_PAGES_TO_SIZE (NewKernelDtbPages)) != 0) {
+    if (FdtOpenInto ((UINT8 *)KernelDtbStart, NewKernelDtb, EFI_PAGES_TO_SIZE (NewKernelDtbPages)) != 0) {
       DEBUG ((DEBUG_ERROR, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
       goto Done;
     }

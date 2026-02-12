@@ -2,13 +2,13 @@
 
   PCIe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <PiDxe.h>
 
 #include <IndustryStandard/Pci.h>
@@ -2290,7 +2290,7 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.EcamBase      = Private->EcamBase;
       Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
 
-      SegmentNumber = fdt_getprop (
+      SegmentNumber = FdtGetProp (
                         DeviceTreeNode->DeviceTreeBase,
                         DeviceTreeNode->NodeOffset,
                         "linux,pci-domain",
@@ -2306,7 +2306,7 @@ DeviceDiscoveryNotify (
       DEBUG ((DEBUG_INFO, "Segment Number = 0x%x\n", Private->PcieRootBridgeConfigurationIo.SegmentNumber));
 
       if (ChipId == TH500_CHIP_ID) {
-        CtrlId = fdt_getprop (
+        CtrlId = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "nvidia,controller-id",
@@ -2319,7 +2319,7 @@ DeviceDiscoveryNotify (
           Private->CtrlId = SwapBytes32 (Private->CtrlId);
         }
 
-        SocketId = fdt_getprop (
+        SocketId = FdtGetProp (
                      DeviceTreeNode->DeviceTreeBase,
                      DeviceTreeNode->NodeOffset,
                      "nvidia,socket-id",
@@ -2345,12 +2345,12 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.SocketID = Private->SocketId;
       DEBUG ((DEBUG_INFO, "Socket-ID = 0x%x\n", Private->SocketId));
 
-      RPNodeOffset = fdt_first_subnode (
+      RPNodeOffset = FdtFirstSubnode (
                        DeviceTreeNode->DeviceTreeBase,
                        DeviceTreeNode->NodeOffset
                        );
       if (RPNodeOffset > 0) {
-        if (fdt_get_property (
+        if (FdtGetProperty (
               DeviceTreeNode->DeviceTreeBase,
               RPNodeOffset,
               "external-facing",
@@ -2391,7 +2391,7 @@ DeviceDiscoveryNotify (
       RootBridge->ResourceAssigned      = FALSE;
       RootBridge->AllocationAttributes  = EFI_PCI_HOST_BRIDGE_MEM64_DECODE;
 
-      BusProperty = fdt_getprop (
+      BusProperty = FdtGetProp (
                       DeviceTreeNode->DeviceTreeBase,
                       DeviceTreeNode->NodeOffset,
                       "bus-range",
@@ -2411,7 +2411,7 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.MinBusNumber = RootBridge->Bus.Base;
       Private->PcieRootBridgeConfigurationIo.MaxBusNumber = RootBridge->Bus.Limit;
 
-      IommuProperty = fdt_getprop (
+      IommuProperty = FdtGetProp (
                         DeviceTreeNode->DeviceTreeBase,
                         DeviceTreeNode->NodeOffset,
                         "iommu-map",
@@ -2574,7 +2574,7 @@ DeviceDiscoveryNotify (
         break;
       }
 
-      GpuKickGpioProperty = fdt_getprop (
+      GpuKickGpioProperty = FdtGetProp (
                               DeviceTreeNode->DeviceTreeBase,
                               DeviceTreeNode->NodeOffset,
                               "nvidia,gpukick-gpio",
@@ -2618,7 +2618,7 @@ DeviceDiscoveryNotify (
           Private->PcieRootBridgeConfigurationIo.HbmRangeStart = RangesArray[0].ParentAddress;
           Private->PcieRootBridgeConfigurationIo.HbmRangeSize  = RangesArray[0].Size;
 
-          PxmDmnStartProperty = fdt_getprop (
+          PxmDmnStartProperty = FdtGetProp (
                                   DeviceTreeNode->DeviceTreeBase,
                                   DeviceTreeNode->NodeOffset,
                                   "pxm-domain-start",
@@ -2630,7 +2630,7 @@ DeviceDiscoveryNotify (
             Private->PcieRootBridgeConfigurationIo.ProximityDomainStart = TH500_GPU_HBM_PXM_DOMAIN_START_FOR_GPU_ID (Private->PcieRootBridgeConfigurationIo.SocketID);
           }
 
-          NumPxmDmnProperty = fdt_getprop (
+          NumPxmDmnProperty = FdtGetProp (
                                 DeviceTreeNode->DeviceTreeBase,
                                 DeviceTreeNode->NodeOffset,
                                 "num-pxm-domain",
@@ -2646,7 +2646,7 @@ DeviceDiscoveryNotify (
         }
       }
 
-      if (fdt_get_property (
+      if (FdtGetProperty (
             DeviceTreeNode->DeviceTreeBase,
             DeviceTreeNode->NodeOffset,
             "nvidia,uefi-exit-reset",

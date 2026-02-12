@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 2 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -13,7 +13,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/FruLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <ConfigurationManagerObject.h>
 
 #include "SmbiosParserPrivate.h"
@@ -44,14 +44,14 @@ GetMemoryDeviceCount (
 
   for (Index = 0; Index < MAX_TYPE2_COUNT; Index++) {
     AsciiSPrint (Type2tNodeStr, sizeof (Type2tNodeStr), "/firmware/smbios/type2@%u", Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type2tNodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type2tNodeStr);
     if (NodeOffset < 0) {
       break;
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "memory-device-count", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "memory-device-count", &Length);
     if (Property != NULL) {
-      CurrentCount = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      CurrentCount = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
 
       //
       // Make sure every Type 2 has the the same number of memory devices, if it has.
@@ -161,7 +161,7 @@ InstallSmbiosType2Cm (
 
   for (Index = 0; Index < MAX_TYPE2_COUNT; Index++) {
     AsciiSPrint (Type2tNodeStr, sizeof (Type2tNodeStr), "/firmware/smbios/type2@%u", Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type2tNodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type2tNodeStr);
     if (NodeOffset < 0) {
       break;
     }
@@ -193,7 +193,7 @@ InstallSmbiosType2Cm (
     BaseboardInfo[NumBaseboards].AssetTag     = NULL;
 
     // Get data from DTB
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "manufacturer", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "manufacturer", &Length);
     if (PropertyStr != NULL ) {
       BaseboardInfo[NumBaseboards].Manufacturer = AllocateZeroPool (Length + 1);
       AsciiSPrint (BaseboardInfo[NumBaseboards].Manufacturer, Length + 1, PropertyStr);
@@ -201,7 +201,7 @@ InstallSmbiosType2Cm (
       BaseboardInfo[NumBaseboards].Manufacturer = NULL;
     }
 
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "location-in-chassis", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "location-in-chassis", &Length);
     if (PropertyStr != NULL) {
       BaseboardInfo[NumBaseboards].LocationInChassis = AllocateZeroPool (Length + 1);
       AsciiSPrint (BaseboardInfo[NumBaseboards].LocationInChassis, Length + 1, PropertyStr);
@@ -209,19 +209,19 @@ InstallSmbiosType2Cm (
       BaseboardInfo[NumBaseboards].LocationInChassis = NULL;
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "feature-flags", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "feature-flags", &Length);
     if (Property != NULL) {
-      BaseboardInfo[NumBaseboards].FeatureFlag = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      BaseboardInfo[NumBaseboards].FeatureFlag = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "board-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "board-type", &Length);
     if (Property != NULL) {
-      BaseboardInfo[NumBaseboards].BoardType = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      BaseboardInfo[NumBaseboards].BoardType = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     // Get data from FRU.
     FruDesc  = NULL;
-    Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "fru-desc", &Length);
     if (Property != NULL) {
       FruDesc      = (CHAR8 *)Property;
       Type2FruInfo = FindFruByDescription (Private, FruDesc);
@@ -269,9 +269,9 @@ InstallSmbiosType2Cm (
 
     if (BaseboardInfo[NumBaseboards].BoardType == BaseBoardTypeProcessorMemoryModule) {
       SocketNum = 0;
-      Property  = fdt_getprop (DtbBase, NodeOffset, "socket-num", &Length);
+      Property  = FdtGetProp (DtbBase, NodeOffset, "socket-num", &Length);
       if (Property != NULL) {
-        SocketNum = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+        SocketNum = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
       }
 
       BaseboardInfo[NumBaseboards].ContainedCmObjects = GetMemoryDeviceInfoToken (ParserHandle, SocketNum, HandleCount);

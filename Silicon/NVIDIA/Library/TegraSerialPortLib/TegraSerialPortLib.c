@@ -1,7 +1,7 @@
 /** @file
   Serial I/O Port wrapper library
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,8 @@
 #include <Library/TegraSerialPortLib.h>
 #include <Library/SerialPortLib.h>
 #include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 
 #define TEGRA_SERIAL_PORT_UTC_REGISTERS  2
 
@@ -80,7 +81,7 @@ GetRawDeviceTreePointer (
 
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *)DtbBase != NULL);
-  DtbSize = fdt_totalsize ((VOID *)DtbBase);
+  DtbSize = FdtTotalSize ((VOID *)DtbBase);
   // DTB Base may not be aligned to page boundary. Add overlay to size.
   DtbSize += (DtbBase & EFI_PAGE_MASK);
   DtbSize  = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));

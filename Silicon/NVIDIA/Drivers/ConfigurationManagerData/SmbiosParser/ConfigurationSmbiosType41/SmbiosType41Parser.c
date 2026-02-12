@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 41 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -10,7 +10,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -141,7 +141,7 @@ InstallSmbiosType41Cm (
   for (Index = 0; Index < MAX_TYPE41_COUNT; Index++) {
     ZeroMem (Type41NodeStr, sizeof (Type41NodeStr));
     AsciiSPrint (Type41NodeStr, sizeof (Type41NodeStr), "/firmware/smbios/type41@%u", Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type41NodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type41NodeStr);
     if (NodeOffset < 0) {
       break;
     }
@@ -163,27 +163,27 @@ InstallSmbiosType41Cm (
     VendorDeviceId                                              = MAX_UINT32;
     OnboardDeviceExInfo[NumOnboardDevices].ReferenceDesignation = NULL;
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "device-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "device-type", &Length);
     if (Property != NULL) {
-      DeviceType = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      DeviceType = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "segment-group-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "segment-group-number", &Length);
     if (Property != NULL) {
-      SegmentNum = (UINT16)fdt32_to_cpu (*(UINT32 *)Property);
+      SegmentNum = (UINT16)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "bus-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "bus-number", &Length);
     if (Property != NULL) {
-      BusNum = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      BusNum = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "device-function-number", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "device-function-number", &Length);
     if (Property != NULL) {
-      DevFuncNum = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      DevFuncNum = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "reference-designation", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "reference-designation", &Length);
     if (PropertyStr != NULL) {
       OnboardDeviceExInfo[NumOnboardDevices].ReferenceDesignation = AllocateZeroPool (Length + 1);
       if (OnboardDeviceExInfo[NumOnboardDevices].ReferenceDesignation != NULL) {

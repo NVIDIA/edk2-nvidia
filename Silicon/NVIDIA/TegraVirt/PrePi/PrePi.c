@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -15,7 +15,7 @@
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/CpuExceptionHandlerLib.h>
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "PrePi.h"
 
@@ -141,7 +141,7 @@ PrePiMain (
 
   DtbBase = PcdGet64 (PcdDeviceTreeInitialBaseAddress);
   ASSERT ((VOID *)DtbBase != NULL);
-  DtbSize = fdt_totalsize ((VOID *)DtbBase);
+  DtbSize = FdtTotalSize ((VOID *)DtbBase);
   DtbSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (DtbSize));
 
   DEBUG_CODE_BEGIN ();

@@ -1,7 +1,7 @@
 /** @file
   Memory System Resource Partitioning and Monitoring Table Parser
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -9,7 +9,7 @@
 #include "MpamParser.h"
 #include "../ConfigurationManagerDataRepoLib.h"
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
@@ -87,10 +87,10 @@ UpdateResourceNodeInfo (
     }
 
     // using pHandle as unique identifier
-    pHandle                            = fdt_get_phandle (DeviceTreeBase, NodeOffset);
+    pHandle                            = FdtGetPhandle (DeviceTreeBase, NodeOffset);
     ResourceNodeInfo[Index].Identifier = pHandle;
 
-    MpamProp = fdt_getprop (DeviceTreeBase, NodeOffset, "arm,mpam-device", NULL);
+    MpamProp = FdtGetProp (DeviceTreeBase, NodeOffset, "arm,mpam-device", NULL);
     if (MpamProp == NULL) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
@@ -301,7 +301,7 @@ UpdateMscNodeInfo (
       goto Exit;
     }
 
-    MpamProp = fdt_getprop (DeviceTreeBase, NodeOffset, "arm,not-ready-us", NULL);
+    MpamProp = FdtGetProp (DeviceTreeBase, NodeOffset, "arm,not-ready-us", NULL);
     if (MpamProp == NULL) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
@@ -310,7 +310,7 @@ UpdateMscNodeInfo (
     MscNodeInfo[Index].MaxNRdyUsec = SwapBytes32 (*MpamProp);
 
     // using pHandle as unique identifier
-    pHandle                       = fdt_get_phandle (DeviceTreeBase, NodeOffset);
+    pHandle                       = FdtGetPhandle (DeviceTreeBase, NodeOffset);
     MscNodeInfo[Index].Identifier = pHandle;
 
     // Assign HID and UID based on socket ID
@@ -322,9 +322,9 @@ UpdateMscNodeInfo (
     // Count all resource nodes for this MSC node
     SubNodeOffset     = 0;
     PrevSubNodeOffset = 0;
-    for (SubNodeOffset = fdt_first_subnode (DeviceTreeBase, NodeOffset);
+    for (SubNodeOffset = FdtFirstSubnode (DeviceTreeBase, NodeOffset);
          SubNodeOffset > 0;
-         SubNodeOffset = fdt_next_subnode (DeviceTreeBase, PrevSubNodeOffset))
+         SubNodeOffset = FdtNextSubnode (DeviceTreeBase, PrevSubNodeOffset))
     {
       PrevSubNodeOffset = SubNodeOffset;
       if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("arm,mpam-cache", SubNodeOffset))) {

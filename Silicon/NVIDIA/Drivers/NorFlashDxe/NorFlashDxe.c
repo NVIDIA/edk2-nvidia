@@ -2,7 +2,7 @@
 
   NOR Flash Driver
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1372,10 +1372,10 @@ STATIC
 BOOLEAN
 EFIAPI
 IsValidFlashNode (
-  IN CONST VOID  *DeviceTreeBase,
-  IN INT32       NodeOffset,
-  IN UINT8       NumChipSelects,
-  OUT UINT8      *ChipSelect         OPTIONAL
+  IN VOID    *DeviceTreeBase,
+  IN INT32   NodeOffset,
+  IN UINT8   NumChipSelects,
+  OUT UINT8  *ChipSelect         OPTIONAL
   )
 {
   CONST CHAR8  *NodeName;
@@ -1387,7 +1387,7 @@ IsValidFlashNode (
   BOOLEAN      IsValidCS;
   UINT32       NodeChipSelect;
 
-  NodeName = fdt_get_name (DeviceTreeBase, NodeOffset, NULL);
+  NodeName = FdtGetName (DeviceTreeBase, NodeOffset, NULL);
 
   NodeChipSelect = MAX_UINT32;
   IsDisabled     = FALSE;
@@ -1396,13 +1396,13 @@ IsValidFlashNode (
   if (AsciiStrnCmp (NodeName, "flash@", AsciiStrLen ("flash@")) == 0) {
     IsFlash = TRUE;
   } else if (AsciiStrnCmp (NodeName, "spiflash@", AsciiStrLen ("spiflash@")) == 0) {
-    Offset = fdt_subnode_offset (
+    Offset = FdtSubnodeOffset (
                DeviceTreeBase,
                NodeOffset,
                "partition@0"
                );
     if (Offset >= 0) {
-      Property = fdt_getprop (DeviceTreeBase, Offset, "label", &Length);
+      Property = FdtGetProp (DeviceTreeBase, Offset, "label", &Length);
       if ((Property != NULL) && (Length != 0)) {
         if (AsciiStrStr (Property, "flash") != NULL) {
           IsFlash = TRUE;
@@ -1411,21 +1411,21 @@ IsValidFlashNode (
     }
   }
 
-  Property = fdt_getprop (DeviceTreeBase, NodeOffset, "status", NULL);
+  Property = FdtGetProp (DeviceTreeBase, NodeOffset, "status", NULL);
   if ((Property != NULL) && (AsciiStrCmp (Property, "disabled") == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: %a disabled\n", __FUNCTION__, NodeName));
     IsDisabled = TRUE;
   }
 
   if (IsFlash && !IsDisabled) {
-    Property = fdt_getprop (
+    Property = FdtGetProp (
                  DeviceTreeBase,
                  NodeOffset,
                  "reg",
                  &Length
                  );
     if ((Property != NULL) && (Length == sizeof (UINT32))) {
-      NodeChipSelect = (UINT8)fdt32_to_cpu (*(CONST UINT32 *)Property);
+      NodeChipSelect = (UINT8)Fdt32ToCpu (*(CONST UINT32 *)Property);
       if (NodeChipSelect < NumChipSelects) {
         IsValidCS = TRUE;
         if (ChipSelect != NULL) {
@@ -1486,7 +1486,7 @@ CheckNorFlashCompatibility (
   }
 
   SubNode = 0;
-  fdt_for_each_subnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+  FdtForEachSubnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (IsValidFlashNode (DeviceTreeNode->DeviceTreeBase, SubNode, NumChipSelects, NULL)) {
       return EFI_SUCCESS;
     }
@@ -1717,7 +1717,7 @@ NorFlashDxeDriverBindingStart (
   }
 
   SubNode = 0;
-  fdt_for_each_subnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+  FdtForEachSubnode (SubNode, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
     if (!IsValidFlashNode (DeviceTreeNode->DeviceTreeBase, SubNode, NumChipSelects, &ChipSelect)) {
       continue;
     }

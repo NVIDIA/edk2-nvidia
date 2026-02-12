@@ -2,13 +2,13 @@
 
   Android Boot Config Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 #include <Library/BaseMemoryLib.h>
@@ -279,13 +279,13 @@ AddBootConfigFromDtb (
     return EFI_NOT_FOUND;
   }
 
-  NodeOffset = fdt_path_offset (KernelDtb, "/chosen");
+  NodeOffset = FdtPathOffset (KernelDtb, "/chosen");
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to find /chosen in DTB\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
-  BootConfigEntry = (CHAR8 *)fdt_getprop (KernelDtb, NodeOffset, "bootconfig", &BootConfigLength);
+  BootConfigEntry = (CHAR8 *)FdtGetProp (KernelDtb, NodeOffset, "bootconfig", &BootConfigLength);
   if (NULL == BootConfigEntry) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to find bootconfig node\n", __FUNCTION__));
     // Not a fatal issue as dtb bootconfig can be empty for some platforms

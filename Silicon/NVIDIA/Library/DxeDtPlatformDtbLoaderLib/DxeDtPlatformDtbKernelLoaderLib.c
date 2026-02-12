@@ -32,7 +32,7 @@
 #include <Protocol/EFuse.h>
 #include <IndustryStandard/ArmStdSmc.h>
 #include <NVIDIAConfiguration.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #define T234_FUSE_BOOT_SECURITY_INFO_OFFSET      0x268
 #define T234_OEM_KEY_VALID_BIT                   BIT9
@@ -80,10 +80,10 @@ AddBoardProperties (
   Eeprom = NULL;
   Status = gBS->LocateProtocol (&gNVIDIACvmEepromProtocolGuid, NULL, (VOID **)&Eeprom);
   if (!EFI_ERROR (Status)) {
-    fdt_setprop (Dtb, 0, "serial-number", &Eeprom->SerialNumber, sizeof (Eeprom->SerialNumber));
-    NodeOffset = fdt_path_offset (Dtb, "/chosen");
+    FdtSetProp (Dtb, 0, "serial-number", &Eeprom->SerialNumber, sizeof (Eeprom->SerialNumber));
+    NodeOffset = FdtPathOffset (Dtb, "/chosen");
     if (NodeOffset >= 0) {
-      fdt_setprop (Dtb, NodeOffset, "nvidia,sku", &Eeprom->ProductId, sizeof (Eeprom->ProductId));
+      FdtSetProp (Dtb, NodeOffset, "nvidia,sku", &Eeprom->ProductId, sizeof (Eeprom->ProductId));
     }
   }
 
@@ -94,24 +94,24 @@ AddBoardProperties (
     for (Count = 0; Count < NoHandles; Count++) {
       Status = gBS->HandleProtocol (Handles[Count], &gNVIDIAEepromProtocolGuid, (VOID **)&Eeprom);
       if (!EFI_ERROR (Status)) {
-        NodeOffset = fdt_path_offset (Dtb, "/chosen");
+        NodeOffset = FdtPathOffset (Dtb, "/chosen");
         if (NodeOffset >= 0) {
           CameraId = AsciiStrStr (Eeprom->ProductId, CAMERA_EEPROM_PART_NAME);
           if (CameraId == NULL) {
-            fdt_appendprop (Dtb, NodeOffset, "ids", Eeprom->BoardId, AsciiStrLen (Eeprom->BoardId) + 1);
+            FdtAppendProp (Dtb, NodeOffset, "ids", Eeprom->BoardId, AsciiStrLen (Eeprom->BoardId) + 1);
           } else {
-            fdt_appendprop (Dtb, NodeOffset, "ids", CameraId, AsciiStrLen (CameraId) + 1);
+            FdtAppendProp (Dtb, NodeOffset, "ids", CameraId, AsciiStrLen (CameraId) + 1);
           }
 
-          fdt_appendprop (Dtb, NodeOffset, "ids", " ", 1);
+          FdtAppendProp (Dtb, NodeOffset, "ids", " ", 1);
         }
       }
     }
   }
 
-  NodeOffset = fdt_path_offset (Dtb, "/chosen");
+  NodeOffset = FdtPathOffset (Dtb, "/chosen");
   if (NodeOffset >= 0) {
-    fdt_appendprop (Dtb, NodeOffset, "ids", "\n", 1);
+    FdtAppendProp (Dtb, NodeOffset, "ids", "\n", 1);
   }
 
   if (Handles != NULL) {
@@ -152,7 +152,7 @@ EnableTrustyNode (
   INT32  TrustyNodeOffset;
   INT32  Ret;
 
-  TrustyNodeOffset = fdt_path_offset (Dtb, "/trusty");
+  TrustyNodeOffset = FdtPathOffset (Dtb, "/trusty");
   if (TrustyNodeOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -163,7 +163,7 @@ EnableTrustyNode (
     return;
   }
 
-  Ret = fdt_setprop (Dtb, TrustyNodeOffset, "status", "okay", sizeof ("okay"));
+  Ret = FdtSetProp (Dtb, TrustyNodeOffset, "status", "okay", sizeof ("okay"));
   if (Ret != 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -184,7 +184,7 @@ EnableOpteeNode (
   INT32  OpteeNodeOffset;
   INT32  Ret;
 
-  OpteeNodeOffset = fdt_path_offset (Dtb, "/firmware/optee");
+  OpteeNodeOffset = FdtPathOffset (Dtb, "/firmware/optee");
   if (OpteeNodeOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -195,7 +195,7 @@ EnableOpteeNode (
     return;
   }
 
-  Ret = fdt_setprop (Dtb, OpteeNodeOffset, "status", "okay", sizeof ("okay"));
+  Ret = FdtSetProp (Dtb, OpteeNodeOffset, "status", "okay", sizeof ("okay"));
   if (Ret != 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -224,7 +224,7 @@ EnableFtpmNode (
     goto ExitEnableFtpmNode;
   }
 
-  FtpmNodeOffset = fdt_path_offset (Dtb, "/firmware/ftpm");
+  FtpmNodeOffset = FdtPathOffset (Dtb, "/firmware/ftpm");
   if (FtpmNodeOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -235,7 +235,7 @@ EnableFtpmNode (
     goto ExitEnableFtpmNode;
   }
 
-  Ret = fdt_setprop (Dtb, FtpmNodeOffset, "status", "okay", sizeof ("okay"));
+  Ret = FdtSetProp (Dtb, FtpmNodeOffset, "status", "okay", sizeof ("okay"));
   if (Ret != 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -278,15 +278,15 @@ RemoveQspiNodes (
   Map = gQspiCompatibilityMap;
 
   while (Map->Compatibility != NULL) {
-    NodeOffset = fdt_node_offset_by_compatible (Dtb, 0, Map->Compatibility);
+    NodeOffset = FdtNodeOffsetByCompatible (Dtb, 0, Map->Compatibility);
     while (NodeOffset >= 0) {
-      if ((fdt_subnode_offset (Dtb, NodeOffset, "flash@0") >= 0) ||
-          (fdt_subnode_offset (Dtb, NodeOffset, "spiflash@0") >= 0))
+      if ((FdtSubnodeOffset (Dtb, NodeOffset, "flash@0") >= 0) ||
+          (FdtSubnodeOffset (Dtb, NodeOffset, "spiflash@0") >= 0))
       {
-        fdt_del_node (Dtb, NodeOffset);
+        FdtDelNode (Dtb, NodeOffset);
       }
 
-      NodeOffset = fdt_node_offset_by_compatible (Dtb, NodeOffset, Map->Compatibility);
+      NodeOffset = FdtNodeOffsetByCompatible (Dtb, NodeOffset, Map->Compatibility);
     }
 
     Map++;
@@ -321,9 +321,9 @@ UpdateRamOopsMemory (
   }
 
   if ((RamOopsBase != 0) && (RamOopsSize != 0)) {
-    NodeOffset   = fdt_node_offset_by_compatible (Dtb, 0, "ramoops");
-    AddressCells = fdt_address_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
-    SizeCells    = fdt_size_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
+    NodeOffset   = FdtNodeOffsetByCompatible (Dtb, 0, "ramoops");
+    AddressCells = FdtAddressCells (Dtb, FdtParentOffset (Dtb, NodeOffset));
+    SizeCells    = FdtSizeCells (Dtb, FdtParentOffset (Dtb, NodeOffset));
     if ((AddressCells > 2) ||
         (AddressCells == 0) ||
         (SizeCells > 2) ||
@@ -355,8 +355,8 @@ UpdateRamOopsMemory (
       *(UINT32 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (RamOopsSize);
     }
 
-    fdt_setprop (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
-    fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
+    FdtSetProp (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+    FdtSetProp (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
 
     gBS->FreePool (Data);
   }
@@ -390,12 +390,12 @@ UpdatePvaFwMemory (
   }
 
   if ((PvaFwBase != 0) && (PvaFwSize != 0)) {
-    NodeOffset = fdt_subnode_offset (Dtb, 0, "reserved-memory");
+    NodeOffset = FdtSubnodeOffset (Dtb, 0, "reserved-memory");
     if (NodeOffset >= 0) {
-      NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "pva-carveout");
+      NodeOffset = FdtAddSubnode (Dtb, NodeOffset, "pva-carveout");
       if (NodeOffset >= 0) {
-        AddressCells = fdt_address_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
-        SizeCells    = fdt_size_cells (Dtb, fdt_parent_offset (Dtb, NodeOffset));
+        AddressCells = FdtAddressCells (Dtb, FdtParentOffset (Dtb, NodeOffset));
+        SizeCells    = FdtSizeCells (Dtb, FdtParentOffset (Dtb, NodeOffset));
         if ((AddressCells > 2) ||
             (AddressCells == 0) ||
             (SizeCells > 2) ||
@@ -427,10 +427,10 @@ UpdatePvaFwMemory (
           *(UINT32 *)&Data[AddressCells * sizeof (UINT32)] = SwapBytes32 (PvaFwSize);
         }
 
-        fdt_setprop (Dtb, NodeOffset, "compatible", "nvidia,pva-carveout", sizeof ("nvidia,pva-carveout"));
-        fdt_setprop (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
-        fdt_setprop (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
-        fdt_setprop (Dtb, NodeOffset, "nomap", NULL, 0);
+        FdtSetProp (Dtb, NodeOffset, "compatible", "nvidia,pva-carveout", sizeof ("nvidia,pva-carveout"));
+        FdtSetProp (Dtb, NodeOffset, "reg", Data, (AddressCells + SizeCells) * sizeof (UINT32));
+        FdtSetProp (Dtb, NodeOffset, "status", "okay", sizeof ("okay"));
+        FdtSetProp (Dtb, NodeOffset, "nomap", NULL, 0);
 
         gBS->FreePool (Data);
       }
@@ -513,10 +513,10 @@ ProcessDsuPmu (
   }
 
   if (OemProduction) {
-    NodeOffset = fdt_node_offset_by_compatible (Dtb, 0, "arm,dsu-pmu");
+    NodeOffset = FdtNodeOffsetByCompatible (Dtb, 0, "arm,dsu-pmu");
     while (NodeOffset >= 0) {
-      fdt_del_node (Dtb, NodeOffset);
-      NodeOffset = fdt_node_offset_by_compatible (Dtb, 0, "arm,dsu-pmu");
+      FdtDelNode (Dtb, NodeOffset);
+      NodeOffset = FdtNodeOffsetByCompatible (Dtb, 0, "arm,dsu-pmu");
     }
   }
 }
@@ -549,13 +549,13 @@ UpdateFdt (
 
   // reset pointer in case new fdt was installed
   SetDeviceTreePointer (0, 0);
-  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+  SetDeviceTreePointer (Dtb, FdtTotalSize (Dtb));
 
   // Check if overlays from fw media are already applied
   FirmwareMediaOverlaysApplied = FALSE;
-  NodeOffset                   = fdt_path_offset (Dtb, "/firmware/uefi");
+  NodeOffset                   = FdtPathOffset (Dtb, "/firmware/uefi");
   if (NodeOffset >= 0) {
-    if (NULL != fdt_get_property (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL)) {
+    if (NULL != FdtGetProperty (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL)) {
       DEBUG ((DEBUG_ERROR, "%a: Overlays from firmware media already applied.\r\n", __FUNCTION__));
       FirmwareMediaOverlaysApplied = TRUE;
     }
@@ -565,29 +565,29 @@ UpdateFdt (
     // Apply kernel-dtb overlays
     DEBUG ((DEBUG_ERROR, "%a: Applying overlays from firmware media.\r\n", __FUNCTION__));
     CpublDtb   = (VOID *)(UINTN)GetDTBBaseAddress ();
-    OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + fdt_totalsize (CpublDtb), SIZE_4KB);
-    if (fdt_check_header (OverlayDtb) == 0) {
+    OverlayDtb = (VOID *)ALIGN_VALUE ((UINTN)CpublDtb + FdtTotalSize (CpublDtb), SIZE_4KB);
+    if (FdtCheckHeader (OverlayDtb) == 0) {
       Status = ApplyTegraDeviceTreeOverlay (Dtb, OverlayDtb, SWModule);
       if (EFI_ERROR (Status)) {
         return;
       }
 
-      NodeOffset = fdt_path_offset (Dtb, "/firmware/uefi");
+      NodeOffset = FdtPathOffset (Dtb, "/firmware/uefi");
       if (NodeOffset >= 0) {
-        fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+        FdtSetProp (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
       } else {
-        NodeOffset = fdt_path_offset (Dtb, "/firmware");
+        NodeOffset = FdtPathOffset (Dtb, "/firmware");
         if (NodeOffset >= 0) {
-          NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+          NodeOffset = FdtAddSubnode (Dtb, NodeOffset, "uefi");
           if (NodeOffset >= 0) {
-            fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+            FdtSetProp (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
           }
         } else {
-          NodeOffset = fdt_add_subnode (Dtb, 0, "firmware");
+          NodeOffset = FdtAddSubnode (Dtb, 0, "firmware");
           if (NodeOffset >= 0) {
-            NodeOffset = fdt_add_subnode (Dtb, NodeOffset, "uefi");
+            NodeOffset = FdtAddSubnode (Dtb, NodeOffset, "uefi");
             if (NodeOffset >= 0) {
-              fdt_setprop (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
+              FdtSetProp (Dtb, NodeOffset, "firmware-media-overlays-applied", NULL, 0);
             }
           }
         }
@@ -601,15 +601,15 @@ UpdateFdt (
   }
 
   // Remove plugin-manager node for device trees.
-  NodeOffset = fdt_path_offset (Dtb, "/plugin-manager");
+  NodeOffset = FdtPathOffset (Dtb, "/plugin-manager");
   if (NodeOffset >= 0) {
-    fdt_del_node ((VOID *)Dtb, NodeOffset);
+    FdtDelNode ((VOID *)Dtb, NodeOffset);
   }
 
   // Remove grid of semaphores as we do not set up memory for this
-  NodeOffset = fdt_path_offset (Dtb, "/reserved-memory/grid-of-semaphores");
+  NodeOffset = FdtPathOffset (Dtb, "/reserved-memory/grid-of-semaphores");
   if (NodeOffset > 0) {
-    fdt_del_node (Dtb, NodeOffset);
+    FdtDelNode (Dtb, NodeOffset);
   }
 
   FloorSweepDtb (Dtb);
@@ -680,7 +680,7 @@ DtPlatformLoadDtb (
 
   RanOnce = TRUE;
   UefiDtb = (VOID *)(UINTN)GetDTBBaseAddress ();
-  if (fdt_check_header (UefiDtb) != 0) {
+  if (FdtCheckHeader (UefiDtb) != 0) {
     DEBUG ((DEBUG_ERROR, "%a: UEFI DTB corrupted\r\n", __FUNCTION__));
     return EFI_NOT_FOUND;
   }
@@ -688,15 +688,15 @@ DtPlatformLoadDtb (
   // Double the size taken by DTB to have enough buffer to accommodate
   // any runtime additions made to it.
   DtbCopy = NULL;
-  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (UefiDtb)));
-  if (fdt_open_into (UefiDtb, DtbCopy, 4 * fdt_totalsize (UefiDtb)) != 0) {
+  DtbCopy = AllocatePages (EFI_SIZE_TO_PAGES (4 * FdtTotalSize (UefiDtb)));
+  if (FdtOpenInto (UefiDtb, DtbCopy, 4 * FdtTotalSize (UefiDtb)) != 0) {
     Status = EFI_NOT_FOUND;
     goto Exit;
   }
 
   DEBUG ((DEBUG_ERROR, "%a: Defaulting to UEFI DTB\r\n", __FUNCTION__));
   *Dtb     = DtbCopy;
-  *DtbSize = fdt_totalsize (*Dtb);
+  *DtbSize = FdtTotalSize (*Dtb);
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
@@ -714,7 +714,7 @@ DtPlatformLoadDtb (
 Exit:
   if (EFI_ERROR (Status)) {
     if (DtbCopy != NULL) {
-      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (fdt_totalsize (DtbCopy)));
+      gBS->FreePages ((EFI_PHYSICAL_ADDRESS)DtbCopy, EFI_SIZE_TO_PAGES (FdtTotalSize (DtbCopy)));
       DtbCopy = NULL;
     }
 

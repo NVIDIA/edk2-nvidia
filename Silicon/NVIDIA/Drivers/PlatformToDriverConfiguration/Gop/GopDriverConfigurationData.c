@@ -1,14 +1,15 @@
 /** @file
   GOP Driver specific Query and Response functions
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Uefi.h>
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/FdtLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <PlatformToDriverStructures.h>
@@ -69,7 +70,7 @@ QueryGopParameters (
   }
 
   // Obtaining display info from the device tree
-  DcbImage = (UINT8 *)fdt_getprop (
+  DcbImage = (UINT8 *)FdtGetProp (
                         DtNode->DeviceTreeBase,
                         DtNode->NodeOffset,
                         "nvidia,dcb-image",
@@ -81,7 +82,7 @@ QueryGopParameters (
         DEBUG_ERROR,
         "%a: failed to retrieve property 'nvidia,dcb-image': %a\r\n",
         __FUNCTION__,
-        fdt_strerror (DcbImageLen)
+        FdtStrerror (DcbImageLen)
         ));
     }
 

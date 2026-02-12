@@ -2,7 +2,7 @@
 
   DTB update library
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,7 +11,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <Library/DebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "DtbUpdateLibPrivate.h"
 
@@ -69,7 +69,7 @@ DtbUpdateExecuteAll (
 
   DEBUG ((DEBUG_INFO, "%a: flags=0x%x table entries=%u\n", __FUNCTION__, Flags, mDtbUpdateTableEntries));
 
-  SetDeviceTreePointer (Dtb, fdt_totalsize (Dtb));
+  SetDeviceTreePointer (Dtb, FdtTotalSize (Dtb));
 
   Entry = mDtbUpdateTable;
   for (Index = 0; Index < mDtbUpdateTableEntries; Index++, Entry++) {

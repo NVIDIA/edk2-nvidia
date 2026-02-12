@@ -1,12 +1,13 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/DramCarveoutLib.h>
 #include <Pi/PiPeiCis.h>
 #include <Library/NVIDIADebugLib.h>
@@ -38,27 +39,27 @@ RegisterDeviceTree (
 
   // Register Device Tree
   if (0 != BlDtbLoadAddress) {
-    if (fdt_check_header ((VOID *)BlDtbLoadAddress) == 0) {
-      UINTN  DtbSize = fdt_totalsize ((VOID *)BlDtbLoadAddress);
+    if (FdtCheckHeader ((VOID *)BlDtbLoadAddress) == 0) {
+      UINTN  DtbSize = FdtTotalSize ((VOID *)BlDtbLoadAddress);
 
       EFI_PHYSICAL_ADDRESS  DtbCopy = (EFI_PHYSICAL_ADDRESS)AllocatePages (EFI_SIZE_TO_PAGES (DtbSize * 4));
-      if (fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize) != 0) {
+      if (FdtOpenInto ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize) != 0) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to increase device tree size\r\n", __FUNCTION__));
         return;
       }
 
       DtbNext = ALIGN_VALUE (BlDtbLoadAddress + DtbSize, SIZE_4KB);
-      if (fdt_check_header ((VOID *)DtbNext) == 0) {
+      if (FdtCheckHeader ((VOID *)DtbNext) == 0) {
         Status = ApplyTegraDeviceTreeOverlay ((VOID *)DtbCopy, (VOID *)DtbNext, SWModule);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "DTB Overlay failed. Using base DTB.\n"));
-          fdt_open_into ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize);
+          FdtOpenInto ((VOID *)BlDtbLoadAddress, (VOID *)DtbCopy, 4 * DtbSize);
         }
       }
 
-      NodeOffset = fdt_path_offset ((VOID *)DtbCopy, "/plugin-manager");
+      NodeOffset = FdtPathOffset ((VOID *)DtbCopy, "/plugin-manager");
       if (NodeOffset >= 0) {
-        fdt_del_node ((VOID *)DtbCopy, NodeOffset);
+        FdtDelNode ((VOID *)DtbCopy, NodeOffset);
       }
 
       DeviceTreeHobData = (EFI_PHYSICAL_ADDRESS *)BuildGuidHob (&gFdtHobGuid, sizeof (EFI_PHYSICAL_ADDRESS));

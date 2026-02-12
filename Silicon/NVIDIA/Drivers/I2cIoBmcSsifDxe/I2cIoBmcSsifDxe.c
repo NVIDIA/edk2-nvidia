@@ -2,7 +2,7 @@
 
   I2C IO IPMI driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright 1999 - 2021 Intel Corporation. <BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -20,7 +20,7 @@
 #include <Library/DebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/TimerLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 #include <Protocol/DeviceTreeNode.h>
@@ -555,7 +555,7 @@ I2cIoBmcMasterNotify (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get device tree node, assuming no SMBALERT\r\n", __FUNCTION__));
   } else {
-    fdt_for_each_subnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
+    FdtForEachSubnode (I2cNodeOffset, DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset) {
       if (!EFI_ERROR (
              DeviceTreeCheckNodeSingleCompatibility (
                "ssif-bmc",
@@ -563,7 +563,7 @@ I2cIoBmcMasterNotify (
                )
              ))
       {
-        Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nvidia,smbalert-gpio", &PropertyLen);
+        Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, I2cNodeOffset, "nvidia,smbalert-gpio", &PropertyLen);
         if ((Property != NULL) && (PropertyLen == (3 * sizeof (UINT32)))) {
           GpioProperty                      = (CONST UINT32 *)Property;
           BmcSsifPrivate->SmbAlertGpio      = GPIO (SwapBytes32 (GpioProperty[0]), SwapBytes32 (GpioProperty[1]));

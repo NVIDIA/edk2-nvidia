@@ -2,7 +2,7 @@
 
   TPM2 Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,7 +21,8 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/DriverBinding.h>
 #include <Protocol/DeviceTreeNode.h>
@@ -158,7 +159,7 @@ CheckTpmCompatibility (
   }
 
   // Check compatibility
-  fdt_for_each_subnode (Node, DeviceTree->DeviceTreeBase, DeviceTree->NodeOffset) {
+  FdtForEachSubnode (Node, DeviceTree->DeviceTreeBase, DeviceTree->NodeOffset) {
     for (Index = 0; Index < ARRAY_SIZE (TpmCompatibilityMap); Index++) {
       if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility (TpmCompatibilityMap[Index], Node))) {
         DEBUG ((DEBUG_INFO, "%a: TPM device found.\n", __FUNCTION__));
@@ -209,10 +210,10 @@ GetTpmProperties (
   ASSERT_EFI_ERROR (Status);
 
   // Look for TPM device node
-  fdt_for_each_subnode (Node, DeviceTree->DeviceTreeBase, DeviceTree->NodeOffset) {
+  FdtForEachSubnode (Node, DeviceTree->DeviceTreeBase, DeviceTree->NodeOffset) {
     for (Index = 0; Index < ARRAY_SIZE (TpmCompatibilityMap); Index++) {
       if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility (TpmCompatibilityMap[Index], Node))) {
-        Property = fdt_getprop (
+        Property = FdtGetProp (
                      DeviceTree->DeviceTreeBase,
                      Node,
                      "reg",

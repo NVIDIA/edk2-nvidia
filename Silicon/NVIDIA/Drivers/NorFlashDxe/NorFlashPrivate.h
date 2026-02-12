@@ -2,7 +2,7 @@
 
   NOR Flash Driver Private Data
 
-  Copyright (c) 2020-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,8 @@
 #include <Library/UefiRuntimeLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/DriverBinding.h>
 #include <Protocol/BlockIo.h>

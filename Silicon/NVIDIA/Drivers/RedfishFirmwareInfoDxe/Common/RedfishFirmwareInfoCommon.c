@@ -3,14 +3,14 @@
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
   Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "RedfishFirmwareInfoCommon.h"
 #include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 REDFISH_RESOURCE_COMMON_PRIVATE  *mRedfishResourcePrivate    = NULL;
 EFI_REGULAR_EXPRESSION_PROTOCOL  *mRegularExpressionProtocol = NULL;
@@ -171,7 +171,7 @@ RedfishConsumeResourceCommon (
     return EFI_DEVICE_ERROR;
   }
 
-  FirmwareInventoryOffset = fdt_path_offset (DeviceTreeBase, "/firmware/redfish/update-service/firmware-inventory");
+  FirmwareInventoryOffset = FdtPathOffset (DeviceTreeBase, "/firmware/redfish/update-service/firmware-inventory");
   if (FirmwareInventoryOffset < 0) {
     DEBUG ((DEBUG_INFO, "%a: Device tree node for firmware-inventory not found.\n", __FUNCTION__));
     Status = EFI_SUCCESS;
@@ -179,7 +179,7 @@ RedfishConsumeResourceCommon (
   } else {
     for (DtbFirmwareIdIndex = 1; DtbFirmwareIdIndex < MAX_REDFISH_FMP_COUNT; DtbFirmwareIdIndex++) {
       AsciiSPrint (FirmwareIdProperty, sizeof (FirmwareIdProperty), "id%u", DtbFirmwareIdIndex);
-      Property = fdt_getprop (DeviceTreeBase, FirmwareInventoryOffset, FirmwareIdProperty, &Length);
+      Property = FdtGetProp (DeviceTreeBase, FirmwareInventoryOffset, FirmwareIdProperty, &Length);
       if ((Property != NULL) && (Length > 0)) {
         DtbFirmwareId[DtbFirmwareIdIndex] = AllocateZeroPool ((Length * sizeof (CHAR16)));
         if (DtbFirmwareId[DtbFirmwareIdIndex] == NULL) {

@@ -2,7 +2,7 @@
 
   Tegra P2U (PIPE to UPHY) Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,7 +22,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "TegraP2UDxePrivate.h"
 
@@ -272,15 +272,15 @@ AddP2UEntries (
     ListEntry->Signature = TEGRAP2U_LIST_SIGNATURE;
     InsertTailList (&Private->TegraP2UList, &ListEntry->Link);
     Private->TegraP2Us++;
-    ListEntry->P2UId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
+    ListEntry->P2UId = FdtGetPhandle (Private->DeviceTreeBase, NodeOffset);
 
-    AddressCells = fdt_address_cells (Private->DeviceTreeBase, fdt_parent_offset (Private->DeviceTreeBase, NodeOffset));
+    AddressCells = FdtAddressCells (Private->DeviceTreeBase, FdtParentOffset (Private->DeviceTreeBase, NodeOffset));
     if ((AddressCells > 2) || (AddressCells == 0)) {
       DEBUG ((DEBUG_ERROR, "%a: Bad cell value, %d\r\n", __FUNCTION__, AddressCells));
       return EFI_UNSUPPORTED;
     }
 
-    RegProperty = fdt_getprop (
+    RegProperty = FdtGetProp (
                     Private->DeviceTreeBase,
                     NodeOffset,
                     "reg",
@@ -297,9 +297,9 @@ AddP2UEntries (
     }
 
     if (AddressCells == 2) {
-      ListEntry->BaseAddr = fdt64_to_cpu (*((UINT64 *)RegProperty));
+      ListEntry->BaseAddr = Fdt64ToCpu (*((UINT64 *)RegProperty));
     } else {
-      ListEntry->BaseAddr = fdt32_to_cpu (*((UINT32 *)RegProperty));
+      ListEntry->BaseAddr = Fdt32ToCpu (*((UINT32 *)RegProperty));
     }
 
     DEBUG ((
@@ -322,7 +322,7 @@ AddP2UEntries (
       return EFI_DEVICE_ERROR;
     }
 
-    if (NULL != fdt_get_property (
+    if (NULL != FdtGetProperty (
                   Private->DeviceTreeBase,
                   NodeOffset,
                   "nvidia,skip-sz-protect-en",

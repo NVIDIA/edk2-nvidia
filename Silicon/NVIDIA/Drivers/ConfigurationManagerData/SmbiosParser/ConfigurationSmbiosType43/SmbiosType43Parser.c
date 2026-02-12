@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 43 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -15,7 +15,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/Tpm2CommandLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 
@@ -88,11 +88,11 @@ InstallSmbiosType43Cm (
   //
   // Get TPM description from DTB
   //
-  DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type43");
+  DtbOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, "type43");
   if (DtbOffset < 0) {
     DEBUG ((DEBUG_INFO, "%a: Device tree node for SMBIOS Type 43 not found.\n", __FUNCTION__));
   } else {
-    Property = fdt_getprop (DtbBase, DtbOffset, "description", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "description", &Length);
     if ((Property == NULL) || (Length == 0)) {
       DEBUG ((DEBUG_INFO, "%a: Device tree property 'type43/description' not found.\n", __FUNCTION__));
     } else {

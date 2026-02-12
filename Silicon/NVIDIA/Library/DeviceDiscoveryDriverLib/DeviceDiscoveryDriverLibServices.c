@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  Copyright (c) 2018-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,7 +17,7 @@
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Protocol/DeviceTreeCompatibility.h>
@@ -466,24 +466,24 @@ DeviceDiscoverySetProd (
   INT32  ProdParentOffset;
   INT32  ProdSettingOffset;
 
-  ProdParentOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "prod-settings");
+  ProdParentOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "prod-settings");
   if (ProdParentOffset < 0) {
     return EFI_NOT_FOUND;
   }
 
-  Property = (CONST UINT32 *)fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, "#prod-cells", NULL);
+  Property = (CONST UINT32 *)FdtGetProp (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, "#prod-cells", NULL);
   if (NULL != Property) {
     ProdCells = SwapBytes32 (*Property);
   } else {
     ProdCells = 3;
   }
 
-  ProdSettingOffset = fdt_subnode_offset (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, ProdSetting);
+  ProdSettingOffset = FdtSubnodeOffset (DeviceTreeNode->DeviceTreeBase, ProdParentOffset, ProdSetting);
   if (ProdSettingOffset < 0) {
     return EFI_NOT_FOUND;
   }
 
-  Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, ProdSettingOffset, "prod", &PropertySize);
+  Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, ProdSettingOffset, "prod", &PropertySize);
   if (Property == NULL) {
     return EFI_NOT_FOUND;
   }

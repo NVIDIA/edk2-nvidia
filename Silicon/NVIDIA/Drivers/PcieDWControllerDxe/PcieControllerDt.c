@@ -2,7 +2,7 @@
 
   PCIe Controller Driver FDT manipulation
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,7 @@
 #include <Library/DebugLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 /**
    Parse the GIC and MSI base addresses from the given PCIe Controller FDT node.
@@ -41,13 +41,13 @@ ParseGicMsiBase (
   UINT32      MsiParentPhandle;
   INTN        MsiParentOffset;
 
-  Property = fdt_getprop (Fdt, NodeOffset, "msi-parent", &PropertySize);
+  Property = FdtGetProp (Fdt, NodeOffset, "msi-parent", &PropertySize);
   if (Property == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: cannot retrieve property 'msi-parent': %a\r\n",
       __FUNCTION__,
-      fdt_strerror (PropertySize)
+      FdtStrerror (PropertySize)
       ));
     return FALSE;
   } else if (PropertySize != 2 * sizeof (UINT32)) {
@@ -63,14 +63,14 @@ ParseGicMsiBase (
 
   MsiParentPhandle = SwapBytes32 (*(UINT32 *)Property);
 
-  MsiParentOffset = fdt_node_offset_by_phandle (Fdt, MsiParentPhandle);
+  MsiParentOffset = FdtNodeOffsetByPhandle (Fdt, MsiParentPhandle);
   if (MsiParentOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to locate GICv2m node by phandle 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)MsiParentPhandle,
-      fdt_strerror (MsiParentOffset)
+      FdtStrerror (MsiParentOffset)
       ));
     return FALSE;
   }
@@ -84,13 +84,13 @@ ParseGicMsiBase (
     return FALSE;
   }
 
-  Property = fdt_getprop (Fdt, MsiParentOffset, "reg", &PropertySize);
+  Property = FdtGetProp (Fdt, MsiParentOffset, "reg", &PropertySize);
   if (Property == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: cannot retrieve GICv2m property 'reg': %a\r\n",
       __FUNCTION__,
-      fdt_strerror (PropertySize)
+      FdtStrerror (PropertySize)
       ));
     return FALSE;
   } else if (PropertySize != 4 * sizeof (UINT64)) {
@@ -133,27 +133,27 @@ FindFdtPcieControllerNode (
 
   Offset = -1;
   while (1) {
-    Offset = fdt_node_offset_by_compatible (Fdt, Offset, "nvidia,tegra234-pcie");
+    Offset = FdtNodeOffsetByCompatible (Fdt, Offset, "nvidia,tegra234-pcie");
     if (Offset < 0) {
       if (Offset != -FDT_ERR_NOTFOUND) {
         DEBUG ((
           DEBUG_ERROR,
           "%a: failed to locate node by compatible: %a\r\n",
           __FUNCTION__,
-          fdt_strerror (Offset)
+          FdtStrerror (Offset)
           ));
       }
 
       return FALSE;
     }
 
-    Property = fdt_getprop (Fdt, Offset, "linux,pci-domain", &PropertySize);
+    Property = FdtGetProp (Fdt, Offset, "linux,pci-domain", &PropertySize);
     if (Property == NULL) {
       DEBUG ((
         DEBUG_ERROR,
         "%a: failed to retrieve controller number: %a\r\n",
         __FUNCTION__,
-        fdt_strerror (PropertySize)
+        FdtStrerror (PropertySize)
         ));
       return FALSE;
     } else if (PropertySize != sizeof (UINT32)) {
@@ -198,7 +198,7 @@ UpdateFdtRegulatorAlwaysOn (
   UINT32        RegPhandle;
   INT32         RegNodeOffset;
 
-  Property = fdt_getprop (Fdt, NodeOffset, RegName, &PropertySize);
+  Property = FdtGetProp (Fdt, NodeOffset, RegName, &PropertySize);
   if (Property == NULL) {
     DEBUG ((
       DEBUG_ERROR,
@@ -206,7 +206,7 @@ UpdateFdtRegulatorAlwaysOn (
       __FUNCTION__,
       RegName,
       (UINTN)NodeOffset,
-      fdt_strerror (PropertySize)
+      FdtStrerror (PropertySize)
       ));
     return FALSE;
   } else if (PropertySize != sizeof (UINT32)) {
@@ -225,7 +225,7 @@ UpdateFdtRegulatorAlwaysOn (
 
   RegPhandle = SwapBytes32 (*Property);
 
-  RegNodeOffset = fdt_node_offset_by_phandle (Fdt, RegPhandle);
+  RegNodeOffset = FdtNodeOffsetByPhandle (Fdt, RegPhandle);
   if (RegNodeOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -233,12 +233,12 @@ UpdateFdtRegulatorAlwaysOn (
       __FUNCTION__,
       RegName,
       (UINTN)RegPhandle,
-      fdt_strerror (RegNodeOffset)
+      FdtStrerror (RegNodeOffset)
       ));
     return FALSE;
   }
 
-  PropertySize = fdt_setprop_empty (Fdt, RegNodeOffset, "regulator-always-on");
+  PropertySize = FdtSetPropEmpty (Fdt, RegNodeOffset, "regulator-always-on");
   if (PropertySize != 0) {
     DEBUG ((
       DEBUG_ERROR,
@@ -246,7 +246,7 @@ UpdateFdtRegulatorAlwaysOn (
       __FUNCTION__,
       RegName,
       (UINTN)RegNodeOffset,
-      fdt_strerror (PropertySize)
+      FdtStrerror (PropertySize)
       ));
     return FALSE;
   }
@@ -278,40 +278,40 @@ UpdateFdtPcieControllerNode (
   CONST UINT64 (*RegProperty)[2];
   UINT64  EcamRegion[2];
 
-  Result = fdt_setprop_string (Fdt, NodeOffset, "compatible", "pci-host-ecam-generic");
+  Result = FdtSetPropString (Fdt, NodeOffset, "compatible", "pci-host-ecam-generic");
   if (Result != 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to update compatible string of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_stringlist_search (Fdt, NodeOffset, "reg-names", "ecam");
+  Result = FdtStringListSearch (Fdt, NodeOffset, "reg-names", "ecam");
   if (Result < 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to retrieve ecam region details from node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
   EcamIndex = (UINTN)Result;
 
-  RegProperty = fdt_getprop (Fdt, NodeOffset, "reg", &Result);
+  RegProperty = FdtGetProp (Fdt, NodeOffset, "reg", &Result);
   if (RegProperty == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to lookup property 'reg' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   } else if ((UINTN)Result < (EcamIndex + 1) * sizeof (EcamRegion)) {
@@ -329,76 +329,76 @@ UpdateFdtPcieControllerNode (
 
   CopyMem (EcamRegion, RegProperty[EcamIndex], sizeof (EcamRegion));
 
-  Result = fdt_setprop_string (Fdt, NodeOffset, "reg-names", "ecam");
+  Result = FdtSetPropString (Fdt, NodeOffset, "reg-names", "ecam");
   if (Result != 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to set property 'reg-names' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_setprop (Fdt, NodeOffset, "reg", EcamRegion, sizeof (EcamRegion));
+  Result = FdtSetProp (Fdt, NodeOffset, "reg", EcamRegion, sizeof (EcamRegion));
   if (Result != 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to set property 'reg' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_nop_property (Fdt, NodeOffset, "power-domains");
+  Result = FdtNopProperty (Fdt, NodeOffset, "power-domains");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to delete property 'power-domains' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
   /* Disable IOMMU nodes. WARNING: This will likely cause crashes when
      the attached device attempts to perform DMA! */
-  Result = fdt_nop_property (Fdt, NodeOffset, "iommus");
+  Result = FdtNopProperty (Fdt, NodeOffset, "iommus");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to delete property 'iommus' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_nop_property (Fdt, NodeOffset, "iommu-map");
+  Result = FdtNopProperty (Fdt, NodeOffset, "iommu-map");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to delete property 'iommu-map' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_nop_property (Fdt, NodeOffset, "iommu-map-mask");
+  Result = FdtNopProperty (Fdt, NodeOffset, "iommu-map-mask");
   if ((Result != 0) && (Result != -FDT_ERR_NOTFOUND)) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to delete property 'iommu-map-mask' of node at offset 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)NodeOffset,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }

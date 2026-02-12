@@ -15,7 +15,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Protocol/EmbeddedGpio.h>
 #include <Guid/EventGroup.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 EMBEDDED_GPIO      *mGpio;
 EMBEDDED_GPIO_PIN  mGpioPin;
@@ -105,7 +105,7 @@ GpioBootCompleteDxeInitialize (
 
   // Get GPIO information from device tree
   Property = NULL;
-  Property = fdt_getprop (Dtb, NodeOffset, "gpios", NULL);
+  Property = FdtGetProp (Dtb, NodeOffset, "gpios", NULL);
   if (Property == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get gpio information from boot complete dtb node.\n", __FUNCTION__));
     return EFI_NOT_FOUND;

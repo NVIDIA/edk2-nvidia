@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -27,7 +27,7 @@
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <Server/RASNSInterface.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Server/Erst.h>
 
 /* ACPI table creation default values */

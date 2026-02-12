@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 3 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -11,7 +11,7 @@
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/FruLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -62,7 +62,7 @@ GetFruDataType3 (
 
   FruDesc = NULL;
 
-  FruDesc = (CHAR8 *)fdt_getprop (DtbBase, DtbOffset, PropertyName, &Length);
+  FruDesc = (CHAR8 *)FdtGetProp (DtbBase, DtbOffset, PropertyName, &Length);
   if ((FruDesc == NULL) || (Length == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree property '%a' not found.\n", __FUNCTION__, PropertyName));
     return EFI_NOT_FOUND;
@@ -146,13 +146,13 @@ InstallSmbiosType3Cm (
     // '/firmware/smbios/type3/fru-desc' is required to specify which FRU is used
     //
     AsciiSPrint (Type3NodeStr, sizeof (Type3NodeStr), "/firmware/smbios/type3@%u", Type3Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type3NodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type3NodeStr);
     if (NodeOffset < 0) {
       break;
     }
 
     // Get manufacturer data from DTB
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "manufacturer", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "manufacturer", &Length);
     if (PropertyStr != NULL ) {
       ManufacturerStr = (CHAR8 *)AllocateZeroPool (Length + 1);
       if (ManufacturerStr != NULL) {
@@ -239,7 +239,7 @@ InstallSmbiosType3Cm (
     ContainedElements     = NULL;
     for (Index = 0; Index < MAX_TYPE3_CONTAINED_ELEMENT_COUNT; Index++) {
       AsciiSPrint (DtContainedElementFormat, sizeof (DtContainedElementFormat), "%a/contained-element@%u", Type3NodeStr, Index);
-      Type3ContainedElementOffset = fdt_path_offset (DtbBase, DtContainedElementFormat);
+      Type3ContainedElementOffset = FdtPathOffset (DtbBase, DtContainedElementFormat);
       if (Type3ContainedElementOffset < 0) {
         DEBUG ((DEBUG_INFO, "%a: SMBIOS Type 3 enclosure[%u] contained element count = %u.\n", __FUNCTION__, Type3Index, ContainedElementCount));
         break;
@@ -252,19 +252,19 @@ InstallSmbiosType3Cm (
         if (ContainedElements != NULL) {
           ContainedElementCount++;
 
-          Property = fdt_getprop (DtbBase, Type3ContainedElementOffset, "type", &Length);
+          Property = FdtGetProp (DtbBase, Type3ContainedElementOffset, "type", &Length);
           if (Property != NULL) {
-            ContainedElements[Index].ContainedElementType = (UINT8)fdt32_to_cpu (*((UINT32 *)Property));
+            ContainedElements[Index].ContainedElementType = (UINT8)Fdt32ToCpu (*((UINT32 *)Property));
           }
 
-          Property = fdt_getprop (DtbBase, Type3ContainedElementOffset, "minimum", &Length);
+          Property = FdtGetProp (DtbBase, Type3ContainedElementOffset, "minimum", &Length);
           if (Property != NULL) {
-            ContainedElements[Index].ContainedElementMinimum = (UINT8)fdt32_to_cpu (*((UINT32 *)Property));
+            ContainedElements[Index].ContainedElementMinimum = (UINT8)Fdt32ToCpu (*((UINT32 *)Property));
           }
 
-          Property = fdt_getprop (DtbBase, Type3ContainedElementOffset, "maximum", &Length);
+          Property = FdtGetProp (DtbBase, Type3ContainedElementOffset, "maximum", &Length);
           if (Property != NULL) {
-            ContainedElements[Index].ContainedElementMaximum = (UINT8)fdt32_to_cpu (*((UINT32 *)Property));
+            ContainedElements[Index].ContainedElementMaximum = (UINT8)Fdt32ToCpu (*((UINT32 *)Property));
           }
         }
       }
@@ -273,25 +273,25 @@ InstallSmbiosType3Cm (
     //
     // Check if there are OEM overrides from DTB for chassis power cords.
     //
-    Property = fdt_getprop (DtbBase, NodeOffset, "number-of-power-cords", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "number-of-power-cords", &Length);
     if (Property != NULL) {
-      EnclosureInfo[NumEnclosures].NumberofPowerCords = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      EnclosureInfo[NumEnclosures].NumberofPowerCords = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     //
     // Check if there are OEM overrides from DTB for chassis height.
     //
-    Property = fdt_getprop (DtbBase, NodeOffset, "height", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "height", &Length);
     if (Property != NULL) {
-      EnclosureInfo[NumEnclosures].Height = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      EnclosureInfo[NumEnclosures].Height = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     //
     // Check if there are OEM overrides from DTB for oem defined data field.
     //
-    Property = fdt_getprop (DtbBase, NodeOffset, "oem-defined", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "oem-defined", &Length);
     if (Property != NULL) {
-      *(UINT32 *)&EnclosureInfo[NumEnclosures].OemDefined[0] = fdt32_to_cpu (*(UINT32 *)Property);
+      *(UINT32 *)&EnclosureInfo[NumEnclosures].OemDefined[0] = Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     //

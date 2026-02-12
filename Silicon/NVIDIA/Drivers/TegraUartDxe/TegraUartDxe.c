@@ -2,7 +2,7 @@
 
   TegraUart Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,6 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraSerialPortLib.h>
-#include <libfdt.h>
 #include <NVIDIAConfiguration.h>
 
 NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {

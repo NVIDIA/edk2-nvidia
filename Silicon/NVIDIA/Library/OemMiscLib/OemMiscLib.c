@@ -1,7 +1,7 @@
 /** @file
 *  OemMiscLib.c
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -29,7 +29,7 @@
 #include <Protocol/Eeprom.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/TegraCpuFreq.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #define HZ_TO_MHZ(x)   (x/1000000)
 #define GENMASK_32(n)  (~(0U) >> (32 - n))
@@ -435,7 +435,7 @@ OemGetProductName (
       return NULL;
     }
 
-    Property = fdt_getprop (DtbBase, 0, "model", &Length);
+    Property = FdtGetProp (DtbBase, 0, "model", &Length);
     if ((Property != NULL) && (Length != 0)) {
       BoardProductName = AllocateZeroPool (Length * sizeof (CHAR16));
       if (BoardProductName == NULL) {
@@ -485,17 +485,17 @@ GetProcessorVersionDtb (
     return NULL;
   }
 
-  DtbSmbiosOffset = fdt_path_offset (DtbBase, "/firmware/smbios");
+  DtbSmbiosOffset = FdtPathOffset (DtbBase, "/firmware/smbios");
   if (DtbSmbiosOffset < 0) {
     return NULL;
   }
 
-  Type4Offset = fdt_subnode_offset (DtbBase, DtbSmbiosOffset, "type4@0");
+  Type4Offset = FdtSubnodeOffset (DtbBase, DtbSmbiosOffset, "type4@0");
   if (Type4Offset < 0) {
     return NULL;
   }
 
-  Property = fdt_getprop (DtbBase, Type4Offset, "processor-version", &Length);
+  Property = FdtGetProp (DtbBase, Type4Offset, "processor-version", &Length);
   if ((Property != NULL) && (Length != 0)) {
     ProcessorStep = TegraGetMinorVersion ();
     if (ProcessorStep == NULL) {
@@ -664,12 +664,12 @@ OemGetSocketDesignation (
   }
 
   AsciiSPrint (Type4tNodeStr, sizeof (Type4tNodeStr), "/firmware/smbios/type4@%u", Index);
-  NodeOffset = fdt_path_offset (DtbBase, Type4tNodeStr);
+  NodeOffset = FdtPathOffset (DtbBase, Type4tNodeStr);
   if (NodeOffset < 0) {
     return NULL;
   }
 
-  Property = fdt_getprop (DtbBase, NodeOffset, "socket-designation", &Length);
+  Property = FdtGetProp (DtbBase, NodeOffset, "socket-designation", &Length);
   if ((Property != NULL) && (Length != 0)) {
     SocketDesignation = AllocateZeroPool (Length * sizeof (CHAR16));
     if (SocketDesignation == NULL) {

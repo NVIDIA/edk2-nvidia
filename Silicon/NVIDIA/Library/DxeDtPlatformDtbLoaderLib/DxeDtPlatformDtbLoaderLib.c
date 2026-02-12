@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2017, Linaro, Ltd. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -12,7 +12,7 @@
 #include <Library/BaseLib.h>
 #include <Library/HobLib.h>
 #include <Library/DebugLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 /**
   Return a pool allocated copy of the DTB image that is appropriate for
@@ -42,7 +42,7 @@ DtPlatformLoadDtb (
 
   *Dtb = (VOID *)(UINTN)*(UINT64 *)GET_GUID_HOB_DATA (Hob);
 
-  if (fdt_check_header (*Dtb) != 0) {
+  if (FdtCheckHeader (*Dtb) != 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: No DTB found @ 0x%p\n",
@@ -52,7 +52,7 @@ DtPlatformLoadDtb (
     return EFI_NOT_FOUND;
   }
 
-  *DtbSize = fdt_totalsize (*Dtb);
+  *DtbSize = FdtTotalSize (*Dtb);
 
   return EFI_SUCCESS;
 }

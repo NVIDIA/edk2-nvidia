@@ -36,7 +36,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <IndustryStandard/ArmFfaSvc.h>
 #include <ArmFfaSvcLegacy.h>
 
-#include <Include/libfdt.h>
+#include <Include/Library/FdtLib.h>
 
 #include <Library/StandaloneMmHafniumSlabMemAllocLib.h>
 #include <Library/StandaloneMmHafniumMmuLib.h>
@@ -91,7 +91,7 @@ FDTGetProperty32 (
   INT32       Length;
   UINT32      P32;
 
-  Property = fdt_getprop (DtbAddress, NodeOffset, PropertyName, &Length);
+  Property = FdtGetProp (DtbAddress, NodeOffset, PropertyName, &Length);
 
   if (Property == NULL) {
     if (Mandatory == TRUE) {
@@ -125,7 +125,7 @@ FDTGetProperty64 (
   INT32       Length;
   UINT64      P64;
 
-  Property = fdt_getprop (DtbAddress, NodeOffset, PropertyName, &Length);
+  Property = FdtGetProp (DtbAddress, NodeOffset, PropertyName, &Length);
 
   if (Property == NULL) {
     if (Mandatory == TRUE) {
@@ -156,19 +156,19 @@ CheckManifest (
   INT32  ParentOffset = 0;
 
   /* Check integrity of DTB */
-  HeaderCheck = fdt_check_header ((VOID *)DtbAddress);
+  HeaderCheck = FdtCheckHeader ((VOID *)DtbAddress);
   if (HeaderCheck != 0) {
-    DEBUG ((DEBUG_ERROR, "fdt_check_header failed, err=%d\r\n", HeaderCheck));
+    DEBUG ((DEBUG_ERROR, "FdtCheckHeader failed, err=%d\r\n", HeaderCheck));
     return EFI_DEVICE_ERROR;
   }
 
-  ParentOffset = fdt_path_offset (DtbAddress, "/");
+  ParentOffset = FdtPathOffset (DtbAddress, "/");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find root node\r\n"));
     return EFI_DEVICE_ERROR;
   }
 
-  ParentOffset = fdt_path_offset (DtbAddress, "/memory-regions");
+  ParentOffset = FdtPathOffset (DtbAddress, "/memory-regions");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find /memory-regions node\r\n"));
     return EFI_DEVICE_ERROR;
@@ -190,7 +190,7 @@ GetSpImageBase (
   INT32   ParentOffset = 0;
   UINT64  SpImageBase  = 0;
 
-  ParentOffset = fdt_path_offset (DtbAddress, "/");
+  ParentOffset = FdtPathOffset (DtbAddress, "/");
 
   SpImageBase = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address", TRUE) +
                 FDTGetProperty32 (DtbAddress, ParentOffset, "entrypoint-offset", TRUE);
@@ -262,18 +262,18 @@ GetDeviceMemRegions (
   NumRegions   = 0;
   Index        = 0;
   Status       = EFI_SUCCESS;
-  ParentOffset = fdt_path_offset (DtbAddress, "/device-regions");
+  ParentOffset = FdtPathOffset (DtbAddress, "/device-regions");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find /device-regions node\r\n"));
     Status = EFI_NOT_FOUND;
     goto GetDeviceMemRegionsExit;
   }
 
-  for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
+  for (NodeOffset = FdtFirstSubnode (DtbAddress, ParentOffset);
        NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
+       NodeOffset = FdtNextSubnode (DtbAddress, PrevNodeOffset))
   {
-    NodeName = fdt_get_name (DtbAddress, NodeOffset, NULL);
+    NodeName = FdtGetName (DtbAddress, NodeOffset, NULL);
 
     /*
      * Don't account for a device-region whose socket isn't enabled.
@@ -292,11 +292,11 @@ GetDeviceMemRegions (
   BufferSize    = NumRegions * sizeof (EFI_MM_DEVICE_REGION);
   DeviceRegions = BuildGuidHob (&gEfiStandaloneMmDeviceMemoryRegions, BufferSize);
 
-  for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
+  for (NodeOffset = FdtFirstSubnode (DtbAddress, ParentOffset);
        NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
+       NodeOffset = FdtNextSubnode (DtbAddress, PrevNodeOffset))
   {
-    NodeName = fdt_get_name (DtbAddress, NodeOffset, NULL);
+    NodeName = FdtGetName (DtbAddress, NodeOffset, NULL);
 
     /*
      * If Socket specific device regions are present, then check if the socket
@@ -373,7 +373,7 @@ GetAndPrintManifestinformation (
   UINTN       NsRegionIndex;
   INT32       Length;
 
-  ParentOffset = fdt_path_offset (DtbAddress, "/");
+  ParentOffset = FdtPathOffset (DtbAddress, "/");
 
   LoadAddress                = FDTGetProperty64 (DtbAddress, ParentOffset, "load-address", TRUE);
   PayloadBootInfo.SpMemBase  = LoadAddress;
@@ -383,18 +383,18 @@ GetAndPrintManifestinformation (
   LowestRegion               = SPMemoryLimit;
   HighestRegion              = PayloadBootInfo.SpMemBase;
 
-  ParentOffset = fdt_path_offset (DtbAddress, "/memory-regions");
+  ParentOffset = FdtPathOffset (DtbAddress, "/memory-regions");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find /memory-regions node\r\n"));
     return EFI_DEVICE_ERROR;
   }
 
   NsRegionIndex = 0;
-  for (NodeOffset = fdt_first_subnode (DtbAddress, ParentOffset);
+  for (NodeOffset = FdtFirstSubnode (DtbAddress, ParentOffset);
        NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (DtbAddress, PrevNodeOffset))
+       NodeOffset = FdtNextSubnode (DtbAddress, PrevNodeOffset))
   {
-    NodeName      = fdt_get_name (DtbAddress, NodeOffset, NULL);
+    NodeName      = FdtGetName (DtbAddress, NodeOffset, NULL);
     RegionAddress = FDTGetProperty64 (DtbAddress, NodeOffset, "base-address", TRUE);
     RegionSize    = FDTGetProperty32 (DtbAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
     if (ADDRESS_IN_RANGE (RegionAddress, LoadAddress, SPMemoryLimit)) {
@@ -403,7 +403,7 @@ GetAndPrintManifestinformation (
     }
 
     /* For each known resource type, extract information */
-    if (fdt_getprop (DtbAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
+    if (FdtGetProp (DtbAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
       /* Publish the Ns Buffer Addr Size to what StMM needs.*/
 
       ErstCachedSize   = FDTGetProperty32 (DtbAddress, NodeOffset, "nv-erst-cached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
@@ -1051,14 +1051,14 @@ ConfigureStage1Translations (
 
  #else
   /* Loop over all the device-regions of the manifest. This is time-consuming with caches disabled. */
-  ParentOffset = fdt_path_offset (DTBAddress, "/device-regions");
+  ParentOffset = FdtPathOffset (DTBAddress, "/device-regions");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find /device-regions node\r\n"));
     ASSERT (0);
   }
 
-  for (NodeOffset = fdt_first_subnode (DTBAddress, ParentOffset); NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (DTBAddress, PrevNodeOffset))
+  for (NodeOffset = FdtFirstSubnode (DTBAddress, ParentOffset); NodeOffset > 0;
+       NodeOffset = FdtNextSubnode (DTBAddress, PrevNodeOffset))
   {
     RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
     RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
@@ -1083,7 +1083,7 @@ ConfigureStage1Translations (
   NumRegions++;
 
   /* Loop over all the memory-regions of the manifest. This is time-consuming with caches disabled. */
-  ParentOffset = fdt_path_offset (DTBAddress, "/memory-regions");
+  ParentOffset = FdtPathOffset (DTBAddress, "/memory-regions");
   if (ParentOffset < 0) {
     DEBUG ((DEBUG_ERROR, "Failed to find /memory-regions node\r\n"));
     ASSERT (0);
@@ -1091,19 +1091,19 @@ ConfigureStage1Translations (
 
   NsBufferAddress = 0;
   NsBufferSize    = 0;
-  for (NodeOffset = fdt_first_subnode (DTBAddress, ParentOffset); NodeOffset > 0;
-       NodeOffset = fdt_next_subnode (DTBAddress, PrevNodeOffset))
+  for (NodeOffset = FdtFirstSubnode (DTBAddress, ParentOffset); NodeOffset > 0;
+       NodeOffset = FdtNextSubnode (DTBAddress, PrevNodeOffset))
   {
     INT32       Length;
     CONST VOID  *NodeName;
 
-    NodeName = fdt_get_name (DTBAddress, NodeOffset, NULL);
+    NodeName = FdtGetName (DTBAddress, NodeOffset, NULL);
     if (NodeName == NULL) {
       PrevNodeOffset = NodeOffset;
       continue;
     }
 
-    if (fdt_getprop (DTBAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
+    if (FdtGetProp (DTBAddress, NodeOffset, "nv-non-secure-memory", &Length) != NULL) {
       NsBufferAddress  = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
       NsBufferSize     = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
       ErstCachedSize   = FDTGetProperty32 (DTBAddress, NodeOffset, "nv-erst-cached-pages-count", FALSE) * DEFAULT_PAGE_SIZE;
@@ -1141,7 +1141,7 @@ ConfigureStage1Translations (
       }
     }
 
-    if (fdt_getprop (DTBAddress, NodeOffset, "nv-sp-shared-buffer-id", &Length) != NULL) {
+    if (FdtGetProp (DTBAddress, NodeOffset, "nv-sp-shared-buffer-id", &Length) != NULL) {
       RegionAddress = PAGE_ALIGN (FDTGetProperty64 (DTBAddress, NodeOffset, "base-address", TRUE), DEFAULT_PAGE_SIZE);
       RegionSize    = FDTGetProperty32 (DTBAddress, NodeOffset, "pages-count", TRUE) * DEFAULT_PAGE_SIZE;
       /* Secure Buffer */

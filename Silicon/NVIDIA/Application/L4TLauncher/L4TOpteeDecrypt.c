@@ -15,7 +15,6 @@
 #include <Library/PrintLib.h>
 #include <Library/OpteeNvLib.h>
 #include <Library/FileHandleLib.h>
-#include <libfdt_env.h>
 #include "L4TOpteeDecrypt.h"
 #include "L4TLauncher.h"
 

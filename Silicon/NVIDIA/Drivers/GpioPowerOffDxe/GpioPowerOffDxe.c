@@ -1,7 +1,7 @@
 /** @file
   Gpio Power Off Dxe
 
-  SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,7 +11,8 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Protocol/EmbeddedGpio.h>
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 
 #define GPIO_POWER_OFF_POLL_INTERVAL  1000
 
@@ -97,7 +98,7 @@ GpioPowerOffDxeInitialize (
   }
 
   Property = NULL;
-  Property = fdt_getprop (Dtb, NodeOffset, "gpios", NULL);
+  Property = FdtGetProp (Dtb, NodeOffset, "gpios", NULL);
   if (Property == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get gpio information from uphy configuration dtb node.\n", __func__));
     return EFI_NOT_FOUND;

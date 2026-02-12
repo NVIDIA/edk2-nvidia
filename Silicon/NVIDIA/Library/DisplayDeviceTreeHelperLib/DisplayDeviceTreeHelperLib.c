@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,7 +14,9 @@
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PrintLib.h>
 
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 
 ///
 /// Maximum number of maximum clock rates supported by
@@ -53,13 +55,13 @@ UpdateDeviceTreeFrameBufferRegionNode (
   CONST UINT32  BaseLo = (UINT32)Base;
   CONST UINT32  BaseHi = (UINT32)(Base >> 32);
 
-  Name = fdt_get_name (DeviceTree, NodeOffset, &Result);
+  Name = FdtGetName (DeviceTree, NodeOffset, &Result);
   if (Name == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to get name: %r\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
@@ -104,13 +106,13 @@ UpdateDeviceTreeFrameBufferRegionNode (
     return FALSE;
   }
 
-  Result = fdt_set_name (DeviceTree, NodeOffset, NameBuffer);
+  Result = FdtSetName (DeviceTree, NodeOffset, NameBuffer);
   if (Result != 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to set name: %r\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
@@ -118,7 +120,7 @@ UpdateDeviceTreeFrameBufferRegionNode (
   RegProp[0] = SwapBytes64 (Base);
   RegProp[1] = SwapBytes64 (Size);
 
-  Result = fdt_setprop_inplace (
+  Result = FdtSetPropInplace (
              DeviceTree,
              NodeOffset,
              "reg",
@@ -130,12 +132,12 @@ UpdateDeviceTreeFrameBufferRegionNode (
       DEBUG_ERROR,
       "%a: failed to set 'reg' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Prop = fdt_getprop (DeviceTree, NodeOffset, "iommu-addresses", &Result);
+  Prop = FdtGetProp (DeviceTree, NodeOffset, "iommu-addresses", &Result);
   if (Prop != NULL) {
     if (Result != sizeof (IommuAddrsProp)) {
       DEBUG ((
@@ -154,7 +156,7 @@ UpdateDeviceTreeFrameBufferRegionNode (
     /* Set up IOMMU identity mapping */
     CopyMem (&IommuAddrsProp[1], RegProp, sizeof (RegProp));
 
-    Result = fdt_setprop_inplace (
+    Result = FdtSetPropInplace (
                DeviceTree,
                NodeOffset,
                "iommu-addresses",
@@ -166,13 +168,13 @@ UpdateDeviceTreeFrameBufferRegionNode (
         DEBUG_ERROR,
         "%a: failed to set 'iommu-addresses' property: %a\r\n",
         __FUNCTION__,
-        fdt_strerror (Result)
+        FdtStrerror (Result)
         ));
       return FALSE;
     }
   }
 
-  Result = fdt_setprop_string (
+  Result = FdtSetPropString (
              DeviceTree,
              NodeOffset,
              "status",
@@ -183,7 +185,7 @@ UpdateDeviceTreeFrameBufferRegionNode (
       DEBUG_ERROR,
       "%a: failed to set 'status' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
@@ -292,13 +294,13 @@ UpdateDeviceTreeSimpleFramebufferNode (
     return FALSE;
   }
 
-  Prop = fdt_getprop (DeviceTree, NodeOffset, "memory-region", &Result);
+  Prop = FdtGetProp (DeviceTree, NodeOffset, "memory-region", &Result);
   if (Prop == NULL) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: failed to get 'memory-region': %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   } else if (Result != sizeof (UINT32)) {
@@ -314,7 +316,7 @@ UpdateDeviceTreeSimpleFramebufferNode (
 
   MemoryRegionPhandle = SwapBytes32 (*(CONST UINT32 *)Prop);
 
-  Result = fdt_setprop_inplace_u32 (
+  Result = FdtSetPropInplaceU32 (
              DeviceTree,
              NodeOffset,
              "width",
@@ -325,12 +327,12 @@ UpdateDeviceTreeSimpleFramebufferNode (
       DEBUG_ERROR,
       "%a: failed to set 'width' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_setprop_inplace_u32 (
+  Result = FdtSetPropInplaceU32 (
              DeviceTree,
              NodeOffset,
              "height",
@@ -341,12 +343,12 @@ UpdateDeviceTreeSimpleFramebufferNode (
       DEBUG_ERROR,
       "%a: failed to set 'height' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_setprop_inplace_u32 (
+  Result = FdtSetPropInplaceU32 (
              DeviceTree,
              NodeOffset,
              "stride",
@@ -357,12 +359,12 @@ UpdateDeviceTreeSimpleFramebufferNode (
       DEBUG_ERROR,
       "%a: failed to set 'stride' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_setprop_string (
+  Result = FdtSetPropString (
              DeviceTree,
              NodeOffset,
              "format",
@@ -373,12 +375,12 @@ UpdateDeviceTreeSimpleFramebufferNode (
       DEBUG_ERROR,
       "%a: failed to set 'format' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  Result = fdt_setprop_string (
+  Result = FdtSetPropString (
              DeviceTree,
              NodeOffset,
              "status",
@@ -389,19 +391,19 @@ UpdateDeviceTreeSimpleFramebufferNode (
       DEBUG_ERROR,
       "%a: failed to set 'status' property: %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
-  MemoryRegionOffset = fdt_node_offset_by_phandle (DeviceTree, MemoryRegionPhandle);
+  MemoryRegionOffset = FdtNodeOffsetByPhandle (DeviceTree, MemoryRegionPhandle);
   if (MemoryRegionOffset < 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: cannot find memory region node by phandle 0x%x: %a\r\n",
       __FUNCTION__,
       (UINTN)MemoryRegionPhandle,
-      fdt_strerror (MemoryRegionOffset)
+      FdtStrerror (MemoryRegionOffset)
       ));
     return FALSE;
   }
@@ -437,20 +439,20 @@ UpdateDeviceTreeSimpleFramebufferInfo (
   INT32  Result, NodeOffset;
   UINTN  NodeCount;
 
-  Result = fdt_path_offset (DeviceTree, "/chosen");
+  Result = FdtPathOffset (DeviceTree, "/chosen");
   if (Result < 0) {
     DEBUG ((
       DEBUG_ERROR,
       "%a: cannot find node '/chosen': %a\r\n",
       __FUNCTION__,
-      fdt_strerror (Result)
+      FdtStrerror (Result)
       ));
     return FALSE;
   }
 
   NodeCount = 0;
-  fdt_for_each_subnode (NodeOffset, DeviceTree, Result) {
-    Result = fdt_node_check_compatible (DeviceTree, NodeOffset, "simple-framebuffer");
+  FdtForEachSubnode (NodeOffset, DeviceTree, Result) {
+    Result = FdtNodeCheckCompatible (DeviceTree, NodeOffset, "simple-framebuffer");
     if (Result != 0) {
       continue;
     }
@@ -474,7 +476,7 @@ UpdateDeviceTreeSimpleFramebufferInfo (
       DEBUG_ERROR,
       "%a: failed to enumerate children of '/chosen': %a\r\n",
       __FUNCTION__,
-      fdt_strerror (NodeOffset)
+      FdtStrerror (NodeOffset)
       ));
     return FALSE;
   }
@@ -614,7 +616,7 @@ DisplayDeviceTreeUpdateMaxClockRates (
     }
 
     SetDeviceTreePointer (NULL, 0);
-    SetDeviceTreePointer (DeviceTree, fdt_totalsize (DeviceTree));
+    SetDeviceTreePointer (DeviceTree, FdtTotalSize (DeviceTree));
   }
 
   Status = DeviceTreeGetNodeByPath (DisplayNodePath, &NodeOffset);
@@ -624,7 +626,7 @@ DisplayDeviceTreeUpdateMaxClockRates (
 
   Count = MaxDispClkRateCount;
   for (Index = 0; Index < Count; ++Index) {
-    PropertyData[Index] = cpu_to_fdt32 (MaxDispClkRateKhz[Index]);
+    PropertyData[Index] = CpuToFdt32 (MaxDispClkRateKhz[Index]);
   }
 
   Status = SetNodePropertyIfExists (
@@ -639,7 +641,7 @@ DisplayDeviceTreeUpdateMaxClockRates (
 
   Count = MaxHubClkRateCount;
   for (Index = 0; Index < Count; ++Index) {
-    PropertyData[Index] = cpu_to_fdt32 (MaxHubClkRateKhz[Index]);
+    PropertyData[Index] = CpuToFdt32 (MaxHubClkRateKhz[Index]);
   }
 
   Status = SetNodePropertyIfExists (
@@ -715,7 +717,7 @@ DisplayDeviceTreeUpdateIsoBandwidth (
     }
 
     SetDeviceTreePointer (NULL, 0);
-    SetDeviceTreePointer (DeviceTree, fdt_totalsize (DeviceTree));
+    SetDeviceTreePointer (DeviceTree, FdtTotalSize (DeviceTree));
   }
 
   Status = DeviceTreeGetNodeByPath (DisplayNodePath, &NodeOffset);
@@ -723,7 +725,7 @@ DisplayDeviceTreeUpdateIsoBandwidth (
     goto Exit;
   }
 
-  PropertyData = cpu_to_fdt32 (IsoBandwidthKbytesPerSec);
+  PropertyData = CpuToFdt32 (IsoBandwidthKbytesPerSec);
 
   Status = SetNodePropertyIfExists (
              NodeOffset,
@@ -735,7 +737,7 @@ DisplayDeviceTreeUpdateIsoBandwidth (
     goto Exit;
   }
 
-  PropertyData = cpu_to_fdt32 (MemclockFloorKbytesPerSec);
+  PropertyData = CpuToFdt32 (MemclockFloorKbytesPerSec);
 
   Status = SetNodePropertyIfExists (
              NodeOffset,

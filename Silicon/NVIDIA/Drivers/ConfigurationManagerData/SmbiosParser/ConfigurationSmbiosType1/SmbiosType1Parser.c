@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 1 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -16,7 +16,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/FruLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 
@@ -140,7 +140,7 @@ InstallSmbiosType1Cm (
   //
   for (Index = 0; Index < MAX_TYPE1_COUNT; Index++) {
     AsciiSPrint (NodeName, sizeof (NodeName), "type1@%u", Index);
-    DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, NodeName);
+    DtbOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, NodeName);
     if (DtbOffset < 0) {
       break;
     }
@@ -160,7 +160,7 @@ InstallSmbiosType1Cm (
   // If the loop exits with an error status, log an error and exit.
   //
   if (DtbOffset < 0) {
-    DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type1");
+    DtbOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, "type1");
     if (DtbOffset < 0) {
       DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 1 not found.\n", __FUNCTION__));
       Status = RETURN_NOT_FOUND;
@@ -172,7 +172,7 @@ InstallSmbiosType1Cm (
     goto CleanupAndReturn;
   }
 
-  Property = fdt_getprop (DtbBase, DtbOffset, "fru-desc", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "fru-desc", &Length);
   if ((Property == NULL) || (Length == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree property 'fru-desc' not found.\n", __FUNCTION__));
     Status = RETURN_NOT_FOUND;
@@ -199,17 +199,17 @@ InstallSmbiosType1Cm (
   //
   // Check if there are OEM overrides
   //
-  Property = fdt_getprop (DtbBase, DtbOffset, "manufacturer", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "manufacturer", &Length);
   if ((Property != NULL) && (Length != 0)) {
     ManufacturerStr = (CHAR8 *)Property;
   }
 
-  Property = fdt_getprop (DtbBase, DtbOffset, "product-name", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "product-name", &Length);
   if ((Property != NULL) && (Length != 0)) {
     ProductNameStr = (CHAR8 *)Property;
   }
 
-  Property = fdt_getprop (DtbBase, DtbOffset, "family", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "family", &Length);
   if ((Property != NULL) && (Length != 0)) {
     SystemInfo->Family = (CHAR8 *)AllocateCopyPool (Length, Property);
   }

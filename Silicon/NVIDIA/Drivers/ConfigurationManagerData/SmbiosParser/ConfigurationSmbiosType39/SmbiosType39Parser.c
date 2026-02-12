@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 39 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -13,7 +13,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/Ipmi.h>
 
@@ -76,13 +76,13 @@ InstallSmbiosType39Cm (
   //
   for (PsuCount = 0; PsuCount < MAX_PSUS; PsuCount++) {
     AsciiSPrint (Type39Str, sizeof (Type39Str), TYPE39_STR, PsuCount);
-    DtbOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, Type39Str);
+    DtbOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, Type39Str);
     if (DtbOffset < 0) {
       break;
     }
 
     // '/firmware/smbios/type39@x/fru-desc' is required to specify which FRU is PSU FRU
-    Property = fdt_getprop (DtbBase, DtbOffset, "fru-desc", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "fru-desc", &Length);
     if ((Property == NULL) || (Length == 0)) {
       DEBUG ((DEBUG_ERROR, "%a: DT property '%a/fru-desc' not found.\n", __FUNCTION__, Type39Str));
       break;
@@ -90,7 +90,7 @@ InstallSmbiosType39Cm (
 
     FruDesc[PsuCount] = (CHAR8 *)Property;
 
-    Property = fdt_getprop (DtbBase, DtbOffset, "location", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "location", &Length);
     if ((Property != NULL) && (Length > 0)) {
       PsuLoc[PsuCount] = (CHAR8 *)Property;
     } else {

@@ -2,7 +2,7 @@
 
   Tegra GPIO Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -19,7 +19,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Protocol/EmbeddedGpio.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "TegraGpioPrivate.h"
 
@@ -557,7 +557,7 @@ DeviceDiscoveryNotify (
       }
 
       mControllerArray[mControllerCount].BaseAddress = GpioBaseAddress;
-      mControllerArray[mControllerCount].Handle      = fdt_get_phandle (
+      mControllerArray[mControllerCount].Handle      = FdtGetPhandle (
                                                          DeviceTreeNode->DeviceTreeBase,
                                                          DeviceTreeNode->NodeOffset
                                                          );

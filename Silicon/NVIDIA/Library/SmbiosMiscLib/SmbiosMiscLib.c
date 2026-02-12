@@ -1,7 +1,7 @@
 /** @file
 *  SmbiosMiscLib.c
 *
-*  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2021, NUVIA Inc. All rights reserved.
 *  Copyright (c) 2018, Hisilicon Limited. All rights reserved.
 *  Copyright (c) 2018, Linaro Limited. All rights reserved.
@@ -22,7 +22,6 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/TegraPlatformInfoLib.h>
-#include <libfdt.h>
 
 /**
   SmbiosMiscLibConstructor

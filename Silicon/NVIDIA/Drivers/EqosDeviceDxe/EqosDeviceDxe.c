@@ -2,7 +2,7 @@
 
   DW EQoS device tree binding driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,7 +23,7 @@
 #include <Library/NetLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/Eeprom.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "DwEqosSnpDxe.h"
 #include "EqosDeviceDxePrivate.h"
@@ -132,7 +132,7 @@ GetFdtProperty (
   CONST VOID  *Property;
   INT32       PropertySize;
 
-  Property = fdt_getprop (DeviceTreeBase, NodeOffset, PropertyName, &PropertySize);
+  Property = FdtGetProp (DeviceTreeBase, NodeOffset, PropertyName, &PropertySize);
 
   if (Property == NULL) {
     return EFI_NOT_FOUND;
@@ -240,14 +240,14 @@ DeviceDiscoveryNotify (
       SnpMode       = &Snp->SnpMode;
       Snp->Snp.Mode = SnpMode;
 
-      MacRegionIndex = fdt_stringlist_search (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "mac");
+      MacRegionIndex = FdtStringListSearch (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "mac");
       if (MacRegionIndex < 0) {
         DEBUG ((
           DEBUG_ERROR,
           "%a: failed to retrieve mac region details from node at offset 0x%x: %a assuming 0\r\n",
           __FUNCTION__,
           (UINTN)DeviceTreeNode->NodeOffset,
-          fdt_strerror (MacRegionIndex)
+          FdtStrerror (MacRegionIndex)
           ));
         MacRegionIndex = 0;
       }
@@ -327,9 +327,9 @@ DeviceDiscoveryNotify (
       ZeroMem (&SnpMode->PermanentAddress, sizeof (SnpMode->PermanentAddress));
       ZeroMem (&SnpMode->CurrentAddress, sizeof (SnpMode->CurrentAddress));
 
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "mac-address", &PropertySize);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "mac-address", &PropertySize);
       if (Property == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: no mac-address for %a\n", __FUNCTION__, fdt_get_name (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, NULL)));
+        DEBUG ((DEBUG_ERROR, "%a: no mac-address for %a\n", __FUNCTION__, FdtGetName (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, NULL)));
         return EFI_DEVICE_ERROR;
       }
 
@@ -395,7 +395,7 @@ DeviceDiscoveryNotify (
 
       Snp->PhyDriver.ControllerHandle = ControllerHandle;
       FlipResetMode                   = FALSE;
-      ResetGpioProp                   = (CONST UINT32 *)fdt_getprop (
+      ResetGpioProp                   = (CONST UINT32 *)FdtGetProp (
                                                           DeviceTreeNode->DeviceTreeBase,
                                                           DeviceTreeNode->NodeOffset,
                                                           "nvidia,phy-reset-gpio",
@@ -405,7 +405,7 @@ DeviceDiscoveryNotify (
         // TODO: Revert FlipResetMode based changes once upstream DTB has been
         // updated.
         FlipResetMode = TRUE;
-        ResetGpioProp = (CONST UINT32 *)fdt_getprop (
+        ResetGpioProp = (CONST UINT32 *)FdtGetProp (
                                           DeviceTreeNode->DeviceTreeBase,
                                           DeviceTreeNode->NodeOffset,
                                           "phy-reset-gpios",
@@ -428,7 +428,7 @@ DeviceDiscoveryNotify (
         Snp->PhyDriver.ResetPin = NON_EXISTENT_ON_PLATFORM;
       }
 
-      if (fdt_get_path (
+      if (FdtGetPath (
             DeviceTreeNode->DeviceTreeBase,
             DeviceTreeNode->NodeOffset,
             Snp->DeviceTreePath,
@@ -454,7 +454,7 @@ DeviceDiscoveryNotify (
 
       Snp->PhyDriver.MgbeDevice = CompareGuid (Device->Type, &gDwMgbeNetNonDiscoverableDeviceGuid);
 
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "compatible", NULL);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "compatible", NULL);
       if (Property == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: No compatible\n", __FUNCTION__));
         return EFI_DEVICE_ERROR;
@@ -468,14 +468,14 @@ DeviceDiscoveryNotify (
       // Init EMAC
       if (Snp->PhyDriver.MgbeDevice) {
         // Get XPCS base address
-        XpcsRegionIndex = fdt_stringlist_search (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "xpcs");
+        XpcsRegionIndex = FdtStringListSearch (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "reg-names", "xpcs");
         if (XpcsRegionIndex < 0) {
           DEBUG ((
             DEBUG_ERROR,
             "%a: failed to retrieve xpcs region details from node at offset 0x%x: %a\r\n",
             __FUNCTION__,
             (UINTN)DeviceTreeNode->NodeOffset,
-            fdt_strerror (XpcsRegionIndex)
+            FdtStrerror (XpcsRegionIndex)
             ));
           return EFI_UNSUPPORTED;
         }
@@ -510,7 +510,7 @@ DeviceDiscoveryNotify (
 
       Status = GetFdtProperty (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "phy-handle", &PhyNodeHandle);
       if (!EFI_ERROR (Status)) {
-        PhyNodeOffset = fdt_node_offset_by_phandle (DeviceTreeNode->DeviceTreeBase, PhyNodeHandle);
+        PhyNodeOffset = FdtNodeOffsetByPhandle (DeviceTreeNode->DeviceTreeBase, PhyNodeHandle);
         if (PhyNodeOffset > 0) {
           // Get values can ignore status as we already setup defaults and these nodes are optional.
           GetFdtProperty (DeviceTreeNode->DeviceTreeBase, PhyNodeOffset, "reg", &Snp->PhyDriver.PhyAddress);

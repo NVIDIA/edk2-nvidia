@@ -40,7 +40,7 @@
 #include <Library/SecureBootVariableLib.h>
 
 #include <NVIDIAConfiguration.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
 
@@ -1516,8 +1516,8 @@ ExtLinuxBoot (
       goto LoadKernel;
     }
 
-    ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (4 * fdt_totalsize (NewFdtBase)));
-    if (fdt_open_into (NewFdtBase, ExpandedFdtBase, 4 * fdt_totalsize (NewFdtBase)) != 0) {
+    ExpandedFdtBase = AllocatePages (EFI_SIZE_TO_PAGES (4 * FdtTotalSize (NewFdtBase)));
+    if (FdtOpenInto (NewFdtBase, ExpandedFdtBase, 4 * FdtTotalSize (NewFdtBase)) != 0) {
       Status = EFI_NOT_FOUND;
       goto Exit;
     }
@@ -1563,7 +1563,7 @@ ExtLinuxBoot (
           goto Exit;
         }
 
-        FdtStatus = fdt_check_header (OverlayBuffer);
+        FdtStatus = FdtCheckHeader (OverlayBuffer);
         if (FdtStatus != 0) {
           ErrorPrint (L"%a: Overlay %s bad header: %lld\r\n", __FUNCTION__, OverlayPath, FdtStatus);
           goto Exit;
@@ -1675,7 +1675,7 @@ Exit:
   }
 
   if (ExpandedFdtBase != NULL) {
-    FreePages (ExpandedFdtBase, EFI_SIZE_TO_PAGES (2 * fdt_totalsize (NewFdtBase)));
+    FreePages (ExpandedFdtBase, EFI_SIZE_TO_PAGES (2 * FdtTotalSize (NewFdtBase)));
     ExpandedFdtBase = NULL;
   }
 
@@ -2195,12 +2195,12 @@ ReadAndroidStyleDtbPartition (
       goto Exit;
     }
 
-    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+    if (FdtCheckHeader ((UINT8 *)DtbBuffer) != 0) {
       ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
       goto Exit;
     }
 
-    Size            = fdt_totalsize ((UINT8 *)DtbBuffer);
+    Size            = FdtTotalSize ((UINT8 *)DtbBuffer);
     SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
     SignatureSize   = DtbBufferSize - SignatureOffset;
   } else {
@@ -2225,12 +2225,12 @@ ReadAndroidStyleDtbPartition (
       goto Exit;
     }
 
-    if (fdt_check_header ((UINT8 *)DtbBuffer) != 0) {
+    if (FdtCheckHeader ((UINT8 *)DtbBuffer) != 0) {
       ErrorPrint (L"DTB on partition was corrupted, try using UEFI DTB\r\n");
       goto Exit;
     }
 
-    Size = fdt_totalsize ((UINT8 *)DtbBuffer);
+    Size = FdtTotalSize ((UINT8 *)DtbBuffer);
     if (IsSecureBootEnabled ()) {
       SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
       if (SignatureOffset + SignatureSize > DtbBufferSize) {
@@ -2354,7 +2354,7 @@ BootAndroidStylePartition (
       break;
     }
 
-    if (fdt_open_into ((UINT8 *)Dtb, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
+    if (FdtOpenInto ((UINT8 *)Dtb, NewDtb, EFI_PAGES_TO_SIZE (NewDtbPages)) != 0) {
       DEBUG ((DEBUG_WARN, "%a: failed to relocate kernel DTB\r\n", __FUNCTION__));
       break;
     }

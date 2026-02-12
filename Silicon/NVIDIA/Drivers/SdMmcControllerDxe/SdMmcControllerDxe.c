@@ -2,7 +2,7 @@
 
   SD MMC Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,7 @@
 #include <Protocol/SdMmcOverride.h>
 #include <Protocol/Regulator.h>
 #include <Protocol/PlatformToDriverConfiguration.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <PlatformToDriverStructures.h>
 #include <Library/TegraPlatformInfoLib.h>
 
@@ -63,7 +63,7 @@ SdMmcCapability (
     return Status;
   }
 
-  if (NULL != fdt_get_property (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
+  if (NULL != FdtGetProperty (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
     Capability->SlotType = 0x1; // Embedded slot
   }
 
@@ -122,7 +122,7 @@ SdMmcNotify (
       return Status;
     }
 
-    if (NULL != fdt_get_property (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
+    if (NULL != FdtGetProperty (Node->DeviceTreeBase, Node->NodeOffset, "non-removable", NULL)) {
       TapValue  = SDHCI_TAP_EMBEDDED;
       TrimValue = SDHCI_TRIM_EMBEDDED;
     } else {
@@ -327,7 +327,7 @@ DeviceDiscoveryNotify (
         return EFI_INVALID_PARAMETER;
       }
 
-      ClockIds = (CONST UINT32 *)fdt_getprop (
+      ClockIds = (CONST UINT32 *)FdtGetProp (
                                    DeviceTreeNode->DeviceTreeBase,
                                    DeviceTreeNode->NodeOffset,
                                    "clocks",

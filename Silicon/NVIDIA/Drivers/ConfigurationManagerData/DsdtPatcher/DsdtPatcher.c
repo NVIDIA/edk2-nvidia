@@ -1,7 +1,7 @@
 /** @file
   Patches to the DSDT
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -17,7 +17,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/RasNsCommPcieDpcDataProtocol.h>
 
@@ -95,13 +95,13 @@ UpdatePwrBtnInfo (
     return EFI_DEVICE_ERROR;
   }
 
-  NodeOffset = fdt_path_offset (DeviceTreeBase, UEFI_FDT_NODE_STR);
+  NodeOffset = FdtPathOffset (DeviceTreeBase, UEFI_FDT_NODE_STR);
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_INFO, "%a: Device tree node for %a not found.\n", __FUNCTION__, UEFI_FDT_NODE_STR));
     return EFI_SUCCESS;
   }
 
-  Property = fdt_getprop (DeviceTreeBase, NodeOffset, PWR_BTN_FDT_STR, &Length);
+  Property = FdtGetProp (DeviceTreeBase, NodeOffset, PWR_BTN_FDT_STR, &Length);
   if ((Property == NULL) || (Length == 0)) {
     DEBUG ((DEBUG_INFO, "%a: Device tree node for %a not found.\n", __FUNCTION__, PWR_BTN_FDT_STR));
     return EFI_SUCCESS;

@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -30,7 +30,7 @@
 #include <Ppi/GuidedSectionExtraction.h>
 #include <Ppi/SecPerformance.h>
 #include <Pi/PiFirmwareVolume.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "PrePi.h"
 
@@ -209,13 +209,13 @@ PrintModel (
     return;
   }
 
-  NumProperty = fdt_stringlist_count (Dtb, 0, "model");
+  NumProperty = FdtStringListCount (Dtb, 0, "model");
   if (NumProperty <= 0) {
     return;
   }
 
   for (Count = 0; Count < NumProperty; Count++) {
-    Data = (CHAR8 *)fdt_stringlist_get (Dtb, 0, "model", Count, &Length);
+    Data = (CHAR8 *)FdtStringListGet (Dtb, 0, "model", Count, &Length);
     if (Length <= 0) {
       return;
     }
@@ -291,17 +291,17 @@ CEntryPoint (
 
   DtbBase = GetDTBBaseAddress ();
   ASSERT ((VOID *)DtbBase != NULL);
-  DtbSize = fdt_totalsize ((VOID *)DtbBase);
+  DtbSize = FdtTotalSize ((VOID *)DtbBase);
 
   // Find the end of overlay DTB region.
   // Overlay DTBs are aligned to 4KB
   DtbNext = ALIGN_VALUE (DtbBase + DtbSize, SIZE_4KB);
   while (DtbNext < MemoryBase + MemorySize) {
-    if (fdt_check_header ((VOID *)DtbNext) != 0) {
+    if (FdtCheckHeader ((VOID *)DtbNext) != 0) {
       break;
     }
 
-    DtbNext += fdt_totalsize ((VOID *)DtbNext);
+    DtbNext += FdtTotalSize ((VOID *)DtbNext);
     DtbNext  = ALIGN_VALUE (DtbNext, SIZE_4KB);
   }
 

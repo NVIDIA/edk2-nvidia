@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 8 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -10,7 +10,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/PrintLib.h>
 #include <ConfigurationManagerObject.h>
 
@@ -58,7 +58,7 @@ InstallSmbiosType8Cm (
   for (Index = 0; ; Index++) {
     ZeroMem (Type8NodeStr, sizeof (Type8NodeStr));
     AsciiSPrint (Type8NodeStr, sizeof (Type8NodeStr), "/firmware/smbios/type8@%u", Index);
-    NodeOffset = fdt_path_offset (DtbBase, Type8NodeStr);
+    NodeOffset = FdtPathOffset (DtbBase, Type8NodeStr);
     if (NodeOffset < 0) {
       break;
     }
@@ -73,7 +73,7 @@ InstallSmbiosType8Cm (
       return EFI_OUT_OF_RESOURCES;
     }
 
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "internal-reference-designator", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "internal-reference-designator", &Length);
     if (PropertyStr != NULL) {
       PortConnectorInfo[NumPortConnectors].InternalReferenceDesignator = AllocateZeroPool (Length + 1);
       if (PortConnectorInfo[NumPortConnectors].InternalReferenceDesignator != NULL) {
@@ -81,7 +81,7 @@ InstallSmbiosType8Cm (
       }
     }
 
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, "external-reference-designator", &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, "external-reference-designator", &Length);
     if (PropertyStr != NULL) {
       PortConnectorInfo[NumPortConnectors].ExternalReferenceDesignator = AllocateZeroPool (Length + 1);
       if (PortConnectorInfo[NumPortConnectors].ExternalReferenceDesignator != NULL) {
@@ -89,19 +89,19 @@ InstallSmbiosType8Cm (
       }
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "internal-connector-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "internal-connector-type", &Length);
     if (Property != NULL) {
-      PortConnectorInfo[NumPortConnectors].InternalConnectorType = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      PortConnectorInfo[NumPortConnectors].InternalConnectorType = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "external-connector-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "external-connector-type", &Length);
     if (Property != NULL) {
-      PortConnectorInfo[NumPortConnectors].ExternalConnectorType = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      PortConnectorInfo[NumPortConnectors].ExternalConnectorType = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
-    Property = fdt_getprop (DtbBase, NodeOffset, "port-type", &Length);
+    Property = FdtGetProp (DtbBase, NodeOffset, "port-type", &Length);
     if (Property != NULL) {
-      PortConnectorInfo[NumPortConnectors].PortType = (UINT8)fdt32_to_cpu (*(UINT32 *)Property);
+      PortConnectorInfo[NumPortConnectors].PortType = (UINT8)Fdt32ToCpu (*(UINT32 *)Property);
     }
 
     NumPortConnectors++;

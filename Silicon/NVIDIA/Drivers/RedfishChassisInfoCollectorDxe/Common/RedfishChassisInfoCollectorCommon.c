@@ -3,14 +3,14 @@
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
   Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "RedfishChassisInfoCollectorCommon.h"
 #include <Library/DtPlatformDtbLoaderLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
@@ -195,13 +195,13 @@ HandleResource (
     DtbChassisInfoPropAttr.Data = 0;
 
     AsciiSPrint (ChassisInfoNodeString, sizeof (ChassisInfoNodeString), "/firmware/redfish/chassis-info/prop@%u", ChassisInfoNodeIndex);
-    NodeOffset = fdt_path_offset (DeviceTreeBase, ChassisInfoNodeString);
+    NodeOffset = FdtPathOffset (DeviceTreeBase, ChassisInfoNodeString);
     if (NodeOffset < 0) {
       DEBUG ((DEBUG_INFO, "%a: Device tree node for chassis-info not found.\n", __func__));
       Status = EFI_SUCCESS;
       break;
     } else {
-      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "uri", &Length);
+      Property = FdtGetProp (DeviceTreeBase, NodeOffset, "uri", &Length);
       if ((Property != NULL) && (Length > 0)) {
         if (ARRAY_SIZE (DtbChassisInfoPropUri) > Length) {
           AsciiStrToUnicodeStrS (
@@ -215,12 +215,12 @@ HandleResource (
         }
       }
 
-      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "attr", &Length);
+      Property = FdtGetProp (DeviceTreeBase, NodeOffset, "attr", &Length);
       if ((Property != NULL) && (Length > 0)) {
-        DtbChassisInfoPropAttr.Data = (UINT32)fdt32_to_cpu (*(UINT32 *)Property);
+        DtbChassisInfoPropAttr.Data = (UINT32)Fdt32ToCpu (*(UINT32 *)Property);
       }
 
-      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "uefi-var", &Length);
+      Property = FdtGetProp (DeviceTreeBase, NodeOffset, "uefi-var", &Length);
       if ((Property != NULL) && (Length > 0)) {
         if (ARRAY_SIZE (DtbChassisInfoPropVarName) > Length) {
           AsciiStrToUnicodeStrS (
@@ -234,7 +234,7 @@ HandleResource (
         }
       }
 
-      Property = fdt_getprop (DeviceTreeBase, NodeOffset, "prop-name", &Length);
+      Property = FdtGetProp (DeviceTreeBase, NodeOffset, "prop-name", &Length);
       if ((Property != NULL) && (Length > 0)) {
         DtbChassisInfoPropName = (CHAR8 *)Property;
       }

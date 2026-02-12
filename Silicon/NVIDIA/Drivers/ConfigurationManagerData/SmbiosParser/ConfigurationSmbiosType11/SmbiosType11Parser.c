@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 11 table.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -13,7 +13,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <ConfigurationManagerObject.h>
 
@@ -59,7 +59,7 @@ InstallSmbiosType11Cm (
   StringList    = NULL;
   OemStrings    = NULL;
 
-  NodeOffset = fdt_subnode_offset (DtbBase, Private->DtbSmbiosOffset, "type11");
+  NodeOffset = FdtSubnodeOffset (DtbBase, Private->DtbSmbiosOffset, "type11");
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS Type 11 not found.\n", __FUNCTION__));
     Status = RETURN_NOT_FOUND;
@@ -76,7 +76,7 @@ InstallSmbiosType11Cm (
   // Get oem-strings from DTB
   for (Index = 1; Index < 100; Index++) {
     AsciiSPrint (PropertyName, sizeof (PropertyName), "oem-strings%u", Index);
-    PropertyStr = fdt_getprop (DtbBase, NodeOffset, PropertyName, &Length);
+    PropertyStr = FdtGetProp (DtbBase, NodeOffset, PropertyName, &Length);
     if ((PropertyStr == NULL) || (Length <= 0)) {
       break;
     }

@@ -1,7 +1,7 @@
 /** @file
   Uphy Configuration Dxe
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,8 @@
 #include <TH500/TH500Definitions.h>
 #include <TH500/TH500MB1Configuration.h>
 #include <Protocol/EmbeddedGpio.h>
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 
 EFI_STATUS
 EFIAPI
@@ -119,7 +120,7 @@ Th500UphyConfiguration (
     }
 
     Property = NULL;
-    Property = fdt_getprop (Dtb, NodeOffset, "gpio", NULL);
+    Property = FdtGetProp (Dtb, NodeOffset, "gpio", NULL);
     if (Property == NULL) {
       DEBUG ((DEBUG_ERROR, "ERROR: Failed to get gpio information from uphy configuration dtb node.\n"));
       Status = EFI_NOT_FOUND;
@@ -131,7 +132,7 @@ Th500UphyConfiguration (
     GpioNum               = SwapBytes32 (Data[1]);
 
     Property = NULL;
-    Property = fdt_getprop (Dtb, NodeOffset, "nvidia,hw-instance-id", NULL);
+    Property = FdtGetProp (Dtb, NodeOffset, "nvidia,hw-instance-id", NULL);
     if (Property == NULL) {
       DEBUG ((DEBUG_ERROR, "ERROR: Failed to get hw instance information from uphy configuration dtb node.\n"));
       Status = EFI_NOT_FOUND;
@@ -188,7 +189,7 @@ Th500UphyConfiguration (
       }
 
       Property = NULL;
-      Property = fdt_getprop (Dtb, NodeOffset, "gpio", NULL);
+      Property = FdtGetProp (Dtb, NodeOffset, "gpio", NULL);
       if (Property == NULL) {
         DEBUG ((DEBUG_ERROR, "ERROR: Failed to get gpio information from uphy configuration dtb node.\n"));
         Status = EFI_NOT_FOUND;

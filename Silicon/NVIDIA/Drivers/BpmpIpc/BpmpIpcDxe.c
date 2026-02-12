@@ -2,7 +2,7 @@
 
   BPMP IPC Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -78,7 +78,7 @@ HspDeviceTreeIsSupported (
     CONST CHAR8  *InterruptNames;
     INT32        NamesLength;
 
-    InterruptNames = (CONST CHAR8 *)fdt_getprop (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "interrupt-names", &NamesLength);
+    InterruptNames = (CONST CHAR8 *)FdtGetProp (DeviceInfo->DeviceTreeBase, DeviceInfo->NodeOffset, "interrupt-names", &NamesLength);
     if ((InterruptNames == NULL) || (NamesLength == 0)) {
       return EFI_UNSUPPORTED;
     }
@@ -257,11 +257,11 @@ BpmpIpcInitialize (
   // If BPMP is disabled on target return dummy ipc protocol
   BOOLEAN  BpmpPresent = FALSE;
 
-  NodeOffset = fdt_node_offset_by_compatible (DeviceTreeBase, -1, "nvidia,tegra186-bpmp");
+  NodeOffset = FdtNodeOffsetByCompatible (DeviceTreeBase, -1, "nvidia,tegra186-bpmp");
   if (NodeOffset >= 0) {
     CONST VOID  *Property    = NULL;
     INT32       PropertySize = 0;
-    Property = fdt_getprop (
+    Property = FdtGetProp (
                  DeviceTreeBase,
                  NodeOffset,
                  "status",

@@ -2,7 +2,7 @@
 
   A driver that sends SMBIOS tables to UEFI variables
 
-  SPDX-FileCopyrightText: copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,7 @@
 #include <Library/ReportStatusCodeLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/SmbiosStringTableLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/Smbios.h>
 
@@ -58,13 +58,13 @@ IsHmcSupport (
     return FALSE;
   }
 
-  NodeOffset = fdt_path_offset (DtbBase, SmbiosNodeStr);
+  NodeOffset = FdtPathOffset (DtbBase, SmbiosNodeStr);
   if (NodeOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Fail to find SMBIOS overlay\n", __FUNCTION__));
     return FALSE;
   }
 
-  Property = fdt_getprop (DtbBase, NodeOffset, "send-smbios-tables", &Length);
+  Property = FdtGetProp (DtbBase, NodeOffset, "send-smbios-tables", &Length);
   if ((Property == NULL) || (Length == 0)) {
     DEBUG ((DEBUG_ERROR, "%a: Do not support HMC SMBIOS variables\n", __FUNCTION__));
     return FALSE;
@@ -78,7 +78,7 @@ IsHmcSupport (
   }
 
   for (Index = 0; Index < HmcSmbiosTypeCount; Index++) {
-    HmcSmbiosTypes[Index] = (UINT8)fdt32_to_cpu (Property[Index]);
+    HmcSmbiosTypes[Index] = (UINT8)Fdt32ToCpu (Property[Index]);
   }
 
   return TRUE;

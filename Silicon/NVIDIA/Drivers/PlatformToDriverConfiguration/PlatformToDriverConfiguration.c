@@ -1,13 +1,13 @@
 /** @file
   Platform To Driver Configuration Protocol
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <libfdt.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/PlatformToDriverConfiguration.h>
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>

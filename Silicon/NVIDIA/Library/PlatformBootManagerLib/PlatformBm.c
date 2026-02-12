@@ -63,7 +63,6 @@
 #include <Guid/TtyTerm.h>
 #include <Guid/SerialPortLibVendor.h>
 #include <IndustryStandard/Ipmi.h>
-#include <libfdt.h>
 #include <NVIDIAConfiguration.h>
 #include "PlatformBm.h"
 

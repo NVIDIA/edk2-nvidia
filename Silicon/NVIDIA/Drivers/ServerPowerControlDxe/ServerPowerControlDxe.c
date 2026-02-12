@@ -1,7 +1,7 @@
 /** @file
  *  Server Power Control Dxe
  *
- *  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ *  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  *  SPDX-License-Identifier: BSD-2-Clause-Patent
  *
@@ -17,7 +17,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #define BYPASS_EXIT   0
 #define BYPASS_ENTER  1
@@ -156,7 +156,7 @@ ConfigurePowerControl (
     }
 
     Property = NULL;
-    Property = fdt_getprop (Dtb, NodeOffset, "bpmp", &DataLen);
+    Property = FdtGetProp (Dtb, NodeOffset, "bpmp", &DataLen);
     if ((Property == NULL) ||
         (DataLen != sizeof (UINT32)))
     {
@@ -273,7 +273,7 @@ ServerPowerControlDxeInitialize (
     }
 
     Property = NULL;
-    Property = fdt_getprop (Dtb, NodeOffset, "bpmp", &DataLen);
+    Property = FdtGetProp (Dtb, NodeOffset, "bpmp", &DataLen);
     if ((Property == NULL) ||
         (DataLen != sizeof (UINT32)))
     {

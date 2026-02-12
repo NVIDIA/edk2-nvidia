@@ -20,7 +20,7 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/DeviceTreeNode.h>
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #define DISPLAY_HEAD_COUNT     8
 #define DISPLAY_SOR_COUNT      8
@@ -434,7 +434,7 @@ GetSubnodeGpioPin (
   INT32                 PropSize;
   UINT32                PinValue;
 
-  SubnodeOffset = fdt_subnode_offset (
+  SubnodeOffset = FdtSubnodeOffset (
                     DeviceTreeBase,
                     NodeOffset,
                     SubnodeName
@@ -446,14 +446,14 @@ GetSubnodeGpioPin (
         "%a: could not locate subnode '%a': %a\r\n",
         __FUNCTION__,
         SubnodeName,
-        fdt_strerror (SubnodeOffset)
+        FdtStrerror (SubnodeOffset)
         ));
     }
 
     return FALSE;
   }
 
-  GpiosProp = fdt_getprop (
+  GpiosProp = FdtGetProp (
                 DeviceTreeBase,
                 SubnodeOffset,
                 GpiosPropName,
@@ -462,10 +462,10 @@ GetSubnodeGpioPin (
   if (PropSize < 0) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a: fdt_getprop failed for '%a': %a\r\n",
+      "%a: FdtGetProp failed for '%a': %a\r\n",
       __FUNCTION__,
       GpiosPropName,
-      fdt_strerror (PropSize)
+      FdtStrerror (PropSize)
       ));
     return FALSE;
   }
@@ -562,7 +562,7 @@ NvDisplayLookupGpioPins (
 
   GpioOffset = -1;
   do {
-    GpioOffset = fdt_node_offset_by_compatible (DeviceTreeBase, GpioOffset, Compatible);
+    GpioOffset = FdtNodeOffsetByCompatible (DeviceTreeBase, GpioOffset, Compatible);
     if (GpioOffset == -FDT_ERR_NOTFOUND) {
       DEBUG ((
         DEBUG_INFO,
@@ -579,7 +579,7 @@ NvDisplayLookupGpioPins (
         "%a: failed to lookup node by compatible '%a': %a\r\n",
         __FUNCTION__,
         Compatible,
-        fdt_strerror (GpioOffset)
+        FdtStrerror (GpioOffset)
         ));
       return EFI_NOT_FOUND;
     }
@@ -598,7 +598,7 @@ NvDisplayLookupGpioPins (
     }
   } while (SubnodeNames[Index] != NULL);
 
-  GpioPhandle = fdt_get_phandle (DeviceTreeBase, GpioOffset);
+  GpioPhandle = FdtGetPhandle (DeviceTreeBase, GpioOffset);
   if ((GpioPhandle == 0) || (GpioPhandle == MAX_UINT32)) {
     DEBUG ((
       DEBUG_ERROR,

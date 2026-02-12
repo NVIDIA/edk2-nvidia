@@ -2,13 +2,13 @@
 
   PCIe Generic Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <PiDxe.h>
 
 #include <IndustryStandard/Pci.h>
@@ -372,9 +372,9 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.MinBusNumber = RootBridge->Bus.Base;
       Private->PcieRootBridgeConfigurationIo.MaxBusNumber = RootBridge->Bus.Limit;
 
-      AddressCells    = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
-      PciAddressCells = fdt_address_cells (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
-      SizeCells       = fdt_size_cells (DeviceTreeNode->DeviceTreeBase, fdt_parent_offset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
+      AddressCells    = FdtAddressCells (DeviceTreeNode->DeviceTreeBase, FdtParentOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
+      PciAddressCells = FdtAddressCells (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset);
+      SizeCells       = FdtSizeCells (DeviceTreeNode->DeviceTreeBase, FdtParentOffset (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset));
       RangeSize       = (AddressCells + PciAddressCells + SizeCells) * sizeof (UINT32);
 
       if (PciAddressCells != 3) {

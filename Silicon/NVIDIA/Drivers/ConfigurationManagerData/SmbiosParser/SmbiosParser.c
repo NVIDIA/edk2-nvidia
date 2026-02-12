@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS tables.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -14,7 +14,7 @@
 #include <Library/PrintLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/PciIo.h>
 
@@ -261,7 +261,7 @@ EvaluateDtbNodeCondition (
   //
   // Check if the node has "condition"
   //
-  DtbOffset = fdt_subnode_offset (DtbBase, NodeOffset, "condition");
+  DtbOffset = FdtSubnodeOffset (DtbBase, NodeOffset, "condition");
   if (DtbOffset < 0) {
     return EFI_NOT_FOUND;
   }
@@ -269,7 +269,7 @@ EvaluateDtbNodeCondition (
   //
   // Supported condition types: fru-desc, pci, mmio
   //
-  Property = fdt_getprop (DtbBase, DtbOffset, "type", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "type", &Length);
   if ((Property == NULL) || (Length == 0)) {
     DEBUG ((DEBUG_ERROR, "'condition/type' not found.\n"));
     return EFI_INVALID_PARAMETER;
@@ -280,7 +280,7 @@ EvaluateDtbNodeCondition (
   //
   // If 'unexpected' is defined, negate the condition
   //
-  Property = fdt_getprop (DtbBase, DtbOffset, "unexpected", &Length);
+  Property = FdtGetProp (DtbBase, DtbOffset, "unexpected", &Length);
   if (Property != NULL) {
     Unexpected = TRUE;
   }
@@ -289,7 +289,7 @@ EvaluateDtbNodeCondition (
   // Check if FRU is present
   //
   if (AsciiStriCmp (TypeStr, "fru-desc") == 0) {
-    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "value", &Length);
     if ((Property == NULL) || (Length == 0)) {
       DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
       return EFI_INVALID_PARAMETER;
@@ -298,7 +298,7 @@ EvaluateDtbNodeCondition (
     FruDesc = (CHAR8 *)Property;
     Fru     = FindFruByDescription (Private, FruDesc);
     if (Fru != NULL) {
-      Property = fdt_getprop (DtbBase, DtbOffset, "pattern", &Length);
+      Property = FdtGetProp (DtbBase, DtbOffset, "pattern", &Length);
       if ((Property == NULL) || (Length == 0)) {
         DEBUG ((DEBUG_ERROR, "'condition/pattern' not found.\n"));
         return EFI_INVALID_PARAMETER;
@@ -320,24 +320,24 @@ EvaluateDtbNodeCondition (
   // Read PCI config space register and check if it matches 'value'
   //
   if (AsciiStriCmp (TypeStr, "pcie") == 0) {
-    Property = fdt_getprop (DtbBase, DtbOffset, "address", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "address", &Length);
     if ((Property == NULL) || (Length < 8)) {
       DEBUG ((DEBUG_ERROR, "'condition/address' not found.\n"));
       return EFI_INVALID_PARAMETER;
     }
 
-    PcieSBDF      = fdt32_to_cpu (*(UINT32 *)Property);
-    PcieRegOffset = fdt32_to_cpu (*((UINT32 *)Property + 1));
+    PcieSBDF      = Fdt32ToCpu (*(UINT32 *)Property);
+    PcieRegOffset = Fdt32ToCpu (*((UINT32 *)Property + 1));
 
-    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "value", &Length);
     if ((Property == NULL) || (Length < 4)) {
       DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
       return EFI_INVALID_PARAMETER;
     }
 
-    ExpectedValue = fdt32_to_cpu (*(UINT32 *)Property);
+    ExpectedValue = Fdt32ToCpu (*(UINT32 *)Property);
     if (Length == 8) {
-      ExpectedMask = fdt32_to_cpu (*((UINT32 *)Property + 1));
+      ExpectedMask = Fdt32ToCpu (*((UINT32 *)Property + 1));
     }
 
     //
@@ -371,23 +371,23 @@ EvaluateDtbNodeCondition (
   // Read MMIO register and matches it against 'value'
   //
   if (AsciiStriCmp (TypeStr, "mmio") == 0) {
-    Property = fdt_getprop (DtbBase, DtbOffset, "address", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "address", &Length);
     if ((Property == NULL) || (Length < 8)) {
       DEBUG ((DEBUG_ERROR, "'condition/address' not found.\n"));
       return EFI_INVALID_PARAMETER;
     }
 
-    MmioAddr = fdt64_to_cpu (*(UINT32 *)Property);
+    MmioAddr = Fdt64ToCpu (*(UINT32 *)Property);
 
-    Property = fdt_getprop (DtbBase, DtbOffset, "value", &Length);
+    Property = FdtGetProp (DtbBase, DtbOffset, "value", &Length);
     if ((Property == NULL) || (Length < 4)) {
       DEBUG ((DEBUG_ERROR, "'condition/value' not found.\n"));
       return EFI_INVALID_PARAMETER;
     }
 
-    ExpectedValue = fdt32_to_cpu (*(UINT32 *)Property);
+    ExpectedValue = Fdt32ToCpu (*(UINT32 *)Property);
     if (Length == 8) {
-      ExpectedMask = fdt32_to_cpu (*((UINT32 *)Property + 1));
+      ExpectedMask = Fdt32ToCpu (*((UINT32 *)Property + 1));
     }
 
     Value = MmioRead32 (MmioAddr);
@@ -472,7 +472,7 @@ SmbiosParser (
     goto CleanupAndReturn;
   }
 
-  Private->DtbSmbiosOffset = fdt_path_offset (Private->DtbBase, "/firmware/smbios");
+  Private->DtbSmbiosOffset = FdtPathOffset (Private->DtbBase, "/firmware/smbios");
   if (Private->DtbSmbiosOffset < 0) {
     DEBUG ((DEBUG_ERROR, "%a: Device tree node for SMBIOS not found.\n", __FUNCTION__));
     // Continue anyway to install SMBIOS tables that do not need DTB

@@ -2,7 +2,7 @@
 
   PCIe Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -38,7 +38,7 @@
 #include <Protocol/TegraP2U.h>
 #include <Protocol/ConfigurationManagerTokenProtocol.h>
 
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <IndustryStandard/MemoryMappedConfigurationSpaceAccessTable.h>
 #include <IndustryStandard/Pci.h>
@@ -125,15 +125,15 @@ struct cmd_uphy_pcie_controller_state_request {
    * @brief PCIE controller number
    * Valid numbers for T234: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
    */
-  uint8_t    pcie_controller;
-  uint8_t    enable;
+  UINT8    pcie_controller;
+  UINT8    enable;
 };
 
 struct mrq_uphy_request {
   /** @brief Lane number. */
-  uint16_t    lane;
+  UINT16    lane;
   /** @brief Sub-command id. */
-  uint16_t    cmd;
+  UINT16    cmd;
 
   union {
     struct cmd_uphy_pcie_controller_state_request    controller_state;
@@ -1745,7 +1745,7 @@ DeviceDiscoveryNotify (
       Private->PcieRootBridgeConfigurationIo.Write         = PcieConfigurationWrite;
       Private->PcieRootBridgeConfigurationIo.SegmentNumber = 0;
 
-      SegmentNumber = fdt_getprop (
+      SegmentNumber = FdtGetProp (
                         DeviceTreeNode->DeviceTreeBase,
                         DeviceTreeNode->NodeOffset,
                         "linux,pci-domain",
@@ -1762,7 +1762,7 @@ DeviceDiscoveryNotify (
 
       Private->CtrlId = Private->PcieRootBridgeConfigurationIo.SegmentNumber;
 
-      ControllerId = fdt_getprop (
+      ControllerId = FdtGetProp (
                        DeviceTreeNode->DeviceTreeBase,
                        DeviceTreeNode->NodeOffset,
                        "nvidia,controller-id",
@@ -1777,7 +1777,7 @@ DeviceDiscoveryNotify (
 
       DEBUG ((DEBUG_INFO, "Controller-ID = %u\n", Private->CtrlId));
 
-      BpmpPhandle = fdt_getprop (
+      BpmpPhandle = FdtGetProp (
                       DeviceTreeNode->DeviceTreeBase,
                       DeviceTreeNode->NodeOffset,
                       "nvidia,bpmp",
@@ -1792,7 +1792,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_ERROR, "PCIE Controller ID-%u, Bpmp Phandle-%u\n", Private->CtrlId, Private->BpmpPhandle));
       }
 
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "nvidia,max-speed",
@@ -1802,7 +1802,7 @@ DeviceDiscoveryNotify (
         CopyMem (&Private->MaxLinkSpeed, Property, sizeof (UINT32));
         Private->MaxLinkSpeed = SwapBytes32 (Private->MaxLinkSpeed);
       } else {
-        Property = fdt_getprop (
+        Property = FdtGetProp (
                      DeviceTreeNode->DeviceTreeBase,
                      DeviceTreeNode->NodeOffset,
                      "max-link-speed",
@@ -1832,7 +1832,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_INFO, "MSI base = 0x%lx\r\n", Private->MsiBase));
       }
 
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "num-lanes",
@@ -1849,7 +1849,7 @@ DeviceDiscoveryNotify (
 
       DEBUG ((DEBUG_INFO, "Number of lanes = %u\n", Private->NumLanes));
 
-      if (NULL != fdt_get_property (
+      if (NULL != FdtGetProperty (
                     DeviceTreeNode->DeviceTreeBase,
                     DeviceTreeNode->NodeOffset,
                     "nvidia,update-fc-fixup",
@@ -1870,7 +1870,7 @@ DeviceDiscoveryNotify (
       }
 
       /* Get the vddio-pex-ctl supply */
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "vddio-pex-ctl-supply",
@@ -1887,7 +1887,7 @@ DeviceDiscoveryNotify (
       }
 
       /* Get the 3v3 supply */
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "vpcie3v3-supply",
@@ -1904,7 +1904,7 @@ DeviceDiscoveryNotify (
       }
 
       /* Get the 12v supply */
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "vpcie12v-supply",
@@ -1920,7 +1920,7 @@ DeviceDiscoveryNotify (
         DEBUG ((DEBUG_INFO, "Failed to find 12v slot supply regulator\n"));
       }
 
-      if (NULL != fdt_get_property (
+      if (NULL != FdtGetProperty (
                     DeviceTreeNode->DeviceTreeBase,
                     DeviceTreeNode->NodeOffset,
                     "nvidia,enable-srns",
@@ -1932,7 +1932,7 @@ DeviceDiscoveryNotify (
         Private->EnableSRNS = FALSE;
       }
 
-      if (NULL != fdt_get_property (
+      if (NULL != FdtGetProperty (
                     DeviceTreeNode->DeviceTreeBase,
                     DeviceTreeNode->NodeOffset,
                     "nvidia,enable-ext-refclk",
@@ -1952,7 +1952,7 @@ DeviceDiscoveryNotify (
       RootBridge->ResourceAssigned      = FALSE;
       RootBridge->AllocationAttributes  = EFI_PCI_HOST_BRIDGE_MEM64_DECODE;
 
-      BusProperty = fdt_getprop (
+      BusProperty = FdtGetProp (
                       DeviceTreeNode->DeviceTreeBase,
                       DeviceTreeNode->NodeOffset,
                       "bus-range",
@@ -2074,7 +2074,7 @@ DeviceDiscoveryNotify (
       FreePool (TokenMap);
       TokenMap = NULL;
 
-      Property = fdt_getprop (
+      Property = FdtGetProp (
                    DeviceTreeNode->DeviceTreeBase,
                    DeviceTreeNode->NodeOffset,
                    "phys",

@@ -30,7 +30,6 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
-  EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [Packages.AARCH64]

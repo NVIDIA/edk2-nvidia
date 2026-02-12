@@ -2,7 +2,7 @@
 
   BPMP IPC private structures
 
-  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -24,7 +24,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 #include <Library/DeviceDiscoveryLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 //
 // Global Variables definitions

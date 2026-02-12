@@ -1,7 +1,7 @@
 /** @file
   BpmpIpc protocol implementation for BPMP IPC driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -633,7 +633,7 @@ BpmpIpcProtocolInit (
 
   for (Index = 0; Index < BpmpDeviceCount; Index++) {
     PrivateData->Channels[Index].BpmpPhandle = BpmpNodeInfo[Index].Phandle;
-    MboxesProperty                           = fdt_getprop (BpmpNodeInfo[Index].DeviceTreeBase, BpmpNodeInfo[Index].NodeOffset, "mboxes", &PropertySize);
+    MboxesProperty                           = FdtGetProp (BpmpNodeInfo[Index].DeviceTreeBase, BpmpNodeInfo[Index].NodeOffset, "mboxes", &PropertySize);
     if (NULL == MboxesProperty) {
       Status = EFI_UNSUPPORTED;
       goto ErrorExit;

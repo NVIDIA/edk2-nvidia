@@ -2,7 +2,7 @@
 
   Regulator Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,7 @@
 #include <Protocol/EmbeddedGpio.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/DeviceTreeHelperLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include "RegulatorDxePrivate.h"
 
@@ -986,12 +986,12 @@ AddFixedRegulators (
     ListEntry->Signature = REGULATOR_LIST_SIGNATURE;
     InsertTailList (&Private->RegulatorList, &ListEntry->Link);
     Private->Regulators++;
-    ListEntry->RegulatorId   = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
-    Property                 = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-always-on", NULL);
+    ListEntry->RegulatorId   = FdtGetPhandle (Private->DeviceTreeBase, NodeOffset);
+    Property                 = FdtGetProp (Private->DeviceTreeBase, NodeOffset, "regulator-always-on", NULL);
     ListEntry->AlwaysEnabled = (Property != NULL);
-    Property                 = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "enable-active-high", NULL);
+    Property                 = FdtGetProp (Private->DeviceTreeBase, NodeOffset, "enable-active-high", NULL);
     ListEntry->ActiveLow     = (Property == NULL);
-    Property                 = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "gpio", &PropertySize);
+    Property                 = FdtGetProp (Private->DeviceTreeBase, NodeOffset, "gpio", &PropertySize);
     if ((NULL != Property) && (PropertySize == (3 * sizeof (UINT32)))) {
       CONST UINT32  *Data      = (CONST UINT32 *)Property;
       UINT32        Controller = SwapBytes32 (Data[0]);
@@ -1003,7 +1003,7 @@ AddFixedRegulators (
       ListEntry->IsAvailable = TRUE;
     }
 
-    Property = fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-min-microvolt", &PropertySize);
+    Property = FdtGetProp (Private->DeviceTreeBase, NodeOffset, "regulator-min-microvolt", &PropertySize);
     if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
       UINT32  Microvolts = SwapBytes32 (*(UINT32 *)Property);
       ListEntry->MinMicrovolts = Microvolts;
@@ -1011,7 +1011,7 @@ AddFixedRegulators (
     }
 
     ListEntry->MicrovoltStep = 0;
-    ListEntry->Name          = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, NodeOffset, "regulator-name", NULL);
+    ListEntry->Name          = (CONST CHAR8 *)FdtGetProp (Private->DeviceTreeBase, NodeOffset, "regulator-name", NULL);
   }
 
   return EFI_SUCCESS;
@@ -1128,7 +1128,7 @@ AddPmicRegulators (
     for (InstanceIndex = 0; InstanceIndex < NumberOfHandles; InstanceIndex++) {
       Status = GetDeviceTreeNode (NodeHandles[InstanceIndex], &Dtb, &NodeOffset);
       if (!EFI_ERROR (Status)) {
-        RegulatorNodeOffset = fdt_subnode_offset (
+        RegulatorNodeOffset = FdtSubnodeOffset (
                                 Private->DeviceTreeBase,
                                 NodeOffset,
                                 "regulators"
@@ -1141,8 +1141,8 @@ AddPmicRegulators (
               return EFI_OUT_OF_RESOURCES;
             }
 
-            ListEntry->RegulatorId = fdt_get_phandle (Private->DeviceTreeBase, NodeOffset);
-            ListEntry->Name        = fdt_get_name (Private->DeviceTreeBase, NodeOffset, NULL);
+            ListEntry->RegulatorId = FdtGetPhandle (Private->DeviceTreeBase, NodeOffset);
+            ListEntry->Name        = FdtGetName (Private->DeviceTreeBase, NodeOffset, NULL);
             Status                 = SetupPmicInfo (Private, ListEntry, PmicSupported[PmicIndex].RegulatorSettings[RegulatorIndex].Name, &PmicSupported[PmicIndex]);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
@@ -1153,7 +1153,7 @@ AddPmicRegulators (
             }
           }
         } else {
-          fdt_for_each_subnode (SubNodeOffset, Private->DeviceTreeBase, RegulatorNodeOffset) {
+          FdtForEachSubnode (SubNodeOffset, Private->DeviceTreeBase, RegulatorNodeOffset) {
             INT32       PropertySize;
             CONST VOID  *Property = NULL;
 
@@ -1163,25 +1163,25 @@ AddPmicRegulators (
               return EFI_OUT_OF_RESOURCES;
             }
 
-            ListEntry->RegulatorId   = fdt_get_phandle (Private->DeviceTreeBase, SubNodeOffset);
-            Property                 = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-always-on", NULL);
+            ListEntry->RegulatorId   = FdtGetPhandle (Private->DeviceTreeBase, SubNodeOffset);
+            Property                 = FdtGetProp (Private->DeviceTreeBase, SubNodeOffset, "regulator-always-on", NULL);
             ListEntry->AlwaysEnabled = (Property != NULL);
             ListEntry->IsAvailable   = ListEntry->AlwaysEnabled;
-            Property                 = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-min-microvolt", &PropertySize);
+            Property                 = FdtGetProp (Private->DeviceTreeBase, SubNodeOffset, "regulator-min-microvolt", &PropertySize);
             if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
               UINT32  Microvolts = SwapBytes32 (*(UINT32 *)Property);
               ListEntry->MinMicrovolts = Microvolts;
             }
 
-            Property = fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-max-microvolt", &PropertySize);
+            Property = FdtGetProp (Private->DeviceTreeBase, SubNodeOffset, "regulator-max-microvolt", &PropertySize);
             if ((NULL != Property) && (PropertySize == sizeof (UINT32))) {
               UINT32  Microvolts = SwapBytes32 (*(UINT32 *)Property);
               ListEntry->MaxMicrovolts = Microvolts;
             }
 
             ListEntry->MicrovoltStep = 0;
-            ListEntry->Name          = (CONST CHAR8 *)fdt_getprop (Private->DeviceTreeBase, SubNodeOffset, "regulator-name", NULL);
-            Status                   = SetupPmicInfo (Private, ListEntry, fdt_get_name (Private->DeviceTreeBase, SubNodeOffset, NULL), &PmicSupported[PmicIndex]);
+            ListEntry->Name          = (CONST CHAR8 *)FdtGetProp (Private->DeviceTreeBase, SubNodeOffset, "regulator-name", NULL);
+            Status                   = SetupPmicInfo (Private, ListEntry, FdtGetName (Private->DeviceTreeBase, SubNodeOffset, NULL), &PmicSupported[PmicIndex]);
             if (EFI_ERROR (Status)) {
               DEBUG ((DEBUG_ERROR, "%a: Failed to get pmic info: %x, %r\r\n", __FUNCTION__, ListEntry->RegulatorId, Status));
               FreePool (ListEntry);

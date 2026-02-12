@@ -2,7 +2,7 @@
 
   SE RNG Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -17,7 +17,6 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TimerLib.h>
-#include <libfdt.h>
 #include <Library/CacheMaintenanceLib.h>
 #include <Protocol/NonDiscoverableDevice.h>
 

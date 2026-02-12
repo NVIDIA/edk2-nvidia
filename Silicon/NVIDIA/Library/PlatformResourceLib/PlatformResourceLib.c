@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -17,7 +17,7 @@
 #include <Library/PlatformResourceLib.h>
 #include <Library/PrintLib.h>
 #include <Guid/ArmMpCoreInfo.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include "SocResourceConfig.h"
 
 #define GET_AFFINITY_BASED_MPID(Aff3, Aff2, Aff1, Aff0)         \
@@ -74,7 +74,7 @@ UpdateCoreInfoFromDtb (
   OUT SOC_CORE_BITMAP_INFO         *SocCoreBitmapInfo
   )
 {
-  CONST VOID  *Dtb;
+  VOID        *Dtb;
   UINTN       MaxClusters;
   UINTN       MaxCoresPerCluster;
   UINTN       MaxSockets;
@@ -99,25 +99,25 @@ UpdateCoreInfoFromDtb (
   CpuMapPathFormat = NULL;
 
   // find highest numa-node-id, if present
-  CpusOffset = fdt_path_offset (Dtb, "/cpus");
-  fdt_for_each_subnode (NodeOffset, Dtb, CpusOffset) {
-    Property = fdt_getprop (Dtb, NodeOffset, "device_type", &Length);
+  CpusOffset = FdtPathOffset (Dtb, "/cpus");
+  FdtForEachSubnode (NodeOffset, Dtb, CpusOffset) {
+    Property = FdtGetProp (Dtb, NodeOffset, "device_type", &Length);
     if ((Property == NULL) || (AsciiStrCmp (Property, "cpu") != 0)) {
-      NodeOffset = fdt_next_subnode (Dtb, NodeOffset);
+      NodeOffset = FdtNextSubnode (Dtb, NodeOffset);
       continue;
     }
 
-    Property = fdt_getprop (Dtb, NodeOffset, "numa-node-id", &Length);
+    Property = FdtGetProp (Dtb, NodeOffset, "numa-node-id", &Length);
     if ((Property == NULL) || (Length != sizeof (NumaNodeId))) {
       if (MaxSockets != 0) {
-        DEBUG ((DEBUG_ERROR, "Missing numa-node-id in /cpus/%a\n", fdt_get_name (Dtb, NodeOffset, NULL)));
+        DEBUG ((DEBUG_ERROR, "Missing numa-node-id in /cpus/%a\n", FdtGetName (Dtb, NodeOffset, NULL)));
         return EFI_DEVICE_ERROR;
       } else {
         break;
       }
     }
 
-    NumaNodeId = fdt32_to_cpu (*(UINT32 *)Property);
+    NumaNodeId = Fdt32ToCpu (*(UINT32 *)Property);
     if ((NumaNodeId + 1) > MaxSockets) {
       MaxSockets = NumaNodeId + 1;
     }
@@ -128,7 +128,7 @@ UpdateCoreInfoFromDtb (
     // check for socket nodes, 100 limit due to socket@xx string
     for (MaxSockets = 0; MaxSockets < 100; MaxSockets++) {
       AsciiSPrint (SocketNodeStr, sizeof (SocketNodeStr), "/socket@%u", MaxSockets);
-      SocketOffset = fdt_path_offset (Dtb, SocketNodeStr);
+      SocketOffset = FdtPathOffset (Dtb, SocketNodeStr);
       if (SocketOffset < 0) {
         break;
       }
@@ -159,7 +159,7 @@ UpdateCoreInfoFromDtb (
     UINTN  Cluster;
 
     AsciiSPrint (CpuMapPathStr, sizeof (CpuMapPathStr), CpuMapPathFormat, Socket);
-    CpuMapOffset = fdt_path_offset (Dtb, CpuMapPathStr);
+    CpuMapOffset = FdtPathOffset (Dtb, CpuMapPathStr);
     if (CpuMapOffset < 0) {
       SocCoreBitmapInfo->MaxPossibleClustersPerSystem = 1;
       SocCoreBitmapInfo->MaxPossibleCoresPerCluster   = 1;
@@ -177,7 +177,7 @@ UpdateCoreInfoFromDtb (
     Cluster = 0;
     while (TRUE) {
       AsciiSPrint (ClusterNodeStr, sizeof (ClusterNodeStr), "cluster%u", Cluster);
-      NodeOffset = fdt_subnode_offset (Dtb, CpuMapOffset, ClusterNodeStr);
+      NodeOffset = FdtSubnodeOffset (Dtb, CpuMapOffset, ClusterNodeStr);
       if (NodeOffset < 0) {
         break;
       }
@@ -193,7 +193,7 @@ UpdateCoreInfoFromDtb (
   SocCoreBitmapInfo->MaxPossibleClustersPerSystem = MaxClusters;
 
   // Use cluster0 node to find max core subnode
-  Cluster0Offset = fdt_subnode_offset (Dtb, CpuMapOffset, "cluster0");
+  Cluster0Offset = FdtSubnodeOffset (Dtb, CpuMapOffset, "cluster0");
   if (Cluster0Offset < 0) {
     SocCoreBitmapInfo->MaxPossibleCoresPerCluster = 1;
     DEBUG ((
@@ -208,7 +208,7 @@ UpdateCoreInfoFromDtb (
   MaxCoresPerCluster = 1;
   while (TRUE) {
     AsciiSPrint (CoreNodeStr, sizeof (CoreNodeStr), "core%u", MaxCoresPerCluster);
-    NodeOffset = fdt_subnode_offset (Dtb, Cluster0Offset, CoreNodeStr);
+    NodeOffset = FdtSubnodeOffset (Dtb, Cluster0Offset, CoreNodeStr);
     if (NodeOffset < 0) {
       break;
     }

@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,7 +15,7 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/HobLib.h>
 #include <Library/PlatformResourceLib.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/UsbFwProtocol.h>
 
@@ -42,7 +42,7 @@ UsbFirmwarePlatformIsSupported (
     return FALSE;
   }
 
-  Model = (CONST CHAR8 *)fdt_getprop (Dtb, 0, "model", &Length);
+  Model = (CONST CHAR8 *)FdtGetProp (Dtb, 0, "model", &Length);
   if ((Length > 0) && (Model != NULL)) {
     if (0 == AsciiStrCmp (Model, "e3360_1099")) {
       DEBUG ((DEBUG_ERROR, "%a: Xavier-SLT unsupported\r\n", __FUNCTION__));

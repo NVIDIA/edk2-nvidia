@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -90,7 +90,7 @@ ApeiDxeNotifyC2cGpuPresence (
     CONST VOID  *Property;
     INT32       Length;
 
-    Property = fdt_getprop (Dtb, NodeOffset, "c2c-partitions", &Length);
+    Property = FdtGetProp (Dtb, NodeOffset, "c2c-partitions", &Length);
     if ((Property != NULL)) {
       *pC2cGpuPresent = TRUE;
       break;
@@ -135,29 +135,29 @@ ApeiDxeInitialize (
     return Status;
   }
 
-  NodeOffset = fdt_path_offset (DtbBase, "/firmware/uefi");
+  NodeOffset = FdtPathOffset (DtbBase, "/firmware/uefi");
   if (NodeOffset >= 0) {
-    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-sdei-table", NULL)) {
+    if (NULL != FdtGetProperty (DtbBase, NodeOffset, "skip-sdei-table", NULL)) {
       SkipSdei = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip SDEI Table\r\n", __FUNCTION__));
     }
 
-    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-hest-table", NULL)) {
+    if (NULL != FdtGetProperty (DtbBase, NodeOffset, "skip-hest-table", NULL)) {
       SkipHest = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip HEST Table\r\n", __FUNCTION__));
     }
 
-    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-bert-table", NULL)) {
+    if (NULL != FdtGetProperty (DtbBase, NodeOffset, "skip-bert-table", NULL)) {
       SkipBert = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip BERT Table\r\n", __FUNCTION__));
     }
 
-    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-einj-table", NULL)) {
+    if (NULL != FdtGetProperty (DtbBase, NodeOffset, "skip-einj-table", NULL)) {
       SkipEinj = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip EINJ Table\r\n", __FUNCTION__));
     }
 
-    if (NULL != fdt_get_property (DtbBase, NodeOffset, "skip-erst-table", NULL)) {
+    if (NULL != FdtGetProperty (DtbBase, NodeOffset, "skip-erst-table", NULL)) {
       SkipErst = TRUE;
       DEBUG ((DEBUG_ERROR, "%a: Skip ERST Table\r\n", __FUNCTION__));
     }

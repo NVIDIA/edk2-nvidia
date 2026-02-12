@@ -2,7 +2,7 @@
 
   EFUSE Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -20,7 +20,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/ResetNodeProtocol.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 #include <Protocol/DeviceTreeCompatibility.h>
 #include "EFuseDxePrivate.h"
 
@@ -167,7 +167,7 @@ DeviceDiscoveryNotify (
       Private->EFuseProtocol.WriteReg = EfuseWriteRegister;
 
       Property = NULL;
-      Property = fdt_getprop (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
+      Property = FdtGetProp (DeviceTreeNode->DeviceTreeBase, DeviceTreeNode->NodeOffset, "nvidia,hw-instance-id", NULL);
       if (Property == NULL) {
         Private->EFuseProtocol.Socket = 0;
       } else {

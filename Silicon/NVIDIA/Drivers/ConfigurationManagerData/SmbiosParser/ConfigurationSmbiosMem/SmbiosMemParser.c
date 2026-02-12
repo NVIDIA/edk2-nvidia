@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of SMBIOS Type 16/17/19 tables.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -15,7 +15,7 @@
 #include <Library/PrintLib.h>
 #include <Library/FruLib.h>
 #include <TH500/TH500Definitions.h>
-#include <libfdt.h>
+#include <Library/FdtLib.h>
 
 #include <ConfigurationManagerObject.h>
 
@@ -152,10 +152,10 @@ InstallSmbiosType17Cm (
           );
 
         NodeOffset = 0;
-        NodeOffset = fdt_path_offset (DtbBase, Type4NodeStr);
+        NodeOffset = FdtPathOffset (DtbBase, Type4NodeStr);
         if (NodeOffset > 0) {
           Property = NULL;
-          Property = fdt_getprop (DtbBase, NodeOffset, "fru-desc", NULL);
+          Property = FdtGetProp (DtbBase, NodeOffset, "fru-desc", NULL);
           if (Property != NULL) {
             FruInfo = NULL;
             FruDesc = (CHAR8 *)Property;

@@ -1,7 +1,7 @@
 /** @file
   SDMMC Driver specific Query and Response functions
 
-  Copyright (c) 2021-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -9,7 +9,8 @@
 
 #include "SdMmcConfigurationData.h"
 
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 #include <PlatformToDriverStructures.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -72,7 +73,7 @@ QuerySdMmcParameters (
   SdmmcParameterInfo = (SDMMC_PARAMETER_INFO *)*ParameterBlock;
 
   // Obtaining SDMMC parameters from the DT
-  RegulatorPointer = (CONST UINT32 *)fdt_getprop (
+  RegulatorPointer = (CONST UINT32 *)FdtGetProp (
                                        DtNode->DeviceTreeBase,
                                        DtNode->NodeOffset,
                                        "vmmc-supply",
@@ -83,7 +84,7 @@ QuerySdMmcParameters (
     SdmmcParameterInfo->VmmcRegulatorId        = SwapBytes32 (*RegulatorPointer);
   }
 
-  RegulatorPointer = (CONST UINT32 *)fdt_getprop (
+  RegulatorPointer = (CONST UINT32 *)FdtGetProp (
                                        DtNode->DeviceTreeBase,
                                        DtNode->NodeOffset,
                                        "vqmmc-supply",
@@ -94,11 +95,11 @@ QuerySdMmcParameters (
     SdmmcParameterInfo->VqmmcRegulatorId        = SwapBytes32 (*RegulatorPointer);
   }
 
-  if (fdt_get_property (DtNode->DeviceTreeBase, DtNode->NodeOffset, "non-removable", NULL) != NULL) {
+  if (FdtGetProperty (DtNode->DeviceTreeBase, DtNode->NodeOffset, "non-removable", NULL) != NULL) {
     SdmmcParameterInfo->NonRemovable = TRUE;
   }
 
-  if (fdt_getprop (DtNode->DeviceTreeBase, DtNode->NodeOffset, "only1v8", NULL) != NULL) {
+  if (FdtGetProp (DtNode->DeviceTreeBase, DtNode->NodeOffset, "only1v8", NULL) != NULL) {
     SdmmcParameterInfo->Only1v8 = TRUE;
   }
 

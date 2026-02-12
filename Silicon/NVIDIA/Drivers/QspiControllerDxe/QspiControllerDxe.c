@@ -2,7 +2,7 @@
 
   QSPI Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -23,7 +23,8 @@
 #include <Protocol/ClockNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/QspiController.h>
-#include <libfdt.h>
+#include <Library/BaseLib.h>
+#include <Library/FdtLib.h>
 
 #define QSPI_CONTROLLER_SIGNATURE  SIGNATURE_32('Q','S','P','I')
 
@@ -364,7 +365,7 @@ DetectNumChipSelects (
   INT32         Length;
   UINT8         NumChipSelects;
 
-  NumCs = (CONST UINT32 *)fdt_getprop (
+  NumCs = (CONST UINT32 *)FdtGetProp (
                             DeviceTreeNode->DeviceTreeBase,
                             DeviceTreeNode->NodeOffset,
                             "num-cs",
@@ -372,7 +373,7 @@ DetectNumChipSelects (
                             );
 
   if ((NumCs != NULL) && (Length == sizeof (UINT32))) {
-    NumChipSelects = (UINT8)fdt32_to_cpu (*(CONST UINT32 *)NumCs);
+    NumChipSelects = (UINT8)Fdt32ToCpu (*(CONST UINT32 *)NumCs);
     DEBUG ((DEBUG_INFO, "%a: num-cs=%u\n", __FUNCTION__, NumChipSelects));
     return NumChipSelects;
   }
@@ -450,7 +451,7 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverBindingSupported:
-      SecureController = (CONST UINT32 *)fdt_getprop (
+      SecureController = (CONST UINT32 *)FdtGetProp (
                                            DeviceTreeNode->DeviceTreeBase,
                                            DeviceTreeNode->NodeOffset,
                                            "nvidia,secure-qspi-controller",
@@ -499,7 +500,7 @@ DeviceDiscoveryNotify (
       ControllerType = DetectControllerType (Device);
       ClockId        = MAX_UINT32;
 
-      DtClockIds = (CONST UINT32 *)fdt_getprop (
+      DtClockIds = (CONST UINT32 *)FdtGetProp (
                                      DeviceTreeNode->DeviceTreeBase,
                                      DeviceTreeNode->NodeOffset,
                                      "clocks",
