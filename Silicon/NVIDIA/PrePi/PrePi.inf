@@ -1,6 +1,6 @@
 #/** @file
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
 #  Copyright (c) 2011-2017, ARM Ltd. All rights reserved.<BR>
 #
@@ -29,6 +29,7 @@
   EmbeddedPkg/EmbeddedPkg.dec
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]

@@ -122,7 +122,7 @@
   #
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
     <LibraryClasses>
-      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+      DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLibBase.inf
       VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
       NULL|Silicon/NVIDIA/Library/VarCheckLockAllLibMm/VarCheckLockAllLibMm.inf
       NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf

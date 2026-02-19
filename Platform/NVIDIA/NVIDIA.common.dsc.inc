@@ -185,7 +185,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   ArmGenericTimerCounterLib|ArmPkg/Library/ArmGenericTimerPhyCounterLib/ArmGenericTimerPhyCounterLib.inf
   ResetSystemLib|ArmPkg/Library/ArmPsciResetSystemLib/ArmPsciResetSystemLib.inf
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
-  ArmMmuLib|ArmPkg/Library/ArmMmuLib/ArmMmuBaseLib.inf
+  ArmMmuLib|UefiCpuPkg/Library/ArmMmuLib/ArmMmuBaseLib.inf
   OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
 
   TimerLib|ArmPkg/Library/ArmArchTimerLib/ArmArchTimerLib.inf
@@ -352,6 +352,10 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   TableHelperLib|DynamicTablesPkg/Library/Common/TableHelperLib/TableHelperLib.inf
   AcpiHelperLib|DynamicTablesPkg/Library/Common/AcpiHelperLib/AcpiHelperLib.inf
   SmbiosStringTableLib|DynamicTablesPkg/Library/Common/SmbiosStringTableLib/SmbiosStringTableLib.inf
+  MetadataHandlerLib|DynamicTablesPkg/Library/Common/MetadataHandlerLib/MetadataHandlerLib.inf
+  MetadataObjLib|DynamicTablesPkg/Library/Common/MetadataObjLib/MetadataObjLib.inf
+  CmObjHelperLib|DynamicTablesPkg/Library/Common/CmObjHelperLib/CmObjHelperLib.inf
+  Tpm2DeviceTableLib|DynamicTablesPkg/Library/Common/Tpm2DeviceTableLib/Tpm2DeviceTableLib.inf
   JedecJep106Lib|MdePkg/Library/JedecJep106Lib/JedecJep106Lib.inf
 
   PciLib|MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf

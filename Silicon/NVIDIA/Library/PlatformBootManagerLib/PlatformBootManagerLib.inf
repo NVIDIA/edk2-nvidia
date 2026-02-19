@@ -69,7 +69,6 @@
   FastbootUtilityLib
 
 [FeaturePcd]
-  gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
   gNVIDIATokenSpaceGuid.PcdQuickBootSupported
   gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported
 

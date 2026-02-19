@@ -28,6 +28,7 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
   Silicon/StandaloneMmPkgLegacy/StandaloneMmPkgLegacy.dec
   Silicon/NVIDIA/NVIDIA.dec
 
