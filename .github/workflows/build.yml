@@ -102,6 +102,11 @@ jobs:
               continue
             fi
 
+            # Skip android images if we do not have libavb in the combo.
+            if [[ ${defconfig} =~ "_android" ]] && [ ! -d edk2-nvidia/Silicon/NVIDIA/Library/AvbLib/libavb/libavb ]; then
+              continue
+            fi
+
             # Remove build output to avoid running out of space.  The image is kept.
             echo "Removing Build directory"
             rm -rf Build
