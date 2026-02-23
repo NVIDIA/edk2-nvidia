@@ -107,6 +107,11 @@ jobs:
               continue
             fi
 
+            # Skip t26x builds.  This codeline isn't ready for those yet.
+            if [[ ${defconfig} =~ "t26x_" ]]; then
+              continue
+            fi
+
             # Remove build output to avoid running out of space.  The image is kept.
             echo "Removing Build directory"
             rm -rf Build
@@ -121,7 +126,6 @@ jobs:
           # Build all non-Kconfig images
           edk2-nvidia/Platform/NVIDIA/StandaloneMmOptee/build.sh
           edk2-nvidia/Platform/NVIDIA/StandaloneMm/build.sh
-          edk2-nvidia/Platform/NVIDIA/StandaloneMmJetson/build.sh
           edk2-nvidia/Platform/NVIDIA/DeviceTree/build.sh
           edk2-nvidia/Platform/NVIDIA/L4TLauncher/build.sh
 
