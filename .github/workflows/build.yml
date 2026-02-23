@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -99,6 +99,11 @@ jobs:
           for defconfig in edk2-nvidia/Platform/NVIDIA/Tegra/DefConfigs/*.defconfig; do
             # Skip t24x images if we do not have edk2-redfish-client in the combo.
             if [[ ${defconfig} =~ "t24x_datacenter" ]] && [ ! -d edk2-redfish-client ]; then
+              continue
+            fi
+
+            # Skip android images if we do not have libavb in the combo.
+            if [[ ${defconfig} =~ "_android" ]] && [ ! -d edk2-nvidia/Silicon/NVIDIA/Library/AvbLib/libavb/libavb ]; then
               continue
             fi
 
