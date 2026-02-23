@@ -65,6 +65,49 @@ STATIC struct AvbKeyData {
   BOOLEAN        IsTrusted;
 } gAvbKeyData;
 
+EFI_STATUS
+AvbReadDeviceLockedState (
+  OUT BOOLEAN  *IsLocked
+  )
+{
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+
+  InvokeFunctionArg.Function            = TA_AVB_CMD_READ_LOCK_STATE;
+  InvokeFunctionArg.Params[0].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read unlocked state from AVB TA\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  *IsLocked = (InvokeFunctionArg.Params[0].Union.Value.A == 0) ? FALSE : TRUE;
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+AvbWriteDeviceLockedState (
+  BOOLEAN  IsLocked
+  )
+{
+  EFI_STATUS                 Status            = EFI_SUCCESS;
+  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+
+  InvokeFunctionArg.Function                = TA_AVB_CMD_WRITE_LOCK_STATE;
+  InvokeFunctionArg.Params[0].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
+  InvokeFunctionArg.Params[0].Union.Value.A = IsLocked ? 1 : 0;
+
+  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to set unlocked state from AVB TA\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
 /**
   Read tamper-evident storage, parse device unlocked state.
 
@@ -81,39 +124,32 @@ ReadIsDeviceUnlocked (
   OUT bool    *IsUnlocked
   )
 {
-  EFI_STATUS                 Status            = EFI_SUCCESS;
-  AvbIOResult                AvbResult         = AVB_IO_RESULT_OK;
-  OPTEE_INVOKE_FUNCTION_ARG  InvokeFunctionArg = { 0 };
+  EFI_STATUS   Status       = EFI_SUCCESS;
+  AvbIOResult  AvbResult    = AVB_IO_RESULT_OK;
+  BOOLEAN      DeviceLocked = FALSE;
 
-  InvokeFunctionArg.Function            = TA_AVB_CMD_READ_LOCK_STATE;
-  InvokeFunctionArg.Params[0].Attribute = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_OUTPUT;
-
-  Status = AvbOpteeInvoke (&InvokeFunctionArg);
+  Status = AvbReadDeviceLockedState (&DeviceLocked);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read unlocked state from AVB TA\n", __FUNCTION__, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read locked state from AVB TA\n", __FUNCTION__, Status));
     AvbResult = (Status == EFI_NOT_FOUND) ? AVB_IO_RESULT_ERROR_NO_SUCH_VALUE : AVB_IO_RESULT_ERROR_IO;
   }
 
   // If locked state not found, setting as locked by default
   if (AvbResult == AVB_IO_RESULT_ERROR_NO_SUCH_VALUE) {
-    ZeroMem (&InvokeFunctionArg, sizeof (OPTEE_INVOKE_FUNCTION_ARG));
-    InvokeFunctionArg.Function                = TA_AVB_CMD_WRITE_LOCK_STATE;
-    InvokeFunctionArg.Params[0].Attribute     = OPTEE_MESSAGE_ATTRIBUTE_TYPE_VALUE_INPUT;
-    InvokeFunctionArg.Params[0].Union.Value.A = 1;
-
-    Status = AvbOpteeInvoke (&InvokeFunctionArg);
+    Status = AvbWriteDeviceLockedState (TRUE);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write unlocked state from AVB TA\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to write locked state from AVB TA\n", __FUNCTION__, Status));
       AvbResult = AVB_IO_RESULT_ERROR_IO;
       goto Exit;
     }
 
-    AvbResult = AVB_IO_RESULT_OK;
+    DeviceLocked = TRUE;
+    AvbResult    = AVB_IO_RESULT_OK;
   } else if (AvbResult != AVB_IO_RESULT_OK) {
     goto Exit;
   }
 
-  *IsUnlocked = (InvokeFunctionArg.Params[0].Union.Value.A == 0) ? TRUE : FALSE;
+  *IsUnlocked = (DeviceLocked == FALSE) ? TRUE : FALSE;
 
 Exit:
   return AvbResult;

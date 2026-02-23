@@ -40,6 +40,7 @@
   UefiRuntimeServicesTableLib
   AndroidBcbLib
   DeviceTreeHelperLib
+  AvbLib
 
 [Protocols]
   gAndroidFastbootTransportProtocolGuid
@@ -48,6 +49,9 @@
   gEfiSimpleTextOutProtocolGuid
   gEfiSimpleTextInProtocolGuid
   gNVIDIABootChainProtocolGuid
+  gEfiPartitionInfoProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
 
 [Guids]
   gEfiFmpCapsuleGuid

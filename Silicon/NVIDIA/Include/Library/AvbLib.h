@@ -140,4 +140,30 @@ AddRpmbInfoToDtb (
   VOID
   );
 
+/**
+  Read device locked state from AVB TA.
+
+  @param[out]  IsLocked   Pointer to receive the locked state (TRUE = locked).
+
+  @retval EFI_SUCCESS     The operation completed successfully.
+  @retval Other           Error from AVB TA.
+**/
+EFI_STATUS
+AvbReadDeviceLockedState (
+  BOOLEAN  *IsLocked
+  );
+
+/**
+  Write device locked state to AVB TA.
+
+  @param[in]  IsLocked   TRUE = locked, FALSE = unlocked.
+
+  @retval EFI_SUCCESS     The operation completed successfully.
+  @retval Other           Error from AVB TA.
+**/
+EFI_STATUS
+AvbWriteDeviceLockedState (
+  BOOLEAN  IsLocked
+  );
+
 #endif

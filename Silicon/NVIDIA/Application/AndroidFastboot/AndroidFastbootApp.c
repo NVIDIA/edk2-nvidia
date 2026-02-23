@@ -11,10 +11,15 @@
 
 #include "AndroidFastbootApp.h"
 
+#include <Uefi/UefiBaseType.h>
+
 #include <Protocol/AndroidFastbootTransport.h>
 #include <Protocol/AndroidFastbootPlatform.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/SimpleTextIn.h>
+#include <Protocol/PartitionInfo.h>
+#include <Protocol/BlockIo.h>
+#include <Protocol/DiskIo.h>
 
 #include <Guid/FmpCapsule.h>
 #include <Guid/NVIDIAPublicVariableGuid.h>
@@ -24,10 +29,13 @@
 #include <Library/PcdLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiApplicationEntryPoint.h>
 #include <Library/PrintLib.h>
 #include <Library/AndroidBcbLib.h>
+#include <Library/OpteeNvLib.h>
+#include <Library/AvbLib.h>
 
 /*
  * UEFI Application using the FASTBOOT_TRANSPORT_PROTOCOL and
@@ -216,6 +224,28 @@ HandleOemBootloaderUpdate (
   SEND_LITERAL ("OKAY");
 }
 
+/**
+  Read the AVB locked state. On read failure, fail-safe to TRUE so a
+  flaky RPMB / TA cannot be used to bypass lock-state enforcement.
+**/
+STATIC
+BOOLEAN
+IsBootloaderLocked (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     IsLocked;
+
+  Status = AvbReadDeviceLockedState (&IsLocked);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: read locked state: %r (assuming locked)\n", __FUNCTION__, Status));
+    return TRUE;
+  }
+
+  return IsLocked;
+}
+
 STATIC
 VOID
 HandleFlash (
@@ -224,6 +254,11 @@ HandleFlash (
 {
   EFI_STATUS  Status;
   CHAR16      OutputString[FASTBOOT_STRING_MAX_LENGTH];
+
+  if (IsBootloaderLocked ()) {
+    SEND_LITERAL ("FAILBootloader is locked.");
+    return;
+  }
 
   // Build output string
   UnicodeSPrint (OutputString, sizeof (OutputString), L"Flashing partition %a\r\n", PartitionName);
@@ -268,6 +303,11 @@ HandleErase (
   EFI_STATUS  Status;
   CHAR16      OutputString[FASTBOOT_STRING_MAX_LENGTH];
 
+  if (IsBootloaderLocked ()) {
+    SEND_LITERAL ("FAILBootloader is locked.");
+    return;
+  }
+
   // Build output string
   UnicodeSPrint (OutputString, sizeof (OutputString), L"Erasing partition %a\r\n", PartitionName);
   mTextOut->OutputString (mTextOut, OutputString);
@@ -289,6 +329,11 @@ HandleBoot (
 {
   EFI_STATUS  Status;
 
+  if (IsBootloaderLocked ()) {
+    SEND_LITERAL ("FAILBootloader is locked.");
+    return;
+  }
+
   mTextOut->OutputString (mTextOut, L"Booting downloaded image\r\n");
 
   if (mDataBuffer == NULL) {
@@ -307,6 +352,286 @@ HandleBoot (
   }
 
   // We shouldn't get here
+}
+
+#define FAC_RST_PROTECTION_PARTITION_NAME  L"fac_rst_protection"
+#define GPT_PARTITION_NAME_LENGTH          36
+
+//
+// Partitions wiped on factory reset / lock / unlock. MSC (BCB) and
+// fac_rst_protection are deliberately left out. Wipe mechanism (full
+// vs head-only, chunk size, etc.) is decided by the platform driver.
+//
+STATIC CONST CHAR8  *CONST  mFactoryResetPartitions[] = {
+  "userdata",
+  "CAC",
+  "MDA",
+};
+
+EFI_STATUS
+FastbootFactoryReset (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Idx;
+  CHAR8       Info[96];
+  UINTN       InfoLen;
+
+  for (Idx = 0; Idx < ARRAY_SIZE (mFactoryResetPartitions); Idx++) {
+    //
+    // Per-partition INFO progress is only meaningful in the fastboot
+    // command path; menu / boot-time callers run with mTransport ==
+    // NULL and report progress through their own UI.
+    //
+    if (mTransport != NULL) {
+      InfoLen = AsciiSPrint (
+                  Info,
+                  sizeof (Info),
+                  "INFOerasing %a ...",
+                  mFactoryResetPartitions[Idx]
+                  );
+      mTransport->Send (InfoLen, Info, &mFatalSendErrorEvent);
+    }
+
+    Status = mPlatform->ErasePartition ((CHAR8 *)mFactoryResetPartitions[Idx]);
+    if (Status == EFI_NOT_FOUND) {
+      DEBUG ((DEBUG_WARN, "%a: %a: not present, skipping\n", __FUNCTION__, mFactoryResetPartitions[Idx]));
+      continue;
+    }
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: %a: erase failed: %r\n", __FUNCTION__, mFactoryResetPartitions[Idx], Status));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+GetUnlockAbility (
+  OUT BOOLEAN  *UnlockAllowed
+  )
+{
+  EFI_STATUS                   Status;
+  UINTN                        NumOfHandles;
+  EFI_HANDLE                   *HandleBuffer;
+  UINTN                        Index;
+  EFI_PARTITION_INFO_PROTOCOL  *PartitionInfo;
+  EFI_BLOCK_IO_PROTOCOL        *BlockIo;
+  EFI_DISK_IO_PROTOCOL         *DiskIo;
+  UINT32                       MediaId;
+  UINTN                        PartitionSize;
+  UINT8                        UnlockAbilityFlag;
+
+  if (UnlockAllowed == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *UnlockAllowed = FALSE;
+
+  NumOfHandles = 0;
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiPartitionInfoProtocolGuid,
+                        NULL,
+                        &NumOfHandles,
+                        &HandleBuffer
+                        );
+  if (EFI_ERROR (Status) || (NumOfHandles == 0) || (HandleBuffer == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to locate partition handles: %r\n", __FUNCTION__, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  for (Index = 0; Index < NumOfHandles; Index++) {
+    PartitionInfo = NULL;
+    Status        = gBS->HandleProtocol (
+                           HandleBuffer[Index],
+                           &gEfiPartitionInfoProtocolGuid,
+                           (VOID **)&PartitionInfo
+                           );
+    if (EFI_ERROR (Status) || (PartitionInfo == NULL)) {
+      continue;
+    }
+
+    if (PartitionInfo->Type != PARTITION_TYPE_GPT) {
+      continue;
+    }
+
+    if (0 == StrnCmp (
+               PartitionInfo->Info.Gpt.PartitionName,
+               FAC_RST_PROTECTION_PARTITION_NAME,
+               StrnLenS (FAC_RST_PROTECTION_PARTITION_NAME, GPT_PARTITION_NAME_LENGTH)
+               ))
+    {
+      break;
+    }
+  }
+
+  if (Index >= NumOfHandles) {
+    DEBUG ((DEBUG_ERROR, "%a: Partition %s not found\n", __FUNCTION__, FAC_RST_PROTECTION_PARTITION_NAME));
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  BlockIo = NULL;
+  Status  = gBS->HandleProtocol (
+                   HandleBuffer[Index],
+                   &gEfiBlockIoProtocolGuid,
+                   (VOID **)&BlockIo
+                   );
+  if (EFI_ERROR (Status) || (BlockIo == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get BlockIo: %r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  DiskIo = NULL;
+  Status = gBS->HandleProtocol (
+                  HandleBuffer[Index],
+                  &gEfiDiskIoProtocolGuid,
+                  (VOID **)&DiskIo
+                  );
+  if (EFI_ERROR (Status) || (DiskIo == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get DiskIo: %r\n", __FUNCTION__, Status));
+    goto Exit;
+  }
+
+  MediaId           = BlockIo->Media->MediaId;
+  PartitionSize     = (BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
+  UnlockAbilityFlag = 0;
+
+  if (PartitionSize == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: %s partition size is 0\n", __FUNCTION__, FAC_RST_PROTECTION_PARTITION_NAME));
+    Status = EFI_NOT_FOUND;
+    goto Exit;
+  }
+
+  Status = DiskIo->ReadDisk (DiskIo, MediaId, PartitionSize - 1, sizeof (UnlockAbilityFlag), &UnlockAbilityFlag);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read %s: %r\n", __FUNCTION__, FAC_RST_PROTECTION_PARTITION_NAME, Status));
+    goto Exit;
+  }
+
+  *UnlockAllowed = (UnlockAbilityFlag != 0);
+  DEBUG ((DEBUG_INFO, "%a: unlock_ability = %d\n", __FUNCTION__, UnlockAbilityFlag));
+
+Exit:
+  if (HandleBuffer != NULL) {
+    gBS->FreePool (HandleBuffer);
+  }
+
+  return Status;
+}
+
+EFI_STATUS
+FastbootLockBootloader (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = FastbootFactoryReset ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AvbWriteDeviceLockedState (1);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: write locked state: %r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+EFI_STATUS
+FastbootUnlockBootloader (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     UnlockAllowed;
+
+  Status = GetUnlockAbility (&UnlockAllowed);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: read unlock ability: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (!UnlockAllowed) {
+    DEBUG ((DEBUG_ERROR, "%a: OEM unlock blocked by fac_rst_protection\n", __FUNCTION__));
+    return EFI_ACCESS_DENIED;
+  }
+
+  Status = FastbootFactoryReset ();
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = AvbWriteDeviceLockedState (0);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: write locked state: %r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
+STATIC
+VOID
+HandleFlashingCommand (
+  IN CHAR8  *Command
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     IsLocked;
+  BOOLEAN     WantLocked;
+
+  if (!AsciiStrCmp (Command, "lock")) {
+    WantLocked = TRUE;
+  } else if (!AsciiStrCmp (Command, "unlock")) {
+    WantLocked = FALSE;
+  } else {
+    SEND_LITERAL ("FAILUnknown flashing command");
+    return;
+  }
+
+  Status = AvbReadDeviceLockedState (&IsLocked);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: read locked state: %r\n", __FUNCTION__, Status));
+    SEND_LITERAL ("FAILBootloader lock state unknown");
+    return;
+  }
+
+  if (IsLocked == WantLocked) {
+    if (WantLocked) {
+      SEND_LITERAL ("FAILBootloader is already locked.");
+    } else {
+      SEND_LITERAL ("FAILBootloader is already unlocked.");
+    }
+
+    return;
+  }
+
+  Status = WantLocked ? FastbootLockBootloader () : FastbootUnlockBootloader ();
+  switch (Status) {
+    case EFI_SUCCESS:
+      SEND_LITERAL ("OKAY");
+      return;
+    case EFI_ACCESS_DENIED:
+      SEND_LITERAL ("FAILUnlock is not allowed. Enable OEM unlock first");
+      return;
+    default:
+      DEBUG ((DEBUG_ERROR, "%a: %a failed: %r\n", __FUNCTION__, Command, Status));
+      if (WantLocked) {
+        SEND_LITERAL ("FAILLock device failed");
+      } else {
+        SEND_LITERAL ("FAILUnlock device failed");
+      }
+
+      return;
+  }
 }
 
 STATIC
@@ -363,6 +688,8 @@ AcceptCmd (
     HandleDownload (Command + sizeof ("download"));
   } else if (MATCH_CMD_LITERAL ("verify", Command)) {
     SEND_LITERAL ("FAILNot supported");
+  } else if (MATCH_CMD_LITERAL ("flashing", Command)) {
+    HandleFlashingCommand (Command + sizeof ("flashing"));
   } else if (MATCH_CMD_LITERAL ("flash", Command)) {
     HandleFlash (Command + sizeof ("flash"));
   } else if (MATCH_CMD_LITERAL ("erase", Command)) {
@@ -568,6 +895,12 @@ FastbootAppEntryPoint (
   Status = gBS->LocateProtocol (&gEfiSimpleTextInProtocolGuid, NULL, (VOID **)&TextIn);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Fastboot: Couldn't open Text Input Protocol: %r\n", Status));
+    return Status;
+  }
+
+  Status = AvbOpteeInterfaceInit ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Fastboot: Avb OP-TEE initialization failed: %r\n", Status));
     return Status;
   }
 

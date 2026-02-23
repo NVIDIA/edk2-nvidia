@@ -2545,7 +2545,15 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
 !ifdef CONFIG_BOOT_ANDROID_FASTBOOT
   Silicon/NVIDIA/Drivers/TegraUsbDeviceControllerDxe/TegraUsbDeviceControllerDxe.inf
-  Silicon/NVIDIA/Application/AndroidFastboot/AndroidFastbootApp.inf
+  Silicon/NVIDIA/Application/AndroidFastboot/AndroidFastbootApp.inf {
+    <LibraryClasses>
+      AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
+!ifdef CONFIG_SOC_T26X
+      AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceFfa/AvbOpteeInterfaceFfa.inf
+!else
+      AvbOpteeInterfaceLib|Silicon/NVIDIA/Library/AvbLib/AvbOpteeInterfaceSmc/AvbOpteeInterfaceSmc.inf
+!endif
+  }
   EmbeddedPkg/Drivers/AndroidFastbootTransportUsbDxe/FastbootTransportUsbDxe.inf {
     <LibraryClasses>
       NULL|Silicon/NVIDIA/Library/TegraUsbNullLib/TegraUsbNullLib.inf
