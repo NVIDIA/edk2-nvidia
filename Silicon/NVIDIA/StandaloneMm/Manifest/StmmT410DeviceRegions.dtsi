@@ -53,5 +53,5 @@ th500-gpio0-socket1 {
 sysram-pt {
   base-address = <0x0001F00 0x0037C000 >;
   pages-count  = < 16 >;                   // 64kb
-  attributes   = < 0x1 >;                  // secure ro
+  attributes   = < 0x9 >;                  // non-secure ro
 };
