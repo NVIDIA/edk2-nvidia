@@ -475,6 +475,56 @@ NctDumpTnspecToDtb (
 }
 
 /**
+ * Set a MAC address property on a DTB node.
+ *
+ * @param[in,out] Dtb       Pointer to FDT blob.
+ * @param[in]     NodePath  Absolute DTB node path.
+ * @param[in]     PropName  Property name to set.
+ * @param[in]     Addr      6-byte MAC address.
+ * @param[in]     Label     Human-readable label for log messages.
+ */
+STATIC
+EFI_STATUS
+SetMacAddrInDtb (
+  IN OUT VOID         *Dtb,
+  IN     CONST CHAR8  *NodePath,
+  IN     CONST CHAR8  *PropName,
+  IN     UINT8        *Addr,
+  IN     CONST CHAR8  *Label
+  )
+{
+  INT32  NodeOffset;
+  INT32  FdtErr;
+
+  NodeOffset = FdtPathOffset (Dtb, NodePath);
+  if (NodeOffset < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: DTB node %a not found (fdt err=%d)\n", __FUNCTION__, NodePath, NodeOffset));
+    return EFI_NOT_FOUND;
+  }
+
+  FdtErr = FdtSetProp (Dtb, NodeOffset, PropName, Addr, 6);
+  if (FdtErr < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: FdtSetProp failed for %a/%a (fdt err=%d)\n", __FUNCTION__, NodePath, PropName, FdtErr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: %a = %02x:%02x:%02x:%02x:%02x:%02x\n",
+    __FUNCTION__,
+    Label,
+    Addr[0],
+    Addr[1],
+    Addr[2],
+    Addr[3],
+    Addr[4],
+    Addr[5]
+    ));
+
+  return EFI_SUCCESS;
+}
+
+/**
  * Create a top-level DTB node if it does not already exist.
  *
  * @param[in,out] Dtb       Pointer to FDT blob.
@@ -567,4 +617,75 @@ NctDumpNctToDtb (
   DEBUG ((DEBUG_ERROR, "%a: /nct/factory-mode = %u\n", __FUNCTION__, Item.FactoryMode.Flag));
 
   return EFI_SUCCESS;
+}
+
+/*
+ * Populate WiFi, Ethernet, and Bluetooth MAC addresses from NCT into a DTB.
+ */
+EFI_STATUS
+EFIAPI
+NctPopulateMacAddrs (
+  IN OUT VOID  *Dtb
+  )
+{
+  EFI_STATUS  Status;
+  NCT_ITEM    Item;
+
+  if (Dtb == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (IsNctInitialized == FALSE) {
+    Status = NctInit (NULL);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: NCT init failed: %r\n", __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  /* WiFi: /wifi/mac-address */
+  Status = NctReadItem (NCT_ID_WIFI_ADDR, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read WiFi MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  Status = SetMacAddrInDtb (Dtb, "/wifi", "mac-address", Item.WifiAddr.Addr, "WiFi MAC");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set WiFi MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  /* Ethernet: /ethernet/mac-address */
+  Status = NctReadItem (NCT_ID_ETH_ADDR, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read ETH MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  Status = SetMacAddrInDtb (Dtb, "/ethernet", "mac-address", Item.EthAddr.Addr, "ETH MAC");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set ETH MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  /* Bluetooth: /serial@3130000/bluetooth/local-bd-address */
+  Status = NctReadItem (NCT_ID_BT_ADDR, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read BT MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  Status = SetMacAddrInDtb (Dtb, "/serial@3130000/bluetooth", "local-bd-address", Item.BtAddr.Addr, "BT MAC");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set BT MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  /* Thread network: /serial@c6f0000/threadnetwork/mac-address */
+  Status = NctReadItem (NCT_ID_THREAD_ADDR, &Item);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read THREAD MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  Status = SetMacAddrInDtb (Dtb, "/serial@c6f0000/threadnetwork", "mac-address", Item.BtAddr.Addr, "THREAD MAC");
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set THREAD MAC from NCT: %r\n", __FUNCTION__, Status));
+  }
+
+  return Status;
 }

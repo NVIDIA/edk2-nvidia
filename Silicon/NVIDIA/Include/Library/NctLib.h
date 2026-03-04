@@ -69,7 +69,7 @@ typedef UINT32 NCT_ID;
 #define NCT_ID_FUELGAUGE_ID           17           /* ID:17 */
 #define NCT_ID_WCC                    18           /* ID:18 */
 #define NCT_ID_ETH_ADDR               19           /* ID:19 */
-#define NCT_ID_UNUSED3                20           /* ID:20 */
+#define NCT_ID_THREAD_ADDR            20           /* ID:20 */
 #define NCT_ID_UNUSED4                21           /* ID:21 */
 #define NCT_ID_UNUSED5                22           /* ID:22 */
 #define NCT_ID_UNUSED6                23           /* ID:23 */
@@ -113,6 +113,10 @@ typedef struct {
 typedef struct {
   UINT8    Addr[6];
 } NCT_ETH_ADDR;
+
+typedef struct {
+  UINT8    Addr[6];
+} NCT_THREAD_ADDR;
 
 typedef struct {
   UINT16    Id;
@@ -169,6 +173,7 @@ typedef union {
   NCT_RAMDUMP           Ramdump;
   NCT_WCC               Wcc;
   NCT_ETH_ADDR          EthAddr;
+  NCT_THREAD_ADDR       ThreadAddr;
   NCT_BOARD_INFO        BoardInfo;
   NCT_LBH_ID            GpsId;
   NCT_LBH_ID            LcdId;
@@ -298,6 +303,28 @@ NctDumpTnspecToDtb (
 EFI_STATUS
 EFIAPI
 NctDumpNctToDtb (
+  IN OUT VOID  *Dtb
+  );
+
+/**
+ * Populate WiFi, Ethernet, and Bluetooth MAC addresses from NCT into a DTB.
+ *
+ * DTB nodes and properties:
+ *   /wifi                         -> mac-address        (WiFi)
+ *   /ethernet                     -> local-mac-address  (Ethernet)
+ *   /serial@3130000/bluetooth     -> local-bd-address   (Bluetooth)
+ *   /serial@6cf0000/threadnetwork -> mac-address        (Thread)
+ *
+ * @param[in,out] Dtb  Pointer to a writable Flattened Device Tree blob.
+ *
+ * @retval EFI_SUCCESS            All MAC addresses populated successfully.
+ * @retval EFI_INVALID_PARAMETER  Dtb is NULL.
+ * @retval EFI_NOT_FOUND          One or more DTB nodes not found.
+ * @retval EFI_DEVICE_ERROR       fdt_setprop failed.
+ */
+EFI_STATUS
+EFIAPI
+NctPopulateMacAddrs (
   IN OUT VOID  *Dtb
   );
 

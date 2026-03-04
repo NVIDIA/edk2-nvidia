@@ -1017,6 +1017,12 @@ AndroidBootDxeLoadDtb (
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
         }
 
+        // Populate Nct mac-addr to dtb
+        Status = NctPopulateMacAddrs (DtbCopy);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to set bt/wifi/eth mac addr\n", __FUNCTION__, Status));
+        }
+
         Status = NctDumpNctToDtb (DtbCopy);
         if (EFI_ERROR (Status)) {
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add nct info\n", __FUNCTION__, Status));

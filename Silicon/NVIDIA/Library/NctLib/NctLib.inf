@@ -24,6 +24,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   ShellPkg/ShellPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -35,6 +36,7 @@
   HandleParsingLib
   DeviceTreeHelperLib
   PlatformResourceLib
+  FdtLib
 
 [Guids]
   gFdtTableGuid
