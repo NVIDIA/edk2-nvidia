@@ -562,8 +562,20 @@ OpteeDecryptImage (
     goto Exit;
   }
 
+  if (ImageHeaderSize == 0) {
+    ErrorPrint (L"%a: ImageHeaderSize cannot be zero\r\n", __FUNCTION__);
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
+  }
+
   if (SrcFileSize < ImageHeaderSize) {
     ErrorPrint (L"%a: SrcFileSize can not be less than 8K \r\n", __FUNCTION__);
+    Status = EFI_INVALID_PARAMETER;
+    goto Exit;
+  }
+
+  if (SrcFileSize == FirstBlockSize) {
+    ErrorPrint (L"%a: Number of encrypted data blocks is zero\r\n", __FUNCTION__);
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
