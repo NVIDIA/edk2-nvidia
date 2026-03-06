@@ -142,6 +142,8 @@
 
 [PcdsFeatureFlag]
   gEfiMdeModulePkgTokenSpaceGuid.PcdVariableCollectStatistics|TRUE
+  gEfiSecurityPkgTokenSpaceGuid.PcdDisableCustomModeEvaluation|TRUE
+  gEfiSecurityPkgTokenSpaceGuid.PcdDisableSecureBootOverride|TRUE
 
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
