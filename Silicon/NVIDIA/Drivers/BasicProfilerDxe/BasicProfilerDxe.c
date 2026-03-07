@@ -19,6 +19,7 @@
 #include <Library/DxeServicesTableLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TimerLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Ppi/SecPerformance.h>
 #include <Protocol/KernelCmdLineUpdate.h>
 
@@ -27,10 +28,16 @@
 #define PROFILER_UEFI_SIZE     SIZE_4KB
 #define FW_PROFILER_DATA_SIZE  ALIGN_VALUE (PROFILER_UEFI_SIZE, SIZE_64KB)
 
+// Linux kernel profiler record structure format
+// Total structure size is 56 + 8 = 64 bytes per record
+#define MAX_PROFILE_STRLEN  55
+
+#pragma pack(1)
 typedef struct {
-  UINT64    UEFIEntryTimestamp;
-  UINT64    ExitBootServicesTimestamp;
-} UEFI_PROFILE;
+  CHAR8     Str[MAX_PROFILE_STRLEN + 1];   // 56 bytes: profiling point string
+  UINT64    Timestamp;                     // 8 bytes: timer counter value
+} PROFILER_RECORD;
+#pragma pack()
 
 STATIC
 CHAR16  mProfilerNewCommandLineArgument[PROFILER_CMD_MAX_LEN];
@@ -49,7 +56,8 @@ OnExitBootServices (
   UINTN                     ProfilerBase;
   VOID                      *Hob;
   FIRMWARE_SEC_PERFORMANCE  *Performance;
-  UEFI_PROFILE              *UEFIProfileData;
+  PROFILER_RECORD           *ProfilerRecords;
+  UINT64                    ExitBootServicesTime;
 
   gBS->CloseEvent (Event);
 
@@ -64,10 +72,30 @@ OnExitBootServices (
   }
 
   if (Performance->ResetEnd != 0) {
-    ProfilerBase                               = (UINTN)Context;
-    UEFIProfileData                            = (UEFI_PROFILE *)(ProfilerBase + PROFILER_UEFI_OFFSET);
-    UEFIProfileData->UEFIEntryTimestamp        = Performance->ResetEnd;
-    UEFIProfileData->ExitBootServicesTimestamp = GetTimeInNanoSecond (GetPerformanceCounter ());
+    ProfilerBase    = (UINTN)Context;
+    ProfilerRecords = (PROFILER_RECORD *)(ProfilerBase + PROFILER_UEFI_OFFSET);
+    // Convert ticks to nanoseconds, then divide by 1000 to convert nanoseconds to microseconds
+    ExitBootServicesTime = GetTimeInNanoSecond (GetPerformanceCounter ()) / 1000;
+
+    // Initialize both records to zero
+    SetMem (ProfilerRecords, sizeof (PROFILER_RECORD) * 2, 0);
+
+    // Record 1: UEFI Entry Timestamp (ResetEnd) - stored in microseconds
+    AsciiStrCpyS (
+      ProfilerRecords[0].Str,
+      MAX_PROFILE_STRLEN + 1,
+      "UEFIEntryTimestamp"
+      );
+    // Performance->ResetEnd is already in nanoseconds from SEC phase, divide by 1000 to convert to microseconds
+    ProfilerRecords[0].Timestamp = Performance->ResetEnd / 1000;
+
+    // Record 2: Exit Boot Services Timestamp - stored in microseconds
+    AsciiStrCpyS (
+      ProfilerRecords[1].Str,
+      MAX_PROFILE_STRLEN + 1,
+      "ExitBootServicesTimestamp"
+      );
+    ProfilerRecords[1].Timestamp = ExitBootServicesTime;
   }
 
   return;
@@ -103,7 +131,7 @@ BasicProfilerDxeInitialize (
 
   if ((ProfilerBase == 0) ||
       (ProfilerSize == 0) ||
-      (ProfilerSize <= SIZE_64KB))
+      (ProfilerSize < SIZE_64KB))
   {
     DEBUG ((DEBUG_ERROR, "Invalid profiler carveout information\n"));
     return EFI_NOT_FOUND;

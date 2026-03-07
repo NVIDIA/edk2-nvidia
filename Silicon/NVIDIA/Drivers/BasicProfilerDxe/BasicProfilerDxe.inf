@@ -32,6 +32,7 @@
   PlatformResourceLib
   DxeServicesTableLib
   HobLib
+  BaseMemoryLib
 
 [Guids]
   gEfiEventExitBootServicesGuid
