@@ -1,5 +1,5 @@
 /** @file
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,6 +15,11 @@
 #include <Protocol/AndroidFastbootPlatform.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/SimpleTextIn.h>
+
+#include <Guid/FmpCapsule.h>
+#include <Guid/NVIDIAPublicVariableGuid.h>
+
+#include <Protocol/BootChainProtocol.h>
 
 #include <Library/PcdLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -141,6 +146,78 @@ HandleDownload (
 
 STATIC
 VOID
+HandleOemBootloaderUpdate (
+  VOID
+  )
+{
+  EFI_STATUS                  Status;
+  EFI_CAPSULE_HEADER          *CapsuleHeader;
+  NVIDIA_BOOT_CHAIN_PROTOCOL  *BootChainProtocol;
+  UINT8                       BootChain;
+
+  mTextOut->OutputString (mTextOut, L"OEM bootloader_update: processing capsule via UpdateCapsule\r\n");
+
+  if (mDataBuffer == NULL) {
+    SEND_LITERAL ("FAILNo payload downloaded. Use 'fastboot stage' first");
+    return;
+  }
+
+  if (mNumDataBytes < sizeof (EFI_CAPSULE_HEADER)) {
+    SEND_LITERAL ("FAILPayload too small to be a valid capsule");
+    return;
+  }
+
+  CapsuleHeader = (EFI_CAPSULE_HEADER *)mDataBuffer;
+  if (!CompareGuid (&CapsuleHeader->CapsuleGuid, &gEfiFmpCapsuleGuid)) {
+    DEBUG ((DEBUG_ERROR, "bootloader_update: invalid capsule GUID, not FMP\n"));
+    SEND_LITERAL ("FAILInvalid capsule: not an FMP capsule");
+    return;
+  }
+
+  if (CapsuleHeader->CapsuleImageSize > mNumDataBytes) {
+    SEND_LITERAL ("FAILCapsule image size exceeds downloaded data");
+    return;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIABootChainProtocolGuid,
+                  NULL,
+                  (VOID **)&BootChainProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "bootloader_update: BootChainProtocol not found: %r\n", Status));
+    SEND_LITERAL ("FAILCannot determine active boot chain");
+    return;
+  }
+
+  BootChain = (UINT8)BootChainProtocol->ActiveBootChain;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "bootloader_update: capsule size=%u, current slot=%u\n",
+    CapsuleHeader->CapsuleImageSize,
+    BootChain
+    ));
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "bootloader_update: calling gRT->UpdateCapsule, size=%u\n",
+    CapsuleHeader->CapsuleImageSize
+    ));
+
+  Status = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "bootloader_update: UpdateCapsule failed: %r\n", Status));
+    SEND_LITERAL ("FAILUpdateCapsule failed");
+    return;
+  }
+
+  DEBUG ((DEBUG_ERROR, "bootloader_update: capsule processed successfully\n"));
+  SEND_LITERAL ("OKAY");
+}
+
+STATIC
+VOID
 HandleFlash (
   IN CHAR8  *PartitionName
   )
@@ -155,6 +232,12 @@ HandleFlash (
   if (mDataBuffer == NULL) {
     // Doesn't look like we were sent any data
     SEND_LITERAL ("FAILNo data to flash");
+    return;
+  }
+
+  if (MATCH_CMD_LITERAL ("staging", PartitionName)) {
+    SEND_LITERAL ("INFONote: This is a bootloader update, not a partition write.");
+    HandleOemBootloaderUpdate ();
     return;
   }
 
@@ -233,6 +316,15 @@ HandleOemCommand (
   )
 {
   EFI_STATUS  Status;
+
+  while (*Command == ' ') {
+    Command++;
+  }
+
+  if (MATCH_CMD_LITERAL ("bootloader_update", Command)) {
+    HandleOemBootloaderUpdate ();
+    return;
+  }
 
   Status = mPlatform->DoOemCommand (Command);
   if (Status == EFI_NOT_FOUND) {

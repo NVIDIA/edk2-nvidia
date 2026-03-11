@@ -32,6 +32,7 @@
   NctLib
   PrintLib
   TegraPlatformInfoLib
+  AndroidBcbLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
@@ -40,12 +41,14 @@
   gNVIDIASavedCapsuleProtocolGuid
   gNVIDIAAndroidFmpInitCompleteProtocolGuid
   gNVIDIAEFuseProtocolGuid
+  gNVIDIABootChainProtocolGuid
 
 [Guids]
   gNVIDIAPublicVariableGuid
   gEfiFmpCapsuleGuid
 
 [Pcd]
+  gNVIDIATokenSpaceGuid.PcdFmpMultiImageMinimalUpdate
 
 [Depex]
-  gEfiBlockIoProtocolGuid AND gNVIDIAEFuseProtocolGuid
+  gEfiBlockIoProtocolGuid AND gNVIDIABootChainProtocolGuid AND gNVIDIAEFuseProtocolGuid

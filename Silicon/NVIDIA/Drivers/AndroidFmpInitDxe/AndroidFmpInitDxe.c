@@ -19,12 +19,14 @@
 #include <Library/NctLib.h>
 #include <Library/PrintLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/AndroidBcbLib.h>
 
 #include <Protocol/BlockIo.h>
 #include <Protocol/DiskIo.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/SavedCapsuleProtocol.h>
 #include <Protocol/EFuse.h>
+#include <Protocol/BootChainProtocol.h>
 
 #define FMP_WRITE_LOOP_SIZE    (64 * 1024)
 #define ANDROID_ESP_PARTITION  L"staging"
@@ -395,6 +397,79 @@ Done:
 }
 
 /**
+  Setup FMP variables and PCDs for fastboot capsule update path.
+  Called when bootonce-bootloader BCB is detected so that the capsule
+  update environment is ready before the fastboot application starts.
+
+  @retval EFI_SUCCESS         Operation successful
+  @retval others              Error occurred
+**/
+STATIC
+EFI_STATUS
+SetupFastbootCapsuleEnv (
+  VOID
+  )
+{
+  EFI_STATUS                  Status;
+  NVIDIA_BOOT_CHAIN_PROTOCOL  *BootChainProtocol;
+  UINT8                       BootChain;
+  CHAR8                       PlatformSpec[TEGRA_PLATFORM_SPEC_MAX_LEN];
+
+  Status = AndroidFmpGetPlatformSpec (PlatformSpec, sizeof (PlatformSpec));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r getting TegraPlatformSpec\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = gRT->SetVariable (
+                  TEGRA_PLATFORM_SPEC_VARIABLE_NAME,
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                  AsciiStrLen (PlatformSpec) + 1,
+                  PlatformSpec
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Error setting variable %s: %r\n", __FUNCTION__, TEGRA_PLATFORM_SPEC_VARIABLE_NAME, Status));
+    return Status;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gNVIDIABootChainProtocolGuid,
+                  NULL,
+                  (VOID **)&BootChainProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: BootChainProtocol not found: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BootChain = (UINT8)BootChainProtocol->ActiveBootChain;
+
+  Status = gRT->SetVariable (
+                  L"FmpCapsuleSinglePartitionChain",
+                  &gNVIDIAPublicVariableGuid,
+                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+                  sizeof (UINT8),
+                  &BootChain
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: SetVariable FmpCapsuleSinglePartitionChain: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: FmpCapsuleSinglePartitionChain set to %u\n", __FUNCTION__, BootChain));
+
+  Status = PcdSetBoolS (PcdFmpMultiImageMinimalUpdate, TRUE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: PcdSet PcdFmpMultiImageMinimalUpdate: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: Fastboot capsule environment ready\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+/**
  Android FMP Initialization DXE Driver entry point.
 
   @param[in]  ImageHandle       Image handle
@@ -414,33 +489,49 @@ AndroidFmpInitDxeInitialize (
   EFI_STATUS          Status;
   EFI_HANDLE          Handle;
   EFI_CAPSULE_HEADER  *Header = NULL;
+  MiscCmdType         MiscCmd = MISC_CMD_TYPE_INVALID;
 
-  Status = AndroidFmpGetCapsule (NULL, &Header);
-  if (EFI_ERROR (Status)) {
-    // Do not setup Android Capsule update environment and install protocol
-    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to load capsule\n", __FUNCTION__, Status));
-    Status = EFI_SUCCESS;
-    goto Exit;
-  }
+  //
+  // When booting into fastboot (bootonce-bootloader), prepare the capsule
+  // update environment early so UpdateCapsule can work from the fastboot app.
+  //
+  Status = GetCmdFromMiscPartition (NULL, &MiscCmd, FALSE);
+  if (!EFI_ERROR (Status) && (MiscCmd == MISC_CMD_TYPE_FASTBOOT_BOOTLOADER)) {
+    Status = SetupFastbootCapsuleEnv ();
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN, "%a: Got %r setting up fastboot capsule env\n", __FUNCTION__, Status));
+    }
 
-  mProtocol.GetCapsule = AndroidFmpGetCapsule;
-  Handle               = NULL;
+    // Skip capsule loading and AutoUpdateBrBct for fastboot path; the
+    // capsule will arrive via fastboot stage.  Fall through to install
+    // FmpInitComplete so that FmpDxe can start.
+  } else {
+    Status = AndroidFmpGetCapsule (NULL, &Header);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to load capsule\n", __FUNCTION__, Status));
+      Status = EFI_SUCCESS;
+      goto Exit;
+    }
 
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Handle,
-                  &gNVIDIASavedCapsuleProtocolGuid,
-                  &mProtocol,
-                  NULL
-                  );
+    mProtocol.GetCapsule = AndroidFmpGetCapsule;
+    Handle               = NULL;
 
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error installing protocol: %r\n", __FUNCTION__, Status));
-    goto Exit;
-  }
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &Handle,
+                    &gNVIDIASavedCapsuleProtocolGuid,
+                    &mProtocol,
+                    NULL
+                    );
 
-  Status = AndroidFmpSimulateVars ();
-  if (EFI_ERROR (Status)) {
-    goto Exit;
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Error installing protocol: %r\n", __FUNCTION__, Status));
+      goto Exit;
+    }
+
+    Status = AndroidFmpSimulateVars ();
+    if (EFI_ERROR (Status)) {
+      goto Exit;
+    }
   }
 
   Handle = NULL;

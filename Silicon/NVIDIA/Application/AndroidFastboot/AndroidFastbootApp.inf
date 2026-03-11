@@ -1,5 +1,5 @@
 #/** @file
-#  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -39,6 +39,7 @@
   UefiLib
   UefiRuntimeServicesTableLib
   AndroidBcbLib
+  DeviceTreeHelperLib
 
 [Protocols]
   gAndroidFastbootTransportProtocolGuid
@@ -46,6 +47,15 @@
   gEfiLoadedImageProtocolGuid
   gEfiSimpleTextOutProtocolGuid
   gEfiSimpleTextInProtocolGuid
+  gNVIDIABootChainProtocolGuid
+
+[Guids]
+  gEfiFmpCapsuleGuid
+  gNVIDIAPublicVariableGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition
 
 [Packages]
   MdePkg/MdePkg.dec

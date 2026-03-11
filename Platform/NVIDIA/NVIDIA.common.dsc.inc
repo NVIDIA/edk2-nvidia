@@ -1097,6 +1097,10 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|FALSE
 !endif
 
+!ifdef CONFIG_BUILD_ANDROID
+  gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition|TRUE
+!endif
+
   #
   # NV Storage PCDs.
   #
