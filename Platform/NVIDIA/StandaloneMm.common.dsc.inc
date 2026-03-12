@@ -145,3 +145,4 @@
 [PcdsFixedAtBuild.common]
   gNVIDIATokenSpaceGuid.PcdUefiVersionString|L"$(BUILDID_STRING)"
   gNVIDIATokenSpaceGuid.PcdUefiDateTimeBuiltString|L"$(BUILD_DATE_TIME)"
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|TRUE
