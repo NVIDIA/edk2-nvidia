@@ -1,7 +1,7 @@
 /** @file
   SSDT Pcie Table Generator.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -835,4 +835,26 @@ cleanup:
   }
 
   return Status;
+}
+
+/** AddHostBridgeDsmMethod - stub for this library instance.
+
+  @param [in]       PciInfo     Pci device information.
+  @param [in, out]  PciNode     Host bridge AML device node.
+
+  @retval EFI_SUCCESS  Always.
+**/
+EFI_STATUS
+EFIAPI
+AddHostBridgeDsmMethod (
+  IN      CONST CM_ARCH_COMMON_PCI_CONFIG_SPACE_INFO  *PciInfo,
+  IN  OUT   AML_OBJECT_NODE_HANDLE                    PciNode
+  )
+{
+  ASSERT (PciInfo != NULL);
+  ASSERT (PciNode != NULL);
+  (VOID)PciInfo;
+  (VOID)PciNode;
+
+  return EFI_SUCCESS;
 }
