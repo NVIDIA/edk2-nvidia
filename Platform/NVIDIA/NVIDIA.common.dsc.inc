@@ -446,6 +446,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   MemoryVerificationLib|Silicon/NVIDIA/Library/MemoryVerificationLib/MemoryVerificationLib.inf
 
   SystemContextLib|Silicon/NVIDIA/Library/SystemContextLib/SystemContextLib.inf
+  SystemFiberLib|Silicon/NVIDIA/Library/SystemFiberLib/SystemFiberLib.inf
   StatusRegLib|Silicon/NVIDIA/Library/StatusRegLib/StatusRegLib.inf
 
   OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
