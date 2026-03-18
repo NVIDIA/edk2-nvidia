@@ -1029,6 +1029,13 @@ AndroidBootDxeLoadDtb (
           goto Exit;
         }
 
+        if ((PcdGetBool (PcdBootAndroidImage))) {
+          Status = AddRpmbInfoToDtb ();
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add rpmb_dump to Dtb\n", __FUNCTION__, Status));
+          }
+        }
+
         gBS->FreePages ((EFI_PHYSICAL_ADDRESS)CurrentDtb, EFI_SIZE_TO_PAGES (FdtTotalSize (CurrentDtb)));
       }
     }

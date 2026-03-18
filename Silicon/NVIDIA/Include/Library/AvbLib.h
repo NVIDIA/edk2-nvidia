@@ -1,7 +1,7 @@
 /** @file
   EDK2 API for AvbLib
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -125,6 +125,19 @@ AvbOpteeInterfaceInit (
 EFI_STATUS
 AvbOpteeInvoke (
   IN OUT OPTEE_INVOKE_FUNCTION_ARG  *InvokeFunctionArg
+  );
+
+/**
+  Add RPMB AVB info to DTB under /chosen/rpmb_dump node.
+
+  Must be called after kernel DTB is installed and after AvbVerifyBoot.
+
+  @retval EFI_SUCCESS     Info added to DTB successfully.
+  @retval Other           Error occurred.
+**/
+EFI_STATUS
+AddRpmbInfoToDtb (
+  VOID
   );
 
 #endif

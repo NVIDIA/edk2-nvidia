@@ -24,6 +24,7 @@
 #include <Library/BootConfigProtocolLib.h>
 #include <Library/OpteeNvLib.h>
 #include <Library/AndroidBcbLib.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/BlockIo.h>
@@ -42,7 +43,8 @@
 #define MAX_SN_LEN              32
 #define PatchLevelStrFormatLen  10
 
-STATIC EFI_HANDLE  mControllerHandle;
+STATIC EFI_HANDLE      mControllerHandle;
+STATIC AVB_BOOT_STATE  mAvbBootState = VERIFIED_BOOT_UNKNOWN_STATE;
 
 EFI_STATUS
 AvbShowUi (
@@ -947,6 +949,132 @@ Exit:
   return Status;
 }
 
+/**
+  Add RPMB AVB info to DTB under /chosen/rpmb_dump node.
+
+  Dumps avb_state, rollback_index, and vbmeta_digest into the
+  device tree for diagnostic purposes. All values are read from
+  RPMB tamper-resistant storage via OP-TEE.
+
+  @retval EFI_SUCCESS           Info added to DTB successfully.
+  @retval Others                Error occurred.
+
+**/
+EFI_STATUS
+AddRpmbInfoToDtb (
+  VOID
+  )
+{
+  AVB_BOOT_STATE  BootState = mAvbBootState;
+  EFI_STATUS      Status;
+  VOID            *DeviceTree;
+  INT32           ChosenNode;
+  INT32           NodeOffset;
+  BOOLEAN         DeviceUnlocked;
+  CHAR8           StrBuf[512];
+  CONST CHAR8     *LockState;
+  CONST CHAR8     *EioState;
+  UINT32          Idx;
+  UINTN           Len;
+  UINT8           VbmetaDigest[SHA256_DIGEST_SIZE];
+  size_t          DigestBytesRead;
+  INT32           FdtErr;
+  uint64_t        RollbackIdx;
+  AvbIOResult     AvbResult;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &DeviceTree);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get dtb ptr\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ChosenNode = FdtPathOffset (DeviceTree, "/chosen");
+  if (ChosenNode < 0) {
+    DEBUG ((DEBUG_ERROR, "%a: /chosen node not found\n", __FUNCTION__));
+    return EFI_NOT_FOUND;
+  }
+
+  NodeOffset = FdtPathOffset (DeviceTree, "/chosen/rpmb_dump");
+  if (NodeOffset < 0) {
+    NodeOffset = FdtAddSubnode (DeviceTree, ChosenNode, "rpmb_dump");
+    if (NodeOffset < 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to create /chosen/rpmb_dump subnode: %d\n", __FUNCTION__, NodeOffset));
+      return EFI_DEVICE_ERROR;
+    }
+  }
+
+  AvbResult = ReadIsDeviceUnlocked (NULL, &DeviceUnlocked);
+  if (AvbResult != AVB_IO_RESULT_OK) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read lock state: %d\n", __FUNCTION__, AvbResult));
+    return EFI_DEVICE_ERROR;
+  }
+
+  LockState = DeviceUnlocked ? "unlocked" : "locked";
+  EioState  = (BootState == VERIFIED_BOOT_RED_STATE_EIO) ? "eio_mode" : "normal_mode";
+  AsciiSPrint (StrBuf, sizeof (StrBuf), "%a, %a", LockState, EioState);
+  FdtErr = FdtSetPropString (DeviceTree, NodeOffset, "avb_state", StrBuf);
+  if (FdtErr != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set avb_state: %d\n", __FUNCTION__, FdtErr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  StrBuf[0] = '\0';
+  Len       = 0;
+  for (Idx = 0; Idx < AVB_MAX_NUMBER_OF_ROLLBACK_INDEX_LOCATIONS; Idx++) {
+    RollbackIdx = 0;
+    AvbResult   = ReadRollbackIndex (NULL, (size_t)Idx, &RollbackIdx);
+    if (AvbResult != AVB_IO_RESULT_OK) {
+      RollbackIdx = 0;
+    }
+
+    Len += AsciiSPrint (
+             StrBuf + Len,
+             sizeof (StrBuf) - Len,
+             "%lu ",
+             RollbackIdx
+             );
+  }
+
+  FdtErr = FdtSetPropString (DeviceTree, NodeOffset, "rollback_index", StrBuf);
+  if (FdtErr != 0) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to set rollback_index: %d\n", __FUNCTION__, FdtErr));
+    return EFI_DEVICE_ERROR;
+  }
+
+  DigestBytesRead = 0;
+  AvbResult       = ReadPersistentValue (
+                      NULL,
+                      ROT_VBMETA_DIGEST_NAME,
+                      sizeof (VbmetaDigest),
+                      VbmetaDigest,
+                      &DigestBytesRead
+                      );
+  if ((AvbResult == AVB_IO_RESULT_OK) && (DigestBytesRead > 0)) {
+    StrBuf[0] = '\0';
+    Len       = 0;
+    for (Idx = 0; Idx < DigestBytesRead; Idx++) {
+      Len += AsciiSPrint (
+               StrBuf + Len,
+               sizeof (StrBuf) - Len,
+               "%02x",
+               VbmetaDigest[Idx]
+               );
+    }
+
+    FdtErr = FdtSetPropString (DeviceTree, NodeOffset, "vbmeta_digest", StrBuf);
+    if (FdtErr != 0) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to set vbmeta_digest: %d\n", __FUNCTION__, FdtErr));
+      return EFI_DEVICE_ERROR;
+    }
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to read vbmeta_digest from RPMB\n", __FUNCTION__));
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Updated rpmb_dump info to DTB\n", __FUNCTION__));
+
+  return EFI_SUCCESS;
+}
+
 EFI_STATUS
 AvbVerifyBoot (
   IN BOOLEAN     IsRecovery,
@@ -983,6 +1111,8 @@ AvbVerifyBoot (
     DEBUG ((DEBUG_ERROR, "%a: %r to set ROT bootinfo to Optee\n", __FUNCTION__, Status));
     goto Exit;
   }
+
+  mAvbBootState = BootState;
 
   BootStateStr = (BootState == VERIFIED_BOOT_RED_STATE) ? "red" :
                  (BootState == VERIFIED_BOOT_RED_STATE_EIO) ? "red_eio" :

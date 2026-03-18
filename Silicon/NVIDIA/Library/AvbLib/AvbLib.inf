@@ -69,11 +69,15 @@
   BootChainInfoLib
   MemoryAllocationLib
   DeviceTreeHelperLib
+  FdtLib
   BaseCryptLib
   BootConfigProtocolLib
   AvbOpteeInterfaceLib
   PerformanceLib
   AndroidBcbLib
+
+[Guids]
+  gFdtTableGuid
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
