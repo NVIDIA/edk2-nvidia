@@ -43,6 +43,7 @@
 #include <Library/FdtLib.h>
 #include "L4TLauncher.h"
 #include "L4TRootfsValidation.h"
+#include "L4TPreIsoInstaller.h"
 
 L4T_LAUNCHER_SUPPORT_PROTOCOL  *gL4TSupportProtocol;
 
@@ -2666,6 +2667,14 @@ L4TLauncher (
   }
 
   DeviceHandle = GetDeviceHandleForFvBoot (LoadedImage->DeviceHandle, BootParams.BootChain);
+
+  Status = HandleIsoBootMedia (ImageHandle, DeviceHandle, BootParams.BootChain);
+  if (Status == EFI_ABORTED) {
+    ErrorPrint (L"%a: Iso boot loop detected, halting\r\n", __FUNCTION__);
+    CpuDeadLoop ();
+  } else if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   if (IsSecureBootEnabled ()) {
     Status = GetImageEncryptionInfo (&EncryptionInfo);
