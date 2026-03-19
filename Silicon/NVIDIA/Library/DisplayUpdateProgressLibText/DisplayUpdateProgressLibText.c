@@ -1,7 +1,8 @@
 /** @file
   Provides services to display completion progress of a firmware update on a
-  text console.
+  text console, centered below the boot logo.
 
+  SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
   Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 
@@ -17,12 +18,23 @@
 //
 // Control Style.  Set to 100 so it is reset on first call.
 //
-UINTN  mPreviousProgress = 100;
+STATIC UINTN  mPreviousProgress = 100;
 
 //
 // Text foreground color of progress bar
 //
-UINTN  mProgressBarForegroundColor;
+STATIC UINTN  mProgressBarForegroundColor;
+
+//
+// Cursor position and bar geometry, computed once per progress session
+//
+STATIC UINTN  mProgressRow = 0;
+STATIC UINTN  mProgressCol = 0;
+STATIC UINTN  mBarBlocks   = 50;
+
+#define PROGRESS_TEXT_WIDTH    25
+#define BAR_PERCENT_OF_SCREEN  40
+#define MIN_BAR_BLOCKS         20
 
 /**
   Function indicates the current completion progress of a firmware update.
@@ -74,7 +86,32 @@ DisplayUpdateProgress (
   // Do special init on first call of each progress session
   //
   if (mPreviousProgress == 100) {
-    Print (L"\n");
+    //
+    // Query console geometry and compute bar width / position so that
+    // the progress bar is horizontally centered and placed at 80% vertical.
+    //
+    {
+      UINTN  MaxColumns = 0;
+      UINTN  MaxRows    = 0;
+
+      gST->ConOut->QueryMode (
+                     gST->ConOut,
+                     (UINTN)gST->ConOut->Mode->Mode,
+                     &MaxColumns,
+                     &MaxRows
+                     );
+      mBarBlocks = (MaxColumns * BAR_PERCENT_OF_SCREEN) / 100;
+      if (mBarBlocks < MIN_BAR_BLOCKS) {
+        mBarBlocks = MIN_BAR_BLOCKS;
+      }
+
+      {
+        UINTN  TotalWidth = PROGRESS_TEXT_WIDTH + mBarBlocks;
+
+        mProgressCol = (MaxColumns > TotalWidth) ? (MaxColumns - TotalWidth) / 2 : 0;
+      }
+      mProgressRow = (MaxRows * 4) / 5;
+    }
 
     //
     // Convert pixel color to text foreground color
@@ -114,7 +151,7 @@ DisplayUpdateProgress (
   // Can not update progress bar if Completion is less than previous
   //
   if (Completion < mPreviousProgress) {
-    DEBUG ((DEBUG_WARN, "WARNING: Completion (%d) should not be lesss than Previous (%d)!!!\n", Completion, mPreviousProgress));
+    DEBUG ((DEBUG_WARN, "WARNING: Completion (%d) should not be less than Previous (%d)!!!\n", Completion, mPreviousProgress));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -124,9 +161,14 @@ DisplayUpdateProgress (
   CurrentAttribute = (UINTN)gST->ConOut->Mode->Attribute;
 
   //
+  // Position cursor at the computed row/column instead of using \r
+  //
+  gST->ConOut->SetCursorPosition (gST->ConOut, mProgressCol, mProgressRow);
+
+  //
   // Print progress percentage
   //
-  Print (L"\rUpdate Progress - %3d%% ", Completion);
+  Print (L"Update Progress - %3d%% ", Completion);
 
   //
   // Set progress bar color
@@ -137,9 +179,9 @@ DisplayUpdateProgress (
                  );
 
   //
-  // Print completed portion of progress bar
+  // Print completed portion of progress bar (scaled to mBarBlocks)
   //
-  for (Index = 0; Index < Completion / 2; Index++) {
+  for (Index = 0; Index < (Completion * mBarBlocks) / 100; Index++) {
     Print (L"%c", BLOCKELEMENT_FULL_BLOCK);
   }
 
@@ -151,7 +193,7 @@ DisplayUpdateProgress (
   //
   // Print remaining portion of progress bar
   //
-  for ( ; Index < 50; Index++) {
+  for ( ; Index < mBarBlocks; Index++) {
     Print (L"%c", BLOCKELEMENT_LIGHT_SHADE);
   }
 

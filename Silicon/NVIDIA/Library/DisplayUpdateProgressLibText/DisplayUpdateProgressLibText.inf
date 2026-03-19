@@ -1,7 +1,8 @@
 ## @file
 #  Provides services to display completion progress of a firmware update on a
-#  text console.
+#  text console, centered below the boot logo.
 #
+#  SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation, All rights reserved.<BR>
 #  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 #
