@@ -1,0 +1,29 @@
+## @file
+#  Provides services to display completion progress of a firmware update on a
+#  text console.
+#
+#  Copyright (c) 2016, Microsoft Corporation, All rights reserved.<BR>
+#  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = DisplayUpdateProgressLibText
+  FILE_GUID       = A8B3D725-E816-4DF4-B498-CF3A8B46B9E3
+  MODULE_TYPE     = DXE_DRIVER
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = DisplayUpdateProgressLib|DXE_DRIVER UEFI_DRIVER UEFI_APPLICATION
+
+[Sources]
+  DisplayUpdateProgressLibText.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  UefiLib

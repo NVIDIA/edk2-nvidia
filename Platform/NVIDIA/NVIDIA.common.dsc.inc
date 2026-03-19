@@ -631,7 +631,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   VirtioMmioDeviceLib|OvmfPkg/Library/VirtioMmioDeviceLib/VirtioMmioDeviceLib.inf
 !endif
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
+!ifdef CONFIG_BUILD_ANDROID
+  DisplayUpdateProgressLib|Silicon/NVIDIA/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
+!else
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
+!endif
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
