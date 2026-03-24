@@ -74,7 +74,7 @@ jobs:
           # Derive the edkrepo combo.  We'll assume it matches the branch name.
           EDKREPO_COMBO=${{ github.ref_name }}
           if [[ ${{ github.event_name }} = pull_request ]]; then
-            EDKREPO_COMBO=${{ github.base_ref	}}
+            EDKREPO_COMBO=${{ github.base_ref }}
           fi
           # Start with the edkrepo combo that matches this branch
           edkrepo clone -v workspace NVIDIA-Platforms ${EDKREPO_COMBO}
