@@ -638,6 +638,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
   AndroidBootImgLib|EmbeddedPkg/Library/AndroidBootImgLib/AndroidBootImgLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
+  FastbootUtilityLib|Silicon/NVIDIA/Library/FastbootUtilityLib/FastbootUtilityLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
 !ifdef CONFIG_PRM_PACKAGE_SUPPORT
   PrmContextBufferLib|PrmPkg/Library/DxePrmContextBufferLib/DxePrmContextBufferLib.inf

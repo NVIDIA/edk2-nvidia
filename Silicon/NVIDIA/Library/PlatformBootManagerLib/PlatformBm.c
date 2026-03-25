@@ -21,6 +21,8 @@
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootManagerLib.h>
+#include <Library/FastbootUtilityLib.h>
+
 #include <Library/UefiLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/PlatformBootManagerLib.h>
@@ -2133,24 +2135,28 @@ PlatformBootManagerBeforeConsole (
 
  #if FixedPcdGetBool (PcdBootAndroidImage) == 1
       //
-      // Register UEFI Fastboot
+      // Check BCB for fastboot command
       //
       Status = GetCmdFromMiscPartition (NULL, &MiscCmd, TRUE);
       if (!EFI_ERROR (Status) && ((MiscCmd == MISC_CMD_TYPE_FASTBOOT_BOOTLOADER))) {
         FastBoot = TRUE;
       }
 
-      if (TRUE == FastBoot) {
+      //
+      // Check USB keyboard A+B combo for fastboot entry.
+      //
+      if (!FastBoot && CheckFastbootKeyCombo ()) {
+        FastBoot = TRUE;
+      }
+
+      if (FastBoot) {
         PlatformRegisterFvBootOption (
           &gAndroidFastbootFileGuid,
           L"Android Fastboot",
           LOAD_OPTION_ACTIVE,
           LoadOptionTypeBoot
           );
-        Status = EfiBootManagerGetStaticApp (&BootOption, &gAndroidFastbootFileGuid);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get Fastboot app\n", __FUNCTION__, Status));
-        }
+        DEBUG ((DEBUG_ERROR, "Fastboot requested. Option registered before SetBootOrder.\n"));
       }
 
  #endif

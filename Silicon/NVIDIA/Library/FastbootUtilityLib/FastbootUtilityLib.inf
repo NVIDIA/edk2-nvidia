@@ -1,0 +1,40 @@
+## @file
+#
+# Fastboot Utility Library
+#
+# Provides helpers for deciding whether the system should enter Android
+# Fastboot mode based on USB HID input (USB keyboards, NVIDIA
+# Thunderstrike controller).
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001A
+  BASE_NAME                      = FastbootUtilityLib
+  FILE_GUID                      = 1F6AEDE9-0EED-42AB-B823-7AF6385729AE
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = FastbootUtilityLib
+
+[Sources.common]
+  FastbootUtilityLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  UefiBootManagerLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiUsbIoProtocolGuid           ## CONSUMES
+  gEfiDevicePathProtocolGuid      ## CONSUMES

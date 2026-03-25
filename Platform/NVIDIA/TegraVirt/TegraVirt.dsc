@@ -105,6 +105,7 @@
   BootChainInfoLib|Silicon/NVIDIA/Library/BootChainInfoVirtLib/BootChainInfoVirtLib.inf
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
   AndroidBcbLib|Silicon/NVIDIA/Library/AndroidBcbLib/AndroidBcbLib.inf
+  FastbootUtilityLib|Silicon/NVIDIA/Library/FastbootUtilityLib/FastbootUtilityLib.inf
   SiblingPartitionLib|Silicon/NVIDIA/Library/SiblingPartitionLib/SiblingPartitionLib.inf
   AvbLib|Silicon/NVIDIA/Library/AvbLib/AvbLib.inf
   OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
