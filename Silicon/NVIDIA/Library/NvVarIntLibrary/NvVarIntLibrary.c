@@ -63,6 +63,7 @@ STATIC MEASURE_VAR_TYPE  SecureVars[] = {
  *            other       Failed to compute measurement.
  */
 EFI_STATUS
+EFIAPI
 MeasureBootVars (
   IN  CHAR16    *VarName   OPTIONAL,
   IN  EFI_GUID  *VarGuid   OPTIONAL,
@@ -347,6 +348,7 @@ RemoveDupSignatureList (
  *            Other Failed to update the HashValue.
  */
 EFI_STATUS
+EFIAPI
 MeasureSecureDbVars (
   IN  CHAR16    *VarName   OPTIONAL,
   IN  EFI_GUID  *VarGuid   OPTIONAL,
@@ -602,6 +604,7 @@ ExitMeasureSecureBootVars:
  *            Other         failed to compute a valid measurement.
  */
 EFI_STATUS
+EFIAPI
 ComputeVarMeasurement (
   IN  CHAR16    *VarName   OPTIONAL,
   IN  EFI_GUID  *VarGuid   OPTIONAL,
