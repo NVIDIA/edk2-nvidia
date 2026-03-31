@@ -1,7 +1,7 @@
 /** @file
   UEFI payloads decryption Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -630,7 +630,7 @@ OpteeDecryptImage (
       goto Exit;
     }
 
-    memcpy (Data + *DstFileSize, Block, OutSize);
+    CopyMem (Data + *DstFileSize, Block, OutSize);
     *DstFileSize += OutSize;
   }
 
@@ -653,7 +653,7 @@ OpteeDecryptImage (
     goto Exit;
   }
 
-  memcpy (Data + *DstFileSize, Block, OutSize);
+  CopyMem (Data + *DstFileSize, Block, OutSize);
   *DstFileSize += OutSize;
 
 Exit:

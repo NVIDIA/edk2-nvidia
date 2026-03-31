@@ -1,7 +1,7 @@
 /** @file
   The main process for L4TLauncher application.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1929,7 +1929,7 @@ ReadAndroidStyleKernelPartition (
       goto Exit;
     }
 
-    memcpy (&ImageHeader, ImageBuffer, sizeof (ANDROID_BOOTIMG_HEADER));
+    CopyMem (&ImageHeader, ImageBuffer, sizeof (ANDROID_BOOTIMG_HEADER));
     Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
     if (EFI_ERROR (Status)) {
       ErrorPrint (L"Header not seen\r\n");
@@ -1947,7 +1947,7 @@ ReadAndroidStyleKernelPartition (
 
     SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
     SignatureSize   = DecryptedImageBufferSize - SignatureOffset;
-    memcpy (SignatureBuffer, ImageBuffer + SignatureOffset, SignatureSize);
+    CopyMem (SignatureBuffer, ImageBuffer + SignatureOffset, SignatureSize);
     Status = VerifyDetachedSignature (
                SignatureBuffer,
                SignatureSize,
@@ -1959,7 +1959,7 @@ ReadAndroidStyleKernelPartition (
       DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
       SignatureSize   = SIG_FILE_SIZE_2KB;
       SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
-      memcpy (SignatureBuffer, (VOID *)(ImageBuffer + SignatureOffset), SignatureSize);
+      CopyMem (SignatureBuffer, (VOID *)(ImageBuffer + SignatureOffset), SignatureSize);
       Status = VerifyDetachedSignature (
                  SignatureBuffer,
                  SignatureSize,
@@ -2436,7 +2436,7 @@ BootAndroidStyleImage (
   VOID                    *SignatureBuffer = NULL;
   UINTN                   SignatureSize;
 
-  memcpy (&ImageHeader, (VOID *)ImageBase, sizeof (ANDROID_BOOTIMG_HEADER));
+  CopyMem (&ImageHeader, (VOID *)ImageBase, sizeof (ANDROID_BOOTIMG_HEADER));
   Status = AndroidBootImgGetImgSize (&ImageHeader, &ImageBufferSize);
   if (EFI_ERROR (Status)) {
     ErrorPrint (L"Android image header not seen\r\n");
@@ -2459,7 +2459,7 @@ BootAndroidStyleImage (
     }
 
     SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
-    memcpy (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
+    CopyMem (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
     Status = VerifyDetachedSignature (
                SignatureBuffer,
                SignatureSize,
@@ -2471,7 +2471,7 @@ BootAndroidStyleImage (
       DEBUG ((DEBUG_ERROR, "%a: Verify signature with 2KB alignment\r\n", __FUNCTION__));
       SignatureSize   = SIG_FILE_SIZE_2KB;
       SignatureOffset = ALIGN_VALUE (ImageBufferSize, SignatureSize);
-      memcpy (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
+      CopyMem (SignatureBuffer, (VOID *)(ImageBase + SignatureOffset), SignatureSize);
       Status = VerifyDetachedSignature (
                  SignatureBuffer,
                  SignatureSize,
