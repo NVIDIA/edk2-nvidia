@@ -185,7 +185,8 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { "nvidia,tegra234-gpio",      &gNVIDIANonDiscoverableT234GpioDeviceGuid     },
   { "nvidia,tegra234-gpio-aon",  &gNVIDIANonDiscoverableT234GpioAonDeviceGuid  },
   { "nvidia,tegra23x-gpio",      &gNVIDIANonDiscoverableT23xGpioDeviceGuid     },
-  { "nvidia,tegra264-gpio-main", &gNVIDIANonDiscoverableT264GpioMainDeviceGuid },
+  { "nvidia,tegra264-gpio",      &gNVIDIANonDiscoverableT264GpioMainDeviceGuid },
+  { "nvidia,tegra264-gpio-main", &gNVIDIANonDiscoverableT264GpioMainDeviceGuid }, // deprecated
   { "nvidia,tegra264-gpio-aon",  &gNVIDIANonDiscoverableT264GpioAonDeviceGuid  },
   { "nvidia,tegra264-gpio-uphy", &gNVIDIANonDiscoverableT264GpioUphyDeviceGuid },
   { "nvidia,th500-gpio",         &gNVIDIANonDiscoverableTH500GpioDeviceGuid    },
