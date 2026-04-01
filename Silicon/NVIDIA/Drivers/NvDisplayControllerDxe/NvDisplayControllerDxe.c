@@ -2,7 +2,7 @@
 
   NV Display Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -166,6 +166,12 @@ DeviceDiscoveryNotify (
       if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT234DisplayDeviceGuid)) {
         return NvDisplayControllerStartT23x (DriverHandle, ControllerHandle, DeviceTreeNode);
       } else if (CompareGuid (Device->Type, &gNVIDIANonDiscoverableT264DisplayDeviceGuid)) {
+        // check DTB root node for t268
+        if (!EFI_ERROR (DeviceTreeCheckNodeSingleCompatibility ("nvidia,tegra268", 0))) {
+          DEBUG ((DEBUG_ERROR, "%a: t268 display not supported\r\n", __FUNCTION__));
+          return EFI_UNSUPPORTED;
+        }
+
         return NvDisplayControllerStartT264 (DriverHandle, ControllerHandle);
       } else {
         ASSERT_EFI_ERROR (EFI_UNSUPPORTED);
