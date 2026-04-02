@@ -14,7 +14,7 @@
 #include <Protocol/SmmVariable.h>
 #include <Library/BaseLib.h>
 #include <NVIDIAConfiguration.h>
-#include <IndustryStandard/Acpi64.h>
+#include <IndustryStandard/Acpi.h>
 
 STATIC NVIDIA_SEQ_RECORD_PROTOCOL   *RasSeqProto;
 STATIC NVIDIA_CMET_RECORD_PROTOCOL  *CmetSeqProto;

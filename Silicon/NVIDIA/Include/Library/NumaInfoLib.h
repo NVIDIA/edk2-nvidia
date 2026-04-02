@@ -12,7 +12,7 @@
 #define NUMA_INFO_LIB__
 
 #include <Uefi/UefiBaseType.h>
-#include <IndustryStandard/Acpi65.h>
+#include <IndustryStandard/Acpi.h>
 
 typedef enum {
   NUMA_INFO_TYPE_CPU,

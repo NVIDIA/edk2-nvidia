@@ -24,7 +24,7 @@
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeConfigurationIo.h>
 
-#include <IndustryStandard/Acpi65.h>
+#include <IndustryStandard/Acpi.h>
 
 #include <TH500/TH500Definitions.h>
 
