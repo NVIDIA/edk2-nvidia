@@ -1,7 +1,7 @@
 /** @file
   Lpi parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -134,7 +134,7 @@ LpiParser (
   LpiInfo[0].IsInteger                             = FALSE;
   LpiInfo[0].RegisterEntryMethod.AccessSize        = 3;
   LpiInfo[0].RegisterEntryMethod.Address           = 0xFFFFFFFF;
-  LpiInfo[0].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+  LpiInfo[0].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_6_FUNCTIONAL_FIXED_HARDWARE;
   LpiInfo[0].RegisterEntryMethod.RegisterBitOffset = 0;
   LpiInfo[0].RegisterEntryMethod.RegisterBitWidth  = 0x20;
   CopyMem (LpiInfo[0].StateName, "WFI", sizeof ("WFI"));
@@ -192,7 +192,7 @@ LpiParser (
     LpiInfo[NumberOfLpiStates].EnableParentState                     = 0;
     LpiInfo[NumberOfLpiStates].IsInteger                             = FALSE;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AccessSize        = 3;
-    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+    LpiInfo[NumberOfLpiStates].RegisterEntryMethod.AddressSpaceId    = EFI_ACPI_6_6_FUNCTIONAL_FIXED_HARDWARE;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitOffset = 0;
     LpiInfo[NumberOfLpiStates].RegisterEntryMethod.RegisterBitWidth  = 0x20;
     Status                                                           = DeviceTreeGetNodeProperty (NodeOffset, "idle-state-name", &Property, &PropertyLen);

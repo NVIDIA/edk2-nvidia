@@ -2,7 +2,7 @@
 
   Numa Information Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,7 +26,7 @@ typedef struct {
   UINT32                        SocketId;
   NUMA_INFO_TYPE                DeviceType;
   UINT8                         DeviceHandleType;
-  EFI_ACPI_6_5_DEVICE_HANDLE    DeviceHandle;
+  EFI_ACPI_6_6_DEVICE_HANDLE    DeviceHandle;
   BOOLEAN                       InitiatorDomain;
   BOOLEAN                       TargetDomain;
 } NUMA_INFO_DOMAIN_INFO;

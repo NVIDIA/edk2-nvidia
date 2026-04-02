@@ -1,7 +1,7 @@
 /** @file
   GicC parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -182,7 +182,7 @@ GicPsdParser (
       }
     }
 
-    PsdInfo[ClusterIndex].Revision  = EFI_ACPI_6_5_AML_PSD_REVISION;
+    PsdInfo[ClusterIndex].Revision  = EFI_ACPI_6_6_AML_PSD_REVISION;
     PsdInfo[ClusterIndex].Domain    = ClusterIndex;
     PsdInfo[ClusterIndex].CoordType = ACPI_AML_COORD_TYPE_HW_ALL;
     PsdInfo[ClusterIndex].NumProc   = NumCores;
@@ -422,7 +422,7 @@ GicCParser (
     GicCInfo[CoreIndex].AcpiProcessorUid = (SocketId * MaxCoresPerSocket * MaxThreadsPerCore) +
                                            (ClusterId * MaxCoresPerCluster * MaxThreadsPerCore) +
                                            (CoreId * MaxThreadsPerCore) + ThreadId;
-    GicCInfo[CoreIndex].Flags                    = EFI_ACPI_6_4_GIC_ENABLED;
+    GicCInfo[CoreIndex].Flags                    = EFI_ACPI_6_6_GIC_ENABLED;
     GicCInfo[CoreIndex].ParkingProtocolVersion   = 0;
     GicCInfo[CoreIndex].PerformanceInterruptGsiv = PmuBaseInterrupt;
 
@@ -440,7 +440,7 @@ GicCParser (
     GicCInfo[CoreIndex].SpeOverflowInterrupt          = SpeOverflowInterruptNum;
     GicCInfo[CoreIndex].ProximityDomain               = SocketId;
     GicCInfo[CoreIndex].ClockDomain                   = 0;
-    GicCInfo[CoreIndex].AffinityFlags                 = EFI_ACPI_6_4_GICC_ENABLED;
+    GicCInfo[CoreIndex].AffinityFlags                 = EFI_ACPI_6_6_GICC_ENABLED;
 
     GicCInfo[CoreIndex].CpcToken      = CpcTokens ? CpcTokens[CoreIndex] : CM_NULL_TOKEN;
     GicCInfo[CoreIndex].PsdToken      = PsdTokens ? PsdTokens[ClusterIndex] : CM_NULL_TOKEN;

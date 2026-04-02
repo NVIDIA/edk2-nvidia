@@ -2,7 +2,7 @@
 
   Tegra CPU Frequency Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -629,7 +629,7 @@ STATIC
 VOID
 EFIAPI
 SetAddressStruct (
-  IN EFI_ACPI_6_4_GENERIC_ADDRESS_STRUCTURE  *AddressStruct,
+  IN EFI_ACPI_6_6_GENERIC_ADDRESS_STRUCTURE  *AddressStruct,
   IN UINT8                                   RegisterBitWidth,
   IN UINT8                                   RegisterBitOffset,
   IN UINT8                                   AccessSize,
@@ -637,11 +637,11 @@ SetAddressStruct (
 
   )
 {
-  AddressStruct->AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY;
+  AddressStruct->AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY;
   AddressStruct->RegisterBitWidth  = RegisterBitWidth;
   AddressStruct->RegisterBitOffset = RegisterBitOffset;
   if (RegisterBitWidth == 0) {
-    AddressStruct->AccessSize = EFI_ACPI_6_4_UNDEFINED;
+    AddressStruct->AccessSize = EFI_ACPI_6_6_UNDEFINED;
     AddressStruct->Address    = 0;
   } else {
     AddressStruct->AccessSize = AccessSize;
@@ -717,24 +717,24 @@ TegraCpuFreqGetCpcInfo (
   }
 
   CpcInfo->Revision = 3;
-  SetAddressStruct (&CpcInfo->HighestPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->HighestPerformanceBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->HighestPerformanceInteger = Limits.ndiv_max;
-  SetAddressStruct (&CpcInfo->NominalPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->NominalPerformanceBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->NominalPerformanceInteger = Limits.ndiv_max;
-  SetAddressStruct (&CpcInfo->LowestNonlinearPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->LowestNonlinearPerformanceBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->LowestNonlinearPerformanceInteger = Limits.ndiv_min;
-  SetAddressStruct (&CpcInfo->LowestPerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->LowestPerformanceBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->LowestPerformanceInteger = Limits.ndiv_min;
-  SetAddressStruct (&CpcInfo->GuaranteedPerformanceRegister, CppcBitWidths.GuaranteedPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.GuaranteedPerformance);
+  SetAddressStruct (&CpcInfo->GuaranteedPerformanceRegister, CppcBitWidths.GuaranteedPerformance, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.GuaranteedPerformance);
   // DesiredAddress is required
   NV_ASSERT_RETURN (CppcBitWidths.DesiredPerformance != 0, return EFI_UNSUPPORTED, "%a: DesiredPerformance register not found for CPU frequency controller.\n", __func__);
 
-  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, CppcBitWidths.DesiredPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DesiredPerformance);
-  SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, CppcBitWidths.MinimumPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MinimumPerformance);
-  SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, CppcBitWidths.MaximumPerformance, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.MaximumPerformance);
-  SetAddressStruct (&CpcInfo->PerformanceReductionToleranceRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->TimeWindowRegister, CppcBitWidths.TimeWindow, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.TimeWindow);
-  SetAddressStruct (&CpcInfo->CounterWraparoundTimeBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->DesiredPerformanceRegister, CppcBitWidths.DesiredPerformance, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.DesiredPerformance);
+  SetAddressStruct (&CpcInfo->MinimumPerformanceRegister, CppcBitWidths.MinimumPerformance, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.MinimumPerformance);
+  SetAddressStruct (&CpcInfo->MaximumPerformanceRegister, CppcBitWidths.MaximumPerformance, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.MaximumPerformance);
+  SetAddressStruct (&CpcInfo->PerformanceReductionToleranceRegister, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->TimeWindowRegister, CppcBitWidths.TimeWindow, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.TimeWindow);
+  SetAddressStruct (&CpcInfo->CounterWraparoundTimeBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
 
   // ReferencePerformanceCounter register indicating that it is not support uses FFH register which is 64bits by specification.
   if (CppcBitWidths.ReferencePerformanceCounter == 0) {
@@ -744,36 +744,36 @@ TegraCpuFreqGetCpcInfo (
   }
 
   if (CppcBitWidths.ReferencePerformanceCounter == 0) {
-    CpcInfo->ReferencePerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+    CpcInfo->ReferencePerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_6_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->ReferencePerformanceCounterRegister.RegisterBitOffset = 0;
-    CpcInfo->ReferencePerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
+    CpcInfo->ReferencePerformanceCounterRegister.AccessSize        = EFI_ACPI_6_6_QWORD;
     CpcInfo->ReferencePerformanceCounterRegister.Address           = 0x1;
   } else {
-    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, CppcBitWidths.ReferencePerformanceCounter, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.ReferencePerformanceCounter);
+    SetAddressStruct (&CpcInfo->ReferencePerformanceCounterRegister, CppcBitWidths.ReferencePerformanceCounter, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.ReferencePerformanceCounter);
   }
 
   if (CppcBitWidths.DeliveredPerformanceCounter == 0) {
-    CpcInfo->DeliveredPerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_4_FUNCTIONAL_FIXED_HARDWARE;
+    CpcInfo->DeliveredPerformanceCounterRegister.AddressSpaceId    = EFI_ACPI_6_6_FUNCTIONAL_FIXED_HARDWARE;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitWidth  = 64;
     CpcInfo->DeliveredPerformanceCounterRegister.RegisterBitOffset = 0;
-    CpcInfo->DeliveredPerformanceCounterRegister.AccessSize        = EFI_ACPI_6_4_QWORD;
+    CpcInfo->DeliveredPerformanceCounterRegister.AccessSize        = EFI_ACPI_6_6_QWORD;
     CpcInfo->DeliveredPerformanceCounterRegister.Address           = 0x0;
   } else {
-    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, CppcBitWidths.DeliveredPerformanceCounter, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.DeliveredPerformanceCounter);
+    SetAddressStruct (&CpcInfo->DeliveredPerformanceCounterRegister, CppcBitWidths.DeliveredPerformanceCounter, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.DeliveredPerformanceCounter);
   }
 
-  SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, CppcBitWidths.PerformanceLimited, 0, EFI_ACPI_6_4_DWORD, (UINT64)PerfLimited);
-  SetAddressStruct (&CpcInfo->CPPCEnableRegister, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
-  SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, CppcBitWidths.AutonomousSelectionEnable, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousSelectionEnable);
+  SetAddressStruct (&CpcInfo->PerformanceLimitedRegister, CppcBitWidths.PerformanceLimited, 0, EFI_ACPI_6_6_DWORD, (UINT64)PerfLimited);
+  SetAddressStruct (&CpcInfo->CPPCEnableRegister, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->AutonomousSelectionEnableBuffer, CppcBitWidths.AutonomousSelectionEnable, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.AutonomousSelectionEnable);
   CpcInfo->AutonomousSelectionEnableInteger = 0;
-  SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, CppcBitWidths.AutonomousActivityWindowRegister, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.AutonomousActivityWindowRegister);
-  SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, CppcBitWidths.EnergyPerformancePreference, 0, EFI_ACPI_6_4_DWORD, BaseAddress + CppcOffsets.EnergyPerformancePreference);
-  SetAddressStruct (&CpcInfo->ReferencePerformanceBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->AutonomousActivityWindowRegister, CppcBitWidths.AutonomousActivityWindowRegister, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.AutonomousActivityWindowRegister);
+  SetAddressStruct (&CpcInfo->EnergyPerformancePreferenceRegister, CppcBitWidths.EnergyPerformancePreference, 0, EFI_ACPI_6_6_DWORD, BaseAddress + CppcOffsets.EnergyPerformancePreference);
+  SetAddressStruct (&CpcInfo->ReferencePerformanceBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->ReferencePerformanceInteger = ConvertFreqToNdiv (&Limits, RefClockFreq);
-  SetAddressStruct (&CpcInfo->LowestFrequencyBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->LowestFrequencyBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->LowestFrequencyInteger = HZ_TO_MHZ (ConvertNdivToFreq (&Limits, CpcInfo->LowestPerformanceInteger));
-  SetAddressStruct (&CpcInfo->NominalFrequencyBuffer, 0, 0, EFI_ACPI_6_4_UNDEFINED, 0);
+  SetAddressStruct (&CpcInfo->NominalFrequencyBuffer, 0, 0, EFI_ACPI_6_6_UNDEFINED, 0);
   CpcInfo->NominalFrequencyInteger = HZ_TO_MHZ (ConvertNdivToFreq (&Limits, CpcInfo->NominalPerformanceInteger));
 
   return EFI_SUCCESS;

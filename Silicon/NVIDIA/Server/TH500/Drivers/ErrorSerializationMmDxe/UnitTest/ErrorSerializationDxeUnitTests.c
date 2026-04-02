@@ -4,7 +4,7 @@
   Tests are run using a flash stub, including tests for both
   a working flash device and a faulty flash device.
 
-  Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1120,7 +1120,7 @@ E2EEmptyFlashSetup (
   UT_ASSERT_EQUAL (mErrorSerialization.BufferInfo.ErrorLogInfo.Length, ERROR_LOG_INFO_BUFFER_SIZE);
 
   TestErstComm = (ERST_COMM_STRUCT *)TestErstBuffer;
-  UT_ASSERT_STATUS_EQUAL (GetStatus (TestErstComm), EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  UT_ASSERT_STATUS_EQUAL (GetStatus (TestErstComm), EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   Status = TestNorFlashProtocol->GetAttributes (TestNorFlashProtocol, &NorAttributes);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   TypicalTime = NorAttributes.ProgramFirstByteTimeUs*4 + NorAttributes.ProgramPageTimeUs*((ERROR_LOG_INFO_BUFFER_SIZE+NorAttributes.ProgramPageSize-1)/NorAttributes.ProgramPageSize);
@@ -1183,7 +1183,7 @@ E2EWrite (
   RecordCount = mErrorSerialization.RecordCount;
   UT_ASSERT_EQUAL (ErstComm->RecordCount, RecordCount);
 
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
     if (ErstFindRecord (RecordId)) {
       IsANewRecord = 0;
     } else {
@@ -1243,7 +1243,7 @@ E2EWrite (
   ErstComm->Operation = ERST_OPERATION_INVALID;
 
   // Check the results
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
     // Record Count updated
     UT_ASSERT_EQUAL (ErstComm->RecordCount, RecordCount+IsANewRecord);
 
@@ -1429,7 +1429,7 @@ E2ESimpleFillTest (
     0,
     0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
@@ -1440,12 +1440,12 @@ E2ESimpleFillTest (
     0,
     0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
   // Should be able to do a dummy write, and not affect real writes later
-  E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
   // Should fail a write that has an offset too large for header
@@ -1455,7 +1455,7 @@ E2ESimpleFillTest (
     mErrorSerialization.BufferInfo.ErrorLogInfo.Length - sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + 1,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
@@ -1476,7 +1476,7 @@ E2ESimpleFillTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -1497,7 +1497,7 @@ E2ESimpleFillTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE
+    EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
@@ -1508,7 +1508,7 @@ E2ESimpleFillTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE
+    EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
@@ -1616,7 +1616,7 @@ E2ERead (
   ErstComm->Operation = ERST_OPERATION_INVALID;
 
   // Check the results
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
     // Check fields that write should have updated
     UT_ASSERT_TRUE ((RecordId == ERST_FIRST_RECORD_ID) || (Cper->RecordID == RecordId));
     UT_ASSERT_EQUAL (Cper->RecordLength, PayloadSize + sizeof (EFI_COMMON_ERROR_RECORD_HEADER));
@@ -1685,7 +1685,7 @@ E2ERead (
   }
 
   // If it's not found then it's not empty, so ErstComm should indicate a valid record number
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND) {
     UT_ASSERT_TRUE (
       (ErstComm->RecordID != RecordId) &&
       (ErstComm->RecordID != ERST_INVALID_RECORD_ID)
@@ -1744,7 +1744,7 @@ E2EClear (
   RecordCount = mErrorSerialization.RecordCount;
   UT_ASSERT_EQUAL (ErstComm->RecordCount, RecordCount);
 
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
     CperInfo = ErstFindRecord (RecordId);
     UT_ASSERT_NOT_NULL (CperInfo);
     BlockInfo = ErstGetBlockOfRecord (CperInfo);
@@ -1788,7 +1788,7 @@ E2EClear (
   ErstComm->Operation = ERST_OPERATION_INVALID;
 
   // Check the results
-  if (ExpectedStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+  if (ExpectedStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
     StoredCper   = (EFI_COMMON_ERROR_RECORD_HEADER *)(TestFlashStorage + TestInfo->ErstOffset + OriginalCperInfo.RecordOffset);
     StoredCperPI = (CPER_ERST_PERSISTENCE_INFO *)&StoredCper->PersistenceInfo;
 
@@ -1879,7 +1879,7 @@ E2EWriteReadClearTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       E2ERead (
         Context,
@@ -1887,7 +1887,7 @@ E2EWriteReadClearTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       E2EClear (
         Context,
@@ -1895,7 +1895,7 @@ E2EWriteReadClearTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -1917,7 +1917,7 @@ E2EWriteReadClearTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+    EFI_ACPI_6_6_ERST_STATUS_SUCCESS
     );
 
   return UNIT_TEST_PASSED;
@@ -1947,7 +1947,7 @@ E2EEmptyFlashReadTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   // Test Empty RecordStore (with "Invalid" RecordId)
@@ -1957,7 +1957,7 @@ E2EEmptyFlashReadTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   // Test Empty RecordStore (with a valid RecordId)
@@ -1967,7 +1967,7 @@ E2EEmptyFlashReadTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   // Test Empty RecordStore (with invalid buffer parameters)
@@ -1977,7 +1977,7 @@ E2EEmptyFlashReadTest (
     MAX_UINT64,       // An invalid offset
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   return UNIT_TEST_PASSED;
@@ -2007,7 +2007,7 @@ E2EEmptyFlashClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
 
   // Test Empty RecordStore (with "Invalid" RecordId)
@@ -2017,7 +2017,7 @@ E2EEmptyFlashClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   // Test Empty RecordStore (with a valid RecordId)
@@ -2027,7 +2027,7 @@ E2EEmptyFlashClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   return UNIT_TEST_PASSED;
@@ -2081,7 +2081,7 @@ E2ESimpleReadTest (
     mErrorSerialization.BufferInfo.ErrorLogInfo.Length - sizeof (EFI_COMMON_ERROR_RECORD_HEADER) + 1,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE
+    EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE
     );
   UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
@@ -2103,7 +2103,7 @@ E2ESimpleReadTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -2124,7 +2124,7 @@ E2ESimpleReadTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND
     );
 
   return UNIT_TEST_PASSED;
@@ -2195,7 +2195,7 @@ E2ESimpleRecoveryReadTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -2216,7 +2216,7 @@ E2ESimpleRecoveryReadTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND
     );
 
   return UTStatus;
@@ -2285,7 +2285,7 @@ E2ESimpleBootTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -2310,23 +2310,23 @@ SimFailTest (
 {
   DEBUG ((DEBUG_INFO, "Inside SimFailTest\n"));
 
-  E2EWrite (Context, 0x327b23c6643c9869, 0, 0x3f80, 0x3, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x19495cff2ae8944a, 0, 0x3f80, 0xc, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x46e87ccd3d1b58ba, 0, 0x3f80, 0xb, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x41b71efb79e2a9e3, 0, 0x3f80, 0x6, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x5bd062c212200854, 0, 0x3f80, 0x8, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x1f16e9e81190cde7, 0, 0x3f80, 0xd, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x3352255a109cf92e, 0, 0x3f80, 0x3, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EWrite (Context, 0x1befd79f41a7c4c9, 0, 0x3f80, 0xa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x327b23c6643c9869, 0, 0x3f80, 0x3, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x19495cff2ae8944a, 0, 0x3f80, 0xc, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x46e87ccd3d1b58ba, 0, 0x3f80, 0xb, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x41b71efb79e2a9e3, 0, 0x3f80, 0x6, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x5bd062c212200854, 0, 0x3f80, 0x8, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x1f16e9e81190cde7, 0, 0x3f80, 0xd, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x3352255a109cf92e, 0, 0x3f80, 0x3, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, 0x1befd79f41a7c4c9, 0, 0x3f80, 0xa, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
-  E2ERead (Context, 0x327b23c6643c9869, 0, 0x3f80, 0x3, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x19495cff2ae8944a, 0, 0x3f80, 0xc, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x46e87ccd3d1b58ba, 0, 0x3f80, 0xb, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x41b71efb79e2a9e3, 0, 0x3f80, 0x6, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x5bd062c212200854, 0, 0x3f80, 0x8, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x1f16e9e81190cde7, 0, 0x3f80, 0xd, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x3352255a109cf92e, 0, 0x3f80, 0x3, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2ERead (Context, 0x1befd79f41a7c4c9, 0, 0x3f80, 0xa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x327b23c6643c9869, 0, 0x3f80, 0x3, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x19495cff2ae8944a, 0, 0x3f80, 0xc, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x46e87ccd3d1b58ba, 0, 0x3f80, 0xb, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x41b71efb79e2a9e3, 0, 0x3f80, 0x6, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x5bd062c212200854, 0, 0x3f80, 0x8, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x1f16e9e81190cde7, 0, 0x3f80, 0xd, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x3352255a109cf92e, 0, 0x3f80, 0x3, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2ERead (Context, 0x1befd79f41a7c4c9, 0, 0x3f80, 0xa, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
   return UNIT_TEST_PASSED;
 }
@@ -2374,7 +2374,7 @@ E2ESimpleClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
 
   // Test Full RecordStore (with "Invalid" RecordId)
@@ -2384,7 +2384,7 @@ E2ESimpleClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
 
   // Test Full RecordStore (with a valid but missing RecordId)
@@ -2394,7 +2394,7 @@ E2ESimpleClearTest (
     0x0,
     0x0,
     0xaa,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND
     );
 
   RemainingBlocks      = ErstSize/mErrorSerialization.BlockSize;
@@ -2415,7 +2415,7 @@ E2ESimpleClearTest (
         RecordOffset,
         PayloadSize,
         PayloadData,
-        EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+        EFI_ACPI_6_6_ERST_STATUS_SUCCESS
         );
       RecordId++;
       SizeIndex++;
@@ -2436,7 +2436,7 @@ E2ESimpleClearTest (
     RecordOffset,
     PayloadSize,
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY
+    EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY
     );
 
   return UNIT_TEST_PASSED;
@@ -2536,14 +2536,14 @@ InvalidInputTest (
   MmioWrite32 (0, 0);
   ErrorSerializationEventHandler (NULL, NULL, NULL, NULL);
   UT_ASSERT_EQUAL (MmioRead32 (0), 1);
-  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_4_ERST_STATUS_FAILED);
+  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_6_ERST_STATUS_FAILED);
 
   // Unknown Operation
   ErstComm->Operation = 0xaa;
   MmioWrite32 (0, 0);
   ErrorSerializationEventHandler (NULL, NULL, NULL, NULL);
   UT_ASSERT_EQUAL (MmioRead32 (0), 1);
-  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_4_ERST_STATUS_FAILED);
+  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_6_ERST_STATUS_FAILED);
 
   // Try to get block of record that's not present
   BlockInfo = ErstGetBlockOfRecord (&CperInfo);
@@ -2632,7 +2632,7 @@ InvalidInputTest (
   mErrorSerialization.InitStatus = EFI_OUT_OF_RESOURCES;
   Status                         = ErrorSerializationEventHandler (NULL, NULL, NULL, NULL);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS); // Handler always returns success
-  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE);
+  UT_ASSERT_STATUS_EQUAL (GetStatus (ErstComm), EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE);
   mErrorSerialization.InitStatus = EFI_SUCCESS;
 
   // NOTE: The below tests break the tracking data
@@ -2661,7 +2661,7 @@ InvalidInputTest (
   Status = ErrorSerializationReInit ();
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_STATUS_EQUAL (mErrorSerialization.InitStatus, EFI_SUCCESS);
-  E2ERead (Context, ERST_FIRST_RECORD_ID, 0, 0, 0, EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY); // Was EFI_ACPI_6_4_ERST_STATUS_FAILED
+  E2ERead (Context, ERST_FIRST_RECORD_ID, 0, 0, 0, EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY); // Was EFI_ACPI_6_6_ERST_STATUS_FAILED
 
   // *** InitProtocol when ERST offset isn't a multiple of Nor block size
   UTStatus = UnitTestMockNorFlashProtocol (TestNorFlashProtocol, MockNorErstOffset-1, MockNorErstSize);
@@ -2704,7 +2704,7 @@ InvalidInputTest (
   Status = ErrorSerializationReInit ();
   UT_ASSERT_STATUS_EQUAL (Status, EFI_NO_MEDIA);
   UT_ASSERT_STATUS_EQUAL (mErrorSerialization.InitStatus, EFI_NO_MEDIA);
-  E2ERead (Context, ERST_FIRST_RECORD_ID, 0, 0, 0, EFI_ACPI_6_4_ERST_STATUS_HARDWARE_NOT_AVAILABLE);
+  E2ERead (Context, ERST_FIRST_RECORD_ID, 0, 0, 0, EFI_ACPI_6_6_ERST_STATUS_HARDWARE_NOT_AVAILABLE);
 
   return UNIT_TEST_PASSED;
 }
@@ -2742,12 +2742,12 @@ FaultyFlashTest (
   DEBUG ((DEBUG_INFO, "FaultyFlash - Write tests\n"));
   // Test Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  E2EWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_FAILED);
+  E2EWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_6_ERST_STATUS_FAILED);
 
   DEBUG ((DEBUG_INFO, "FaultyFlash - DummyWrite tests\n"));
   // Test Dummy Writing with a broken flash while it's empty
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EDummyWrite (Context, 0x1, 0x0, 0x0, 0xaa, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
   DEBUG ((DEBUG_INFO, "FaultyFlash - Fill\n"));
   // Make sure there's valid data, written with the good protocol
@@ -2769,7 +2769,7 @@ FaultyFlashTest (
     CperInfo->RecordOffset,
     CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER),
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
 
   DEBUG ((DEBUG_INFO, "FaultyFlash - Clear tests\n"));
@@ -2781,7 +2781,7 @@ FaultyFlashTest (
     CperInfo->RecordOffset,
     CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER),
     PayloadData,
-    EFI_ACPI_6_4_ERST_STATUS_FAILED
+    EFI_ACPI_6_6_ERST_STATUS_FAILED
     );
 
   DEBUG ((DEBUG_INFO, "FaultyFlash - CPER tests\n"));
@@ -2804,13 +2804,13 @@ FaultyFlashTest (
   // 5. Write an entry
   mErrorSerialization.NorFlashProtocol = TestNorFlashProtocol;
   while (ErstComm->RecordID != ERST_INVALID_RECORD_ID) {
-    E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+    E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   }
 
   E2ESimpleFillTest (Context);
-  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   mErrorSerialization.NorFlashProtocol = FaultyNorFlashProtocol;
-  E2EWrite (Context, 0xabcd, 0x0, 0x0, 0xbb, EFI_ACPI_6_4_ERST_STATUS_FAILED);
+  E2EWrite (Context, 0xabcd, 0x0, 0x0, 0xbb, EFI_ACPI_6_6_ERST_STATUS_FAILED);
 
   DEBUG ((DEBUG_INFO, "FaultyFlash - CollectBlock tests\n"));
   // ErstCollectBlock when ReadSpinor fails
@@ -2922,9 +2922,9 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Try to read the entry, triggering a reinit, and confirm it's not there
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -2952,9 +2952,9 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Try to read the entry, triggering a reinit, and confirm it's not there
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -2980,9 +2980,9 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Try to read the entry, triggering a reinit, and confirm it's not there
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -3009,10 +3009,10 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Confirm that the record is invalidated then freed
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -3039,10 +3039,10 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Confirm that the record is invalidated then freed
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -3069,10 +3069,10 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (UTStatus, UNIT_TEST_PASSED);
 
   // Confirm that the record is invalidated then freed
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
   // Create it again
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   // Confirm all the data is correct via E2ESimpleReadTest
   E2ESimpleReadTest (Context);
 
@@ -3109,7 +3109,7 @@ IncomingOutgoingInvalidTest (
 
   // Confirm that we get the VALID rather than the OUTGOING data when reading
   // And that the OUTGOING record has been deleted
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_DELETED);
 
   SanityCheckTracking (Context);
@@ -3146,7 +3146,7 @@ IncomingOutgoingInvalidTest (
 
   // Confirm that we get the VALID rather than the OUTGOING data when reading
   // And that the OUTGOING record has been deleted
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_DELETED);
 
   SanityCheckTracking (Context);
@@ -3183,7 +3183,7 @@ IncomingOutgoingInvalidTest (
 
   // Confirm that we get the VALID rather than the OUTGOING data when reading
   // And that the OUTGOING record has been deleted
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_DELETED);
 
   SanityCheckTracking (Context);
@@ -3219,8 +3219,8 @@ IncomingOutgoingInvalidTest (
   UT_ASSERT_STATUS_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
 
   // Confirm that INCOMING was invalidated and VALID stayed valid
-  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND);
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND);
+  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
   SanityCheckTracking (Context);
 
@@ -3262,7 +3262,7 @@ IncomingOutgoingInvalidTest (
 
   // Confirm that INCOMING was invalidated and VALID was unchanged
   // DEBUG ((DEBUG_INFO, "INCOMING 0x%p (0x%x) OUTGOING 0x%p (0x%x)\n", mErrorSerialization.IncomingCperInfo, CperPI->Status, mErrorSerialization.OutgoingCperInfo, OutgoingCperPI->Status));
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
   SanityCheckTracking (Context);
 
@@ -3308,7 +3308,7 @@ IncomingOutgoingInvalidTest (
 
   // Confirm that OUTGOING was deleted and INCOMING marked valid
   // DEBUG ((DEBUG_INFO, "Before mES.RecordCount 0x%x\n", mErrorSerialization.RecordCount));
-  E2ERead (Context, OutgoingRecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_VALID);
   UT_ASSERT_EQUAL (OutgoingCperPI->Status, ERST_RECORD_STATUS_DELETED);
   // DEBUG ((DEBUG_INFO, "After mES.RecordCount 0x%x\n", mErrorSerialization.RecordCount));
@@ -3370,7 +3370,7 @@ IncomingOutgoingInvalidTest (
   SanityCheckTracking (Context);
 
   // Confirm that VAILD was preserved and INCOMING was INVALIDATED (note: INCOMING's block should have been cleaned up)
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
 
   SanityCheckTracking (Context);
@@ -3436,7 +3436,7 @@ IncomingOutgoingInvalidTest (
   SanityCheckTracking (Context);
 
   // Confirm that VALID was preserved and INCOMING was INVALIDATED
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
 
   SanityCheckTracking (Context);
@@ -3506,7 +3506,7 @@ IncomingOutgoingInvalidTest (
   SanityCheckTracking (Context);
 
   // Confirm that VALID was preserved and INCOMING was INVALIDATED
-  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2ERead (Context, OutgoingRecordId, 0x0, OutgoingPayloadSize, OutgoingPayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   UT_ASSERT_EQUAL (CperPI->Status, ERST_RECORD_STATUS_FREE);
 
   // NOTE: Tests below don't do E2E, so can't use ErstComm
@@ -3607,25 +3607,25 @@ ReclaimTest (
     PayloadSize = CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
 
     // Can't overwrite entry due to lack of space
-    E2EWrite (Context, CperInfo->RecordId, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE);
+    E2EWrite (Context, CperInfo->RecordId, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE);
     UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
 
     // Remove the entry to make space to write something
-    E2EClear (Context, CperInfo->RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+    E2EClear (Context, CperInfo->RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
     // Write an entry with the same size as the deleted entry
-    E2EWrite (Context, 0x1234 + i, 0x0, PayloadSize, ~PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+    E2EWrite (Context, 0x1234 + i, 0x0, PayloadSize, ~PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
     // Can't write another entry due to lack of space
-    E2EWrite (Context, 0x1235 + i, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE);
+    E2EWrite (Context, 0x1235 + i, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE);
     UT_ASSERT_EQUAL (mErrorSerialization.UnsyncedSpinorChanges, 0);
   }
 
   // Replacing existing entries when near full
 
   // First, clear two entries to make at least 2*sizeof(CperHeader) space
-  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
-  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
+  E2EClear (Context, ErstComm->RecordID, 0x0, 0x0, 0x0, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
 
   // Next, Replace an entry and set its payload to sizeof(CperHeader)
   DEBUG ((DEBUG_INFO, "Testing Replacing an entry with payload size of a header\n"));
@@ -3633,21 +3633,21 @@ ReclaimTest (
   CperInfo     = ErstFindRecord (RecordId);
   PayloadSize  = CperInfo->RecordLength - sizeof (EFI_COMMON_ERROR_RECORD_HEADER);
   RecordOffset = CperInfo->RecordOffset;
-  E2EWrite (Context, RecordId, 0x0, sizeof (EFI_COMMON_ERROR_RECORD_HEADER), PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, sizeof (EFI_COMMON_ERROR_RECORD_HEADER), PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_EQUAL (RecordOffset, CperInfo->RecordOffset);
 
   // Now, replace it without a payload
   DEBUG ((DEBUG_INFO, "Testing Replacing an entry with payload size 0\n"));
   RecordOffset = CperInfo->RecordOffset;
-  E2EWrite (Context, RecordId, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, 0x0, ~PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_EQUAL (RecordOffset, CperInfo->RecordOffset);
 
   // Finally, replace it with original payload size
   DEBUG ((DEBUG_INFO, "Testing Replacing an entry with original payload size\n"));
   RecordOffset = CperInfo->RecordOffset;
-  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_4_ERST_STATUS_SUCCESS);
+  E2EWrite (Context, RecordId, 0x0, PayloadSize, PayloadData, EFI_ACPI_6_6_ERST_STATUS_SUCCESS);
   CperInfo = ErstFindRecord (RecordId);
   UT_ASSERT_NOT_EQUAL (RecordOffset, CperInfo->RecordOffset);
 
@@ -3947,7 +3947,7 @@ ValidateRecordTest (
     TestInfo->Offset,
     PayloadSize,
     0xaa,  // PayloadData
-    EFI_ACPI_6_4_ERST_STATUS_SUCCESS
+    EFI_ACPI_6_6_ERST_STATUS_SUCCESS
     );
 
   CperInfo = ErstFindRecord (RecordId);

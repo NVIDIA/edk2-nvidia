@@ -1,7 +1,7 @@
 /** @file
   TPM info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -86,8 +86,8 @@ TpmInfoParser (
   //
   // Install SSDT with TPM node
   //
-  NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-  NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+  NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+  NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
   NewAcpiTable.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
   NewAcpiTable.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdttpm_th500_aml_code;
   NewAcpiTable.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

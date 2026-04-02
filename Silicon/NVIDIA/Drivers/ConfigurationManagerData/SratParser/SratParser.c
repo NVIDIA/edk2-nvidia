@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of Static Resource Affinity Table
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -66,8 +66,8 @@ SratParser (
 
   // Create a ACPI Table Entry
 
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_SYSTEM_RESOURCE_AFFINITY_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_6_SYSTEM_RESOURCE_AFFINITY_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSrat);
   AcpiTableHeader.AcpiTableData      = NULL;
   AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);
@@ -95,7 +95,7 @@ SratParser (
     MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = TH500_AMAP_GET_SOCKET (PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress);
     MemoryAffinityInfo[MemoryAffinityInfoIndex].BaseAddress     = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryBaseAddress;
     MemoryAffinityInfo[MemoryAffinityInfoIndex].Length          = PlatformResourceInfo->ResourceInfo->DramRegions[MemoryAffinityInfoIndex].MemoryLength;
-    MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED;
+    MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_6_MEMORY_ENABLED;
   }
 
   for (Index = 0; Index <= MaxProximityDomain; Index++) {
@@ -112,7 +112,7 @@ SratParser (
       }
 
       MemoryAffinityInfo[MemoryAffinityInfoIndex].ProximityDomain = Index;
-      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_4_MEMORY_ENABLED|EFI_ACPI_6_4_MEMORY_HOT_PLUGGABLE;
+      MemoryAffinityInfo[MemoryAffinityInfoIndex].Flags           = EFI_ACPI_6_6_MEMORY_ENABLED|EFI_ACPI_6_6_MEMORY_HOT_PLUGGABLE;
       MemoryAffinityInfoIndex++;
     }
   }
@@ -162,13 +162,13 @@ SratParser (
       }
 
       // Only support PCI device handle type for now
-      if (DomainInfo.DeviceHandleType != EFI_ACPI_6_4_PCI_DEVICE_HANDLE) {
+      if (DomainInfo.DeviceHandleType != EFI_ACPI_6_6_PCI_DEVICE_HANDLE) {
         GenericInitiatorAffinityInfoCount--;
         continue;
       }
 
       GenericInitiatorAffinityInfo[GenericInitiatorAffinityInfoIndex].ProximityDomain  = Index;
-      GenericInitiatorAffinityInfo[GenericInitiatorAffinityInfoIndex].Flags            = EFI_ACPI_6_4_GENERIC_INITIATOR_AFFINITY_STRUCTURE_ENABLED|EFI_ACPI_6_4_GENERIC_INITIATOR_AFFINITY_STRUCTURE_ARCHITECTURAL_TRANSACTIONS;
+      GenericInitiatorAffinityInfo[GenericInitiatorAffinityInfoIndex].Flags            = EFI_ACPI_6_6_GENERIC_INITIATOR_AFFINITY_STRUCTURE_ENABLED|EFI_ACPI_6_6_GENERIC_INITIATOR_AFFINITY_STRUCTURE_ARCHITECTURAL_TRANSACTIONS;
       GenericInitiatorAffinityInfo[GenericInitiatorAffinityInfoIndex].DeviceHandleType = DomainInfo.DeviceHandleType;
       DeviceHandlePciInfo[GenericInitiatorAffinityInfoIndex].SegmentNumber             = DomainInfo.DeviceHandle.Pci.PciSegment;
       DeviceHandlePciInfo[GenericInitiatorAffinityInfoIndex].BusNumber                 = DomainInfo.DeviceHandle.Pci.PciBdfNumber & 0xFF;

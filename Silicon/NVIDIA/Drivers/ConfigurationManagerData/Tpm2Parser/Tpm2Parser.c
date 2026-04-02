@@ -1,7 +1,7 @@
 /** @file
   Trusted Computing Platform 2 Table (TPM2) Parser
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -96,7 +96,7 @@ Tpm2Parser (
   //
   // Create a ACPI Table Entry for TPM2
   //
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE;
   AcpiTableHeader.AcpiTableRevision  = Tpm2TableRev;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdTpm2);
   AcpiTableHeader.AcpiTableData      = NULL;

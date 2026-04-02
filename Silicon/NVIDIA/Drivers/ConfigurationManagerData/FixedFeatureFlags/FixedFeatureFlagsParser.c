@@ -1,7 +1,7 @@
 /** @file
   Fixed feature flags parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -51,7 +51,7 @@ FixedFeatureFlagsParser (
 
   EFI_STATUS                          Status;
   CM_ARCH_COMMON_FIXED_FEATURE_FLAGS  FixedFeatureFlags = {
-    EFI_ACPI_6_4_PWR_BUTTON
+    EFI_ACPI_6_6_PWR_BUTTON
   };
  #endif
 

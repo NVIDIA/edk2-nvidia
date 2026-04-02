@@ -2,7 +2,7 @@
 
   Numa Information Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -456,7 +456,7 @@ NumaInfoLibConstructor (
         mNumaInfo[NumaIndex].ProximityDomain               = RootBridgeCfgIo->ProximityDomainStart + DomainIndex;
         mNumaInfo[NumaIndex].SocketId                      = RootBridgeCfgIo->SocketID;
         mNumaInfo[NumaIndex].DeviceType                    = NUMA_INFO_TYPE_GPU;
-        mNumaInfo[NumaIndex].DeviceHandleType              = EFI_ACPI_6_5_PCI_DEVICE_HANDLE;
+        mNumaInfo[NumaIndex].DeviceHandleType              = EFI_ACPI_6_6_PCI_DEVICE_HANDLE;
         mNumaInfo[NumaIndex].DeviceHandle.Pci.PciBdfNumber = SwapBytes16 (BusNumber << 8 | DeviceNumber << 3 | FunctionNumber);
         mNumaInfo[NumaIndex].DeviceHandle.Pci.PciSegment   = SegmentNumber;
         mNumaInfo[NumaIndex].InitiatorDomain               = TRUE;

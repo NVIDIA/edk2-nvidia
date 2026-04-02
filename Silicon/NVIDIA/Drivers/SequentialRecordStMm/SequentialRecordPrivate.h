@@ -2,7 +2,7 @@
 
   Private Sequential record protocol/header definitions.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -93,7 +93,7 @@ typedef struct {
 
 /*
  * Format of a RAS log entry.
- * In particular, the Log field contains the actual CPER and begins with EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE
+ * In particular, the Log field contains the actual CPER and begins with EFI_ACPI_6_6_GENERIC_ERROR_DATA_ENTRY_STRUCTURE
  * that contains the severity and the actual details about the CPER (SectionType, ErrorDataLength...)
  */
 typedef struct {

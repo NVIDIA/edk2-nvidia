@@ -1,7 +1,7 @@
 /** @file
   Patches the SSDT with ThermalZoneInfo for TH500
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -420,8 +420,8 @@ ThermalZoneTH500InfoParser (
       return Status;
     }
 
-    NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-    NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+    NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+    NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
     NewAcpiTable.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
     NewAcpiTable.AcpiTableData      = BpmpTable;
     NewAcpiTable.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

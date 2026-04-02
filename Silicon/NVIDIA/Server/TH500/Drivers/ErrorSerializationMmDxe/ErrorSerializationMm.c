@@ -1,7 +1,7 @@
 /** @file
   NVIDIA ERST Driver
 
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1355,12 +1355,12 @@ ErstEfiStatusToAcpiStatus (
   // GCOVR_EXCL_START - Not going to test all the EFI return codes
   switch (EfiStatus) {
     case EFI_SUCCESS:
-      return EFI_ACPI_6_4_ERST_STATUS_SUCCESS;
+      return EFI_ACPI_6_6_ERST_STATUS_SUCCESS;
       break;
     case EFI_OUT_OF_RESOURCES:
     case EFI_VOLUME_FULL:
     case EFI_BUFFER_TOO_SMALL:
-      return EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE;
+      return EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE;
       break;
     case EFI_NO_MEDIA:
     case EFI_NO_RESPONSE:
@@ -1369,7 +1369,7 @@ ErstEfiStatusToAcpiStatus (
     case EFI_NO_MAPPING:
     case EFI_NOT_READY:
     case EFI_TIMEOUT:
-      return EFI_ACPI_6_4_ERST_STATUS_HARDWARE_NOT_AVAILABLE;
+      return EFI_ACPI_6_6_ERST_STATUS_HARDWARE_NOT_AVAILABLE;
       break;
     case EFI_LOAD_ERROR:
     case EFI_INVALID_PARAMETER:
@@ -1390,15 +1390,15 @@ ErstEfiStatusToAcpiStatus (
     case EFI_INVALID_LANGUAGE:
     case EFI_COMPROMISED_DATA:
     case EFI_HTTP_ERROR:
-      return EFI_ACPI_6_4_ERST_STATUS_FAILED;
+      return EFI_ACPI_6_6_ERST_STATUS_FAILED;
       break;
     case EFI_NOT_FOUND:
     case EFI_END_OF_MEDIA:
     case EFI_END_OF_FILE:
-      return EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND;
+      return EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND;
       break;
     default:
-      return EFI_ACPI_6_4_ERST_STATUS_FAILED;
+      return EFI_ACPI_6_6_ERST_STATUS_FAILED;
       break;
   }
 
@@ -1453,7 +1453,7 @@ ErrorSerializationEventHandler (
   DummyOp  = FALSE;
 
   // Default status, which will be interpreted at the end
-  AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_SUCCESS;
+  AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_SUCCESS;
   EfiStatus  = mErrorSerialization.InitStatus;
 
   if (EFI_ERROR (EfiStatus)) {
@@ -1495,7 +1495,7 @@ ErrorSerializationEventHandler (
       /* Write the record at RecordOffset into the storage as RecordID */
       if (OSRecordOffset > (mErrorSerialization.BufferInfo.ErrorLogInfo.Length - sizeof (EFI_COMMON_ERROR_RECORD_HEADER))) {
         DEBUG ((DEBUG_WARN, "%a: RecordOffset overflows ErrorLogBuffer\n", __FUNCTION__));
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_FAILED;
         break;
       }
 
@@ -1573,7 +1573,7 @@ ErrorSerializationEventHandler (
 
       if (OSRecordOffset + OSRecordLength > mErrorSerialization.BufferInfo.ErrorLogInfo.Length) {
         DEBUG ((DEBUG_WARN, "%a: RecordOffset (0x%lx) + RecordLength (0x%lx) overflows ErrorLogBuffer Length (0x%x)\n", __FUNCTION__, OSRecordOffset, OSRecordLength, mErrorSerialization.BufferInfo.ErrorLogInfo.Length));
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_FAILED;
         break;
       }
 
@@ -1581,7 +1581,7 @@ ErrorSerializationEventHandler (
       if (NewCper == NULL) {
         // GCOVR_EXCL_START - won't test allocation errors
         DEBUG ((DEBUG_WARN, "%a: Couldn't allocate space for Cper tracking\n", __FUNCTION__));
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE;
         break;
         // GCOVR_EXCL_STOP
       }
@@ -1617,7 +1617,7 @@ ErrorSerializationEventHandler (
 
     case ERST_OPERATION_READ:
       if (mErrorSerialization.RecordCount == 0) {
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY;
         DEBUG ((DEBUG_WARN, "%a: Record Store Empty\n", __FUNCTION__));
         break;
       }
@@ -1625,7 +1625,7 @@ ErrorSerializationEventHandler (
       /* Determine where to put the error record */
       if (OSRecordOffset > (mErrorSerialization.BufferInfo.ErrorLogInfo.Length - sizeof (EFI_COMMON_ERROR_RECORD_HEADER))) {
         DEBUG ((DEBUG_WARN, "%a: RecordOffset overflows ErrorLogBuffer\n", __FUNCTION__));
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_NOT_ENOUGH_SPACE;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_NOT_ENOUGH_SPACE;
         break;
       }
 
@@ -1651,20 +1651,20 @@ ErrorSerializationEventHandler (
 
     case ERST_OPERATION_CLEAR:
       if (OSRecordID == ERST_FIRST_RECORD_ID) {
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_FAILED;
         DEBUG ((DEBUG_WARN, "%a: Cannot clear RecordId 0 (\"First available\")\n", __FUNCTION__));
       } else if (mErrorSerialization.RecordCount == 0) {
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_RECORD_STORE_EMPTY;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_RECORD_STORE_EMPTY;
         DEBUG ((DEBUG_WARN, "%a: Record Store Empty\n", __FUNCTION__));
       } else if (OSRecordID == ERST_INVALID_RECORD_ID) {
-        AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
+        AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_FAILED;
         DEBUG ((DEBUG_WARN, "%a: Cannot clear RecordId 0xFF...FF (\"Invalid ID\")\n", __FUNCTION__));
       } else {
         /* Find the error record in the storage and mark it as freed */
         Record = ErstFindRecord (OSRecordID);
         if (Record == NULL) {
           DEBUG ((DEBUG_WARN, "%a: RecordId not found\n", __FUNCTION__));
-          AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_RECORD_NOT_FOUND;
+          AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_RECORD_NOT_FOUND;
         } else {
           EfiStatus = ErstClearRecord (Record);
         }
@@ -1680,7 +1680,7 @@ ErrorSerializationEventHandler (
 
     default:
       DEBUG ((DEBUG_WARN, "%a: Unknown operation %d\n", __FUNCTION__, ERSTComm->Operation));
-      AcpiStatus = EFI_ACPI_6_4_ERST_STATUS_FAILED;
+      AcpiStatus = EFI_ACPI_6_6_ERST_STATUS_FAILED;
       break;
   }
 
@@ -1688,7 +1688,7 @@ ReturnStatus:
   /* Report the result */
   if (ERSTComm != NULL) {
     ERSTComm->RecordCount = mErrorSerialization.RecordCount;
-    if (AcpiStatus == EFI_ACPI_6_4_ERST_STATUS_SUCCESS) {
+    if (AcpiStatus == EFI_ACPI_6_6_ERST_STATUS_SUCCESS) {
       ERSTComm->Status = ErstEfiStatusToAcpiStatus (EfiStatus) << ERST_STATUS_BIT_OFFSET;
     } else {
       ERSTComm->Status = AcpiStatus << ERST_STATUS_BIT_OFFSET;
@@ -2538,7 +2538,7 @@ ErrorSerializationSetupOsCommunication (
   ErstComm            = (ERST_COMM_STRUCT *)mErrorSerialization.BufferInfo.ErstBase;
   ErstComm->Operation = ERST_OPERATION_INVALID;
   CopyMem (&ErstComm->ErrorLogAddressRange, &mErrorSerialization.BufferInfo.ErrorLogInfo, sizeof (ERST_ERROR_LOG_INFO));
-  ErstComm->Status       = EFI_ACPI_6_4_ERST_STATUS_SUCCESS;
+  ErstComm->Status       = EFI_ACPI_6_6_ERST_STATUS_SUCCESS;
   ErstComm->RecordCount  = 0;
   ErstComm->RecordID     = ERST_INVALID_RECORD_ID;
   ErstComm->RecordOffset = 0;

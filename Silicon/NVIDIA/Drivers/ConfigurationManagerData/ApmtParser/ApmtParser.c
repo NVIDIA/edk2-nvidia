@@ -1,7 +1,7 @@
 /** @file
   Arm Performance Monitoring Unit Table (APMT) parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -82,7 +82,7 @@ ApmtParser (
   ApmtNodeIndex = 0;
 
   // Populate header
-  ApmtHeader->Header.Signature = EFI_ACPI_6_4_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_SIGNATURE;
+  ApmtHeader->Header.Signature = EFI_ACPI_6_6_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_SIGNATURE;
   ApmtHeader->Header.Revision  = EFI_ACPI_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_REVISION;
   CopyMem (ApmtHeader->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (ApmtHeader->Header.OemId));
   ApmtHeader->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
@@ -214,7 +214,7 @@ ApmtParser (
                               ApmtNodeIndex * sizeof (EFI_ACPI_ARM_PERFORMANCE_MONITORING_UNIT_NODE);
 
   // Install Table
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_SIGNATURE;
   AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_ARM_PERFORMANCE_MONITORING_UNIT_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdRaw);
   AcpiTableHeader.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ApmtHeader;

@@ -1,7 +1,7 @@
 /** @file
   Static Locality Information Table Parser
 
-  SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -29,7 +29,7 @@ SlitParser (
   UINT8                                                           *Distance;
   UINT32                                                          RowIndex;
   UINT32                                                          ColIndex;
-  EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER  *SlitHeader;
+  EFI_ACPI_6_6_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER  *SlitHeader;
   UINT32                                                          MaxProximityDomain;
   UINT32                                                          NumberOfInitiatorDomains;
   UINT32                                                          NumberOfTargetDomains;
@@ -44,7 +44,7 @@ SlitParser (
 
   // Allocate table
   SlitHeader = AllocateZeroPool (
-                 sizeof (EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
+                 sizeof (EFI_ACPI_6_6_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
                  sizeof (UINT8) * ProximityDomains * ProximityDomains
                  );
   if (SlitHeader == NULL) {
@@ -55,8 +55,8 @@ SlitParser (
   //
   Distance = (UINT8 *)(SlitHeader + 1);
   // Populate header
-  SlitHeader->Header.Signature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
-  SlitHeader->Header.Revision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
+  SlitHeader->Header.Signature = EFI_ACPI_6_6_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
+  SlitHeader->Header.Revision  = EFI_ACPI_6_6_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
   CopyMem (SlitHeader->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (SlitHeader->Header.OemId));
   SlitHeader->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   SlitHeader->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
@@ -88,11 +88,11 @@ SlitParser (
     }
   }
 
-  SlitHeader->Header.Length = sizeof (EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
+  SlitHeader->Header.Length = sizeof (EFI_ACPI_6_6_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_HEADER) +
                               sizeof (UINT8) * ProximityDomains * ProximityDomains;
   // Install Table
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_4_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_SYSTEM_LOCALITY_INFORMATION_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_6_SYSTEM_LOCALITY_DISTANCE_INFORMATION_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdRaw);
   AcpiTableHeader.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)SlitHeader;
   AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

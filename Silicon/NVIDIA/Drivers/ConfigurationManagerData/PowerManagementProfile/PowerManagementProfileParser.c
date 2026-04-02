@@ -1,7 +1,7 @@
 /** @file
   Power management profile parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -46,7 +46,7 @@ PowerManagementProfileParser (
 {
   EFI_STATUS                                    Status;
   CM_ARCH_COMMON_POWER_MANAGEMENT_PROFILE_INFO  PmProfileInfo = {
-    EFI_ACPI_6_4_PM_PROFILE_ENTERPRISE_SERVER
+    EFI_ACPI_6_6_PM_PROFILE_ENTERPRISE_SERVER
   };
 
   if (ParserHandle == NULL) {

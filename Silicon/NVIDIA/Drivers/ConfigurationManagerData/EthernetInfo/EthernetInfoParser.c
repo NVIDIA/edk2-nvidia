@@ -1,7 +1,7 @@
 /** @file
   Ethernet info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -56,8 +56,8 @@ EthernetInfoParser (
     return EFI_SUCCESS;
   }
 
-  NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-  NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+  NewAcpiTable.AcpiTableSignature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+  NewAcpiTable.AcpiTableRevision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
   NewAcpiTable.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdt);
   NewAcpiTable.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)ssdteth_aml_code;
   NewAcpiTable.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

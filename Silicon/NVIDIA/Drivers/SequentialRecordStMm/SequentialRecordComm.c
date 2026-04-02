@@ -3,7 +3,7 @@
   MM driver to write Sequential records to Flash. This File handles the
   communications bit.
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -216,16 +216,16 @@ RasLogOverrideTargets (
   )
 {
   RAS_LOG_MM_ENTRY                                 *LogEntry;
-  EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE  *Gedes;
+  EFI_ACPI_6_6_GENERIC_ERROR_DATA_ENTRY_STRUCTURE  *Gedes;
 
   if (FeaturePcdGet (PcdNoCorrectedErrorsInHest)) {
     LogEntry = (RAS_LOG_MM_ENTRY *)RasPayload;
-    Gedes    = (EFI_ACPI_6_4_GENERIC_ERROR_DATA_ENTRY_STRUCTURE *)LogEntry->Log;
+    Gedes    = (EFI_ACPI_6_6_GENERIC_ERROR_DATA_ENTRY_STRUCTURE *)LogEntry->Log;
     DEBUG ((DEBUG_INFO, "%a: Target=0x%llx Severity=0x%lx\n", __FUNCTION__, Target, Gedes->ErrorSeverity));
 
     /* Don't publish corrected/informational errors to HEST/OS */
-    if ((Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_CORRECTED) ||
-        (Gedes->ErrorSeverity == EFI_ACPI_6_4_ERROR_SEVERITY_NONE))
+    if ((Gedes->ErrorSeverity == EFI_ACPI_6_6_ERROR_SEVERITY_CORRECTED) ||
+        (Gedes->ErrorSeverity == EFI_ACPI_6_6_ERROR_SEVERITY_NONE))
     {
       Target &= ~(PUBLISH_HEST);
       Target |= PUBLISH_BMC;

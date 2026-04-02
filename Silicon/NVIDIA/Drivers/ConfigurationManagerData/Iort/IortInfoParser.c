@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data of IO Remapping Table
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1765,7 +1765,7 @@ IortInfoParser (
   Private = &mIortPrivate;
 
   // Create a ACPI Table Entry
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_IO_REMAPPING_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_IO_REMAPPING_TABLE_SIGNATURE;
   AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_IO_REMAPPING_TABLE_REVISION_06;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdIort);
   AcpiTableHeader.AcpiTableData      = NULL;

@@ -1,7 +1,7 @@
 /** @file
   Nvdla info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -129,8 +129,8 @@ NvdlaInfoParser (
   } while (!EFI_ERROR (Status));
 
   if (DeviceInfo.Uid != 0) {
-    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-    AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+    AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtGenericDevice);
     AcpiTableHeader.AcpiTableData      = NULL;
     AcpiTableHeader.OemTableId         = 0;

@@ -1,7 +1,7 @@
 /** @file
   Serial port info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -132,11 +132,11 @@ SerialPortInfoParser (
 
   // Extend ACPI table list with the new table header
   if (SerialPortConfig == NVIDIA_SERIAL_PORT_DBG2_SBSA) {
-    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
+    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_DEBUG_PORT_2_TABLE_SIGNATURE;
     AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
   } else {
-    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE;
+    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_SIGNATURE;
     AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_SERIAL_PORT_CONSOLE_REDIRECTION_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSpcr);
   }

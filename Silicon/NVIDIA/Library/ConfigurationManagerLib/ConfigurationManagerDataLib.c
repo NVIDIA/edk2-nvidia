@@ -1,7 +1,7 @@
 /** @file
   Configuration Manager Data Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   Copyright (c) 2021 - 2022, Arm Limited. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -748,9 +748,9 @@ InitializeSsdtTableGenerator (
 
   NV_ASSERT_RETURN (GenerationProtocol != NULL, return EFI_INVALID_PARAMETER, "%a: GenerationProtocol is NULL\n", __FUNCTION__);
 
-  SsdtTableHeader.Signature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+  SsdtTableHeader.Signature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
   SsdtTableHeader.Length    = sizeof (EFI_ACPI_DESCRIPTION_HEADER);
-  SsdtTableHeader.Revision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+  SsdtTableHeader.Revision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
   SsdtTableHeader.Checksum  = 0;
   CopyMem (SsdtTableHeader.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (SsdtTableHeader.OemId));
   SsdtTableHeader.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);

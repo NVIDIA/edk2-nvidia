@@ -1,7 +1,7 @@
 /** @file
   Cache info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -171,25 +171,25 @@ GetCacheInfoFromCacheNode (
   switch (CacheNode->CacheData.Type) {
     case CACHE_TYPE_ICACHE:
       CacheInfo->Attributes =  CACHE_ATTRIBUTES (
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_ALLOCATION_READ,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_CACHE_TYPE_INSTRUCTION,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
                                  );
       break;
 
     case CACHE_TYPE_DCACHE:
       CacheInfo->Attributes =  CACHE_ATTRIBUTES (
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_CACHE_TYPE_DATA,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
                                  );
       break;
 
     case CACHE_TYPE_UNIFIED:
       CacheInfo->Attributes =  CACHE_ATTRIBUTES (
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
-                                 EFI_ACPI_6_3_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_ALLOCATION_READ_WRITE,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_CACHE_TYPE_UNIFIED,
+                                 EFI_ACPI_6_6_CACHE_ATTRIBUTES_WRITE_POLICY_WRITE_BACK
                                  );
       break;
 

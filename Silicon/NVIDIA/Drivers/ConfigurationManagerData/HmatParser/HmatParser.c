@@ -1,7 +1,7 @@
 /** @file
   Heterogeneous Memory Attribute Table (HMAT) Parser
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -35,7 +35,7 @@ GetSizeOfLatencyAndBandwidthInfoStruct (
 {
   UINT64  Size;
 
-  Size = sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
+  Size = sizeof (EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
          sizeof (UINT32) * NumInitProxDmns +
          sizeof (UINT32) * NumTarProxDmns +
          sizeof (UINT16) * NumInitProxDmns * NumTarProxDmns;
@@ -50,9 +50,9 @@ HmatParser (
   IN        INT32                  FdtBranch
   )
 {
-  EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO  *LatBwInfoStruct;
-  EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO  *NextLatBwInfoStruct;
-  EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER                *HmatTable;
+  EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO  *LatBwInfoStruct;
+  EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO  *NextLatBwInfoStruct;
+  EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER                *HmatTable;
   UINT32                                                                  HmatTableSize;
   UINTN                                                                   NumLatBwInfoStruct;
   UINT32                                                                  MaxProximityDomain;
@@ -133,7 +133,7 @@ HmatParser (
   ASSERT (IndexTarget == NumTarProxDmns);
 
   // Calculate the size of the Table to be allocated
-  HmatTableSize = sizeof (EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER) +
+  HmatTableSize = sizeof (EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_HEADER) +
                   (NumLatBwInfoStruct * GetSizeOfLatencyAndBandwidthInfoStruct (NumInitProxDmns, NumTarProxDmns));
 
   // Allocate table
@@ -145,9 +145,9 @@ HmatParser (
   }
 
   // Populate Header
-  HmatTable->Header.Signature = EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE;
+  HmatTable->Header.Signature = EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE;
   HmatTable->Header.Length    = HmatTableSize;
-  HmatTable->Header.Revision  = EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION;
+  HmatTable->Header.Revision  = EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION;
   CopyMem (HmatTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (HmatTable->Header.OemId));
   HmatTable->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   HmatTable->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
@@ -159,11 +159,11 @@ HmatParser (
   HmatTable->Reserved[3]            = EFI_ACPI_RESERVED_BYTE;
 
   // Starting location of HMAT structures
-  LatBwInfoStruct = (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)(HmatTable + 1);
+  LatBwInfoStruct = (EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)(HmatTable + 1);
 
   // Populate Latency Bandwidth Info structures
   for (InfoStructIdx = 0; InfoStructIdx < NumLatBwInfoStruct; InfoStructIdx++ ) {
-    LatBwInfoStruct->Type                  = (UINT16)(EFI_ACPI_6_5_HMAT_TYPE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO);
+    LatBwInfoStruct->Type                  = (UINT16)(EFI_ACPI_6_6_HMAT_TYPE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO);
     LatBwInfoStruct->Reserved[0]           = EFI_ACPI_RESERVED_BYTE;
     LatBwInfoStruct->Reserved[1]           = EFI_ACPI_RESERVED_BYTE;
     LatBwInfoStruct->Length                = (UINT32)(GetSizeOfLatencyAndBandwidthInfoStruct (NumInitProxDmns, NumTarProxDmns));
@@ -178,14 +178,14 @@ HmatParser (
 
     // assigning proximity domain values at an offset
     ProximityDomainValue = (UINT32 *)((UINT8 *)LatBwInfoStruct +
-                                      sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO));
+                                      sizeof (EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO));
     CopyMem (ProximityDomainValue, InitiatorProximityDomainList, sizeof (UINT32) * NumInitProxDmns);
     ProximityDomainValue += NumInitProxDmns;
     CopyMem (ProximityDomainValue, TargetProximityDomainList, sizeof (UINT32) * NumTarProxDmns);
 
     // assigning latency or bandwidth values at an offset
     LatencyBandwidthValueArray[InfoStructIdx] = (UINT16 *)((UINT8 *)LatBwInfoStruct +
-                                                           sizeof (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
+                                                           sizeof (EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO) +
                                                            sizeof (UINT32) * NumInitProxDmns +
                                                            sizeof (UINT32) * NumTarProxDmns);
 
@@ -204,7 +204,7 @@ HmatParser (
     }
 
     // Next HMAT structure
-    NextLatBwInfoStruct = (EFI_ACPI_6_5_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)((UINT8 *)LatBwInfoStruct
+    NextLatBwInfoStruct = (EFI_ACPI_6_6_HMAT_STRUCTURE_SYSTEM_LOCALITY_LATENCY_AND_BANDWIDTH_INFO *)((UINT8 *)LatBwInfoStruct
                                                                                                      + LatBwInfoStruct->Length);
     LatBwInfoStruct = NextLatBwInfoStruct;
   }
@@ -243,8 +243,8 @@ HmatParser (
 
   // Install HMAT Table
 
-  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE;
-  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_5_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION;
+  AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_SIGNATURE;
+  AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_6_HETEROGENEOUS_MEMORY_ATTRIBUTE_TABLE_REVISION;
   AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdRaw);
   AcpiTableHeader.AcpiTableData      = (EFI_ACPI_DESCRIPTION_HEADER *)HmatTable;
   AcpiTableHeader.OemTableId         = PcdGet64 (PcdAcpiDefaultOemTableId);

@@ -1,7 +1,7 @@
 /** @file
   Parser to create network based pci devices for DBG2 creation.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -122,7 +122,7 @@ Dbg2NetworkParser (
 
     Dbg2DeviceInfo.PortType    = EFI_ACPI_DBG2_PORT_TYPE_NET;
     Dbg2DeviceInfo.PortSubtype = PciData.Hdr.VendorId;
-    Dbg2DeviceInfo.AccessSize  = EFI_ACPI_6_4_DWORD;
+    Dbg2DeviceInfo.AccessSize  = EFI_ACPI_6_6_DWORD;
     MemoryRangeCount           = 0;
 
     for (BarIndex = 0; BarIndex < PCI_MAX_BAR; BarIndex++) {
@@ -186,7 +186,7 @@ Dbg2NetworkParser (
     goto CleanupAndReturn;
   }
 
-  AcpiTableHeader->AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
+  AcpiTableHeader->AcpiTableSignature = EFI_ACPI_6_6_DEBUG_PORT_2_TABLE_SIGNATURE;
   AcpiTableHeader->AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
   AcpiTableHeader->TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
   AcpiTableHeader->AcpiTableData      = NULL;

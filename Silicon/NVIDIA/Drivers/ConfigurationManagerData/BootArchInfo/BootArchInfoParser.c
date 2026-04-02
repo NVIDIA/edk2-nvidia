@@ -1,7 +1,7 @@
 /** @file
   Boot arch info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -46,7 +46,7 @@ BootArchInfoParser (
 {
   EFI_STATUS             Status;
   CM_ARM_BOOT_ARCH_INFO  BootArchInfo = {
-    EFI_ACPI_6_4_ARM_PSCI_COMPLIANT
+    EFI_ACPI_6_6_ARM_PSCI_COMPLIANT
   };
 
   if (ParserHandle == NULL) {

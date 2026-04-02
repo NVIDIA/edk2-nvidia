@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2021-2025, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2026, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -67,8 +67,8 @@ typedef struct {
  * Definition of the "Trigger Action Table" as defined in ACPI 6.4
  */
 typedef struct {
-  EFI_ACPI_6_4_EINJ_TRIGGER_ACTION_TABLE           Header;
-  EFI_ACPI_6_4_EINJ_INJECTION_INSTRUCTION_ENTRY    TriggerActions[EINJ_TRIGGER_ACTION_COUNT];
+  EFI_ACPI_6_6_EINJ_TRIGGER_ACTION_TABLE           Header;
+  EFI_ACPI_6_6_EINJ_INJECTION_INSTRUCTION_ENTRY    TriggerActions[EINJ_TRIGGER_ACTION_COUNT];
 } EFI_ACPI_6_X_EINJ_TRIGGER_ERROR_ACTION_TABLE;
 
 /*

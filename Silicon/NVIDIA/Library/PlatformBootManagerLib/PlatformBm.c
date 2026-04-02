@@ -2574,7 +2574,7 @@ VerifyAcpiSanity (
       break;
     }
 
-    if (Table->Signature != EFI_ACPI_6_4_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
+    if (Table->Signature != EFI_ACPI_6_6_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
       continue;
     } else {
       DsdtFound = TRUE;

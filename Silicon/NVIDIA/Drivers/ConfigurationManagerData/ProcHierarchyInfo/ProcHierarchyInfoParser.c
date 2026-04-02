@@ -1,7 +1,7 @@
 /** @file
   Proc hierarchy info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -183,11 +183,11 @@ ProcHierarchyInfoParser (
   if (NumSockets > 1) {
     ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
     ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                    EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                    EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
-                                                    EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
+                                                    EFI_ACPI_6_6_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                    EFI_ACPI_6_6_PPTT_NODE_IS_NOT_LEAF,
+                                                    EFI_ACPI_6_6_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
     ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = CM_NULL_TOKEN;
     ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = CM_NULL_TOKEN;
@@ -208,11 +208,11 @@ ProcHierarchyInfoParser (
     ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
     SocketTokenMap[SocketId]                    = ProcHierarchyInfo[ProcHierarchyIndex].Token;
     ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                    EFI_ACPI_6_4_PPTT_PACKAGE_PHYSICAL,
-                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                    EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
-                                                    EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
+                                                    EFI_ACPI_6_6_PPTT_PACKAGE_PHYSICAL,
+                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                    EFI_ACPI_6_6_PPTT_NODE_IS_NOT_LEAF,
+                                                    EFI_ACPI_6_6_PPTT_IMPLEMENTATION_IDENTICAL
                                                     );
 
     ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = RootToken;
@@ -258,11 +258,11 @@ ProcHierarchyInfoParser (
         if (!EFI_ERROR (Status)) {
           ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
           ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                          EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                          EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                          EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
-                                                          EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
+                                                          EFI_ACPI_6_6_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                          EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                          EFI_ACPI_6_6_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                          EFI_ACPI_6_6_PPTT_NODE_IS_NOT_LEAF,
+                                                          EFI_ACPI_6_6_PPTT_IMPLEMENTATION_IDENTICAL
                                                           );
           ProcHierarchyInfo[ProcHierarchyIndex].ParentToken                = SocketTokenMap[SocketId];
           ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken          = CM_NULL_TOKEN;
@@ -308,22 +308,22 @@ ProcHierarchyInfoParser (
         // Only build once per core
         ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken = CM_NULL_TOKEN;
         ProcHierarchyInfo[ProcHierarchyIndex].Flags             = PROC_NODE_FLAGS (
-                                                                    EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                                    EFI_ACPI_6_4_PPTT_NODE_IS_NOT_LEAF,
-                                                                    EFI_ACPI_6_4_PPTT_IMPLEMENTATION_IDENTICAL
+                                                                    EFI_ACPI_6_6_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                                    EFI_ACPI_6_6_PPTT_NODE_IS_NOT_LEAF,
+                                                                    EFI_ACPI_6_6_PPTT_IMPLEMENTATION_IDENTICAL
                                                                     );
         DEBUG ((DEBUG_INFO, "%a: Building multi-thread container ID: %llx Flags: %x Token: %x\n", __FUNCTION__, ProcessorId, ProcHierarchyInfo[ProcHierarchyIndex].Flags, ProcHierarchyInfo[ProcHierarchyIndex].Token));
         ProcHierarchyInfo[ProcHierarchyIndex].LpiToken = CM_NULL_TOKEN;
       } else {
         ProcHierarchyInfo[ProcHierarchyIndex].AcpiIdObjectToken = GicCInfoTokens[CoreIndex];
         ProcHierarchyInfo[ProcHierarchyIndex].Flags             = PROC_NODE_FLAGS (
-                                                                    EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                                    EFI_ACPI_6_4_PPTT_PROCESSOR_IS_NOT_THREAD,
-                                                                    EFI_ACPI_6_4_PPTT_NODE_IS_LEAF,
-                                                                    EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+                                                                    EFI_ACPI_6_6_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                                    EFI_ACPI_6_6_PPTT_PROCESSOR_IS_NOT_THREAD,
+                                                                    EFI_ACPI_6_6_PPTT_NODE_IS_LEAF,
+                                                                    EFI_ACPI_6_6_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                                                                     );
         DEBUG ((DEBUG_INFO, "%a: Building single-thread object ID: %llx Flags: %x Token: %x\n", __FUNCTION__, ProcessorId, ProcHierarchyInfo[ProcHierarchyIndex].Flags, ProcHierarchyInfo[ProcHierarchyIndex].Token));
         ProcHierarchyInfo[ProcHierarchyIndex].LpiToken = LpiToken;
@@ -350,11 +350,11 @@ ProcHierarchyInfoParser (
     if (MaxThreadsPerCore > 1) {
       ProcHierarchyInfo[ProcHierarchyIndex].Token = ProcHierarchyInfoTokens[ProcHierarchyIndex];
       ProcHierarchyInfo[ProcHierarchyIndex].Flags = PROC_NODE_FLAGS (
-                                                      EFI_ACPI_6_4_PPTT_PACKAGE_NOT_PHYSICAL,
-                                                      EFI_ACPI_6_4_PPTT_PROCESSOR_ID_VALID,
-                                                      EFI_ACPI_6_4_PPTT_PROCESSOR_IS_THREAD,
-                                                      EFI_ACPI_6_4_PPTT_NODE_IS_LEAF,
-                                                      EFI_ACPI_6_4_PPTT_IMPLEMENTATION_NOT_IDENTICAL
+                                                      EFI_ACPI_6_6_PPTT_PACKAGE_NOT_PHYSICAL,
+                                                      EFI_ACPI_6_6_PPTT_PROCESSOR_ID_VALID,
+                                                      EFI_ACPI_6_6_PPTT_PROCESSOR_IS_THREAD,
+                                                      EFI_ACPI_6_6_PPTT_NODE_IS_LEAF,
+                                                      EFI_ACPI_6_6_PPTT_IMPLEMENTATION_NOT_IDENTICAL
                                                       );
       ProcHierarchyInfo[ProcHierarchyIndex].ParentToken = CoreTokenMap[CoreId + (MaxCoresPerSocket*SocketId)];
       DEBUG ((DEBUG_INFO, "%a: Building multi-thread object ID: %llx Flags: %x Token: %x ParentToken: %x\n", __FUNCTION__, ProcessorId, ProcHierarchyInfo[ProcHierarchyIndex].Flags, ProcHierarchyInfo[ProcHierarchyIndex].Token, ProcHierarchyInfo[ProcHierarchyIndex].ParentToken));

@@ -1,7 +1,7 @@
 /** @file
   Virtio Mmio info parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -143,7 +143,7 @@ VirtioMmioParser (
     Dbg2DeviceInfo.AddressResourceToken = DeviceInfo.AddressResourceToken;
     Dbg2DeviceInfo.PortType             = EFI_ACPI_DBG2_PORT_TYPE_NET;
     Dbg2DeviceInfo.PortSubtype          = VIRTIO_MMIO_LAN_SUBTYPE;
-    Dbg2DeviceInfo.AccessSize           = EFI_ACPI_6_3_DWORD;
+    Dbg2DeviceInfo.AccessSize           = EFI_ACPI_6_6_DWORD;
     CopyMem (Dbg2DeviceInfo.ObjectName, DeviceInfo.Name, sizeof (DeviceInfo.Name));
 
     Status = NvExtendCmObj (ParserHandle, Dbg2CmObjDesc, CM_NULL_TOKEN, NULL);
@@ -159,7 +159,7 @@ VirtioMmioParser (
   } while (!EFI_ERROR (Status));
 
   if (DeviceInfo.Uid != 0) {
-    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_DEBUG_PORT_2_TABLE_SIGNATURE;
+    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_DEBUG_PORT_2_TABLE_SIGNATURE;
     AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_DEBUG_PORT_2_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdDbg2);
     AcpiTableHeader.AcpiTableData      = NULL;
@@ -172,8 +172,8 @@ VirtioMmioParser (
       return Status;
     }
 
-    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
-    AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_4_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
+    AcpiTableHeader.AcpiTableSignature = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE;
+    AcpiTableHeader.AcpiTableRevision  = EFI_ACPI_6_6_SECONDARY_SYSTEM_DESCRIPTION_TABLE_REVISION;
     AcpiTableHeader.TableGeneratorId   = CREATE_STD_ACPI_TABLE_GEN_ID (EStdAcpiTableIdSsdtGenericDevice);
     AcpiTableHeader.AcpiTableData      = NULL;
     AcpiTableHeader.OemTableId         = 0;

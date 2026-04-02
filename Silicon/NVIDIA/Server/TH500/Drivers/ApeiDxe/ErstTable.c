@@ -1,7 +1,7 @@
 /** @file
   NVIDIA Error Record Serialization Table
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -15,14 +15,14 @@
 #define ERST_ENTRIES_COUNT  19
 
 typedef struct {
-  EFI_ACPI_6_4_ERROR_RECORD_SERIALIZATION_TABLE_HEADER    Header;
-  EFI_ACPI_6_4_ERST_SERIALIZATION_INSTRUCTION_ENTRY       Entries[ERST_ENTRIES_COUNT];
+  EFI_ACPI_6_6_ERROR_RECORD_SERIALIZATION_TABLE_HEADER    Header;
+  EFI_ACPI_6_6_ERST_SERIALIZATION_INSTRUCTION_ENTRY       Entries[ERST_ENTRIES_COUNT];
 } ERST_WITH_ENTRIES;
 
 STATIC ERST_WITH_ENTRIES  ErstTable = {
   .Header                    = {
     .Header                  = {
-      .Signature       = EFI_ACPI_6_4_ERROR_RECORD_SERIALIZATION_TABLE_SIGNATURE,
+      .Signature       = EFI_ACPI_6_6_ERROR_RECORD_SERIALIZATION_TABLE_SIGNATURE,
       .Length          = sizeof (ERST_WITH_ENTRIES),
       .Revision        = EFI_ACPI_OEM_REVISION,
       .OemTableId      = MAX_UINT64,
@@ -30,7 +30,7 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
       .CreatorId       = EFI_ACPI_CREATOR_ID,
       .CreatorRevision = EFI_ACPI_CREATOR_REVISION
     },
-    .SerializationHeaderSize = sizeof (EFI_ACPI_6_4_ERROR_RECORD_SERIALIZATION_TABLE_HEADER) -
+    .SerializationHeaderSize = sizeof (EFI_ACPI_6_6_ERROR_RECORD_SERIALIZATION_TABLE_HEADER) -
                                sizeof (EFI_ACPI_DESCRIPTION_HEADER),
     .InstructionEntryCount   = ERST_ENTRIES_COUNT
   },
@@ -40,15 +40,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set Operation field to WRITE in ERST_COMM_STRUCT
    */
   .Entries[0] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_BEGIN_WRITE_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_BEGIN_WRITE_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_OPERATION_WRITE,
@@ -60,15 +60,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set Operation field to READ in ERST_COMM_STRUCT
    */
   .Entries[1] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_BEGIN_READ_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_BEGIN_READ_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_OPERATION_READ,
@@ -80,15 +80,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set Operation field to CLEAR in ERST_COMM_STRUCT
    */
   .Entries[2] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_BEGIN_CLEAR_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_BEGIN_CLEAR_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_OPERATION_CLEAR,
@@ -100,15 +100,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set Operation field to INVALID in ERST_COMM_STRUCT
    */
   .Entries[3] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_END_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_END_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_OPERATION_INVALID,
@@ -120,15 +120,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set RecordOffset to the user specified value in ERST_COMM_STRUCT
    */
   .Entries[4] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_SET_RECORD_OFFSET,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_SET_RECORD_OFFSET,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -139,15 +139,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Mark the action status as invalid in the ERST_COMM_STRUCT, and then trigger an interrupt to cause RAS FW to do the operation that was set up.
    */
   .Entries[5] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_EXECUTE_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_EXECUTE_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = ERST_STATUS_INVALID_WIDTH,
       .RegisterBitOffset = ERST_STATUS_INVALID_OFFSET,
-      .AccessSize        = EFI_ACPI_6_4_DWORD,
+      .AccessSize        = EFI_ACPI_6_6_DWORD,
       /*.Address dynamically assigned */
     },
     .Value = ERST_STATUS_IS_INVALID,
@@ -155,15 +155,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
   },
 
   .Entries[6] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_EXECUTE_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_EXECUTE_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 32,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_DWORD,
+      .AccessSize        = EFI_ACPI_6_6_DWORD,
       /*.Address dynamically assigned */
     },
     .Value = 0x1,
@@ -175,15 +175,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Check if the status "register" in ERST_COMM_STRUCT is invalid. Keep checking it until valid. Then read the interrupt status register
    */
   .Entries[7] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_CHECK_BUSY_STATUS,
-    .Instruction         = EFI_ACPI_6_4_ERST_NOOP, // JDS TODO - EFI_ACPI_6_4_ERST_SKIP_NEXT_INSTRUCTION_IF_TRUE
+    .SerializationAction = EFI_ACPI_6_6_ERST_CHECK_BUSY_STATUS,
+    .Instruction         = EFI_ACPI_6_6_ERST_NOOP, // JDS TODO - EFI_ACPI_6_6_ERST_SKIP_NEXT_INSTRUCTION_IF_TRUE
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = ERST_STATUS_INVALID_WIDTH,
       .RegisterBitOffset = ERST_STATUS_INVALID_OFFSET,
-      .AccessSize        = EFI_ACPI_6_4_DWORD
+      .AccessSize        = EFI_ACPI_6_6_DWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_STATUS_IS_VALID,
@@ -191,15 +191,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
   },
 
   .Entries[8] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_CHECK_BUSY_STATUS,
-    .Instruction         = EFI_ACPI_6_4_ERST_NOOP, // JDS TODO - EFI_ACPI_6_4_ERST_GOTO
+    .SerializationAction = EFI_ACPI_6_6_ERST_CHECK_BUSY_STATUS,
+    .Instruction         = EFI_ACPI_6_6_ERST_NOOP, // JDS TODO - EFI_ACPI_6_6_ERST_GOTO
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = ERST_STATUS_INVALID_WIDTH,
       .RegisterBitOffset = ERST_STATUS_INVALID_OFFSET,
-      .AccessSize        = EFI_ACPI_6_4_DWORD
+      .AccessSize        = EFI_ACPI_6_6_DWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_ENTRIES_COUNT,                   // Intentionally invalid default, to be replaced dynamically
@@ -207,15 +207,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
   },
 
   .Entries[9] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_CHECK_BUSY_STATUS,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_CHECK_BUSY_STATUS,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 32,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_DWORD
+      .AccessSize        = EFI_ACPI_6_6_DWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_BUSY_VALUE,
@@ -227,15 +227,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the Status field in ERST_COMM_STRUCT
    */
   .Entries[10] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_COMMAND_STATUS,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_COMMAND_STATUS,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = ERST_STATUS_WIDTH,
       .RegisterBitOffset = ERST_STATUS_BIT_OFFSET,
-      .AccessSize        = EFI_ACPI_6_4_DWORD
+      .AccessSize        = EFI_ACPI_6_6_DWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_STATUS_MASK
@@ -246,15 +246,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the RecordID field in ERST_COMM_STRUCT
    */
   .Entries[11] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_RECORD_IDENTIFIER,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_RECORD_IDENTIFIER,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -265,15 +265,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Write the RecordID field to the user-specified value in ERST_COMM_STRUCT
    */
   .Entries[12] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_SET_RECORD_IDENTIFIER,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_SET_RECORD_IDENTIFIER,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -284,15 +284,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the RecordCount field in ERST_COMM_STRUCT
    */
   .Entries[13] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_RECORD_COUNT,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_RECORD_COUNT,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 32,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_DWORD
+      .AccessSize        = EFI_ACPI_6_6_DWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_RECORD_COUNT_MASK
@@ -303,15 +303,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Set Operation field to DUMMY_WRITE in ERST_COMM_STRUCT
    */
   .Entries[14] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_BEGIN_DUMMY_WRITE_OPERATION,
-    .Instruction         = EFI_ACPI_6_4_ERST_WRITE_REGISTER_VALUE,
+    .SerializationAction = EFI_ACPI_6_6_ERST_BEGIN_DUMMY_WRITE_OPERATION,
+    .Instruction         = EFI_ACPI_6_6_ERST_WRITE_REGISTER_VALUE,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Value = ERST_OPERATION_DUMMY_WRITE,
@@ -323,15 +323,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the ErrorLogAddressRange.PhysicalBase field in ERST_COMM_STRUCT
    */
   .Entries[15] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -342,15 +342,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the ErrorLogAddressRange.Length field in ERST_COMM_STRUCT
    */
   .Entries[16] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE_LENGTH,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE_LENGTH,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -361,15 +361,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the ErrorLogAddressRange.Attributes field in ERST_COMM_STRUCT
    */
   .Entries[17] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE_ATTRIBUTES,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE_ATTRIBUTES,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -380,15 +380,15 @@ STATIC ERST_WITH_ENTRIES  ErstTable = {
    * Implementation: Read the Timings field in ERST_COMM_STRUCT
    */
   .Entries[18] = {
-    .SerializationAction = EFI_ACPI_6_4_ERST_GET_EXECUTE_OPERATION_TIMINGS,
-    .Instruction         = EFI_ACPI_6_4_ERST_READ_REGISTER,
+    .SerializationAction = EFI_ACPI_6_6_ERST_GET_EXECUTE_OPERATION_TIMINGS,
+    .Instruction         = EFI_ACPI_6_6_ERST_READ_REGISTER,
     .Flags               = 0,
     .Reserved0           = 0,
     .RegisterRegion      = {
-      .AddressSpaceId    = EFI_ACPI_6_4_SYSTEM_MEMORY,
+      .AddressSpaceId    = EFI_ACPI_6_6_SYSTEM_MEMORY,
       .RegisterBitWidth  = 64,
       .RegisterBitOffset = 0,
-      .AccessSize        = EFI_ACPI_6_4_QWORD
+      .AccessSize        = EFI_ACPI_6_6_QWORD
                            /*.Address dynamically assigned */
     },
     .Mask                    = ERST_DEFAULT_MASK
@@ -401,7 +401,7 @@ ErstCreateAcpiTable (
   )
 {
   UINTN                                              TableHandle;
-  EFI_ACPI_6_4_ERST_SERIALIZATION_INSTRUCTION_ENTRY  *Entry;
+  EFI_ACPI_6_6_ERST_SERIALIZATION_INSTRUCTION_ENTRY  *Entry;
   EFI_ACPI_TABLE_PROTOCOL                            *AcpiTableProtocol;
   EFI_STATUS                                         Status;
   UINT64                                             RegisterAddress;
@@ -427,17 +427,17 @@ ErstCreateAcpiTable (
     }
 
     switch (Entry->SerializationAction) {
-      case EFI_ACPI_6_4_ERST_BEGIN_WRITE_OPERATION:
-      case EFI_ACPI_6_4_ERST_BEGIN_READ_OPERATION:
-      case EFI_ACPI_6_4_ERST_BEGIN_CLEAR_OPERATION:
-      case EFI_ACPI_6_4_ERST_END_OPERATION:
-      case EFI_ACPI_6_4_ERST_BEGIN_DUMMY_WRITE_OPERATION:
+      case EFI_ACPI_6_6_ERST_BEGIN_WRITE_OPERATION:
+      case EFI_ACPI_6_6_ERST_BEGIN_READ_OPERATION:
+      case EFI_ACPI_6_6_ERST_BEGIN_CLEAR_OPERATION:
+      case EFI_ACPI_6_6_ERST_END_OPERATION:
+      case EFI_ACPI_6_6_ERST_BEGIN_DUMMY_WRITE_OPERATION:
         RegisterAddress = (UINT64)&(ErstComm->Operation);
         break;
-      case EFI_ACPI_6_4_ERST_SET_RECORD_OFFSET:
+      case EFI_ACPI_6_6_ERST_SET_RECORD_OFFSET:
         RegisterAddress = (UINT64)&(ErstComm->RecordOffset);
         break;
-      case EFI_ACPI_6_4_ERST_EXECUTE_OPERATION:
+      case EFI_ACPI_6_6_ERST_EXECUTE_OPERATION:
         if (ActionIndex == 0) {
           RegisterAddress = (UINT64)&(ErstComm->Status);
         } else if (ActionIndex == 1) {
@@ -445,7 +445,7 @@ ErstCreateAcpiTable (
         }
 
         break;
-      case EFI_ACPI_6_4_ERST_CHECK_BUSY_STATUS:
+      case EFI_ACPI_6_6_ERST_CHECK_BUSY_STATUS:
         if (ActionIndex == 0) {
           RegisterAddress = (UINT64)&(ErstComm->Status);
         } else if (ActionIndex == 1) {
@@ -456,26 +456,26 @@ ErstCreateAcpiTable (
         }
 
         break;
-      case EFI_ACPI_6_4_ERST_GET_COMMAND_STATUS:
+      case EFI_ACPI_6_6_ERST_GET_COMMAND_STATUS:
         RegisterAddress = (UINT64)&(ErstComm->Status);
         break;
-      case EFI_ACPI_6_4_ERST_GET_RECORD_IDENTIFIER:
-      case EFI_ACPI_6_4_ERST_SET_RECORD_IDENTIFIER:
+      case EFI_ACPI_6_6_ERST_GET_RECORD_IDENTIFIER:
+      case EFI_ACPI_6_6_ERST_SET_RECORD_IDENTIFIER:
         RegisterAddress = (UINT64)&(ErstComm->RecordID);
         break;
-      case EFI_ACPI_6_4_ERST_GET_RECORD_COUNT:
+      case EFI_ACPI_6_6_ERST_GET_RECORD_COUNT:
         RegisterAddress = (UINT64)&(ErstComm->RecordCount);
         break;
-      case EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE:
+      case EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE:
         RegisterAddress = (UINT64)&(ErstComm->ErrorLogAddressRange.PhysicalBase);
         break;
-      case EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE_LENGTH:
+      case EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE_LENGTH:
         RegisterAddress = (UINT64)&(ErstComm->ErrorLogAddressRange.Length);
         break;
-      case EFI_ACPI_6_4_ERST_GET_ERROR_LOG_ADDRESS_RANGE_ATTRIBUTES:
+      case EFI_ACPI_6_6_ERST_GET_ERROR_LOG_ADDRESS_RANGE_ATTRIBUTES:
         RegisterAddress = (UINT64)&(ErstComm->ErrorLogAddressRange.Attributes);
         break;
-      case EFI_ACPI_6_4_ERST_GET_EXECUTE_OPERATION_TIMINGS:
+      case EFI_ACPI_6_6_ERST_GET_EXECUTE_OPERATION_TIMINGS:
         RegisterAddress = (UINT64)&(ErstComm->Timings);
         break;
       default:
