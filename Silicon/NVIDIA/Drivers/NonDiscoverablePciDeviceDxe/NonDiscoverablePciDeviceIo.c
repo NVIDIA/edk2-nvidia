@@ -2,7 +2,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Copyright (c) 2016, Linaro, Ltd. All rights reserved.<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1813,13 +1813,16 @@ TegraDisplayInitializePciIoProtocol (
   PCI_EXPANSION_ROM_HEADER  *RomHdr;
   PCI_DATA_STRUCTURE        *Pcir;
 
+  RomImage = NULL;
+  RomSize  = 0;
+
   Status = TegraDisplayGetDcbImage (
              ControllerHandle,
              Dev->Device->Type,
              &RomImage,
              &RomSize
              );
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) || (RomImage == NULL) || (RomSize == 0)) {
     return EFI_DEVICE_ERROR;
   }
 

@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - T264
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -351,8 +351,12 @@ EnableHwT264 (
   IN CONST BOOLEAN                    Enable
   )
 {
-  EFI_STATUS                               Status, Status1;
+  EFI_STATUS                               Status;
+  EFI_STATUS                               Status1;
   NV_DISPLAY_CONTROLLER_HW_PRIVATE *CONST  Private = NV_DISPLAY_CONTROLLER_HW_PRIVATE_FROM_THIS (This);
+
+  Status  = EFI_SUCCESS;
+  Status1 = EFI_SUCCESS;
 
   if (Enable) {
     if (!Private->MaxEmcFrequencyForced) {

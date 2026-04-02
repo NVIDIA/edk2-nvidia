@@ -2,7 +2,7 @@
 
   NV Display Controller Driver - Common
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -455,6 +455,9 @@ CreateControllerPrivate (
   NON_DISCOVERABLE_DEVICE           *Device;
   NV_DISPLAY_CONTROLLER_HW          *Hw1    = Hw;
   NV_DISPLAY_CONTROLLER_PRIVATE     *Result = NULL;
+
+  ResourcesSize  = 0;
+  DtNodePathSize = 0;
 
   if (Private == NULL) {
     Status = EFI_INVALID_PARAMETER;
