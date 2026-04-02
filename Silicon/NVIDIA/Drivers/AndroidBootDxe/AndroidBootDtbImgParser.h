@@ -1,7 +1,7 @@
 /** @file
   Android Boot Config Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -69,12 +69,14 @@ ExtractDtbfromDtbImg (
  *
  * @param Dtbo pointer to the dtbo partition.
  * @param DtboCount record the number of dtbo.
+ * @param DtboStartIdx the starting entry index within the dtbo.img.
  * @return EFI_SUCCESS if success, else if not.
  */
 EFI_STATUS
 ExtractDtbofromDtboImg (
   VOID    **Dtbo,
-  UINT32  *DtboCount
+  UINT32  *DtboCount,
+  UINT32  *DtboStartIdx
   );
 
 #endif /* __ANDROID_BOOTDTBIMGPARSER_H__ */

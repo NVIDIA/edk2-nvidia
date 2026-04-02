@@ -379,7 +379,8 @@ EFI_STATUS
 EFIAPI
 AndroidLocateKernelDtbo (
   IN OUT VOID    **Dtbo,
-  IN     UINT32  *DtboCount
+  IN     UINT32  *DtboCount,
+  OUT    UINT32  *DtboStartIdx
   )
 {
   EFI_STATUS  Status;
@@ -387,7 +388,7 @@ AndroidLocateKernelDtbo (
 
 retry:
 
-  Status = ExtractDtbofromDtboImg (Dtbo, DtboCount);
+  Status = ExtractDtbofromDtboImg (Dtbo, DtboCount, DtboStartIdx);
 
   if (!EFI_ERROR (Status)) {
     if (FdtCheckHeader (*Dtbo) == 0) {
@@ -413,17 +414,19 @@ STATIC
 VOID
 EFIAPI
 AndroidApplyOverlays (
-  IN OUT  VOID  *Dtb,
-  IN VOID       *Dtbo,
-  IN  UINT32    DtboCount,
-  IN  CHAR8     *AndroidbootDtboIdx
+  IN OUT  VOID    *Dtb,
+  IN      VOID    *Dtbo,
+  IN      UINT32  DtboCount,
+  IN      UINT32  DtboStartIdx
   )
 {
   UINTN  Count;
+  UINTN  CurrentIdx;
   VOID   *FdtNext;
   UINTN  FdtSize;
   INT32  Status;
-  UINTN  CurrentLength = AsciiStrLen (AndroidbootDtboIdx);
+  CHAR8  AndroidbootDtboIdx[MAX_ANDROID_BOOT_DTBO_IDX] = "";
+  UINTN  CurrentLength                                 = 0;
   UINTN  DtbSize;
   VOID   *DtbBackup = NULL;
 
@@ -432,6 +435,8 @@ AndroidApplyOverlays (
         Count < DtboCount;
         Count++ )
   {
+    CurrentIdx = DtboStartIdx + Count;
+
     Status =  FdtCheckHeader (FdtNext);
     if (Status != 0) {
       DEBUG ((DEBUG_ERROR, "%a: Invalid overlay. Count = %u. Error = %d Returning\r\n", __FUNCTION__, Count, Status));
@@ -460,12 +465,12 @@ AndroidApplyOverlays (
 
     // Set androidboot.dtbo_idx kernel commandline parameter.
     if (!CurrentLength) {
-      AndroidbootDtboIdx[CurrentLength++] = '0' + Count;
+      AndroidbootDtboIdx[CurrentLength++] = '0' + CurrentIdx;
       AndroidbootDtboIdx[CurrentLength]   = '\0';
     } else {
       if (CurrentLength+2 < MAX_ANDROID_BOOT_DTBO_IDX) {
         AndroidbootDtboIdx[CurrentLength++] = ',';
-        AndroidbootDtboIdx[CurrentLength++] = '0' + Count;
+        AndroidbootDtboIdx[CurrentLength++] = '0' + CurrentIdx;
         AndroidbootDtboIdx[CurrentLength]   = '\0';
       } else {
         DEBUG ((DEBUG_ERROR, "%a: AndroidbootDtboIdx overflowed", __FUNCTION__));
@@ -844,9 +849,9 @@ AndroidBootDxeLoadDtb (
   VOID                               *KernelDtbo = NULL;
   VOID                               *Dtbo;
   UINT32                             DtboCount;
-  BOOLEAN                            SkipOverlays                                  = FALSE;
-  CHAR8                              AndroidbootDtboIdx[MAX_ANDROID_BOOT_DTBO_IDX] = "";
-  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate                             = NULL;
+  UINT32                             DtboStartIdx      = 0;
+  BOOLEAN                            SkipOverlays      = FALSE;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigUpdate = NULL;
   CHAR8                              NewBootConfigStr[BOOTCONFIG_MAX_LEN];
   CHAR8                              *BootConfigEntry = NULL;
   INT32                              FdtErr;
@@ -931,7 +936,7 @@ AndroidBootDxeLoadDtb (
 
     if (SkipOverlays == FALSE) {
       Dtbo   = KernelDtbo;
-      Status = AndroidLocateKernelDtbo (&Dtbo, &DtboCount);
+      Status = AndroidLocateKernelDtbo (&Dtbo, &DtboCount, &DtboStartIdx);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: Valid DTBO image not found\r\n", __FUNCTION__));
         SkipOverlays = TRUE;
@@ -946,7 +951,7 @@ AndroidBootDxeLoadDtb (
       (FdtOpenInto (Dtb, DtbCopy, (FdtTotalSize (Dtb)+ 4 * FdtTotalSize (Dtb))) == 0))
   {
     if (SkipOverlays == FALSE) {
-      AndroidApplyOverlays (DtbCopy, Dtbo, DtboCount, AndroidbootDtboIdx);
+      AndroidApplyOverlays (DtbCopy, Dtbo, DtboCount, DtboStartIdx);
     }
 
     Status = gBS->InstallConfigurationTable (&gFdtTableGuid, DtbCopy);
