@@ -94,6 +94,14 @@ STATIC CONST CHAR16  *NoVerifyPartitionNames[] = {
   NULL
 };
 
+// image names not supported on minimal (single- or multi-image) capsule update
+STATIC CONST CHAR16  *MinimalUnsupportedImageNames[] = {
+  L"GPT",
+  FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
+  BR_BCT_BACKUP_PARTITION_NAME,
+  NULL
+};
+
 // progress tracking variables
 STATIC UINTN  mTotalBytesToFlash  = 0;
 STATIC UINTN  mTotalBytesFlashed  = 0;
@@ -1028,6 +1036,9 @@ WriteImage (
   Write FW package data to all FwImages except for special images.
 
   @param[in]  Header                Pointer to the FW package header
+  @param[in]  MinimalUpdate         Whether to write minimal update images
+  @param[in]  Flags                 FwImage flags for the write.  See
+                                    NVIDIA_FW_IMAGE_PROTOCOL.Write()
 
   @retval EFI_SUCCESS               The operation completed successfully
   @retval Others                    An error occurred
@@ -1037,7 +1048,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 WriteRegularImages (
-  IN  CONST FW_PACKAGE_HEADER  *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  IN  BOOLEAN                  MinimalUpdate,
+  IN  UINTN                    Flags
   )
 {
   EFI_STATUS                Status;
@@ -1056,7 +1069,10 @@ WriteRegularImages (
 
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
-    if (IsSpecialImageName (ImageName)) {
+    if ((!MinimalUpdate && IsSpecialImageName (ImageName)) ||
+        (MinimalUpdate && NameIsInList (ImageName, MinimalUnsupportedImageNames)))
+    {
+      DEBUG ((DEBUG_INFO, "%a: Skipping write for partition %s\n", __FUNCTION__, ImageName));
       continue;
     }
 
@@ -1068,7 +1084,7 @@ WriteRegularImages (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
-      if (NameIsInList (ImageName, mFwImagesRequired)) {
+      if (!MinimalUpdate && NameIsInList (ImageName, mFwImagesRequired)) {
         DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         return Status;
       }
@@ -1079,7 +1095,7 @@ WriteRegularImages (
     Status = WriteImage (
                Header,
                ImageName,
-               FW_IMAGE_RW_FLAG_NONE
+               Flags
                );
     if (EFI_ERROR (Status)) {
       return Status;
@@ -1215,6 +1231,9 @@ VerifyImage (
   is returned.
 
   @param[in]  Header                Pointer to the FW package header
+  @param[in]  MinimalUpdate         Whether to verify minimal update images
+  @param[in]  Flags                 FwImage flags for the verify.  See
+                                    NVIDIA_FW_IMAGE_PROTOCOL.Read()
 
   @retval EFI_SUCCESS               The operation completed successfully
   @retval Others                    An error occurred
@@ -1224,7 +1243,9 @@ STATIC
 EFI_STATUS
 EFIAPI
 VerifyAllImages (
-  IN  CONST FW_PACKAGE_HEADER  *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  IN  BOOLEAN                  MinimalUpdate,
+  IN  UINTN                    Flags
   )
 {
   EFI_STATUS                Status;
@@ -1246,7 +1267,10 @@ VerifyAllImages (
 
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
-    if (NameIsInList (ImageName, NoVerifyPartitionNames)) {
+    if (NameIsInList (ImageName, NoVerifyPartitionNames) ||
+        (MinimalUpdate && NameIsInList (ImageName, MinimalUnsupportedImageNames)))
+    {
+      DEBUG ((DEBUG_INFO, "%a: Skipping verify for partition %s\n", __FUNCTION__, ImageName));
       continue;
     }
 
@@ -1258,7 +1282,7 @@ VerifyAllImages (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
-      if (NameIsInList (ImageName, mFwImagesRequired)) {
+      if (!MinimalUpdate && NameIsInList (ImageName, mFwImagesRequired)) {
         DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         return Status;
       }
@@ -1269,7 +1293,7 @@ VerifyAllImages (
     Status = VerifyImage (
                Header,
                ImageName,
-               FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE,
+               Flags,
                DEBUG_ERROR
                );
     if (EFI_ERROR (Status)) {
@@ -1371,12 +1395,14 @@ UpdateBctBackupPartition (
 }
 
 /**
-  Update a single FwImage from a special single-image FW package/capsule.
-  This is a development feature enabled by PcdFmpSingleImageUpdate and
-  requires that the FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE variable
-  be set to the partition chain to be written (0=A, 1=B).
+  Write and verify FwImage(s) from a minimal FW package/capsule for advanced developers.
 
-  @param[in]  Header                Pointer to the single-image FW package header
+  Requires FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE (0=A, 1=B).
+  For single image capsule, PcdFmpSingleImageUpdate must be TRUE.
+  For more than one image, PcdFmpMultiImageMinimalUpdate must be TRUE.
+  Image names allowed on the minimal path are enforced in FmpTegraCheckImage.
+
+  @param[in]  Header                Pointer to the FW package header
 
   @retval EFI_SUCCESS               The operation completed successfully
   @retval Others                    An error occurred
@@ -1385,22 +1411,15 @@ UpdateBctBackupPartition (
 STATIC
 EFI_STATUS
 EFIAPI
-FmpTegraSetSingleImage (
+FmpTegraSetMinimalImages (
   IN  CONST FW_PACKAGE_HEADER  *Header
   )
 {
-  EFI_STATUS                   Status;
-  CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
-  CHAR16                       PkgName[FW_IMAGE_NAME_LENGTH];
-  UINT8                        BootChain;
-  UINTN                        WriteFlag;
-  UINTN                        VariableSize;
+  EFI_STATUS  Status;
+  UINT8       BootChain;
+  UINTN       WriteFlag;
+  UINTN       VariableSize;
 
-  // Get capsule package image name
-  PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
-  FwPackageCopyImageName (PkgName, PkgImageInfo, sizeof (PkgName));
-
-  // Get boot chain from variable
   VariableSize = sizeof (BootChain);
   Status       = gRT->GetVariable (
                         FMP_CAPSULE_SINGLE_PARTITION_CHAIN_VARIABLE,
@@ -1439,20 +1458,19 @@ FmpTegraSetSingleImage (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: handling single image=%s\n",
+    "%a: minimal update images=%u\n",
     __FUNCTION__,
-    PkgName
+    Header->ImageCount
     ));
 
-  // write and verify single image
-  Status = WriteImage (Header, PkgName, WriteFlag);
+  Status = WriteRegularImages (Header, TRUE, WriteFlag);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
 
-  Status = VerifyImage (Header, PkgName, WriteFlag, DEBUG_ERROR);
+  Status = VerifyAllImages (Header, TRUE, WriteFlag);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1518,14 +1536,13 @@ FmpTegraCheckImage (
   EFI_STATUS                   Status;
   UINTN                        Index;
   UINTN                        ImageCount;
-  CHAR16                       SingleImageNameBuffer[FW_IMAGE_NAME_LENGTH];
-  CONST CHAR16                 *SingleImageName = NULL;
   NVIDIA_FW_IMAGE_PROTOCOL     **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
   CONST CHAR16                 *RequiredImageName;
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
   UINTN                        GptImageIndex;
+  BOOLEAN                      MinimalUpdate;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1539,21 +1556,20 @@ FmpTegraCheckImage (
     return EFI_INVALID_PARAMETER;
   }
 
+  *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
+
   if (Image == NULL) {
-    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_BAD_IMAGE_POINTER;
     return EFI_INVALID_PARAMETER;
   }
 
   if (!mFmpLibInitialized) {
-    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_FMP_LIB_UNINITIALIZED;
     return EFI_NOT_READY;
   }
 
   Status = mBootChainProtocol->CheckAndCancelUpdate (mBootChainProtocol, &Canceled);
   if (EFI_ERROR (Status) || Canceled) {
-    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_BOOT_CHAIN_UPDATE_CANCELED;
     return EFI_ABORTED;
   }
@@ -1567,14 +1583,12 @@ FmpTegraCheckImage (
       "Update package header failed validation: %r\n",
       Status
       ));
-    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_INVALID_PACKAGE_HEADER;
     return EFI_ABORTED;
   }
 
   if (Header->Type != FW_PACKAGE_TYPE_FW) {
     DEBUG ((DEBUG_ERROR, "Package type=%u not supported!\n", Header->Type));
-    *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
     *LastAttemptStatus = LAS_ERROR_UNSUPPORTED_PACKAGE_TYPE;
     return EFI_ABORTED;
   }
@@ -1590,9 +1604,28 @@ FmpTegraCheckImage (
     return Status;
   }
 
+  // Detect development minimal capsule: single-image or multi-image
+  MinimalUpdate = FALSE;
+  if (Header->ImageCount == 1) {
+    if (!mPcdFmpSingleImageUpdate && !PcdGetBool (PcdFmpMultiImageMinimalUpdate)) {
+      DEBUG ((DEBUG_ERROR, "%a: minimal update PCD not set\n", __FUNCTION__));
+      *LastAttemptStatus = LAS_ERROR_SINGLE_IMAGE_NOT_SUPPORTED;
+      return EFI_UNSUPPORTED;
+    }
+
+    MinimalUpdate = TRUE;
+  } else if (PcdGetBool (PcdFmpMultiImageMinimalUpdate)) {
+    MinimalUpdate = TRUE;
+  }
+
+  if (MinimalUpdate) {
+    DEBUG ((DEBUG_INFO, "%a: handling minimal update for %u images\n", __FUNCTION__, Header->ImageCount));
+  }
+
   // If supported, update inactive FwPartition meta-data by writing capsule
   // GPT data to pseudo-image if GPT image data is present in package.
-  if ((FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
+  if (!MinimalUpdate &&
+      (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
       !EFI_ERROR (GetPackageImageIndex (Header, L"GPT", &GptImageIndex)))
   {
     Status = WriteImage (
@@ -1606,36 +1639,7 @@ FmpTegraCheckImage (
     }
   }
 
-  ImageCount = FwImageGetCount ();
-
-  // Handle special case of a development package with exactly one image
-  if (Header->ImageCount == 1) {
-    if (!mPcdFmpSingleImageUpdate) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: PcdFmpSingleImageUpdateEnabled not set\n",
-        __FUNCTION__
-        ));
-      *LastAttemptStatus = LAS_ERROR_SINGLE_IMAGE_NOT_SUPPORTED;
-      return EFI_UNSUPPORTED;
-    }
-
-    PkgImageInfo = FwPackageImageInfoPtr (Header, 0);
-    FwPackageCopyImageName (
-      SingleImageNameBuffer,
-      PkgImageInfo,
-      sizeof (SingleImageNameBuffer)
-      );
-    SingleImageName = SingleImageNameBuffer;
-    ImageCount      = 1;
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: handling single image=%s\n",
-      __FUNCTION__,
-      SingleImageName
-      ));
-  }
-
+  ImageCount           = FwImageGetCount ();
   FwImageProtocolArray = FwImageGetProtocolArray ();
   for (Index = 0; Index < ImageCount; Index++) {
     CONST CHAR16         *ImageName;
@@ -1645,13 +1649,6 @@ FmpTegraCheckImage (
     FwImageProtocol = FwImageProtocolArray[Index];
     ImageName       = FwImageProtocol->ImageName;
 
-    if ((ImageCount == 1) &&
-        (SingleImageName != NULL) &&
-        (StrCmp (ImageName, SingleImageName) != 0))
-    {
-      continue;
-    }
-
     Status = GetPackageImageIndex (
                Header,
                ImageName,
@@ -1660,9 +1657,8 @@ FmpTegraCheckImage (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_INFO, "%a: No image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
 
-      if (NameIsInList (ImageName, mFwImagesRequired)) {
+      if (!MinimalUpdate && NameIsInList (ImageName, mFwImagesRequired)) {
         DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
-        *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
         *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
         return EFI_ABORTED;
       }
@@ -1670,9 +1666,13 @@ FmpTegraCheckImage (
       continue;
     }
 
-    PkgImageInfo = FwPackageImageInfoPtr (Header, PkgImageIndex);
+    if (MinimalUpdate && NameIsInList (ImageName, MinimalUnsupportedImageNames)) {
+      DEBUG ((DEBUG_INFO, "%a: minimal update not supported for image %s\n", __FUNCTION__, ImageName));
+      continue;
+    }
 
-    Status = FwImageProtocol->GetAttributes (FwImageProtocol, &ImageAttributes);
+    PkgImageInfo = FwPackageImageInfoPtr (Header, PkgImageIndex);
+    Status       = FwImageProtocol->GetAttributes (FwImageProtocol, &ImageAttributes);
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -1680,7 +1680,6 @@ FmpTegraCheckImage (
         ImageName,
         Status
         ));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_IMAGE_ATTRIBUTES_ERROR;
       return EFI_ABORTED;
     }
@@ -1693,7 +1692,6 @@ FmpTegraCheckImage (
         PkgImageInfo->Bytes,
         ImageAttributes.WriteBytes
         ));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_IMAGE_TOO_BIG;
       return EFI_ABORTED;
     }
@@ -1706,21 +1704,21 @@ FmpTegraCheckImage (
         "Package image %s goes beyond end of capsule!\n",
         ImageName
         ));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
       *LastAttemptStatus = LAS_ERROR_PACKAGE_SIZE_ERROR;
       return EFI_ABORTED;
     }
   }
 
   // Check that every required image has a protocol
-  for (Index = 0; Index < mFwImagesRequiredCount; Index++) {
-    RequiredImageName = mFwImagesRequired[Index];
-    FwImageProtocol   = FwImageFindProtocol (RequiredImageName);
-    if (FwImageProtocol == NULL) {
-      DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, RequiredImageName));
-      *ImageUpdatable    = IMAGE_UPDATABLE_INVALID;
-      *LastAttemptStatus = LAS_ERROR_NO_PROTOCOL_FOR_IMAGE;
-      return EFI_ABORTED;
+  if (!MinimalUpdate) {
+    for (Index = 0; Index < mFwImagesRequiredCount; Index++) {
+      RequiredImageName = mFwImagesRequired[Index];
+      FwImageProtocol   = FwImageFindProtocol (RequiredImageName);
+      if (FwImageProtocol == NULL) {
+        DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, RequiredImageName));
+        *LastAttemptStatus = LAS_ERROR_NO_PROTOCOL_FOR_IMAGE;
+        return EFI_ABORTED;
+      }
     }
   }
 
@@ -1784,9 +1782,11 @@ FmpTegraSetImage (
   mTotalBytesToFlash  = FmpTegraGetTotalBytesToFlash (Header);
   mTotalBytesToVerify = (mPcdFmpWriteVerifyImage) ? mTotalBytesToFlash : 0;
 
-  // Handle special case of a development capsule with exactly one image
-  if (Header->ImageCount == 1) {
-    Status = FmpTegraSetSingleImage (Header);
+  // Development minimal capsule: single-image, or multi-image when PcdFmpMultiImageMinimalUpdate is TRUE
+  if (((Header->ImageCount == 1) && mPcdFmpSingleImageUpdate) ||
+      PcdGetBool (PcdFmpMultiImageMinimalUpdate))
+  {
+    Status = FmpTegraSetMinimalImages (Header);
     if (EFI_ERROR (Status)) {
       *LastAttemptStatus = LAS_ERROR_SET_SINGLE_IMAGE_FAILED;
       return EFI_ABORTED;
@@ -1847,7 +1847,7 @@ FmpTegraSetImage (
     return EFI_ABORTED;
   }
 
-  Status = WriteRegularImages (Header);
+  Status = WriteRegularImages (Header, FALSE, FW_IMAGE_RW_FLAG_NONE);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_WRITE_IMAGES_FAILED;
     return EFI_ABORTED;
@@ -1871,7 +1871,7 @@ FmpTegraSetImage (
 
   SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
 
-  Status = VerifyAllImages (Header);
+  Status = VerifyAllImages (Header, FALSE, FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_VERIFY_IMAGES_FAILED;
     return EFI_ABORTED;

@@ -2,7 +2,7 @@
 #  Provides firmware device specific services to support updates of a firmware
 #  image stored in a firmware device.
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
 #  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 #
@@ -60,6 +60,7 @@
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate
   gNVIDIATokenSpaceGuid.PcdFwImageEnableBPartitions
   gNVIDIATokenSpaceGuid.PcdBootAndroidImage
+  gNVIDIATokenSpaceGuid.PcdFmpMultiImageMinimalUpdate
 
 [Protocols]
   gNVIDIABrBctUpdateProtocolGuid            ## CONSUMES

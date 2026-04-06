@@ -736,6 +736,8 @@
 #Fmp options
   gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate|FALSE|BOOLEAN|0x0000005A
   gNVIDIATokenSpaceGuid.PcdFmpWriteVerifyImage|TRUE|BOOLEAN|0x0000005B
+# Enable multi-image development capsules for minimal updates (no boot chain mgmt).
+  gNVIDIATokenSpaceGuid.PcdFmpMultiImageMinimalUpdate|FALSE|BOOLEAN|0x0000005D
 
 #List of non-unique FMP system ImageTypeId's to generate warnings
   gNVIDIATokenSpaceGuid.PcdNonUniqueSystemFmpCapsuleImageTypeIdGuid|{0x0}|VOID*|0x000000A4
