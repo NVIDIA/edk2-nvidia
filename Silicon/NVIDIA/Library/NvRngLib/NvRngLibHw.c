@@ -1,7 +1,7 @@
 /** @file
   Random number generator that gets the RNG via the ARM TrngLib.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -68,7 +68,7 @@ GenerateEntropy (
 }
 
 /**
-  Get a 16-bit random number from the RNG driver in StMM.
+  Get a 16-bit random number via the ATF TRNG service.
 
   if Rand is NULL, then ASSERT().
 
@@ -102,7 +102,7 @@ HwGetRandomNumber16 (
 }
 
 /**
-  Get a 32-bit random number from RNG Driver in StMM.
+  Get a 32-bit random number via the ATF TRNG service.
 
   if Rand is NULL, then ASSERT().
 
@@ -136,7 +136,7 @@ HwGetRandomNumber32 (
 }
 
 /**
-  Get a 64-bit random number from the RNG driver in StMM.
+  Get a 64-bit random number via the ATF TRNG service.
 
   if Rand is NULL, then ASSERT().
 
@@ -170,7 +170,7 @@ HwGetRandomNumber64 (
 }
 
 /**
-  Get 128-bit random number from RNG driver in StMM.
+  Get a 128-bit random number via the ATF TRNG service.
 
   if Rand is NULL, then ASSERT().
 
@@ -218,7 +218,7 @@ HwGetRngGuid (
 }
 
 /**
- * Get the Rng Ops if using the StMM based RNG Driver.
+ * Get the Rng Ops if the ATF TRNG service is available.
  *
  * @param[in]      None.
  *

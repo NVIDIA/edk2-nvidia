@@ -1,8 +1,8 @@
 /** @file
- Rng Lib that gets the RNG from a secure RNG driver in StMM or from a Non-Safe
- Rng Source if MM isn't present.
+ Rng Lib that gets the RNG from the ATF TRNG service or from a non-HW
+ fallback RNG source if TRNG is not available.
 
- SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -119,7 +119,7 @@ NvRngLibConstructor (
   RngOps = HwRngGetOps ();
   if (RngOps == NULL) {
     RngOps = NonHwRngGetOps ();
-    DEBUG ((DEBUG_ERROR, "%a: No StMM Using NonHW RngLib\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: TRNG not available, using NonHW RngLib\n", __FUNCTION__));
   } else {
     DEBUG ((DEBUG_INFO, "%a: Using HW RngLib\n", __FUNCTION__));
   }
