@@ -1081,6 +1081,8 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   !endif
 !endif
 
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFindLoadOptionIgnoreDescription|TRUE
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.
