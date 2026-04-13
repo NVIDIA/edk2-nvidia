@@ -47,6 +47,114 @@
 
 L4T_LAUNCHER_SUPPORT_PROTOCOL  *gL4TSupportProtocol;
 
+//
+// Fallback stub implementations for backward compatibility with firmware
+// that does not include L4TLauncherSupportDxe.  These stubs are only
+// activated on ISO installation media and allow the ISO install /
+// PreIsoInstaller path to function.  Behaviour in fallback mode:
+//   - Rootfs status defaults to chain A only (no slot B, retry count A = 3)
+//   - Device tree overlays are not applied
+//   - Boot device prioritisation is disabled
+//   - RCM boot path is not entered
+//   - Boot component header size defaults to 8 KB (T234+)
+//
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackGetRootfsStatusReg (
+  OUT UINT32  *RegisterValue
+  )
+{
+  if (RegisterValue == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // Report a single-slot (chain A only) configuration: 0x0030FACE
+  //   magic = 0xFACE, current slot = A, retry count B = 0 (no slot B),
+  //   retry count A = 3 (slot A is valid and bootable).
+  DEBUG ((DEBUG_INFO, "%a: using fallback, default to chain A only\r\n", __FUNCTION__));
+  *RegisterValue = 0x0030FACE;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackSetRootfsStatusReg (
+  IN UINT32  RegisterValue
+  )
+{
+  DEBUG ((DEBUG_INFO, "%a: using fallback, ignoring register write\r\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackGetBootDeviceClass (
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  OUT CONST CHAR8              **DeviceClass
+  )
+{
+  DEBUG ((DEBUG_INFO, "%a: using fallback, returning EFI_NOT_FOUND\r\n", __FUNCTION__));
+  return EFI_NOT_FOUND;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackGetBootComponentHeaderSize (
+  OUT UINTN  *HeaderSize
+  )
+{
+  if (HeaderSize == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: using fallback, defaulting to SIZE_8KB\r\n", __FUNCTION__));
+  *HeaderSize = SIZE_8KB;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackApplyTegraDeviceTreeOverlay (
+  VOID   *FdtBase,
+  VOID   *FdtOverlay,
+  CHAR8  *ModuleStr
+  )
+{
+  DEBUG ((DEBUG_INFO, "%a: using fallback, skipping overlay (no-op)\r\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FallbackGetBootModeInfo (
+  TEGRA_BOOT_MODE_METADATA  *BootModeInfo
+  )
+{
+  if (BootModeInfo == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: using fallback, defaulting to TegrablBootColdBoot\r\n", __FUNCTION__));
+  BootModeInfo->BootType = TegrablBootColdBoot;
+  return EFI_SUCCESS;
+}
+
+STATIC L4T_LAUNCHER_SUPPORT_PROTOCOL  mFallbackL4TSupport = {
+  FallbackGetRootfsStatusReg,
+  FallbackSetRootfsStatusReg,
+  FallbackGetBootDeviceClass,
+  FallbackGetBootComponentHeaderSize,
+  FallbackApplyTegraDeviceTreeOverlay,
+  FallbackGetBootModeInfo
+};
+
 STATIC ImageEncryptionInfo  EncryptionInfo;
 
 STATIC VOID   *mRamdiskData = NULL;
@@ -2656,8 +2764,13 @@ L4TLauncher (
 
   Status = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
   if (EFI_ERROR (Status)) {
-    ErrorPrint (L"%a: Unable to locate L4T Support protocol: %r\r\n", __FUNCTION__, Status);
-    return Status;
+    if (IsIso9660BootMedia (LoadedImage->DeviceHandle) && IsIsoIdFileValid (LoadedImage->DeviceHandle)) {
+      ErrorPrint (L"%a: L4T Support protocol not found, but device is valid ISO installation media, using fallback\r\n", __FUNCTION__);
+      gL4TSupportProtocol = &mFallbackL4TSupport;
+    } else {
+      ErrorPrint (L"%a: Unable to locate L4T Support protocol: %r\r\n", __FUNCTION__, Status);
+      return Status;
+    }
   }
 
   Status = ProcessBootParams (LoadedImage, &BootParams);
