@@ -64,8 +64,20 @@ For details on generating certificates, see https://github.com/tianocore/tianoco
 The EDK2 capsule generation and signing tool is here: https://github.com/tianocore/edk2/blob/master/BaseTools/Source/Python/Capsule/GenerateCapsule.py.
 
 ## Special Features
-### Single Image Capsule Update
-The Capsule Update feature updates all system firmware images.  For development purposes, a capsule with a single firmware image may also be used to update that image in one boot chain.
+### Minimal capsule updates (development only)
+For development, a capsule may contain only a subset of firmware images instead of a full system firmware package. Additionally, the update may be directed at either boot chain and normal boot chain management is not performed.
 
-The enable this support, the PCD gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate must be set to TRUE.  Before a single image capsule is processed, the FmpCapsuleSinglePartitionChain UEFI variable (GUID=781e084c-a330-417c-b678-38e696380cb9) must be set to the desired boot chain to be updated (0=A, 1=B).  An active boot chain firmware image can only be updated if the PCD gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition is set to TRUE.
+**Configuration**
+
+- The desired boot chain to update is selected using the **FmpCapsuleSinglePartitionChain** UEFI variable (GUID `781e084c-a330-417c-b678-38e696380cb9`, values `0` = chain A, `1` = chain B).
+- An active boot chain firmware image can only be updated if the PCD **gNVIDIATokenSpaceGuid.PcdOverwriteActiveFwPartition** is set to TRUE.
+- **Single-image capsule:** Either **gNVIDIATokenSpaceGuid.PcdFmpSingleImageUpdate** or **gNVIDIATokenSpaceGuid.PcdFmpMultiImageMinimalUpdate** must be TRUE, or the single-image capsule is rejected as unsupported.
+- **Multi-image capsule:** **gNVIDIATokenSpaceGuid.PcdFmpMultiImageMinimalUpdate** must be TRUE to use the minimal path; otherwise the update follows the full multi-image / production rules.
+
+**Behavior**
+
+- The firmware applies each image in the capsule that matches a platform **FwImage** partition name; partitions that are not in the capsule are not required for minimal updates.
+- The following image names are **not** updated on the minimal path (they are skipped if present): **GPT**, **update_inactive_partitions**, **BCT-boot-chain_backup**.  Minimal updates do not perform GPT / inactive-partition metadata updates that full updates may perform.
+
+**Note:** Minimal updates are for advanced development workflows and do not replace a complete, validated firmware package for production capsule update with protective boot chain management.
 
