@@ -1,0 +1,28 @@
+## @file
+#
+#  ProtocolHelperLib stubs for host based tests
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ProtocolHelperStubLib
+  FILE_GUID                      = 8ffd26c3-f72f-4fdb-9efb-3d1785e68439
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ProtocolHelperLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+
+[Sources.common]
+  ProtocolHelperStubLib.c
