@@ -67,7 +67,8 @@
   gNVIDIAL4TLauncherSupportProtocol
   gNVIDIAPlatformKernelArgsProtocolGuid
   gNVIDIACvmEepromProtocolGuid
-  gEfiHash2ProtocolGuid
+  gEfiHash2ServiceBindingProtocolGuid   ## CONSUMES
+  gEfiHash2ProtocolGuid                 ## CONSUMES
 
 [UserExtensions.TianoCore."ExtraFiles"]
   L4TLauncherExtra.uni

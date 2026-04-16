@@ -22,6 +22,7 @@
 #include <Protocol/LoadedImage.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/Hash2.h>
+#include <Protocol/ServiceBinding.h>
 
 #include <Guid/SystemResourceTable.h>
 #include <Protocol/Eeprom.h>
@@ -262,9 +263,10 @@ ReadFileContent (
   @param[out] HexString      Buffer to receive the 64-character hex string (+ NUL).
   @param[in]  HexStringSize  Size of HexString buffer (must be >= 65).
 
-  @retval EFI_SUCCESS        Hash computed and converted successfully.
-  @retval EFI_UNSUPPORTED    EFI_HASH2_PROTOCOL not available.
-  @retval Other              Error from hash protocol.
+  @retval EFI_SUCCESS          Hash computed and converted successfully.
+  @retval EFI_BUFFER_TOO_SMALL HexStringSize is less than SHA256_HEX_STRING_SIZE + 1.
+  @retval EFI_NOT_FOUND        EFI_HASH2_SERVICE_BINDING_PROTOCOL not available.
+  @retval Other                Error from CreateChild, HandleProtocol, or Hash operation.
 
 **/
 STATIC
@@ -277,19 +279,47 @@ ComputeSha256Hex (
   IN  UINTN  HexStringSize
   )
 {
-  EFI_STATUS          Status;
-  EFI_HASH2_PROTOCOL  *Hash2;
-  EFI_HASH2_OUTPUT    HashOutput;
-  UINTN               Index;
-  STATIC CONST CHAR8  HexChars[] = "0123456789abcdef";
+  EFI_STATUS                    Status;
+  EFI_STATUS                    DestroyStatus;
+  EFI_SERVICE_BINDING_PROTOCOL  *Hash2Sb;
+  EFI_HANDLE                    ChildHandle;
+  EFI_HASH2_PROTOCOL            *Hash2;
+  EFI_HASH2_OUTPUT              HashOutput;
+  UINTN                         Index;
+  STATIC CONST CHAR8            HexChars[] = "0123456789abcdef";
 
   if (HexStringSize < SHA256_HEX_STRING_SIZE + 1) {
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  Status = gBS->LocateProtocol (&gEfiHash2ProtocolGuid, NULL, (VOID **)&Hash2);
+  // 1. Locate the service binding (what Hash2DxeCrypto actually installs)
+  Status = gBS->LocateProtocol (
+                  &gEfiHash2ServiceBindingProtocolGuid,
+                  NULL,
+                  (VOID **)&Hash2Sb
+                  );
   if (EFI_ERROR (Status)) {
-    PreIsoLogPrint (L"%a: EFI_HASH2_PROTOCOL not available: %r\r\n", __FUNCTION__, Status);
+    PreIsoLogPrint (L"%a: EFI_HASH2_SERVICE_BINDING_PROTOCOL not available: %r\r\n", __FUNCTION__, Status);
+    return Status;
+  }
+
+  // 2. Create a child handle — this installs gEfiHash2ProtocolGuid on it
+  ChildHandle = NULL;
+  Status      = Hash2Sb->CreateChild (Hash2Sb, &ChildHandle);
+  if (EFI_ERROR (Status)) {
+    PreIsoLogPrint (L"%a: Hash2 CreateChild failed: %r\r\n", __FUNCTION__, Status);
+    return Status;
+  }
+
+  // 3. Retrieve Hash2 from the child handle
+  Status = gBS->HandleProtocol (ChildHandle, &gEfiHash2ProtocolGuid, (VOID **)&Hash2);
+  if (EFI_ERROR (Status)) {
+    PreIsoLogPrint (L"%a: HandleProtocol(Hash2) failed: %r\r\n", __FUNCTION__, Status);
+    DestroyStatus = Hash2Sb->DestroyChild (Hash2Sb, ChildHandle);
+    if (EFI_ERROR (DestroyStatus)) {
+      PreIsoLogPrint (L"%a: DestroyChild failed: %r\r\n", __FUNCTION__, DestroyStatus);
+    }
+
     return Status;
   }
 
@@ -300,6 +330,13 @@ ComputeSha256Hex (
                     DataSize,
                     &HashOutput
                     );
+
+  // 4. Destroy the child regardless of hash outcome
+  DestroyStatus = Hash2Sb->DestroyChild (Hash2Sb, ChildHandle);
+  if (EFI_ERROR (DestroyStatus)) {
+    PreIsoLogPrint (L"%a: DestroyChild failed: %r\r\n", __FUNCTION__, DestroyStatus);
+  }
+
   if (EFI_ERROR (Status)) {
     PreIsoLogPrint (L"%a: SHA256 hash failed: %r\r\n", __FUNCTION__, Status);
     return Status;
