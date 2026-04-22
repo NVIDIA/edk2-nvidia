@@ -1861,6 +1861,70 @@ EnsurePlatformSpecVariables (
 }
 
 /**
+  Print an error message indicating the current UEFI firmware is too old
+  to support ISO installation.
+
+  @param[in]  CurrentSlotVersion  Version of the current active slot.
+
+**/
+STATIC
+VOID
+PrintUefiVersionUnsupported (
+  IN UINT32  CurrentSlotVersion
+  )
+{
+  PreIsoLogPrint (L"\r\n");
+  PreIsoLogPrint (L"  *** NVIDIA UEFI Firmware Version Too Old ***\r\n");
+  PreIsoLogPrint (L"\r\n");
+  PreIsoLogPrint (
+    L"  Current version : %d.%02d.%02d\r\n",
+    (CurrentSlotVersion >> 16) & 0xFF,
+    (CurrentSlotVersion >> 8) & 0xFF,
+    CurrentSlotVersion & 0xFF
+    );
+  PreIsoLogPrint (L"\r\n");
+  PreIsoLogPrint (L"  Your UEFI version is too old and does not support the current ISO.\r\n");
+  PreIsoLogPrint (L"  Please install latest JP5 BSP and try again.\r\n");
+  PreIsoLogPrint (L"\r\n");
+}
+
+/**
+  Check whether the current chain version meets the minimum requirement
+  for capsule update with layout change
+
+  If the current slot version is earlier than 35.5.0, the UEFI firmware
+  does not support capsule update with layout change. In that case the
+  error banner is displayed and FALSE is returned; the caller converts
+  this into EFI_ABORTED to abort ISO installation.
+
+  @param[in]  CurrentSlotVersion  Version of the current active slot.
+
+  @retval TRUE    Firmware version meets the minimum requirement.
+  @retval FALSE   Firmware version is too old; capsule update with layout change is not supported.
+
+**/
+STATIC
+BOOLEAN
+IsCapsuleUpdateSupportLayoutChange (
+  IN UINT32  CurrentSlotVersion
+  )
+{
+  // 35.5.0 (0x230500) is the minimum UEFI version that supports
+  // capsule update with layout change.
+  if (CurrentSlotVersion < 0x230500) {
+    PreIsoLogWrite (
+      L"%a: Current slot version (0x%x) < 35.5.0 (0x230500) -> UEFI too old\r\n",
+      __FUNCTION__,
+      CurrentSlotVersion
+      );
+    PrintUefiVersionUnsupported (CurrentSlotVersion);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
   Determine if capsule update is needed based on version comparison.
 
   @param[in]  PreIsoInstallerVersion      Version from capsule.
@@ -1880,9 +1944,19 @@ ShouldPerformCapsuleUpdate (
   IN UINT32  NonCurrentSlotVersion
   )
 {
+  if (PreIsoInstallerVersion < NonCurrentSlotVersion) {
+    PreIsoLogWrite (
+      L"%a: ISO version (0x%x) < non-current slot version (0x%x) -> Skipping update\r\n",
+      __FUNCTION__,
+      PreIsoInstallerVersion,
+      NonCurrentSlotVersion
+      );
+    return FALSE;
+  }
+
   if (PreIsoInstallerVersion > CurrentSlotVersion) {
     PreIsoLogWrite (
-      L"%a: Capsule version (0x%x) > current slot version (0x%x) -> Update required\r\n",
+      L"%a: ISO version (0x%x) > current slot version (0x%x) -> Update required\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
       CurrentSlotVersion
@@ -1892,7 +1966,7 @@ ShouldPerformCapsuleUpdate (
 
   if (PreIsoInstallerVersion > NonCurrentSlotVersion) {
     PreIsoLogWrite (
-      L"%a: Capsule version (0x%x) > non-current slot version (0x%x) -> Update required\r\n",
+      L"%a: ISO version (0x%x) > non-current slot version (0x%x) -> Update required\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
       NonCurrentSlotVersion
@@ -1900,7 +1974,7 @@ ShouldPerformCapsuleUpdate (
     return TRUE;
   }
 
-  PreIsoLogWrite (L"%a: Capsule version (0x%x) is not newer than any slot -> Skipping update\r\n", __FUNCTION__, PreIsoInstallerVersion);
+  PreIsoLogWrite (L"%a: ISO version (0x%x) is not newer than any slot -> Skipping update\r\n", __FUNCTION__, PreIsoInstallerVersion);
   return FALSE;
 }
 
@@ -1939,13 +2013,13 @@ ConfirmCapsuleUpdate (
   PreIsoLogPrint (L"  A newer firmware version has been detected.\r\n");
   PreIsoLogPrint (
     L"  New FW version  : %d.%02d.%02d\r\n",
-    (PreIsoInstallerVersion >> 16) & 0xFFFF,
+    (PreIsoInstallerVersion >> 16) & 0xFF,
     (PreIsoInstallerVersion >> 8) & 0xFF,
     PreIsoInstallerVersion & 0xFF
     );
   PreIsoLogPrint (
     L"  Current version : %d.%02d.%02d\r\n",
-    (CurrentSlotVersion >> 16) & 0xFFFF,
+    (CurrentSlotVersion >> 16) & 0xFF,
     (CurrentSlotVersion >> 8) & 0xFF,
     CurrentSlotVersion & 0xFF
     );
@@ -2183,6 +2257,11 @@ RunPreIsoInstaller (
 
   PreIsoLogWrite (L"%a: Current Boot Chain: %d\r\n", __FUNCTION__, BootChain);
   PreIsoLogWrite (L"%a: Capsule Version: 0x%x, Slot 0: 0x%x, Slot 1: 0x%x\r\n", __FUNCTION__, PreIsoInstallerVersion, VersionSlotA, VersionSlotB);
+
+  if (!IsCapsuleUpdateSupportLayoutChange (CurrentSlotVersion)) {
+    Status = EFI_ABORTED;
+    goto Done;
+  }
 
   NeedsCapsuleUpdate = ShouldPerformCapsuleUpdate (
                          PreIsoInstallerVersion,
