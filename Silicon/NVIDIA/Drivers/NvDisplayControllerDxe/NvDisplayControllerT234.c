@@ -287,7 +287,7 @@ ForceMaxEmcFrequency (
   UINT32      IsoBandwidthKbps, MemclockFloorKbps;
 
   if (Enable) {
-    IsoBandwidthKbps  = 4500 * SIZE_1KB; /* 4.5 GB/s */
+    IsoBandwidthKbps  = 4500U * 1000U; /* 4.5 GB/s decimal */
     MemclockFloorKbps = MAX_UINT32;
   } else {
     /*
@@ -569,11 +569,13 @@ EnableHwT234 (
     }
   } else {
     /* Shutdown display HW if and only if we were called to disable
-       the display. */
-    Status = NvDisplayHwShutdown (
-               Private->DriverHandle,
-               Private->ControllerHandle
-               );
+       the display, and clocks were enabled */
+    if (Private->ClocksEnabled) {
+      Status = NvDisplayHwShutdown (
+                 Private->DriverHandle,
+                 Private->ControllerHandle
+                 );
+    }
 
 Disable:
     if (Private->GpiosConfigured) {
@@ -702,10 +704,8 @@ NvDisplayControllerStartT234 (
     goto Exit;
   }
 
-  Status = NvDisplayControllerStart (DriverHandle, ControllerHandle, &Private->Hw);
-  if (!EFI_ERROR (Status)) {
-    Private = NULL;
-  }
+  Status  = NvDisplayControllerStart (DriverHandle, ControllerHandle, &Private->Hw);
+  Private = NULL;
 
 Exit:
   if (Private != NULL) {
