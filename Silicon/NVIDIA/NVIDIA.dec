@@ -539,6 +539,9 @@
 #should OR in the bits that match the platform's actual ACPI capabilities.
   gNVIDIATokenSpaceGuid.PcdAcpiFadtFixedFeatureFlags|0x00000000|UINT32|0x00000171
 
+#T26x CPUBL params TEGRABL_MAX_SOCKETS
+  gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount|2|UINT8|0x000000B1
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

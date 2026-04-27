@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -47,10 +47,11 @@ STATIC TEGRA_FUSE_INFO  T264FuseList[] = {
   { "fuse-isp-disable-isp1", T264_FUSE_ISP_DISABLE_OFFSET, BIT1                        },
 };
 
-STATIC UINT64  T264SocketFuseBaseAddr[TEGRABL_MAX_SOCKETS] = {
+STATIC UINT64  T264SocketFuseBaseAddr[] = {
   T264_FUSE_BASE_SOCKET_0,
   T264_FUSE_BASE_SOCKET_1,
 };
+STATIC_ASSERT (ARRAY_SIZE (T264SocketFuseBaseAddr) >= TEGRABL_MAX_SOCKETS, "T264SocketFuseBaseAddr array size mismatch");
 
 STATIC UINT32  T264CoreDisableFuseMask[T264_MAX_CORE_DISABLE_WORDS] = {
   T264_CPU_FLOORSWEEPING_DISABLE_MASK_0,
@@ -61,7 +62,7 @@ STATIC UINT32  T264CoreDisableFuseOffset[T264_MAX_CORE_DISABLE_WORDS] = {
 };
 
 STATIC COMMON_RESOURCE_CONFIG_INFO  T264CommonResourceConfigInfo = {
-  T264_MAX_SOCKETS,
+  TEGRABL_MAX_SOCKETS,
   T264_MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,

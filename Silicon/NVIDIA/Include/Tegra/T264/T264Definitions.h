@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -14,7 +14,6 @@
 #define T264_SOCKET_OFFSET  0x10000000000
 #define T264_SOCKET_SHIFT   40
 #define T264_SOCKET_MASK    0x1
-#define T264_MAX_SOCKETS    2
 
 // GIC
 #define T264_GIC_DISTRIBUTOR_BASE             0x08146000000

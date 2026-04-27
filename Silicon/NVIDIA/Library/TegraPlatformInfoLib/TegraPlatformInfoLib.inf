@@ -32,3 +32,4 @@
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdMiscRegBaseAddress
+  gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount

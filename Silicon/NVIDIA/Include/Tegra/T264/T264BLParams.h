@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -10,10 +10,15 @@
 #define __T264_BL_PARAMS_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Library/PcdLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 
-#define TEGRABL_MAX_SOCKETS                     2U
+#define TEGRABL_MAX_SOCKETS  FixedPcdGet8(PcdT26xCpublSocketCount)
+#if TEGRABL_MAX_SOCKETS == 0 || TEGRABL_MAX_SOCKETS > 2
+  #error "TEGRABL_MAX_SOCKETS must be 1 or 2"
+#endif
+
 #define TEGRABL_SHA512_DIGEST_BYTES             64U
 #define TEGRABL_MAX_CPUBL_OEM_FW_RATCHET_INDEX  304U
 #define TEGRABL_NUM_DRAM_BAD_PAGES              1024
