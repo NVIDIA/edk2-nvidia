@@ -1561,3 +1561,8 @@ menu "Miscellaneous"
     The GUID value to identify the platform image.  This rarely needs to be
     changed.
 endmenu
+
+config T26X_CPUBL_SOCKET_COUNT
+  int
+  default 2 if SOC_T26X_IS_T268
+  default 2 if !SOC_T26X_IS_T268
