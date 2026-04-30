@@ -687,6 +687,8 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdTurnOffUsbLegacySupport|TRUE
 
+  gArmTokenSpaceGuid.PcdSmmuIoMmuStrictAccessPermissions|TRUE
+
   ## Indicates if S3 performance data will be supported in ACPI FPDT table.
   #   TRUE  - S3 performance data will be supported in ACPI FPDT table.
   #   FALSE - S3 performance data will not be supported in ACPI FPDT table.
