@@ -16,6 +16,18 @@
 !include Platform/NVIDIA/HostBasedTests/HostBasedTests.dsc.inc
 
 [Components]
+
+  #
+  # BootChainDxe Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/BootChainDxe/UnitTest/BootChainDxeUnitTestsHost.inf {
+    <LibraryClasses>
+      UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
+      UefiBootServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiBootServicesTableStubLib/UefiBootServicesTableStubLib.inf
+      PlatformResourceLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PlatformResourceStubLib/PlatformResourceStubLib.inf
+      StatusRegLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StatusRegStubLib/StatusRegStubLib.inf
+  }
+
   #
   # FvbDxe Host Based UnitTest Support
   #

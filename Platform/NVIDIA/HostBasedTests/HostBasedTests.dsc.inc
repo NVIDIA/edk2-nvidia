@@ -48,6 +48,7 @@
   WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
   MmServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/MmServicesTableStubLib/MmServicesTableStubLib.inf
   ArmSvcLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/ArmSvcStubLib/ArmSvcStubLib.inf
+  GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
 
 [BuildOptions.common.EDKII.HOST_APPLICATION]
 !ifdef $(HOSTAPP_STATIC_LINK)

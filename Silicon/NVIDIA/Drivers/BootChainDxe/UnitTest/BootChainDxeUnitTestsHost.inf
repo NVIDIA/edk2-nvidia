@@ -1,0 +1,47 @@
+## @file
+# Host-based unit tests for BootChainDxe.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = BootChainDxeUnitTestsHost
+  FILE_GUID      = a3e1f2c7-4d82-4b91-a055-3f9e2d1c8b47
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  BootChainDxeUnitTests.c
+  ../BootChainDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PrintLib
+  UnitTestLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  PlatformResourceLib
+  StatusRegLib
+
+[Guids]
+  gEfiEventReadyToBootGuid
+  gEfiGlobalVariableGuid
+  gNVIDIAPublicVariableGuid
+  gNVIDIATokenSpaceGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[Protocols]
+  gNVIDIABrBctUpdateProtocolGuid
+  gNVIDIABootChainProtocolGuid
