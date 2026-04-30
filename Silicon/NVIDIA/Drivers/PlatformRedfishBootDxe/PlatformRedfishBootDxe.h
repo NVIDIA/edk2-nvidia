@@ -2,7 +2,7 @@
   Platform Redfish boot order driver header file.
 
   (C) Copyright 2022 Hewlett Packard Enterprise Development LP<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -46,7 +46,7 @@ extern UINT8  PlatformRedfishBootVfrBin[];
 #define ADDENDUM_PROTOCOL_VERSION      0x01
 #define CONFIGURE_LANGUAGE_PREFIX      "x-UEFI-redfish-"
 #define SCHEMA_STRING_SIZE             64
-#define CONFIG_LANGUAGE_SIZE           32
+#define CONFIG_LANGUAGE_SIZE           (4 + 4 + 2 + 255 + 1) // "Boot" + OptionNum + ": " + desc(max 255 CHAR16) + NULL char
 #define REDFISH_BOOT_OBJECT_NAME       "Boot"
 #define REDFISH_BOOTORDER_OBJECT_NAME  "BootOrder"
 #define REDFISH_BOOT_DEBUG_DUMP        DEBUG_VERBOSE

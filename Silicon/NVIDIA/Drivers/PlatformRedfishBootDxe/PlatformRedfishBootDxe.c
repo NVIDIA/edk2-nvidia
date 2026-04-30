@@ -90,7 +90,14 @@ UpdateConfigLanguageToValues (
     return EFI_NOT_FOUND;
   }
 
-  UnicodeSPrint (ConfigLanguage, sizeof (ConfigLanguage), L"Boot%04x", BootOption->OptionNumber);
+  if ((BootOption->Description == NULL) || (BootOption->Description[0] == L'\0')) {
+    //
+    // For the case that the description is NULL or empty, use the option number only.
+    //
+    UnicodeSPrint (ConfigLanguage, sizeof (ConfigLanguage), L"Boot%04x", BootOption->OptionNumber);
+  } else {
+    UnicodeSPrint (ConfigLanguage, sizeof (ConfigLanguage), L"Boot%04x: %s", BootOption->OptionNumber, BootOption->Description);
+  }
 
   for (SchemaIndex = 0; SchemaIndex < SchemaCount; SchemaIndex++) {
     AsciiSPrint (SchemaString, sizeof (SchemaString), "%a%a.%a", CONFIGURE_LANGUAGE_PREFIX, mSupportComputerSystemSchema[SchemaIndex].Schema, mSupportComputerSystemSchema[SchemaIndex].Version);
