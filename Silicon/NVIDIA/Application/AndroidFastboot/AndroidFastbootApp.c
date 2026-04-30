@@ -10,8 +10,11 @@
 **/
 
 #include "AndroidFastbootApp.h"
+#include "FastbootMenu.h"
 
-#include <Uefi/UefiBaseType.h>
+#include <Uefi.h>
+
+#include <Library/BaseLib.h>
 
 #include <Protocol/AndroidFastbootTransport.h>
 #include <Protocol/AndroidFastbootPlatform.h>
@@ -32,6 +35,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiApplicationEntryPoint.h>
+#include <Library/UefiBootManagerLib.h>
 #include <Library/PrintLib.h>
 #include <Library/AndroidBcbLib.h>
 #include <Library/OpteeNvLib.h>
@@ -46,6 +50,7 @@ STATIC FASTBOOT_TRANSPORT_PROTOCOL  *mTransport;
 STATIC FASTBOOT_PLATFORM_PROTOCOL   *mPlatform;
 
 STATIC EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *mTextOut;
+STATIC EFI_SIMPLE_TEXT_INPUT_PROTOCOL   *mTextIn;
 
 typedef enum {
   ExpectCmdState,
@@ -68,7 +73,7 @@ STATIC EFI_EVENT  mFinishedEvent;
 
 STATIC EFI_EVENT  mFatalSendErrorEvent;
 
-// This macro uses sizeof - only use it on arrays (i.e. string literals)
+// This macro uses sizeof - only use it on array (i.e. string literals)
 #define SEND_LITERAL(Str)            mTransport->Send (       \
                                         sizeof (Str) - 1,     \
                                         Str,                  \
@@ -127,12 +132,14 @@ HandleDownload (
   mNumDataBytes = AsciiStrHexToUint64 (NumBytesString);
   if (mNumDataBytes == 0) {
     mTextOut->OutputString (mTextOut, L"ERROR: Fail to get the number of bytes to download.\r\n");
+    FastbootMenuSetStatus (L"Fastboot: download failed (invalid size)");
     SEND_LITERAL ("FAILFailed to get the number of bytes to download");
     return;
   }
 
   UnicodeSPrint (OutputString, sizeof (OutputString), L"Downloading %d bytes\r\n", mNumDataBytes);
   mTextOut->OutputString (mTextOut, OutputString);
+  FastbootMenuSetStatus (L"Fastboot: download starting (%Lu bytes)", mNumDataBytes);
 
   mDataBuffer = AllocatePool (mNumDataBytes);
   if (mDataBuffer == NULL) {
@@ -263,6 +270,7 @@ HandleFlash (
   // Build output string
   UnicodeSPrint (OutputString, sizeof (OutputString), L"Flashing partition %a\r\n", PartitionName);
   mTextOut->OutputString (mTextOut, OutputString);
+  FastbootMenuSetStatus (L"Fastboot: flashing %a", PartitionName);
 
   if (mDataBuffer == NULL) {
     // Doesn't look like we were sent any data
@@ -284,12 +292,15 @@ HandleFlash (
   if (Status == EFI_NOT_FOUND) {
     SEND_LITERAL ("FAILNo such partition.");
     mTextOut->OutputString (mTextOut, L"No such partition.\r\n");
+    FastbootMenuSetStatus (L"Fastboot: flash failed (no partition)");
   } else if (EFI_ERROR (Status)) {
     SEND_LITERAL ("FAILError flashing partition.");
     mTextOut->OutputString (mTextOut, L"Error flashing partition.\r\n");
     DEBUG ((DEBUG_ERROR, "Couldn't flash image:  %r\n", Status));
+    FastbootMenuSetStatus (L"Fastboot: flash error");
   } else {
     mTextOut->OutputString (mTextOut, L"Done.\r\n");
+    FastbootMenuSetStatus (L"Fastboot: flash OK — %a", PartitionName);
     SEND_LITERAL ("OKAY");
   }
 }
@@ -311,13 +322,16 @@ HandleErase (
   // Build output string
   UnicodeSPrint (OutputString, sizeof (OutputString), L"Erasing partition %a\r\n", PartitionName);
   mTextOut->OutputString (mTextOut, OutputString);
+  FastbootMenuSetStatus (L"Fastboot: erasing %a", PartitionName);
 
   Status = mPlatform->ErasePartition (PartitionName);
   if (EFI_ERROR (Status)) {
     SEND_LITERAL ("FAILCheck device console.");
     DEBUG ((DEBUG_ERROR, "Couldn't erase image:  %r\n", Status));
+    FastbootMenuSetStatus (L"Fastboot: erase failed");
   } else {
     SEND_LITERAL ("OKAY");
+    FastbootMenuSetStatus (L"Fastboot: erase OK — %a", PartitionName);
   }
 }
 
@@ -335,6 +349,7 @@ HandleBoot (
   }
 
   mTextOut->OutputString (mTextOut, L"Booting downloaded image\r\n");
+  FastbootMenuSetStatus (L"Fastboot: booting downloaded image");
 
   if (mDataBuffer == NULL) {
     // Doesn't look like we were sent any data
@@ -368,8 +383,20 @@ STATIC CONST CHAR8  *CONST  mFactoryResetPartitions[] = {
   "MDA",
 };
 
+/**
+  Internal: erase the partitions listed in mFactoryResetPartitions
+  (userdata, CAC, MDA). Missing partitions are treated as benign and
+  skipped; fail-fast on the first hard error.
+
+  This raw wipe deliberately does NOT consult fac_rst_protection.
+  Public entry points (FastbootFactoryReset, FastbootUnlockBootloader)
+  are responsible for the FRP gate; FastbootLockBootloader is the
+  intentional exception (lock is the safe direction and must not be
+  blocked by FRP).
+**/
+STATIC
 EFI_STATUS
-FastbootFactoryReset (
+EraseFactoryResetPartitions (
   VOID
   )
 {
@@ -527,13 +554,40 @@ Exit:
 }
 
 EFI_STATUS
+FastbootFactoryReset (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     UnlockAllowed;
+
+  Status = GetUnlockAbility (&UnlockAllowed);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: read unlock ability: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  if (!UnlockAllowed) {
+    DEBUG ((DEBUG_ERROR, "%a: factory reset blocked by fac_rst_protection\n", __FUNCTION__));
+    return EFI_ACCESS_DENIED;
+  }
+
+  return EraseFactoryResetPartitions ();
+}
+
+EFI_STATUS
 FastbootLockBootloader (
   VOID
   )
 {
   EFI_STATUS  Status;
 
-  Status = FastbootFactoryReset ();
+  //
+  // Lock is the safe direction (re-enabling AVB protection); always
+  // wipe user data without consulting fac_rst_protection so an
+  // unlocked device can always be re-locked from the menu.
+  //
+  Status = EraseFactoryResetPartitions ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -565,7 +619,7 @@ FastbootUnlockBootloader (
     return EFI_ACCESS_DENIED;
   }
 
-  Status = FastbootFactoryReset ();
+  Status = EraseFactoryResetPartitions ();
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -614,6 +668,34 @@ HandleFlashingCommand (
     return;
   }
 
+  //
+  // Even when the host issued the lock/unlock command over USB the
+  // user must still physically confirm at the device console -- this
+  // mirrors stock Android `fastboot oem unlock` behaviour and stops a
+  // remote (or unattended-USB) attacker from flipping the AVB lock
+  // bit without anyone in front of the screen.
+  //
+  SEND_LITERAL ("INFONote: please Confirm/Cancel on screen");
+
+  {
+    BOOLEAN  Confirmed;
+
+    Confirmed = WantLocked
+                  ? FastbootMenuLockConfirmFromHost ()
+                  : FastbootMenuUnlockConfirmFromHost ();
+    if (!Confirmed) {
+      if (WantLocked) {
+        SEND_LITERAL ("FAILLock cancelled at device");
+        FastbootMenuSetStatus (L"Fastboot: lock cancelled at device");
+      } else {
+        SEND_LITERAL ("FAILUnlock cancelled at device");
+        FastbootMenuSetStatus (L"Fastboot: unlock cancelled at device");
+      }
+
+      return;
+    }
+  }
+
   Status = WantLocked ? FastbootLockBootloader () : FastbootUnlockBootloader ();
   switch (Status) {
     case EFI_SUCCESS:
@@ -651,6 +733,7 @@ HandleOemCommand (
     return;
   }
 
+  FastbootMenuSetStatus (L"Fastboot: OEM command");
   Status = mPlatform->DoOemCommand (Command);
   if (Status == EFI_NOT_FOUND) {
     SEND_LITERAL ("FAILOEM Command not recognised.");
@@ -699,8 +782,7 @@ AcceptCmd (
   } else if (MATCH_CMD_LITERAL ("continue", Command)) {
     SEND_LITERAL ("OKAY");
     mTextOut->OutputString (mTextOut, L"Received 'continue' command. Exiting Fastboot mode\r\n");
-
-    gBS->SignalEvent (mFinishedEvent);
+    FastbootMenuSetStatus (L"Fastboot: continue (menu still active)");
   } else if (MATCH_CMD_LITERAL ("reboot", Command)) {
     if (MATCH_CMD_LITERAL ("reboot-booloader", Command)) {
       // fastboot_protocol.txt:
@@ -777,6 +859,12 @@ AcceptData (
       (mBytesReceivedSoFar * 100) / mNumDataBytes // percentage
       );
     mTextOut->OutputString (mTextOut, OutputString);
+    FastbootMenuSetStatus (
+      L"Fastboot: download %Lu / %Lu (%Lu%%)",
+      mBytesReceivedSoFar,
+      mNumDataBytes,
+      (mNumDataBytes == 0) ? 0 : (mBytesReceivedSoFar * 100) / mNumDataBytes
+      );
   }
 
   if (mBytesReceivedSoFar == mNumDataBytes) {
@@ -785,29 +873,26 @@ AcceptData (
     mTextOut->OutputString (mTextOut, L"\r\n");
     SEND_LITERAL ("OKAY");
     mState = ExpectCmdState;
+    FastbootMenuSetStatus (L"Fastboot: download complete");
   }
 }
 
-/*
-  This is the NotifyFunction passed to CreateEvent in the FastbootAppEntryPoint
-  It will be called by the UEFI event framework when the transport protocol
-  implementation signals that data has been received from the Fastboot host.
-  The parameters are ignored.
-*/
 STATIC
-VOID
-DataReady (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+BOOLEAN
+DrainFastbootPackets (
+  VOID
   )
 {
   UINTN       Size;
   VOID        *Data;
   EFI_STATUS  Status;
+  BOOLEAN     Any;
 
+  Any = FALSE;
   do {
     Status = mTransport->Receive (&Size, &Data);
     if (!EFI_ERROR (Status)) {
+      Any = TRUE;
       if (mState == ExpectCmdState) {
         AcceptCmd (Size, (CHAR8 *)Data);
       } else if (mState == ExpectDataState) {
@@ -826,8 +911,11 @@ DataReady (
     // (Put a newline at the beginning as we are probably in the data phase,
     //  so the download progress line, with no '\n' is probably on the console)
     mTextOut->OutputString (mTextOut, L"\r\nFatal error receiving data. Exiting.\r\n");
+    FastbootMenuSetStatus (L"Fastboot: fatal receive error");
     gBS->SignalEvent (mFinishedEvent);
   }
+
+  return Any;
 }
 
 /*
@@ -844,6 +932,180 @@ FatalErrorNotify (
   gBS->SignalEvent (mFinishedEvent);
 }
 
+/**
+  Try every non-Fastboot, non-app, non-hidden, non-shell, active
+  boot option in BootOrder until one of them transfers control
+  to the OS (which never returns) or the candidate list is
+  exhausted.
+
+  Why we do this from inside the Fastboot app instead of just
+  returning to BDS:
+
+  Standard EDK2 BDS (MdeModulePkg/Universal/BdsDxe/BdsEntry.c
+  BootBootOptions()) already filters CATEGORY_APP and inactive
+  entries, so in principle it would naturally land on the kernel
+  boot option after our Fastboot returned — except that the
+  spec-mandated post-boot logic
+
+      EfiBootManagerBoot (&BootOptions[Index]);
+      if ((BootManagerMenu != NULL) &&
+          (BootOptions[Index].Status == EFI_SUCCESS)) {
+        EfiBootManagerBoot (BootManagerMenu);
+        break;
+      }
+
+  treats our EFI_SUCCESS return as "the OS booted and exited
+  cleanly", and immediately invokes BootManagerMenu. On this
+  platform BootManagerMenu is "Enter Setup", so the kernel
+  boot option in BootOrder[N] is never reached. By driving the
+  boot loop here we keep control inside the app until something
+  successfully boots.
+
+  Filtering rules:
+
+    - skip LOAD_OPTION_HIDDEN entries (platform internals like
+      "Enter Setup" / "BootManagerMenuApp");
+    - skip the Fastboot boot option itself (description
+      "Android Fastboot") so we don't recursively re-enter
+      ourselves;
+    - skip the "UEFI Shell" entry: a clean shell `exit` returns
+      EFI_SUCCESS, which (per the BDS rationale above) would
+      strand us at the BootManagerMenu instead of the kernel.
+
+  Behaviour on each candidate:
+
+    - if EfiBootManagerBoot does not return, the OS is running.
+      Done.
+    - if it returns with Status==EFI_NOT_FOUND/etc. (load
+      failure — typical of auto-generated eMMC user-data
+      entries that have no /EFI/BOOT/BOOTAA64.EFI), we move
+      on to the next candidate.
+    - if it returns with Status==EFI_SUCCESS (a synchronous
+      OS-side exit that we did not expect), we still move on
+      rather than dropping back to Setup.
+
+  When no candidate succeeds, we just return; the caller then
+  falls back to BDS's normal "return to BDS" path (which on
+  this platform terminates at "Enter Setup").
+**/
+STATIC
+VOID
+BootNextAndroidKernelOption (
+  VOID
+  )
+{
+  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions;
+  UINTN                         BootOptionCount;
+  UINTN                         Index;
+  UINTN                         Attempts;
+
+  BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount, LoadOptionTypeBoot);
+  if (BootOptions == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a: no boot options found\n", __FUNCTION__));
+    return;
+  }
+
+  //
+  // Iterate every candidate in BootOrder, *not* just the first one. On this
+  // platform BootOrder typically looks like:
+  //
+  //   Boot0005 = Android Fastboot              (us — skip to avoid recursion)
+  //   Boot0001 = UEFI Micron ... eMMC User Data (auto-generated; ext4 mount
+  //                                             fails when no EFI loader is
+  //                                             on the data partition, so
+  //                                             EfiBootManagerBoot returns
+  //                                             EFI_NOT_FOUND)
+  //   Boot0000 = Enter Setup                   (HIDDEN — skip)
+  //   Boot0003 = BootManagerMenuApp            (HIDDEN — skip)
+  //   Boot0004 = UEFI Shell                    (skip: a clean shell `exit`
+  //                                             returns EFI_SUCCESS which
+  //                                             would terminate our chain
+  //                                             before reaching the kernel)
+  //   Boot0002 = UEFI NVIDIA eMMC Kernel Boot  (the actual Android kernel
+  //                                             boot via AndroidBootDxe —
+  //                                             this is what we want)
+  //
+  // Stopping at the first candidate (previous behavior) lands us on Boot0001
+  // which always fails on Android partitioning. Keep trying subsequent
+  // entries until one of them transfers control to the OS (in which case
+  // EfiBootManagerBoot never returns) or we exhaust the list.
+  //
+  Attempts = 0;
+  for (Index = 0; Index < BootOptionCount; Index++) {
+    if ((BootOptions[Index].Attributes & LOAD_OPTION_ACTIVE) == 0) {
+      continue;
+    }
+
+    if ((BootOptions[Index].Attributes & LOAD_OPTION_CATEGORY) != LOAD_OPTION_CATEGORY_BOOT) {
+      continue;
+    }
+
+    if ((BootOptions[Index].Attributes & LOAD_OPTION_HIDDEN) != 0) {
+      continue;
+    }
+
+    if (BootOptions[Index].Description != NULL) {
+      if (StrCmp (BootOptions[Index].Description, L"Android Fastboot") == 0) {
+        continue;
+      }
+
+      //
+      // Skip the UEFI Shell entry: a normal shell session exits with
+      // EFI_SUCCESS which BDS interprets as "OS exited cleanly" and which
+      // would also abort the rest of our fall-through chain. The Android
+      // kernel boot option is what we actually want for both "Continue"
+      // and "Boot safe mode".
+      //
+      if (StrCmp (BootOptions[Index].Description, L"UEFI Shell") == 0) {
+        continue;
+      }
+    }
+
+    Attempts++;
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: trying Boot%04x = %s (attempt %u)\n",
+      __FUNCTION__,
+      BootOptions[Index].OptionNumber,
+      (BootOptions[Index].Description != NULL) ? BootOptions[Index].Description : L"<no name>",
+      (UINT32)Attempts
+      ));
+
+    //
+    // On success EfiBootManagerBoot never returns: the OS takes over. On
+    // load/launch failure it returns with BootOptions[Index].Status set
+    // (commonly EFI_NOT_FOUND); in that case we simply move on to the
+    // next candidate. We do NOT break on a Status==EFI_SUCCESS return
+    // either, because the only way to reach this point with SUCCESS is
+    // a synchronous OS-side `exit` — for which the most useful behavior
+    // is still to keep trying the remaining kernel boot entries instead
+    // of dropping straight back to the BDS Setup menu.
+    //
+    EfiBootManagerBoot (&BootOptions[Index]);
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Boot%04x returned, Status=%r — trying next BootOrder entry\n",
+      __FUNCTION__,
+      BootOptions[Index].OptionNumber,
+      BootOptions[Index].Status
+      ));
+  }
+
+  if (Attempts == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: no suitable kernel boot option in BootOrder\n", __FUNCTION__));
+  } else {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: exhausted %u BootOrder candidate(s) without a successful OS hand-off — falling back to BDS\n",
+      __FUNCTION__,
+      (UINT32)Attempts
+      ));
+  }
+
+  EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+}
+
 EFI_STATUS
 EFIAPI
 FastbootAppEntryPoint (
@@ -851,14 +1113,29 @@ FastbootAppEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                      Status;
-  EFI_EVENT                       ReceiveEvent;
-  EFI_EVENT                       WaitEventArray[2];
-  UINTN                           EventIndex;
-  EFI_SIMPLE_TEXT_INPUT_PROTOCOL  *TextIn;
-  EFI_INPUT_KEY                   Key;
+  EFI_STATUS     Status;
+  EFI_EVENT      ReceiveEvent;
+  EFI_EVENT      MenuTimerEvent;
+  EFI_INPUT_KEY  Key;
+  BOOLEAN        Done;
+  BOOLEAN        ServicedFastboot;
+
+  //
+  // Initialize all event handles to NULL up-front. The cleanup paths below
+  // (both error-return and the final teardown) call gBS->CloseEvent on each
+  // handle unconditionally; CoreCloseEvent treats NULL as EFI_INVALID_PARAMETER
+  // and returns harmlessly, but a stack-resident EFI_EVENT left uninitialised
+  // (or with garbage from a CreateEvent that bailed out without writing
+  // *Event — see the Type==0 rationale at the CreateEvent calls below) will
+  // make CoreCloseEvent dereference a bogus pointer and translation-fault.
+  //
+  ReceiveEvent         = NULL;
+  MenuTimerEvent       = NULL;
+  mFinishedEvent       = NULL;
+  mFatalSendErrorEvent = NULL;
 
   mDataBuffer = NULL;
+  DEBUG ((DEBUG_ERROR, "Fastboot: Entry\n"));
 
   Status = gBS->LocateProtocol (
                   &gAndroidFastbootTransportProtocolGuid,
@@ -892,7 +1169,7 @@ FastbootAppEntryPoint (
     return Status;
   }
 
-  Status = gBS->LocateProtocol (&gEfiSimpleTextInProtocolGuid, NULL, (VOID **)&TextIn);
+  Status = gBS->LocateProtocol (&gEfiSimpleTextInProtocolGuid, NULL, (VOID **)&mTextIn);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Fastboot: Couldn't open Text Input Protocol: %r\n", Status));
     return Status;
@@ -910,18 +1187,27 @@ FastbootAppEntryPoint (
     DEBUG ((DEBUG_ERROR, "Fastboot: Couldn't disable watchdog timer: %r\n", Status));
   }
 
-  // Create event for receipt of data from the host
-  Status = gBS->CreateEvent (
-                  EVT_NOTIFY_SIGNAL,
-                  TPL_CALLBACK,
-                  DataReady,
-                  NULL,
-                  &ReceiveEvent
-                  );
+  //
+  // ReceiveEvent is signalled by the transport when packets arrive; the main
+  // loop drains the queued protocol using non-blocking Receive() (EFI_NOT_READY
+  // when idle). No notify callback — cooperative polling only.
+  //
+  // Type MUST be 0 here, NOT EVT_NOTIFY_WAIT/EVT_NOTIFY_SIGNAL: per UEFI spec
+  // (and CoreCreateEventEx in MdeModulePkg/Core/Dxe/Event/Event.c), passing
+  // either notify-type bit with NotifyFunction == NULL or NotifyTpl <=
+  // TPL_APPLICATION causes CreateEvent to bail out with EFI_INVALID_PARAMETER
+  // *without writing *Event*, so the local would silently retain stack
+  // garbage. CoreCloseEvent later dereferences Event->Signature and faults
+  // on a translation error (FAR=garbage). A Type==0 event has no notify
+  // semantics but is still a valid handle for both gBS->SignalEvent (used
+  // by the transport via mReceiveEvent in FastbootTransportUsb.c) and
+  // gBS->CheckEvent.
+  //
+  Status = gBS->CreateEvent (0, 0, NULL, NULL, &ReceiveEvent);
   ASSERT_EFI_ERROR (Status);
 
-  // Create event for exiting application when "continue" command is received
-  Status = gBS->CreateEvent (0, TPL_CALLBACK, NULL, NULL, &mFinishedEvent);
+  // Signalled on fatal transport error
+  Status = gBS->CreateEvent (0, 0, NULL, NULL, &mFinishedEvent);
   ASSERT_EFI_ERROR (Status);
 
   // Create event to pass to FASTBOOT_TRANSPORT_PROTOCOL.Send, signalling a
@@ -935,42 +1221,125 @@ FastbootAppEntryPoint (
                   );
   ASSERT_EFI_ERROR (Status);
 
-  // Start listening for data
+  Status = gBS->CreateEvent (EVT_TIMER, TPL_APPLICATION, NULL, NULL, &MenuTimerEvent);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Fastboot: CreateEvent MenuTimer failed: %r\n", Status));
+    gBS->CloseEvent (ReceiveEvent);
+    gBS->CloseEvent (mFinishedEvent);
+    gBS->CloseEvent (mFatalSendErrorEvent);
+    mPlatform->UnInit ();
+    return Status;
+  }
+
+  // Start listening for data (USB gadget in fastboot mode)
   Status = mTransport->Start (
                          ReceiveEvent
                          );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Fastboot: Couldn't start transport: %r\n", Status));
+    gBS->CloseEvent (MenuTimerEvent);
+    gBS->CloseEvent (ReceiveEvent);
+    gBS->CloseEvent (mFinishedEvent);
+    gBS->CloseEvent (mFatalSendErrorEvent);
+    mPlatform->UnInit ();
     return Status;
   }
 
-  // Talk to the user
-  mTextOut->OutputString (
-              mTextOut,
-              L"Android Fastboot mode - version " ANDROID_FASTBOOT_VERSION ". Press RETURN or SPACE key to quit.\r\n"
-              );
+  FastbootMenuInit (mTextOut, MenuTimerEvent);
+  FastbootMenuSetStatus (L"Fastboot: USB ready — use menu or host fastboot");
 
-  // Quit when the user presses any key, or mFinishedEvent is signalled
-  WaitEventArray[0] = mFinishedEvent;
-  WaitEventArray[1] = TextIn->WaitForKey;
-  while (1) {
-    gBS->WaitForEvent (2, WaitEventArray, &EventIndex);
-    Status = TextIn->ReadKeyStroke (gST->ConIn, &Key);
-    if (Key.ScanCode == SCAN_NULL) {
-      if ((Key.UnicodeChar == CHAR_CARRIAGE_RETURN) ||
-          (Key.UnicodeChar == L' '))
-      {
+  Done = FALSE;
+
+  while (!Done) {
+    FastbootMenuRedrawIfDirty ();
+
+    //
+    // 1) USB fastboot: dequeue all pending packets (Receive is non-blocking;
+    //    EFI_NOT_READY when the transport queue is empty).
+    //
+    ServicedFastboot = DrainFastbootPackets ();
+
+    FastbootMenuRedrawIfDirty ();
+
+    //
+    // 2) Fatal receive/send error.
+    //
+    Status = gBS->CheckEvent (mFinishedEvent);
+    if (!EFI_ERROR (Status)) {
+      Done = TRUE;
+      break;
+    }
+
+    //
+    // 3) Menu idle timeout: delegated to the menu module.
+    //
+    Status = gBS->CheckEvent (MenuTimerEvent);
+    if (!EFI_ERROR (Status)) {
+      Done = FastbootMenuOnIdleTimeout ();
+      if (Done) {
         break;
       }
     }
+
+    //
+    // 4) Keyboard / menu navigation (non-blocking ReadKeyStroke).
+    //    Menu navigation/actions are handled by the menu module; SPACE
+    //    remains a non-menu quit path.
+    //
+    Key.ScanCode    = SCAN_NULL;
+    Key.UnicodeChar = CHAR_NULL;
+    Status          = mTextIn->ReadKeyStroke (mTextIn, &Key);
+    if (!EFI_ERROR (Status)) {
+      FASTBOOT_MENU_KEY_RESULT  KeyResult;
+
+      KeyResult = FastbootMenuHandleKey (&Key);
+      if (KeyResult == FastbootMenuKeyResultExitApp) {
+        Done = TRUE;
+        break;
+      }
+
+      if (KeyResult == FastbootMenuKeyResultIgnored) {
+        if ((Key.ScanCode == SCAN_NULL) && (Key.UnicodeChar == L' ')) {
+          //
+          // Former standalone fastboot used RETURN or SPACE to exit; ENTER
+          // is now the menu activator, so only SPACE retains a non-menu
+          // quit path.
+          //
+          Done = TRUE;
+          break;
+        }
+      }
+    }
+
+    if (ServicedFastboot) {
+      FastbootMenuArmIdleTimer ();
+    }
+
+    //
+    // Brief cooperative yield (does not wait on USB or keys).
+    //
+    gBS->Stall (500);
   }
 
   mTransport->Stop ();
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Warning: Fastboot Transport Stop: %r\n", Status));
-  }
+  gBS->SetTimer (MenuTimerEvent, TimerCancel, 0);
+  gBS->CloseEvent (MenuTimerEvent);
+  gBS->CloseEvent (ReceiveEvent);
+  gBS->CloseEvent (mFinishedEvent);
+  gBS->CloseEvent (mFatalSendErrorEvent);
 
   mPlatform->UnInit ();
+
+  //
+  // If the user picked "Continue" or "Boot safe mode" from the
+  // bootloader menu, hand control directly to the next bootable
+  // BootOrder entry (the Android kernel via AndroidBootDxe). See
+  // BootNextAndroidKernelOption() for why we cannot let BDS do
+  // this on its own.
+  //
+  if (FastbootMenuShouldContinueAndroidBoot ()) {
+    BootNextAndroidKernelOption ();
+  }
 
   return EFI_SUCCESS;
 }

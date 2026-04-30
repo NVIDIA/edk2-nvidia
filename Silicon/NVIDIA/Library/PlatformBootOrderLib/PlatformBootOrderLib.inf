@@ -1,6 +1,6 @@
 #/** @file
 #
-#    SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#    SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -29,6 +29,8 @@
   BaseMemoryLib
   PrintLib
   UefiBootManagerLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
   SortLib
   DebugLib
   IpmiBaseLib
@@ -39,7 +41,8 @@
   HobLib
 
 [Protocols]
-  gEfiPciIoProtocolGuid          ## CONSUMES
+  gEfiPciIoProtocolGuid                                 ## CONSUMES
+  gNVIDIALoadfileKernelArgsProtocol                     ## CONSUMES
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdIpmiNetworkBootMode

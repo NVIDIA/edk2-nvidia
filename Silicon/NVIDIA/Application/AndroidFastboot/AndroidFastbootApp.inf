@@ -21,6 +21,8 @@
 [Sources.common]
   AndroidFastbootApp.c
   AndroidBootImg.c
+  FastbootMenu.c
+  FastbootMenu.h
 
 [Sources.ARM, Sources.AARCH64]
   Arm/BootAndroidBootImg.c
@@ -30,17 +32,19 @@
   BaseMemoryLib
   DebugLib
   DevicePathLib
-  DxeServicesTableLib
   MemoryAllocationLib
   PcdLib
   PrintLib
   UefiApplicationEntryPoint
+  UefiBootManagerLib
   UefiBootServicesTableLib
   UefiLib
   UefiRuntimeServicesTableLib
   AndroidBcbLib
   DeviceTreeHelperLib
   AvbLib
+  BootConfigProtocolLib
+  IoLib
 
 [Protocols]
   gAndroidFastbootTransportProtocolGuid
@@ -52,6 +56,7 @@
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
+  gNVIDIABootConfigUpdateProtocol
 
 [Guids]
   gEfiFmpCapsuleGuid

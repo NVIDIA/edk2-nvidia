@@ -7,6 +7,7 @@
 **/
 
 #include <Uefi.h>
+#include <Library/BaseLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
@@ -29,6 +30,18 @@ CHAR8  *SlotSuffixNameId[MAX_BOOT_CHAIN_INFO_MAPPING] = {
   "_b",
 };
 CHAR8  AndroidbootDtboIdx[MAX_ANDROID_BOOT_DTBO_IDX] = "";
+
+//
+// Standalone handle on which the bootconfig update protocol instance
+// is installed. Using a private handle (instead of gImageHandle) makes
+// the protocol globally locatable across UEFI images, so that callers
+// in different modules (e.g. AndroidFastbootApp and AndroidBootDxe)
+// share the same in-memory accumulator (NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL
+// .BootConfigs). The handle and its protocol survive image unload
+// because the pool memory is EfiBootServicesData, valid until
+// ExitBootServices.
+//
+STATIC EFI_HANDLE  mBootConfigHandle = NULL;
 
 /**
  * Appends androidboot.newArgs=newValue to the bootconfig string.
@@ -106,7 +119,7 @@ BootConfigProtocolInit (
   BootConfigUpdate->UpdateBootConfigs = UpdateBootConfig;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &gImageHandle,
+                  &mBootConfigHandle,
                   &gNVIDIABootConfigUpdateProtocol,
                   BootConfigUpdate,
                   NULL
@@ -148,12 +161,17 @@ GetBootConfigUpdateProtocol (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = gBS->HandleProtocol (gImageHandle, &gNVIDIABootConfigUpdateProtocol, (VOID **)BootConfigProtocol);
+  //
+  // LocateProtocol walks the system protocol database, so it sees the
+  // single shared instance regardless of which image originally
+  // installed it (see mBootConfigHandle).
+  //
+  Status = gBS->LocateProtocol (&gNVIDIABootConfigUpdateProtocol, NULL, (VOID **)BootConfigProtocol);
   if (!EFI_ERROR (Status)) {
     return Status;
   }
 
-  if (Status == EFI_UNSUPPORTED) {
+  if (Status == EFI_NOT_FOUND) {
     return BootConfigProtocolInit (BootConfigProtocol);
   } else {
     return Status;
@@ -400,4 +418,81 @@ BootConfigPrepareBootTimeArgs (
   }
 
   return EFI_SUCCESS;
+}
+
+/**
+  Test whether the shared bootconfig accumulator already contains an
+  androidboot.<Key>=<ExpectedValue> entry, with proper line-boundary
+  matching so e.g. "mode=safe" does not match "mode=safety".
+
+  See the public header for the full contract.
+**/
+BOOLEAN
+EFIAPI
+BootConfigHasAndroidbootValue (
+  IN CONST CHAR8  *Key,
+  IN CONST CHAR8  *ExpectedValue
+  )
+{
+  EFI_STATUS                         Status;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+  CONST CHAR8                        *Accumulator;
+  CHAR8                              *Needle;
+  UINTN                              KeyLen;
+  UINTN                              ExpectedValueLen;
+  UINTN                              NeedleCapacity;
+  UINTN                              NeedleLen;
+  CONST CHAR8                        *Cursor;
+  CHAR8                              AfterChar;
+  BOOLEAN                            Found;
+
+  if ((Key == NULL) || (ExpectedValue == NULL)) {
+    return FALSE;
+  }
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status) || (BootConfigProtocol->BootConfigs == NULL)) {
+    return FALSE;
+  }
+
+  Accumulator = BootConfigProtocol->BootConfigs;
+
+  KeyLen           = AsciiStrLen (Key);
+  ExpectedValueLen = AsciiStrLen (ExpectedValue);
+  NeedleCapacity   = (sizeof ("androidboot.") - 1) + KeyLen + (sizeof ("=") - 1) + ExpectedValueLen + 1;
+  Needle           = AllocateZeroPool (NeedleCapacity);
+  if (Needle == NULL) {
+    return FALSE;
+  }
+
+  AsciiSPrint (Needle, NeedleCapacity, "androidboot.%a=%a", Key, ExpectedValue);
+  NeedleLen = AsciiStrLen (Needle);
+  Found     = FALSE;
+
+  Cursor = Accumulator;
+  while ((Cursor = AsciiStrStr (Cursor, Needle)) != NULL) {
+    //
+    // Accept both LF and CR as the leading/trailing boundary. The
+    // accumulator is currently produced via EDK2's PrintLib, whose
+    // SPrintMarker translates "\n" in the format string to "\r\n"
+    // -- so entries are de facto separated by "\r\n". Be liberal in
+    // what we accept here so a future fix of that translation does
+    // not require touching this helper again.
+    //
+    if ((Cursor == Accumulator) ||
+        (*(Cursor - 1) == '\n') || (*(Cursor - 1) == '\r'))
+    {
+      AfterChar = *(Cursor + NeedleLen);
+      if ((AfterChar == '\n') || (AfterChar == '\r') || (AfterChar == '\0')) {
+        Found = TRUE;
+        goto Exit;
+      }
+    }
+
+    Cursor++;
+  }
+
+Exit:
+  FreePool (Needle);
+  return Found;
 }

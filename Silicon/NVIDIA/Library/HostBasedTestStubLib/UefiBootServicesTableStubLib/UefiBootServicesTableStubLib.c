@@ -2,7 +2,7 @@
 
   UEFI Boot Services Table Lib stubs for host based tests
 
-  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -173,12 +173,31 @@ MockInstallMultipleProtocolInterfaces (
   VA_END (Args);
 }
 
+// EFI_LOCATE_DEVICE_PATH stub (host tests have no firmware device model)
+EFI_STATUS
+EFIAPI
+UefiLocateDevicePath (
+  IN     EFI_GUID                  *Protocol,
+  IN OUT EFI_DEVICE_PATH_PROTOCOL  **DevicePath,
+  OUT    EFI_HANDLE                *Device
+  )
+{
+  (VOID)Protocol;
+  (VOID)DevicePath;
+  if (Device != NULL) {
+    *Device = NULL;
+  }
+
+  return EFI_NOT_FOUND;
+}
+
 // EFI_LOCATE_PROTOCOL stub
 EFI_STATUS
 EFIAPI
 UefiLocateProtocol (
-  IN  EFI_GUID *Protocol,
-  IN  VOID *Registration, OPTIONAL
+  IN  EFI_GUID  *Protocol,
+  IN  VOID      *Registration,
+  OPTIONAL
   OUT VOID      **Interface
   )
 {
@@ -238,6 +257,7 @@ UefiBootServicesTableInit (
   gBS->CloseEvent                        = UefiCloseEvent;
   gBS->CreateEventEx                     = UefiCreateEventEx;
   gBS->InstallMultipleProtocolInterfaces = UefiInstallMultipleProtocolInterfaces;
+  gBS->LocateDevicePath                  = UefiLocateDevicePath;
   gBS->LocateProtocol                    = UefiLocateProtocol;
   gBS->SignalEvent                       = UefiSignalEvent;
 }

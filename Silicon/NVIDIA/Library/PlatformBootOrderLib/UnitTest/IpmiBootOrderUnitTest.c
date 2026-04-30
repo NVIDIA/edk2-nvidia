@@ -1,7 +1,7 @@
 /** @file
   Unit tests of the IPMI portion of the PlatformBootOrder library.
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -648,14 +648,13 @@ IBO_AddUsbDP (
 {
   USB_DEVICE_PATH  DevicePath[2];
 
-  DevicePath[0].Header.Type      = MESSAGING_DEVICE_PATH;
-  DevicePath[0].Header.SubType   = MSG_USB_DP;
-  DevicePath[0].Header.Length[0] = sizeof (DevicePath[0]);
+  ZeroMem (DevicePath, sizeof (DevicePath));
+  DevicePath[0].Header.Type    = MESSAGING_DEVICE_PATH;
+  DevicePath[0].Header.SubType = MSG_USB_DP;
+  SetDevicePathNodeLength (&DevicePath[0].Header, sizeof (USB_DEVICE_PATH));
   DevicePath[0].ParentPortNumber = Port;
   DevicePath[0].InterfaceNumber  = Interface;
-  DevicePath[1].Header.Type      = END_DEVICE_PATH_TYPE;
-  DevicePath[1].Header.SubType   = END_ENTIRE_DEVICE_PATH_SUBTYPE;
-  DevicePath[1].Header.Length[0] = END_DEVICE_PATH_LENGTH;
+  SetDevicePathEndNode (&DevicePath[1].Header);
 
   if (!IsDevicePathValid (&DevicePath[0].Header, sizeof (DevicePath))) {
     DEBUG ((DEBUG_ERROR, "DevicePath isn't valid!\n"));
@@ -675,14 +674,13 @@ IBO_AddVirtualUsbDP (
 {
   USB_DEVICE_PATH  DevicePath[2];
 
-  DevicePath[0].Header.Type      = MESSAGING_DEVICE_PATH;
-  DevicePath[0].Header.SubType   = MSG_USB_DP;
-  DevicePath[0].Header.Length[0] = sizeof (DevicePath[0]);
+  ZeroMem (DevicePath, sizeof (DevicePath));
+  DevicePath[0].Header.Type    = MESSAGING_DEVICE_PATH;
+  DevicePath[0].Header.SubType = MSG_USB_DP;
+  SetDevicePathNodeLength (&DevicePath[0].Header, sizeof (USB_DEVICE_PATH));
   DevicePath[0].ParentPortNumber = Port;
   DevicePath[0].InterfaceNumber  = Interface;
-  DevicePath[1].Header.Type      = END_DEVICE_PATH_TYPE;
-  DevicePath[1].Header.SubType   = END_ENTIRE_DEVICE_PATH_SUBTYPE;
-  DevicePath[1].Header.Length[0] = END_DEVICE_PATH_LENGTH;
+  SetDevicePathEndNode (&DevicePath[1].Header);
 
   if (!IsDevicePathValid (&DevicePath[0].Header, sizeof (DevicePath))) {
     DEBUG ((DEBUG_ERROR, "DevicePath isn't valid!\n"));

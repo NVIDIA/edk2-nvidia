@@ -48,6 +48,43 @@ NVIDIA_BOOT_ORDER_PRIORITY  mBootPriorityTemplate[BOOT_ORDER_TEMPLATE_CLASS_COUN
 STATIC  NVIDIA_BOOT_ORDER_PRIORITY  *mBootPriorityTable = NULL;
 STATIC  UINTN                       mBootPriorityCount  = 0;
 
+/**
+  Test whether an option resolves to an AndroidBootDxe handle by looking
+  for gNVIDIALoadfileKernelArgsProtocol on its device path. AndroidBootDxe
+  is the only installer of this protocol, so it is a stable marker for
+  "this option loads an Android boot.img" regardless of description /
+  HII localisation.
+
+  @param[in] Option   The boot option to classify.
+
+  @retval TRUE        Option goes through AndroidBootDxe.
+  @retval FALSE       Otherwise (or any lookup failure).
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsAndroidBootImgLoaderOption (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION  *Option
+  )
+{
+  EFI_STATUS                Status;
+  EFI_DEVICE_PATH_PROTOCOL  *Remaining;
+  EFI_HANDLE                Handle;
+
+  if ((Option == NULL) || (Option->FilePath == NULL)) {
+    return FALSE;
+  }
+
+  Remaining = Option->FilePath;
+  Handle    = NULL;
+  Status    = gBS->LocateDevicePath (
+                     &gNVIDIALoadfileKernelArgsProtocol,
+                     &Remaining,
+                     &Handle
+                     );
+  return (BOOLEAN)(!EFI_ERROR (Status) && (Handle != NULL));
+}
+
 STATIC
 EFI_PCI_IO_PROTOCOL *
 GetBootOptPciIoProtocol (
@@ -95,8 +132,8 @@ GetBootOptPciIoProtocol (
   if ((LatestPciDevicePath != NULL) && (LatestPciDevicePath != DevicePath)) {
     TempDevicePathText = ConvertDevicePathToText (
                            NextDevicePathNode (LatestPciDevicePath),
-                           TRUE,    // DisplayOnly
-                           FALSE    // AllowShortcuts
+                           TRUE,                        // DisplayOnly
+                           FALSE                        // AllowShortcuts
                            );
     if (TempDevicePathText != NULL) {
       TailingCharCount = StrLen (TempDevicePathText) + 1;
@@ -123,8 +160,8 @@ GetBootOptPciIoProtocol (
 
         PciIoDevicePathText = ConvertDevicePathToText (
                                 TempDevicePath,
-                                TRUE, // DisplayOnly
-                                FALSE // AllowShortcuts
+                                TRUE,                        // DisplayOnly
+                                FALSE                        // AllowShortcuts
                                 );
         if (PciIoDevicePathText != NULL) {
           if (StrnCmp (PciIoDevicePathText, DevicePathText, BootOptPciIoDevicePathTextLen) == 0) {
@@ -345,6 +382,21 @@ GetBootClassOfOption (
   } else if (StrCmp (Option->Description, L"Android Fastboot") == 0) {
     for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
       if (AsciiStrCmp (Table[BootPriorityIndex].OrderName, "fastboot") == 0) {
+        Result = &Table[BootPriorityIndex];
+        goto ReturnResult;
+      }
+    }
+  } else if (IsAndroidBootImgLoaderOption (Option)) {
+    //
+    // AndroidBootDxe-installed handles (eMMC / SD / UFS / USB / RCM
+    // Kernel & Recovery Boot) all load an Android boot.img and belong to
+    // the "boot.img" priority class. Without this branch they would be
+    // classified by their underlying transport, which does not appear in
+    // the Android DefaultBootPriority list, and end up at the tail of
+    // BootOrder behind unbootable auto-generated partition entries.
+    //
+    for (BootPriorityIndex = 0; BootPriorityIndex < Count; BootPriorityIndex++) {
+      if (Table[BootPriorityIndex].ExtraSpecifier == NVIDIA_BOOT_TYPE_BOOTIMG) {
         Result = &Table[BootPriorityIndex];
         goto ReturnResult;
       }

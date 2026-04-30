@@ -527,14 +527,14 @@ AndroidBootDxeUpdateDtbCmdLine (
   CmdLineDtb = NULL;
   Status     = gBS->AllocatePool (
                       EfiBootServicesData,
-                      CommandLineLength,
+                      (UINTN)CommandLineLength,
                       (VOID **)&CmdLineDtb
                       );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  gBS->SetMem (CmdLineDtb, CommandLineLength, 0);
+  gBS->SetMem (CmdLineDtb, (UINTN)CommandLineLength, 0);
 
   UnicodeStrToAsciiStrS (CmdLine, CmdLineDtb, CommandLineLength);
 
@@ -1020,6 +1020,26 @@ AndroidBootDxeLoadDtb (
           }
         } else {
           DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig Handle, or BootConfigUpdate->BootConfigs is NULL\n", __FUNCTION__, Status));
+        }
+
+        //
+        // If safe mode is requested via bootconfig (UEFI Fastboot menu's
+        // "Boot safe mode" appends androidboot.mode=safe to the shared
+        // bootconfig accumulator), expose /chosen/nvidia,safe_mode_adb
+        // so the kernel/Android side relaxes ro.adb.secure.
+        //
+        if (BootConfigHasAndroidbootValue ("mode", "safe")) {
+          INT32  ChosenOffset = FdtPathOffset (DtbCopy, "/chosen");
+          if (ChosenOffset < 0) {
+            DEBUG ((DEBUG_ERROR, "%a: re-resolve /chosen failed: %d\n", __FUNCTION__, ChosenOffset));
+          } else {
+            FdtErr = FdtSetProp (DtbCopy, ChosenOffset, "nvidia,safe_mode_adb", NULL, 0);
+            if (FdtErr < 0) {
+              DEBUG ((DEBUG_ERROR, "%a: Got err=%d trying to set /chosen/nvidia,safe_mode_adb\n", __FUNCTION__, FdtErr));
+            } else {
+              DEBUG ((DEBUG_ERROR, "%a: Added /chosen/nvidia,safe_mode_adb for safe mode\n", __FUNCTION__));
+            }
+          }
         }
 
         // Populate Nct mac-addr to dtb

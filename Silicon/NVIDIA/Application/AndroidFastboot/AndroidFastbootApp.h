@@ -1,6 +1,6 @@
 /** @file
 
-  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -39,13 +39,17 @@ ParseAndroidBootImg (
   );
 
 /**
-  Erase the partitions that any "factory reset" / "lock" / "unlock"
-  flow needs to clear (currently userdata, CAC, MDA). Missing
-  partitions are treated as benign (board variants). Fail-fast on
+  Wipe user data partitions (currently userdata, CAC, MDA). Missing
+  partitions are treated as benign (board variants); fail-fast on
   the first hard error.
 
-  @retval EFI_SUCCESS       All partitions erased (or absent).
-  @retval Other EFI_ERROR   Erase failed on some partition; see DEBUG.
+  Honours fac_rst_protection: when OEM unlock is blocked the wipe
+  is refused with EFI_ACCESS_DENIED. Use FastbootLockBootloader to
+  wipe as part of re-locking, which intentionally bypasses FRP.
+
+  @retval EFI_SUCCESS         All partitions erased (or absent).
+  @retval EFI_ACCESS_DENIED   Blocked by fac_rst_protection.
+  @retval Other EFI_ERROR     Erase failed on some partition; see DEBUG.
 **/
 EFI_STATUS
 FastbootFactoryReset (

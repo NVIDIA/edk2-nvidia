@@ -2,7 +2,7 @@
 
   UEFI Runtime Services Table Lib stubs for host based tests
 
-  Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -77,7 +77,7 @@ UefiGetVariable (
   UEFI_VARIABLE  *Var;
 
   Var = UefiFindVariable (Name, Guid);
-  if ((Var == NULL) || ((Var->Data == NULL) && (!EFI_ERROR (Var->ForcedGetStatus)))) {
+  if (Var == NULL) {
     return EFI_NOT_FOUND;
   }
 

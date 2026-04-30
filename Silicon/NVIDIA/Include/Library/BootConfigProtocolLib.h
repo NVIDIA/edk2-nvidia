@@ -2,7 +2,7 @@
 
   BootConfig Protocol library
 
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -51,6 +51,29 @@ EFI_STATUS
 EFIAPI
 BootConfigPrepareBootTimeArgs (
   VOID
+  );
+
+/**
+  Test whether the shared bootconfig accumulator already contains an
+  androidboot.<Key>=<ExpectedValue> entry, with proper line-boundary
+  matching so e.g. "mode=safe" does not match "mode=safety".
+
+  The accumulator is read from the singleton BootConfigUpdateProtocol
+  instance (same one used by BootConfigAdd*); callers do not need to
+  hold a protocol pointer themselves.
+
+  @param[in] Key            The androidboot key to look for (e.g. "mode").
+  @param[in] ExpectedValue  The value to look for (e.g. "safe").
+
+  @retval TRUE   The exact androidboot.<Key>=<ExpectedValue> entry is
+                 present in the accumulator.
+  @retval FALSE  Otherwise (or the accumulator/protocol is unavailable).
+**/
+BOOLEAN
+EFIAPI
+BootConfigHasAndroidbootValue (
+  IN CONST CHAR8  *Key,
+  IN CONST CHAR8  *ExpectedValue
   );
 
 #endif /* __BOOTCONFIG_PROTOCOL_LIB_H_ */
