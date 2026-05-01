@@ -533,6 +533,12 @@
 #Indicate if there is a GPT for each boot chain
   gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain|FALSE|BOOLEAN|0x000000A5
 
+#FADT Fixed Feature Flags bits to publish via EArchCommonObjFixedFeatureFlags.
+#Each bit corresponds to a flag in EFI_ACPI_x_x_FIXED_ACPI_DESCRIPTION_TABLE.Flags
+#as defined in MdePkg/Include/IndustryStandard/Acpi66.h. Each platform DSC
+#should OR in the bits that match the platform's actual ACPI capabilities.
+  gNVIDIATokenSpaceGuid.PcdAcpiFadtFixedFeatureFlags|0x00000000|UINT32|0x00000171
+
 [PcdsFeatureFlag]
 #OPTEE presence
   gNVIDIATokenSpaceGuid.PcdOpteePresent|FALSE|BOOLEAN|0x00000067

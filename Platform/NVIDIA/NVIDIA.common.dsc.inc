@@ -1425,6 +1425,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !ifdef CONFIG_SOC_T24X
 [PcdsFixedAtBuild]
   gNVIDIATokenSpaceGuid.PcdEthernetIntrId|0xFA
+
+  # FADT Fixed Feature Flags. TH500 declares a control-method power button
+  # (PNP0C0C, \_SB.PWRB in Dsdt_TH500.asl), so PWR_BUTTON (BIT4 = 0x10) must
+  # be set
+  gNVIDIATokenSpaceGuid.PcdAcpiFadtFixedFeatureFlags|0x00000010
  !ifdef CONFIG_DEBUG_LOG_SCRATCH_REG
    ## SCRATCH_SCRATCH_<i> [i >= 21] is used to log crash related information.
    gNVIDIATokenSpaceGuid.PcdNvScratchRegBase|0x0000C3903DC

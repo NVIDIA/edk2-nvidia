@@ -10,7 +10,7 @@
 #include "../ConfigurationManagerDataRepoLib.h"
 
 #include <Library/NVIDIADebugLib.h>
-#include <Library/TegraPlatformInfoLib.h>
+#include <Library/PcdLib.h>
 
 /** Fixed feature flags parser function.
 
@@ -44,27 +44,28 @@ FixedFeatureFlagsParser (
   IN        INT32                  FdtBranch
   )
 {
- #if 0
-  // This feature isn't supported on any current platforms.  However, we
-  // anticipate needing it in the future.  Keeping the code, but commenting it
-  // for now.
-
   EFI_STATUS                          Status;
-  CM_ARCH_COMMON_FIXED_FEATURE_FLAGS  FixedFeatureFlags = {
-    EFI_ACPI_6_6_PWR_BUTTON
-  };
- #endif
+  CM_ARCH_COMMON_FIXED_FEATURE_FLAGS  FixedFeatureFlags;
 
   if (ParserHandle == NULL) {
     ASSERT (0);
     return EFI_INVALID_PARAMETER;
   }
 
-  // This feature is not supported on any current platforms.
-  return EFI_SUCCESS;
+  // The set of FADT Fixed Feature flag bits to publish is platform-defined
+  // via PcdAcpiFadtFixedFeatureFlags. Each platform DSC selects the bits
+  // that match its actual ACPI capabilities (e.g. PWR_BUTTON when the DSDT
+  // declares a PNP0C0C device). The FADT generator OR's these bits into
+  // EFI_ACPI_x_x_FIXED_ACPI_DESCRIPTION_TABLE.Flags, masked by the
+  // hardware-reduced / non-hardware-reduced valid-flag mask.
+  FixedFeatureFlags.Flags = FixedPcdGet32 (PcdAcpiFadtFixedFeatureFlags);
 
- #if 0
-  // Add the CmObj to the Configuration Manager.
+  // Skip publishing an empty CmObj when the platform did not select any
+  // bits, preserving prior behaviour for SoCs that do not need this object.
+  if (FixedFeatureFlags.Flags == 0) {
+    return EFI_SUCCESS;
+  }
+
   Status = NvAddSingleCmObj (
              ParserHandle,
              CREATE_CM_ARCH_COMMON_OBJECT_ID (EArchCommonObjFixedFeatureFlags),
@@ -74,7 +75,6 @@ FixedFeatureFlagsParser (
              );
   ASSERT_EFI_ERROR (Status);
   return Status;
- #endif
 }
 
 REGISTER_PARSER_FUNCTION (FixedFeatureFlagsParser, NULL)
