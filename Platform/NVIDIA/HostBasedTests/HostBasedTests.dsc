@@ -378,6 +378,18 @@
       gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000002
   }
 
+  #
+  # SerialPortInfoParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/SerialPortInfo/UnitTest/SerialPortInfoParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+    <PcdsFixedAtBuild>
+      gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision|0x00000002
+      gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate|115200
+      gArmPlatformTokenSpaceGuid.PL011UartClkInHz|0x00000000
+  }
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000

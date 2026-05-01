@@ -1,0 +1,46 @@
+## @file
+# Host-based unit tests for SerialPortInfoParser.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = SerialPortInfoParserUnitTestsHost
+  FILE_GUID      = d3f0a812-7c41-4b2e-9a30-6e5f18d02c73
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  SerialPortInfoParserUnitTests.c
+  SerialPortInfoParserHost.c
+
+[Packages]
+  ArmPlatformPkg/ArmPlatformPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UnitTestLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdAcpiTegraUartOemTableId
+  gNVIDIATokenSpaceGuid.PcdSerialPortConfig
+  gNVIDIATokenSpaceGuid.PcdSerialTypeConfig
+
+[FixedPcd]
+  gArmPlatformTokenSpaceGuid.PL011UartClkInHz
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
