@@ -125,7 +125,7 @@
       UefiHiiServicesLib|MdeModulePkg/Library/UefiHiiServicesLib/UefiHiiServicesLib.inf
       PeiServicesTablePointerLib|EmulatorPkg/Library/PeiServicesTablePointerLib/PeiServicesTablePointerLib.inf
       HobLib|MdeModulePkg/Library/BaseHobLibNull/BaseHobLibNull.inf
-      PcdLib|Silicon/NVIDIA/Drivers/FvbDxe/UnitTest/FvbPcdStubLib/FvbPcdStubLib.inf
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
       FwVariableLib|Silicon/NVIDIA/Library/FwVariableLib/FwVariableLib.inf
   }
 

@@ -5,7 +5,7 @@
   This library allows non-fixed PCDs to be set during test.  Fixed PCDs cannot
   be mocked as they are implemented as #define'd constants.
 
-  Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,58 +16,51 @@
 
 #include <Library/PcdLib.h>
 
-/**
-  Initialize Uefi PCD stub support.
-
-  This should be called once before running tests.
-
-  @retval None
-
-**/
+/**  Initialize Uefi PCD stub support. Call once before running tests.  **/
 VOID
 UefiPcdInit (
   VOID
   );
 
-/**
-  Clear Uefi PCD list
-
-  This should be called at the start of a test, before adding PCD values.
-
-  @retval None
-
-**/
+/**  Clear Uefi PCD list. Call at the start of a test, before adding values.  **/
 VOID
 UefiPcdClear (
   VOID
   );
 
-/**
-  Set the return of LibPcdGetBool ().
+/**  Set the return of LibPcdGet8() for a given token.  **/
+VOID
+MockLibPcdGet8 (
+  IN UINTN  TokenNumber,
+  IN UINT8  ReturnValue
+  );
 
-  @param[In]  ExpectedTokenNumber   PCD request expected
-  @param[In]  ReturnValue           Value to return when requested
+/**  Set the return of LibPcdGet16() for a given token.  **/
+VOID
+MockLibPcdGet16 (
+  IN UINTN   TokenNumber,
+  IN UINT16  ReturnValue
+  );
 
-  @retval None
-**/
+/**  Set the return of LibPcdGet32() for a given token.  **/
+VOID
+MockLibPcdGet32 (
+  IN UINTN   TokenNumber,
+  IN UINT32  ReturnValue
+  );
+
+/**  Set the return of LibPcdGet64() for a given token.  **/
+VOID
+MockLibPcdGet64 (
+  IN UINTN   TokenNumber,
+  IN UINT64  ReturnValue
+  );
+
+/**  Set the return of LibPcdGetBool() for a given token.  **/
 VOID
 MockLibPcdGetBool (
   IN UINTN    TokenNumber,
   IN BOOLEAN  ReturnValue
-  );
-
-/**
-  Set the return of LibPcdGet64 ().
-
-  @param[In]  ExpectedTokenNumber   PCD request expected
-  @param[In]  ReturnValue           Value to return when requested
-
-  @retval None
- **/
-VOID
-MockLibPcdGet64 (
-  IN UINTN   ExpectedTokenNumber,
-  IN UINT64  ReturnValue
   );
 
 #endif
