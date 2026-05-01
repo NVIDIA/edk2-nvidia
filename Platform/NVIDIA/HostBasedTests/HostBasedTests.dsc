@@ -360,6 +360,14 @@
       PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
   }
 
+  #
+  # IpmiParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/IpmiParser/UnitTest/IpmiParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
