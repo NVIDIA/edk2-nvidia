@@ -1,0 +1,40 @@
+## @file
+# Host-based unit tests for GenericWatchdogInfoParser.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = GenericWatchdogInfoParserUnitTestsHost
+  FILE_GUID      = d3f7a160-b924-4e78-9c41-2e5b8a3d0f96
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  GenericWatchdogInfoParserUnitTests.c
+  GenericWatchdogInfoParserHost.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UnitTestLib
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGenericWatchdogControlBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogRefreshBase
+  gArmTokenSpaceGuid.PcdGenericWatchdogEl2IntrNum

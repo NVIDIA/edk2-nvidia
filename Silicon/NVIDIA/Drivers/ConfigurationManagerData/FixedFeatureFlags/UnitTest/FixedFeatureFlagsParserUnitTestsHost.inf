@@ -1,0 +1,37 @@
+## @file
+# Host-based unit tests for FixedFeatureFlagsParser.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = FixedFeatureFlagsParserUnitTestsHost
+  FILE_GUID      = e1a3c927-8b46-4f85-b60d-27e1f9a3c482
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  FixedFeatureFlagsParserUnitTests.c
+  FixedFeatureFlagsParserHost.c
+
+[Packages]
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UnitTestLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdAcpiFadtFixedFeatureFlags

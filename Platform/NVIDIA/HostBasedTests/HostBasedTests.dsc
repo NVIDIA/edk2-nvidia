@@ -264,6 +264,86 @@
   #
   Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/UnitTest/DeviceDiscoveryDriverLibUnitTestsHost.inf
 
+  #
+  # BootArchInfoParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/BootArchInfo/UnitTest/BootArchInfoParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # EthernetInfoParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/EthernetInfo/UnitTest/EthernetInfoParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # FixedFeatureFlagsParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/FixedFeatureFlags/UnitTest/FixedFeatureFlagsParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # GenericTimerParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericTimer/UnitTest/GenericTimerParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # GenericWatchdogInfoParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/GenericWatchdog/UnitTest/GenericWatchdogInfoParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # PowerManagementProfileParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/PowerManagementProfile/UnitTest/PowerManagementProfileParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # Dbg2NetworkParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/Dbg2NetworkParser/UnitTest/Dbg2NetworkParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # ProtocolBasedObjectsParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/ProtocolBasedObjects/UnitTest/ProtocolBasedObjectsParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # SsdtTableGeneratorParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/SsdtTableGenerator/UnitTest/SsdtTableGeneratorParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
+  #
+  # TpmInfoParser Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/ConfigurationManagerData/TpmInfo/UnitTest/TpmInfoParserUnitTestsHost.inf {
+    <LibraryClasses>
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000

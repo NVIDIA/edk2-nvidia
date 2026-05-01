@@ -1,0 +1,41 @@
+## @file
+# Host-based unit tests for GenericTimerParser.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = GenericTimerParserUnitTestsHost
+  FILE_GUID      = f9c2b451-7e08-4d63-a593-1b4e8d0f7c32
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  GenericTimerParserUnitTests.c
+  GenericTimerParserHost.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UnitTestLib
+
+[FixedPcd]
+  gArmTokenSpaceGuid.PcdArmArchTimerSecIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerVirtIntrNum
+  gArmTokenSpaceGuid.PcdArmArchTimerHypIntrNum
