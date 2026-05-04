@@ -29,6 +29,7 @@
   @return >0                          Buffer1 is greater than Buffer2.
 **/
 INTN
+EFIAPI
 ConfigSpaceCompare (
   IN CONST VOID  *Buffer1,
   IN CONST VOID  *Buffer2
