@@ -1,0 +1,40 @@
+## @file
+# Host-based unit tests for BootChainInfoLib.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = BootChainInfoLibUnitTestsHost
+  FILE_GUID      = 3c10b43b-2832-4bb3-9c40-a1fedbc31624
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  BootChainInfoLibUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CmockaLib
+  DebugLib
+  HobLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UnitTestLib
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdGptIsPerBootChain
+  gNVIDIATokenSpaceGuid.PcdPartitionNamesHaveSuffixes

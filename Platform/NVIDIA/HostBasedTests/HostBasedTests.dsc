@@ -235,6 +235,20 @@
       GCC:*_*_*_DLINK_FLAGS = -Wl,--wrap=CpuDeadLoop
   }
 
+  #
+  # Boot helper library Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Library/BootChainInfoLib/UnitTest/BootChainInfoLibUnitTestsHost.inf {
+    <LibraryClasses>
+      HobLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/HobStubLib/HobStubLib.inf
+      PcdLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PcdStubLib/PcdStubLib.inf
+  }
+  Silicon/NVIDIA/Library/ProtocolHelperLib/UnitTest/ProtocolHelperLibUnitTestsHost.inf {
+    <LibraryClasses>
+      UefiBootServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiBootServicesTableStubLib/UefiBootServicesTableStubLib.inf
+  }
+  Silicon/NVIDIA/Library/PlatformIsSiliconLib/UnitTest/PlatformDepexLibUnitTestsHost.inf
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000

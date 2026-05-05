@@ -1,0 +1,27 @@
+## @file
+# Host-based unit tests for platform depex helper constructors.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = PlatformDepexLibUnitTestsHost
+  FILE_GUID      = f63f068b-6844-4b97-b542-afc80597175b
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  PlatformDepexLibUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  CmockaLib
+  DebugLib
+  UnitTestLib

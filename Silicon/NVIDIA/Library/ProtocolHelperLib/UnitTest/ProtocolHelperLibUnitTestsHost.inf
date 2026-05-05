@@ -1,0 +1,35 @@
+## @file
+# Host-based unit tests for ProtocolHelperLib.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = ProtocolHelperLibUnitTestsHost
+  FILE_GUID      = a3b00b0a-e25f-4f6f-8732-d4e9feda89b3
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  ProtocolHelperLibUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CmockaLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UnitTestLib
+
+[Protocols]
+  gEfiDevicePathProtocolGuid
