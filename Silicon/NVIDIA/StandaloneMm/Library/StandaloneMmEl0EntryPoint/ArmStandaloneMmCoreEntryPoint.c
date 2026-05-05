@@ -61,6 +61,22 @@ extern VOID  *gHobList;
 STATIC MISC_MM_COMMUNICATE_BUFFER  *mMiscMmCommunicateBuffer = NULL;
 STATIC EFI_MMRAM_DESCRIPTOR        *mNsCommBuffer            = NULL;
 STATIC EFI_MMRAM_DESCRIPTOR        *mSCommBuffer             = NULL;
+STATIC COMM_PROTOCOL               mCommProtocol             = CommProtocolFfa;
+STATIC UINTN                       mSpRebootBufBase          = 0;
+STATIC UINTN                       mSpRebootBufSize          = 0;
+
+// FF-A Boot Reason (FF-A SP Lifecycle)
+#define FFA_BOOT_REASON_NONE      0x00
+#define FFA_BOOT_REASON_LIVE_ACT  0x01
+
+// FF-A Stop Reason
+#define FFA_STOP_REASON_NONE      0x00
+#define FFA_STOP_REASON_LIVE_ACT  0x01
+
+// FF-A SP Lifecycle framework message helpers
+#define FFA_FWK_FLAG(s)  ((1u << 31) | (0xFF & (s)))
+#define FFA_SPLC_STOP  0x0B
+#define FFA_SPLC_RESP  0x0C
 
 /**
   Get communication ABI protocol.
@@ -857,6 +873,127 @@ IsTpmFid (
   }
 }
 
+STATIC
+BOOLEAN
+StatefulRebootIsSupported (
+  VOID
+  )
+{
+  return (mCommProtocol == CommProtocolFfa) &&
+         (mSpRebootBufBase > 0UL) &&
+         (mSpRebootBufSize > 0UL);
+}
+
+STATIC
+VOID
+StatefulRebootSaveData (
+  VOID
+  )
+{
+  UINT64  *BufBase;
+
+  if (!StatefulRebootIsSupported ()) {
+    return;
+  }
+
+  BufBase    = (VOID *)mSpRebootBufBase;
+  BufBase[0] = 0xDEADBEEFBABECAFE;
+}
+
+STATIC
+VOID
+StatefulRebootHandler (
+  IN UINT8  BootReason
+  )
+{
+  UINT64  *BufBase;
+  UINT64  BufSize;
+
+  if (!StatefulRebootIsSupported ()) {
+    return;
+  }
+
+  BufBase = (VOID *)mSpRebootBufBase;
+  BufSize = mSpRebootBufSize;
+  DEBUG ((DEBUG_INFO, "[BOOT] found stateful reboot buffer @ addr:0x%lx size:0x%lx\n", BufBase, BufSize));
+
+  switch (BootReason) {
+    case FFA_BOOT_REASON_NONE:
+      DEBUG ((DEBUG_INFO, "[BOOT] setting stateful reboot buffer to 0\n"));
+      ZeroMem (BufBase, BufSize);
+      break;
+    case FFA_BOOT_REASON_LIVE_ACT:
+      DEBUG ((DEBUG_INFO, "[BOOT] reading from stateful reboot buffer: %lx\n", BufBase[0]));
+      break;
+    default:
+      break;
+  }
+}
+
+STATIC
+BOOLEAN
+HandleCustomDirectRequest (
+  IN OUT ARM_SVC_ARGS  *Args
+  )
+{
+  UINTN   RespFuncId;
+  UINT16  SendPartId;
+  UINT16  RecvPartId;
+
+  switch (Args->Arg0) {
+    case ARM_FID_FFA_MSG_SEND_DIRECT_REQ_AARCH32:
+      RespFuncId = ARM_FID_FFA_MSG_SEND_DIRECT_RESP_AARCH32;
+      break;
+    case ARM_FID_FFA_MSG_SEND_DIRECT_REQ_AARCH64:
+      RespFuncId = ARM_FID_FFA_MSG_SEND_DIRECT_RESP_AARCH64;
+      break;
+    default:
+      return FALSE;
+  }
+
+  SendPartId = Args->Arg1 >> 16;
+  RecvPartId = Args->Arg1 & 0xffff;
+
+  switch (Args->Arg2) {
+    case 0x0:
+      switch (Args->Arg3) {
+        case 0x0:
+          // Empty direct message, treat as a "ping"
+          DEBUG ((DEBUG_INFO, "[PING] ack\n"));
+          break;
+        default:
+          return FALSE;
+      }
+
+      break;
+
+    case FFA_FWK_FLAG (FFA_SPLC_STOP):
+      if (RecvPartId != (UINT16)Args->Arg3) {
+        DEBUG ((DEBUG_WARN, "[STOP] wrong target id 0x%x\n", RecvPartId));
+        RecvPartId = (UINT16)Args->Arg3;
+      }
+
+      if (Args->Arg4 == FFA_STOP_REASON_LIVE_ACT) {
+        DEBUG ((DEBUG_INFO, "[STOP] saving data\n"));
+        StatefulRebootSaveData ();
+      }
+
+      DEBUG ((DEBUG_INFO, "[STOP] proceeding\n"));
+      Args->Arg3 = 0; // SUCCESS
+      Args->Arg2 = FFA_FWK_FLAG (FFA_SPLC_RESP);
+      break;
+
+    default:
+      DEBUG ((DEBUG_ERROR, "[DREQ] unknown framework message %lx\n", Args->Arg2));
+      return FALSE;
+  }
+
+  Args->Arg0 = RespFuncId;
+  Args->Arg1 = (UINTN)RecvPartId << 16 | SendPartId;
+
+  return TRUE;
+}
+
 /**
   A loop to delegate events from SPMC.
   DelegatedEventLoop() calls ArmCallSvc() to exit to SPMC.
@@ -901,6 +1038,10 @@ DelegatedEventLoop (
     DEBUG ((DEBUG_INFO, "X5 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg5));
     DEBUG ((DEBUG_INFO, "X6 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg6));
     DEBUG ((DEBUG_INFO, "X7 :  0x%x\n", (UINT32)EventCompleteSvcArgs->Arg7));
+
+    if (HandleCustomDirectRequest (EventCompleteSvcArgs)) {
+      continue;
+    }
 
     if (CommProtocol == CommProtocolFfa) {
       /*
@@ -1037,7 +1178,7 @@ ExitHandler:
   @param  [in]  Arg1        In case of FF-A, this parameter must be zero
                             In case of SPM_MM, Signature and register convention version
   @param  [in]  Arg2        Must be zero
-  @param  [in]  Arg3        In case of FF-A, this parameter must be zero
+  @param  [in]  Arg3        In case of FF-A, boot reason per FF-A SP Lifecycle spec (X3)
                             In case of SPM_MM, address of transfer list
 
 **/
@@ -1160,6 +1301,9 @@ CEntryPoint (
   if (EFI_ERROR (Status)) {
     goto finish;
   }
+
+  // .data is now writable; safe to store to globals
+  mCommProtocol = CommProtocol;
 
   if (ImageContext.ImageAddress != (UINTN)TeData) {
     ImageContext.ImageAddress = (UINTN)TeData;
@@ -1289,6 +1433,8 @@ CEntryPoint (
 
 finish:
   ReturnInitStatusToSpmc (CommProtocol, Status, &EventCompleteSvcArgs);
+
+  StatefulRebootHandler ((UINT8)Arg3);
 
   // Call DelegateEventLoop(), this function never returns.
   DelegatedEventLoop (CommProtocol, CpuDriverEntryPoint, &EventCompleteSvcArgs);
