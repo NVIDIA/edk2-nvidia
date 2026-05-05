@@ -124,6 +124,8 @@ EFI_STRING_ID  UnusedStringArray[] = {
   STRING_TOKEN (STR_MAX_ALLOWED_NUM_SPARES_HELP),
   STRING_TOKEN (STR_FORCED_SNOOP_PROMOTION_PROMPT),
   STRING_TOKEN (STR_FORCED_SNOOP_PROMOTION_HELP),
+  STRING_TOKEN (STR_DISABLE_NSDRAM_ENCR_PROMPT),
+  STRING_TOKEN (STR_DISABLE_NSDRAM_ENCR_HELP),
   STRING_TOKEN (STR_MAX_CORES_PROMPT),
   STRING_TOKEN (STR_MAX_CORES_HELP),
   STRING_TOKEN (STR_SERVER_POWER_CONTROL_PROMPT),
@@ -1990,6 +1992,7 @@ SyncHiiSettings (
     mHiiControlSettings.DisableChannelSparing         = mMb1Config.Data.Mb1Data.FeatureData.DisableChannelSparing;
     mHiiControlSettings.MaxAllowedNumSpares           = mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares;
     mHiiControlSettings.SlcEnableForcedSnoopPromotion = mMb1Config.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion;
+    mHiiControlSettings.DisableNsdramEncryption       = mMb1Config.Data.Mb1Data.FeatureData.DisableNsdramEncryption;
     mHiiControlSettings.PerfVersion                   = mMb1Config.Data.Mb1Data.PerfVersion;
     mHiiControlSettings.UefiDebugLevel                = mMb1Config.Data.Mb1Data.UefiDebugLevel;
 
@@ -2136,6 +2139,7 @@ SyncHiiSettings (
     mMb1Config.Data.Mb1Data.FeatureData.EccAlgorithm                  = mHiiControlSettings.EccAlgorithm;
     mMb1Config.Data.Mb1Data.FeatureData.MaxAllowedNumSpares           = mHiiControlSettings.MaxAllowedNumSpares;
     mMb1Config.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion = mHiiControlSettings.SlcEnableForcedSnoopPromotion;
+    mMb1Config.Data.Mb1Data.FeatureData.DisableNsdramEncryption       = mHiiControlSettings.DisableNsdramEncryption;
     mMb1Config.Data.Mb1Data.PerfVersion                               = mHiiControlSettings.PerfVersion;
     mMb1Config.Data.Mb1Data.UefiDebugLevel                            = mHiiControlSettings.UefiDebugLevel;
 
@@ -2601,6 +2605,10 @@ InitializeSettings (
           }
         }
       }
+    }
+
+    if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 23) {
+      mHiiControlSettings.DisableNsdramEncryptionSupported = TRUE;
     }
 
     if (mMb1Config.Data.Mb1Data.Header.MinorVersion >= 22) {
@@ -3085,6 +3093,9 @@ GetDefaultValue (
       break;
     case KEY_FORCED_SNOOP_PROMOTION:
       Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.SlcEnableForcedSnoopPromotion;
+      break;
+    case KEY_DISABLE_NSDRAM_ENCR:
+      Data = mMb1DefaultConfig.Data.Mb1Data.FeatureData.DisableNsdramEncryption;
       break;
     case KEY_UEFI_DEBUG_LEVEL:
       Data = mMb1DefaultConfig.Data.Mb1Data.UefiDebugLevel;

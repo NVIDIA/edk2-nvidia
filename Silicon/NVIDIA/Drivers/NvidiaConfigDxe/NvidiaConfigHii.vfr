@@ -758,6 +758,15 @@ formset
     endcheckbox;
     endif;
 
+    suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.DisableNsdramEncryptionSupported == 0;
+    checkbox varid = NVIDIA_CONFIG_HII_CONTROL.DisableNsdramEncryption,
+        questionid = KEY_DISABLE_NSDRAM_ENCR,
+        prompt = STRING_TOKEN(STR_DISABLE_NSDRAM_ENCR_PROMPT),
+        help   = STRING_TOKEN(STR_DISABLE_NSDRAM_ENCR_HELP),
+        flags  = INTERACTIVE | RESET_REQUIRED,
+    endcheckbox;
+    endif;
+
     suppressif ideqval NVIDIA_CONFIG_HII_CONTROL.ActiveCoresSettingSupported == 0;
     numeric varid = NVIDIA_CONFIG_HII_CONTROL.ActiveCores,
         questionid = KEY_MAX_CORES,

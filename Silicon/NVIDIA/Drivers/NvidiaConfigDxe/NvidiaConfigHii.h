@@ -128,6 +128,7 @@
 #define KEY_LOCK_ALL_VARS_CONFIG        0x102D
 #define KEY_BMC_CONFIG                  0x102E
 #define KEY_BMC_FACTORY_RESET           0x102F
+#define KEY_DISABLE_NSDRAM_ENCR         0x1030
 
 #define KEY_UPHY0_SOCKET0_CONFIG  0x1100
 #define KEY_UPHY1_SOCKET0_CONFIG  0x1101
@@ -1199,6 +1200,7 @@ typedef struct {
   BOOLEAN    MaxAllowedNumSparesSupported;
   BOOLEAN    DisplayAllMaxAllowedNumSparesOptions;
   BOOLEAN    SlcEnableForcedSnoopPromotionSupported;
+  BOOLEAN    DisableNsdramEncryptionSupported;
   BOOLEAN    PCIeASPML1SSConfigSupported;
   BOOLEAN    PCIeSlotNumConfigSupported;
   BOOLEAN    PCIeURCAConfigSupported;
@@ -1238,6 +1240,7 @@ typedef struct {
   UINT8      EccAlgorithm;
   UINT8      MaxAllowedNumSpares;
   BOOLEAN    SlcEnableForcedSnoopPromotion;
+  BOOLEAN    DisableNsdramEncryption;
   UINT32     ActiveCores;
   UINT8      UphySetting0[MAX_UPHY];
   UINT8      UphySetting1[MAX_UPHY];

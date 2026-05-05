@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -19,7 +19,7 @@
 #define TEGRABL_MAX_MPAM_PARTID           5
 
 #define TEGRABL_MB1_BCT_MAJOR_VERSION  0
-#define TEGRABL_MB1_BCT_MINOR_VERSION  22
+#define TEGRABL_MB1_BCT_MINOR_VERSION  23
 
 #pragma pack(1)
 
@@ -55,7 +55,8 @@ typedef struct {
       UINT64    MaxAllowedNumSpares           : 2;
       UINT64    DisplayAllSpareOptions        : 1;
       UINT64    SlcEnableForcedSnoopPromotion : 1;
-      UINT64    FeatureFieldsUnused           : 47;
+      UINT64    DisableNsdramEncryption       : 1;
+      UINT64    FeatureFieldsUnused           : 46;
     };
   };
 } TEGRABL_FEATURE_DATA;
