@@ -64,7 +64,11 @@ MockUefiLocateProtocol (
   );
 
 /**
-  Initialize Uefi Boot Services Table stub lib
+  Initialize UEFI Boot Services Table stub.
+
+  If the table is already allocated (e.g. a prior test failed before
+  UefiBootServicesTableDeinit), this function releases it first so callers
+  may invoke Init from test setup without depending on prior cleanup.
 
   @retval None
 
@@ -75,7 +79,10 @@ UefiBootServicesTableInit (
   );
 
 /**
-  De-initialize Uefi Boot Services Table stub lib
+  De-initialize UEFI Boot Services Table stub.
+
+  No operation if the table was not initialized, so it is safe to call from
+  test teardown even when setup was skipped or failed partway.
 
   @retval None
 

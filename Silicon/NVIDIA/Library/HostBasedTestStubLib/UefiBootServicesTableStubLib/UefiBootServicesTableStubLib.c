@@ -249,6 +249,15 @@ UefiBootServicesTableInit (
   VOID
   )
 {
+  //
+  // Host tests that abort on UT_ASSERT may skip CleanupTestState(); the next
+  // ResetTestState would otherwise hit ASSERT (gBS == NULL) here. Tear down
+  // any existing stub table first so Init is safe across failing tests.
+  //
+  if (gBS != NULL) {
+    UefiBootServicesTableDeinit ();
+  }
+
   ASSERT (gBS == NULL);
   gBS = AllocateZeroPool (sizeof (*gBS));
 
@@ -270,7 +279,9 @@ UefiBootServicesTableDeinit (
   LIST_ENTRY  *Entry = NULL;
   LIST_ENTRY  *Next  = NULL;
 
-  ASSERT (gBS != NULL);
+  if (gBS == NULL) {
+    return;
+  }
 
   BASE_LIST_FOR_EACH_SAFE (Entry, Next, &mUefiEventListHead) {
     RemoveEntryList (Entry);
