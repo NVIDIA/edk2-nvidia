@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -32,8 +32,8 @@ typedef struct {
   @param  CarveoutRegions             Unsorted list of carveout regions that will be
                                       removed from DramRegions.
   @param  CarveoutRegionsCount        Number of regions in CarveoutRegions.
-  @param  UsableCarveoutRegions       Unsorted list of usable carveout regions that will be
-                                      added to DramRegions.
+  @param  UsableCarveoutRegions       Regions firmware may access, but the OS
+                                      must not allocate.
   @param  UsableCarveoutRegionsCount  Number of regions in UsableCarveoutRegions.
   @param  FinalRegionsCount           Number of regions installed into HOB list.
   @param  MaxRegionStart              Base address of largest region in DRAM usable by UEFI

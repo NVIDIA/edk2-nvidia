@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -297,8 +297,8 @@ MarkUsedMemoryTested (
   @param  CarveoutRegions             Unsorted list of carveout regions that will be
                                       removed from DramRegions.
   @param  CarveoutRegionsCount        Number of regions in CarveoutRegions.
-  @param  UsableCarveoutRegions       Unsorted list of usable carveout regions that will be
-                                      added to DramRegions.
+  @param  UsableCarveoutRegions       Regions firmware may access, but the OS
+                                      must not allocate.
   @param  UsableCarveoutRegionsCount  Number of regions in UsableCarveoutRegions.
   @param  FinalRegionsCount           Number of regions installed into HOB list.
   @param  MaxRegionStart              Base address of largest region in DRAM usable by UEFI
@@ -330,14 +330,31 @@ InstallDramWithCarveouts (
   UINTN                        CarveoutIndex       = 0;
   UINTN                        UsableCarveoutIndex = 0;
   UINTN                        InstalledRegions    = 0;
+  UINTN                        ReservedRegions     = 0;
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
+  EFI_RESOURCE_ATTRIBUTE_TYPE  ReservedResourceAttributes;
   EFI_PHYSICAL_ADDRESS         CarveoutStart;
   EFI_PHYSICAL_ADDRESS         CarveoutEnd;
   EFI_PHYSICAL_ADDRESS         DramEnd;
-  CONST UINTN                  MaxGeneralRegions = (MAX_USABLE_REGIONS - UsableCarveoutRegionsCount - 1);
-  EFI_PHYSICAL_ADDRESS         UefiMemoryBase    = InputDramRegions[UefiDramRegionIndex].MemoryBaseAddress;
-  EFI_PHYSICAL_ADDRESS         UefiMemoryEnd     = UefiMemoryBase + InputDramRegions[UefiDramRegionIndex].MemoryLength;
+  UINTN                        MaxGeneralRegions;
+  EFI_PHYSICAL_ADDRESS         UefiMemoryBase;
+  EFI_PHYSICAL_ADDRESS         UefiMemoryEnd;
   UINTN                        ListIndex;
+
+  if (UsableCarveoutRegionsCount >= MAX_USABLE_REGIONS) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: too many usable carveouts: %lu\n",
+      __FUNCTION__,
+      UsableCarveoutRegionsCount
+      ));
+    return EFI_DEVICE_ERROR;
+  }
+
+  MaxGeneralRegions = MAX_USABLE_REGIONS - UsableCarveoutRegionsCount - 1;
+  UefiMemoryBase    = InputDramRegions[UefiDramRegionIndex].MemoryBaseAddress;
+  UefiMemoryEnd     = UefiMemoryBase +
+                      InputDramRegions[UefiDramRegionIndex].MemoryLength;
 
   // InputDramRegions is CONST, so we need a sortable copy
   DramRegions = AllocatePool (sizeof (NVDA_MEMORY_REGION) * DramRegionsCount);
@@ -460,12 +477,6 @@ InstallDramWithCarveouts (
     MemoryRegionInsert (LargestRegions, &InstalledRegions, &LargestUefiRegion, MAX_USABLE_REGIONS, CompareRegionSizeHighToLow);
   }
 
-  // Add the UsableCarveout regions in the reserved space
-  for (UsableCarveoutIndex = 0; UsableCarveoutIndex < UsableCarveoutRegionsCount; UsableCarveoutIndex++) {
-    DEBUG ((DEBUG_VERBOSE, "DRAM Region [Usable Carveout]: %016lx, %016lx\r\n", UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress, UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength));
-    MemoryRegionInsert (LargestRegions, &InstalledRegions, &UsableCarveoutRegions[UsableCarveoutIndex], MAX_USABLE_REGIONS, CompareRegionSizeHighToLow);
-  }
-
   ResourceAttributes = (
                         EFI_RESOURCE_ATTRIBUTE_PRESENT |
                         EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
@@ -483,7 +494,10 @@ InstallDramWithCarveouts (
     ResourceAttributes |= EFI_RESOURCE_ATTRIBUTE_TESTED;
   }
 
-  // Now that we have the final list, install it in the HOB
+  ReservedResourceAttributes = ResourceAttributes |
+                               EFI_RESOURCE_ATTRIBUTE_TESTED;
+
+  // Now that we have the final list, install system DRAM in the HOB list.
   for (ListIndex = 0; ListIndex < InstalledRegions; ListIndex++) {
     BuildResourceDescriptorHob (
       EFI_RESOURCE_SYSTEM_MEMORY,
@@ -493,12 +507,46 @@ InstallDramWithCarveouts (
       );
   }
 
+  // Keep firmware-usable carveouts out of the OS allocatable memory map.
+  // DXE promotes initialized reserved resources unless they are marked tested,
+  // so reserved carveout resource HOBs always carry TESTED.
+  for (UsableCarveoutIndex = 0;
+       UsableCarveoutIndex < UsableCarveoutRegionsCount;
+       UsableCarveoutIndex++)
+  {
+    if (UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength == 0) {
+      continue;
+    }
+
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Reserved usable carveout: Base: 0x%016lx, Size: 0x%016lx\n",
+      __FUNCTION__,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength
+      ));
+    BuildResourceDescriptorHob (
+      EFI_RESOURCE_MEMORY_RESERVED,
+      ReservedResourceAttributes,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryBaseAddress,
+      UsableCarveoutRegions[UsableCarveoutIndex].MemoryLength
+      );
+    ReservedRegions++;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: reserved %lu usable carveout regions for OS memory map\n",
+    __FUNCTION__,
+    ReservedRegions
+    ));
+
   MarkUsedMemoryTested ();
 
   // Specify the largest chunk of the UEFI DDR region that wasn't covered by carveouts
   *MaxRegionStart    = LargestUefiRegion.MemoryBaseAddress;
   *MaxRegionSize     = LargestUefiRegion.MemoryLength;
-  *FinalRegionsCount = InstalledRegions;
+  *FinalRegionsCount = InstalledRegions + ReservedRegions;
   DEBUG ((DEBUG_INFO, "%a: FinalRegionCount = %d\n", __FUNCTION__, *FinalRegionsCount));
 
   FreePool (DramRegions);

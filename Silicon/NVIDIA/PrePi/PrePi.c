@@ -13,6 +13,9 @@
 #include <Library/DebugAgentLib.h>
 #include <Library/PrePiLib.h>
 #include <Library/PrintLib.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 #include <Library/PrePiHobListPointerLib.h>
 #include <Library/TimerLib.h>
 #include <Library/PerformanceLib.h>
@@ -23,6 +26,7 @@
 #include <Library/TegraSerialPortLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/CpuExceptionHandlerLib.h>
+#include <Library/CacheMaintenanceLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/StatusRegLib.h>
 #include <Library/TegraPlatformInfoLib.h>
@@ -33,6 +37,17 @@
 #include <Library/FdtLib.h>
 
 #include "PrePi.h"
+
+typedef struct {
+  EFI_FIRMWARE_VOLUME_HEADER    *FvHeader;
+  UINT64                        FvSize;
+  UINT64                        DtbBase;
+  UINT64                        DtbSize;
+  UINT64                        StartTimeStamp;
+  EFI_PHYSICAL_ADDRESS          NewStackBase;
+  UINT64                        NewStackLength;
+  UINTN                         NewStackSize;
+} PREPI_STACK_SWITCH_CONTEXT;
 
 STATIC
 VOID
@@ -52,12 +67,208 @@ InitMmu (
   }
 }
 
+STATIC
+VOID *
+ReserveHobTopPages (
+  IN UINTN  Pages
+  )
+{
+  EFI_PEI_HOB_POINTERS  Hob;
+  EFI_PHYSICAL_ADDRESS  NewTop;
+  UINTN                 AllocationSize;
+
+  if ((Pages == 0) || (Pages > (MAX_UINTN / EFI_PAGE_SIZE))) {
+    return NULL;
+  }
+
+  AllocationSize = Pages * EFI_PAGE_SIZE;
+  Hob.Raw        = GetHobList ();
+  NewTop         = Hob.HandoffInformationTable->EfiFreeMemoryTop &
+                   ~(EFI_PHYSICAL_ADDRESS)EFI_PAGE_MASK;
+  if (NewTop < AllocationSize) {
+    return NULL;
+  }
+
+  NewTop -= AllocationSize;
+
+  if (NewTop < (Hob.HandoffInformationTable->EfiFreeMemoryBottom +
+                sizeof (EFI_HOB_MEMORY_ALLOCATION)))
+  {
+    return NULL;
+  }
+
+  // Reserve space from the active HOB heap without creating an allocation HOB.
+  // Some callers need to describe the final type with a special HOB later.
+  Hob.HandoffInformationTable->EfiFreeMemoryTop = NewTop;
+
+  return (VOID *)(UINTN)NewTop;
+}
+
+STATIC
+VOID *
+AllocateBootServicesCodePages (
+  IN UINTN  Pages
+  )
+{
+  VOID   *Allocation;
+  UINTN  AllocationSize;
+
+  Allocation = ReserveHobTopPages (Pages);
+  if (Allocation == NULL) {
+    return NULL;
+  }
+
+  AllocationSize = Pages * EFI_PAGE_SIZE;
+  BuildMemoryAllocationHob (
+    (EFI_PHYSICAL_ADDRESS)(UINTN)Allocation,
+    AllocationSize,
+    EfiBootServicesCode
+    );
+
+  return Allocation;
+}
+
+STATIC
+VOID *
+CopyMmuLiveTranslationEntryHelper (
+  VOID
+  )
+{
+  extern UINT32  ArmReplaceLiveTranslationEntrySize;
+
+  VOID   *HelperCopy;
+  UINTN  HelperPages;
+  UINTN  HelperSize;
+
+  HelperSize  = ArmReplaceLiveTranslationEntrySize;
+  HelperPages = EFI_SIZE_TO_PAGES (HelperSize);
+  HelperCopy  = AllocateBootServicesCodePages (HelperPages);
+  NV_ASSERT_RETURN (
+    HelperCopy != NULL,
+    return NULL,
+    "%a: failed to allocate %lu pages for MMU live-entry helper\n",
+    __FUNCTION__,
+    HelperPages
+    );
+
+  // CpuDxe calls this helper while changing live page tables, after reserved
+  // carveouts may have been made non-executable by DXE memory protection.
+  CopyMem (
+    HelperCopy,
+    (VOID *)(UINTN)ArmReplaceLiveTranslationEntry,
+    HelperSize
+    );
+  WriteBackDataCacheRange (HelperCopy, HelperSize);
+  InvalidateInstructionCacheRange (HelperCopy, HelperSize);
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: copied MMU live-entry helper: 0x%p -> 0x%p, size 0x%lx\n",
+    __FUNCTION__,
+    (VOID *)(UINTN)ArmReplaceLiveTranslationEntry,
+    HelperCopy,
+    HelperSize
+    ));
+
+  return HelperCopy;
+}
+
+STATIC
+BOOLEAN
+IsRangeInReservedResource (
+  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN UINT64                Length
+  )
+{
+  EFI_PEI_HOB_POINTERS         Hob;
+  EFI_HOB_RESOURCE_DESCRIPTOR  *Resource;
+  EFI_PHYSICAL_ADDRESS         EndAddress;
+  EFI_PHYSICAL_ADDRESS         ResourceEnd;
+
+  if ((Length == 0) || (BaseAddress > MAX_UINT64 - Length)) {
+    return FALSE;
+  }
+
+  EndAddress = BaseAddress + Length;
+  Hob.Raw    = GetHobList ();
+  Hob.Raw    = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
+  while (Hob.Raw != NULL) {
+    Resource = Hob.ResourceDescriptor;
+    if ((Resource->ResourceType != EFI_RESOURCE_MEMORY_RESERVED) ||
+        (Resource->ResourceLength == 0) ||
+        (Resource->PhysicalStart > MAX_UINT64 - Resource->ResourceLength))
+    {
+      Hob.Raw = GET_NEXT_HOB (Hob);
+      Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
+      continue;
+    }
+
+    ResourceEnd = Resource->PhysicalStart + Resource->ResourceLength;
+    if ((BaseAddress >= Resource->PhysicalStart) &&
+        (EndAddress <= ResourceEnd))
+    {
+      return TRUE;
+    }
+
+    Hob.Raw = GET_NEXT_HOB (Hob);
+    Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
+  }
+
+  return FALSE;
+}
+
+STATIC
+VOID
+ReserveBootAllocationsInReservedResources (
+  VOID
+  )
+{
+  EFI_PEI_HOB_POINTERS              Hob;
+  EFI_HOB_MEMORY_ALLOCATION_HEADER  *Allocation;
+
+  // Allocation HOB memory types feed the DXE memory map. Boot-service
+  // allocations already placed in reserved carveouts must therefore be
+  // reserved for the OS even though firmware keeps using the memory.
+  Hob.Raw = GetHobList ();
+  Hob.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, Hob.Raw);
+  while (Hob.Raw != NULL) {
+    Allocation = &Hob.MemoryAllocation->AllocDescriptor;
+    if ((Allocation->MemoryType != EfiBootServicesCode) &&
+        (Allocation->MemoryType != EfiBootServicesData))
+    {
+      Hob.Raw = GET_NEXT_HOB (Hob);
+      Hob.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, Hob.Raw);
+      continue;
+    }
+
+    if (IsRangeInReservedResource (
+          Allocation->MemoryBaseAddress,
+          Allocation->MemoryLength
+          ))
+    {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Reserved carveout allocation: Base: 0x%016lx, "
+        "Size: 0x%016lx, Type: %u -> %u\n",
+        __FUNCTION__,
+        Allocation->MemoryBaseAddress,
+        Allocation->MemoryLength,
+        Allocation->MemoryType,
+        EfiReservedMemoryType
+        ));
+      Allocation->MemoryType = EfiReservedMemoryType;
+    }
+
+    Hob.Raw = GET_NEXT_HOB (Hob);
+    Hob.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, Hob.Raw);
+  }
+}
+
 /*++
 
 Routine Description:
   Registers the primary firmware volume
   1. Creates Fv HOB entry
-  2. Split FV into its own system resource
+  2. Split FV into its own resource
   3. Marks region as allocated
 
 
@@ -79,6 +290,8 @@ RegisterFirmwareVolume (
   )
 {
   EFI_RESOURCE_ATTRIBUTE_TYPE  ResourceAttributes;
+  EFI_RESOURCE_TYPE            ResourceType;
+  EFI_MEMORY_TYPE              MemoryType;
   UINT64                       ResourceLength;
   EFI_PEI_HOB_POINTERS         NextHob;
   EFI_PHYSICAL_ADDRESS         FvTop;
@@ -91,35 +304,40 @@ RegisterFirmwareVolume (
   // but this only works if we split off the underlying resource descriptor as well.
   Found = FALSE;
 
-  // Search for System Memory Hob that contains the firmware
+  // Search for a resource HOB that contains the firmware.
   NextHob.Raw = GetHobList ();
   while ((NextHob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, NextHob.Raw)) != NULL) {
-    if ((NextHob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) &&
+    ResourceType = NextHob.ResourceDescriptor->ResourceType;
+    if (((ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) ||
+         (ResourceType == EFI_RESOURCE_MEMORY_RESERVED)) &&
         (FvBase >= NextHob.ResourceDescriptor->PhysicalStart) &&
         (FvTop <= NextHob.ResourceDescriptor->PhysicalStart + NextHob.ResourceDescriptor->ResourceLength))
     {
       ResourceAttributes = NextHob.ResourceDescriptor->ResourceAttribute;
       ResourceLength     = NextHob.ResourceDescriptor->ResourceLength;
       ResourceTop        = NextHob.ResourceDescriptor->PhysicalStart + ResourceLength;
+      MemoryType         = (ResourceType == EFI_RESOURCE_MEMORY_RESERVED) ?
+                           EfiReservedMemoryType :
+                           EfiBootServicesCode;
 
       if (FvBase == NextHob.ResourceDescriptor->PhysicalStart) {
         if (ResourceTop != FvTop) {
-          // Create the System Memory HOB for the firmware
+          // Split off the resource HOB for the firmware.
           BuildResourceDescriptorHob (
-            EFI_RESOURCE_SYSTEM_MEMORY,
+            ResourceType,
             ResourceAttributes,
             FvBase,
             FvSize
             );
 
-          // Top of the FD is system memory available for UEFI
+          // Top of the FD keeps the original resource type.
           NextHob.ResourceDescriptor->PhysicalStart  += FvSize;
           NextHob.ResourceDescriptor->ResourceLength -= FvSize;
         }
       } else {
-        // Create the System Memory HOB for the firmware
+        // Split off the resource HOB for the firmware.
         BuildResourceDescriptorHob (
-          EFI_RESOURCE_SYSTEM_MEMORY,
+          ResourceType,
           ResourceAttributes,
           FvBase,
           FvSize
@@ -128,11 +346,11 @@ RegisterFirmwareVolume (
         // Update the HOB
         NextHob.ResourceDescriptor->ResourceLength = FvBase - NextHob.ResourceDescriptor->PhysicalStart;
 
-        // If there is some memory available on the top of the FD then create a HOB
+        // If there is memory above the FD then create a matching resource HOB.
         if (FvTop < NextHob.ResourceDescriptor->PhysicalStart + ResourceLength) {
-          // Create the System Memory HOB for the remaining region (top of the FD)
+          // Create a HOB for the remaining resource above the FD.
           BuildResourceDescriptorHob (
-            EFI_RESOURCE_SYSTEM_MEMORY,
+            ResourceType,
             ResourceAttributes,
             FvTop,
             ResourceTop - FvTop
@@ -140,8 +358,9 @@ RegisterFirmwareVolume (
         }
       }
 
-      // Mark the memory covering the Firmware Device as boot services code
-      BuildMemoryAllocationHob (FvBase, FvSize, EfiBootServicesCode);
+      // Match the allocation type to the resource type so carveout-hosted
+      // firmware remains reserved in the OS-facing memory map.
+      BuildMemoryAllocationHob (FvBase, FvSize, MemoryType);
 
       Found = TRUE;
       break;
@@ -194,6 +413,210 @@ DisplayHobResource (
 VOID
 PrintModel (
   VOID
+  );
+
+STATIC
+VOID
+EFIAPI
+CEntryPointOnPermanentStack (
+  IN VOID  *Context1,
+  IN VOID  *Context2
+  )
+{
+  EFI_STATUS                  Status;
+  FIRMWARE_SEC_PERFORMANCE    Performance;
+  VOID                        *MmuFuncPtr;
+  VOID                        *MmuFuncHob;
+  PREPI_STACK_SWITCH_CONTEXT  *Context;
+  EFI_PHYSICAL_ADDRESS        StackGuardBase;
+
+  (VOID)Context2;
+
+  Context = (PREPI_STACK_SWITCH_CONTEXT *)Context1;
+
+  // The bootloader starts PrePi on the UEFI carveout stack. Keep the carveout
+  // reserved for the OS, but run DXE and OS loaders from a normal DRAM stack.
+  // OS loaders inherit the current firmware SP, and some reject a stack that
+  // sits in a GetMemoryMap() descriptor reported as EfiReservedMemoryType.
+  StackGuardBase = Context->NewStackBase + Context->NewStackSize;
+  Status         = ArmSetMemoryAttributes (
+                     StackGuardBase,
+                     SIZE_4KB,
+                     EFI_MEMORY_RO,
+                     EFI_MEMORY_RO
+                     );
+  ASSERT_EFI_ERROR (Status);
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: running on migrated stack: Base: 0x%016lx, Size: 0x%016lx\n",
+    __FUNCTION__,
+    Context->NewStackBase,
+    Context->NewStackLength
+    ));
+
+  // Register UEFI DTB
+  RegisterDeviceTree (Context->DtbBase);
+
+  // Get info from platform
+  Status = UpdatePlatformResourceInformation ();
+  NV_ASSERT_RETURN (
+    !EFI_ERROR (Status),
+    CpuDeadLoop (),
+    "Failed to UpdatePlatformResourceInformation - %r!\r\n",
+    Status
+    );
+
+  // Print Chip ID
+  DEBUG ((DEBUG_ERROR, "ChipID: 0x%x\n", TegraGetChipID ()));
+
+  // Print Platform ID
+  DEBUG ((DEBUG_ERROR, "Platform ID: %d\n", TegraGetPlatform ()));
+
+  // Print platform model info from UEFI DTB
+  PrintModel ();
+
+  // Create DTB memory allocation HOB
+  BuildMemoryAllocationHob (Context->DtbBase, Context->DtbSize, EfiBootServicesData);
+
+  // Publish only the migrated stack as the active UEFI stack. The old
+  // bootloader stack remains inside the reserved UEFI carveout and must not
+  // be exposed as boot-service memory in the OS-facing map.
+  BuildStackHob (Context->NewStackBase, Context->NewStackLength);
+
+  // Save a normal-DRAM copy of ArmReplaceLiveTranslationEntry() in a HOB so
+  // CpuDxe can replace live translation entries after UEFI carveouts become
+  // reserved and non-executable under DXE memory protection.
+  MmuFuncPtr = CopyMmuLiveTranslationEntryHelper ();
+  NV_ASSERT_RETURN (
+    MmuFuncPtr != NULL,
+    CpuDeadLoop (),
+    "Missing MMU live-entry helper copy!\r\n"
+    );
+  MmuFuncHob = BuildGuidDataHob (
+                 &gArmMmuReplaceLiveTranslationEntryFuncGuid,
+                 &MmuFuncPtr,
+                 sizeof (MmuFuncPtr)
+                 );
+  ASSERT (MmuFuncHob != NULL);
+
+  // TODO: Call CpuPei as a library
+  BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
+
+  // Store timer value logged at the beginning of firmware image execution
+  Performance.ResetEnd = GetTimeInNanoSecond (Context->StartTimeStamp);
+
+  // Build SEC Performance Data Hob
+  BuildGuidDataHob (&gEfiFirmwarePerformanceGuid, &Performance, sizeof (Performance));
+
+  // Set the Boot Mode
+  SetBootMode (BOOT_WITH_FULL_CONFIGURATION);
+
+  // Register firmware volume
+  Status = RegisterFirmwareVolume ((EFI_PHYSICAL_ADDRESS)Context->FvHeader, Context->FvSize);
+  ASSERT_EFI_ERROR (Status);
+
+  // Boot-service allocations inside carveouts must stay reserved for the OS.
+  ReserveBootAllocationsInReservedResources ();
+
+  // Now, the HOB List has been initialized, we can register performance information
+  PERF_START (NULL, "PEI", NULL, Context->StartTimeStamp);
+
+  // SEC phase needs to run library constructors by hand.
+  ProcessLibraryConstructorList ();
+
+  DisplayHobResource ();
+
+  // Assume the FV that contains the SEC (our code) also contains a compressed FV.
+  Status = DecompressFirstFv ();
+  ASSERT_EFI_ERROR (Status);
+
+  // Load the DXE Core and transfer control to it
+  Status = LoadDxeCoreFromFv (NULL, 0);
+  ASSERT_EFI_ERROR (Status);
+
+  // DXE Core should always load and never return
+  ASSERT (FALSE);
+}
+
+STATIC
+VOID
+SwitchToPermanentStack (
+  IN EFI_FIRMWARE_VOLUME_HEADER  *FvHeader,
+  IN UINT64                      FvSize,
+  IN UINT64                      DtbBase,
+  IN UINT64                      DtbSize,
+  IN UINT64                      StartTimeStamp,
+  IN UINTN                       OldStackBase,
+  IN UINTN                       OldStackSize
+  )
+{
+  PREPI_STACK_SWITCH_CONTEXT  *Context;
+  EFI_PHYSICAL_ADDRESS        OldStackEnd;
+  EFI_PHYSICAL_ADDRESS        NewStackTop;
+  UINTN                       NewStackLength;
+  UINTN                       NewStackPages;
+
+  if (OldStackSize > MAX_UINTN - SIZE_4KB) {
+    CpuDeadLoop ();
+  }
+
+  NewStackLength = ALIGN_VALUE (OldStackSize + SIZE_4KB, EFI_PAGE_SIZE);
+  NewStackPages  = EFI_SIZE_TO_PAGES (NewStackLength);
+  Context        = AllocatePages (EFI_SIZE_TO_PAGES (sizeof (*Context)));
+  NV_ASSERT_RETURN (
+    Context != NULL,
+    CpuDeadLoop (),
+    "%a: failed to allocate stack switch context\n",
+    __FUNCTION__
+    );
+  ZeroMem (Context, sizeof (*Context));
+
+  // Delay the allocation HOB until after SwitchStack() so the HOB can use the
+  // stack allocation GUID instead of a generic boot-service data type.
+  Context->NewStackBase = (EFI_PHYSICAL_ADDRESS)(UINTN)ReserveHobTopPages (
+                                                         NewStackPages
+                                                         );
+  NV_ASSERT_RETURN (
+    Context->NewStackBase != 0,
+    CpuDeadLoop (),
+    "%a: failed to allocate %lu pages for migrated stack\n",
+    __FUNCTION__,
+    NewStackPages
+    );
+
+  Context->FvHeader       = FvHeader;
+  Context->FvSize         = FvSize;
+  Context->DtbBase        = DtbBase;
+  Context->DtbSize        = DtbSize;
+  Context->StartTimeStamp = StartTimeStamp;
+  Context->NewStackLength = NewStackLength;
+  Context->NewStackSize   = OldStackSize;
+  NewStackTop             = Context->NewStackBase + Context->NewStackSize;
+  OldStackEnd             = (EFI_PHYSICAL_ADDRESS)OldStackBase + NewStackLength;
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: switching stack out of UEFI carveout: "
+    "0x%016lx-0x%016lx -> 0x%016lx-0x%016lx\n",
+    __FUNCTION__,
+    OldStackBase,
+    OldStackEnd,
+    Context->NewStackBase,
+    Context->NewStackBase + Context->NewStackLength
+    ));
+
+  SwitchStack (
+    CEntryPointOnPermanentStack,
+    Context,
+    NULL,
+    (VOID *)(UINTN)NewStackTop
+    );
+  ASSERT (FALSE);
+}
+
+VOID
+PrintModel (
+  VOID
   )
 {
   EFI_STATUS  Status;
@@ -236,7 +659,6 @@ CEntryPoint (
   EFI_STATUS                    Status;
   CHAR8                         Buffer[150];
   UINTN                         CharCount;
-  FIRMWARE_SEC_PERFORMANCE      Performance;
   UINT64                        StartTimeStamp;
   EFI_FIRMWARE_VOLUME_HEADER    *FvHeader;
   UINT64                        FvSize;
@@ -251,8 +673,6 @@ CEntryPoint (
   TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
   ARM_MEMORY_REGION_DESCRIPTOR  InitialMemory[2];
   SERIAL_MAPPING                *Mapping;
-  VOID                          *MmuFuncPtr;
-  VOID                          *MmuFuncHob;
 
   Mapping = NULL;
 
@@ -499,77 +919,19 @@ CEntryPoint (
     BuildMemoryTypeInformationHob ();
   }
 
-  // Add all new entries to memory map and relocate HOB if needed
+  // Add DRAM and reserved carveout resources, then migrate the HOB list into
+  // normal DRAM before leaving the bootloader-provided UEFI carveout stack.
   UpdateMemoryMap ();
 
-  Status = ArmSetMemoryAttributes (StackBase + StackSize, SIZE_4KB, EFI_MEMORY_RO, EFI_MEMORY_RO);
-  ASSERT_EFI_ERROR (Status);
+  SwitchToPermanentStack (
+    FvHeader,
+    FvSize,
+    DtbBase,
+    DtbSize,
+    StartTimeStamp,
+    StackBase,
+    StackSize
+    );
 
-  // Register UEFI DTB
-  RegisterDeviceTree (DtbBase);
-
-  // Get info from platform
-  Status = UpdatePlatformResourceInformation ();
-  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to UpdatePlatformResourceInformation - %r!\r\n", Status);
-
-  // Print Chip ID
-  DEBUG ((DEBUG_ERROR, "ChipID: 0x%x\n", TegraGetChipID ()));
-
-  // Print Platform ID
-  DEBUG ((DEBUG_ERROR, "Platform ID: %d\n", TegraGetPlatform ()));
-
-  // Print platform model info from UEFI DTB
-  PrintModel ();
-
-  // Create DTB memory allocation HOB
-  BuildMemoryAllocationHob (DtbBase, DtbSize, EfiBootServicesData);
-
-  // Create the Stacks HOB (reserve the memory for all stacks)
-  BuildStackHob (StackBase, StackSize + SIZE_4KB);
-
-  // Save pointer to PrePi version of the ArmReplaceLiveTranslationEntry()
-  // routine in a HOB so CpuDxe's ArmMmuLib instance can use it to replace
-  // live translation entries without disabling the MMU.
-  MmuFuncPtr = (VOID *)ArmReplaceLiveTranslationEntry;
-  MmuFuncHob = BuildGuidDataHob (
-                 &gArmMmuReplaceLiveTranslationEntryFuncGuid,
-                 &MmuFuncPtr,
-                 sizeof (MmuFuncPtr)
-                 );
-  ASSERT (MmuFuncHob != NULL);
-
-  // TODO: Call CpuPei as a library
-  BuildCpuHob (ArmGetPhysicalAddressBits (), ArmGetPhysicalAddressBits ());
-
-  // Store timer value logged at the beginning of firmware image execution
-  Performance.ResetEnd = GetTimeInNanoSecond (StartTimeStamp);
-
-  // Build SEC Performance Data Hob
-  BuildGuidDataHob (&gEfiFirmwarePerformanceGuid, &Performance, sizeof (Performance));
-
-  // Set the Boot Mode
-  SetBootMode (BOOT_WITH_FULL_CONFIGURATION);
-
-  // Register firmware volume
-  Status = RegisterFirmwareVolume ((EFI_PHYSICAL_ADDRESS)FvHeader, FvSize);
-  ASSERT_EFI_ERROR (Status);
-
-  // Now, the HOB List has been initialized, we can register performance information
-  PERF_START (NULL, "PEI", NULL, StartTimeStamp);
-
-  // SEC phase needs to run library constructors by hand.
-  ProcessLibraryConstructorList ();
-
-  DisplayHobResource ();
-
-  // Assume the FV that contains the SEC (our code) also contains a compressed FV.
-  Status = DecompressFirstFv ();
-  ASSERT_EFI_ERROR (Status);
-
-  // Load the DXE Core and transfer control to it
-  Status = LoadDxeCoreFromFv (NULL, 0);
-  ASSERT_EFI_ERROR (Status);
-
-  // DXE Core should always load and never return
   ASSERT (FALSE);
 }

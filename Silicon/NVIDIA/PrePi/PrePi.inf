@@ -52,6 +52,7 @@
   SystemResourceLib
   DtPlatformDtbLoaderLib
   CpuExceptionHandlerLib
+  CacheMaintenanceLib
   StatusRegLib
   PlatformResourceLib
   StackCheckLib

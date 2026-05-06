@@ -1,7 +1,7 @@
 /** @file
   UEFI memory map test
 
-  Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -45,6 +45,21 @@ typedef struct {
 /// Module-wide test suite context, managed by the test suite setup
 /// and teardown functions.
 STATIC MEMORY_MAP_TEST_SUITE_CONTEXT  mMemoryMapTestSuiteContext;
+
+STATIC
+BOOLEAN
+MemoryMapTypeMatchesResourceType (
+  IN EFI_MEMORY_TYPE    MemoryType,
+  IN EFI_RESOURCE_TYPE  ResourceType
+  )
+{
+  if (ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
+    return TRUE;
+  }
+
+  return (MemoryType == EfiReservedMemoryType) &&
+         (ResourceType == EFI_RESOURCE_MEMORY_RESERVED);
+}
 
 /**
    Retrieve pointers to the HOB list and the UEFI memory map, and
@@ -181,20 +196,19 @@ HobMemoryAllocationsPresentTest (
 
 /**
    Verifies that all memory regions described by the UEFI memory map
-   are located in system memory (as described by
-   EFI_HOB_RESOURCE_DESCRIPTOR).
+   are located in memory resource HOBs.
 
    @param [in] Context Test context.
 
    @retval UNIT_TEST_PASSED            All memory regions are located
-                                       in system memory.
+                                       in resource HOBs.
    @retval UNIT_TEST_ERROR_TEST_FAILED At least one memory region is
-                                       not located in system memory.
+                                       not located in a resource HOB.
 */
 STATIC
 UNIT_TEST_STATUS
 EFIAPI
-MemoryMapRegionsInSystemMemoryTest (
+MemoryMapRegionsInResourceHobTest (
   IN MEMORY_MAP_TEST_SUITE_CONTEXT *CONST  Context
   )
 {
@@ -202,6 +216,7 @@ MemoryMapRegionsInSystemMemoryTest (
   EFI_PEI_HOB_POINTERS   Hob;
   EFI_MEMORY_DESCRIPTOR  *MemDescCur;
   EFI_MEMORY_DESCRIPTOR  *MemDescEnd;
+  EFI_MEMORY_TYPE        MapMemoryType;
   EFI_PHYSICAL_ADDRESS   MapStartAddress;
   EFI_PHYSICAL_ADDRESS   MapEndAddress;
   EFI_PHYSICAL_ADDRESS   HobStartAddress;
@@ -212,14 +227,21 @@ MemoryMapRegionsInSystemMemoryTest (
   MemDescCur = Context->MemoryMap;
   MemDescEnd = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)Context->MemoryMap + Context->MemoryMapSize);
   for ( ; MemDescCur < MemDescEnd; MemDescCur = NEXT_MEMORY_DESCRIPTOR (MemDescCur, Context->DescriptorSize)) {
+    MapMemoryType   = MemDescCur->Type;
     MapStartAddress = MemDescCur->PhysicalStart;
     MapEndAddress   = MemDescCur->PhysicalStart + EFI_PAGES_TO_SIZE (MemDescCur->NumberOfPages);
 
     do {
       HasChanged = FALSE;
       for (Hob.Raw = Context->HobList; !END_OF_HOB_LIST (Hob); Hob.Raw = GET_NEXT_HOB (Hob)) {
-        if (!(  (Hob.Header->HobType == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR)
-             && (Hob.ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY)))
+        if (Hob.Header->HobType != EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
+          continue;
+        }
+
+        if (!MemoryMapTypeMatchesResourceType (
+               MapMemoryType,
+               Hob.ResourceDescriptor->ResourceType
+               ))
         {
           continue;
         }
@@ -240,9 +262,15 @@ MemoryMapRegionsInSystemMemoryTest (
     } while (HasChanged && MapStartAddress < MapEndAddress);
 
     if (MapStartAddress < MapEndAddress) {
-      UT_LOG_ERROR ("Memory map range not located in system memory:" "\r\n");
-      UT_LOG_ERROR ("  Start address = %016lx"                       "\r\n", MapStartAddress);
-      UT_LOG_ERROR ("  End address   = %016lx"                       "\r\n", MapEndAddress);
+      UT_LOG_ERROR ("Memory map range not located in a resource HOB:" "\r\n");
+      UT_LOG_ERROR (
+        "  Start address = %016lx" "\r\n",
+        MapStartAddress
+        );
+      UT_LOG_ERROR (
+        "  End address   = %016lx" "\r\n",
+        MapEndAddress
+        );
       Status = UNIT_TEST_ERROR_TEST_FAILED;
     }
   }
@@ -479,9 +507,9 @@ InitTestSuite (
 
   AddTestCase (
     TestSuite,
-    "Verify all memory map regions located in system memory",
-    "MemoryMapRegionsInSystemMemoryTest",
-    (UNIT_TEST_FUNCTION)MemoryMapRegionsInSystemMemoryTest,
+    "Verify all memory map regions located in resource HOBs",
+    "MemoryMapRegionsInResourceHobTest",
+    (UNIT_TEST_FUNCTION)MemoryMapRegionsInResourceHobTest,
     NULL,
     NULL,
     (UNIT_TEST_CONTEXT)&mMemoryMapTestSuiteContext

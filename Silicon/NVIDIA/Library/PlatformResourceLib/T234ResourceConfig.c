@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -204,6 +204,7 @@ T234AddBootloaderCarveouts (
 
     switch (Index) {
       case CARVEOUT_CCPLEX_INTERWORLD_SHMEM:
+      case CARVEOUT_XUSB:
       case CARVEOUT_RCM_BLOB:
       case CARVEOUT_OS:
       case CARVEOUT_GR:

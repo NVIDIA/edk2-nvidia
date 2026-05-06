@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -527,6 +527,7 @@ TH500AddBootloaderCarveouts (
       case CARVEOUT_RCM_BLOB:
       case CARVEOUT_UEFI:
       case CARVEOUT_OS:
+      case CARVEOUT_PROFILING:
         // Leave in memory map but marked as used on socket 0
         if (Socket == TH500_PRIMARY_SOCKET) {
           Pages = EFI_SIZE_TO_PAGES (Size);

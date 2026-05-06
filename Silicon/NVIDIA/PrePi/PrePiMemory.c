@@ -26,6 +26,23 @@
 // Initial memory needed for GCD
 #define MINIMUM_INITIAL_MEMORY_SIZE  SIZE_64KB
 
+STATIC
+BOOLEAN
+ResourceNeedsWriteBackMapping (
+  IN EFI_HOB_RESOURCE_DESCRIPTOR  *Resource
+  )
+{
+  if (Resource->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
+    return TRUE;
+  }
+
+  // Usable carveouts are reserved from the OS, but firmware can still access
+  // them as normal DRAM before ExitBootServices().
+  return (Resource->ResourceType == EFI_RESOURCE_MEMORY_RESERVED) &&
+         ((Resource->ResourceAttribute &
+           EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE) != 0);
+}
+
 /**
   Calculate total memory bin size neeeded.
 
@@ -262,7 +279,7 @@ UpdateMemoryMap (
       Resource->ResourceType
       ));
 
-    if (Resource->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
+    if (ResourceNeedsWriteBackMapping (Resource)) {
       ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_WB, 0);
     } else {
       ArmSetMemoryAttributes (Resource->PhysicalStart, Resource->ResourceLength, EFI_MEMORY_UC, 0);
