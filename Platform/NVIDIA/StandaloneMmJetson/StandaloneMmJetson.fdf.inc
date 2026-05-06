@@ -6,6 +6,11 @@
 
   !include Platform/NVIDIA/StandaloneMmFfaLegacy.common.fdf.inc
 
+  #
+  # MM User Authentication Driver
+  #
+  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
+
 ################################################################################
 #
 # Rules are use with the [FV] section's module INF type to define

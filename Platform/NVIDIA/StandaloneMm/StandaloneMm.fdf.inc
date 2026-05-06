@@ -7,11 +7,6 @@
   !include Platform/NVIDIA/StandaloneMmFfaLegacy.common.fdf.inc
 
   #
-  # MM NorFlash Blob Driver for ERoT Less updates.
-  #
-  INF Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
-
-  #
   # MM MCTP/ERoT Drivers
   #
   INF Silicon/NVIDIA/Drivers/ErotQspiDxe/ErotQspiStmm.inf

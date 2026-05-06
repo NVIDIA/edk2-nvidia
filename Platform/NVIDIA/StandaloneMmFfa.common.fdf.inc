@@ -42,8 +42,3 @@
   # MM Variable Driver
   #
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
-
-  #
-  # MM User Authentication Driver
-  #
-  INF Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf

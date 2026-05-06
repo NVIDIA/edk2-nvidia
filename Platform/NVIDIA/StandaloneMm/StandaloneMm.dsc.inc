@@ -72,7 +72,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x43
   gNVIDIATokenSpaceGuid.PcdAssertResetTimeoutValue|5
   gNVIDIATokenSpaceGuid.PcdDataOnlyFlashIsSupported|TRUE
-  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|TRUE
+  gNVIDIATokenSpaceGuid.PcdFwBlobIsSupported|FALSE
 
 [PcdsFeatureFlag]
 
@@ -102,12 +102,6 @@
   # Note: it is not included in the FDF as it is not part of the FV
   #
   Silicon/NVIDIA/StandaloneMm/Manifest/Manifest.inf
-
-  #
-  # MM NorFlash Blob Driver for ERoT Less updates.
-  #
-  Silicon/NVIDIA/Drivers/NorFlashDxe/NorFlashStandaloneMmBlob.inf
-
 
   #
   # MM MCTP/ERoT Drivers

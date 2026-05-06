@@ -136,11 +136,6 @@
   #
   Silicon/NVIDIA/Drivers/TegraGpio/TegraGpioStandaloneMm.inf
 
-  #
-  # MM User Authentication Driver
-  #
-  Silicon/NVIDIA/Drivers/UserAuthenticationDxeMm/UserAuthenticationMm.inf
-
 
 [Components.AARCH64]
   #
