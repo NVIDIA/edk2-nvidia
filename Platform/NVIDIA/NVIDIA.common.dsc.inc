@@ -1020,7 +1020,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   # SMBIOS entry point version
   #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0306
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0307
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosDocRev|0x0
 
   # SMBIOS Type0 Firmware BIOS characteristics.
