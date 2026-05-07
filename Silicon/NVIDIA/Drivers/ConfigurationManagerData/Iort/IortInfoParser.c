@@ -1120,6 +1120,8 @@ SetupIortNodeForSmmuV3 (
   UINT32                             IntIndex;
   UINT32                             ChipID;
   TEGRA_PLATFORM_TYPE                PlatformType;
+  INT32                              FwUefiNodeOffset;
+  UINT32                             QuirkIndex;
 
   IortNode = PropNode->IortNode;
   if (IortNode->Token != CM_NULL_TOKEN) {
@@ -1154,7 +1156,50 @@ SetupIortNodeForSmmuV3 (
   if (PlatformType == TEGRA_PLATFORM_VDK) {
     ChipID = TegraGetChipID ();
     if (ChipID == T264_CHIP_ID) {
-      IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
+      //
+      // Only override COHAC on T264 VDK when the DT overlay opts in via
+      //   /firmware/uefi { iort-quirks = "force-dma-coherent"; }.
+      //
+      Status = DeviceTreeGetNodeByPath ("/firmware/uefi", &FwUefiNodeOffset);
+      if (EFI_ERROR (Status)) {
+        if (Status != EFI_NOT_FOUND) {
+          DEBUG ((
+            DEBUG_WARN,
+            "%a: DeviceTreeGetNodeByPath(/firmware/uefi) returned %r\n",
+            __FUNCTION__,
+            Status
+            ));
+        }
+      } else {
+        //
+        // Defer the stringlist walk to DeviceTreeLocateStringIndex so any
+        // future iort-quirks entries are searched the same way every other
+        // DT stringlist consumer searches its properties.
+        //
+        Status = DeviceTreeLocateStringIndex (
+                   FwUefiNodeOffset,
+                   "iort-quirks",
+                   "force-dma-coherent",
+                   &QuirkIndex
+                   );
+        if (Status == EFI_SUCCESS) {
+          IortNode->Flags |= EFI_ACPI_IORT_SMMUv3_FLAG_COHAC_OVERRIDE;
+          DEBUG ((
+            DEBUG_INFO,
+            "%a: T264 VDK applied COHAC override via "
+            "iort-quirks=\"force-dma-coherent\"\n",
+            __FUNCTION__
+            ));
+        } else if ((Status != EFI_NO_MAPPING) && (Status != EFI_NOT_FOUND)) {
+          DEBUG ((
+            DEBUG_WARN,
+            "%a: DeviceTreeLocateStringIndex(iort-quirks, "
+            "\"force-dma-coherent\") returned %r\n",
+            __FUNCTION__,
+            Status
+            ));
+        }
+      }
     }
   }
 

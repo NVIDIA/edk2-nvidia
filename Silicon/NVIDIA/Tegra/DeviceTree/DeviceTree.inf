@@ -17,6 +17,7 @@
 [Sources]
   AcpiBoot.dts
   T234AcpiWinBoot.dts
+  T264ForceDmaCoherent.dts
   BootOrderEmmc.dts
   BootOrderHttp.dts
   BootOrderNvme.dts

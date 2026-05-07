@@ -1,0 +1,29 @@
+/** @file
+*
+*  SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
+**/
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "T264 Force DMA Coherent";
+
+	fragment@0 {
+		target-path = "/";
+		board_config {
+			sw-modules = "uefi";
+		};
+
+		__overlay__ {
+			firmware {
+				uefi {
+					iort-quirks = "force-dma-coherent";
+				};
+			};
+		};
+	};
+};
