@@ -2764,7 +2764,7 @@ L4TLauncher (
 
   Status = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
   if (EFI_ERROR (Status)) {
-    if (IsIso9660BootMedia (LoadedImage->DeviceHandle) && IsIsoIdFileValid (LoadedImage->DeviceHandle)) {
+    if (IsIsoIdFileValid (LoadedImage->DeviceHandle) && IsIso9660BootMedia (LoadedImage->DeviceHandle)) {
       ErrorPrint (L"%a: L4T Support protocol not found, but device is valid ISO installation media, using fallback\r\n", __FUNCTION__);
       gL4TSupportProtocol = &mFallbackL4TSupport;
     } else {
