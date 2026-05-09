@@ -269,6 +269,8 @@ AndroidFmpGetCapsule (
   EFI_DISK_IO_PROTOCOL   *DiskIo;
   EFI_CAPSULE_HEADER     Header;
   EFI_CAPSULE_HEADER     ZeroHeader = { 0 };
+  UINT32                 UefiBootChain;
+  UINT32                 BcbBootChain = MAX_UINT32;
 
   if (mCapsuleHeader != NULL) {
     *CapsuleHeader = mCapsuleHeader;
@@ -292,6 +294,40 @@ AndroidFmpGetCapsule (
     DEBUG ((DEBUG_ERROR, "%a: Invalid capsule header guid\n", __FUNCTION__));
     return EFI_INVALID_PARAMETER;
   }
+
+  //
+  // A staged capsule must be paired with a chain switch in BCB; otherwise the
+  // OTA flow has not committed and the capsule should not be applied. Discard
+  // the capsule when the BCB active chain matches the running UEFI chain (or
+  // when BCB is unavailable / unreadable) to avoid replaying a stale capsule.
+  //
+  UefiBootChain = BcbGetActiveFwBootChain ();
+  Status        = AndroidBcbGetActiveBootChain (NULL, &BcbBootChain);
+  if (EFI_ERROR (Status) || (BcbBootChain == UefiBootChain)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Discarding staged capsule (UEFI chain=%u, BCB chain=%u, status=%r); cleaning staging partition\n",
+      __FUNCTION__,
+      UefiBootChain,
+      BcbBootChain,
+      Status
+      ));
+
+    Status = DiskIo->WriteDisk (DiskIo, BlockIo->Media->MediaId, 0, sizeof (EFI_CAPSULE_HEADER), (VOID *)&ZeroHeader);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Got %r trying to clean staging capsule header\n", __FUNCTION__, Status));
+    }
+
+    return EFI_NOT_FOUND;
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Chain switch detected (UEFI chain=%u, BCB chain=%u); proceeding with capsule\n",
+    __FUNCTION__,
+    UefiBootChain,
+    BcbBootChain
+    ));
 
   CapsuleSize = Header.CapsuleImageSize;
   Capsule     = AllocatePool (CapsuleSize);

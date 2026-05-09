@@ -427,6 +427,58 @@ BcbGetActiveFwBootChain (
 
 EFI_STATUS
 EFIAPI
+AndroidBcbGetActiveBootChain (
+  IN  EFI_HANDLE  Handle,
+  OUT UINT32      *ActiveBootChain
+  )
+{
+  EFI_STATUS             Status;
+  EFI_BLOCK_IO_PROTOCOL  *MscBlockIo;
+  EFI_DISK_IO_PROTOCOL   *MscDiskIo;
+  BootloaderControl      BootCtrl;
+  UINT32                 BootCtrlOffset;
+  UINT32                 ComputedCrc;
+
+  if (ActiveBootChain == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = GetMiscIoProtocolFromHandle (Handle, &MscBlockIo, &MscDiskIo);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to fetch IO protocols\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  BootCtrlOffset = NV_OFFSETOF (BootloaderMessageAb, BootCtrl);
+
+  Status = MscDiskIo->ReadDisk (
+                        MscDiskIo,
+                        MscBlockIo->Media->MediaId,
+                        BootCtrlOffset,
+                        sizeof (BootloaderControl),
+                        (VOID *)&BootCtrl
+                        );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to read bootcontrol from Misc\r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  ComputedCrc = BootloaderControlLeCrc (&BootCtrl);
+  if (ComputedCrc != BootCtrl.Crc32Le) {
+    // BCB has not been initialized yet (e.g. first boot after factory flash).
+    DEBUG ((DEBUG_INFO, "%a: BootCtrl Crc mismatch, BCB not initialized\r\n", __FUNCTION__));
+    return EFI_NOT_READY;
+  }
+
+  *ActiveBootChain = BcbGetActiveBootSlot (&BootCtrl);
+
+  DEBUG ((DEBUG_INFO, "%a: BCB active boot chain = %u\r\n", __FUNCTION__, *ActiveBootChain));
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 AndroidBcbLockChain (
   EFI_HANDLE  Handle
   )

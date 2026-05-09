@@ -183,6 +183,34 @@ BcbGetActiveFwBootChain (
   );
 
 /**
+  Get the active boot chain stored in BCB on the MISC partition.
+
+  Reads the BootloaderControl block from the MISC partition and returns the
+  index of the slot with the highest priority (i.e. the chain Android wants
+  to boot next).  This may differ from the chain UEFI is currently running
+  on (returned by BcbGetActiveFwBootChain) when an OTA has staged a chain
+  switch that has not yet been committed.
+
+  @param[in]   Handle              Image Handle to access block device. Pass
+                                   NULL to auto-locate the MSC partition.
+  @param[out]  ActiveBootChain     Pointer to receive BCB active boot chain
+                                   index (0 = chain A, 1 = chain B).
+
+  @retval EFI_SUCCESS              Operation successful.
+  @retval EFI_INVALID_PARAMETER    ActiveBootChain is NULL.
+  @retval EFI_NOT_READY            BCB is not initialized (CRC mismatch),
+                                   typical for the first boot after factory
+                                   flash.
+  @retval others                   Error occurred.
+**/
+EFI_STATUS
+EFIAPI
+AndroidBcbGetActiveBootChain (
+  IN  EFI_HANDLE  Handle,
+  OUT UINT32      *ActiveBootChain
+  );
+
+/**
   Check Bcb to see if an OTA is in progress
 
   @retval                  True if OTA is in progress
