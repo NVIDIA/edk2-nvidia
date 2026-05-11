@@ -252,8 +252,8 @@ ReserveBootAllocationsInReservedResources (
         __FUNCTION__,
         Allocation->MemoryBaseAddress,
         Allocation->MemoryLength,
-        Allocation->MemoryType,
-        EfiReservedMemoryType
+        (UINT32)Allocation->MemoryType,
+        (UINT32)EfiReservedMemoryType
         ));
       Allocation->MemoryType = EfiReservedMemoryType;
     }
@@ -569,6 +569,10 @@ SwitchToPermanentStack (
     "%a: failed to allocate stack switch context\n",
     __FUNCTION__
     );
+  if (Context == NULL) {
+    return;
+  }
+
   ZeroMem (Context, sizeof (*Context));
 
   // Delay the allocation HOB until after SwitchStack() so the HOB can use the
