@@ -47,7 +47,8 @@ NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .AutoResetModule                 = TRUE,
   .SkipEdkiiNondiscoverableInstall = TRUE,
   .ThreadedDeviceStart             = TRUE,
-  .DisableInRcm                    = TRUE
+  .DisableInRcm                    = TRUE,
+  .AutoDeassertPg                  = TRUE,
 };
 
 STATIC
