@@ -1,5 +1,5 @@
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2011-2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -1339,6 +1339,7 @@ CONFIG_LOGO_IMPLEMENTER = noimplementer.inf
   gNVIDIATokenSpaceGuid.PcdUfsCardRefClkFreq|1
   gNVIDIATokenSpaceGuid.PcdUfsHclkDiv|0xd0
   gNVIDIATokenSpaceGuid.PcdUfsHsSeries|0x2
+  gNVIDIATokenSpaceGuid.PcdUfsMaxBurstLength|5
   gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|TRUE
   gNVIDIATokenSpaceGuid.PcdEnumerationTimeoutMs|200
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
