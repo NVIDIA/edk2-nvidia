@@ -98,6 +98,7 @@
   DtPlatformDtbLoaderLib|Silicon/NVIDIA/Library/DxeDtPlatformDtbLoaderLib/DxeDtPlatformDtbLoaderLib.inf
   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
   DeviceTreeHelperLib|Silicon/NVIDIA/Library/DeviceTreeHelperLib/DeviceTreeHelperLib.inf
+  NvidiaDriverModelProtocolLib|Silicon/NVIDIA/Library/NvidiaDriverModelProtocolLib/NvidiaDriverModelProtocolLib.inf
   WildcardStringLib|Silicon/NVIDIA/Library/WildcardStringLib/WildcardStringLib.inf
   BootConfigProtocolLib|Silicon/NVIDIA/Library/BootConfigProtocolLib/BootConfigProtocolLib.inf
   NctLib|Silicon/NVIDIA/Library/NctLib/NctLib.inf

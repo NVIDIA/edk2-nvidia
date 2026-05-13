@@ -48,11 +48,15 @@
   AndroidBcbLib
   SiblingPartitionLib
   DeviceTreeHelperLib
+  NvidiaDriverModelProtocolLib
   BootConfigProtocolLib
   AvbLib
   NctLib
 
 [Protocols]
+  gEfiComponentNameProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiDriverHealthProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
   gEfiDevicePathProtocolGuid

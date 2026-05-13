@@ -20,6 +20,7 @@
 #include <Library/AndroidBcbLib.h>
 #include <NVIDIAConfiguration.h>
 #include <Library/DeviceTreeHelperLib.h>
+#include <Library/NvidiaDriverModelProtocolLib.h>
 #include <Library/SiblingPartitionLib.h>
 #include <Library/BootConfigProtocolLib.h>
 
@@ -2683,6 +2684,7 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to get DevicePath: %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -2697,6 +2699,7 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to open PartitionInfo: %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -2711,6 +2714,7 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: fail to open BlockIo: %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -2725,6 +2729,7 @@ AndroidBootDriverBindingStart (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a unable to open DiskIo protocol %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -2904,6 +2909,7 @@ Exit:
     DEBUG ((DEBUG_INFO, "%a: done\n", __FUNCTION__));
   }
 
+  NvidiaSetDriverHealthStatusFromEfiStatus (Status);
   return Status;
 }
 
@@ -2970,6 +2976,7 @@ AndroidBootDriverBindingStop (
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
                     );
     if (EFI_ERROR (Status)) {
+      NvidiaSetDriverHealthStatusFromEfiStatus (Status);
       return Status;
     }
 
@@ -3009,6 +3016,7 @@ AndroidBootDriverBindingStop (
 
   DEBUG ((DEBUG_INFO, "%a: done\n", __FUNCTION__));
 
+  NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
   return EFI_SUCCESS;
 }
 
@@ -3336,11 +3344,14 @@ Done:
   }
 
   // Install UEFI Driver Model protocol(s).
-  Status = EfiLibInstallDriverBinding (
+  Status = NvidiaInstallDriverModelProtocols (
              ImageHandle,
              SystemTable,
              &mAndroidBootDriverBinding,
-             ImageHandle
+             ImageHandle,
+             L"NVIDIA Android Boot Driver",
+             L"NVIDIA Android Boot Controller",
+             &gEfiCallerIdGuid
              );
   return Status;
 }
