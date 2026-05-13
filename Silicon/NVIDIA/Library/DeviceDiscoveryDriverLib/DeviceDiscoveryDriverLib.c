@@ -2,7 +2,7 @@
 
   Device Discovery Driver Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -22,6 +22,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NvidiaDriverModelProtocolLib.h>
 #include <Library/TimerLib.h>
 #include <Library/SystemContextLib.h>
 
@@ -721,15 +722,17 @@ DeviceDiscoveryEnumerateDevices (
   VOID
   )
 {
-  EFI_STATUS               Status;
-  NON_DISCOVERABLE_DEVICE  *Device;
-  EFI_HANDLE               DeviceHandle;
-  NVIDIA_DT_NODE_INFO      *DtNodeInfo;
-  UINT32                   DeviceCount;
-  UINT32                   Index;
+  EFI_STATUS                Status;
+  NON_DISCOVERABLE_DEVICE   *Device;
+  EFI_HANDLE                DeviceHandle;
+  NVIDIA_DT_NODE_INFO       *DtNodeInfo;
+  UINT32                    DeviceCount;
+  UINT32                    Index;
+  EFI_DRIVER_HEALTH_STATUS  DriverHealthStatus;
 
-  DeviceCount = 0;
-  DtNodeInfo  = NULL;
+  DeviceCount        = 0;
+  DtNodeInfo         = NULL;
+  DriverHealthStatus = EfiDriverHealthStatusHealthy;
 
   Status = GetSupportedDeviceTreeNodes (
              NULL,
@@ -739,6 +742,7 @@ DeviceDiscoveryEnumerateDevices (
              );
   if (EFI_ERROR (Status) && (Status != EFI_NOT_FOUND)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to get supported nodes - %r\r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -746,6 +750,7 @@ DeviceDiscoveryEnumerateDevices (
     DtNodeInfo = (NVIDIA_DT_NODE_INFO *)AllocateZeroPool (DeviceCount * sizeof (NVIDIA_DT_NODE_INFO));
     if (DtNodeInfo == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to allocate node structure\r\n", __FUNCTION__));
+      NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -757,6 +762,7 @@ DeviceDiscoveryEnumerateDevices (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get supported nodes - %r\r\n", __FUNCTION__, Status));
+      NvidiaSetDriverHealthStatusFromEfiStatus (Status);
       return Status;
     }
   } else {
@@ -768,6 +774,7 @@ DeviceDiscoveryEnumerateDevices (
     Device       = (NON_DISCOVERABLE_DEVICE *)AllocatePool (sizeof (NON_DISCOVERABLE_DEVICE));
     if (Device == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to allocate device protocol.\r\n", __FUNCTION__));
+      NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
       return EFI_DEVICE_ERROR;
     }
 
@@ -779,6 +786,7 @@ DeviceDiscoveryEnumerateDevices (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to process device node - %r\r\n", __FUNCTION__, Status));
+      DriverHealthStatus = EfiDriverHealthStatusFailed;
       continue;
     }
 
@@ -786,6 +794,7 @@ DeviceDiscoveryEnumerateDevices (
                DeviceHandle
                );
     if (EFI_ERROR (Status)) {
+      DriverHealthStatus = EfiDriverHealthStatusFailed;
       continue;
     }
   }
@@ -803,8 +812,12 @@ DeviceDiscoveryEnumerateDevices (
                NULL,
                NULL
                );
+    if (EFI_ERROR (Status)) {
+      DriverHealthStatus = EfiDriverHealthStatusFailed;
+    }
   }
 
+  NvidiaSetDriverHealthStatus (DriverHealthStatus);
   return Status;
 }
 
@@ -858,9 +871,9 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
-  Status = DeviceDiscoveryNotify (
-             DeviceDiscoveryDriverStart,
-             mImageHandle,
+  Status = NvidiaInstallComponentName2AndDriverHealth (
+             ImageHandle,
+             gDeviceDiscoverDriverConfig.DriverName,
              NULL,
              NULL
              );
@@ -868,9 +881,26 @@ DeviceDiscoveryDriverInitialize (
     return Status;
   }
 
+  Status = DeviceDiscoveryNotify (
+             DeviceDiscoveryDriverStart,
+             mImageHandle,
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
+    return Status;
+  }
+
   if (!gDeviceDiscoverDriverConfig.DelayEnumeration) {
     Status = DeviceDiscoveryEnumerateDevices ();
+    if (EFI_ERROR (Status)) {
+      NvidiaSetDriverHealthStatusFromEfiStatus (Status);
+    }
+
     ASSERT_EFI_ERROR (Status);
+  } else {
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
   }
 
   return Status;
