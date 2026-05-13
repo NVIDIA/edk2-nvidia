@@ -581,6 +581,7 @@ GetWormPartitionInfo (
   VOID                        *PartitionEntryArray = NULL;
   CONST EFI_PARTITION_ENTRY   *PartitionEntry;
   UINTN                       GptHeaderOffset;
+  UINTN                       PartitionTableSize;
 
   NorFlashProtocol   = WormInfo->NorFlashProtocol;
   NorFlashAttributes = &WormInfo->NorFlashAttributes;
@@ -613,16 +614,23 @@ GetWormPartitionInfo (
     goto exit;
   }
 
+  PartitionTableSize = GptPartitionTableSizeInBytes (&PartitionHeader);
+  if (PartitionTableSize > NVIDIA_GPT_PARTITION_TABLE_SIZE) {
+    DEBUG ((DEBUG_ERROR, "%a: GPT partition table size 0x%x exceeds region 0x%x\n", __FUNCTION__, PartitionTableSize, NVIDIA_GPT_PARTITION_TABLE_SIZE));
+    Status = EFI_DEVICE_ERROR;
+    goto exit;
+  }
+
   // Read the partition Entries
-  PartitionEntryArray = AllocateZeroPool (GptPartitionTableSizeInBytes (&PartitionHeader));
+  PartitionEntryArray = AllocateZeroPool (PartitionTableSize);
   if (PartitionEntryArray == NULL) {
     goto exit;
   }
 
   Status = NorFlashProtocol->Read (
                                NorFlashProtocol,
-                               PartitionHeader.PartitionEntryLBA * GPT_PARTITION_BLOCK_SIZE,
-                               GptPartitionTableSizeInBytes (&PartitionHeader),
+                               GptPartitionTableLba (&PartitionHeader, NorFlashAttributes->MemoryDensity) * NVIDIA_GPT_BLOCK_SIZE,
+                               PartitionTableSize,
                                PartitionEntryArray
                                );
   if (EFI_ERROR (Status)) {
