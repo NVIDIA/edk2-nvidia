@@ -295,6 +295,24 @@ NvidiaInstallDriverHealthProtocol (
 
 EFI_STATUS
 EFIAPI
+NvidiaUninstallDriverHealthProtocol (
+  IN EFI_HANDLE  DriverHandle
+  )
+{
+  if (DriverHandle == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return gBS->UninstallMultipleProtocolInterfaces (
+                DriverHandle,
+                &gEfiDriverHealthProtocolGuid,
+                &mDriverHealth,
+                NULL
+                );
+}
+
+EFI_STATUS
+EFIAPI
 NvidiaSetDriverHealthStatus (
   IN EFI_DRIVER_HEALTH_STATUS  HealthStatus
   )

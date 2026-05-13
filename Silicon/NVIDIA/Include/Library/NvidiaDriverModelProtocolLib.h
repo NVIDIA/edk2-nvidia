@@ -87,6 +87,21 @@ NvidiaInstallDriverHealthProtocol (
   );
 
 /**
+  Uninstalls Driver Health protocol from a driver handle.
+
+  @param[in] DriverHandle  Driver handle.
+
+  @retval EFI_SUCCESS            Protocol was uninstalled.
+  @retval EFI_INVALID_PARAMETER  DriverHandle is NULL.
+  @retval others                 Protocol uninstallation failure.
+**/
+EFI_STATUS
+EFIAPI
+NvidiaUninstallDriverHealthProtocol (
+  IN EFI_HANDLE  DriverHandle
+  );
+
+/**
   Sets the health status returned by the Driver Health protocol.
 
   @param[in] HealthStatus  Driver health status to report.
