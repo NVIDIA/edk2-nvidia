@@ -1,18 +1,52 @@
 /** @file
   Unit tests of AndroidBootDxe Driver.
 
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <AndroidBootDxeUnitTestPrivate.h>
+#include <Protocol/DriverHealth.h>
 
 #define UNIT_TEST_APP_NAME     "AndroidBootDxe Unit Test Application"
 #define UNIT_TEST_APP_VERSION  "0.2"
 
 STATIC EFI_BOOT_SERVICES  mBS = { 0 };
+
+EFI_STATUS
+EFIAPI
+NvidiaInstallDriverModelProtocols (
+  IN EFI_HANDLE                   ImageHandle,
+  IN EFI_SYSTEM_TABLE             *SystemTable,
+  IN EFI_DRIVER_BINDING_PROTOCOL  *DriverBinding,
+  IN EFI_HANDLE                   DriverBindingHandle,
+  IN CONST CHAR16                 *DriverName,
+  IN CONST CHAR16                 *ControllerName OPTIONAL,
+  IN EFI_GUID                     *ControllerProtocolGuid OPTIONAL
+  )
+{
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+NvidiaSetDriverHealthStatus (
+  IN EFI_DRIVER_HEALTH_STATUS  HealthStatus
+  )
+{
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+NvidiaSetDriverHealthStatusFromEfiStatus (
+  IN EFI_STATUS  Status
+  )
+{
+  return EFI_SUCCESS;
+}
 
 /**
   Initialze the unit test framework, suite, and unit tests for the AndroidBoot
