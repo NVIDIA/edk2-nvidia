@@ -36,6 +36,7 @@ GptValidateHeader (
   if ((Header->Header.Signature != EFI_PTAB_HEADER_ID) ||
       (OriginalCrc != Crc) ||
       (Header->SizeOfPartitionEntry < sizeof (EFI_PARTITION_ENTRY)) ||
+      ((Header->SizeOfPartitionEntry & (Header->SizeOfPartitionEntry - 1)) != 0) ||
       // Ensure NumberOfPartitionEntries*SizeOfPartitionEntry doesn't overflow.
       (Header->NumberOfPartitionEntries >
        DivU64x32 (MAX_UINTN, Header->SizeOfPartitionEntry))
@@ -100,17 +101,20 @@ GptValidatePartitionTable (
 
   FirstBlock = Header->FirstUsableLBA;
   LastBlock  = Header->LastUsableLBA;
-  Partition  = (CONST EFI_PARTITION_ENTRY *)PartitionTable;
-  for (Index = 0; Index < Header->NumberOfPartitionEntries; Index++, Partition++) {
+  for (Index = 0; Index < Header->NumberOfPartitionEntries; Index++) {
+    Partition = (CONST EFI_PARTITION_ENTRY *)((CONST UINT8 *)PartitionTable +
+                                              (Index * Header->SizeOfPartitionEntry));
+
     // skip unused partitions
-    if (StrLen (Partition->PartitionName) == 0) {
+    if (StrnLenS (Partition->PartitionName, sizeof (Partition->PartitionName)/sizeof (Partition->PartitionName[0])) == 0) {
       continue;
     }
 
     if ((Partition->StartingLBA > LastBlock) ||
         (Partition->EndingLBA > LastBlock) ||
         (Partition->StartingLBA < FirstBlock) ||
-        (Partition->EndingLBA < FirstBlock))
+        (Partition->EndingLBA < FirstBlock) ||
+        (Partition->EndingLBA < Partition->StartingLBA))
     {
       return EFI_VOLUME_CORRUPTED;
     }
@@ -152,6 +156,10 @@ GptPartitionSizeInBlocks (
   CONST EFI_PARTITION_ENTRY  *Partition
   )
 {
+  if (Partition->EndingLBA < Partition->StartingLBA) {
+    return 0;
+  }
+
   return Partition->EndingLBA - Partition->StartingLBA + 1;
 }
 

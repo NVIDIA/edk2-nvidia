@@ -181,6 +181,11 @@
       Crc8Lib|Silicon/NVIDIA/Library/Crc8Lib/Crc8Lib.inf
   }
 
+  Silicon/NVIDIA/Library/GptLib/GoogleTest/GptLibGoogleTest.inf {
+    <LibraryClasses>
+      GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
+  }
+
   #
   # RamDiskOS driver Host Based GoogleTest
   #

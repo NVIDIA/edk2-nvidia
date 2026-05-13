@@ -1,0 +1,27 @@
+## @file
+# Host-based GoogleTest suite for GptLib.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION         = 0x00010005
+  BASE_NAME           = GptLibGoogleTest
+  FILE_GUID           = d9648364-b04b-4110-bb8f-8f963011ce4a
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = HOST_APPLICATION
+
+[Sources]
+  GptLibGoogleTest.cpp
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  GoogleTestLib
+  GptLib
