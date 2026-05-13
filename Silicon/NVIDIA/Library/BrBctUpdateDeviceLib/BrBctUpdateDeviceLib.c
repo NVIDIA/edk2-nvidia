@@ -2,7 +2,7 @@
 
   BR-BCT Update Device Library
 
-  SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -31,6 +31,28 @@ STATIC BOOLEAN                     mPcdOverwriteActiveFwPartition   = FALSE;
 STATIC BOOLEAN                     mPcdBootChainIsMarkerBased       = FALSE;
 STATIC VOID                        *mInvalidateBuffer               = NULL;
 STATIC VOID                        *mBackupPartitionBuffer          = NULL;
+
+STATIC
+EFI_STATUS
+EFIAPI
+BrBctGetAlignedBytes (
+  IN  UINTN   Bytes,
+  IN  UINT32  BlockSize,
+  OUT UINTN   *AlignedBytes
+  )
+{
+  if ((BlockSize == 0) || (AlignedBytes == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Bytes > (MAX_UINTN - (BlockSize - 1))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *AlignedBytes = ALIGN_VALUE (Bytes, BlockSize);
+
+  return EFI_SUCCESS;
+}
 
 /**
   Get device offset of given BR-BCT slot data.
@@ -134,8 +156,11 @@ BrBctVerifySlot (
 
   DEBUG ((DEBUG_INFO, "%a: Verifying slot %u\n", __FUNCTION__, Slot));
 
-  BlockSize   = Partition->DeviceInfo->BlockSize;
-  BytesToRead = ALIGN_VALUE (Bytes, BlockSize);
+  BlockSize = Partition->DeviceInfo->BlockSize;
+  Status    = BrBctGetAlignedBytes (Bytes, BlockSize, &BytesToRead);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   if (BytesToRead > Private->BrBctDataSize) {
     return EFI_INVALID_PARAMETER;
@@ -375,7 +400,7 @@ BrBctUpdateFwChain (
     NewFwChain
     ));
 
-  if (This == NULL) {
+  if ((This == NULL) || (NewFwChain >= BOOT_CHAIN_COUNT)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -434,7 +459,7 @@ BrBctUpdateBackupPartition (
 
   DEBUG ((DEBUG_INFO, "%a: ActiveChain=%u\n", __FUNCTION__, mActiveBootChain));
 
-  if ((This == NULL) || (Data == NULL)) {
+  if ((This == NULL) || (Data == NULL) || (mActiveBootChain >= BOOT_CHAIN_COUNT)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -565,6 +590,11 @@ BrBctUpdateDeviceLibDeinit (
     mBackupPartitionBuffer = NULL;
   }
 
+  if (mInvalidateBuffer != NULL) {
+    FreePool (mInvalidateBuffer);
+    mInvalidateBuffer = NULL;
+  }
+
   mActiveBootChain = MAX_UINT32;
   SetMem (&mPrivate, sizeof (mPrivate), 0);
 }
@@ -578,6 +608,10 @@ BrBctUpdateDeviceLibInit (
 {
   BR_BCT_UPDATE_PRIVATE_DATA  *Private;
   UINTN                       MaxBctSlotsSupported;
+
+  if (ActiveBootChain >= BOOT_CHAIN_COUNT) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   mActiveBootChain                 = ActiveBootChain;
   mPcdBrBctVerifyUpdateBeforeWrite = PcdGetBool (PcdBrBctVerifyUpdateBeforeWrite);
@@ -595,6 +629,10 @@ BrBctUpdateDeviceLibInit (
                              EraseBlockSize,
                              PcdGet32 (PcdBrBctLogicalSlotSize)
                              );
+  if (Private->SlotSize == 0) {
+    return EFI_INVALID_PARAMETER;
+  }
+
   Private->Protocol.UpdateFwChain         = BrBctUpdateFwChain;
   Private->Protocol.UpdateBackupPartition = BrBctUpdateBackupPartition;
 
@@ -648,6 +686,7 @@ BrBctUpdateDeviceLibInit (
   mBackupPartitionBuffer = AllocateRuntimeZeroPool (BR_BCT_BACKUP_PARTITION_DATA_SIZE);
   if (mBackupPartitionBuffer == NULL) {
     DEBUG ((DEBUG_ERROR, "%a: mBackupPartitionBuffer alloc failed\n", __FUNCTION__));
+    BrBctUpdateDeviceLibDeinit ();
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -655,6 +694,7 @@ BrBctUpdateDeviceLibInit (
     mInvalidateBuffer = AllocateRuntimePool (Private->BrBctDataSize);
     if (mInvalidateBuffer == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: mInvalidateBuffer alloc failed\n", __FUNCTION__));
+      BrBctUpdateDeviceLibDeinit ();
       return EFI_OUT_OF_RESOURCES;
     }
 

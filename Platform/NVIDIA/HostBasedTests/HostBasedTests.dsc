@@ -249,6 +249,11 @@
   }
   Silicon/NVIDIA/Library/PlatformIsSiliconLib/UnitTest/PlatformDepexLibUnitTestsHost.inf
 
+  #
+  # BrBctUpdateDeviceLib Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/UnitTest/BrBctUpdateDeviceLibUnitTestsHost.inf
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000
