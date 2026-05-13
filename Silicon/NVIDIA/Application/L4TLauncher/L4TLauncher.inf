@@ -43,6 +43,7 @@
   PrintLib
   FileHandleLib
   UefiRuntimeServicesTableLib
+  FdtLib
   AndroidBootImgLib
   SecureBootVariableLib
   OpteeNvLib

@@ -16,12 +16,15 @@
 #define CAPSULE_DEST_DIR      L"EFI\\UpdateCapsule\\"
 #define CAPSULE_DEFAULT_NAME  L"TEGRA_BL_3701_agx.Cap"
 
-#define CAPSULE_3701_AGX      L"TEGRA_BL_3701_agx.Cap"
-#define CAPSULE_3701_AGX_IND  L"TEGRA_BL_3701_agx_ind.Cap"
-#define CAPSULE_3701_000      L"TEGRA_BL_3701_000.Cap"
-#define CAPSULE_3767          L"TEGRA_BL_3767.Cap"
-#define CAPSULE_3767_SUPER    L"TEGRA_BL_3767_super.Cap"
-#define CAPSULE_3834_AGX      L"TEGRA_BL_3834_agx.Cap"
+#define CAPSULE_3701_AGX             L"TEGRA_BL_3701_agx.Cap"
+#define CAPSULE_3701_AGX_SUPER       L"TEGRA_BL_3701_agx_super.Cap"
+#define CAPSULE_3701_AGX_IND         L"TEGRA_BL_3701_agx_ind.Cap"
+#define CAPSULE_3701_000             L"TEGRA_BL_3701_000.Cap"
+#define CAPSULE_3767                 L"TEGRA_BL_3767.Cap"
+#define CAPSULE_3767_SUPER           L"TEGRA_BL_3767_super.Cap"
+#define CAPSULE_3767_NANOE8GB        L"TEGRA_BL_3767_nanoe8gb.Cap"
+#define CAPSULE_3767_NANOE8GB_SUPER  L"TEGRA_BL_3767_nanoe8gb_super.Cap"
+#define CAPSULE_3834_AGX             L"TEGRA_BL_3834_agx.Cap"
 
 #define MAX_CAPSULE_PATH_CHARS  128
 #define MAX_CAPSULE_PATH_SIZE   (MAX_CAPSULE_PATH_CHARS * sizeof (CHAR16))
@@ -59,9 +62,12 @@
 #define COMPAT_FAB_401  "401"
 
 #define BOARD_NAME_AGX_ORIN_DEVKIT             "jetson-agx-orin-devkit"
+#define BOARD_NAME_AGX_ORIN_DEVKIT_SUPER       "jetson-agx-orin-devkit-super"
 #define BOARD_NAME_AGX_ORIN_DEVKIT_INDUSTRIAL  "jetson-agx-orin-devkit-industrial"
 #define BOARD_NAME_ORIN_NANO_DEVKIT            "jetson-orin-nano-devkit"
 #define BOARD_NAME_ORIN_NANO_DEVKIT_SUPER      "jetson-orin-nano-devkit-super"
+#define BOARD_NAME_ORIN_NANOE8GB_DEVKIT        "jetson-orin-nanoe8gb-devkit"
+#define BOARD_NAME_ORIN_NANOE8GB_DEVKIT_SUPER  "jetson-orin-nanoe8gb-devkit-super"
 #define BOARD_NAME_AGX_THOR_DEVKIT             "jetson-agx-thor-devkit"
 #define BOARD_NAME_AGX_THOR_T4000              "jetson-agx-thor-t4000"
 

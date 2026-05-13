@@ -17,6 +17,7 @@
 #include <Library/FileHandleLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/HandleParsingLib.h>
+#include <Library/FdtLib.h>
 
 #include <Protocol/DevicePath.h>
 #include <Protocol/LoadedImage.h>
@@ -24,6 +25,7 @@
 #include <Protocol/Hash2.h>
 #include <Protocol/ServiceBinding.h>
 
+#include <Guid/Fdt.h>
 #include <Guid/SystemResourceTable.h>
 #include <Protocol/Eeprom.h>
 
@@ -1246,15 +1248,144 @@ IsTegraBoardFormat (
 }
 
 /**
-  Check TegraPlatformCompatSpec variable for "super" in the board name.
+  Check whether the compatible spec identifies NanoE8GB.
 
-  @retval TRUE   Board name contains "super".
-  @retval FALSE  Variable not found, read error, or no "super" substring.
+  @param[in]  CompatSpec  TegraPlatformCompatSpec value.
+
+  @retval TRUE   Board name identifies NanoE8GB.
+  @retval FALSE  Board name does not identify NanoE8GB.
 
 **/
 STATIC
 BOOLEAN
-IsOrinNanoSuper (
+IsNanoe8gb (
+  IN CONST CHAR8  *CompatSpec
+  )
+{
+  return (CompatSpec != NULL) &&
+         (AsciiStrStr (CompatSpec, BOARD_NAME_ORIN_NANOE8GB_DEVKIT) != NULL);
+}
+
+/**
+  Check whether the compatible spec identifies a super board.
+
+  @param[in]  CompatSpec  TegraPlatformCompatSpec value.
+
+  @retval TRUE   Board name contains "super".
+  @retval FALSE  Board name does not contain "super".
+
+**/
+STATIC
+BOOLEAN
+IsSuper (
+  IN CONST CHAR8  *CompatSpec
+  )
+{
+  return (CompatSpec != NULL) && (AsciiStrStr (CompatSpec, "super") != NULL);
+}
+
+/**
+  Select AGX Orin capsule payload from board ID, SKU, and FAB.
+
+  @param[in]  BoardSku  Board SKU parsed from EEPROM.
+  @param[in]  BoardFab  Board FAB parsed from EEPROM.
+
+  @retval Capsule file name for the detected AGX Orin variant.
+
+**/
+STATIC
+CONST CHAR16 *
+GetAgxOrinCapsuleFileNameFromBoardInfo (
+  IN UINT32  BoardSku,
+  IN UINT32  BoardFab
+  )
+{
+  if ((BoardSku == 4) || (BoardSku == 5)) {
+    return CAPSULE_3701_AGX;
+  }
+
+  if (BoardSku == 8) {
+    return CAPSULE_3701_AGX_IND;
+  }
+
+  if (BoardSku == 0) {
+    if (BoardFab == 300) {
+      return CAPSULE_3701_AGX;
+    }
+
+    return CAPSULE_3701_000;
+  }
+
+  PreIsoLogPrint (L"%a: Unknown SKU %d for board 3701, using default\r\n", __FUNCTION__, BoardSku);
+  return CAPSULE_DEFAULT_NAME;
+}
+
+/**
+  Select AGX Orin capsule payload.
+
+  Board ID/SKU/FAB are not sufficient to distinguish jetson-agx-orin-devkit
+  from jetson-agx-orin-devkit-super, so the compatible spec board name is used.
+
+  @param[in]  BoardSku  Board SKU parsed from EEPROM.
+  @param[in]  BoardFab  Board FAB parsed from EEPROM.
+
+  @retval Capsule file name for the detected AGX Orin variant.
+
+**/
+STATIC
+CONST CHAR16 *
+GetAgxOrinCapsuleFileName (
+  IN UINT32  BoardSku,
+  IN UINT32  BoardFab
+  )
+{
+  EFI_STATUS    Status;
+  CHAR8         CompatSpec[MAX_SPEC_STRING_LEN];
+  UINTN         DataSize;
+  CONST CHAR16  *DefaultCapsuleFileName;
+
+  DefaultCapsuleFileName = GetAgxOrinCapsuleFileNameFromBoardInfo (BoardSku, BoardFab);
+
+  DataSize = sizeof (CompatSpec) - 1;
+  Status   = gRT->GetVariable (
+                    TEGRA_PLATFORM_COMPAT_SPEC_VARIABLE_NAME,
+                    &gNVIDIAPublicVariableGuid,
+                    NULL,
+                    &DataSize,
+                    CompatSpec
+                    );
+  if (EFI_ERROR (Status)) {
+    PreIsoLogPrint (
+      L"%a: Unable to read TegraPlatformCompatSpec: %r, using %s\r\n",
+      __FUNCTION__,
+      Status,
+      DefaultCapsuleFileName
+      );
+    return DefaultCapsuleFileName;
+  }
+
+  CompatSpec[DataSize] = '\0';
+  PreIsoLogWrite (L"%a: TegraPlatformCompatSpec=%a\r\n", __FUNCTION__, CompatSpec);
+
+  if (IsSuper (CompatSpec)) {
+    return CAPSULE_3701_AGX_SUPER;
+  }
+
+  return DefaultCapsuleFileName;
+}
+
+/**
+  Select Orin Nano capsule payload.
+
+  Board ID/SKU/FAB are not sufficient to distinguish jetson-orin-nano-devkit
+  from jetson-orin-nanoe8gb-devkit, so the compatible spec board name is used.
+
+  @retval Capsule file name for the detected Orin Nano variant.
+
+**/
+STATIC
+CONST CHAR16 *
+GetOrinNanoCapsuleFileName (
   VOID
   )
 {
@@ -1271,16 +1402,34 @@ IsOrinNanoSuper (
                     CompatSpec
                     );
   if (EFI_ERROR (Status)) {
-    return FALSE;
+    PreIsoLogPrint (
+      L"%a: Unable to read TegraPlatformCompatSpec: %r, using default 3767 capsule\r\n",
+      __FUNCTION__,
+      Status
+      );
+    return CAPSULE_3767;
   }
 
   CompatSpec[DataSize] = '\0';
+  PreIsoLogWrite (L"%a: TegraPlatformCompatSpec=%a\r\n", __FUNCTION__, CompatSpec);
 
-  return (AsciiStrStr (CompatSpec, "super") != NULL);
+  if (IsNanoe8gb (CompatSpec)) {
+    if (IsSuper (CompatSpec)) {
+      return CAPSULE_3767_NANOE8GB_SUPER;
+    }
+
+    return CAPSULE_3767_NANOE8GB;
+  }
+
+  if (IsSuper (CompatSpec)) {
+    return CAPSULE_3767_SUPER;
+  }
+
+  return CAPSULE_3767;
 }
 
 /**
-  Select capsule file name based on board ID, SKU, and FAB.
+  Select capsule file name based on board ID, SKU, FAB, and compatible spec.
 
   @param[in]  BoardInfo       Pointer to board information from EEPROM.
   @param[out] CapsuleSource   Buffer to store source capsule path.
@@ -1389,30 +1538,11 @@ SelectCapsuleFile (
 
   switch (BoardId) {
     case BOARD_ID_AGX_ORIN:
-      if ((BoardSku == 4) || (BoardSku == 5)) {
-        CapsuleFileName = CAPSULE_3701_AGX;
-      } else if (BoardSku == 8) {
-        CapsuleFileName = CAPSULE_3701_AGX_IND;
-      } else if (BoardSku == 0) {
-        if (BoardFab == 300) {
-          CapsuleFileName = CAPSULE_3701_AGX;
-        } else {
-          CapsuleFileName = CAPSULE_3701_000;
-        }
-      } else {
-        PreIsoLogPrint (L"%a: Unknown SKU %d for board 3701, using default\r\n", __FUNCTION__, BoardSku);
-        CapsuleFileName = CAPSULE_DEFAULT_NAME;
-      }
-
+      CapsuleFileName = GetAgxOrinCapsuleFileName (BoardSku, BoardFab);
       break;
 
     case BOARD_ID_ORIN_NANO:
-      if (IsOrinNanoSuper ()) {
-        CapsuleFileName = CAPSULE_3767_SUPER;
-      } else {
-        CapsuleFileName = CAPSULE_3767;
-      }
-
+      CapsuleFileName = GetOrinNanoCapsuleFileName ();
       break;
 
     case BOARD_ID_AGX_THOR:
@@ -1432,6 +1562,97 @@ Done:
   UnicodeSPrint (CapsuleDest, BufferSize, L"%s%s", CAPSULE_DEST_DIR, CapsuleFileName);
 
   return EFI_SUCCESS;
+}
+
+/**
+  Check whether an ASCII byte buffer contains a string.
+
+  @param[in]  Buffer     Buffer to search.
+  @param[in]  BufferLen  Size of Buffer in bytes.
+  @param[in]  String     NUL-terminated string to find.
+
+  @retval TRUE   Buffer contains String.
+  @retval FALSE  Buffer does not contain String.
+
+**/
+STATIC
+BOOLEAN
+AsciiBufferContainsString (
+  IN CONST CHAR8  *Buffer,
+  IN UINTN        BufferLen,
+  IN CONST CHAR8  *String
+  )
+{
+  UINTN  Index;
+  UINTN  StringLen;
+
+  if ((Buffer == NULL) || (String == NULL)) {
+    return FALSE;
+  }
+
+  StringLen = AsciiStrLen (String);
+  if ((StringLen == 0) || (BufferLen < StringLen)) {
+    return FALSE;
+  }
+
+  for (Index = 0; Index <= BufferLen - StringLen; Index++) {
+    if (CompareMem (&Buffer[Index], String, StringLen) == 0) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+  Read the root compatible property from the installed DTB.
+
+  @param[out] Compatible     Pointer to receive the compatible property.
+  @param[out] CompatibleLen  Pointer to receive the property size in bytes.
+
+  @retval TRUE   Compatible property was read.
+  @retval FALSE  Compatible property is unavailable.
+
+**/
+STATIC
+BOOLEAN
+EFIAPI
+ReadPlatformCompatible (
+  OUT CONST CHAR8  **Compatible,
+  OUT UINTN        *CompatibleLen
+  )
+{
+  EFI_STATUS  Status;
+  VOID        *FdtBase;
+  CONST VOID  *CompatibleProp;
+  INT32       PropLen;
+
+  if ((Compatible == NULL) || (CompatibleLen == NULL)) {
+    return FALSE;
+  }
+
+  *Compatible    = NULL;
+  *CompatibleLen = 0;
+
+  Status = EfiGetSystemConfigurationTable (&gFdtTableGuid, &FdtBase);
+  if (EFI_ERROR (Status) || (FdtBase == NULL)) {
+    return FALSE;
+  }
+
+  if (FdtCheckHeader (FdtBase) != 0) {
+    return FALSE;
+  }
+
+  PropLen        = 0;
+  CompatibleProp = FdtGetProp (FdtBase, 0, "compatible", &PropLen);
+  if ((CompatibleProp == NULL) || (PropLen <= 0)) {
+    return FALSE;
+  }
+
+  *Compatible    = CompatibleProp;
+  *CompatibleLen = (UINTN)PropLen;
+
+  return TRUE;
 }
 
 /**
@@ -1455,7 +1676,11 @@ ResolveCompatSpecParams (
   OUT CONST CHAR8  **CompatFab
   )
 {
-  UINT32  NumericFab;
+  CONST CHAR8  *Compatible;
+  UINTN        CompatibleLen;
+  BOOLEAN      IsNanoE8GBConf;
+  BOOLEAN      IsSuperConf;
+  UINT32       NumericFab;
 
   NumericFab = 0;
   if ((FabStr[0] >= '0') && (FabStr[0] <= '9') &&
@@ -1465,6 +1690,13 @@ ResolveCompatSpecParams (
     NumericFab = (UINT32)((FabStr[0] - '0') * 100 +
                           (FabStr[1] - '0') * 10 +
                           (FabStr[2] - '0'));
+  }
+
+  IsNanoE8GBConf = FALSE;
+  IsSuperConf    = FALSE;
+  if (ReadPlatformCompatible (&Compatible, &CompatibleLen)) {
+    IsNanoE8GBConf = AsciiBufferContainsString (Compatible, CompatibleLen, "nanoe8gb");
+    IsSuperConf    = AsciiBufferContainsString (Compatible, CompatibleLen, "super");
   }
 
   switch (BoardId) {
@@ -1487,11 +1719,28 @@ ResolveCompatSpecParams (
         *BoardName = BOARD_NAME_AGX_ORIN_DEVKIT;
       }
 
+      if (AsciiStrCmp (*BoardName, BOARD_NAME_AGX_ORIN_DEVKIT) == 0) {
+        if (IsSuperConf) {
+          *BoardName = BOARD_NAME_AGX_ORIN_DEVKIT_SUPER;
+        }
+      }
+
       break;
 
     case BOARD_ID_ORIN_NANO:
       *CompatFab = COMPAT_FAB_000;
-      *BoardName = BOARD_NAME_ORIN_NANO_DEVKIT_SUPER;
+      if (IsNanoE8GBConf) {
+        if (IsSuperConf) {
+          *BoardName = BOARD_NAME_ORIN_NANOE8GB_DEVKIT_SUPER;
+        } else {
+          *BoardName = BOARD_NAME_ORIN_NANOE8GB_DEVKIT;
+        }
+      } else if (IsSuperConf) {
+        *BoardName = BOARD_NAME_ORIN_NANO_DEVKIT_SUPER;
+      } else {
+        *BoardName = BOARD_NAME_ORIN_NANO_DEVKIT;
+      }
+
       break;
 
     case BOARD_ID_AGX_THOR:
