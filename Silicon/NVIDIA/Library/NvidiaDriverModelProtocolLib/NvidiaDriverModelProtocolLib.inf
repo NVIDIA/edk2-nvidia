@@ -1,0 +1,36 @@
+#/** @file
+#
+#  NVIDIA Driver Model Protocol Library
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = NvidiaDriverModelProtocolLib
+  FILE_GUID                      = 1dcd71ff-3cf4-47cc-92ef-d0f774cfb9b7
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = NvidiaDriverModelProtocolLib|DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_DRIVER
+
+[Sources.common]
+  NvidiaDriverModelProtocolLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiComponentNameProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiDriverBindingProtocolGuid
+  gEfiDriverHealthProtocolGuid
