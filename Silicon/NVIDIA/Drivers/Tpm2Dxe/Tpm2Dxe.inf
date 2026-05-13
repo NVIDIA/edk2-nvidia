@@ -35,6 +35,7 @@
   FdtLib
   PcdLib
   TimerLib
+  NvidiaDriverModelProtocolLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   PlatformResourceLib
@@ -44,6 +45,9 @@
   gNVIDIATokenSpaceGuid.PcdTpmEnable
 
 [Protocols]
+  gEfiComponentNameProtocolGuid      ## PRODUCES
+  gEfiComponentName2ProtocolGuid     ## PRODUCES
+  gEfiDriverHealthProtocolGuid       ## PRODUCES
   gNVIDIAQspiControllerProtocolGuid  ## CONSUMES
   gNVIDIADeviceTreeNodeProtocolGuid  ## CONSUMES
   gNVIDIATpm2ProtocolGuid            ## PRODUCES

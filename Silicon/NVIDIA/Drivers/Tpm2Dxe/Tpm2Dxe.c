@@ -15,6 +15,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NvidiaDriverModelProtocolLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/PcdLib.h>
 #include <Library/TimerLib.h>
@@ -508,6 +509,7 @@ ErrorExit:
            );
   }
 
+  NvidiaSetDriverHealthStatusFromEfiStatus (Status);
   return Status;
 }
 
@@ -551,6 +553,7 @@ Tpm2DxeDriverBindingStop (
   UINT32                Index;
 
   if (NumberOfChildren == 0) {
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
     return EFI_SUCCESS;
   }
 
@@ -577,6 +580,7 @@ Tpm2DxeDriverBindingStop (
                     ChildHandleBuffer[Index]
                     );
     if (EFI_ERROR (Status)) {
+      NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
       return EFI_DEVICE_ERROR;
     }
 
@@ -590,6 +594,7 @@ Tpm2DxeDriverBindingStop (
                       NULL
                       );
       if (EFI_ERROR (Status)) {
+        NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
         return EFI_DEVICE_ERROR;
       }
     }
@@ -608,6 +613,7 @@ Tpm2DxeDriverBindingStop (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
     return EFI_DEVICE_ERROR;
   }
 
@@ -618,9 +624,11 @@ Tpm2DxeDriverBindingStop (
                   Controller
                   );
   if (EFI_ERROR (Status)) {
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
     return EFI_DEVICE_ERROR;
   }
 
+  NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
   return EFI_SUCCESS;
 }
 
@@ -649,11 +657,13 @@ InitializeTpm2Dxe (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  // TODO: Add component name support.
-  return EfiLibInstallDriverBinding (
+  return NvidiaInstallDriverModelProtocols (
            ImageHandle,
            SystemTable,
            &gTpm2DxeDriverBinding,
-           ImageHandle
+           ImageHandle,
+           L"NVIDIA TPM2 Driver",
+           L"NVIDIA TPM2 Controller",
+           &gNVIDIAQspiControllerProtocolGuid
            );
 }
