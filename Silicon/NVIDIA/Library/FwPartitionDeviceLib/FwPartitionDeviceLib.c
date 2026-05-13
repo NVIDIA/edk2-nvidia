@@ -413,6 +413,7 @@ FwPartitionWriteToUpdateInactivePartitions (
   EFI_PARTITION_ENTRY              *PartitionTable;
   UINTN                            BlockSize;
   CONST EFI_PARTITION_ENTRY        *Partition;
+  UINTN                            PartitionTableSize;
   UINTN                            Index;
   CHAR16                           BaseName[MAX_PARTITION_NAME_LEN];
   UINTN                            PartitionBootChain;
@@ -460,17 +461,24 @@ FwPartitionWriteToUpdateInactivePartitions (
     return Status;
   }
 
+  PartitionTableSize = GptPartitionTableSizeInBytes (GptHeader);
+  if (PartitionTableSize > NVIDIA_GPT_PARTITION_TABLE_SIZE) {
+    DEBUG ((DEBUG_ERROR, "%a: Partition table size 0x%x exceeds GPT region 0x%x\n", __FUNCTION__, PartitionTableSize, NVIDIA_GPT_PARTITION_TABLE_SIZE));
+    return EFI_VOLUME_CORRUPTED;
+  }
+
   Status = GptValidatePartitionTable (GptHeader, PartitionTable);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Invalid PartitionTable: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
-  Partition = PartitionTable;
-  for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++, Partition++) {
+  for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++) {
+    Partition = (CONST EFI_PARTITION_ENTRY *)((CONST UINT8 *)PartitionTable +
+                                              (Index * GptHeader->SizeOfPartitionEntry));
     Name = Partition->PartitionName;
 
-    if (StrLen (Name) == 0) {
+    if (StrnLenS (Name, sizeof (Partition->PartitionName)/sizeof (Partition->PartitionName[0])) == 0) {
       continue;
     }
 
@@ -855,6 +863,7 @@ FwPartitionAddFromDeviceGpt (
   EFI_PARTITION_ENTRY         *PartitionTable;
   UINT64                      PartitionTableOffset;
   UINTN                       PartitionCount;
+  UINTN                       PartitionTableSize;
   UINTN                       BlockSize;
   UINTN                       GptHeaderOffset;
   UINTN                       GptDataOffset;
@@ -908,8 +917,15 @@ FwPartitionAddFromDeviceGpt (
     goto Done;
   }
 
+  PartitionTableSize = GptPartitionTableSizeInBytes (GptHeader);
+  if (PartitionTableSize > NVIDIA_GPT_PARTITION_TABLE_SIZE) {
+    DEBUG ((DEBUG_ERROR, "%a: Partition table size 0x%x exceeds GPT region 0x%x\n", __FUNCTION__, PartitionTableSize, NVIDIA_GPT_PARTITION_TABLE_SIZE));
+    Status = EFI_VOLUME_CORRUPTED;
+    goto Done;
+  }
+
   // read the GPT partition table
-  PartitionTable = AllocateZeroPool (GptPartitionTableSizeInBytes (GptHeader));
+  PartitionTable = AllocateZeroPool (PartitionTableSize);
   if (PartitionTable == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
@@ -924,14 +940,14 @@ FwPartitionAddFromDeviceGpt (
     DeviceInfo->DeviceName,
     PartitionTableOffset,
     GptHeader->NumberOfPartitionEntries,
-    GptPartitionTableSizeInBytes (GptHeader)
+    PartitionTableSize
     ));
 
   Status = DeviceInfo->DeviceRead (
                          L"GPT-Table",
                          DeviceInfo,
                          PartitionTableOffset,
-                         GptPartitionTableSizeInBytes (GptHeader),
+                         PartitionTableSize,
                          PartitionTable
                          );
   if (EFI_ERROR (Status)) {
@@ -1044,9 +1060,10 @@ FwPartitionAddFromPartitionTable (
   }
 
   // initialize a private struct for each partition in the table
-  Partition = PartitionTable;
-  for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++, Partition++) {
-    if (StrLen (Partition->PartitionName) > 0) {
+  for (Index = 0; Index < GptHeader->NumberOfPartitionEntries; Index++) {
+    Partition = (CONST EFI_PARTITION_ENTRY *)((CONST UINT8 *)PartitionTable +
+                                              (Index * GptHeader->SizeOfPartitionEntry));
+    if (StrnLenS (Partition->PartitionName, sizeof (Partition->PartitionName)/sizeof (Partition->PartitionName[0])) > 0) {
       Status = GetPartitionBaseNameAndBootChainAny (Partition->PartitionName, BaseName, &PartitionBootChain);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "Failed to get base name for %s: %r\n", Partition->PartitionName, Status));
