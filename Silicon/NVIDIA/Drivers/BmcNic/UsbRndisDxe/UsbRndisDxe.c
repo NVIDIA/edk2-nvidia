@@ -3,7 +3,7 @@
 
   Copyright (c) 2011, Intel Corporation. All rights reserved.
   Copyright (c) 2020, ARM Limited. All rights reserved
-  Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -14,6 +14,8 @@
 #include "Rndis.h"
 #include "Snp.h"
 #include "Debug.h"
+
+#include <Library/NvidiaDriverModelProtocolLib.h>
 
 /**
   Initial RNDIS SNP service
@@ -359,12 +361,14 @@ UsbRndisDriverStart (
 
     DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a: Controller Data: 0x%p done, new handle: 0x%p\n", __FUNCTION__, Controller, Private->Handle));
 
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
   DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p\n", __FUNCTION__, Controller));
   Private = NewUsbRndisPrivate (Controller);
   if (Private == NULL) {
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -468,6 +472,7 @@ UsbRndisDriverStart (
 
   DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p done\n", __FUNCTION__, Controller));
 
+  NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
   return EFI_SUCCESS;
 
 OnError:
@@ -476,6 +481,7 @@ OnError:
     ReleaseUsbRndisPrivate (Private, This);
   }
 
+  NvidiaSetDriverHealthStatusFromEfiStatus (Status);
   return Status;
 }
 
@@ -543,6 +549,7 @@ UsbRndisDriverStop (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, uninstall caller ID failed: %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
   }
 
   //
@@ -561,6 +568,7 @@ UsbRndisDriverStop (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a, uninstall protocols failed, MNP may still consume SNP: %r\n", __FUNCTION__, Status));
+    NvidiaSetDriverHealthStatusFromEfiStatus (Status);
     return Status;
   }
 
@@ -568,6 +576,7 @@ UsbRndisDriverStop (
 
   DEBUG ((USB_DEBUG_DRIVER_BINDING, "%a, Controller: 0x%p done\n", __FUNCTION__, Controller));
 
+  NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
   return EFI_SUCCESS;
 }
 
@@ -612,6 +621,13 @@ UsbRndisEntryPoint (
              &gComponentName,
              &gComponentName2
              );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
-  return Status;
+  return NvidiaInstallDriverHealthProtocol (
+           gDriverBinding.DriverBindingHandle,
+           &gDriverBinding,
+           &gEfiUsbIoProtocolGuid
+           );
 }
