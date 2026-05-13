@@ -78,6 +78,9 @@ FPNorFlashErase (
   UINT32                       EraseBlockSize;
   UINT32                       OffsetLba;
   UINT32                       LbaCount;
+  UINT64                       OffsetLba64;
+  UINT64                       LbaCount64;
+  UINTN                        AlignedBytes;
   NOR_FLASH_ATTRIBUTES         *Attributes;
 
   NorFlashInfo = CR (
@@ -89,6 +92,10 @@ FPNorFlashErase (
   NorFlash       = NorFlashInfo->NorFlash;
   Attributes     = &NorFlashInfo->Attributes;
   EraseBlockSize = Attributes->BlockSize;
+
+  if (EraseBlockSize == 0) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   Status = FwPartitionCheckOffsetAndBytes (NorFlashInfo->Bytes, Offset, Bytes);
   if (EFI_ERROR (Status)) {
@@ -114,8 +121,19 @@ FPNorFlashErase (
     return EFI_INVALID_PARAMETER;
   }
 
-  OffsetLba = Offset / EraseBlockSize;
-  LbaCount  = ALIGN_VALUE (Bytes, EraseBlockSize) / EraseBlockSize;
+  if (Bytes > (MAX_UINTN - (EraseBlockSize - 1))) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  AlignedBytes = ALIGN_VALUE (Bytes, EraseBlockSize);
+  OffsetLba64  = Offset / EraseBlockSize;
+  LbaCount64   = AlignedBytes / EraseBlockSize;
+  if ((OffsetLba64 > MAX_UINT32) || (LbaCount64 > MAX_UINT32)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  OffsetLba = (UINT32)OffsetLba64;
+  LbaCount  = (UINT32)LbaCount64;
 
   DEBUG ((
     DEBUG_VERBOSE,
@@ -184,6 +202,10 @@ FPNorFlashRead (
     return Status;
   }
 
+  if ((Offset > MAX_UINT32) || (Bytes > MAX_UINT32)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
   DEBUG ((
     DEBUG_VERBOSE,
     "%a: read offset=%llu, bytes=%u\n",
@@ -192,7 +214,7 @@ FPNorFlashRead (
     Bytes
     ));
 
-  return NorFlash->Read (NorFlash, Offset, Bytes, Buffer);
+  return NorFlash->Read (NorFlash, (UINT32)Offset, (UINT32)Bytes, Buffer);
 }
 
 /**
@@ -222,6 +244,7 @@ FPNorFlashWrite (
   FW_PARTITION_NOR_FLASH_INFO  *NorFlashInfo;
   NVIDIA_NOR_FLASH_PROTOCOL    *NorFlash;
   EFI_STATUS                   Status;
+  UINTN                        OffsetRemainder;
 
   NorFlashInfo = CR (
                    DeviceInfo,
@@ -247,7 +270,16 @@ FPNorFlashWrite (
     return Status;
   }
 
-  if (Offset % NorFlashInfo->Attributes.BlockSize == 0 ) {
+  if (NorFlashInfo->Attributes.BlockSize == 0) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if ((Offset > MAX_UINT32) || (Bytes > MAX_UINT32)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  OffsetRemainder = (UINTN)(Offset % NorFlashInfo->Attributes.BlockSize);
+  if (OffsetRemainder == 0) {
     Status = FPNorFlashErase (DeviceInfo, Offset, Bytes);
     if (EFI_ERROR (Status)) {
       DEBUG ((
@@ -263,16 +295,16 @@ FPNorFlashWrite (
   } else if (Offset == NorFlashInfo->UnalignedGptStart) {
     Status = FPNorFlashErase (
                DeviceInfo,
-               Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
-               Bytes + (Offset % NorFlashInfo->Attributes.BlockSize)
+               Offset - OffsetRemainder,
+               Bytes + OffsetRemainder
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
         "%a: GPT erase offset=%llu, bytes=%u error: %r\n",
         __FUNCTION__,
-        Offset - (Offset % NorFlashInfo->Attributes.BlockSize),
-        Bytes + (Offset % NorFlashInfo->Attributes.BlockSize),
+        Offset - OffsetRemainder,
+        Bytes + OffsetRemainder,
 
         Status
         ));
@@ -288,7 +320,12 @@ FPNorFlashWrite (
     Bytes
     ));
 
-  return NorFlash->Write (NorFlash, Offset, Bytes, NonConstBuffer);
+  return NorFlash->Write (
+                     NorFlash,
+                     (UINT32)Offset,
+                     (UINT32)Bytes,
+                     NonConstBuffer
+                     );
 }
 
 /**
@@ -361,6 +398,11 @@ FPNorFlashInitDevices (
         Index,
         Status
         ));
+      continue;
+    }
+
+    if (Attributes.BlockSize == 0) {
+      DEBUG ((DEBUG_ERROR, "Skipping MM-NorFlash handle %u with zero block size\n", Index));
       continue;
     }
 
