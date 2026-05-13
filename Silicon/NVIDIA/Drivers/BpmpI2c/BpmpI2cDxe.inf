@@ -2,7 +2,7 @@
 #
 #  Bpmp I2c Controller Driver
 #
-#  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -37,8 +37,12 @@
   Crc8Lib
   DeviceTreeHelperLib
   DtPlatformDtbLoaderLib
+  NvidiaDriverModelProtocolLib
 
 [Protocols]
+  gEfiComponentNameProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiDriverHealthProtocolGuid
   gNVIDIABpmpIpcProtocolGuid
   gEfiI2cMasterProtocolGuid
   gEfiI2cEnumerateProtocolGuid

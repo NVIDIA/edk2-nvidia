@@ -18,6 +18,7 @@
 #include <Library/DeviceTreeHelperLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/NvidiaDriverModelProtocolLib.h>
 #include <Library/UefiLib.h>
 #include <Library/IoLib.h>
 #include <Library/Crc8Lib.h>
@@ -112,6 +113,7 @@ BpmpIpcProcess (
     if (NULL != Token) {
       if (EFI_ERROR (Token->TransactionStatus)) {
         DEBUG ((DEBUG_ERROR, "%a: I2C transfer failed async: %r, %08x\r\n", __FUNCTION__, Token->TransactionStatus, Private->MessageError));
+        NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
         *Private->TransactionStatus = EFI_DEVICE_ERROR;
         Private->RequestPacket      = NULL;
         if (Private->TransactionEvent != NULL) {
@@ -134,6 +136,7 @@ BpmpIpcProcess (
 
     *Private->TransactionStatus = EFI_SUCCESS;
     Private->RequestPacket      = NULL;
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
     if (Private->TransactionEvent != NULL) {
       gBS->SignalEvent (Private->TransactionEvent);
     }
@@ -204,6 +207,7 @@ BpmpIpcProcess (
                                );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: I2C transfer failed sync: %r, %08x\r\n", __FUNCTION__, Status, Private->MessageError));
+    NvidiaSetDriverHealthStatus (EfiDriverHealthStatusFailed);
     *Private->TransactionStatus = EFI_DEVICE_ERROR;
     Private->RequestPacket      = NULL;
     if (Private->TransactionEvent != NULL) {
@@ -1353,11 +1357,14 @@ BpmpI2cInitialize (
   UINTN       NumberOfHandles;
   EFI_HANDLE  *HandleBuffer;
 
-  Status = EfiLibInstallDriverBinding (
+  Status = NvidiaInstallDriverModelProtocols (
              ImageHandle,
              SystemTable,
              &mDriverBindingProtocol,
-             ImageHandle
+             ImageHandle,
+             L"NVIDIA BPMP I2C Controller Driver",
+             NULL,
+             NULL
              );
 
   if (EFI_ERROR (Status)) {
