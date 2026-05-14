@@ -6,7 +6,7 @@
   Tests are run using a flash stub, including tests for both
   a working flash device and a faulty flash device.
 
-  SPDX-FileCopyrightText: Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -19,6 +19,7 @@
 #include <Library/UnitTestLib.h>
 
 #include <HostBasedTestStubLib/FlashStubLib.h>
+#include <Protocol/DriverHealth.h>
 
 #include <FvbDxeTestPrivate.h>
 
@@ -40,10 +41,65 @@ STATIC UINT8  *TestVariablePartition;
 STATIC UINT8  *TestFlashStorage;
 STATIC UINT8  *TestBuffer;
 STATIC UINT8  *FtwWriteBuf;
+STATIC UINTN  mInstallDriverHealthCallCount;
+STATIC UINTN  mSetDriverHealthStatusCallCount;
 
 STATIC GUID  ZeroGuid = {
   0, 0, 0, { 0, 0, 0, 0, 0, 0, 0, 0 }
 };
+
+STATIC EFI_DRIVER_HEALTH_STATUS  mDriverHealthStatus = EfiDriverHealthStatusHealthy;
+
+STATIC
+VOID
+ResetDriverHealthStatus (
+  VOID
+  )
+{
+  mInstallDriverHealthCallCount   = 0;
+  mSetDriverHealthStatusCallCount = 0;
+  mDriverHealthStatus             = EfiDriverHealthStatusHealthy;
+}
+
+EFI_STATUS
+EFIAPI
+NvidiaInstallComponentName2AndDriverHealth (
+  IN EFI_HANDLE    DriverHandle,
+  IN CONST CHAR16  *DriverName,
+  IN CONST CHAR16  *ControllerName OPTIONAL,
+  IN EFI_GUID      *ControllerProtocolGuid OPTIONAL
+  )
+{
+  mInstallDriverHealthCallCount++;
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+NvidiaSetDriverHealthStatus (
+  IN EFI_DRIVER_HEALTH_STATUS  HealthStatus
+  )
+{
+  mSetDriverHealthStatusCallCount++;
+  mDriverHealthStatus = HealthStatus;
+
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+NvidiaSetDriverHealthStatusFromEfiStatus (
+  IN EFI_STATUS  Status
+  )
+{
+  mSetDriverHealthStatusCallCount++;
+  mDriverHealthStatus = EFI_ERROR (Status) ?
+                        EfiDriverHealthStatusFailed :
+                        EfiDriverHealthStatusHealthy;
+
+  return EFI_SUCCESS;
+}
 
 // RW_TEST_CONTEXT fields:
 //  Lba
@@ -1219,10 +1275,13 @@ InitializeFvAndVariableStoreHeadersTest (
   VARIABLE_STORE_HEADER       *TestVariableVSH;
   EFI_FVB_ATTRIBUTES_2        ExpectedAttributes;
 
+  ResetDriverHealthStatus ();
   PrivateVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
 
   Status = InitializeFvAndVariableStoreHeaders (PrivateVariableVH);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (mSetDriverHealthStatusCallCount, 1);
+  UT_ASSERT_EQUAL (mDriverHealthStatus, EfiDriverHealthStatusHealthy);
 
   // Check the Volume Header Settings
   TestVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)TestVariablePartition;
@@ -1597,6 +1656,7 @@ FaultyFlashWriteTest (
   UINTN       NumBytes;
 
   NumBytes = 1;
+  ResetDriverHealthStatus ();
 
   // Write tries to flush to the flash device so we should get an error
   Status = Private->FvbInstance.Write (
@@ -1607,6 +1667,8 @@ FaultyFlashWriteTest (
                                   TestBuffer
                                   );
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (mSetDriverHealthStatusCallCount, 1);
+  UT_ASSERT_EQUAL (mDriverHealthStatus, EfiDriverHealthStatusFailed);
 
   return UNIT_TEST_PASSED;
 }
@@ -1628,6 +1690,8 @@ FaultyFlashEraseBlocksTest (
 {
   EFI_STATUS  Status;
 
+  ResetDriverHealthStatus ();
+
   // EraseBlocks tries to flush to the flash device so we should get an error
   Status = Private->FvbInstance.EraseBlocks (
                                   &Private->FvbInstance,
@@ -1636,6 +1700,8 @@ FaultyFlashEraseBlocksTest (
                                   EFI_LBA_LIST_TERMINATOR
                                   );
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (mSetDriverHealthStatusCallCount, 1);
+  UT_ASSERT_EQUAL (mDriverHealthStatus, EfiDriverHealthStatusFailed);
 
   return UNIT_TEST_PASSED;
 }
@@ -1660,11 +1726,14 @@ FaultyFlashInitializeFvHeaderTest (
   EFI_FIRMWARE_VOLUME_HEADER  *PrivateVariableVH;
 
   PrivateVariableVH = (EFI_FIRMWARE_VOLUME_HEADER *)Private->VariablePartition;
+  ResetDriverHealthStatus ();
 
   // Initializing the header tries to flush
   // to the flash device so we should get an error
   Status = InitializeFvAndVariableStoreHeaders (PrivateVariableVH);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
+  UT_ASSERT_EQUAL (mSetDriverHealthStatusCallCount, 1);
+  UT_ASSERT_EQUAL (mDriverHealthStatus, EfiDriverHealthStatusFailed);
 
   return UNIT_TEST_PASSED;
 }
@@ -1837,6 +1906,7 @@ InitTestData (
   Private->FvbInstance.Write              = FvbWrite;
   Private->FvbInstance.EraseBlocks        = FvbEraseBlocks;
   Private->FvbInstance.ParentHandle       = NULL;
+  ResetDriverHealthStatus ();
 }
 
 /**

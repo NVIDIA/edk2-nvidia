@@ -2,7 +2,7 @@
 #
 #  Fvb Driver
 #
-#  Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  Copyright (c) 2018-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -34,8 +34,12 @@
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   UefiRuntimeLib
+  NvidiaDriverModelProtocolLib
 
 [Protocols]
+  gEfiComponentNameProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiDriverHealthProtocolGuid
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiFirmwareVolumeBlockProtocolGuid

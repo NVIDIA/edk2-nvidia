@@ -10,7 +10,23 @@
 
 #include <FvbPrivate.h>
 
+#include <Library/NvidiaDriverModelProtocolLib.h>
+
 NVIDIA_FVB_PRIVATE_DATA  *Private;
+
+/**
+  Update Driver Health from a media I/O result.
+
+  @param[in] Status  Result from an underlying block I/O operation.
+**/
+STATIC
+VOID
+FvbUpdateHealthFromIoStatus (
+  IN EFI_STATUS  Status
+  )
+{
+  NvidiaSetDriverHealthStatusFromEfiStatus (Status);
+}
 
 /**
   The GetAttributes() function retrieves the attributes and
@@ -404,6 +420,7 @@ FvbWrite (
                                   BlockSize,
                                   Private->VariablePartition + FvbOffset
                                   );
+  FvbUpdateHealthFromIoStatus (Status);
 
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
@@ -553,6 +570,7 @@ FvbEraseBlocks (
                                    BlockSize,
                                    Private->VariablePartition + FvbOffset + (Index * BlockSize)
                                    );
+      FvbUpdateHealthFromIoStatus (Status);
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_ERROR, "%a: FVB write failed. Recovered FVB could be corrupt.\n", __FUNCTION__));
         Private->BlockIo->ReadBlocks (
@@ -585,6 +603,7 @@ InitializeFvAndVariableStoreHeaders (
   IN EFI_FIRMWARE_VOLUME_HEADER  *FirmwareVolumeHeader
   )
 {
+  EFI_STATUS             Status;
   VARIABLE_STORE_HEADER  *VariableStoreHeader;
 
   if (FirmwareVolumeHeader == NULL) {
@@ -639,13 +658,16 @@ InitializeFvAndVariableStoreHeaders (
   VariableStoreHeader->State  = VARIABLE_STORE_HEALTHY;
 
   // Write the combined super-header in the flash
-  return Private->BlockIo->WriteBlocks (
-                             Private->BlockIo,
-                             Private->BlockIo->Media->MediaId,
-                             Private->PartitionStartingLBA,
-                             Private->BlockIo->Media->BlockSize,
-                             FirmwareVolumeHeader
-                             );
+  Status = Private->BlockIo->WriteBlocks (
+                               Private->BlockIo,
+                               Private->BlockIo->Media->MediaId,
+                               Private->PartitionStartingLBA,
+                               Private->BlockIo->Media->BlockSize,
+                               FirmwareVolumeHeader
+                               );
+  FvbUpdateHealthFromIoStatus (Status);
+
+  return Status;
 }
 
 /**
@@ -659,6 +681,7 @@ ValidateFvHeader (
   IN EFI_FIRMWARE_VOLUME_HEADER  *FwVolHeader
   )
 {
+  EFI_STATUS             Status;
   UINT16                 Checksum;
   VARIABLE_STORE_HEADER  *VariableStoreHeader;
   UINTN                  VariableStoreLength;
@@ -734,13 +757,16 @@ ValidateFvHeader (
              );
     }
 
-    return Private->BlockIo->WriteBlocks (
-                               Private->BlockIo,
-                               Private->BlockIo->Media->MediaId,
-                               Private->PartitionStartingLBA,
-                               MultU64x32 (Private->NumBlocks, Private->BlockIo->Media->BlockSize),
-                               FwVolHeader
-                               );
+    Status = Private->BlockIo->WriteBlocks (
+                                 Private->BlockIo,
+                                 Private->BlockIo->Media->MediaId,
+                                 Private->PartitionStartingLBA,
+                                 MultU64x32 (Private->NumBlocks, Private->BlockIo->Media->BlockSize),
+                                 FwVolHeader
+                                 );
+    FvbUpdateHealthFromIoStatus (Status);
+
+    return Status;
   }
 
   return EFI_SUCCESS;
@@ -1277,6 +1303,7 @@ FVBInitialize (
                                MultU64x32 (Private->NumBlocks, BlockSize),
                                Private->VariablePartition
                                );
+  FvbUpdateHealthFromIoStatus (Status);
   if (EFI_ERROR (Status)) {
     goto NoFlashExit;
   }
@@ -1297,6 +1324,7 @@ FVBInitialize (
                                  MultU64x32 (Private->NumBlocks, BlockSize),
                                  Private->VariablePartition
                                  );
+    FvbUpdateHealthFromIoStatus (Status);
     if (EFI_ERROR (Status)) {
       goto NoFlashExit;
     }
@@ -1361,6 +1389,16 @@ FVBInitialize (
         goto NoFlashExit;
       }
 
+      Status = NvidiaInstallComponentName2AndDriverHealth (
+                 ImageHandle,
+                 L"NVIDIA Firmware Volume Block Driver",
+                 NULL,
+                 NULL
+                 );
+      if (EFI_ERROR (Status)) {
+        goto NoFlashExit;
+      }
+
       RtProperties = (EFI_RT_PROPERTIES_TABLE *)AllocateRuntimePool (sizeof (EFI_RT_PROPERTIES_TABLE));
       if (RtProperties == NULL) {
         DEBUG ((DEBUG_ERROR, "%a: Failed to allocate RT properties table\r\n", __FUNCTION__));
@@ -1372,6 +1410,7 @@ FVBInitialize (
       RtProperties->Length                   = sizeof (EFI_RT_PROPERTIES_TABLE);
       RtProperties->RuntimeServicesSupported = PcdGet32 (PcdNoVariableRtProperties);
       gBS->InstallConfigurationTable (&gEfiRtPropertiesTableGuid, RtProperties);
+      Status = NvidiaSetDriverHealthStatus (EfiDriverHealthStatusHealthy);
     } else {
       Status = EFI_OUT_OF_RESOURCES;
     }
