@@ -150,8 +150,8 @@ HmatParser (
   CopyMem (HmatTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (HmatTable->Header.OemId));
   HmatTable->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   HmatTable->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-  HmatTable->Header.CreatorId       = FixedPcdGet64 (PcdAcpiDefaultCreatorId);
-  HmatTable->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  HmatTable->Header.CreatorId       = FixedPcdGet32 (PcdAcpiDefaultCreatorId);
+  HmatTable->Header.CreatorRevision = FixedPcdGet32 (PcdAcpiDefaultCreatorRevision);
   HmatTable->Reserved[0]            = EFI_ACPI_RESERVED_BYTE;
   HmatTable->Reserved[1]            = EFI_ACPI_RESERVED_BYTE;
   HmatTable->Reserved[2]            = EFI_ACPI_RESERVED_BYTE;

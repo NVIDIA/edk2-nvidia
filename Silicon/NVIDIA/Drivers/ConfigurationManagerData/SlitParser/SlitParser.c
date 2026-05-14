@@ -59,8 +59,8 @@ SlitParser (
   CopyMem (SlitHeader->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (SlitHeader->Header.OemId));
   SlitHeader->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   SlitHeader->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-  SlitHeader->Header.CreatorId       = FixedPcdGet64 (PcdAcpiDefaultCreatorId);
-  SlitHeader->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  SlitHeader->Header.CreatorId       = FixedPcdGet32 (PcdAcpiDefaultCreatorId);
+  SlitHeader->Header.CreatorRevision = FixedPcdGet32 (PcdAcpiDefaultCreatorRevision);
   // Populate entries
   SlitHeader->NumberOfSystemLocalities = ProximityDomains;
   // Assign normalized local and unreachable distances for all domains

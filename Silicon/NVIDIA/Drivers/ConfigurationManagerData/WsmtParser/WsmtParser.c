@@ -1,7 +1,7 @@
 /** @file
   Windows SMM Security Mitigation Table (WSMT) Parser.
 
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
@@ -47,8 +47,8 @@ WsmtParser (
   CopyMem (WsmtTable->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (WsmtTable->Header.OemId));
   WsmtTable->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   WsmtTable->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-  WsmtTable->Header.CreatorId       = FixedPcdGet64 (PcdAcpiDefaultCreatorId);
-  WsmtTable->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  WsmtTable->Header.CreatorId       = FixedPcdGet32 (PcdAcpiDefaultCreatorId);
+  WsmtTable->Header.CreatorRevision = FixedPcdGet32 (PcdAcpiDefaultCreatorRevision);
   WsmtTable->Header.Length          = sizeof (EFI_ACPI_WSMT_TABLE);
 
   WsmtTable->ProtectionFlags = EFI_WSMT_PROTECTION_FLAGS_FIXED_COMM_BUFFERS |

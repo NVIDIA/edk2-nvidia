@@ -87,8 +87,8 @@ ApmtParser (
   CopyMem (ApmtHeader->Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (ApmtHeader->Header.OemId));
   ApmtHeader->Header.OemTableId      = PcdGet64 (PcdAcpiDefaultOemTableId);
   ApmtHeader->Header.OemRevision     = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
-  ApmtHeader->Header.CreatorId       = FixedPcdGet64 (PcdAcpiDefaultCreatorId);
-  ApmtHeader->Header.CreatorRevision = FixedPcdGet64 (PcdAcpiDefaultOemRevision);
+  ApmtHeader->Header.CreatorId       = FixedPcdGet32 (PcdAcpiDefaultCreatorId);
+  ApmtHeader->Header.CreatorRevision = FixedPcdGet32 (PcdAcpiDefaultCreatorRevision);
 
   // Populate entries
   NodeOffset = -1;
