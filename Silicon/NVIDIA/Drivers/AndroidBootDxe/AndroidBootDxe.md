@@ -103,9 +103,10 @@ are returned to the boot manager through the Load File status.
 
 ## Testing
 
-`AndroidBootDxeUnitTest` covers Android boot header parsing and kernel argument
-update behavior. Driver Binding health paths are not directly exercised by the
-current host tests because the host suite stubs the driver model helper.
+`AndroidBootDxeUnitTest` covers Android boot header parsing, kernel argument
+update behavior, and selected Driver Binding health paths. The health tests
+verify that early Start failures are reported through Driver Health and that
+unsupported child-handle Stop requests do not mutate the current health state.
 
 ## Related Files
 
