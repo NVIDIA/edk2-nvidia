@@ -108,10 +108,22 @@ reaches enumeration completion.
 
 ## Testing
 
-There is no standalone host-based unit test for this shared library. Coverage
-comes from consumers that use the library in platform builds. The Driver Health
-helper behavior used by this library is covered by
-`NvidiaDriverModelProtocolLib` host tests.
+Host-based unit coverage is provided by
+`UnitTest/DeviceDiscoveryDriverLibUnitTests.c`. The tests exercise the shared
+library behavior that can regress without target hardware:
+
+- Device-tree compatibility mapping returns the configured device type GUID and
+  invokes the consumer compatibility notification.
+- Enumeration reports healthy Driver Health when no supported nodes are found
+  or when a matching controller is processed and started successfully.
+- Supported-node discovery failures, node-info allocation failure, node
+  processing failure, controller start failure, and completion notification
+  failure report failed Driver Health.
+- Failure paths that occur before a controller handle owns the device structure
+  are covered so cleanup and health reporting stay aligned.
+
+Consumer-specific callback behavior is still validated in the consuming driver
+tests and on target hardware.
 
 ## Related Files
 

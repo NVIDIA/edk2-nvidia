@@ -254,6 +254,11 @@
   #
   Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/UnitTest/BrBctUpdateDeviceLibUnitTestsHost.inf
 
+  #
+  # DeviceDiscoveryDriverLib Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/UnitTest/DeviceDiscoveryDriverLibUnitTestsHost.inf
+
 
 [PcdsDynamicDefault]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00010000

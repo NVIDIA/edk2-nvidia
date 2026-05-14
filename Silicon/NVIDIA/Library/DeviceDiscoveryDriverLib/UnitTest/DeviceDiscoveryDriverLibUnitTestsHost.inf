@@ -1,0 +1,59 @@
+## @file
+# Host-based unit tests for DeviceDiscoveryDriverLib.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = DeviceDiscoveryDriverLibUnitTestsHost
+  FILE_GUID      = e93501ce-cfbc-4ff7-9aaf-9b44bdcd3679
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  DeviceDiscoveryDriverLibUnitTests.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CmockaLib
+  DebugLib
+  MemoryAllocationLib
+  UnitTestLib
+  UefiBootServicesTableLib
+  UefiLib
+
+[Guids]
+  gEfiAcpiTableGuid
+  gEfiEventExitBootServicesGuid
+  gNVIDIADeviceDiscoveryContextGuid
+  gNVIDIAPlatformResourceDataGuid
+
+[Protocols]
+  gArmScmiClock2ProtocolGuid
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gEfiComponentNameProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiDriverHealthProtocolGuid
+  gNVIDIAAsyncDriverStatusProtocol
+  gNVIDIAClockNodeProtocolGuid
+  gNVIDIAClockParentsProtocolGuid
+  gNVIDIADeviceTreeCompatibilityProtocolGuid
+  gNVIDIADeviceTreeNodeProtocolGuid
+  gNVIDIANonDiscoverableDeviceProtocolGuid
+  gNVIDIAPowerGateNodeProtocolGuid
+  gNVIDIAResetNodeProtocolGuid
+
+[BuildOptions]
+  GCC:*_*_*_CC_FLAGS = -I$(WORKSPACE)/Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib

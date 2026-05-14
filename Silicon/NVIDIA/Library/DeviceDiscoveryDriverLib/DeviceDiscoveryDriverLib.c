@@ -58,6 +58,7 @@ BOOLEAN                                        EnumerationCompleted   = FALSE;
   @retval others                     Error processing status
 **/
 EFI_STATUS
+EFIAPI
 DeviceDiscoveryAsyncStatus (
   IN  NVIDIA_ASYNC_DRIVER_STATUS_PROTOCOL  *This,
   IN  BOOLEAN                              *StillPending
@@ -203,6 +204,7 @@ DeviceDiscoveryOnExitBootServices (
   @param Context Thread Context
 **/
 VOID
+EFIAPI
 DeviceDiscoveryThreadCallback (
   IN EFI_EVENT  Event,
   IN VOID       *Context
@@ -693,6 +695,7 @@ DeviceTreeIsSupported (
 **/
 STATIC
 EFI_STATUS
+EFIAPI
 EnumerationIsNodeSupported (
   IN OUT  NVIDIA_DT_NODE_INFO  *DeviceInfo
   )
@@ -762,6 +765,8 @@ DeviceDiscoveryEnumerateDevices (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to get supported nodes - %r\r\n", __FUNCTION__, Status));
+      FreePool (DtNodeInfo);
+      DtNodeInfo = NULL;
       NvidiaSetDriverHealthStatusFromEfiStatus (Status);
       return Status;
     }
@@ -786,6 +791,7 @@ DeviceDiscoveryEnumerateDevices (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Failed to process device node - %r\r\n", __FUNCTION__, Status));
+      FreePool (Device);
       DriverHealthStatus = EfiDriverHealthStatusFailed;
       continue;
     }
