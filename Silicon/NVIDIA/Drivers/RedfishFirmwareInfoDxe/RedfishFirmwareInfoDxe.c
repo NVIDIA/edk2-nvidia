@@ -2,7 +2,7 @@
   Redfish feature driver - translate firmware inventory to UEFI FMP protocol.
 
   (C) Copyright 2020-2022 Hewlett Packard Enterprise Development LP<BR>
-  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -501,6 +501,10 @@ RedfishResourceEntryPoint (
   }
 
   mRedfishResourcePrivate = AllocateZeroPool (sizeof (REDFISH_RESOURCE_COMMON_PRIVATE));
+  if (mRedfishResourcePrivate == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
   CopyMem (&mRedfishResourcePrivate->ConfigHandler, &mRedfishConfigHandler, sizeof (EDKII_REDFISH_CONFIG_HANDLER_PROTOCOL));
   CopyMem (&mRedfishResourcePrivate->RedfishResourceConfig, &mRedfishResourceConfig, sizeof (EDKII_REDFISH_RESOURCE_CONFIG_PROTOCOL));
 
