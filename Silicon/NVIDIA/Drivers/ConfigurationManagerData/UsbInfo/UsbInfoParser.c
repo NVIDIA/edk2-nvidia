@@ -70,6 +70,7 @@ UsbInfoParser (
   CM_STD_OBJ_ACPI_TABLE_INFO  AcpiTableHeader;
 
   NodeOffset = -1;
+  CmObjDesc  = NULL;
 
   CopyMem (DeviceInfo.Hid, USB_HID, sizeof (DeviceInfo.Hid));
   DeviceInfo.CidValid = TRUE;
@@ -148,10 +149,12 @@ UsbInfoParser (
 
     Status = NvAddAcpiTableGenerator (ParserHandle, &AcpiTableHeader);
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto CleanupAndReturn;
     }
   }
 
+CleanupAndReturn:
+  FREE_NON_NULL (CmObjDesc);
   return Status;
 }
 
