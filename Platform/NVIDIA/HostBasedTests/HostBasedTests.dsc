@@ -255,6 +255,11 @@
   Silicon/NVIDIA/Library/BrBctUpdateDeviceLib/UnitTest/BrBctUpdateDeviceLibUnitTestsHost.inf
 
   #
+  # QspiControllerLib Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Library/QspiControllerLib/UnitTest/QspiControllerLibUnitTestsHost.inf
+
+  #
   # DeviceDiscoveryDriverLib Host Based UnitTest Support
   #
   Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/UnitTest/DeviceDiscoveryDriverLibUnitTestsHost.inf

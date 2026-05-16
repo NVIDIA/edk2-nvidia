@@ -2,7 +2,7 @@
 
   QSPI Controller Library Private Structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,8 +11,9 @@
 #ifndef __QSPI_CONTROLLER_LIBRARY_PRIVATE_H__
 #define __QSPI_CONTROLLER_LIBRARY_PRIVATE_H__
 
-#define TIMEOUT                 1000000
-#define QSPI_CLEAR_STATE_DELAY  100
+#define TIMEOUT                   1000000
+#define QSPI_CLEAR_STATE_DELAY    100
+#define QSPI_CONFIG_SETTLE_DELAY  1
 
 #define QSPI_COMMAND_0  0x0
 
@@ -82,6 +83,11 @@
 
 #define QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT  15
 #define QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT  14
+#define QSPI_FIFO_STATUS_0_ERR_BIT            8
+#define QSPI_FIFO_STATUS_0_TX_FIFO_OVF_BIT    7
+#define QSPI_FIFO_STATUS_0_TX_FIFO_UNF_BIT    6
+#define QSPI_FIFO_STATUS_0_RX_FIFO_OVF_BIT    5
+#define QSPI_FIFO_STATUS_0_RX_FIFO_UNF_BIT    4
 #define QSPI_FIFO_STATUS_0_TX_FIFO_FULL_BIT   3
 #define QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT  2
 #define QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT  0
@@ -89,10 +95,17 @@
 #define QSPI_FIFO_STATUS_0_FIFO_FLUSH  1
 #define QSPI_FIFO_STATUS_0_FIFO_FULL   1
 #define QSPI_FIFO_STATUS_0_FIFO_EMPTY  1
+#define QSPI_FIFO_STATUS_0_ERROR_MASK  0x000001F0
 
 #define QSPI_TX_FIFO_0  0x108
 
 #define QSPI_RX_FIFO_0  0x188
+
+#define QSPI_DMA_CTL_0  0x20
+
+#define QSPI_DMA_CTL_0_DMA_EN_BIT  31
+
+#define QSPI_DMA_CTL_0_DMA_EN_DISABLE  0
 
 #define QSPI_MISC_0                  0x194
 #define QSPI_MISC_0_WAIT_CYCLES_MSB  7

@@ -1,0 +1,29 @@
+## @file
+# Host-based unit tests for QspiControllerLib.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = QspiControllerLibUnitTestsHost
+  FILE_GUID      = 92968688-9c68-4f64-9506-5bb2ffc71f75
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  QspiControllerLibUnitTests.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CmockaLib
+  DebugLib
+  UnitTestLib

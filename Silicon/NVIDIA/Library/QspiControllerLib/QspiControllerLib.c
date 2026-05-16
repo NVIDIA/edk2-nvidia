@@ -18,14 +18,50 @@
 
 #include "QspiControllerLibPrivate.h"
 
-BOOLEAN  TimeOutMessage   = FALSE;
-UINT32   QspiCommand2Data = 0;
+BOOLEAN  TimeOutMessage = FALSE;
+
+/**
+  Disable PIO and FIFO transfer directions.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+**/
+STATIC
+VOID
+QspiDisableTransfer (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_BIT,
+    QSPI_COMMAND_0_RX_EN_DISABLE
+    );
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_BIT,
+    QSPI_COMMAND_0_TX_EN_DISABLE
+    );
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_COMMAND_0,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_BIT,
+    QSPI_COMMAND_0_PIO_DIS
+    );
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_DMA_CTL_0,
+    QSPI_DMA_CTL_0_DMA_EN_BIT,
+    QSPI_DMA_CTL_0_DMA_EN_BIT,
+    QSPI_DMA_CTL_0_DMA_EN_DISABLE
+    );
+}
 
 /**
   Flush QSPI Controller FIFO.
 
-  If FIFO is not already empty, flush the respective TX/RX FIFO. Wait for the
-  register state to reflect FIFO has been flushed.
+  Flush the respective TX/RX FIFO. Wait for the register state to reflect FIFO
+  has been flushed.
 
   @param  QspiBaseAddress          Base Address for QSPI Controller in use.
   @param  TxFifo                   TRUE for Tx Fifo, FALSE for Rx Fifo
@@ -40,81 +76,57 @@ QspiFlushFifo (
   IN BOOLEAN               TxFifo
   )
 {
+  UINT32  EmptyBit;
+  UINT32  FlushBit;
   UINT32  Timeout;
 
   Timeout = 0;
   if (TxFifo) {
-    // Flush TX FIFO if it is not already empty.
-    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (
-                                           QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                           QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT,
-                                           QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT
-                                           ))
-    {
-      // Flush FIFO.
-      MmioBitFieldWrite32 (
-        QspiBaseAddress + QSPI_FIFO_STATUS_0,
-        QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-        QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-        QSPI_FIFO_STATUS_0_FIFO_FLUSH
-        );
-      // Wait for FIFO to be flushed.
-      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (
-                                                QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT,
-                                                QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT
-                                                ))
-      {
-        MicroSecondDelay (1);
-        if (Timeout != TIMEOUT) {
-          Timeout++;
-          if (Timeout == TIMEOUT) {
-            if (TimeOutMessage == FALSE) {
-              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
-              TimeOutMessage = TRUE;
-            }
-
-            return EFI_NOT_READY;
-          }
-        }
-      }
-    }
+    FlushBit = QSPI_FIFO_STATUS_0_TX_FIFO_FLUSH_BIT;
+    EmptyBit = QSPI_FIFO_STATUS_0_TX_FIFO_EMPTY_BIT;
   } else {
-    // Flush RX FIFO if it is not already empty.
-    if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (
-                                           QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT,
-                                           QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT
-                                           ))
-    {
-      // Flush FIFO.
-      MmioBitFieldWrite32 (
-        QspiBaseAddress + QSPI_FIFO_STATUS_0,
-        QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-        QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-        QSPI_FIFO_STATUS_0_FIFO_FLUSH
-        );
-      // Wait for FIFO to be flushed.
-      while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (
-                                                QspiBaseAddress + QSPI_FIFO_STATUS_0,
-                                                QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT,
-                                                QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT
-                                                ))
-      {
-        MicroSecondDelay (1);
-        if (Timeout != TIMEOUT) {
-          Timeout++;
-          if (Timeout == TIMEOUT) {
-            if (TimeOutMessage == FALSE) {
-              DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
-              TimeOutMessage = TRUE;
-            }
+    FlushBit = QSPI_FIFO_STATUS_0_RX_FIFO_FLUSH_BIT;
+    EmptyBit = QSPI_FIFO_STATUS_0_RX_FIFO_EMPTY_BIT;
+  }
 
-            return EFI_NOT_READY;
-          }
+  // Flush FIFO.
+  MmioBitFieldWrite32 (
+    QspiBaseAddress + QSPI_FIFO_STATUS_0,
+    FlushBit,
+    FlushBit,
+    QSPI_FIFO_STATUS_0_FIFO_FLUSH
+    );
+  // Wait for FIFO to be flushed.
+  while (QSPI_FIFO_STATUS_0_FIFO_FLUSH == MmioBitFieldRead32 (
+                                            QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                            FlushBit,
+                                            FlushBit
+                                            ))
+  {
+    MicroSecondDelay (1);
+    if (Timeout != TIMEOUT) {
+      Timeout++;
+      if (Timeout == TIMEOUT) {
+        if (TimeOutMessage == FALSE) {
+          DEBUG ((DEBUG_ERROR, "%a QSPI Transactions Slower Than Usual.\n", __FUNCTION__));
+          TimeOutMessage = TRUE;
         }
+
+        return EFI_NOT_READY;
       }
     }
+  }
+
+  MicroSecondDelay (QSPI_CONFIG_SETTLE_DELAY);
+
+  if (QSPI_FIFO_STATUS_0_FIFO_EMPTY != MmioBitFieldRead32 (
+                                         QspiBaseAddress + QSPI_FIFO_STATUS_0,
+                                         EmptyBit,
+                                         EmptyBit
+                                         ))
+  {
+    DEBUG ((DEBUG_ERROR, "%a QSPI FIFO Flush Failed.\n", __FUNCTION__));
+    return EFI_DEVICE_ERROR;
   }
 
   return EFI_SUCCESS;
@@ -192,6 +204,60 @@ QspiClearTransactionStatus (
       QSPI_TRANSFER_STATUS_0_RDY_READY
       );
   }
+}
+
+/**
+  Clear FIFO status/error sources.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+**/
+STATIC
+VOID
+QspiClearFifoStatus (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  UINT32  FifoStatus;
+
+  FifoStatus = MmioRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0) &
+               QSPI_FIFO_STATUS_0_ERROR_MASK;
+  MmioWrite32 (QspiBaseAddress + QSPI_FIFO_STATUS_0, FifoStatus);
+}
+
+/**
+  Check if FIFO status has an error source set.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+
+  @retval TRUE                     FIFO error is pending.
+  @retval FALSE                    FIFO error is not pending.
+**/
+STATIC
+BOOLEAN
+QspiFifoErrorPending (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  return ((MmioRead32 (QspiBaseAddress + QSPI_FIFO_STATUS_0) &
+           QSPI_FIFO_STATUS_0_ERROR_MASK) != 0);
+}
+
+/**
+  Recover QSPI Controller state after a failed PIO transaction.
+
+  @param  QspiBaseAddress          Base Address for QSPI Controller in use.
+**/
+STATIC
+VOID
+QspiRecoverController (
+  IN EFI_PHYSICAL_ADDRESS  QspiBaseAddress
+  )
+{
+  QspiDisableTransfer (QspiBaseAddress);
+  QspiClearTransactionStatus (QspiBaseAddress);
+  QspiClearFifoStatus (QspiBaseAddress);
+  (VOID)QspiFlushFifo (QspiBaseAddress, TRUE);
+  (VOID)QspiFlushFifo (QspiBaseAddress, FALSE);
 }
 
 /**
@@ -360,6 +426,8 @@ QspiPerformTransactionConfiguration (
   IN UINT32                BlockLen
   )
 {
+  QspiDisableTransfer (QspiBaseAddress);
+
   // Select Single Data Rate mode.
   MmioBitFieldWrite32 (
     QspiBaseAddress + QSPI_COMMAND_0,
@@ -425,10 +493,13 @@ QspiPerformReceive (
   UINT32      Data;
   UINT32      Stride;
 
+  Status      = EFI_SUCCESS;
   BufferTrack = Buffer;
 
   // Clear transaction status
   QspiClearTransactionStatus (QspiBaseAddress);
+  // Clear any stale FIFO error state
+  QspiClearFifoStatus (QspiBaseAddress);
   // Perform transaction packet width and size configuration
   QspiPerformTransactionConfiguration (QspiBaseAddress, PacketLen, Len);
   // Enable RX
@@ -438,6 +509,8 @@ QspiPerformReceive (
     QSPI_COMMAND_0_RX_EN_BIT,
     QSPI_COMMAND_0_RX_EN_ENABLE
     );
+  // Let configuration settle before starting PIO.
+  MicroSecondDelay (QSPI_CONFIG_SETTLE_DELAY);
   // Enable PIO transfer
   MmioBitFieldWrite32 (
     QspiBaseAddress + QSPI_COMMAND_0,
@@ -448,7 +521,13 @@ QspiPerformReceive (
   // Wait for transaction to complete
   Status = QspiWaitTransactionStatusReady (QspiBaseAddress);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
+  }
+
+  if (QspiFifoErrorPending (QspiBaseAddress)) {
+    DEBUG ((DEBUG_ERROR, "%a QSPI FIFO Error.\n", __FUNCTION__));
+    Status = EFI_DEVICE_ERROR;
+    goto Exit;
   }
 
   // Read data from RX FIFO
@@ -462,7 +541,8 @@ QspiPerformReceive (
                                            ))
     {
       DEBUG ((DEBUG_ERROR, "%a QSPI Rx FIFO Empty.\n", __FUNCTION__));
-      return EFI_DEVICE_ERROR;
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
     }
 
     if (PacketLen == sizeof (UINT8)) {
@@ -479,24 +559,14 @@ QspiPerformReceive (
     }
   }
 
-  // Disable RX
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_RX_EN_BIT,
-    QSPI_COMMAND_0_RX_EN_BIT,
-    QSPI_COMMAND_0_RX_EN_DISABLE
-    );
-  // Disable PIO transfer
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_PIO_BIT,
-    QSPI_COMMAND_0_PIO_BIT,
-    QSPI_COMMAND_0_PIO_DIS
-    );
+Exit:
+  QspiDisableTransfer (QspiBaseAddress);
 
-  DEBUG ((DEBUG_INFO, "QSPI Data Received.\n"));
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "QSPI Data Received.\n"));
+  }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
@@ -527,12 +597,15 @@ QspiPerformTransmit (
   UINT32      Data;
   UINT32      Stride;
 
+  Status      = EFI_SUCCESS;
   Data        = 0;
   Stride      = 0;
   BufferTrack = Buffer;
 
   // Clear transaction status
   QspiClearTransactionStatus (QspiBaseAddress);
+  // Clear any stale FIFO error state
+  QspiClearFifoStatus (QspiBaseAddress);
   // Perform transaction packet width and size configuration
   QspiPerformTransactionConfiguration (QspiBaseAddress, PacketLen, Len);
   // Enable TX
@@ -542,6 +615,8 @@ QspiPerformTransmit (
     QSPI_COMMAND_0_TX_EN_BIT,
     QSPI_COMMAND_0_TX_EN_ENABLE
     );
+  // Let configuration settle before filling the FIFO and starting PIO.
+  MicroSecondDelay (QSPI_CONFIG_SETTLE_DELAY);
   // Write data to TX FIFO
   Count = 0;
   while (Count < Len) {
@@ -553,12 +628,14 @@ QspiPerformTransmit (
                                           ))
     {
       DEBUG ((DEBUG_ERROR, "%a QSPI Tx FIFO Full.\n", __FUNCTION__));
-      return EFI_DEVICE_ERROR;
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
     }
 
     if (PacketLen == sizeof (UINT8)) {
       // Since we are using packed mode. we always write 4B with dummy bytes if needed.
       Stride = ((Len - Count) >= sizeof (UINT32)) ? sizeof (UINT32) : (Len - Count);
+      Data   = 0;
       CopyMem (&Data, BufferTrack, Stride);
       MmioWrite32 (QspiBaseAddress + QSPI_TX_FIFO_0, Data);
       BufferTrack += Stride;
@@ -580,27 +657,23 @@ QspiPerformTransmit (
   // Wait for transaction to complete
   Status = QspiWaitTransactionStatusReady (QspiBaseAddress);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
-  // Disable TX
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_TX_EN_BIT,
-    QSPI_COMMAND_0_TX_EN_BIT,
-    QSPI_COMMAND_0_TX_EN_DISABLE
-    );
-  // Disable PIO transfer.
-  MmioBitFieldWrite32 (
-    QspiBaseAddress + QSPI_COMMAND_0,
-    QSPI_COMMAND_0_PIO_BIT,
-    QSPI_COMMAND_0_PIO_BIT,
-    QSPI_COMMAND_0_PIO_DIS
-    );
+  if (QspiFifoErrorPending (QspiBaseAddress)) {
+    DEBUG ((DEBUG_ERROR, "%a QSPI FIFO Error.\n", __FUNCTION__));
+    Status = EFI_DEVICE_ERROR;
+    goto Exit;
+  }
 
-  DEBUG ((DEBUG_INFO, "QSPI Data Transmitted.\n"));
+Exit:
+  QspiDisableTransfer (QspiBaseAddress);
 
-  return EFI_SUCCESS;
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "QSPI Data Transmitted.\n"));
+  }
+
+  return Status;
 }
 
 /**
@@ -658,11 +731,10 @@ QspiInitialize (
 {
   EFI_STATUS  Status;
   UINTN       ChipSelect;
+  UINT32      QspiCommand2Data;
 
   // Save prior configuration
-  if (QspiCommand2Data == 0) {
-    QspiCommand2Data = MmioRead32 (QspiBaseAddress + QSPI_COMMAND2_0);
-  }
+  QspiCommand2Data = MmioRead32 (QspiBaseAddress + QSPI_COMMAND2_0);
 
   // Configure master mode.
   MmioBitFieldWrite32 (
@@ -714,23 +786,30 @@ QspiInitialize (
   // Flush TX FIFO
   Status = QspiFlushFifo (QspiBaseAddress, TRUE);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
   // Flush RX FIFO
   Status = QspiFlushFifo (QspiBaseAddress, FALSE);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto Exit;
   }
 
+Exit:
   // Restore prior configuration
-  if (QspiCommand2Data != 0) {
-    MmioWrite32 (QspiBaseAddress + QSPI_COMMAND2_0, QspiCommand2Data);
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: Restoring QSPI COMMAND2_0 to 0x%08x\n",
+    __FUNCTION__,
+    QspiCommand2Data
+    ));
+  MmioWrite32 (QspiBaseAddress + QSPI_COMMAND2_0, QspiCommand2Data);
+
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "QSPI Initialized.\n"));
   }
 
-  DEBUG ((DEBUG_INFO, "QSPI Initialized.\n"));
-
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
@@ -762,8 +841,11 @@ QspiPerformTransaction (
   UINT32      TransactionCount;
   UINT32      Count;
 
+  Status = EFI_SUCCESS;
+
   // Check for invalid buffer address and size combinations.
-  if (((Packet->TxBuf == NULL) &&
+  if ((Packet == NULL) ||
+      ((Packet->TxBuf == NULL) &&
        (Packet->TxLen != 0)) ||
       ((Packet->TxBuf != NULL) &&
        (Packet->TxLen == 0)) ||
@@ -795,7 +877,7 @@ QspiPerformTransaction (
       DEBUG ((DEBUG_INFO, "QSPI Tx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformTransmit (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
-        return Status;
+        goto Exit;
       }
 
       Buffer += (TransactionWidth * TransactionCount);
@@ -816,7 +898,7 @@ QspiPerformTransaction (
       DEBUG ((DEBUG_INFO, "QSPI Rx Transaction: Count: %u Width: %u.\n", TransactionCount, TransactionWidth));
       Status = QspiPerformReceive (QspiBaseAddress, Buffer, TransactionCount, TransactionWidth);
       if (EFI_ERROR (Status)) {
-        return Status;
+        goto Exit;
       }
 
       Buffer += (TransactionWidth * TransactionCount);
@@ -824,17 +906,24 @@ QspiPerformTransaction (
     }
   }
 
+Exit:
   // Disable Combined sequence mode
   QspiConfigureCombinedSequenceMode (QspiBaseAddress, Packet, FALSE);
   // Disable CS
   QspiConfigureCS (QspiBaseAddress, Packet->ChipSelect, FALSE);
 
+  if (EFI_ERROR (Status)) {
+    QspiRecoverController (QspiBaseAddress);
+  }
+
   // Wait for the controller to clear state before starting next transaction.
-  if ((Packet->Control & QSPI_CONTROLLER_CONTROL_FAST_MODE) == 0) {
+  if (EFI_ERROR (Status) ||
+      ((Packet->Control & QSPI_CONTROLLER_CONTROL_FAST_MODE) == 0))
+  {
     MicroSecondDelay (QSPI_CLEAR_STATE_DELAY);
   }
 
-  return EFI_SUCCESS;
+  return Status;
 }
 
 /**
