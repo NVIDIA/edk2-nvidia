@@ -1,0 +1,42 @@
+## @file
+#  UEFI Shell application to inject a synthetic FFA SPLC_STOP (LIVE_ACT) to
+#  StandaloneMM and verify the LFA state store is written correctly.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = LfaSplcTest
+  FILE_GUID                      = 9646f38b-6c8a-437d-8eeb-db2cdb0d1972
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = LfaSplcTestMain
+
+[Sources]
+  LfaSplcTest.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  ArmSmcLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  StMmDxeGetBuffersLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+
+[Protocols]
+  gEfiShellParametersProtocolGuid
+
+#
+#  VALID_ARCHITECTURES           = AARCH64
+#
