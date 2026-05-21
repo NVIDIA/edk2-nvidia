@@ -762,7 +762,7 @@ GetCpuCacheNodeData (
 
     Status = MpCoreInfoGetProcessorLocation (ProcessorId, &Socket, &Cluster, &Core, &Thread);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: MpCoreInfoGetProcessorLocation failed for CoreId %lx: %r\n", __FUNCTION__, CoreId, Status));
+      DEBUG ((DEBUG_ERROR, "%a: MpCoreInfoGetProcessorLocation failed for ProcessorId %lx: %r\n", __FUNCTION__, ProcessorId, Status));
       goto CleanupAndReturn;
     }
 
@@ -771,32 +771,22 @@ GetCpuCacheNodeData (
       continue;
     }
 
-    // Find the next device = "cpu" node
-    Status = DeviceTreeGetNextCpuNode (&CpuCacheOffset);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNextCpuNode failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
-      goto CleanupAndReturn;
-    }
-
-    // determine the socket, cluster, and core for the cpu
-    Status = DeviceTreeGetNodePropertyValue64 (CpuCacheOffset, "reg", &CoreId);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNodePropertyValue64 failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
-      goto CleanupAndReturn;
-    }
-
-    NV_ASSERT_RETURN (
-      ProcessorId == CoreId,
-      { Status = EFI_INVALID_PARAMETER;
+    // Find the matching device = "cpu" node
+    CpuCacheOffset = -1;
+    do {
+      Status = DeviceTreeGetNextCpuNode (&CpuCacheOffset);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNextCpuNode failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
         goto CleanupAndReturn;
-      },
-      "DeviceTree for CoreIndex %u has CoreId = 0x%lx, but expected 0x%lx\n",
-      CoreIndex,
-      CoreId,
-      ProcessorId
-      );
+      }
 
-    // Gather the I & D cache info from the CpuCacheOffset
+      // determine the socket, cluster, and core for the cpu
+      Status = DeviceTreeGetNodePropertyValue64 (CpuCacheOffset, "reg", &CoreId);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: DeviceTreeGetNodePropertyValue64 failed for CoreIndex %u: %r\n", __FUNCTION__, CoreIndex, Status));
+        goto CleanupAndReturn;
+      }
+    } while (ProcessorId != CoreId);
 
     // I CacheData
     Status = CreateCacheNodeFromOffset (&CacheNodes[NodeIndex], CpuCacheOffset, CACHE_TYPE_ICACHE, TokenMap[NodeIndex], Socket, Cluster, Core);
