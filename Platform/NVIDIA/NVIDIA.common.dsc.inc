@@ -646,7 +646,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
   HandleParsingLib|ShellPkg/Library/UefiHandleParsingLib/UefiHandleParsingLib.inf
 !ifdef CONFIG_BUILD_ANDROID
-  DisplayUpdateProgressLib|Silicon/NVIDIA/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
+  DisplayUpdateProgressLib|Silicon/NVIDIA/Library/DisplayUpdateProgressLibGraphics/DisplayUpdateProgressLibGraphics.inf
 !else
   DisplayUpdateProgressLib|MdeModulePkg/Library/DisplayUpdateProgressLibText/DisplayUpdateProgressLibText.inf
 !endif

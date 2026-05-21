@@ -1,0 +1,36 @@
+## @file
+#  Provides services to display completion progress of a firmware update on a
+#  graphical console that supports the Graphics Output Protocol.
+#
+#  Copyright (c) 2016, Microsoft Corporation, All rights reserved.<BR>
+#  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION     = 0x00010005
+  BASE_NAME       = DisplayUpdateProgressLibGraphics
+  FILE_GUID       = 06A246CB-171C-4D2F-8652-6B4383A091DE
+  MODULE_TYPE     = DXE_DRIVER
+  VERSION_STRING  = 1.0
+  LIBRARY_CLASS   = DisplayUpdateProgressLib|DXE_DRIVER UEFI_DRIVER UEFI_APPLICATION
+
+[Sources]
+  DisplayUpdateProgressLibGraphics.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  BaseLib
+  UefiLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid  # CONSUMES
+  gEdkiiBootLogo2ProtocolGuid     # CONSUMES
