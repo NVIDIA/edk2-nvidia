@@ -150,10 +150,13 @@ StandaloneMmFixupPcdConstructor (
     }
   }
 
-  /* Assert if we are doing a regular boot on a silicon/FPGA platform and
+  /* Fail if we are doing a regular boot on a silicon/FPGA platform and
    * we haven't found the variable partitions.
    */
-  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FVB protocol not found: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
 
   for (Index = 0; Index < HandleCount; Index += 1, Fvb = NULL) {
     Status = gMmst->MmHandleProtocol (
