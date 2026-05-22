@@ -345,7 +345,9 @@ InFbc (
       Fbc = TRUE;
       goto ExitInFbc;
     } else {
-      ASSERT_EFI_ERROR (EFI_NOT_FOUND);
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find platform info HOB\n", __FUNCTION__));
+      Fbc = FALSE;
+      goto ExitInFbc;
     }
   }
 
@@ -383,7 +385,9 @@ GetBootType (
       BootType = TegrablBootInvalid;
       goto ExitBootType;
     } else {
-      ASSERT_EFI_ERROR (EFI_NOT_FOUND);
+      DEBUG ((DEBUG_ERROR, "%a: Unable to find platform info HOB\n", __FUNCTION__));
+      BootType = TegrablBootInvalid;
+      goto ExitBootType;
     }
   }
 
