@@ -234,8 +234,9 @@ and `IsIso9660BootMedia` (called from `HandleIsoBootMedia` before
 until `PreIsoLogInit` opens the log file. As a result, detection-phase
 `PreIsoLogWrite` calls are silently dropped; only `ErrorPrint` output
 (e.g., from `IsIso9660BootMedia`) reaches the console. Log writes are
-buffered; a single `FileHandleFlush` is performed in `PreIsoLogClose`
-before the file handle is closed.
+buffered; `PreIsoLogClose` flushes before closing the file handle. When
+capsule update is staged, `PerformCapsuleUpdate` also flushes cached log
+data before resetting the system.
 
 ## Files
 

@@ -204,6 +204,16 @@ PreIsoLogPrint (
   );
 
 /**
+  Flush cached data to the PreIsoInstaller log file.
+
+**/
+VOID
+EFIAPI
+PreIsoLogFlush (
+  VOID
+  );
+
+/**
   Close the PreIsoInstaller log file.
 
 **/

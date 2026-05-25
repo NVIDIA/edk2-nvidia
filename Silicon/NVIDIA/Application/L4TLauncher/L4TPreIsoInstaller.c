@@ -162,6 +162,17 @@ PreIsoLogWrite (
 
 VOID
 EFIAPI
+PreIsoLogFlush (
+  VOID
+  )
+{
+  if (mLogFileHandle != NULL) {
+    FileHandleFlush (mLogFileHandle);
+  }
+}
+
+VOID
+EFIAPI
 PreIsoLogClose (
   VOID
   )
@@ -2380,6 +2391,7 @@ PerformCapsuleUpdate (
   }
 
   PreIsoLogPrint (L"Capsule update prepared, resetting the system in 2 seconds.\r\n");
+  PreIsoLogFlush ();
   gBS->Stall (2 * 1000000);
   gRT->ResetSystem (EfiResetWarm, EFI_SUCCESS, 0, NULL);
 
