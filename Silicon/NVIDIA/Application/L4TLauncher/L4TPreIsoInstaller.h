@@ -158,7 +158,6 @@ LoadAndStartShim (
 
   @param[in]  ImageHandle    The image handle of this application.
   @param[in]  DeviceHandle   Device handle for ESP.
-  @param[in]  BootChain      Current boot chain.
 
   @retval EFI_SUCCESS        ISO medium handled (or not an ISO medium).
   @retval EFI_ABORTED        Capsule boot loop detected — caller must halt.
@@ -169,8 +168,7 @@ EFI_STATUS
 EFIAPI
 HandleIsoBootMedia (
   IN  EFI_HANDLE  ImageHandle,
-  IN  EFI_HANDLE  DeviceHandle,
-  IN  UINT32      BootChain
+  IN  EFI_HANDLE  DeviceHandle
   );
 
 /**

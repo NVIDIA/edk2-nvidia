@@ -2634,7 +2634,6 @@ Done:
 
   @param[in]  ImageHandle    The image handle of this application.
   @param[in]  DeviceHandle   Device handle for ESP.
-  @param[in]  BootChain      Current boot chain.
 
   @retval EFI_SUCCESS        ISO medium handled (or not an ISO medium).
   @retval EFI_ABORTED        Capsule boot loop detected — caller must halt.
@@ -2645,11 +2644,12 @@ EFI_STATUS
 EFIAPI
 HandleIsoBootMedia (
   IN  EFI_HANDLE  ImageHandle,
-  IN  EFI_HANDLE  DeviceHandle,
-  IN  UINT32      BootChain
+  IN  EFI_HANDLE  DeviceHandle
   )
 {
   EFI_STATUS  Status;
+  UINT32      BootChain;
+  UINTN       DataSize;
 
   if (!IsIsoIdFileValid (DeviceHandle)) {
     return EFI_SUCCESS;
@@ -2660,6 +2660,23 @@ HandleIsoBootMedia (
   }
 
   ErrorPrint (L"ISO installation medium detected, running PreIsoInstaller logic\r\n");
+
+  BootChain = 0;
+  DataSize  = sizeof (BootChain);
+  Status    = gRT->GetVariable (
+                     BOOT_FW_VARIABLE_NAME,
+                     &gNVIDIAPublicVariableGuid,
+                     NULL,
+                     &DataSize,
+                     &BootChain
+                     );
+  if (EFI_ERROR (Status)) {
+    ErrorPrint (L"%a: Failed to read boot firmware chain, using chain 0: %r\r\n", __FUNCTION__, Status);
+    BootChain = 0;
+  } else if (BootChain > 1) {
+    ErrorPrint (L"%a: Invalid boot firmware chain %u, using chain 0\r\n", __FUNCTION__, BootChain);
+    BootChain = 0;
+  }
 
   Status = gL4TSupportProtocol->SetRootfsStatusReg (0x0);
   if (EFI_ERROR (Status)) {

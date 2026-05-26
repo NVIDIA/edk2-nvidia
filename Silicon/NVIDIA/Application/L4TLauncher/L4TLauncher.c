@@ -2781,7 +2781,7 @@ L4TLauncher (
 
   DeviceHandle = GetDeviceHandleForFvBoot (LoadedImage->DeviceHandle, BootParams.BootChain);
 
-  Status = HandleIsoBootMedia (ImageHandle, DeviceHandle, BootParams.BootChain);
+  Status = HandleIsoBootMedia (ImageHandle, DeviceHandle);
   if (Status == EFI_ABORTED) {
     ErrorPrint (L"%a: Iso boot loop detected, halting\r\n", __FUNCTION__);
     CpuDeadLoop ();
