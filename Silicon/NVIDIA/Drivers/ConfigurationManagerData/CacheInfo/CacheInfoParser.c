@@ -154,7 +154,17 @@ GetCacheInfoFromCacheNode (
 
   // Next level token
   if (CacheNode->CacheData.NextLevelCache != 0) {
-    NextCacheNode                    = FindpHandleInTracker (CacheNode->CacheData.NextLevelCache, CacheTracker);
+    NextCacheNode = FindpHandleInTracker (CacheNode->CacheData.NextLevelCache, CacheTracker);
+    if (NextCacheNode == NULL) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: next-level-cache phandle 0x%x not found in tracker\n",
+        __FUNCTION__,
+        CacheNode->CacheData.NextLevelCache
+        ));
+      return EFI_NOT_FOUND;
+    }
+
     CacheInfo->NextLevelOfCacheToken = NextCacheNode->Token;
   } else {
     CacheInfo->NextLevelOfCacheToken = CM_NULL_TOKEN;
@@ -163,6 +173,20 @@ GetCacheInfoFromCacheNode (
   CacheInfo->Size         = CacheNode->CacheData.CacheSize;
   CacheInfo->NumberOfSets = CacheNode->CacheData.CacheSets;
   CacheInfo->LineSize     = CacheNode->CacheData.CacheLineSize;
+
+  // Reject cache geometry that would divide by zero.
+  if ((CacheInfo->LineSize == 0) || (CacheInfo->NumberOfSets == 0) || (CacheInfo->Size == 0)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: zero LineSize (%u) or NumberOfSets (%u) or Size (%u) for cache phandle 0x%x\n",
+      __FUNCTION__,
+      CacheInfo->LineSize,
+      CacheInfo->NumberOfSets,
+      CacheInfo->Size,
+      CacheNode->CacheData.CacheId
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
 
   // Calculate Associativity
   CacheInfo->Associativity = CacheInfo->Size / (CacheInfo->LineSize * CacheInfo->NumberOfSets);
@@ -523,6 +547,7 @@ BuildCacheInfoStruct (
   UINT32           Index;
   CM_OBJECT_TOKEN  *CacheInfoTokenMap;
 
+  Status            = EFI_SUCCESS;
   CacheInfoTokenMap = NULL;
 
   if ((CacheTracker == NULL) ||
@@ -537,6 +562,7 @@ BuildCacheInfoStruct (
     if (CacheInfoTokenMap == NULL) {
       DEBUG ((DEBUG_ERROR, "%a: Unable to allocate space for CacheInfoTokenMap\n", __FUNCTION__));
       *CacheInfoTokens = NULL;
+      return EFI_OUT_OF_RESOURCES;
     }
   }
 
@@ -983,10 +1009,14 @@ FixupSocketClusterCoreFields (
 
     // When Next is NULL, we have reached the top of the hierarchy.
     // Node should be pointing to the top-level cache node at this point.
-    if ((Node->Socket != UNDEFINED_SOCKET) &&
-        ((SocketRootZeroed & (1 << Node->Socket)) == 0))
-    {
-      SocketRootZeroed |= (1 << Node->Socket);
+    if (Node->Socket == UNDEFINED_SOCKET) {
+      continue;
+    }
+
+    NV_ASSERT_RETURN (Node->Socket < (sizeof (SocketRootZeroed) * 8), return EFI_UNSUPPORTED, "%a: Socket %u exceeds SocketRootZeroed width %u\n", __FUNCTION__, Node->Socket, (UINT32)(sizeof (SocketRootZeroed) * 8));
+
+    if ((SocketRootZeroed & (1U << Node->Socket)) == 0) {
+      SocketRootZeroed |= (1U << Node->Socket);
       Node->Cluster     = UNUSED_CLUSTER;
       Node->Core        = UNUSED_CORE;
     }
