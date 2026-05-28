@@ -959,9 +959,9 @@ Cleanup:
 }
 
 /**
-  Get system firmware version from ESRT (EFI System Resource Table).
+  Get system firmware entry from ESRT (EFI System Resource Table).
 
-  @param[out] FwVersion   Pointer to store the firmware version.
+  @param[out] SystemFwEntry  Pointer to store the system firmware ESRT entry.
 
   @retval EFI_SUCCESS    The operation completed successfully.
   @retval EFI_NOT_FOUND  ESRT not found or no system firmware entry.
@@ -971,8 +971,8 @@ Cleanup:
 STATIC
 EFI_STATUS
 EFIAPI
-GetSystemFwVersionFromEsrt (
-  OUT UINT32  *FwVersion
+GetSystemFwEntryFromEsrt (
+  OUT EFI_SYSTEM_RESOURCE_ENTRY  **SystemFwEntry
   )
 {
   EFI_STATUS                 Status;
@@ -980,11 +980,11 @@ GetSystemFwVersionFromEsrt (
   EFI_SYSTEM_RESOURCE_ENTRY  *EsrtEntry;
   UINTN                      Index;
 
-  if (FwVersion == NULL) {
+  if (SystemFwEntry == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *FwVersion = 0;
+  *SystemFwEntry = NULL;
 
   Status = EfiGetSystemConfigurationTable (&gEfiSystemResourceTableGuid, (VOID **)&Esrt);
   if (EFI_ERROR (Status)) {
@@ -1008,17 +1008,25 @@ GetSystemFwVersionFromEsrt (
   for (Index = 0; Index < Esrt->FwResourceCount; Index++) {
     DEBUG ((
       DEBUG_VERBOSE,
-      "%a: ESRT[%d] FwClass: %g, FwVersion: 0x%x, FwType: 0x%x\r\n",
+      "%a: ESRT[%d] FwClass: %g, FwVersion: 0x%x, "
+      "LowestSupportedFwVersion: 0x%x, FwType: 0x%x\r\n",
       __FUNCTION__,
       Index,
       &EsrtEntry->FwClass,
       EsrtEntry->FwVersion,
+      EsrtEntry->LowestSupportedFwVersion,
       EsrtEntry->FwType
       ));
 
     if (EsrtEntry->FwType == ESRT_FW_TYPE_SYSTEMFIRMWARE) {
-      *FwVersion = EsrtEntry->FwVersion;
-      PreIsoLogPrint (L"%a: System FwVersion found: 0x%x\r\n", __FUNCTION__, *FwVersion);
+      *SystemFwEntry = EsrtEntry;
+      PreIsoLogPrint (
+        L"%a: System firmware ESRT entry found: FwVersion=0x%x, "
+        L"LowestSupportedFwVersion=0x%x\r\n",
+        __FUNCTION__,
+        EsrtEntry->FwVersion,
+        EsrtEntry->LowestSupportedFwVersion
+        );
       return EFI_SUCCESS;
     }
 
@@ -1027,6 +1035,84 @@ GetSystemFwVersionFromEsrt (
 
   PreIsoLogPrint (L"%a: System firmware entry not found in ESRT\r\n", __FUNCTION__);
   return EFI_NOT_FOUND;
+}
+
+/**
+  Get system firmware version from ESRT (EFI System Resource Table).
+
+  @param[out] FwVersion   Pointer to store the firmware version.
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+  @retval EFI_NOT_FOUND  ESRT not found or no system firmware entry.
+  @retval Other          Error occurred reading ESRT.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetSystemFwVersionFromEsrt (
+  OUT UINT32  *FwVersion
+  )
+{
+  EFI_STATUS                 Status;
+  EFI_SYSTEM_RESOURCE_ENTRY  *EsrtEntry;
+
+  if (FwVersion == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *FwVersion = 0;
+
+  Status = GetSystemFwEntryFromEsrt (&EsrtEntry);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  *FwVersion = EsrtEntry->FwVersion;
+  PreIsoLogPrint (L"%a: System FwVersion found: 0x%x\r\n", __FUNCTION__, *FwVersion);
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Get system firmware lowest supported version from ESRT (EFI System Resource Table).
+
+  @param[out] LowestSupportedFwVersion  Pointer to store the lowest supported version.
+
+  @retval EFI_SUCCESS    The operation completed successfully.
+  @retval EFI_NOT_FOUND  ESRT not found or no system firmware entry.
+  @retval Other          Error occurred reading ESRT.
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetLowestSupportedFwVersionFromEsrt (
+  OUT UINT32  *LowestSupportedFwVersion
+  )
+{
+  EFI_STATUS                 Status;
+  EFI_SYSTEM_RESOURCE_ENTRY  *EsrtEntry;
+
+  if (LowestSupportedFwVersion == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *LowestSupportedFwVersion = 0;
+
+  Status = GetSystemFwEntryFromEsrt (&EsrtEntry);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  *LowestSupportedFwVersion = EsrtEntry->LowestSupportedFwVersion;
+  PreIsoLogPrint (
+    L"%a: System LowestSupportedFwVersion found: 0x%x\r\n",
+    __FUNCTION__,
+    *LowestSupportedFwVersion
+    );
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -2190,6 +2276,7 @@ IsCapsuleUpdateSupportLayoutChange (
   @param[in]  PreIsoInstallerVersion      Version from capsule.
   @param[in]  CurrentSlotVersion    Version of current active slot.
   @param[in]  NonCurrentSlotVersion Version of non-active slot.
+  @param[in]  LowestSupportedFwVersion    ESRT lowest supported firmware version.
 
   @retval TRUE   Capsule update is needed.
   @retval FALSE  Capsule update is not needed.
@@ -2201,15 +2288,16 @@ EFIAPI
 ShouldPerformCapsuleUpdate (
   IN UINT32  PreIsoInstallerVersion,
   IN UINT32  CurrentSlotVersion,
-  IN UINT32  NonCurrentSlotVersion
+  IN UINT32  NonCurrentSlotVersion,
+  IN UINT32  LowestSupportedFwVersion
   )
 {
-  if (PreIsoInstallerVersion < NonCurrentSlotVersion) {
+  if (PreIsoInstallerVersion < LowestSupportedFwVersion) {
     PreIsoLogWrite (
-      L"%a: ISO version (0x%x) < non-current slot version (0x%x) -> Skipping update\r\n",
+      L"%a: ISO version (0x%x) < lowest supported firmware version (0x%x) -> Skipping update\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
-      NonCurrentSlotVersion
+      LowestSupportedFwVersion
       );
     return FALSE;
   }
@@ -2247,7 +2335,8 @@ ShouldPerformCapsuleUpdate (
   the timeout, the update is skipped automatically.
 
   @param[in]  PreIsoInstallerVersion Capsule firmware version.
-  @param[in]  CurrentSlotVersion     Current slot firmware version.
+  @param[in]  CurrentSlotVersion    Version of current active slot.
+  @param[in]  NonCurrentSlotVersion Version of non-active slot.
 
   @retval TRUE   User confirmed the update.
   @retval FALSE  User declined (or timeout expired).
@@ -2257,31 +2346,39 @@ STATIC
 BOOLEAN
 ConfirmCapsuleUpdate (
   IN UINT32  PreIsoInstallerVersion,
-  IN UINT32  CurrentSlotVersion
+  IN UINT32  CurrentSlotVersion,
+  IN UINT32  NonCurrentSlotVersion
   )
 {
   EFI_STATUS     Status;
   EFI_INPUT_KEY  Key;
   EFI_EVENT      TimerEvent;
   EFI_EVENT      WaitEvents[2];
+  UINT32         LowerVersion;
   UINTN          EventIndex;
   UINTN          Remaining;
+
+  if (CurrentSlotVersion <= NonCurrentSlotVersion) {
+    LowerVersion = CurrentSlotVersion;
+  } else {
+    LowerVersion = NonCurrentSlotVersion;
+  }
 
   PreIsoLogPrint (L"\r\n");
   PreIsoLogPrint (L"  *** NVIDIA QSPI Firmware Update Required ***\r\n");
   PreIsoLogPrint (L"\r\n");
   PreIsoLogPrint (L"  A newer firmware version has been detected.\r\n");
   PreIsoLogPrint (
-    L"  New FW version  : %d.%02d.%02d\r\n",
+    L"  New FW version   : %d.%02d.%02d\r\n",
     (PreIsoInstallerVersion >> 16) & 0xFF,
     (PreIsoInstallerVersion >> 8) & 0xFF,
     PreIsoInstallerVersion & 0xFF
     );
   PreIsoLogPrint (
-    L"  Current version : %d.%02d.%02d\r\n",
-    (CurrentSlotVersion >> 16) & 0xFF,
-    (CurrentSlotVersion >> 8) & 0xFF,
-    CurrentSlotVersion & 0xFF
+    L"  Lower FW version : %d.%02d.%02d\r\n",
+    (LowerVersion >> 16) & 0xFF,
+    (LowerVersion >> 8) & 0xFF,
+    LowerVersion & 0xFF
     );
   PreIsoLogPrint (L"\r\n");
   PreIsoLogPrint (L"  WARNING: Skipping the firmware update may cause the\r\n");
@@ -2291,8 +2388,8 @@ ConfirmCapsuleUpdate (
   PreIsoLogPrint (L"  Press [Y] to proceed, [N] to skip.\r\n");
   PreIsoLogPrint (L"  Auto-skipping in %d seconds...\r\n", CAPSULE_CONFIRM_TIMEOUT_SEC);
   PreIsoLogPrint (L"\r\n");
-  PreIsoLogPrint (L"  Both firmware slots (A and B) will be updated.\r\n");
-  PreIsoLogPrint (L"  This requires 2 automatic reboots. Do not power off\r\n");
+  PreIsoLogPrint (L"  The older firmware will be updated to the new version.\r\n");
+  PreIsoLogPrint (L"  Automatic reboots will occur. Do not power off\r\n");
   PreIsoLogPrint (L"  the system until the update is complete.\r\n");
   PreIsoLogPrint (L"\r\n");
 
@@ -2480,6 +2577,7 @@ RunPreIsoInstaller (
   UINT32                   PreIsoInstallerVersion;
   UINT32                   CurrentSlotVersion;
   UINT32                   NonCurrentSlotVersion;
+  UINT32                   LowestSupportedFwVersion;
   TEGRA_EEPROM_BOARD_INFO  *CvmBoardInfo;
   BOOLEAN                  NeedsCapsuleUpdate;
   CHAR16                   CapsuleSourcePath[MAX_CAPSULE_PATH_CHARS];
@@ -2524,10 +2622,21 @@ RunPreIsoInstaller (
     goto Done;
   }
 
+  Status = GetLowestSupportedFwVersionFromEsrt (&LowestSupportedFwVersion);
+  if (EFI_ERROR (Status)) {
+    PreIsoLogWrite (
+      L"%a: Failed to read ESRT LowestSupportedFwVersion: %r\r\n",
+      __FUNCTION__,
+      Status
+      );
+    goto Done;
+  }
+
   NeedsCapsuleUpdate = ShouldPerformCapsuleUpdate (
                          PreIsoInstallerVersion,
                          CurrentSlotVersion,
-                         NonCurrentSlotVersion
+                         NonCurrentSlotVersion,
+                         LowestSupportedFwVersion
                          );
 
   if (!NeedsCapsuleUpdate) {
@@ -2603,7 +2712,7 @@ RunPreIsoInstaller (
   }
 
   if (StagedFlag == 0) {
-    if (!ConfirmCapsuleUpdate (PreIsoInstallerVersion, CurrentSlotVersion)) {
+    if (!ConfirmCapsuleUpdate (PreIsoInstallerVersion, CurrentSlotVersion, NonCurrentSlotVersion)) {
       PreIsoLogPrint (L"%a: Capsule update skipped by user\r\n", __FUNCTION__);
       Status = EFI_NOT_READY;
       goto Done;

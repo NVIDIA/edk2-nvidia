@@ -68,8 +68,8 @@ a prompt is displayed on the console:
   *** NVIDIA QSPI Firmware Update Required ***
 
   A newer firmware version has been detected.
-  New FW version  : <branch>.<major>.<minor>
-  Current version : <branch>.<major>.<minor>
+  New FW version   : <branch>.<major>.<minor>
+  Lower FW version : <branch>.<major>.<minor>
 
   WARNING: Skipping the firmware update may cause the
   subsequent ISO installation to fail.
@@ -78,10 +78,13 @@ a prompt is displayed on the console:
   Press [Y] to proceed, [N] to skip.
   Auto-skipping in 30 seconds...
 
-  Both firmware slots (A and B) will be updated.
-  This requires 2 automatic reboots. Do not power off
+  The older firmware will be updated to the new version.
+  Automatic reboots will occur. Do not power off
   the system until the update is complete.
 ```
+
+The lower firmware version shown in the prompt is the lower value between
+the current and non-current firmware slot versions.
 
 Version format `0xAABBCCDD` is displayed as `BB.CC.DD` in decimal;
 `0xAA` is always 0 (e.g., `0x00270000` -> `39.00.00`).
@@ -92,7 +95,7 @@ Version format `0xAABBCCDD` is displayed as `BB.CC.DD` in decimal;
 - **Timeout (30s)**: Automatically skips the update.
 
 On subsequent staging attempts (StagedFlag > 0, i.e., after a reboot from a
-previous capsule update for the other A/B slot), the prompt is skipped and
+previous capsule update for a remaining slot), the prompt is skipped and
 the update proceeds automatically.
 
 ## Version Comparison
@@ -100,7 +103,8 @@ the update proceeds automatically.
 The capsule version is parsed from `EFI\version` as a UINT32 hex value. The
 installed firmware versions come from the `SystemFwVersions` NVRAM variable
 when present; if that variable cannot be read, the ESRT system firmware
-version is used for both slots.
+version is used for both slots. The ESRT system firmware entry also provides
+`LowestSupportedFwVersion` for the capsule update decision.
 
 `BootChain` selects which firmware slot is current:
 
@@ -110,15 +114,18 @@ version is used for both slots.
 | 1         | Slot B       | Slot A           |
 
 Any other `BootChain` value is invalid and aborts the PreIsoInstaller flow.
-An update is required if the capsule version is newer than either the current
-or non-current slot.
-The comparison has two early-exit cases:
+An update is required only when the capsule version is greater than or
+equal to `LowestSupportedFwVersion` and newer than either the current or
+non-current slot.
+The comparison has three early-exit cases:
 
 1. If the current slot version is earlier than 35.5.0, the firmware is too old
    to support the ISO capsule layout change. PreIsoInstaller prints an error
    message and returns `EFI_ABORTED`, causing L4TLauncher to halt instead of
    continuing the ISO installation.
-2. If the ISO version is earlier than the non-current slot version,
+2. If the ISO version is earlier than `LowestSupportedFwVersion`,
+   PreIsoInstaller skips the capsule update and continues the ISO installation.
+3. If the ISO version is not newer than either the current or non-current slot,
    PreIsoInstaller skips the capsule update and continues the ISO installation.
 
 If no update is needed, `PreIsoCapsuleStaged` is deleted and shim boot continues.
