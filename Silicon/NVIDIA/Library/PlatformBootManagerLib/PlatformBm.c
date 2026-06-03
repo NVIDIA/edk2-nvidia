@@ -1407,6 +1407,152 @@ PlatformConfigured (
 }
 
 /**
+  Check whether a device path refers to a serial (UART) console.
+
+  Used when SerialPortConfiguration is PortDisabled to identify ConIn
+  devices that must not receive keyboard input over serial.
+
+  @param[in] DevicePath  Device path to inspect.
+
+  @retval TRUE   The path includes a UART messaging device node.
+  @retval FALSE  Otherwise.
+**/
+STATIC
+BOOLEAN
+IsSerialConsoleDevicePath (
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+  )
+{
+  EFI_DEVICE_PATH_PROTOCOL  *Node;
+
+  if (DevicePath == NULL) {
+    return FALSE;
+  }
+
+  for (Node = DevicePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
+    if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) &&
+        (DevicePathSubType (Node) == MSG_UART_DP))
+    {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+  Remove every serial console instance from a console environment variable.
+
+  ConIn is non-volatile and can still list a UART path from before
+  SerialPortConfiguration was set to PortDisabled. BDS connects consoles from
+  that variable before SimpleTextIn handles exist, so stale entries must be
+  cleared from NVRAM directly.
+
+  @param[in] VariableName  L"ConIn" or L"ConInDev".
+  @param[in] ConsoleType   ConIn or ConInDev for EfiBootManagerUpdateConsoleVariable.
+
+  @retval none
+**/
+STATIC
+VOID
+PlatformPurgeSerialFromConsoleVariable (
+  IN CONST CHAR16  *VariableName,
+  IN CONSOLE_TYPE  ConsoleType
+  )
+{
+  EFI_DEVICE_PATH_PROTOCOL  *Variable;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL  *Instance;
+  UINTN                     Size;
+  BOOLEAN                   Removed;
+  EFI_STATUS                Status;
+
+  do {
+    Removed = FALSE;
+
+    GetEfiGlobalVariable2 (VariableName, (VOID **)&Variable, NULL);
+    if (Variable == NULL) {
+      break;
+    }
+
+    DevicePath = Variable;
+    while ((Instance = GetNextDevicePathInstance (&DevicePath, &Size)) != NULL) {
+      if (IsSerialConsoleDevicePath (Instance)) {
+        Status = EfiBootManagerUpdateConsoleVariable (ConsoleType, NULL, Instance);
+        FreePool (Instance);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: removing serial from %s: %r\n",
+            __FUNCTION__,
+            VariableName,
+            Status
+            ));
+          FreePool (Variable);
+          return;
+        }
+
+        Removed = TRUE;
+        break;
+      }
+
+      FreePool (Instance);
+    }
+
+    FreePool (Variable);
+  } while (Removed);
+}
+
+/**
+  Remove serial console device paths from ConIn and ConInDev.
+
+  Purges stale paths from NVRAM first, then removes paths for any bound
+  SimpleTextIn handles (e.g. after TerminalDxe starts).
+
+  @retval none
+**/
+STATIC
+VOID
+PlatformExcludeSerialConIn (
+  VOID
+  )
+{
+  EFI_STATUS                Status;
+  EFI_HANDLE                *Handles;
+  UINTN                     HandleCount;
+  UINTN                     Index;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+
+  PlatformPurgeSerialFromConsoleVariable (L"ConIn", ConIn);
+  PlatformPurgeSerialFromConsoleVariable (L"ConInDev", ConInDev);
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiSimpleTextInProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (!EFI_ERROR (Status)) {
+    for (Index = 0; Index < HandleCount; Index++) {
+      Status = gBS->HandleProtocol (
+                      Handles[Index],
+                      &gEfiDevicePathProtocolGuid,
+                      (VOID **)&DevicePath
+                      );
+      if (EFI_ERROR (Status) || !IsSerialConsoleDevicePath (DevicePath)) {
+        continue;
+      }
+
+      EfiBootManagerUpdateConsoleVariable (ConIn, NULL, DevicePath);
+      EfiBootManagerUpdateConsoleVariable (ConInDev, NULL, DevicePath);
+    }
+
+    FreePool (Handles);
+  }
+}
+
+/**
   Update ConOut, ErrOut, ConIn variables to contain all available devices.
   For initial boot, all consoles are registered. Afterwards, only GOP consoles
   are registered, as external display devices are dynamically attached.
@@ -1492,12 +1638,38 @@ PlatformRegisterConsoles (
                       &gEfiDevicePathProtocolGuid,
                       (VOID **)&Interface
                       );
-      if (!EFI_ERROR (Status)) {
-        EfiBootManagerUpdateConsoleVariable (ConIn, Interface, NULL);
+      if (EFI_ERROR (Status)) {
+        continue;
       }
+
+      //
+      // Do not register serial input when SerialPortConfiguration is PortDisabled.
+      // Serial output may still be used for boot messages; only ConIn is blocked.
+      //
+      if ((PcdGet8 (PcdSerialPortConfig) == NVIDIA_SERIAL_PORT_DISABLED) &&
+          IsSerialConsoleDevicePath (Interface))
+      {
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: Skipping serial ConIn (SerialPortConfiguration=PortDisabled)\n",
+          __FUNCTION__
+          ));
+        continue;
+      }
+
+      EfiBootManagerUpdateConsoleVariable (ConIn, Interface, NULL);
     }
 
     gBS->FreePool (Handles);
+  }
+
+  //
+  // Final cleanup: drop any serial ConIn paths re-added by TerminalDxe/ConPlatformDxe
+  // while consoles were (re)connected. The authoritative purge happens earlier in
+  // PlatformBootManagerBeforeConsole(), before the first EfiBootManagerConnectAll().
+  //
+  if (PcdGet8 (PcdSerialPortConfig) == NVIDIA_SERIAL_PORT_DISABLED) {
+    PlatformExcludeSerialConIn ();
   }
 }
 
@@ -2378,6 +2550,20 @@ PlatformBootManagerBeforeConsole (
   // list their vendor and device id.
   //
   FilterAndProcess (&gEfiPciIoProtocolGuid, NULL, ListPciDevices);
+
+  //
+  // When SerialPortConfiguration is PortDisabled, purge any serial paths from the
+  // non-volatile ConIn/ConInDev variables BEFORE connecting consoles. ConPlatformDxe
+  // installs ConsoleInDevice (which ConSplitter aggregates into gST->ConIn) based on
+  // the ConIn variable contents at EfiBootManagerConnectAll() time. If a previous boot
+  // left a UART path in ConIn, the serial console becomes active on this very boot and
+  // ESC can still open Setup. Clearing the variable here ensures it is gone before the
+  // first ConnectAll, so serial input is never wired up on the first PortDisabled boot.
+  //
+  if (PcdGet8 (PcdSerialPortConfig) == NVIDIA_SERIAL_PORT_DISABLED) {
+    PlatformPurgeSerialFromConsoleVariable (L"ConIn", ConIn);
+    PlatformPurgeSerialFromConsoleVariable (L"ConInDev", ConInDev);
+  }
 
   if (!SingleBoot) {
     if (IsPlatformConfigurationNeeded ()) {
