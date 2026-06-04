@@ -161,8 +161,8 @@ CopyMmuLiveTranslationEntryHelper (
   WriteBackDataCacheRange (HelperCopy, HelperSize);
   InvalidateInstructionCacheRange (HelperCopy, HelperSize);
   DEBUG ((
-    DEBUG_ERROR,
-    "%a: copied MMU live-entry helper: 0x%p -> 0x%p, size 0x%lx\n",
+    DEBUG_INFO,
+    "%a: copied MMU live-entry helper to boot-services code: 0x%p -> 0x%p, size 0x%lx\n",
     __FUNCTION__,
     (VOID *)(UINTN)ArmReplaceLiveTranslationEntry,
     HelperCopy,
@@ -224,6 +224,11 @@ ReserveBootAllocationsInReservedResources (
 {
   EFI_PEI_HOB_POINTERS              Hob;
   EFI_HOB_MEMORY_ALLOCATION_HEADER  *Allocation;
+  UINTN                             ReservedCount;
+  UINT64                            ReservedSize;
+
+  ReservedCount = 0;
+  ReservedSize  = 0;
 
   // Allocation HOB memory types feed the DXE memory map. Boot-service
   // allocations already placed in reserved carveouts must therefore be
@@ -246,7 +251,7 @@ ReserveBootAllocationsInReservedResources (
           ))
     {
       DEBUG ((
-        DEBUG_ERROR,
+        DEBUG_VERBOSE,
         "%a: Reserved carveout allocation: Base: 0x%016lx, "
         "Size: 0x%016lx, Type: %u -> %u\n",
         __FUNCTION__,
@@ -255,11 +260,24 @@ ReserveBootAllocationsInReservedResources (
         (UINT32)Allocation->MemoryType,
         (UINT32)EfiReservedMemoryType
         ));
+      ReservedCount++;
+      ReservedSize          += Allocation->MemoryLength;
       Allocation->MemoryType = EfiReservedMemoryType;
     }
 
     Hob.Raw = GET_NEXT_HOB (Hob);
     Hob.Raw = GetNextHob (EFI_HOB_TYPE_MEMORY_ALLOCATION, Hob.Raw);
+  }
+
+  if (ReservedCount != 0) {
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: converted %lu boot-service allocation HOBs in reserved resources to "
+      "EfiReservedMemoryType, total size 0x%016lx\n",
+      __FUNCTION__,
+      ReservedCount,
+      ReservedSize
+      ));
   }
 }
 
