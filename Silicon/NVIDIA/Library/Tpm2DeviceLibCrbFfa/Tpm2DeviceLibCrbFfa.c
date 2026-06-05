@@ -437,16 +437,11 @@ Tpm2Initialize (
   }
 
   if (PcdGet8 (PcdTpm2InitializationPolicy) == 1) {
-    DEBUG ((DEBUG_INFO, "%a: TPM Startup STATE\n", __FUNCTION__));
-    Status = Tpm2Startup (TPM_SU_STATE);
+    DEBUG ((DEBUG_INFO, "%a: TPM Startup CLEAR\n", __FUNCTION__));
+    Status = Tpm2Startup (TPM_SU_CLEAR);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_INFO, "%a: TPM Startup STATE failed - %r\n", __FUNCTION__, Status));
-      DEBUG ((DEBUG_INFO, "%a: TPM Startup CLEAR\n", __FUNCTION__));
-      Status = Tpm2Startup (TPM_SU_CLEAR);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "%a: TPM Startup CLEAR failed - %r\n", __FUNCTION__, Status));
-        return EFI_DEVICE_ERROR;
-      }
+      DEBUG ((DEBUG_ERROR, "%a: TPM Startup CLEAR failed - %r\n", __FUNCTION__, Status));
+      return EFI_DEVICE_ERROR;
     }
   }
 
