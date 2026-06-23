@@ -1910,7 +1910,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
       DebugLib|Silicon/NVIDIA/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   }
 
+!ifdef CONFIG_SOC_T24X
   Silicon/NVIDIA/Drivers/ResetNotifyRuntimeDxe/ResetNotifyRuntimeDxe.inf
+!endif
   IpmiFeaturePkg/Frb/FrbDxe.inf
 
   #
