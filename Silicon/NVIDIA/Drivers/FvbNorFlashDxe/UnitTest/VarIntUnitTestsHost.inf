@@ -55,6 +55,8 @@
 
 [Pcd]
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
+  gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount
+  gNVIDIATokenSpaceGuid.PcdAllowVarIntV0Migration
 
 [Guids]
   gEfiGlobalVariableGuid
