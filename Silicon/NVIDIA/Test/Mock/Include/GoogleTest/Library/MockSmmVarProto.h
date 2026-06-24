@@ -27,6 +27,14 @@ struct MockSmmVarProto {
      IN OUT  UINTN     *DataSize,
      OUT     VOID      *Data)
     );
+
+  MOCK_FUNCTION_DECLARATION (
+    EFI_STATUS,
+    SmmVarProto_SmmGetNextVariableName,
+    (IN OUT  UINTN     *VariableNameSize,
+     IN OUT  CHAR16    *VariableName,
+     IN OUT  EFI_GUID  *VendorGuid)
+    );
 };
 
 #endif

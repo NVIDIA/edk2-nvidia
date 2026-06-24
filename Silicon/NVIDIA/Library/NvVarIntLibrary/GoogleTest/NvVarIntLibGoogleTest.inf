@@ -36,3 +36,7 @@
 [LibraryClasses]
   GoogleTestLib
   NvVarIntLib
+  MmServicesTableLib
+  MmVarLib
+  HashApiLib
+  SmmVarProtoLib

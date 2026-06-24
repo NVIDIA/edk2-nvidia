@@ -20,9 +20,13 @@
 #include <Library/BaseMemoryLib.h>
 #include <HostBasedTestStubLib/NvVarIntStubLib.h>
 
-EFIAPI
+STATIC UINTN  ExitBootServicesNotifyCount;
+STATIC UINTN  ExitBootServicesNotifyOrder;
+STATIC UINTN  VarIntEventOrder;
+
 EFI_STATUS
-ComputeVarMeasurement (
+EFIAPI
+ComputeVarMeasurementV0 (
   IN  CHAR16    *VarName   OPTIONAL,
   IN  EFI_GUID  *VarGuid   OPTIONAL,
   IN  UINT32    Attributes OPTIONAL,
@@ -46,6 +50,132 @@ ComputeVarMeasurement (
   return Status;
 }
 
+EFI_STATUS
+EFIAPI
+ComputeVarMeasurementV1 (
+  IN  CHAR16    *VarName   OPTIONAL,
+  IN  EFI_GUID  *VarGuid   OPTIONAL,
+  IN  UINT32    Attributes OPTIONAL,
+  IN  VOID      *Data      OPTIONAL,
+  IN  UINTN     DataSize   OPTIONAL,
+  OUT UINT8     *Meas
+  )
+{
+  EFI_STATUS  Status;
+  UINT8       *MockMeas;
+  UINTN       MeasSz;
+
+  if (VarName != NULL) {
+    check_expected_ptr (VarName);
+  }
+
+  MockMeas = (UINT8 *)mock ();
+  MeasSz   = (UINTN)mock ();
+  Status   = (EFI_STATUS)mock ();
+  CopyMem (Meas, MockMeas, MeasSz);
+  return Status;
+}
+
+EFI_STATUS
+EFIAPI
+ComputeVarMeasurement (
+  IN  CHAR16    *VarName   OPTIONAL,
+  IN  EFI_GUID  *VarGuid   OPTIONAL,
+  IN  UINT32    Attributes OPTIONAL,
+  IN  VOID      *Data      OPTIONAL,
+  IN  UINTN     DataSize   OPTIONAL,
+  OUT UINT8     *Meas
+  )
+{
+  return ComputeVarMeasurementV1 (
+           VarName,
+           VarGuid,
+           Attributes,
+           Data,
+           DataSize,
+           Meas
+           );
+}
+
+BOOLEAN
+EFIAPI
+NvVarIntIsExcludedVar (
+  IN CHAR16    *VarName OPTIONAL,
+  IN EFI_GUID  *VarGuid OPTIONAL
+  )
+{
+  return FALSE;
+}
+
+BOOLEAN
+EFIAPI
+NvVarIntCanUpdateMeasurement (
+  IN CHAR16    *VarName,
+  IN EFI_GUID  *VarGuid,
+  IN UINT32    Attributes,
+  IN UINTN     DataSize
+  )
+{
+  return TRUE;
+}
+
+BOOLEAN
+EFIAPI
+NvVarIntIsNoOpUpdate (
+  IN CHAR16    *VarName,
+  IN EFI_GUID  *VarGuid,
+  IN UINT32    Attributes,
+  IN VOID      *Data,
+  IN UINTN     DataSize
+  )
+{
+  return FALSE;
+}
+
+VOID
+EFIAPI
+NvVarIntNotifyExitBootServices (
+  VOID
+  )
+{
+  ExitBootServicesNotifyCount++;
+  ExitBootServicesNotifyOrder = MockNvVarIntNextEventOrder ();
+}
+
+VOID
+MockNvVarIntResetExitBootServicesNotify (
+  VOID
+  )
+{
+  ExitBootServicesNotifyCount = 0;
+  ExitBootServicesNotifyOrder = 0;
+  VarIntEventOrder            = 0;
+}
+
+UINTN
+MockNvVarIntGetExitBootServicesNotifyCount (
+  VOID
+  )
+{
+  return ExitBootServicesNotifyCount;
+}
+
+UINTN
+MockNvVarIntGetExitBootServicesNotifyOrder (
+  VOID
+  )
+{
+  return ExitBootServicesNotifyOrder;
+}
+
+UINTN
+MockNvVarIntNextEventOrder (
+  VOID
+  )
+{
+  return ++VarIntEventOrder;
+}
+
 /**
   Set up mock parameters for ComputeVarMeasurement() stub
 
@@ -64,11 +194,39 @@ MockComputeVarMeasurement (
   IN  EFI_STATUS  ReturnStatus
   )
 {
+  MockComputeVarMeasurementV1 (VarName, MockMeas, MeasSize, ReturnStatus);
+}
+
+VOID
+MockComputeVarMeasurementV0 (
+  IN  CHAR16      *VarName,
+  OUT UINT8       *MockMeas,
+  IN  UINTN       MeasSize,
+  IN  EFI_STATUS  ReturnStatus
+  )
+{
   if (VarName != NULL) {
-    expect_memory (ComputeVarMeasurement, VarName, VarName, sizeof (VarName));
+    expect_value (ComputeVarMeasurementV0, VarName, VarName);
   }
 
-  will_return (ComputeVarMeasurement, MockMeas);
-  will_return (ComputeVarMeasurement, MeasSize);
-  will_return (ComputeVarMeasurement, ReturnStatus);
+  will_return (ComputeVarMeasurementV0, MockMeas);
+  will_return (ComputeVarMeasurementV0, MeasSize);
+  will_return (ComputeVarMeasurementV0, ReturnStatus);
+}
+
+VOID
+MockComputeVarMeasurementV1 (
+  IN  CHAR16      *VarName,
+  OUT UINT8       *MockMeas,
+  IN  UINTN       MeasSize,
+  IN  EFI_STATUS  ReturnStatus
+  )
+{
+  if (VarName != NULL) {
+    expect_value (ComputeVarMeasurementV1, VarName, VarName);
+  }
+
+  will_return (ComputeVarMeasurementV1, MockMeas);
+  will_return (ComputeVarMeasurementV1, MeasSize);
+  will_return (ComputeVarMeasurementV1, ReturnStatus);
 }

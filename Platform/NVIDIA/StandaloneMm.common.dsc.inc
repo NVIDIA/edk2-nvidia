@@ -67,6 +67,7 @@
 
   MceAriLib|Silicon/NVIDIA/Library/MceAriLib/MceAriLib.inf
   HashApiLib|CryptoPkg/Library/BaseHashApiLib/BaseHashApiLib.inf
+  SortLib|MdeModulePkg/Library/BaseSortLib/BaseSortLib.inf
   NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
   MmVarLib|Silicon/NVIDIA/Library/MmVarLib/MmVarLib.inf
   ErotLib|Silicon/NVIDIA/Library/ErotLibNull/ErotLibNull.inf

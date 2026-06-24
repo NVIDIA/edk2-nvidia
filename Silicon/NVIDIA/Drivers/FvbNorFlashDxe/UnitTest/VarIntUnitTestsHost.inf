@@ -57,4 +57,7 @@
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
 
 [Guids]
+  gEfiGlobalVariableGuid
   gEfiImageSecurityDatabaseGuid
+  gMtcVendorGuid
+  gEfiMemoryTypeInformationGuid

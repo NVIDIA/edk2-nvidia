@@ -7,7 +7,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/VarSetCallbacksLib.h>
-#include <Library/BaseLib.h>
 #include <Library/MmServicesTableLib.h>
 #include <Library/StandaloneMmOpteeDeviceMem.h>
 #include <Library/DebugLib.h>
@@ -39,7 +38,13 @@ VarPreSetCallback (
     }
   }
 
-  /* Recompute/extend hash */
+  if ((VarIntProto->IsDeferred != NULL) &&
+      (VarIntProto->IsDeferred (VarIntProto) == TRUE))
+  {
+    return EFI_SUCCESS;
+  }
+
+  /* Write the pending measurement before the variable flash update. */
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
                           VariableName,
@@ -48,6 +53,20 @@ VarPreSetCallback (
                           Data,
                           DataSize
                           );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to compute pending measurement %r\n", __FUNCTION__, Status));
+    VarIntProto->MeasurementDirty = FALSE;
+    return Status;
+  }
+
+  if (VarIntProto->MeasurementDirty == TRUE) {
+    Status = VarIntProto->WriteNewMeasurement (VarIntProto);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: Failed to write pending measurement %r\n", __FUNCTION__, Status));
+      VarIntProto->MeasurementDirty = FALSE;
+      return Status;
+    }
+  }
 
   return EFI_SUCCESS;
 }
@@ -64,6 +83,7 @@ VarPostSetCallback (
   IN EFI_STATUS                SetVarStatus
   )
 {
+  EFI_STATUS  CleanupStatus;
   EFI_STATUS  Status;
 
   if (VarIntProto == NULL) {
@@ -78,21 +98,63 @@ VarPostSetCallback (
     }
   }
 
-  /* Recompute/extend hash */
+  if ((VarIntProto->IsDeferred != NULL) &&
+      (VarIntProto->IsDeferred (VarIntProto) == TRUE))
+  {
+    if (VarIntProto->MarkDirty != NULL) {
+      Status = VarIntProto->MarkDirty (
+                              VarIntProto,
+                              VariableName,
+                              VendorGuid,
+                              SetVarStatus
+                              );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to mark deferred measurement dirty %r\n", __FUNCTION__, Status));
+      }
+    }
+
+    return EFI_SUCCESS;
+  }
+
+  CleanupStatus = SetVarStatus;
+
+  if (VarIntProto->MeasurementDirty == TRUE) {
+    if (!EFI_ERROR (SetVarStatus)) {
+      Status = VarIntProto->ComputeNewMeasurement (
+                              VarIntProto,
+                              NULL,
+                              NULL,
+                              0,
+                              NULL,
+                              0
+                              );
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to compute committed measurement %r\n", __FUNCTION__, Status));
+        CleanupStatus = EFI_ABORTED;
+        goto CleanupPendingMeasurement;
+      }
+
+      Status = VarIntProto->WriteNewMeasurement (VarIntProto);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((DEBUG_ERROR, "%a: Failed to prepare committed measurement %r\n", __FUNCTION__, Status));
+        CleanupStatus = EFI_ABORTED;
+        goto CleanupPendingMeasurement;
+      }
+    }
+  }
+
+CleanupPendingMeasurement:
   Status = VarIntProto->InvalidateLast (
                           VarIntProto,
                           VariableName,
                           VendorGuid,
-                          SetVarStatus
+                          CleanupStatus
                           );
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to Invalidate Record %r\n",
-      __FUNCTION__,
-      Status
-      ));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to Invalidate Record %r\n", __FUNCTION__, Status));
   }
+
+  VarIntProto->MeasurementDirty = FALSE;
 
   return Status;
 }

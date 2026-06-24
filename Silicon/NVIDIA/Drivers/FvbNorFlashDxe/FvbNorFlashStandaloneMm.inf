@@ -71,6 +71,10 @@
   gEfiGlobalVariableGuid
   gEfiImageSecurityDatabaseGuid
   gNVIDIAPublicVariableGuid
+  gMtcVendorGuid
+  gEfiMemoryTypeInformationGuid
+  gEfiEventReadyToBootGuid       ## CONSUMES ## Event
+  gEfiEventExitBootServicesGuid  ## CONSUMES ## Event
 
 [Depex]
   TRUE

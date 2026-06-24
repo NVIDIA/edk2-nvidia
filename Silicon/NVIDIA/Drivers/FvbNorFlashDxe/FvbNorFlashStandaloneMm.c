@@ -13,7 +13,9 @@
 #include <FvbPrivate.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/IoLib.h>
+#include <Library/NvVarIntLib.h>
 #include <Library/NVIDIADebugLib.h>
+#include <Guid/EventGroup.h>
 
 /* FVB transactions will only be made to socket 0. */
 #define FVB_DEVICE_SOCKET    0
@@ -27,6 +29,8 @@ STATIC UINT64                   VariableSize;
 STATIC UINT64                   ReservedPartitionOffset;
 STATIC UINT64                   ReservedPartitionSize;
 STATIC NOR_FLASH_ATTRIBUTES     NorFlashAttributes;
+STATIC VOID                     *VarIntReadyToBootRegistration      = NULL;
+STATIC VOID                     *VarIntExitBootServicesRegistration = NULL;
 
 STATIC
 EFI_STATUS
@@ -415,14 +419,10 @@ FvbWrite (
   BlockSize = Private->FlashAttributes.BlockSize;
   LastBlock = (Private->PartitionSize / Private->FlashAttributes.BlockSize) - 1;
   if (CheckVarStoreIntegrity == TRUE) {
-    if (VarInt->CurMeasurement[0] == FVB_ERASED_BYTE) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: Writing Measurement 0x%x\n",
-        __FUNCTION__,
-        VarInt->CurMeasurement[0]
-        ));
-      VarInt->WriteNewMeasurement (VarInt);
+    if ((VarInt->CurMeasurement[0] == FVB_ERASED_BYTE) &&
+        ((VarInt->IsDeferred == NULL) || (VarInt->IsDeferred (VarInt) == FALSE)))
+    {
+      VarInt->MeasurementDirty = TRUE;
     }
   }
 
@@ -899,18 +899,228 @@ EraseMeasurementPartition (
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+HandleFinalVarIntBootstrapFailure (
+  IN EFI_STATUS   FailureStatus,
+  IN CONST CHAR8  *FailureReason
+  )
+{
+  BOOLEAN  MeasurementPartitionBlank;
+
+  if (!EFI_ERROR (FailureStatus)) {
+    FailureStatus = EFI_DEVICE_ERROR;
+  }
+
+  if (FailureReason == NULL) {
+    FailureReason = "VarInt bootstrap";
+  }
+
+  MeasurementPartitionBlank = FALSE;
+  if (VarInt != NULL) {
+    MeasurementPartitionBlank = IsMeasurementPartitionErasedOrZero (
+                                  VarInt->NorFlashProtocol,
+                                  ReservedPartitionOffset,
+                                  ReservedPartitionSize
+                                  );
+  }
+
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: %a final failure: status=%r "
+    "var_offset=0x%lx var_size=0x%lx meas_offset=0x%lx "
+    "meas_size=0x%lx meas_blank=%u\n",
+    __FUNCTION__,
+    FailureReason,
+    FailureStatus,
+    VariableOffset,
+    VariableSize,
+    ReservedPartitionOffset,
+    ReservedPartitionSize,
+    MeasurementPartitionBlank
+    ));
+
+  /*
+   * ReadyToBoot and ExitBootServices are too late for the
+   * VarIntCheckFailed/DefaultVariableDxe recovery handoff.  Deferred
+   * bootstrap failures mean the initial integrity baseline could not be
+   * established, so do not corrupt the variable store or erase measurements.
+   */
+  return VarIntFatalBootstrapFailure (FailureStatus, FailureReason);
+}
+
+STATIC
+EFI_STATUS
+HandleVarIntFailure (
+  IN EFI_STATUS   FailureStatus,
+  IN CONST CHAR8  *FailureReason
+  )
+{
+  EFI_STATUS                 Status;
+  EFI_SMM_VARIABLE_PROTOCOL  *SmmVariable;
+  BOOLEAN                    AssertOnFail;
+  BOOLEAN                    MeasurementPartitionBlank;
+  UINT32                     VarIntCheckFail;
+
+  if (!EFI_ERROR (FailureStatus)) {
+    FailureStatus = EFI_DEVICE_ERROR;
+  }
+
+  if (FailureReason == NULL) {
+    FailureReason = "VarInt";
+  }
+
+  MeasurementPartitionBlank = FALSE;
+  if (VarInt != NULL) {
+    MeasurementPartitionBlank = IsMeasurementPartitionErasedOrZero (
+                                  VarInt->NorFlashProtocol,
+                                  ReservedPartitionOffset,
+                                  ReservedPartitionSize
+                                  );
+  }
+
+  AssertOnFail = FeaturePcdGet (PcdAssertOnVarStoreIntegrityCheckFail);
+  DEBUG ((
+    DEBUG_ERROR,
+    "%a: %a failure detail: status=%r "
+    "var_offset=0x%lx var_size=0x%lx meas_offset=0x%lx "
+    "meas_size=0x%lx meas_blank=%u assert_on_fail=%u\n",
+    __FUNCTION__,
+    FailureReason,
+    FailureStatus,
+    VariableOffset,
+    VariableSize,
+    ReservedPartitionOffset,
+    ReservedPartitionSize,
+    MeasurementPartitionBlank,
+    AssertOnFail
+    ));
+
+  if (AssertOnFail == TRUE) {
+    NV_ASSERT_RETURN (!EFI_ERROR (FailureStatus), CpuDeadLoop (), "%a failed - %r!\r\n", FailureReason, FailureStatus);
+    return FailureStatus;
+  }
+
+  if (VarInt == NULL) {
+    NV_ASSERT_RETURN (VarInt != NULL, CpuDeadLoop (), "%a failed - VarInt protocol unavailable!\r\n", FailureReason);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&SmmVariable);
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Locate SmmVariable Protocol - %r!\r\n", Status);
+
+  VarIntCheckFail = 1;
+  Status          = SmmVariable->SmmSetVariable (
+                                   VARINT_CHECK_FAILED,
+                                   &gEfiGlobalVariableGuid,
+                                   EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                                   sizeof (UINT32),
+                                   &VarIntCheckFail
+                                   );
+  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Set %s Variable - %r!\r\n", VARINT_CHECK_FAILED, Status);
+
+  DEBUG ((DEBUG_ERROR, "%a: Corrupting FV Header\n", __FUNCTION__));
+  Status = CorruptFvHeader (VariableOffset, VariableSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Corrupt FV Header %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  Status = EraseMeasurementPartition (NULL, ReservedPartitionOffset, ReservedPartitionSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to Erase Partition %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * VarIntReadyToBootNotify
+ * Callback function to flush a deferred VarInt measurement at ReadyToBoot.
+ *
+ * @param Protocol   Protocol for which the notify is installed
+ * @param Interface  Interface that is passed down when the callback is installed
+ * @param Handle     Handle on which this notify is called.
+ *
+ * @return EFI_SUCCESS No deferred measurement was pending, or the flush succeeded.
+ *         Other       Failed to flush the deferred measurement.
+ *
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+VarIntReadyToBootNotify (
+  IN CONST EFI_GUID  *Protocol,
+  IN VOID            *Interface,
+  IN EFI_HANDLE      Handle
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = VarIntFlushDeferredMeasurementAtReadyToBoot (VarInt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to flush deferred measurement %r\n", __FUNCTION__, Status));
+    return HandleFinalVarIntBootstrapFailure (Status, "ReadyToBoot VarInt bootstrap");
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+ * VarIntExitBootServicesNotify
+ * Callback function to enter VarInt preserve-only runtime mode.
+ *
+ * @param Protocol   Protocol for which the notify is installed
+ * @param Interface  Interface that is passed down when the callback is installed
+ * @param Handle     Handle on which this notify is called.
+ *
+ * @return EFI_SUCCESS No deferred measurement was pending.
+ *         Other       VarInt bootstrap was still deferred at ExitBootServices.
+ *
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+VarIntExitBootServicesNotify (
+  IN CONST EFI_GUID  *Protocol,
+  IN VOID            *Interface,
+  IN EFI_HANDLE      Handle
+  )
+{
+  EFI_STATUS  Status;
+
+  Status = VarIntNotifyExitBootServicesPreserveOnly (VarInt);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Deferred VarInt measurement still pending %r\n", __FUNCTION__, Status));
+    return HandleFinalVarIntBootstrapFailure (Status, "ExitBootServices VarInt bootstrap");
+  }
+
+  return EFI_SUCCESS;
+}
+
 /**
  * MmFvbSmmVarReady
  * Callback function when the SmmVariable protocol is installed.
  * This notify function is only installed if the VarStore Integrity feature
- * is enabled, so when called check the validity of of the stored measurement.
+ * is enabled, so when called check the validity of the stored measurement.
  *
  * @param Protocol   Protocol for which the notify is installed
- * @param Interface  Interface that is passed down when the callback is instaleld
+ * @param Interface  Interface that is passed down when the callback is installed
  * @param Handle     Handle on which this notify is called.
  *
- * @return EFI_SUCCESS Succesful validation of the VarStore Measurement.
- *         Other       Assert as this means the VarStore could be tampered.
+ * @return EFI_SUCCESS Successful validation of the VarStore measurement.
+ *         Other       Failed recovery after VarStore validation failure.
  *
  */
 STATIC
@@ -922,21 +1132,16 @@ MmFvbSmmVarReady (
   IN EFI_HANDLE      Handle
   )
 {
-  EFI_STATUS                 Status;
-  EFI_SMM_VARIABLE_PROTOCOL  *SmmVariable;
-  UINT32                     VarIntCheckFail;
+  EFI_STATUS  Status;
 
-  Status          = VarInt->Validate (VarInt);
-  VarIntCheckFail = 0;
+  Status = VarInt->Validate (VarInt);
   if (EFI_ERROR (Status)) {
     DEBUG ((
       DEBUG_ERROR,
-      "%a:Var Store Validation failed %r",
+      "%a: Var Store Validation failed %r\n",
       __FUNCTION__,
       Status
       ));
-
-    VarIntCheckFail = 1;
 
     /* We're here, which means there is a non-erased Variable Integrity space
      * that isn't matching our expected measurement.
@@ -946,46 +1151,9 @@ MmFvbSmmVarReady (
      * will corrupt the FV header and set a volatile variable that will signal the NS UEFI
      * to reboot the system. The subsequent reboot should re-initialize the Variable Store.
      */
-    if (FeaturePcdGet (PcdAssertOnVarStoreIntegrityCheckFail) == TRUE) {
-      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Var Store Validation failed - %r!\r\n", Status);
-    } else {
-      Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&SmmVariable);
-      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Locate SmmVariable Protocol - %r!\r\n", Status);
-
-      // Set a Volatile Variable that NS side will check in UEFI.
-      Status = SmmVariable->SmmSetVariable (
-                              VARINT_CHECK_FAILED,
-                              &gEfiGlobalVariableGuid,
-                              EFI_VARIABLE_BOOTSERVICE_ACCESS,
-                              sizeof (UINT32),
-                              &VarIntCheckFail
-                              );
-      NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Set %s Variable - %r!\r\n", VARINT_CHECK_FAILED, Status);
-
-      // Corrupt the FV header which forces a re-init of the Variable store during the next reboot.
-      DEBUG ((DEBUG_ERROR, "%a: Corrupting FV Header\n", __FUNCTION__));
-      Status = CorruptFvHeader (VariableOffset, VariableSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Failed to Corrupt FV Header %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        return Status;
-      }
-
-      // Erase the Measeurement Partition.
-      Status = EraseMeasurementPartition (NULL, ReservedPartitionOffset, ReservedPartitionSize);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Failed to Erase Partition %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        return Status;
-      }
+    Status = HandleVarIntFailure (Status, "Var Store Validation");
+    if (EFI_ERROR (Status)) {
+      return Status;
     }
   } else {
     DEBUG ((DEBUG_ERROR, "%a: VarStore validation Succesful\n", __FUNCTION__));
@@ -1717,6 +1885,20 @@ FVBNORInitialize (
                       );
 
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to register callback - %r!\r\n", Status);
+
+    Status = gMmst->MmRegisterProtocolNotify (
+                      &gEfiEventReadyToBootGuid,
+                      VarIntReadyToBootNotify,
+                      &VarIntReadyToBootRegistration
+                      );
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to register ReadyToBoot callback - %r!\r\n", Status);
+
+    Status = gMmst->MmRegisterProtocolNotify (
+                      &gEfiEventExitBootServicesGuid,
+                      VarIntExitBootServicesNotify,
+                      &VarIntExitBootServicesRegistration
+                      );
+    NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to register ExitBootServices callback - %r!\r\n", Status);
   }
 
   for (Index = 0; Index < FVB_TO_CREATE; Index++) {
