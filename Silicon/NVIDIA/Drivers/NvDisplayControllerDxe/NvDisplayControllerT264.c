@@ -401,11 +401,13 @@ EnableHwT264 (
     }
   } else {
     /* Shutdown display HW if and only if we were called to disable
-       the display. */
-    Status = NvDisplayHwShutdown (
-               Private->DriverHandle,
-               Private->ControllerHandle
-               );
+       the display, and clocks were enabled */
+    if (Private->ClocksEnabled) {
+      Status = NvDisplayHwShutdown (
+                 Private->DriverHandle,
+                 Private->ControllerHandle
+                 );
+    }
 
 Disable:
     if (Private->ClocksEnabled) {
