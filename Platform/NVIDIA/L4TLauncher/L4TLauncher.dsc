@@ -143,3 +143,8 @@ gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x4f
     <LibraryClasses>
       OpteeNvLib|Silicon/NVIDIA/Library/OpteeNvLib/OpteeNvLib.inf
     }
+
+  #
+  # L4T shim
+  #
+  Silicon/NVIDIA/Application/L4TShim/L4TShim.inf

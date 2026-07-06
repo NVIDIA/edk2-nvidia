@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -6,6 +6,9 @@
 ###############################################################################
 # Stuart build for NVIDIA L4T Launcher
 
+
+import shutil
+from pathlib import Path
 
 from edk2nv.stuart import NVIDIASettingsManager, NVIDIAPlatformBuilder
 
@@ -33,3 +36,16 @@ class PlatformBuilder(NVIDIAPlatformBuilder):
     """PlatformBuilder for NVIDIA's L4T Launcher."""
 
     SettingsManager = L4TLauncherSettingsManager
+
+    def PlatformPostBuild(self):
+        # Stage the L4TShim boot app built by this platform next to the launcher.
+        ret = super().PlatformPostBuild()
+        if ret != 0:
+            return ret
+        ws_dir = Path(self.settings.GetWorkspaceRoot())
+        build_dir = Path(self.env.GetValue("BUILD_OUTPUT_BASE"))
+        target = self.settings.GetTarget()
+        shim_dst = ws_dir / "images" / f"BOOTAA64_L4TShim_{target}.efi"
+        shim_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(build_dir / "AARCH64" / "L4TShim.efi", shim_dst)
+        return ret

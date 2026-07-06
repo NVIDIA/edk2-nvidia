@@ -1,0 +1,39 @@
+## @file
+#  L4TShim boot shim application.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION    = 0x0001001b
+  BASE_NAME      = L4TShim
+  FILE_GUID      = d73e078f-99b8-4183-be96-9d4094e26503
+  MODULE_TYPE    = UEFI_APPLICATION
+  VERSION_STRING = 1.0
+  ENTRY_POINT    = L4TShimMain
+
+[Sources]
+  L4TShim.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DevicePathLib
+  DebugLib
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+
+[Guids]
+  gNVIDIAPublicVariableGuid
