@@ -19,6 +19,8 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/NctLib.h>
+#include <Library/PcdLib.h>
 #include <Protocol/PowerGateNodeProtocol.h>
 #include <Protocol/ArmScmiClock2Protocol.h>
 #include <Protocol/UsbPadCtl.h>
@@ -2348,6 +2350,45 @@ XudcUsbDeviceSend (
   return EFI_SUCCESS;
 }
 
+STATIC
+VOID
+XudcUpdateSerialNo (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+  CHAR8       SerialStr[MAX_SERIALNO_LEN + 1];
+  UINTN       Index;
+
+  //
+  // Keep descriptor size aligned with bLength so trailing zero bytes are not
+  // sent to host when the serial descriptor is requested.
+  //
+  config_fastboot.serialno.len = s_usb_serial_number[0];
+
+  ZeroMem (SerialStr, sizeof (SerialStr));
+  Status = NctGetSerialNumber (SerialStr, sizeof (SerialStr));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to get NCT serial number: %r\n", __FUNCTION__, Status));
+    return;
+  }
+
+  ZeroMem (&s_usb_serial_number[2], sizeof (s_usb_serial_number) - 2);
+  for (Index = 0;
+       (Index < MAX_SERIALNO_LEN) &&
+       (SerialStr[Index] != '\0') &&
+       (SerialStr[Index] != ' ');
+       Index++)
+  {
+    s_usb_serial_number[2 + (Index * 2)] = (UINT8)SerialStr[Index];
+    s_usb_serial_number[3 + (Index * 2)] = 0x00;
+  }
+
+  s_usb_serial_number[0]       = (UINT8)(2 + (Index * 2));
+  s_usb_serial_number[1]       = 0x03;
+  config_fastboot.serialno.len = s_usb_serial_number[0];
+}
+
 EFI_STATUS
 EFIAPI
 XudcUsbDeviceStart (
@@ -2418,6 +2459,10 @@ XudcUsbDeviceStart (
   mPrivate->DataReceivedCallback = RxCallback;
   mPrivate->DataSentCallback     = TxCallback;
   mPrivate->DataPacket           = NULL;
+
+  if (FixedPcdGetBool (PcdBootAndroidImage)) {
+    XudcUpdateSerialNo ();
+  }
 
   XudcEnumerate ();
 
