@@ -833,8 +833,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory|0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS|0
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType|0
+!ifdef CONFIG_BUILD_ANDROID
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData|6000
+  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|1472
+!else
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData|4000
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode|4000
+!endif
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesCode|4000
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiBootServicesData|50000
   gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiLoaderCode|500
