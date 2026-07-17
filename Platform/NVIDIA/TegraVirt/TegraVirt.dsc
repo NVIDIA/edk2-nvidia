@@ -56,6 +56,7 @@
   NorFlashPlatformLib|ArmVirtPkg/Library/NorFlashKvmtoolLib/NorFlashKvmtoolLib.inf
 
   CapsuleLib|MdeModulePkg/Library/DxeCapsuleLibNull/DxeCapsuleLibNull.inf
+  CapsuleAttemptRecordLib|Silicon/NVIDIA/Library/CapsuleAttemptRecordLibNull/CapsuleAttemptRecordLibNull.inf
 
   # BDS Libraries
   UefiBootManagerLib|MdeModulePkg/Library/UefiBootManagerLib/UefiBootManagerLib.inf

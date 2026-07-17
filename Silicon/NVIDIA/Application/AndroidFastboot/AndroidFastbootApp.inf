@@ -30,6 +30,7 @@
 [LibraryClasses]
   BaseLib
   BaseMemoryLib
+  CapsuleAttemptRecordLib
   DebugLib
   DevicePathLib
   MemoryAllocationLib

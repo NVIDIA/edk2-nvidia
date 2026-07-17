@@ -1,0 +1,33 @@
+## @file
+#  Capsule attempt record client library.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CapsuleAttemptRecordLib
+  FILE_GUID                      = 6d28119a-9fe0-4476-b3d9-4f7fbca9be16
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = CapsuleAttemptRecordLib|DXE_DRIVER UEFI_APPLICATION
+
+[Sources]
+  CapsuleAttemptRecordLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  DebugLib
+  PcdLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gNVIDIACapsuleAttemptRecordProtocolGuid      ## CONSUMES
+
+[FeaturePcd]
+  gNVIDIATokenSpaceGuid.PcdCapsuleAttemptRecordSupported

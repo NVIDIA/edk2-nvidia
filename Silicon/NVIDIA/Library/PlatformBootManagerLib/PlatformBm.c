@@ -14,6 +14,7 @@
 #include <IndustryStandard/Pci22.h>
 #include <Library/BootLogoLib.h>
 #include <Library/CapsuleLib.h>
+#include <Library/CapsuleAttemptRecordLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/DeviceTreeHelperLib.h>
@@ -2786,6 +2787,7 @@ HandleCapsules (
   EFI_CAPSULE_HEADER        *CapsuleHeader;
   BOOLEAN                   NeedReset;
   EFI_STATUS                Status;
+  EFI_STATUS                RecordStatus;
 
   DEBUG ((DEBUG_INFO, "%a: processing capsules ...\n", __FUNCTION__));
 
@@ -2854,6 +2856,16 @@ HandleCapsules (
   // Activate new FW if any capsules installed
   //
   if (NeedReset) {
+    RecordStatus = CapsuleAttemptRecordUpdateFmpImageInfo ();
+    if (EFI_ERROR (RecordStatus)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: capsule attempt record update failed: %r\n",
+        __FUNCTION__,
+        RecordStatus
+        ));
+    }
+
     DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
 
     StatusRegReset ();
@@ -3162,6 +3174,8 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
+  EFI_STATUS  Status;
+
   // Print the BootOrder information
   PrintCurrentBootOrder (DEBUG_ERROR);
 
@@ -3209,6 +3223,11 @@ PlatformBootManagerAfterConsole (
 
   // Ipmi communication
   PrintBmcIpAddresses ();
+
+  Status = CapsuleAttemptRecordDumpLatest ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: capsule attempt record dump failed: %r\n", __FUNCTION__, Status));
+  }
 
   //
   // On ARM, there is currently no reason to use the phased capsule

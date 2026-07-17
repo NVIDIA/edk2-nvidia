@@ -201,6 +201,8 @@
 
   Silicon/NVIDIA/Library/WildcardStringLib/UnitTest/WildcardStringLibGoogleTest.inf
 
+  Silicon/NVIDIA/Drivers/CapsuleAttemptRecordDxe/UnitTest/CapsuleAttemptRecordDxeInternalGoogleTest.inf
+
   #
   # Redfish HTTP Boot Config Driver GoogleTest
   #

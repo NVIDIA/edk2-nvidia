@@ -1,0 +1,51 @@
+## @file
+#  Capsule attempt record DXE driver.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CapsuleAttemptRecordDxe
+  FILE_GUID                      = 4a500c17-c86b-414f-86d7-5e0108d6cf59
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = CapsuleAttemptRecordDxeEntryPoint
+
+[Sources]
+  CapsuleAttemptRecordDxe.c
+  CapsuleAttemptRecordDxeInternal.c
+  CapsuleAttemptRecordDxeInternal.h
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  DtPlatformDtbLoaderLib
+  FdtLib
+  MemoryAllocationLib
+  PcdLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiBlockIoProtocolGuid                       ## CONSUMES
+  gEfiFirmwareManagementProtocolGuid           ## CONSUMES
+  gEfiPartitionInfoProtocolGuid                 ## CONSUMES
+  gNVIDIACapsuleAttemptRecordProtocolGuid      ## PRODUCES
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid
+  gNVIDIATokenSpaceGuid.PcdCapsuleAttemptRecordSupported
+
+[Depex]
+  TRUE

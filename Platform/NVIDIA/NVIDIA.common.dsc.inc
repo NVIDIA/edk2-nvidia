@@ -315,6 +315,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   FmpAuthenticationLib|SecurityPkg/Library/FmpAuthenticationLibPkcs7/FmpAuthenticationLibPkcs7.inf
   FmpPayloadHeaderLib|FmpDevicePkg/Library/FmpPayloadHeaderLibV1/FmpPayloadHeaderLibV1.inf
   CapsuleUpdatePolicyLib|Silicon/NVIDIA/Library/CapsuleUpdatePolicyLibOnProtocol/CapsuleUpdatePolicyLibOnProtocol.inf
+  CapsuleAttemptRecordLib|Silicon/NVIDIA/Library/CapsuleAttemptRecordLib/CapsuleAttemptRecordLib.inf
   FmpDependencyLib|FmpDevicePkg/Library/FmpDependencyLib/FmpDependencyLib.inf
   FmpDependencyCheckLib|FmpDevicePkg/Library/FmpDependencyCheckLibNull/FmpDependencyCheckLibNull.inf
   FmpDependencyDeviceLib|FmpDevicePkg/Library/FmpDependencyDeviceLibNull/FmpDependencyDeviceLibNull.inf
@@ -689,6 +690,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   # keep a copy of it in runtime memory after ready to boot.
   gEfiMdeModulePkgTokenSpaceGuid.PcdHiiOsRuntimeSupport|FALSE
 !endif
+
+!ifdef CONFIG_CAPSULE_ATTEMPT_RECORD
+  gNVIDIATokenSpaceGuid.PcdCapsuleAttemptRecordSupported|TRUE
+!endif
+
   gEfiMdePkgTokenSpaceGuid.PcdComponentNameDisable|FALSE
   gEfiMdePkgTokenSpaceGuid.PcdDriverDiagnosticsDisable|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdComponentName2Disable|FALSE
@@ -2473,6 +2479,10 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Drivers/CapsuleUpdatePolicyDxe/CapsuleUpdatePolicyDxe.inf
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
+  !ifdef CONFIG_CAPSULE_ATTEMPT_RECORD
+    Silicon/NVIDIA/Drivers/CapsuleAttemptRecordDxe/CapsuleAttemptRecordDxe.inf
+  !endif
+
   #
   # Esrt - EFI System Resource Table
   #

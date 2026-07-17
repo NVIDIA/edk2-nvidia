@@ -119,6 +119,10 @@ FvNameGuid         = $(PLATFORM_GUID)
 !endif
 
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
+  !ifdef CONFIG_CAPSULE_ATTEMPT_RECORD
+    INF Silicon/NVIDIA/Drivers/CapsuleAttemptRecordDxe/CapsuleAttemptRecordDxe.inf
+  !endif
+
   #
   # Esrt - EFI System Resource Table
   #

@@ -15,6 +15,7 @@
 #include <Uefi.h>
 
 #include <Library/BaseLib.h>
+#include <Library/CapsuleAttemptRecordLib.h>
 
 #include <Protocol/AndroidFastbootTransport.h>
 #include <Protocol/AndroidFastbootPlatform.h>
@@ -263,6 +264,7 @@ HandleOemBootloaderUpdate (
   )
 {
   EFI_STATUS                  Status;
+  EFI_STATUS                  RecordStatus;
   EFI_CAPSULE_HEADER          *CapsuleHeader;
   NVIDIA_BOOT_CHAIN_PROTOCOL  *BootChainProtocol;
   UINT8                       BootChain;
@@ -317,7 +319,12 @@ HandleOemBootloaderUpdate (
     CapsuleHeader->CapsuleImageSize
     ));
 
-  Status = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  Status       = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  RecordStatus = CapsuleAttemptRecordUpdateFmpImageInfo ();
+  if (EFI_ERROR (RecordStatus)) {
+    DEBUG ((DEBUG_ERROR, "bootloader_update: capsule attempt record update failed: %r\n", RecordStatus));
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "bootloader_update: UpdateCapsule failed: %r\n", Status));
     SEND_LITERAL ("FAILUpdateCapsule failed");

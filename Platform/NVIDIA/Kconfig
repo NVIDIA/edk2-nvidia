@@ -1318,6 +1318,11 @@ depends on FIRMWARE_MANAGEMENT
   help
     Support for firmware update via capsule
 
+  config CAPSULE_ATTEMPT_RECORD
+  bool "Support capsule update attempt records"
+  help
+    Persist diagnostic information about capsule update attempts.
+
   config RUNTIME_FIRMWARE_CAPSULE_SUPPORTED
   bool "Support runtime firmware capsule delivery"
   depends on FIRMWARE_CAPSULE_SUPPORTED && FIRMWARE_MANAGEMENT_BLOB

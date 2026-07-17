@@ -1,0 +1,22 @@
+## @file
+#  Null capsule attempt record client library.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CapsuleAttemptRecordLibNull
+  FILE_GUID                      = 91d8ece7-1c7c-4ad6-86da-b81b70afe60a
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = CapsuleAttemptRecordLib|DXE_DRIVER UEFI_APPLICATION
+
+[Sources]
+  CapsuleAttemptRecordLibNull.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec

@@ -1,0 +1,39 @@
+## @file
+#  Host tests for CapsuleAttemptRecordDxe internal functions.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010017
+  BASE_NAME                      = CapsuleAttemptRecordDxeInternalGoogleTest
+  FILE_GUID                      = 4c43f39c-420b-4145-8963-37a1e7e9fbb1
+  VERSION_STRING                 = 1.0
+  MODULE_TYPE                    = HOST_APPLICATION
+
+[Sources]
+  CapsuleAttemptRecordDxeInternalGoogleTest.cpp
+  ../CapsuleAttemptRecordDxeInternal.c
+  ../CapsuleAttemptRecordDxeInternal.h
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  FdtLib
+  GoogleTestLib
+  MemoryAllocationLib
+  PrintLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiPartitionInfoProtocolGuid
