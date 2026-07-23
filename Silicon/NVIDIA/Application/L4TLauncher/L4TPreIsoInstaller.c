@@ -2545,6 +2545,21 @@ ConfirmCapsuleUpdate (
 }
 
 /**
+  Print a SUPER mode notice for platforms that will be updated to SUPER mode.
+
+**/
+STATIC
+VOID
+PrintSuperModeNotice (
+  VOID
+  )
+{
+  if (IsOrinNanoDevkitSku5NonSuper (mTegraPlatformSpec.mBoardName)) {
+    PreIsoLogPrint (L"\r\n  NOTE: this device will be updated to SUPER mode after the capsule update\r\n");
+  }
+}
+
+/**
   Perform capsule update process.
 
   @param[in]  DeviceHandle    Device handle for file operations.
@@ -2811,6 +2826,8 @@ RunPreIsoInstaller (
       Status = EFI_ABORTED;
       goto Done;
     }
+
+    PrintSuperModeNotice ();
   }
 
   // Increment the staging counter after user accepts but before the actual
