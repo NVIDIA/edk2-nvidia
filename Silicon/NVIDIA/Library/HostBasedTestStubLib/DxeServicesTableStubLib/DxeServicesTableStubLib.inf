@@ -1,0 +1,29 @@
+## @file
+#
+#  DXE Services Table Lib stub for host based tests. Provides the gDS symbol so
+#  modules that reference DXE Services (but do not exercise them under test) can
+#  link on the host.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DxeServicesTableStubLib
+  FILE_GUID                      = fa3db905-5d45-4f19-9a06-784e8e8e966b
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DxeServicesTableLib
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+
+[Sources.common]
+  DxeServicesTableStubLib.c

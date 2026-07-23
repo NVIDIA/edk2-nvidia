@@ -589,6 +589,10 @@
 
   gNVIDIATokenSpaceGuid.PcdBootConfigEnableSecurityModeFuse|FALSE|BOOLEAN|0x000000B7
 
+  # androidboot.bootreason: physical address of PMC_IMPL_RST_STATUS_0, read
+  # directly by UEFI (CCPLEX has firewall read access, bug 6488007). 0 disables.
+  gNVIDIATokenSpaceGuid.PcdBootReasonPmcRstStatusAddress|0x0|UINT64|0x000000B9
+
 # Enable the NCT-integrity SHA-256 seed/verify path in AvbLib (Android / Tegra).
 # When TRUE, AvbVerifyBoot hashes the NCT partition and, on first boot only
 # (when no nvidia.nct.sha256 persistent value exists in the AVB TA / RPMB),

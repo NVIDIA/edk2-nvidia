@@ -20,9 +20,18 @@
 
 [LibraryClasses]
   MemoryAllocationLib
+  IoLib
   NctLib
   BootChainInfoLib
   AndroidBcbLib
+#
+# DxeServicesTableLib (gDS) is only valid in DXE-phase and later modules.
+# BootConfigProtocolLib stays MODULE_TYPE = BASE (it is linked into BASE
+# libraries such as AvbLib and into UEFI_APPLICATION consumers), so the
+# dependency is scoped to the module types that actually consume it rather
+# than declared unconditionally for a BASE library. GetPmcBootReason() also
+# guards against a NULL gDS at runtime. No BASE/PEI/SMM root module consumes
+# this library.
 #
 # TegraPlatformInfoLib is only referenced under
 # PcdBootConfigEnableSecurityModeFuse == TRUE. Platforms that do not
@@ -31,13 +40,19 @@
 # being listed here unconditionally.
 #
 
+[LibraryClasses.common.DXE_DRIVER, LibraryClasses.common.DXE_RUNTIME_DRIVER, LibraryClasses.common.UEFI_DRIVER, LibraryClasses.common.UEFI_APPLICATION, LibraryClasses.common.HOST_APPLICATION]
+  DxeServicesTableLib
+
 [Sources.common]
   BootConfigProtocolLib.c
+  T23xPmcBootReason.c
+  T23xPmcBootReason.h
 
 [Pcd]
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdBootConfigEnableSecurityModeFuse
+  gNVIDIATokenSpaceGuid.PcdBootReasonPmcRstStatusAddress
 
 [Guids]
 

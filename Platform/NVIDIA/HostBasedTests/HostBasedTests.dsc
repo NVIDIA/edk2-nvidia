@@ -28,6 +28,9 @@
       StatusRegLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StatusRegStubLib/StatusRegStubLib.inf
   }
 
+  # BootConfigProtocolLib PMC RST_SOURCE -> boot reason decode
+  Silicon/NVIDIA/Library/BootConfigProtocolLib/UnitTest/BootConfigProtocolLibUnitTests.inf
+
   #
   # FvbDxe Host Based UnitTest Support
   #

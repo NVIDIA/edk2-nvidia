@@ -6,12 +6,15 @@
 
 **/
 
+#include <PiDxe.h>
 #include <Uefi.h>
 #include <Library/BaseLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrintLib.h>
+#include <Library/IoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/NctLib.h>
 #include <Library/BootChainInfoLib.h>
 #include <Library/AndroidBcbLib.h>
@@ -20,6 +23,7 @@
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
 #include <Protocol/EFuse.h>
+#include "T23xPmcBootReason.h"
 
 #define BOOTCONFIG_DUMMY_SERIALNO    "DummySN"
 #define BOOTCONFIG_DEFAULT_SERIALNO  "0123456789ABCDEF"
@@ -134,6 +138,7 @@ BootConfigProtocolInit (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to install bootconfig update protocol\n", __FUNCTION__, Status));
+    FreePool (BootConfigUpdate);
     return Status;
   }
 
@@ -391,6 +396,200 @@ BootConfigAddDtboIdx (
   return Status;
 }
 
+// SHLD2-1095: hardware boot reason (androidboot.bootreason).
+//
+// Decoded from the PMC reset source, which UEFI reads directly from
+// PMC_IMPL_RST_STATUS_0: per bug 6488007 the firewall grants CCPLEX read
+// access, and GetPmcBootReason() maps the register page on demand (see below).
+// The platform DSC supplies the address via PcdBootReasonPmcRstStatusAddress.
+// Field layout (T23x PMC_IMPL_RST_STATUS_0):
+//   bits[1:0] = RST_LEVEL  (L0/L1/L2/WARM)
+//   bits[7:2] = RST_SOURCE (the 6-bit source enum decoded in T23xPmcBootReason.c)
+//
+// The PMIC-specific cause is not recoverable on this platform: the max77851
+// reset-cause registers (read-clear RLOGIC_INT and latched TOP_STAT2/IO_STAT)
+// are already cleared/reloaded from OTP before even MB1 runs (verified on
+// target HW), so no PMIC decode is attempted here. PMIC over-temperature is
+// instead reported through the orderly-shutdown path (thermal HAL ->
+// "shutdown,thermal" via bootstat).
+
+// T23xPmcSourceToReason() lives in T23xPmcBootReason.c (pure decode,
+// host-unit-tested). The RST_SOURCE enum is T23x-specific; the PCD that drives
+// this read is only set under CONFIG_SOC_T23X, so other SoCs never reach here.
+
+/**
+  Read the PMC reset source directly from PMC_IMPL_RST_STATUS_0 and map it to a
+  canonical boot reason.
+
+  @retval EFI_SUCCESS    *Reason set from the PMC RST_STATUS register.
+  @retval EFI_NOT_FOUND  Feature disabled (PCD 0) or register unreadable.
+**/
+STATIC
+EFI_STATUS
+GetPmcBootReason (
+  OUT CONST CHAR8  **Reason
+  )
+{
+  UINT32                           Val;
+  UINT8                            Source;
+  EFI_STATUS                       Status;
+  EFI_PHYSICAL_ADDRESS             Addr;
+  EFI_PHYSICAL_ADDRESS             PageBase;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Desc;
+  BOOLEAN                          Mapped;
+  UINT64                           OriginalAttributes;
+  EFI_STATUS                       RestoreStatus;
+
+  if (Reason == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  // The register address is platform-specific and supplied via PCD by the
+  // platform DSC; the default 0 disables the decode (this library is shared).
+  if (FixedPcdGet64 (PcdBootReasonPmcRstStatusAddress) == 0) {
+    return EFI_NOT_FOUND;
+  }
+
+  // PMC_IMPL lives in a register block that UEFI does not map by default (NS
+  // code normally avoids PMC core MMIO), so an unguarded read faults with a
+  // translation fault. Map the containing page uncached on demand, but only if
+  // it is not already in the GCD, and release it again after the read so the
+  // default "PMC core not NS-mapped" state is preserved.
+  Addr               = (EFI_PHYSICAL_ADDRESS)FixedPcdGet64 (PcdBootReasonPmcRstStatusAddress);
+  PageBase           = Addr & ~(EFI_PHYSICAL_ADDRESS)EFI_PAGE_MASK;
+  Mapped             = FALSE;
+  OriginalAttributes = 0;
+
+  // gDS (DXE Services) is only valid in DXE-phase modules. This library is BASE
+  // (it is consumed by BASE/UEFI_APPLICATION modules too), so guard against a
+  // NULL gDS rather than dereferencing it in a non-DXE context.
+  if (gDS == NULL) {
+    return EFI_NOT_FOUND;
+  }
+
+  // Query the current GCD state: EFI_NOT_FOUND (or a described-but-nonexistent
+  // region) means the page is unmapped and we must add it; a successful lookup
+  // of a real region means it is owned elsewhere and we only tweak attributes;
+  // any other error is unexpected, so do not guess at the mapping state.
+  Status = gDS->GetMemorySpaceDescriptor (PageBase, &Desc);
+  if (!EFI_ERROR (Status)) {
+    if (Desc.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
+      Mapped = TRUE;
+    } else {
+      // Page already in the GCD (owned elsewhere): remember its attributes so we
+      // can restore them after temporarily forcing UC for the read.
+      OriginalAttributes = Desc.Attributes;
+    }
+  } else if (Status == EFI_NOT_FOUND) {
+    Mapped = TRUE;
+  } else {
+    DEBUG ((DEBUG_ERROR, "%a: GetMemorySpaceDescriptor(0x%llx) failed: %r\n", __FUNCTION__, PageBase, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  if (Mapped) {
+    // Map the PMC page uncached. We only ever read RST_STATUS, so no
+    // EFI_MEMORY_RO is requested: RO is not a portable GCD MMIO capability and
+    // can be rejected by the CPU arch protocol on some implementations.
+    Status = gDS->AddMemorySpace (
+                    EfiGcdMemoryTypeMemoryMappedIo,
+                    PageBase,
+                    SIZE_4KB,
+                    EFI_MEMORY_UC
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "%a: AddMemorySpace(0x%llx) failed: %r\n", __FUNCTION__, PageBase, Status));
+      return EFI_NOT_FOUND;
+    }
+  }
+
+  Status = gDS->SetMemorySpaceAttributes (PageBase, SIZE_4KB, EFI_MEMORY_UC);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: SetMemorySpaceAttributes(0x%llx) failed: %r\n", __FUNCTION__, PageBase, Status));
+    if (Mapped) {
+      gDS->RemoveMemorySpace (PageBase, SIZE_4KB);
+    } else {
+      // Undo any partial attribute change on a pre-existing mapping.
+      RestoreStatus = gDS->SetMemorySpaceAttributes (PageBase, SIZE_4KB, OriginalAttributes);
+      if (EFI_ERROR (RestoreStatus)) {
+        DEBUG ((DEBUG_ERROR, "%a: restore attributes for 0x%llx failed: %r\n", __FUNCTION__, PageBase, RestoreStatus));
+      }
+    }
+
+    return EFI_NOT_FOUND;
+  }
+
+  Val = MmioRead32 ((UINTN)Addr);
+
+  // Restore the pre-read GCD state: remove a mapping we added, or put back the
+  // original attributes of a mapping that already existed - so PMC core is not
+  // left NS-accessible and another owner's mapping is not altered. Best-effort,
+  // but log a cleanup failure rather than silently leaving the region changed.
+  if (Mapped) {
+    Status = gDS->RemoveMemorySpace (PageBase, SIZE_4KB);
+  } else {
+    Status = gDS->SetMemorySpaceAttributes (PageBase, SIZE_4KB, OriginalAttributes);
+  }
+
+  if (EFI_ERROR (Status)) {
+    // Cleanup failed: the PMC page may be left NS-accessible / an owner's
+    // mapping altered. Suppress the boot reason rather than publishing it while
+    // the GCD state is indeterminate.
+    DEBUG ((DEBUG_ERROR, "%a: GCD cleanup for 0x%llx failed: %r\n", __FUNCTION__, PageBase, Status));
+    return EFI_NOT_FOUND;
+  }
+
+  // 0xFFFFFFFF means the register is firewalled/unreadable; do not emit a
+  // bogus reason. Otherwise RST_STATUS always holds a real value (0 ==
+  // SYS_RESET_N/L0 is a legitimate cold-boot status).
+  if (Val == MAX_UINT32) {
+    return EFI_NOT_FOUND;
+  }
+
+  Source  = (UINT8)((Val >> 2) & 0x3FU);
+  *Reason = T23xPmcSourceToReason (Source);
+  DEBUG ((DEBUG_INFO, "%a: PMC RST_STATUS=0x%08x source=%u -> %a\n", __FUNCTION__, Val, Source, *Reason));
+  return EFI_SUCCESS;
+}
+
+/**
+  Publish androidboot.bootreason into the bootconfig accumulator. Best-effort:
+  never blocks Android boot on failure.
+
+  The reason comes from the PMC reset source (PMC_IMPL_RST_STATUS_0).
+**/
+STATIC
+EFI_STATUS
+BootConfigAddBootReason (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  CONST CHAR8                        *Reason     = NULL;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfig = NULL;
+
+  if (EFI_ERROR (GetPmcBootReason (&Reason)) || (Reason == NULL)) {
+    DEBUG ((DEBUG_INFO, "%a: no HW boot reason (PMC RST_STATUS unavailable)\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  Status = GetBootConfigUpdateProtocol (&BootConfig);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: no BootConfig protocol: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = BootConfig->UpdateBootConfigs (BootConfig, "bootreason", Reason);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: failed to add bootreason: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: androidboot.bootreason=%a\n", __FUNCTION__, Reason));
+
+  return EFI_SUCCESS;
+}
+
 #if FixedPcdGetBool (PcdBootConfigEnableSecurityModeFuse)
 
 STATIC
@@ -529,6 +728,13 @@ BootConfigPrepareBootTimeArgs (
   Status = BootConfigAddDtboIdx ();
   if (EFI_ERROR (Status)) {
     return Status;
+  }
+
+  // SHLD2-1095: publish androidboot.bootreason from the HW reset cause.
+  // Best-effort - intentionally not gated on status so it never blocks boot.
+  Status = BootConfigAddBootReason ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add androidboot.bootreason\n", __FUNCTION__, Status));
   }
 
   Status = BootConfigAddSecurityMode ();

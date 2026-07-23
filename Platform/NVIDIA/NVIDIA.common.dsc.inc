@@ -1002,6 +1002,18 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 
   #
+  # androidboot.bootreason PMC reset source (T23X Android only): UEFI reads
+  # PMC_IMPL_RST_STATUS_0 directly (0x0C360000 + 0x70 = 0x0C360070). CCPLEX has
+  # firewall read access (bug 6488007). Default 0 in NVIDIA.dec keeps it
+  # disabled on all other platforms.
+  #
+!ifdef CONFIG_BUILD_ANDROID
+!ifdef CONFIG_SOC_T23X
+  gNVIDIATokenSpaceGuid.PcdBootReasonPmcRstStatusAddress|0xC360070
+!endif
+!endif
+
+  #
   # Enable AvbLib NCT-integrity SHA-256 seed (T23X Android only).
   # The seed path requires NCT (NVIDIA-specific) and the AVB TA / RPMB, both
   # of which are only present on Android Tegra targets. Default in NVIDIA.dec

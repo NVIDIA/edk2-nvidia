@@ -38,6 +38,7 @@
   PlatformResourceLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/PlatformResourceStubLib/PlatformResourceStubLib.inf
   TegraPlatformInfoLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/TegraPlatformInfoStubLib/TegraPlatformInfoStubLib.inf
   UefiBootServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiBootServicesTableStubLib/UefiBootServicesTableStubLib.inf
+  DxeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/DxeServicesTableStubLib/DxeServicesTableStubLib.inf
   UefiRuntimeServicesTableLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/UefiRuntimeServicesTableStubLib/UefiRuntimeServicesTableStubLib.inf
   StandaloneMmOpteeLib|Silicon/NVIDIA/Library/HostBasedTestStubLib/StandaloneMmOpteeStubLib/StandaloneMmOpteeStubLib.inf
   BlockIoStubProtocol|Silicon/NVIDIA/Library/HostBasedTestStubLib/BlockIoStubProtocol/BlockIoStubProtocol.inf
