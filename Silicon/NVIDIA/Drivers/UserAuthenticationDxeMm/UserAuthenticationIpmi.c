@@ -1,7 +1,7 @@
 /** @file
   IPMI password OEM commands.
 
-  Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -139,6 +139,7 @@ IpmiOemSetBiosPassword (
   IPMI_OEM_SET_BIOS_PASSWORD_RESPONSE_DATA  ResponseData;
   UINT32                                    ResponseSize;
   EFI_STATUS                                Status;
+  EFI_TPL                                   OldTpl;
 
   if (IdSelector != BIOS_PASSWORD_SELECTOR_ADMIN) {
     return EFI_UNSUPPORTED;
@@ -170,6 +171,7 @@ IpmiOemSetBiosPassword (
   DEBUG_CODE_END ();
 
   ResponseSize = sizeof (IPMI_OEM_SET_BIOS_PASSWORD_RESPONSE_DATA);
+  OldTpl       = gBS->RaiseTPL (TPL_CALLBACK);
   Status       = IpmiSubmitCommand (
                    IPMI_NETFN_OEM,
                    IPMI_OEM_SET_BIOS_PASSWORD,
@@ -178,6 +180,7 @@ IpmiOemSetBiosPassword (
                    (UINT8 *)&ResponseData,
                    &ResponseSize
                    );
+  gBS->RestoreTPL (OldTpl);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: IPMI_OEM_SET_BIOS_PASSWORD error: %r\n", __func__, Status));
     return Status;
@@ -217,6 +220,7 @@ IpmiOemGetBiosPassword (
   IPMI_OEM_GET_BIOS_PASSWORD_RESPONSE_DATA  ResponseData;
   UINT32                                    ResponseSize;
   EFI_STATUS                                Status;
+  EFI_TPL                                   OldTpl;
 
   if ((PasswordAction == NULL) || (PasswordSalt == NULL) || (PasswordHash == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -233,6 +237,7 @@ IpmiOemGetBiosPassword (
   ZeroMem (&ResponseData, sizeof (IPMI_OEM_GET_BIOS_PASSWORD_RESPONSE_DATA));
   ResponseSize                   = sizeof (IPMI_OEM_GET_BIOS_PASSWORD_RESPONSE_DATA);
   RequestData.PasswordIdSelector = IdSelector;
+  OldTpl                         = gBS->RaiseTPL (TPL_CALLBACK);
   Status                         = IpmiSubmitCommand (
                                      IPMI_NETFN_OEM,
                                      IPMI_OEM_GET_BIOS_PASSWORD,
@@ -241,6 +246,7 @@ IpmiOemGetBiosPassword (
                                      (UINT8 *)&ResponseData,
                                      &ResponseSize
                                      );
+  gBS->RestoreTPL (OldTpl);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: IPMI_OEM_GET_BIOS_PASSWORD error: %r\n", __func__, Status));
     return Status;
@@ -260,8 +266,10 @@ IpmiOemGetBiosPassword (
       return EFI_OUT_OF_RESOURCES;
     }
 
-    *PasswordHash = AllocateCopyPool (BIOS_PASSWORD_SALT_SIZE, ResponseData.PasswordHash);
+    *PasswordHash = AllocateCopyPool (BIOS_PASSWORD_HASH_SIZE, ResponseData.PasswordHash);
     if (*PasswordHash == NULL) {
+      FreePool (*PasswordSalt);
+      *PasswordSalt = NULL;
       return EFI_OUT_OF_RESOURCES;
     }
   }
