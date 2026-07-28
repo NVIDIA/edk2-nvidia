@@ -673,6 +673,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 ################################################################################
 
 [PcdsFeatureFlag.common]
+!ifdef CONFIG_BUILD_ANDROID
+  # Android has no OS-level consumer for the HII database, so do not
+  # keep a copy of it in runtime memory after ready to boot.
+  gEfiMdeModulePkgTokenSpaceGuid.PcdHiiOsRuntimeSupport|FALSE
+!endif
   gEfiMdePkgTokenSpaceGuid.PcdComponentNameDisable|FALSE
   gEfiMdePkgTokenSpaceGuid.PcdDriverDiagnosticsDisable|TRUE
   gEfiMdePkgTokenSpaceGuid.PcdComponentName2Disable|FALSE
