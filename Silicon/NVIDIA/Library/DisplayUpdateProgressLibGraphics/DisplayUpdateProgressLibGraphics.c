@@ -97,8 +97,8 @@ STATIC CONST EFI_GRAPHICS_OUTPUT_BLT_PIXEL  mBarTrackPixel = {
 };
 
 //
-// Colors sampled from android_ota_4k.bmp so the dynamic OTA progress UI matches
-// the baked-in splash template (yellow-green bar, brighter percentage text).
+// Colors sampled from the android_ota splash art in bmp.blob so the dynamic
+// OTA progress UI matches it (yellow-green bar, brighter percentage text).
 //
 #define ANDROID_OTA_PROGRESS_GREEN_R  118U
 #define ANDROID_OTA_PROGRESS_GREEN_G  185U

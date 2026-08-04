@@ -7,11 +7,9 @@
 
 #include <Uefi.h>
 #include <Protocol/GraphicsOutput.h>
-#include <Protocol/HiiDatabase.h>
-#include <Protocol/HiiImageEx.h>
-#include <Protocol/HiiPackageList.h>
 #include <Protocol/AvbUi.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BmpBlobLib.h>
 #include <Library/BootLogoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
@@ -19,60 +17,20 @@
 #include <Library/TimerLib.h>
 #include <Library/ImageScaleLib.h>
 
-#include "AvbUiPrivate.h"
-
 //
 // AVB UI display timeout in seconds
 //
 #define AVB_UI_TIMEOUT_SECONDS       5
 #define AVB_UI_MICROSECONDS_PER_SEC  1000000
-#define AVB_UI_HIGH_RES_MIN_HEIGHT   1080
-#define AVB_UI_HIGH_RES_MIN_WIDTH    1920
-
-//
-// Module globals
-//
-STATIC EFI_HII_IMAGE_EX_PROTOCOL  *mHiiImageEx;
-STATIC EFI_HII_HANDLE             mHiiHandle;
-
-/**
-  Select the asset tier for the active GOP mode.
-
-  1080p-class and larger (including 4K/8K) use AVB_UI_ASSET_1080 art.
-**/
-STATIC
-AVB_UI_ASSET_TIER
-AvbUiSelectAssetTier (
-  VOID
-  )
-{
-  EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
-
-  Gop    = NULL;
-  Status = gBS->LocateProtocol (
-                  &gEfiGraphicsOutputProtocolGuid,
-                  NULL,
-                  (VOID **)&Gop
-                  );
-  if (EFI_ERROR (Status) || (Gop == NULL) || (Gop->Mode == NULL) || (Gop->Mode->Info == NULL)) {
-    return AVB_UI_ASSET_720;
-  }
-
-  if ((Gop->Mode->Info->VerticalResolution >= AVB_UI_HIGH_RES_MIN_HEIGHT) ||
-      (Gop->Mode->Info->HorizontalResolution >= AVB_UI_HIGH_RES_MIN_WIDTH))
-  {
-    return AVB_UI_ASSET_1080;
-  }
-
-  return AVB_UI_ASSET_720;
-}
 
 /**
   Display an image scaled to full screen.
   Uses single Blt for the entire frame to minimize tearing.
 
-  @param[in] ImageId         HII Image ID to display.
+  The artwork lives in the BMP partition (bmp.blob) rather than in the
+  firmware image, so it can be refreshed without reflashing UEFI.
+
+  @param[in] BlobImageType   Blob image type to look up in bmp.blob.
   @param[in] TimeoutSeconds  Timeout in seconds (0 = no wait).
 
   @retval EFI_SUCCESS        Image displayed successfully.
@@ -81,34 +39,20 @@ AvbUiSelectAssetTier (
 STATIC
 EFI_STATUS
 AvbUiDisplayImage (
-  IN EFI_IMAGE_ID  ImageId,
-  IN UINTN         TimeoutSeconds
+  IN UINT32  BlobImageType,
+  IN UINTN   TimeoutSeconds
   )
 {
   EFI_STATUS                     Status;
   EFI_GRAPHICS_OUTPUT_PROTOCOL   *Gop;
-  EFI_IMAGE_INPUT                Image;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *SourceImage;
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *ScaledImage;
+  UINTN                          SourceWidth;
+  UINTN                          SourceHeight;
   UINTN                          ScreenWidth;
   UINTN                          ScreenHeight;
   UINTN                          ElapsedSeconds;
   EFI_INPUT_KEY                  Key;
-
-  //
-  // Get image from HII
-  //
-  Status = mHiiImageEx->GetImageEx (
-                          mHiiImageEx,
-                          mHiiHandle,
-                          ImageId,
-                          &Image
-                          );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to get image %d: %r\n", __FUNCTION__, ImageId, Status));
-    return Status;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: Image %ux%u\n", __FUNCTION__, Image.Width, Image.Height));
 
   //
   // Locate GOP
@@ -128,17 +72,35 @@ AvbUiDisplayImage (
 
   DEBUG ((DEBUG_INFO, "%a: Screen %ux%u\n", __FUNCTION__, ScreenWidth, ScreenHeight));
 
+  Status = BmpBlobGetPartitionImage (
+             BlobImageType,
+             ScreenWidth,
+             ScreenHeight,
+             &SourceImage,
+             &SourceWidth,
+             &SourceHeight
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to load image %u: %r\n", __FUNCTION__, BlobImageType, Status));
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: Image %ux%u\n", __FUNCTION__, SourceWidth, SourceHeight));
+
   //
   // Scale image to full screen in memory first
   //
   Status = ImageScale (
-             Image.Bitmap,
-             (UINTN)Image.Width,
-             (UINTN)Image.Height,
+             SourceImage,
+             SourceWidth,
+             SourceHeight,
              ScreenWidth,
              ScreenHeight,
              &ScaledImage
              );
+
+  FreePool (SourceImage);
+
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Failed to scale image: %r\n", __FUNCTION__, Status));
     return Status;
@@ -209,14 +171,12 @@ AvbUiShow (
   IN AVB_UI_STATE            State
   )
 {
-  EFI_STATUS         Status  = EFI_SUCCESS;
-  EFI_IMAGE_ID       ImageId = 0;
-  UINTN              Timeout = 0;
-  AVB_UI_ASSET_TIER  AssetTier;
-  BOOLEAN            ShowImage = TRUE;
+  EFI_STATUS  Status        = EFI_SUCCESS;
+  UINT32      BlobImageType = MAX_UINT32;
+  UINTN       Timeout       = 0;
+  BOOLEAN     ShowImage     = TRUE;
 
   DEBUG ((DEBUG_INFO, "%a: State = %d\n", __FUNCTION__, State));
-  AssetTier = AvbUiSelectAssetTier ();
 
   switch (State) {
     case AVB_UI_STATE_GREEN:
@@ -226,20 +186,20 @@ AvbUiShow (
 
     case AVB_UI_STATE_ORANGE:
       DEBUG ((DEBUG_INFO, "%a: Orange state - device unlocked\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_ORANGE_720 + AssetTier];
-      Timeout = AVB_UI_TIMEOUT_SECONDS;
+      BlobImageType = NVIDIA_BMP_IMAGE_VERITY_ORANGE;
+      Timeout       = AVB_UI_TIMEOUT_SECONDS;
       break;
 
     case AVB_UI_STATE_RED:
       DEBUG ((DEBUG_ERROR, "%a: Red state - verification failed\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_STOP_720 + AssetTier];
-      Timeout = 0;  // Halt
+      BlobImageType = NVIDIA_BMP_IMAGE_VERITY_RED_STOP;
+      Timeout       = 0;  // Halt
       break;
 
     case AVB_UI_STATE_RED_EIO:
       DEBUG ((DEBUG_ERROR, "%a: Red EIO state - I/O error\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_EIO_720 + AssetTier];
-      Timeout = 0;  // Halt
+      BlobImageType = NVIDIA_BMP_IMAGE_VERITY_RED_EIO;
+      Timeout       = 0;  // Halt
       break;
 
     default:
@@ -249,7 +209,7 @@ AvbUiShow (
   }
 
   if (ShowImage) {
-    Status = AvbUiDisplayImage (ImageId, Timeout);
+    Status = AvbUiDisplayImage (BlobImageType, Timeout);
   }
 
   //
@@ -294,73 +254,10 @@ AvbUiDxeInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                   Status;
-  EFI_HII_PACKAGE_LIST_HEADER  *PackageList;
-  EFI_HII_DATABASE_PROTOCOL    *HiiDatabase;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO, "%a: Initializing AVB UI DXE Driver\n", __FUNCTION__));
 
-  //
-  // Locate HII Database Protocol
-  //
-  Status = gBS->LocateProtocol (
-                  &gEfiHiiDatabaseProtocolGuid,
-                  NULL,
-                  (VOID **)&HiiDatabase
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to locate HII Database: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  //
-  // Locate HII Image Ex Protocol
-  //
-  Status = gBS->LocateProtocol (
-                  &gEfiHiiImageExProtocolGuid,
-                  NULL,
-                  (VOID **)&mHiiImageEx
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to locate HII Image Ex: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  //
-  // Retrieve HII package list from PE/COFF resource section
-  //
-  Status = gBS->OpenProtocol (
-                  ImageHandle,
-                  &gEfiHiiPackageListProtocolGuid,
-                  (VOID **)&PackageList,
-                  ImageHandle,
-                  NULL,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: HII Package not found in PE/COFF resource: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  //
-  // Publish HII package list to HII Database
-  //
-  Status = HiiDatabase->NewPackageList (
-                          HiiDatabase,
-                          PackageList,
-                          NULL,
-                          &mHiiHandle
-                          );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to create HII package list: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: HII package list registered\n", __FUNCTION__));
-
-  //
-  // Install AVB UI Protocol
-  //
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ImageHandle,
                   &gNVIDIAAvbUiProtocolGuid,

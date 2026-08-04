@@ -1,0 +1,38 @@
+## @file
+#  NVIDIA BMP blob parser library.
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BmpBlobLib
+  FILE_GUID                      = b2f4f2d8-5ac1-4b35-b95a-c0f2d9d9f1a5
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = BmpBlobLib|DXE_DRIVER UEFI_DRIVER UEFI_APPLICATION
+
+[Sources.common]
+  BmpBlobLib.c
+  BmpBlobPartition.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  BmpSupportLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid        ## CONSUMES
+  gEfiDiskIoProtocolGuid         ## CONSUMES
+  gEfiPartitionInfoProtocolGuid  ## CONSUMES

@@ -62,6 +62,7 @@
   PlatformBootManagerLib|Silicon/NVIDIA/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
   PlatformBootOrderLib|Silicon/NVIDIA/Library/PlatformBootOrderLib/PlatformBootOrderLibNoIpmi.inf
   BootLogoLib|MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
+  BmpBlobLib|Silicon/NVIDIA/Library/BmpBlobLib/BmpBlobLib.inf
   ImageScaleLib|Silicon/NVIDIA/Library/ImageScaleLib/ImageScaleLib.inf
 
   CustomizedDisplayLib|MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
