@@ -12,6 +12,7 @@
 #include <Protocol/HiiPackageList.h>
 #include <Protocol/AvbUi.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootLogoLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -25,12 +26,47 @@
 //
 #define AVB_UI_TIMEOUT_SECONDS       5
 #define AVB_UI_MICROSECONDS_PER_SEC  1000000
+#define AVB_UI_HIGH_RES_MIN_HEIGHT   1080
+#define AVB_UI_HIGH_RES_MIN_WIDTH    1920
 
 //
 // Module globals
 //
 STATIC EFI_HII_IMAGE_EX_PROTOCOL  *mHiiImageEx;
 STATIC EFI_HII_HANDLE             mHiiHandle;
+
+/**
+  Select the asset tier for the active GOP mode.
+
+  1080p-class and larger (including 4K/8K) use AVB_UI_ASSET_1080 art.
+**/
+STATIC
+AVB_UI_ASSET_TIER
+AvbUiSelectAssetTier (
+  VOID
+  )
+{
+  EFI_STATUS                    Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
+
+  Gop    = NULL;
+  Status = gBS->LocateProtocol (
+                  &gEfiGraphicsOutputProtocolGuid,
+                  NULL,
+                  (VOID **)&Gop
+                  );
+  if (EFI_ERROR (Status) || (Gop == NULL) || (Gop->Mode == NULL) || (Gop->Mode->Info == NULL)) {
+    return AVB_UI_ASSET_720;
+  }
+
+  if ((Gop->Mode->Info->VerticalResolution >= AVB_UI_HIGH_RES_MIN_HEIGHT) ||
+      (Gop->Mode->Info->HorizontalResolution >= AVB_UI_HIGH_RES_MIN_WIDTH))
+  {
+    return AVB_UI_ASSET_1080;
+  }
+
+  return AVB_UI_ASSET_720;
+}
 
 /**
   Display an image scaled to full screen.
@@ -173,47 +209,64 @@ AvbUiShow (
   IN AVB_UI_STATE            State
   )
 {
-  EFI_STATUS    Status;
-  EFI_IMAGE_ID  ImageId;
-  UINTN         Timeout;
+  EFI_STATUS         Status  = EFI_SUCCESS;
+  EFI_IMAGE_ID       ImageId = 0;
+  UINTN              Timeout = 0;
+  AVB_UI_ASSET_TIER  AssetTier;
+  BOOLEAN            ShowImage = TRUE;
 
   DEBUG ((DEBUG_INFO, "%a: State = %d\n", __FUNCTION__, State));
+  AssetTier = AvbUiSelectAssetTier ();
 
   switch (State) {
     case AVB_UI_STATE_GREEN:
       DEBUG ((DEBUG_INFO, "%a: Green state - no UI needed\n", __FUNCTION__));
-      return EFI_SUCCESS;
+      ShowImage = FALSE;
+      break;
 
     case AVB_UI_STATE_ORANGE:
       DEBUG ((DEBUG_INFO, "%a: Orange state - device unlocked\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_ORANGE];
-      Timeout = AVB_UI_TIMEOUT_SECONDS;
-      break;
-
-    case AVB_UI_STATE_YELLOW:
-      DEBUG ((DEBUG_INFO, "%a: Yellow state - unverified key\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_YELLOW];
+      ImageId = mAvbUiImageId[AVB_UI_IMAGE_ORANGE_720 + AssetTier];
       Timeout = AVB_UI_TIMEOUT_SECONDS;
       break;
 
     case AVB_UI_STATE_RED:
       DEBUG ((DEBUG_ERROR, "%a: Red state - verification failed\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_STOP];
+      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_STOP_720 + AssetTier];
       Timeout = 0;  // Halt
       break;
 
     case AVB_UI_STATE_RED_EIO:
       DEBUG ((DEBUG_ERROR, "%a: Red EIO state - I/O error\n", __FUNCTION__));
-      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_EIO];
+      ImageId = mAvbUiImageId[AVB_UI_IMAGE_RED_EIO_720 + AssetTier];
       Timeout = 0;  // Halt
       break;
 
     default:
       DEBUG ((DEBUG_WARN, "%a: Unknown state %d\n", __FUNCTION__, State));
-      return EFI_SUCCESS;
+      ShowImage = FALSE;
+      break;
   }
 
-  Status = AvbUiDisplayImage (ImageId, Timeout);
+  if (ShowImage) {
+    Status = AvbUiDisplayImage (ImageId, Timeout);
+  }
+
+  //
+  // PlatformBootManagerLib defers BootLogoEnableLogo() for Android builds
+  // (PcdBootAndroidImage), expecting AvbUiDxe to draw the platform boot
+  // logo once verified-boot UI handling is complete. Clear the framebuffer
+  // first so the boot logo isn't overlaid on top of a lingering AVB splash.
+  // Skip both clear and logo for red / red_eio so the diagnostic image
+  // stays on screen while the device halts.
+  //
+  if ((State != AVB_UI_STATE_RED) && (State != AVB_UI_STATE_RED_EIO)) {
+    if (gST->ConOut != NULL) {
+      gST->ConOut->ClearScreen (gST->ConOut);
+    }
+
+    BootLogoEnableLogo ();
+  }
 
   return Status;
 }

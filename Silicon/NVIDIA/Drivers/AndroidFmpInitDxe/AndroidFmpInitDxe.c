@@ -11,6 +11,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
+#include <Library/ImageScaleLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -23,13 +24,29 @@
 
 #include <Protocol/BlockIo.h>
 #include <Protocol/DiskIo.h>
+#include <Protocol/GraphicsOutput.h>
+#include <Protocol/HiiDatabase.h>
+#include <Protocol/HiiImageEx.h>
+#include <Protocol/HiiPackageList.h>
+#include <Protocol/FwUpdateSplashProtocol.h>
 #include <Protocol/PartitionInfo.h>
 #include <Protocol/SavedCapsuleProtocol.h>
 #include <Protocol/EFuse.h>
 #include <Protocol/BootChainProtocol.h>
 
-#define FMP_WRITE_LOOP_SIZE    (64 * 1024)
-#define ANDROID_ESP_PARTITION  L"staging"
+#include "AndroidFmpInitPrivate.h"
+
+#define FMP_WRITE_LOOP_SIZE                  (64 * 1024)
+#define ANDROID_ESP_PARTITION                L"staging"
+#define ANDROID_FMP_SPLASH_1080P_SHORT_EDGE  1080U
+
+//
+// Lower bound (in percent) for the FMP progress bar painted on top of the
+// firmware-update splash. Picked so the user perceives the firmware
+// install as the final ~20% of the overall update flow; tweak here if
+// the boot-time budget preceding HandleCapsules() changes meaningfully.
+//
+#define ANDROID_FMP_SPLASH_PROGRESS_BASE  80
 // these can be parsed out from NCT
 #define TEGRA_PLATFORM_SPEC_VARIABLE_NAME  L"TegraPlatformSpec"
 #define AUTO_UPDATE_BRBCT_VARIABLE_NAME    L"AutoUpdateBrBct"
@@ -42,6 +59,17 @@
 
 STATIC NVIDIA_SAVED_CAPSULE_PROTOCOL  mProtocol;
 STATIC EFI_CAPSULE_HEADER             *mCapsuleHeader = NULL;
+
+//
+// HII state for the OTA splash. Populated lazily on the first splash request
+// so failures (e.g. HII Database protocol not yet installed) don't block the
+// capsule init path. ``mHiiHandle == NULL`` means "not registered yet" or
+// "registration failed permanently".
+//
+STATIC EFI_HANDLE                 mDriverImageHandle = NULL;
+STATIC EFI_HII_HANDLE             mHiiHandle         = NULL;
+STATIC EFI_HII_IMAGE_EX_PROTOCOL  *mHiiImageEx       = NULL;
+STATIC BOOLEAN                    mHiiInitTried      = FALSE;
 
 /**
   Get partition BlockIo/DiskIo
@@ -506,6 +534,213 @@ SetupFastbootCapsuleEnv (
 }
 
 /**
+  Lazily register this driver's HII image package list with the HII Database.
+
+  The package list is attached to the PE/COFF image via
+  ``UEFI_HII_RESOURCE_SECTION = TRUE`` in the inf and contains the OTA splash
+  bitmap. Registration is performed best-effort on first access so that a
+  missing HII Database protocol (depex omission is intentional -- we must not
+  block capsule init on UI) leaves ``mHiiHandle`` NULL and the splash is
+  silently skipped.
+
+  @retval EFI_SUCCESS  HII bundle is registered and ready for image lookup.
+  @retval Other        HII protocol missing or registration failed.
+**/
+STATIC
+EFI_STATUS
+EnsureHiiBundleRegistered (
+  VOID
+  )
+{
+  EFI_STATUS                   Status;
+  EFI_HII_DATABASE_PROTOCOL    *HiiDatabase;
+  EFI_HII_PACKAGE_LIST_HEADER  *PackageList;
+
+  if (mHiiHandle != NULL) {
+    return EFI_SUCCESS;
+  }
+
+  //
+  // Latch the first attempt: HII may be unavailable for the lifetime of this
+  // driver image (e.g. minimal boot), and retrying every splash call would
+  // spam the log without changing the outcome.
+  //
+  if (mHiiInitTried) {
+    return EFI_NOT_FOUND;
+  }
+
+  mHiiInitTried = TRUE;
+
+  if (mDriverImageHandle == NULL) {
+    DEBUG ((DEBUG_WARN, "%a: driver image handle not captured\n", __FUNCTION__));
+    return EFI_NOT_READY;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gEfiHiiDatabaseProtocolGuid,
+                  NULL,
+                  (VOID **)&HiiDatabase
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: HII Database not available: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gEfiHiiImageExProtocolGuid,
+                  NULL,
+                  (VOID **)&mHiiImageEx
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: HII Image Ex not available: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = gBS->OpenProtocol (
+                  mDriverImageHandle,
+                  &gEfiHiiPackageListProtocolGuid,
+                  (VOID **)&PackageList,
+                  mDriverImageHandle,
+                  NULL,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: HII package not in PE/COFF resource: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = HiiDatabase->NewPackageList (HiiDatabase, PackageList, NULL, &mHiiHandle);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Failed to publish HII package list: %r\n", __FUNCTION__, Status));
+    mHiiHandle = NULL;
+    return Status;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: HII package list registered\n", __FUNCTION__));
+  return EFI_SUCCESS;
+}
+
+/**
+  Render the OTA splash bitmap to the full screen and return immediately.
+
+  The splash is left on the framebuffer for the rest of UEFI execution; the
+  next stage (capsule install + reset) will naturally replace it. Best-effort:
+  missing HII / GOP / image data yields EFI_SUCCESS without rendering, since
+  capsule install must proceed regardless of UI.
+
+  @retval EFI_SUCCESS  Splash shown (or silently skipped).
+  @retval Other        Underlying HII / GOP failure (logged).
+**/
+STATIC
+EFI_STATUS
+AndroidFmpDisplaySplash (
+  VOID
+  )
+{
+  EFI_STATUS                     Status;
+  EFI_IMAGE_ID                   ImageId;
+  EFI_IMAGE_INPUT                Image;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL   *Gop;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *ScaledImage;
+  UINTN                          ScreenWidth;
+  UINTN                          ScreenHeight;
+  UINTN                          PanelShortEdge;
+
+  Status = EnsureHiiBundleRegistered ();
+  if (EFI_ERROR (Status)) {
+    return EFI_SUCCESS;
+  }
+
+  Status = gBS->LocateProtocol (
+                  &gEfiGraphicsOutputProtocolGuid,
+                  NULL,
+                  (VOID **)&Gop
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: GOP not available: %r\n", __FUNCTION__, Status));
+    return EFI_SUCCESS;
+  }
+
+  if ((Gop->Mode == NULL) || (Gop->Mode->Info == NULL)) {
+    DEBUG ((DEBUG_WARN, "%a: GOP mode info unavailable\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  ScreenWidth    = Gop->Mode->Info->HorizontalResolution;
+  ScreenHeight   = Gop->Mode->Info->VerticalResolution;
+  PanelShortEdge = (ScreenWidth < ScreenHeight) ? ScreenWidth : ScreenHeight;
+
+  if (PanelShortEdge > ANDROID_FMP_SPLASH_1080P_SHORT_EDGE) {
+    ImageId = mOtaImageId4k;
+  } else {
+    ImageId = mOtaImageId1080;
+  }
+
+  Status = mHiiImageEx->GetImageEx (mHiiImageEx, mHiiHandle, ImageId, &Image);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: GetImageEx %d failed: %r\n", __FUNCTION__, ImageId, Status));
+    return Status;
+  }
+
+  Status = ImageScale (
+             Image.Bitmap,
+             (UINTN)Image.Width,
+             (UINTN)Image.Height,
+             ScreenWidth,
+             ScreenHeight,
+             &ScaledImage
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: ImageScale failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = Gop->Blt (
+                  Gop,
+                  ScaledImage,
+                  EfiBltBufferToVideo,
+                  0,
+                  0,                                                 // src x/y
+                  0,
+                  0,                                                 // dst x/y
+                  ScreenWidth,
+                  ScreenHeight,
+                  ScreenWidth * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
+                  );
+
+  FreePool (ScaledImage);
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_WARN, "%a: GOP Blt failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  OTA splash protocol Show() method. Wraps ``AndroidFmpDisplaySplash``
+  so PlatformBootManagerLib can render the splash right before
+  HandleCapsules() runs the FMP install. Resolution-aware image
+  selection happens inside AndroidFmpDisplaySplash().
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+AndroidFmpSplashShow (
+  IN NVIDIA_FW_UPDATE_SPLASH_PROTOCOL  *This
+  )
+{
+  return AndroidFmpDisplaySplash ();
+}
+
+STATIC NVIDIA_FW_UPDATE_SPLASH_PROTOCOL  mSplashProtocol = {
+  AndroidFmpSplashShow,
+  ANDROID_FMP_SPLASH_PROGRESS_BASE,
+  L"Updating SHIELD: "
+};
+
+/**
  Android FMP Initialization DXE Driver entry point.
 
   @param[in]  ImageHandle       Image handle
@@ -523,9 +758,19 @@ AndroidFmpInitDxeInitialize (
   )
 {
   EFI_STATUS          Status;
-  EFI_HANDLE          Handle;
+  EFI_HANDLE          CapsuleSplashHandle;
+  EFI_HANDLE          CompleteHandle;
   EFI_CAPSULE_HEADER  *Header = NULL;
   MiscCmdType         MiscCmd = MISC_CMD_TYPE_INVALID;
+
+  //
+  // Cache the driver's image handle so the splash path can later
+  // OpenProtocol(gEfiHiiPackageListProtocolGuid) against it to retrieve the
+  // bundled HII resource section.
+  //
+  mDriverImageHandle  = ImageHandle;
+  CapsuleSplashHandle = NULL;
+  CompleteHandle      = NULL;
 
   //
   // When booting into fastboot (bootonce-bootloader), prepare the capsule
@@ -550,17 +795,27 @@ AndroidFmpInitDxeInitialize (
     }
 
     mProtocol.GetCapsule = AndroidFmpGetCapsule;
-    Handle               = NULL;
 
+    //
+    // Publish the saved-capsule protocol for FmpDxe and the OTA splash
+    // protocol so PlatformBootManagerLib can render android_ota_4k.bmp as
+    // the background for the FMP install progress that runs inside
+    // HandleCapsules(). Drawing the splash here during DXE would be wiped
+    // by BDS console reconfiguration, so we defer the actual blit until
+    // PlatformBm invokes Show() on the protocol.
+    //
     Status = gBS->InstallMultipleProtocolInterfaces (
-                    &Handle,
+                    &CapsuleSplashHandle,
                     &gNVIDIASavedCapsuleProtocolGuid,
                     &mProtocol,
+                    &gNVIDIAFwUpdateSplashProtocolGuid,
+                    &mSplashProtocol,
                     NULL
                     );
 
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a: Error installing protocol: %r\n", __FUNCTION__, Status));
+      CapsuleSplashHandle = NULL;
       goto Exit;
     }
 
@@ -570,18 +825,29 @@ AndroidFmpInitDxeInitialize (
     }
   }
 
-  Handle = NULL;
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &Handle,
+                  &CompleteHandle,
                   &gNVIDIAAndroidFmpInitCompleteProtocolGuid,
                   NULL,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Error installing InitComplete: %r\n", __FUNCTION__, Status));
+    CompleteHandle = NULL;
     goto Exit;
   }
 
 Exit:
+  if (EFI_ERROR (Status) && (CapsuleSplashHandle != NULL)) {
+    gBS->UninstallMultipleProtocolInterfaces (
+           CapsuleSplashHandle,
+           &gNVIDIASavedCapsuleProtocolGuid,
+           &mProtocol,
+           &gNVIDIAFwUpdateSplashProtocolGuid,
+           &mSplashProtocol,
+           NULL
+           );
+  }
+
   return Status;
 }

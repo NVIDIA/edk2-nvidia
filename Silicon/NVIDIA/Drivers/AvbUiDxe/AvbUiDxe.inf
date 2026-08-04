@@ -22,10 +22,12 @@
   AvbUiDxe.c
   AvbUiImages.c
   AvbUi.idf
-  verity_orange_pause_720.bmp
-  verity_yellow_pause_720.bmp
+  verity_orange_720.bmp
+  verity_orange_1080.bmp
   verity_red_stop_720.bmp
+  verity_red_stop_1080.bmp
   verity_red_eio_720.bmp
+  verity_red_eio_1080.bmp
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -38,6 +40,7 @@
   DebugLib
   MemoryAllocationLib
   BaseMemoryLib
+  BootLogoLib
   TimerLib
   ImageScaleLib
 

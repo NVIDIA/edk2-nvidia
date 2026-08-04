@@ -56,6 +56,7 @@
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/PlatformBootManager.h>
 #include <Protocol/ReportStatusCodeHandler.h>
+#include <Protocol/FwUpdateSplashProtocol.h>
 #include <Protocol/SavedCapsuleProtocol.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
@@ -2984,7 +2985,29 @@ PlatformBootManagerAfterConsole (
   //
   // Show the splash screen.
   //
-  BootLogoEnableLogo ();
+  // For non-Android builds we draw the platform boot logo as usual. For
+  // Android builds the boot logo is deferred until after the AVB UI dwell
+  // completes (see AvbShowUi in AvbLib); instead, if any driver published
+  // gNVIDIAFwUpdateSplashProtocolGuid (e.g. AndroidFmpInitDxe staging a
+  // capsule), we render its splash here so DisplayUpdateProgressLib has
+  // a real backdrop for the FMP install progress that runs inside
+  // HandleCapsules() below.
+  //
+  if (!PcdGetBool (PcdBootAndroidImage)) {
+    BootLogoEnableLogo ();
+  } else {
+    NVIDIA_FW_UPDATE_SPLASH_PROTOCOL  *Splash;
+    EFI_STATUS                        SplashStatus;
+
+    SplashStatus = gBS->LocateProtocol (
+                          &gNVIDIAFwUpdateSplashProtocolGuid,
+                          NULL,
+                          (VOID **)&Splash
+                          );
+    if (!EFI_ERROR (SplashStatus)) {
+      Splash->Show (Splash);
+    }
+  }
 
   //
   // Display system and hotkey information after console is ready.
@@ -3042,6 +3065,10 @@ PlatformBootManagerWaitCallback (
   ProgressTitle = NULL;
   Timeout       = PcdGet16 (PcdPlatformBootTimeOut);
   ProgressTitle = (EFI_STRING)PcdGetPtr (PcdBootManagerWaitMessage);
+
+  if (PcdGetBool (PcdBootAndroidImage)) {
+    return;
+  }
 
   ASSERT (ProgressTitle != NULL);
 

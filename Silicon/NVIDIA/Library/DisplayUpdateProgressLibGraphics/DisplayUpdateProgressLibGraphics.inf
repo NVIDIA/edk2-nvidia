@@ -1,7 +1,10 @@
 ## @file
 #  Provides services to display completion progress of a firmware update on a
-#  graphical console that supports the Graphics Output Protocol.
+#  graphical console that supports the Graphics Output Protocol, with the
+#  percentage caption rendered via HII font below the bar (with text-console
+#  fallback when HII font is unavailable).
 #
+#  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #  Copyright (c) 2016, Microsoft Corporation, All rights reserved.<BR>
 #  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 #
@@ -22,15 +25,23 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseLib
   BaseMemoryLib
   DebugLib
+  HiiLib
   MemoryAllocationLib
+  PcdLib
+  PrintLib
   UefiBootServicesTableLib
-  BaseLib
   UefiLib
 
 [Protocols]
-  gEfiGraphicsOutputProtocolGuid  # CONSUMES
-  gEdkiiBootLogo2ProtocolGuid     # CONSUMES
+  gEfiGraphicsOutputProtocolGuid       ## CONSUMES
+  gEfiHiiFontProtocolGuid              ## SOMETIMES_CONSUMES
+  gNVIDIAFwUpdateSplashProtocolGuid    ## SOMETIMES_CONSUMES
+
+[FixedPcd]
+  gNVIDIATokenSpaceGuid.PcdBootAndroidImage  ## CONSUMES

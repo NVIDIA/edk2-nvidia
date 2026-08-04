@@ -52,14 +52,11 @@ AvbShowUi (
   }
 
   //
-  // Map AVB boot state to UI state
+  // Map AVB boot state to UI state.
   //
   switch (BootState) {
     case VERIFIED_BOOT_GREEN_STATE:
       UiState = AVB_UI_STATE_GREEN;
-      break;
-    case VERIFIED_BOOT_YELLOW_STATE:
-      UiState = AVB_UI_STATE_YELLOW;
       break;
     case VERIFIED_BOOT_ORANGE_STATE:
       UiState = AVB_UI_STATE_ORANGE;
@@ -76,7 +73,10 @@ AvbShowUi (
   }
 
   //
-  // Call AVB UI Protocol
+  // Call AVB UI Protocol. AvbUiDxe is responsible for rendering the
+  // verified-boot splash (if any), dwelling on it for the appropriate
+  // amount of time, and then drawing the platform boot logo -- which
+  // PlatformBootManagerLib defers for Android builds.
   //
   Status = AvbUi->Show (AvbUi, UiState);
   if (EFI_ERROR (Status)) {

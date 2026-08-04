@@ -13,12 +13,22 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = AndroidFmpInitDxeInitialize
+#
+#  HII resource section so the OTA splash BMP gets bundled into the PE/COFF
+#  image and can be retrieved via gEfiHiiPackageListProtocolGuid at runtime.
+#
+  UEFI_HII_RESOURCE_SECTION      = TRUE
 
 [Sources.common]
   AndroidFmpInitDxe.c
+  AndroidFmpInitImages.c
+  AndroidFmpInit.idf
+  android_ota_4k.bmp
+  android_ota_1080.bmp
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
@@ -33,15 +43,21 @@
   PrintLib
   TegraPlatformInfoLib
   AndroidBcbLib
+  ImageScaleLib
 
 [Protocols]
   gEfiPartitionInfoProtocolGuid
   gEfiBlockIoProtocolGuid
   gEfiDiskIoProtocolGuid
   gNVIDIASavedCapsuleProtocolGuid
+  gNVIDIAFwUpdateSplashProtocolGuid         ## PRODUCES
   gNVIDIAAndroidFmpInitCompleteProtocolGuid
   gNVIDIAEFuseProtocolGuid
   gNVIDIABootChainProtocolGuid
+  gEfiHiiDatabaseProtocolGuid               ## CONSUMES
+  gEfiHiiImageExProtocolGuid                ## CONSUMES
+  gEfiHiiPackageListProtocolGuid            ## CONSUMES
+  gEfiGraphicsOutputProtocolGuid            ## CONSUMES
 
 [Guids]
   gNVIDIAPublicVariableGuid

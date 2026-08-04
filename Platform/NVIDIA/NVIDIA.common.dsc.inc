@@ -1021,7 +1021,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName|L"NVIDIA System Firmware"
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion|0x0
+!ifdef CONFIG_BUILD_ANDROID
+  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceProgressColor|0x00A5DE15   # RGB(165,222,21) android_ota_4k.bmp yellow-green
+!else
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceProgressColor|0x0000FF00   # Green=255
+!endif
 !endif
 
   #

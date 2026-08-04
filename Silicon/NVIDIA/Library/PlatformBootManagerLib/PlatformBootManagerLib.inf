@@ -144,4 +144,5 @@
   gNVIDIAMemoryTestConfig
   gNVIDIAAsyncDriverStatusProtocol
   gNVIDIASavedCapsuleProtocolGuid
+  gNVIDIAFwUpdateSplashProtocolGuid
   gEfiRscHandlerProtocolGuid

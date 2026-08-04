@@ -20,7 +20,6 @@ typedef struct _NVIDIA_AVB_UI_PROTOCOL NVIDIA_AVB_UI_PROTOCOL;
 //
 typedef enum {
   AVB_UI_STATE_GREEN,     // Verified boot - no UI needed
-  AVB_UI_STATE_YELLOW,    // Unverified signing key - show warning
   AVB_UI_STATE_ORANGE,    // Device unlocked - show warning
   AVB_UI_STATE_RED,       // Verification failed - show error and halt
   AVB_UI_STATE_RED_EIO    // I/O error - show error and halt
