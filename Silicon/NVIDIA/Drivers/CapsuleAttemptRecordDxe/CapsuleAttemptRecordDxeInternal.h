@@ -13,6 +13,7 @@
 #include <Uefi.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/FirmwareManagement.h>
+#include <Protocol/CapsuleAttemptRecordProtocol.h>
 
 #define CAPSULE_ATTEMPT_RECORD_STORAGE_NODE_PATH   "/firmware/uefi/capsule-update-record"
 #define CAPSULE_ATTEMPT_RECORD_STORAGE_COMPATIBLE  "nvidia,capsule-update-record-storage-v1"
@@ -98,6 +99,18 @@ typedef struct {
   EFI_BLOCK_IO_PROTOCOL    *BlockIo;
 } CAPSULE_ATTEMPT_RECORD_CONTEXT;
 
+typedef enum {
+  CapsuleAttemptRecordStateInProgress,
+  CapsuleAttemptRecordStateCompleted
+} CAPSULE_ATTEMPT_RECORD_STATE;
+
+typedef struct {
+  UINT64                           AttemptId;
+  BOOLEAN                          AttemptIdValid;
+  CAPSULE_ATTEMPT_RECORD_SOURCE    Source;
+  CAPSULE_ATTEMPT_RECORD_STATE     State;
+} CAPSULE_ATTEMPT_RECORD_LIFECYCLE;
+
 EFI_STATUS
 EFIAPI
 CapsuleAttemptRecordInitialize (
@@ -116,6 +129,25 @@ EFI_STATUS
 EFIAPI
 CapsuleAttemptRecordUpdateFmpImageInfo (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT                   *Context,
+  IN     CONST EFI_GUID                                   *ImageTypeId,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+  );
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordBegin (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
+  OUT    UINT64                          *AttemptId
+  );
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordFinalize (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT                   *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE                    Source,
+  IN     UINT64                                           AttemptId,
+  IN     BOOLEAN                                          AttemptIdValid,
   IN     CONST EFI_GUID                                   *ImageTypeId,
   IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
   );
@@ -152,11 +184,18 @@ CapsuleAttemptRecordSequenceIsNewer (
   IN UINT64  Reference
   );
 
+/**
+  Builds a capsule attempt record payload.
+
+  Lifecycle is required when EntryCount is zero. Entries is required when
+  EntryCount is nonzero.
+**/
 EFI_STATUS
 CapsuleAttemptRecordBuildPayload (
   OUT VOID                                     *Payload,
   IN  UINT32                                   PayloadCapacity,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE   *Lifecycle OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
   IN  UINTN                                    EntryCount,
   OUT UINT32                                   *PayloadLength
   );

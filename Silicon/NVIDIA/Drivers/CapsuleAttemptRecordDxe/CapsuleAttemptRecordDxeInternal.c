@@ -308,7 +308,7 @@ CapsuleAttemptRecordParseStorageConfig (
 
   Context->SlotSize = (UINTN)Value;
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "%a: storage DT accepted: partition=%a offset=%Lu size=%Lu slots=%u\n",
     __FUNCTION__,
     Context->PartitionName,
@@ -703,7 +703,8 @@ EFI_STATUS
 CapsuleAttemptRecordBuildPayload (
   OUT VOID                                     *Payload,
   IN  UINT32                                   PayloadCapacity,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE   *Lifecycle OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
   IN  UINTN                                    EntryCount,
   OUT UINT32                                   *PayloadLength
   )
@@ -714,8 +715,9 @@ CapsuleAttemptRecordBuildPayload (
   CHAR8  NodeName[32];
   CHAR8  GuidString[37];
 
-  if ((Payload == NULL) || (Entries == NULL) || (EntryCount == 0) ||
-      (PayloadLength == NULL))
+  if ((Payload == NULL) || (PayloadLength == NULL) ||
+      ((EntryCount != 0) && (Entries == NULL)) ||
+      ((Lifecycle == NULL) && (EntryCount == 0)))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -739,6 +741,58 @@ CapsuleAttemptRecordBuildPayload (
          ) != 0))
   {
     return EFI_BUFFER_TOO_SMALL;
+  }
+
+  if (Lifecycle != NULL) {
+    CONST CHAR8  *Source;
+    CONST CHAR8  *State;
+
+    switch (Lifecycle->Source) {
+      case CapsuleAttemptRecordSourceAndroidFastboot:
+        Source = "android-fastboot";
+        break;
+      case CapsuleAttemptRecordSourceCapsuleOnDisk:
+        Source = "capsule-on-disk";
+        break;
+      case CapsuleAttemptRecordSourceSavedCapsule:
+        Source = "saved-capsule";
+        break;
+      case CapsuleAttemptRecordSourceUnknown:
+        Source = "unknown";
+        break;
+      default:
+        return EFI_INVALID_PARAMETER;
+    }
+
+    State = (Lifecycle->State == CapsuleAttemptRecordStateInProgress) ?
+            "in-progress" : "completed";
+    if ((Lifecycle->State != CapsuleAttemptRecordStateInProgress) &&
+        (Lifecycle->State != CapsuleAttemptRecordStateCompleted))
+    {
+      return EFI_INVALID_PARAMETER;
+    }
+
+    if ((FdtSetPropU64 (
+           Payload,
+           0,
+           "nvidia,attempt-id",
+           Lifecycle->AttemptId
+           ) != 0) ||
+        (FdtSetPropString (
+           Payload,
+           0,
+           "nvidia,attempt-source",
+           Source
+           ) != 0) ||
+        (FdtSetPropString (
+           Payload,
+           0,
+           "nvidia,attempt-state",
+           State
+           ) != 0))
+    {
+      return EFI_BUFFER_TOO_SMALL;
+    }
   }
 
   for (Index = 0; Index < EntryCount; Index++) {
@@ -1063,29 +1117,29 @@ CapsuleAttemptRecordDeinitialize (
   }
 }
 
+STATIC
 EFI_STATUS
-EFIAPI
-CapsuleAttemptRecordUpdateFmpImageInfo (
-  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT                   *Context,
-  IN     CONST EFI_GUID                                   *ImageTypeId,
-  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+CommitRecord (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT           *Context,
+  IN OUT CAPSULE_ATTEMPT_RECORD_LIFECYCLE         *Lifecycle,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
+  IN     UINTN                                    EntryCount
   )
 {
-  EFI_STATUS                         Status;
-  CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  Entry;
-  VOID                               *SlotBuffer;
-  VOID                               *VerifyBuffer;
-  UINT32                             PayloadLength;
-  UINT32                             LatestSlot;
-  UINT32                             TargetSlot;
-  UINT32                             FirstInvalidSlot;
-  UINT64                             LatestSequence;
-  UINT64                             NewSequence;
-  EFI_LBA                            Lba;
-  CAPSULE_ATTEMPT_RECORD_SLOT_INFO   SlotInfo;
+  EFI_STATUS                        Status;
+  VOID                              *SlotBuffer;
+  VOID                              *VerifyBuffer;
+  UINT32                            PayloadLength;
+  UINT32                            LatestSlot;
+  UINT32                            TargetSlot;
+  UINT32                            FirstInvalidSlot;
+  UINT64                            LatestSequence;
+  UINT64                            NewSequence;
+  EFI_LBA                           Lba;
+  CAPSULE_ATTEMPT_RECORD_SLOT_INFO  SlotInfo;
 
-  if ((Context == NULL) || (Context->BlockIo == NULL) || (ImageTypeId == NULL) ||
-      (ImageInfoSet == NULL))
+  if ((Context == NULL) || (Context->BlockIo == NULL) ||
+      (Lifecycle == NULL) || ((EntryCount != 0) && (Entries == NULL)))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -1101,17 +1155,6 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
     return EFI_WRITE_PROTECTED;
   }
 
-  ZeroMem (&Entry, sizeof (Entry));
-  Status = NormalizeFmpImageInfo (
-             ImageTypeId,
-             ImageInfoSet,
-             &Entry
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: FMP image info normalization failed: %r\n", __FUNCTION__, Status));
-    return Status;
-  }
-
   if ((Context->SlotSize - CAPSULE_ATTEMPT_RECORD_HEADER_SIZE) > MAX_UINT32) {
     DEBUG ((DEBUG_ERROR, "%a: payload capacity exceeds limit: %u\n", __FUNCTION__, Context->SlotSize));
     return EFI_BAD_BUFFER_SIZE;
@@ -1124,21 +1167,6 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
     FreeBlockIoBuffer (Context, VerifyBuffer);
     return EFI_OUT_OF_RESOURCES;
   }
-
-  ZeroMem (SlotBuffer, Context->SlotSize);
-  Status = CapsuleAttemptRecordBuildPayload (
-             (UINT8 *)SlotBuffer + CAPSULE_ATTEMPT_RECORD_HEADER_SIZE,
-             (UINT32)(Context->SlotSize - CAPSULE_ATTEMPT_RECORD_HEADER_SIZE),
-             &Entry,
-             1,
-             &PayloadLength
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: payload build failed: %r\n", __FUNCTION__, Status));
-    goto Done;
-  }
-
-  DEBUG ((DEBUG_INFO, "%a: payload built: length=%u\n", __FUNCTION__, PayloadLength));
 
   Status = FindLatestSlot (
              Context,
@@ -1174,6 +1202,27 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
       NewSequence
       ));
   }
+
+  if (!Lifecycle->AttemptIdValid) {
+    Lifecycle->AttemptId      = NewSequence;
+    Lifecycle->AttemptIdValid = TRUE;
+  }
+
+  ZeroMem (SlotBuffer, Context->SlotSize);
+  Status = CapsuleAttemptRecordBuildPayload (
+             (UINT8 *)SlotBuffer + CAPSULE_ATTEMPT_RECORD_HEADER_SIZE,
+             (UINT32)(Context->SlotSize - CAPSULE_ATTEMPT_RECORD_HEADER_SIZE),
+             Lifecycle,
+             Entries,
+             EntryCount,
+             &PayloadLength
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: payload build failed: %r\n", __FUNCTION__, Status));
+    goto Done;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: payload built: length=%u\n", __FUNCTION__, PayloadLength));
 
   BuildSlotHeader (SlotBuffer, NewSequence, PayloadLength);
   Lba = DivU64x32 (
@@ -1227,13 +1276,96 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: record verification validation failed: %r\n", __FUNCTION__, Status));
   } else {
-    DEBUG ((DEBUG_ERROR, "%a: record update verified successfully: slot=%u sequence=%Lu\n", __FUNCTION__, TargetSlot, NewSequence));
+    DEBUG ((DEBUG_INFO, "%a: record update verified successfully: slot=%u sequence=%Lu\n", __FUNCTION__, TargetSlot, NewSequence));
   }
 
 Done:
   FreeBlockIoBuffer (Context, VerifyBuffer);
   FreeBlockIoBuffer (Context, SlotBuffer);
   return Status;
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordBegin (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
+  OUT    UINT64                          *AttemptId
+  )
+{
+  EFI_STATUS                        Status;
+  CAPSULE_ATTEMPT_RECORD_LIFECYCLE  Lifecycle;
+
+  if ((AttemptId == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
+      (Source >= CapsuleAttemptRecordSourceMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Lifecycle.AttemptId      = 0;
+  Lifecycle.AttemptIdValid = FALSE;
+  Lifecycle.Source         = Source;
+  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  Status                   = CommitRecord (Context, &Lifecycle, NULL, 0);
+  if (!EFI_ERROR (Status)) {
+    *AttemptId = Lifecycle.AttemptId;
+  }
+
+  return Status;
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordFinalize (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT                   *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE                    Source,
+  IN     UINT64                                           AttemptId,
+  IN     BOOLEAN                                          AttemptIdValid,
+  IN     CONST EFI_GUID                                   *ImageTypeId,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+  )
+{
+  EFI_STATUS                         Status;
+  CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  Entry;
+  CAPSULE_ATTEMPT_RECORD_LIFECYCLE   Lifecycle;
+
+  if ((ImageTypeId == NULL) || (ImageInfoSet == NULL) ||
+      (Source < CapsuleAttemptRecordSourceUnknown) ||
+      (Source >= CapsuleAttemptRecordSourceMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  ZeroMem (&Entry, sizeof (Entry));
+  Status = NormalizeFmpImageInfo (ImageTypeId, ImageInfoSet, &Entry);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: FMP image info normalization failed: %r\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Lifecycle.AttemptId      = AttemptId;
+  Lifecycle.AttemptIdValid = AttemptIdValid;
+  Lifecycle.Source         = Source;
+  Lifecycle.State          = CapsuleAttemptRecordStateCompleted;
+  return CommitRecord (Context, &Lifecycle, &Entry, 1);
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordUpdateFmpImageInfo (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT                   *Context,
+  IN     CONST EFI_GUID                                   *ImageTypeId,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+  )
+{
+  return CapsuleAttemptRecordFinalize (
+           Context,
+           CapsuleAttemptRecordSourceUnknown,
+           0,
+           FALSE,
+           ImageTypeId,
+           ImageInfoSet
+           );
 }
 
 STATIC
@@ -1450,6 +1582,20 @@ DumpPayload (
   UINTN        StringLength;
   UINT32       FormatVersion;
   INT32        Node;
+  INT32        AttemptIdLength;
+  CONST VOID   *AttemptIdProperty;
+  UINT64       AttemptIdValue;
+  UINT64       AttemptId;
+  CONST CHAR8  *Source;
+  CONST CHAR8  *State;
+  CONST VOID   *SourceProperty;
+  CONST VOID   *StateProperty;
+  INT32        SourcePropertyLength;
+  INT32        StatePropertyLength;
+  UINTN        SourceLength;
+  UINTN        StateLength;
+  EFI_STATUS   SourceStatus;
+  EFI_STATUS   StateStatus;
 
   if ((FdtCheckHeader (Payload) != 0) || (FdtTotalSize (Payload) != PayloadLength)) {
     return EFI_COMPROMISED_DATA;
@@ -1480,6 +1626,61 @@ DumpPayload (
 
   if (FormatVersion != CAPSULE_ATTEMPT_RECORD_PAYLOAD_FORMAT) {
     return EFI_UNSUPPORTED;
+  }
+
+  AttemptIdProperty = FdtGetProp (
+                        Payload,
+                        0,
+                        "nvidia,attempt-id",
+                        &AttemptIdLength
+                        );
+  SourceProperty = FdtGetProp (
+                     Payload,
+                     0,
+                     "nvidia,attempt-source",
+                     &SourcePropertyLength
+                     );
+  StateProperty = FdtGetProp (
+                    Payload,
+                    0,
+                    "nvidia,attempt-state",
+                    &StatePropertyLength
+                    );
+  SourceStatus = GetRequiredStringProperty (
+                   Payload,
+                   0,
+                   "nvidia,attempt-source",
+                   &Source,
+                   &SourceLength
+                   );
+  StateStatus = GetRequiredStringProperty (
+                  Payload,
+                  0,
+                  "nvidia,attempt-state",
+                  &State,
+                  &StateLength
+                  );
+  if ((AttemptIdProperty == NULL) && (SourceProperty == NULL) &&
+      (StateProperty == NULL))
+  {
+    DEBUG ((DEBUG_ERROR, "Capsule attempt lifecycle: legacy Phase 1 record\n"));
+  } else {
+    if ((AttemptIdProperty == NULL) ||
+        (AttemptIdLength != sizeof (AttemptIdValue)) ||
+        EFI_ERROR (SourceStatus) || EFI_ERROR (StateStatus))
+    {
+      return EFI_COMPROMISED_DATA;
+    }
+
+    CopyMem (&AttemptIdValue, AttemptIdProperty, sizeof (AttemptIdValue));
+    AttemptId = Fdt64ToCpu (AttemptIdValue);
+    DEBUG ((
+      DEBUG_ERROR,
+      "Capsule attempt lifecycle: id=%Lu source=%a state=%a\n",
+      AttemptId,
+      Source,
+      State
+      ));
   }
 
   FdtForEachSubnode (Node, Payload, 0) {

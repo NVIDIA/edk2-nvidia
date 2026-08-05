@@ -38,6 +38,64 @@ LocateCapsuleAttemptRecordProtocol (
 
 EFI_STATUS
 EFIAPI
+CapsuleAttemptRecordBegin (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  )
+{
+  EFI_STATUS                              Status;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *Protocol;
+
+  if (!FeaturePcdGet (PcdCapsuleAttemptRecordSupported)) {
+    return EFI_SUCCESS;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: record begin requested for source %u\n", __FUNCTION__, Source));
+
+  Status = LocateCapsuleAttemptRecordProtocol (&Protocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if ((Protocol->Revision < NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION) ||
+      (Protocol->Begin == NULL))
+  {
+    return EFI_UNSUPPORTED;
+  }
+
+  return Protocol->Begin (Protocol, Source);
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordFinalize (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  )
+{
+  EFI_STATUS                              Status;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *Protocol;
+
+  if (!FeaturePcdGet (PcdCapsuleAttemptRecordSupported)) {
+    return EFI_SUCCESS;
+  }
+
+  DEBUG ((DEBUG_INFO, "%a: record finalize requested for source %u\n", __FUNCTION__, Source));
+
+  Status = LocateCapsuleAttemptRecordProtocol (&Protocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if ((Protocol->Revision < NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION) ||
+      (Protocol->Finalize == NULL))
+  {
+    return EFI_UNSUPPORTED;
+  }
+
+  return Protocol->Finalize (Protocol, Source);
+}
+
+EFI_STATUS
+EFIAPI
 CapsuleAttemptRecordUpdateFmpImageInfo (
   VOID
   )

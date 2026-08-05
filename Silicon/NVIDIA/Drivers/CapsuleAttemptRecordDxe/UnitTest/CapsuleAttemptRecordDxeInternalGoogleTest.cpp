@@ -254,6 +254,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsEsrtPayloadWithGuidString) {
     CapsuleAttemptRecordBuildPayload (
       Payload,
       sizeof (Payload),
+      NULL,
       &Entry,
       1,
       &PayloadLength
@@ -271,6 +272,125 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsEsrtPayloadWithGuidString) {
   ASSERT_NE (nullptr, FirmwareClass);
   EXPECT_EQ (37, Length);
   EXPECT_STREQ ("bf0d4599-20d4-414e-b2c5-3595b1cda402", FirmwareClass);
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentity) {
+  CAPSULE_ATTEMPT_RECORD_CONTEXT             Context;
+  EFI_GUID                                   ImageTypeId;
+  EFI_FIRMWARE_IMAGE_DESCRIPTOR              Descriptor;
+  CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  ImageInfoSet;
+  CAPSULE_ATTEMPT_RECORD_SLOT_INFO           SlotInfo;
+  UINT64                                     AttemptId;
+  CONST VOID                                 *StoredAttemptId;
+  UINT64                                     StoredAttemptIdValue;
+  CONST CHAR8                                *State;
+  INT32                                      Length;
+  CONST VOID                                 *Payload;
+
+  Context = MakeContext ();
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBegin (
+      &Context,
+      CapsuleAttemptRecordSourceSavedCapsule,
+      &AttemptId
+      )
+    );
+  EXPECT_EQ (1U, AttemptId);
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordValidateSlotBuffer (mStorage, Context.SlotSize, &SlotInfo)
+    );
+  Payload = mStorage + SlotInfo.PayloadOffset;
+  EXPECT_LT (FdtPathOffset (Payload, "/esrt-entry-0"), 0);
+  State = (CONST CHAR8 *)FdtGetProp (Payload, 0, "nvidia,attempt-state", &Length);
+  ASSERT_NE (nullptr, State);
+  EXPECT_STREQ ("in-progress", State);
+  State = (CONST CHAR8 *)FdtGetProp (Payload, 0, "nvidia,attempt-source", &Length);
+  ASSERT_NE (nullptr, State);
+  EXPECT_STREQ ("saved-capsule", State);
+
+  ZeroMem (&ImageTypeId, sizeof (ImageTypeId));
+  ImageTypeId.Data1 = 0x12345678;
+  ZeroMem (&Descriptor, sizeof (Descriptor));
+  Descriptor.ImageTypeId         = ImageTypeId;
+  Descriptor.AttributesSupported = IMAGE_ATTRIBUTE_IN_USE;
+  Descriptor.AttributesSetting   = IMAGE_ATTRIBUTE_IN_USE;
+  ZeroMem (&ImageInfoSet, sizeof (ImageInfoSet));
+  ImageInfoSet.ImageInfo         = &Descriptor;
+  ImageInfoSet.ImageInfoSize     = sizeof (Descriptor);
+  ImageInfoSet.DescriptorVersion = 3;
+  ImageInfoSet.DescriptorCount   = 1;
+  ImageInfoSet.DescriptorSize    = sizeof (Descriptor);
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordFinalize (
+      &Context,
+      CapsuleAttemptRecordSourceSavedCapsule,
+      AttemptId,
+      TRUE,
+      &ImageTypeId,
+      &ImageInfoSet
+      )
+    );
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordValidateSlotBuffer (
+      mStorage + Context.SlotSize,
+      Context.SlotSize,
+      &SlotInfo
+      )
+    );
+  Payload = mStorage + Context.SlotSize + SlotInfo.PayloadOffset;
+  EXPECT_GE (FdtPathOffset (Payload, "/esrt-entry-0"), 0);
+  State = (CONST CHAR8 *)FdtGetProp (Payload, 0, "nvidia,attempt-state", &Length);
+  ASSERT_NE (nullptr, State);
+  EXPECT_STREQ ("completed", State);
+  StoredAttemptId = FdtGetProp (
+                      Payload,
+                      0,
+                      "nvidia,attempt-id",
+                      &Length
+                      );
+  ASSERT_NE (nullptr, StoredAttemptId);
+  ASSERT_EQ ((INT32)sizeof (StoredAttemptIdValue), Length);
+  CopyMem (&StoredAttemptIdValue, StoredAttemptId, sizeof (StoredAttemptIdValue));
+  EXPECT_EQ (AttemptId, Fdt64ToCpu (StoredAttemptIdValue));
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
+  UINT8                             Payload[4096];
+  UINT32                            PayloadLength;
+  CAPSULE_ATTEMPT_RECORD_LIFECYCLE  Lifecycle;
+  CONST CHAR8                       *Source;
+  INT32                             Length;
+
+  ZeroMem (&Lifecycle, sizeof (Lifecycle));
+  Lifecycle.AttemptId      = 1;
+  Lifecycle.AttemptIdValid = TRUE;
+  Lifecycle.Source         = CapsuleAttemptRecordSourceCapsuleOnDisk;
+  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBuildPayload (
+      Payload,
+      sizeof (Payload),
+      &Lifecycle,
+      NULL,
+      0,
+      &PayloadLength
+      )
+    );
+  EXPECT_EQ (PayloadLength, FdtTotalSize (Payload));
+  Source = (CONST CHAR8 *)FdtGetProp (
+                            Payload,
+                            0,
+                            "nvidia,attempt-source",
+                            &Length
+                            );
+  ASSERT_NE (nullptr, Source);
+  EXPECT_STREQ ("capsule-on-disk", Source);
 }
 
 TEST_F (CapsuleAttemptRecordDxeInternalTest, BlockIoCommitAdvancesSlotsAndRejectsCorruption) {

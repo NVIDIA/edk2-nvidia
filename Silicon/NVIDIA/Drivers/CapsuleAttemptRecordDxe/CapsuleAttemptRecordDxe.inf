@@ -18,6 +18,8 @@
   CapsuleAttemptRecordDxe.c
   CapsuleAttemptRecordDxeInternal.c
   CapsuleAttemptRecordDxeInternal.h
+  CapsuleAttemptRecordDxeState.c
+  CapsuleAttemptRecordDxeState.h
 
 [Packages]
   EmbeddedPkg/EmbeddedPkg.dec

@@ -2763,6 +2763,7 @@ HandleSavedCapsules (
   )
 {
   EFI_STATUS                     Status;
+  EFI_STATUS                     RecordStatus;
   NVIDIA_SAVED_CAPSULE_PROTOCOL  *Protocol;
   EFI_CAPSULE_HEADER             *CapsuleHeader;
 
@@ -2785,7 +2786,31 @@ HandleSavedCapsules (
   DEBUG ((DEBUG_INFO, "%a: installing capsule bytes=%u guid=%g\n", __FUNCTION__, CapsuleHeader->CapsuleImageSize, &CapsuleHeader->CapsuleGuid));
 
   ValidateActiveBootChain ();
-  Status = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  RecordStatus = CapsuleAttemptRecordBegin (
+                   CapsuleAttemptRecordSourceSavedCapsule
+                   );
+  if (EFI_ERROR (RecordStatus)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: capsule attempt record begin failed: %r\n",
+      __FUNCTION__,
+      RecordStatus
+      ));
+  }
+
+  Status       = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  RecordStatus = CapsuleAttemptRecordFinalize (
+                   CapsuleAttemptRecordSourceSavedCapsule
+                   );
+  if (EFI_ERROR (RecordStatus)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: capsule attempt record finalize failed: %r\n",
+      __FUNCTION__,
+      RecordStatus
+      ));
+  }
+
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: UpdateCapsule failed: %r\n", __FUNCTION__, Status));
   }
@@ -2818,7 +2843,8 @@ HandleCapsules (
   }
 
   //
-  // Find all capsule images from hob
+  // Capsule attempt records are not supported for HOB-delivered capsule
+  // updates.
   //
   HobPointer.Raw = GetHobList ();
   NeedReset      = FALSE;
@@ -2852,6 +2878,18 @@ HandleCapsules (
     // Mark existing boot chain as good.
     ValidateActiveBootChain ();
 
+    RecordStatus = CapsuleAttemptRecordBegin (
+                     CapsuleAttemptRecordSourceCapsuleOnDisk
+                     );
+    if (EFI_ERROR (RecordStatus)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: capsule attempt record begin failed: %r\n",
+        __FUNCTION__,
+        RecordStatus
+        ));
+    }
+
     NeedReset = TRUE;
     Status    = CoDRelocateCapsule (0);
     if (EFI_ERROR (Status)) {
@@ -2860,6 +2898,18 @@ HandleCapsules (
         "%a: CoDRelocateCapsule failed: %r\n",
         __FUNCTION__,
         Status
+        ));
+    }
+
+    RecordStatus = CapsuleAttemptRecordFinalize (
+                     CapsuleAttemptRecordSourceCapsuleOnDisk
+                     );
+    if (EFI_ERROR (RecordStatus)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: capsule attempt record finalize failed: %r\n",
+        __FUNCTION__,
+        RecordStatus
         ));
     }
   }
@@ -2873,16 +2923,6 @@ HandleCapsules (
   // Activate new FW if any capsules installed
   //
   if (NeedReset) {
-    RecordStatus = CapsuleAttemptRecordUpdateFmpImageInfo ();
-    if (EFI_ERROR (RecordStatus)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: capsule attempt record update failed: %r\n",
-        __FUNCTION__,
-        RecordStatus
-        ));
-    }
-
     DEBUG ((DEBUG_WARN, "%a: resetting to activate new firmware ...\n", __FUNCTION__));
 
     StatusRegReset ();

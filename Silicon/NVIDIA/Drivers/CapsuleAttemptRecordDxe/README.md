@@ -48,6 +48,22 @@ UEFI execution model, so the driver does not raise TPL or maintain a lock.
 
 ## Protocol Operations
 
+### `Begin`
+
+Commits an `in-progress` record containing an assigned attempt ID and the
+caller's source context. The driver retains that identity for a matching
+finalization request. The begin record intentionally has no ESRT entry because
+the post-operation FMP result does not yet exist.
+
+### `Finalize`
+
+Gathers the current system FMP descriptor and commits a `completed` record. It
+uses the active attempt ID when the source matches a successful begin. If no
+matching begin exists, it assigns a new attempt ID so the final snapshot is
+still durable. A matching finalization request consumes the active attempt
+identity even if gathering or committing the completed record fails. This
+prevents a later capsule operation from reusing the earlier attempt ID.
+
 ### `UpdateFmpImageInfo`
 
 The update operation performs these steps:
@@ -63,13 +79,8 @@ The update operation performs these steps:
 8. Select a target slot, write the complete slot, flush it, read it back, and
    validate the result.
 
-The supported callers request this operation only after their capsule operation
-returns. `PlatformBootManagerLib` performs one update after capsule processing
-requests a reset and before performing that reset, covering capsule HOBs,
-Capsule-on-Disk, and saved capsules such as an Android OTA capsule. These flows
-do not use persist-across-reset delivery or request an UpdateCapsule-initiated
-reset, so the record is a post-operation FMP snapshot and not a pre-operation
-or in-progress marker.
+This compatibility operation commits a completed record with unknown source.
+Current callers use `Begin` and `Finalize`.
 
 The system FMP is produced by `FmpDevicePkg/FmpDxe`. That implementation
 exposes exactly one fixed-size firmware image descriptor, and the driver asserts
@@ -83,8 +94,8 @@ pointer fields are never persisted.
 ### `DumpLatest`
 
 The dump operation initializes the record context if necessary, selects the
-newest valid slot, validates its envelope and payload, and prints it through
-`DEBUG_ERROR`. It does not write, clear, or otherwise modify the record.
+newest valid slot, validates its envelope and payload, and prints it. It does
+not write, clear, or otherwise modify the record.
 
 The payload root `compatible` value and format version are validated
 explicitly. Immediate subnodes and their properties are then dumped without a
@@ -188,6 +199,9 @@ The current payload is a standalone DTB with this schema:
 / {
     compatible = "nvidia,capsule-attempt-record-v1";
     nvidia,format-version = <1>;
+    nvidia,attempt-id = /bits/ 64 <...>;
+    nvidia,attempt-source = "android-fastboot";
+    nvidia,attempt-state = "completed";
 
     esrt-entry-0 {
         nvidia,firmware-class =
@@ -200,6 +214,16 @@ The current payload is a standalone DTB with this schema:
 };
 ```
 
+`nvidia,attempt-source` is `android-fastboot`, `capsule-on-disk`,
+`saved-capsule`, or `unknown`. PlatformBootManager uses `capsule-on-disk` for
+Capsule-on-Disk processing and `saved-capsule` for `HandleSavedCapsules`
+processing. The compatibility update operation uses `unknown` because it does
+not identify a lifecycle producer.
+`nvidia,attempt-state` is `in-progress` or `completed`. A begin record has the
+three lifecycle properties but no ESRT subnode. Its completed replacement has
+the same attempt ID and includes the ESRT snapshot. Existing records without
+lifecycle properties remain readable.
+
 The firmware-class GUID is stored as a lowercase canonical string. Firmware
 version is always copied from the descriptor. Lowest-supported firmware version
 is copied for descriptor version 2 or later and otherwise stored as zero.
@@ -209,12 +233,6 @@ descriptor fields, package metadata, and pointer-referenced data are not
 stored.
 
 ## Error Behavior
-
-The driver uses `DEBUG_ERROR` for the accepted storage DT description and for
-a record update that has passed write, flush, readback, byte comparison, and
-record validation. These positive diagnostics remain visible on platforms that
-filter `DEBUG_INFO`; intervening `DEBUG_ERROR` messages identify a failed
-stage.
 
 - Feature-disabled client calls return `EFI_SUCCESS` as no-ops without reaching
   the driver.

@@ -13,6 +13,24 @@
 
 EFI_STATUS
 EFIAPI
+CapsuleAttemptRecordBegin (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  )
+{
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordFinalize (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  )
+{
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 CapsuleAttemptRecordUpdateFmpImageInfo (
   VOID
   )

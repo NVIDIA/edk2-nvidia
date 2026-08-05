@@ -41,6 +41,24 @@ returning `EFI_NOT_READY`.
 The public declarations are in
 [`CapsuleAttemptRecordLib.h`](../../Include/Library/CapsuleAttemptRecordLib.h).
 
+### `CapsuleAttemptRecordBegin`
+
+Commits a durable `in-progress` record before capsule processing starts. The
+caller supplies the coarse producer context: Android fastboot,
+PlatformBootManager `HandleCapsules`, or PlatformBootManager
+`HandleSavedCapsules`. The driver assigns an attempt ID and retains it for the
+matching finalization request.
+
+### `CapsuleAttemptRecordFinalize`
+
+Gathers the post-operation FMP image information and commits a `completed`
+record. When a matching begin succeeded, the completed record uses the same
+attempt ID. A finalization without a matching begin remains valid and receives
+a new attempt ID, preserving the existing PlatformBootManager reset-path
+snapshot behavior. A matching finalization consumes the active attempt identity
+even if the completed record cannot be gathered or committed, so a later
+capsule operation cannot inherit the earlier attempt ID.
+
 ### `CapsuleAttemptRecordUpdateFmpImageInfo`
 
 Requests that the driver gather the current FMP image information for
@@ -48,18 +66,25 @@ Requests that the driver gather the current FMP image information for
 not pass an FMP descriptor or storage information; the driver owns both
 operations.
 
-Current callers invoke this function after their capsule operation returns:
+This operation remains available for compatibility and commits a completed
+record with unknown source. Current call sites use the lifecycle operations:
 
-- `AndroidFastbootApp` calls it immediately after `UpdateCapsule`.
-- `PlatformBootManagerLib` calls it after capsule processing has requested a
-  reset and before performing that reset. This covers capsule HOBs,
-  Capsule-on-Disk, and saved capsules such as an Android OTA capsule.
+- `AndroidFastbootApp` begins immediately before `UpdateCapsule` and finalizes
+  immediately after it returns.
+- `PlatformBootManagerLib` begins immediately before Capsule-on-Disk relocation
+  or saved-capsule `UpdateCapsule` processing and finalizes immediately after
+  the operation returns. Capsule-on-Disk uses the `capsule-on-disk`
+  source, while saved-capsule processing uses `saved-capsule`.
+
+Capsule attempt records are not supported for HOB-delivered capsule updates.
+That path intentionally performs no Begin, Finalize, or compatibility update
+operation.
 
 These supported capsule flows do not use persist-across-reset delivery and do
-not request that `UpdateCapsule` initiate a reset. The capsule operation
-therefore returns before the Phase 1 snapshot is requested. The committed
-record describes the FMP state available after that returned operation; it is
-not an in-progress marker written before the operation starts.
+not request that `UpdateCapsule` initiate a reset. The completed record
+describes the FMP state available after the returned operation. If reset or
+power loss prevents finalization, the durable in-progress record remains as
+evidence that processing began.
 
 The record status is independent of the capsule operation status. A record
 failure is never substituted for the original capsule result.
@@ -69,7 +94,7 @@ failure is never substituted for the original capsule result.
 Requests that the driver read and print the newest valid record without
 modifying storage. `PlatformBootManagerLib` calls this before capsule handling
 during boot, allowing the previously committed attempt to be reported before
-a new Capsule-on-Disk operation can replace it.
+a new capsule operation can replace it.
 
 ## Call Flow
 
@@ -93,18 +118,9 @@ The library returns:
 - The status returned by the selected protocol operation after successful
   discovery.
 
-The library emits `DEBUG_INFO` tracing when an operation is skipped because the
-feature PCD is disabled. When the feature is enabled, an update request and any
-protocol discovery failure are logged at `DEBUG_ERROR`. This makes a reached
-update call visible even when `DEBUG_INFO` is filtered and identifies a missing
-or undispatched driver as a platform integration error. The library does not
-log an error returned by a successfully located driver protocol. Callers log
-those operation errors; this includes `EFI_UNSUPPORTED` when the driver
-encounters an unsupported configuration or record format.
-
 ## Execution Context
 
-Both public operations are synchronous and must be called at
+All public operations are synchronous and must be called at
 `TPL_APPLICATION`. The driver may allocate memory, enumerate protocols, parse
 DT data, and perform Block I/O before returning.
 

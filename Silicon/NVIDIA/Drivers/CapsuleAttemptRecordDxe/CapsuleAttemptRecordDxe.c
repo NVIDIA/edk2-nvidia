@@ -20,6 +20,7 @@
 #include <Protocol/FirmwareManagement.h>
 
 #include "CapsuleAttemptRecordDxeInternal.h"
+#include "CapsuleAttemptRecordDxeState.h"
 
 #define CAPSULE_ATTEMPT_RECORD_PRIVATE_SIGNATURE  SIGNATURE_32 ('C', 'A', 'R', 'D')
 
@@ -27,6 +28,7 @@ typedef struct {
   UINT32                                    Signature;
   NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL    Protocol;
   CAPSULE_ATTEMPT_RECORD_CONTEXT            *RecordContext;
+  CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE     State;
 } CAPSULE_ATTEMPT_RECORD_PRIVATE;
 
 #define CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL(ProtocolPointer)  \
@@ -47,14 +49,37 @@ CapsuleAttemptRecordProtocolDumpLatest (
   IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This
   );
 
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolBegin (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  );
+
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolFinalize (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  );
+
 STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
   CAPSULE_ATTEMPT_RECORD_PRIVATE_SIGNATURE,
   {
     NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION,
     CapsuleAttemptRecordProtocolUpdateFmpImageInfo,
-    CapsuleAttemptRecordProtocolDumpLatest
+    CapsuleAttemptRecordProtocolDumpLatest,
+    CapsuleAttemptRecordProtocolBegin,
+    CapsuleAttemptRecordProtocolFinalize
   },
-  NULL
+  NULL,
+  {
+    FALSE,
+    0,
+    CapsuleAttemptRecordSourceUnknown
+  }
 };
 
 STATIC
@@ -302,19 +327,16 @@ InitializeRecordContext (
 
 STATIC
 EFI_STATUS
-EFIAPI
-CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
-  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This
+FinalizeRecord (
+  IN OUT CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
+  IN     UINT64                          AttemptId,
+  IN     BOOLEAN                         AttemptIdValid
   )
 {
   EFI_STATUS                                 Status;
-  CAPSULE_ATTEMPT_RECORD_PRIVATE             *Private;
   CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  ImageInfoSet;
   EFI_GUID                                   ImageTypeId;
-
-  if (This == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
 
   if (PcdGetSize (PcdSystemFmpCapsuleImageTypeIdGuid) != sizeof (ImageTypeId)) {
     DEBUG ((
@@ -326,7 +348,6 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
     return EFI_UNSUPPORTED;
   }
 
-  Private = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
   CopyGuid (&ImageTypeId, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid));
 
   Status = FindFmpImageInfo (&ImageTypeId, &ImageInfoSet);
@@ -337,14 +358,111 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
 
   Status = InitializeRecordContext (Private);
   if (!EFI_ERROR (Status)) {
-    Status = CapsuleAttemptRecordUpdateFmpImageInfo (
+    Status = CapsuleAttemptRecordFinalize (
                Private->RecordContext,
+               Source,
+               AttemptId,
+               AttemptIdValid,
                &ImageTypeId,
                &ImageInfoSet
                );
   }
 
   FreeFmpImageInfoSet (&ImageInfoSet);
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This
+  )
+{
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return FinalizeRecord (
+           CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This),
+           CapsuleAttemptRecordSourceUnknown,
+           0,
+           FALSE
+           );
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolBegin (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  )
+{
+  EFI_STATUS                      Status;
+  CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private;
+  UINT64                          AttemptId;
+
+  if ((This == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
+      (Source >= CapsuleAttemptRecordSourceMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  Status  = InitializeRecordContext (Private);
+  if (!EFI_ERROR (Status)) {
+    Status = CapsuleAttemptRecordBegin (
+               Private->RecordContext,
+               Source,
+               &AttemptId
+               );
+  }
+
+  if (!EFI_ERROR (Status)) {
+    CapsuleAttemptRecordStateBegin (&Private->State, Source, AttemptId);
+    DEBUG ((DEBUG_INFO, "%a: attempt %Lu began for source %u\n", __FUNCTION__, AttemptId, Source));
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolFinalize (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  )
+{
+  EFI_STATUS                      Status;
+  CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private;
+  UINT64                          AttemptId;
+  BOOLEAN                         MatchingAttempt;
+
+  if ((This == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
+      (Source >= CapsuleAttemptRecordSourceMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private         = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  MatchingAttempt = CapsuleAttemptRecordStateMatch (&Private->State, Source, &AttemptId);
+
+  Status = FinalizeRecord (
+             Private,
+             Source,
+             AttemptId,
+             MatchingAttempt
+             );
+  if (MatchingAttempt) {
+    CapsuleAttemptRecordStateConsume (&Private->State);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a: attempt finalized for source %u\n", __FUNCTION__, Source));
+  }
+
   return Status;
 }
 

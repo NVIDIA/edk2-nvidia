@@ -319,10 +319,19 @@ HandleOemBootloaderUpdate (
     CapsuleHeader->CapsuleImageSize
     ));
 
-  Status       = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
-  RecordStatus = CapsuleAttemptRecordUpdateFmpImageInfo ();
+  RecordStatus = CapsuleAttemptRecordBegin (
+                   CapsuleAttemptRecordSourceAndroidFastboot
+                   );
   if (EFI_ERROR (RecordStatus)) {
-    DEBUG ((DEBUG_ERROR, "bootloader_update: capsule attempt record update failed: %r\n", RecordStatus));
+    DEBUG ((DEBUG_ERROR, "bootloader_update: capsule attempt record begin failed: %r\n", RecordStatus));
+  }
+
+  Status       = gRT->UpdateCapsule (&CapsuleHeader, 1, (UINTN)NULL);
+  RecordStatus = CapsuleAttemptRecordFinalize (
+                   CapsuleAttemptRecordSourceAndroidFastboot
+                   );
+  if (EFI_ERROR (RecordStatus)) {
+    DEBUG ((DEBUG_ERROR, "bootloader_update: capsule attempt record finalize failed: %r\n", RecordStatus));
   }
 
   if (EFI_ERROR (Status)) {

@@ -16,7 +16,15 @@
   { 0xada0d916, 0xc07e, 0x489f,                     \
     { 0x93, 0x33, 0x7f, 0x44, 0x8e, 0x82, 0x2c, 0x17 } }
 
-#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00010000
+#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00020000
+
+typedef enum {
+  CapsuleAttemptRecordSourceUnknown = 0,
+  CapsuleAttemptRecordSourceAndroidFastboot,
+  CapsuleAttemptRecordSourceCapsuleOnDisk,
+  CapsuleAttemptRecordSourceSavedCapsule,
+  CapsuleAttemptRecordSourceMax
+} CAPSULE_ATTEMPT_RECORD_SOURCE;
 
 typedef struct _NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL
   NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL;
@@ -68,6 +76,42 @@ EFI_STATUS
   IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This
   );
 
+/**
+  Persist an in-progress capsule attempt record.
+
+  @param[in] This    A pointer to the protocol instance.
+  @param[in] Source  The producer or capsule-processing context.
+
+  @retval EFI_SUCCESS            The marker was persisted.
+  @retval EFI_INVALID_PARAMETER  This is NULL or Source is invalid.
+  @retval Others                 The marker could not be persisted.
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI *NVIDIA_CAPSULE_ATTEMPT_RECORD_BEGIN)(
+  IN  NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN  CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  );
+
+/**
+  Persist a completed capsule attempt record with current FMP information.
+
+  @param[in] This    A pointer to the protocol instance.
+  @param[in] Source  The producer or capsule-processing context.
+
+  @retval EFI_SUCCESS            The record was persisted.
+  @retval EFI_INVALID_PARAMETER  This is NULL or Source is invalid.
+  @retval Others                 The record could not be persisted.
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI *NVIDIA_CAPSULE_ATTEMPT_RECORD_FINALIZE)(
+  IN  NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN  CAPSULE_ATTEMPT_RECORD_SOURCE           Source
+  );
+
 ///
 /// Protocol used by executable modules to access the singleton capsule attempt
 /// record service.
@@ -76,6 +120,8 @@ struct _NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL {
   UINT32                                                 Revision;
   NVIDIA_CAPSULE_ATTEMPT_RECORD_UPDATE_FMP_IMAGE_INFO    UpdateFmpImageInfo;
   NVIDIA_CAPSULE_ATTEMPT_RECORD_DUMP_LATEST              DumpLatest;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_BEGIN                    Begin;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_FINALIZE                 Finalize;
 };
 
 extern EFI_GUID  gNVIDIACapsuleAttemptRecordProtocolGuid;

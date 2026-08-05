@@ -11,6 +11,41 @@
 #define __CAPSULE_ATTEMPT_RECORD_LIB_H__
 
 #include <Uefi/UefiBaseType.h>
+#include <Protocol/CapsuleAttemptRecordProtocol.h>
+
+/**
+  Persist a durable marker that a capsule attempt is starting.
+
+  @param[in] Source  The producer or capsule-processing context.
+
+  @retval EFI_SUCCESS            The marker was persisted, or support is disabled.
+  @retval EFI_INVALID_PARAMETER  Source is not a supported producer.
+  @retval EFI_NOT_READY          The driver protocol is unavailable.
+  @retval Others                 The marker could not be persisted.
+
+**/
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordBegin (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  );
+
+/**
+  Persist the completed capsule attempt and current FMP image information.
+
+  @param[in] Source  The producer or capsule-processing context.
+
+  @retval EFI_SUCCESS            The record was persisted, or support is disabled.
+  @retval EFI_INVALID_PARAMETER  Source is not a supported producer.
+  @retval EFI_NOT_READY          The driver protocol is unavailable.
+  @retval Others                 The record could not be persisted.
+
+**/
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordFinalize (
+  IN CAPSULE_ATTEMPT_RECORD_SOURCE  Source
+  );
 
 /**
   Update the capsule attempt record with the current FMP image information.
