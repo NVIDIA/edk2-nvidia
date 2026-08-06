@@ -60,9 +60,26 @@ the post-operation FMP result does not yet exist.
 Gathers the current system FMP descriptor and commits a `completed` record. It
 uses the active attempt ID when the source matches a successful begin. If no
 matching begin exists, it assigns a new attempt ID so the final snapshot is
-still durable. A matching finalization request consumes the active attempt
-identity even if gathering or committing the completed record fails. This
-prevents a later capsule operation from reusing the earlier attempt ID.
+still durable. When the source matches an active attempt, the latest valid
+CheckImage or SetImage diagnostics are retained in the completed record. A
+matching finalization request consumes the active attempt identity even if
+gathering or committing the completed record fails. This prevents a later
+capsule operation from reusing the earlier attempt ID.
+
+### `UpdateFmpDiagnostics`
+
+This operation records information from the actual Tegra FMP validation and
+application paths. Its `CheckImage` argument distinguishes the producer. Each
+request identifies the failed image when known, the raw `EFI_STATUS`, the
+detailed NVIDIA last-attempt status, `TegraPlatformSpec`, and the compatible
+TnSpec. The driver
+commits a replacement `in-progress` record immediately, using the active
+attempt ID and source. This makes a deep FMP failure durable before control
+returns to the outer capsule lifecycle call site.
+
+The driver retains the newest diagnostic in memory and includes it when the
+matching attempt is finalized. A diagnostic update without an active attempt
+returns `EFI_NOT_READY`.
 
 ### `UpdateFmpImageInfo`
 
@@ -203,6 +220,16 @@ The current payload is a standalone DTB with this schema:
     nvidia,attempt-source = "android-fastboot";
     nvidia,attempt-state = "completed";
 
+    diagnostics {
+        nvidia,producer = "fmp-tegra-set-image";
+        nvidia,failed-image = "A_cpu-bootloader";
+        nvidia,efi-status = /bits/ 64 <...>;
+        nvidia,nvidia-status = <...>;
+        nvidia,platform-spec = "...";
+        nvidia,tnspec = "...";
+        nvidia,completion-percent = <47>;
+    };
+
     esrt-entry-0 {
         nvidia,firmware-class =
             "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
@@ -223,6 +250,27 @@ not identify a lifecycle producer.
 three lifecycle properties but no ESRT subnode. Its completed replacement has
 the same attempt ID and includes the ESRT snapshot. Existing records without
 lifecycle properties remain readable.
+
+The optional `diagnostics` subnode contains the newest event reported by
+`FmpTegraCheckImage` or `FmpTegraSetImage`. The producer is
+`fmp-tegra-check-image` or `fmp-tegra-set-image`. `nvidia,efi-status` preserves
+the raw status before an FMP path maps it to its public return value, while
+`nvidia,nvidia-status` identifies the operation result using the detailed
+device last-attempt code. `nvidia,failed-image` is omitted when no particular
+image applies. For SetImage diagnostics, the optional
+`nvidia,completion-percent` property contains the current percentage from 0
+through 100. It begins at zero and advances after each progress percentage is
+successfully displayed to the user. CheckImage diagnostics omit this property
+because that producer does not own the update progress display. The value is
+retained in memory until the SetImage
+diagnostic is persisted when SetImage returns. A reset, hang, or power loss
+before that point does not cause periodic progress writes and may leave the
+previous diagnostic as the newest persistent record.
+
+`nvidia,platform-spec` contains `TegraPlatformSpec`, and `nvidia,tnspec`
+contains `TegraPlatformCompatSpec`, the compatible TnSpec used for capsule
+image selection. Either property is omitted if its source value is not
+available.
 
 The firmware-class GUID is stored as a lowercase canonical string. Firmware
 version is always copied from the descriptor. Lowest-supported firmware version
@@ -256,6 +304,7 @@ The host test is located in `UnitTest/` and compiles
 - Trailing-wildcard partition-name matching.
 - Storage DT parsing.
 - Diagnostic DTB construction and GUID-string encoding.
+- FMP diagnostic and platform-identity DTB properties.
 - Block I/O commits, slot advancement, corruption fallback, and dumping.
 - Read-only media, unaligned regions, and nonmatching FMP image types.
 - Sequence comparison across wrap.

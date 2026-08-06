@@ -16,7 +16,7 @@
   { 0xada0d916, 0xc07e, 0x489f,                     \
     { 0x93, 0x33, 0x7f, 0x44, 0x8e, 0x82, 0x2c, 0x17 } }
 
-#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00020000
+#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00040000
 
 typedef enum {
   CapsuleAttemptRecordSourceUnknown = 0,
@@ -112,16 +112,50 @@ EFI_STATUS
   IN  CAPSULE_ATTEMPT_RECORD_SOURCE           Source
   );
 
+/**
+  Persist diagnostics produced while checking or applying a capsule image.
+
+  @param[in] This            A pointer to the protocol instance.
+  @param[in] CheckImage      TRUE for CheckImage; FALSE for SetImage.
+  @param[in] FailedImage     Failed image name, or NULL when no image applies.
+  @param[in] RawStatus       Raw status returned by the failing operation.
+  @param[in] NvidiaStatus    Detailed NVIDIA last-attempt status.
+  @param[in] PlatformSpec    Tegra platform specification, or NULL.
+  @param[in] TnSpec          Tegra compatible TnSpec, or NULL.
+  @param[in] Completion      Current SetImage completion percentage, or NULL
+                             for a producer that does not report completion.
+
+  @retval EFI_SUCCESS            The diagnostic record was persisted.
+  @retval EFI_INVALID_PARAMETER  This is NULL, a string is too long, or the
+                                 completion percentage exceeds 100.
+  @retval EFI_NOT_READY          No capsule attempt is active.
+  @retval Others                 The record could not be persisted.
+
+**/
+typedef
+EFI_STATUS
+(EFIAPI *NVIDIA_CAPSULE_ATTEMPT_RECORD_UPDATE_FMP_DIAGNOSTICS)(
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN BOOLEAN                                 CheckImage,
+  IN CONST CHAR16                            *FailedImage OPTIONAL,
+  IN EFI_STATUS                              RawStatus,
+  IN UINT32                                  NvidiaStatus,
+  IN CONST CHAR8                             *PlatformSpec OPTIONAL,
+  IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT32                            *Completion OPTIONAL
+  );
+
 ///
 /// Protocol used by executable modules to access the singleton capsule attempt
 /// record service.
 ///
 struct _NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL {
-  UINT32                                                 Revision;
-  NVIDIA_CAPSULE_ATTEMPT_RECORD_UPDATE_FMP_IMAGE_INFO    UpdateFmpImageInfo;
-  NVIDIA_CAPSULE_ATTEMPT_RECORD_DUMP_LATEST              DumpLatest;
-  NVIDIA_CAPSULE_ATTEMPT_RECORD_BEGIN                    Begin;
-  NVIDIA_CAPSULE_ATTEMPT_RECORD_FINALIZE                 Finalize;
+  UINT32                                                  Revision;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_UPDATE_FMP_IMAGE_INFO     UpdateFmpImageInfo;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_DUMP_LATEST               DumpLatest;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_BEGIN                     Begin;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_FINALIZE                  Finalize;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_UPDATE_FMP_DIAGNOSTICS    UpdateFmpDiagnostics;
 };
 
 extern EFI_GUID  gNVIDIACapsuleAttemptRecordProtocolGuid;

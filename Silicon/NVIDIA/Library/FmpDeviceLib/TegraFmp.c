@@ -13,6 +13,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/BootChainInfoLib.h>
+#include <Library/CapsuleAttemptRecordLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/DisplayUpdateProgressLib.h>
@@ -103,11 +104,12 @@ STATIC CONST CHAR16  *MinimalUnsupportedImageNames[] = {
 };
 
 // progress tracking variables
-STATIC UINTN  mTotalBytesToFlash  = 0;
-STATIC UINTN  mTotalBytesFlashed  = 0;
-STATIC UINTN  mTotalBytesToVerify = 0;
-STATIC UINTN  mTotalBytesVerified = 0;
-STATIC UINTN  mCurrentCompletion  = 0;
+STATIC UINTN   mTotalBytesToFlash       = 0;
+STATIC UINTN   mTotalBytesFlashed       = 0;
+STATIC UINTN   mTotalBytesToVerify      = 0;
+STATIC UINTN   mTotalBytesVerified      = 0;
+STATIC UINTN   mCurrentCompletion       = 0;
+STATIC UINT32  mLastDisplayedCompletion = 0;
 
 // module variables
 STATIC EFI_EVENT     mAddressChangeEvent      = NULL;
@@ -123,12 +125,42 @@ STATIC BOOLEAN       mIsProductionFused       = FALSE;
 STATIC UINT32        mActiveBootChain         = MAX_UINT32;
 STATIC CONST CHAR16  **mFwImagesRequired      = NULL;
 STATIC UINTN         mFwImagesRequiredCount   = 0;
+STATIC CONST CHAR16  *mDiagnosticImageName    = NULL;
 
 STATIC NVIDIA_BOOT_CHAIN_PROTOCOL                     *mBootChainProtocol   = NULL;
 STATIC NVIDIA_BR_BCT_UPDATE_PROTOCOL                  *mBrBctUpdateProtocol = NULL;
 STATIC EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  mProgress             = NULL;
 STATIC EFI_HANDLE                                     mImageHandle          = NULL;
-FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER                 mInstaller            = NULL;
+
+STATIC
+VOID
+RecordFmpDiagnostic (
+  IN BOOLEAN       CheckImage,
+  IN CONST CHAR16  *FailedImage OPTIONAL,
+  IN EFI_STATUS    RawStatus,
+  IN UINT32        NvidiaStatus
+  )
+{
+  EFI_STATUS    Status;
+  CONST UINT32  *CompletionPointer;
+
+  CompletionPointer = CheckImage ? NULL : &mLastDisplayedCompletion;
+
+  Status = CapsuleAttemptRecordUpdateFmpDiagnostics (
+             CheckImage,
+             FailedImage,
+             RawStatus,
+             NvidiaStatus,
+             mPlatformSpec,
+             mPlatformCompatSpec,
+             CompletionPointer
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: attempt record diagnostic update failed: %r\n", __FUNCTION__, Status));
+  }
+}
+
+FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  mInstaller = NULL;
 
 CONST CHAR16 **
 EFIAPI
@@ -414,12 +446,19 @@ UpdateProgress (
   IN  UINTN  Completion
   )
 {
+  EFI_STATUS  Status;
+
   EFI_STATUS EFIAPI
   UpdateImageProgress (
     IN  UINTN  Completion
     );
 
-  return UpdateImageProgress (Completion);
+  Status = UpdateImageProgress (Completion);
+  if (!EFI_ERROR (Status)) {
+    mLastDisplayedCompletion = (UINT32)Completion;
+  }
+
+  return Status;
 }
 
 /**
@@ -934,7 +973,8 @@ WriteImage (
   BOOLEAN                      Match;
   BOOLEAN                      TailAllFf;
 
-  FwImageProtocol = FwImageFindProtocol (Name);
+  mDiagnosticImageName = Name;
+  FwImageProtocol      = FwImageFindProtocol (Name);
   if (FwImageProtocol == NULL) {
     DEBUG ((
       DEBUG_INFO,
@@ -1067,8 +1107,9 @@ WriteRegularImages (
     CONST CHAR16              *ImageName;
     NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
 
-    FwImageProtocol = FwImageProtocolArray[Index];
-    ImageName       = FwImageProtocol->ImageName;
+    FwImageProtocol      = FwImageProtocolArray[Index];
+    ImageName            = FwImageProtocol->ImageName;
+    mDiagnosticImageName = ImageName;
     if ((!MinimalUpdate && IsSpecialImageName (ImageName)) ||
         (MinimalUpdate && NameIsInList (ImageName, MinimalUnsupportedImageNames)))
     {
@@ -1138,6 +1179,7 @@ VerifyImage (
   UINTN                        ImageIndex;
   FW_IMAGE_ATTRIBUTES          ImageAttributes;
 
+  mDiagnosticImageName = Name;
   if (!mPcdFmpWriteVerifyImage) {
     return EFI_SUCCESS;
   }
@@ -1265,8 +1307,9 @@ VerifyAllImages (
     CONST CHAR16              *ImageName;
     NVIDIA_FW_IMAGE_PROTOCOL  *FwImageProtocol;
 
-    FwImageProtocol = FwImageProtocolArray[Index];
-    ImageName       = FwImageProtocol->ImageName;
+    FwImageProtocol      = FwImageProtocolArray[Index];
+    ImageName            = FwImageProtocol->ImageName;
+    mDiagnosticImageName = ImageName;
     if (NameIsInList (ImageName, NoVerifyPartitionNames) ||
         (MinimalUpdate && NameIsInList (ImageName, MinimalUnsupportedImageNames)))
     {
@@ -1329,7 +1372,8 @@ InvalidateImage (
   EFI_STATUS                Status;
   UINTN                     Bytes;
 
-  FwImageProtocol = FwImageFindProtocol (Name);
+  mDiagnosticImageName = Name;
+  FwImageProtocol      = FwImageFindProtocol (Name);
   if (FwImageProtocol == NULL) {
     DEBUG ((
       DEBUG_INFO,
@@ -1533,13 +1577,14 @@ FmpTegraCheckImage (
   )
 {
   CONST FW_PACKAGE_HEADER      *Header;
+  CONST CHAR16                 *ImageName;
   EFI_STATUS                   Status;
+  EFI_STATUS                   ReturnStatus;
   UINTN                        Index;
   UINTN                        ImageCount;
   NVIDIA_FW_IMAGE_PROTOCOL     **FwImageProtocolArray;
   CONST FW_PACKAGE_IMAGE_INFO  *PkgImageInfo;
   BOOLEAN                      Canceled;
-  CONST CHAR16                 *RequiredImageName;
   NVIDIA_FW_IMAGE_PROTOCOL     *FwImageProtocol;
   UINTN                        GptImageIndex;
   BOOLEAN                      MinimalUpdate;
@@ -1557,21 +1602,31 @@ FmpTegraCheckImage (
   }
 
   *ImageUpdatable = IMAGE_UPDATABLE_INVALID;
+  ImageName       = NULL;
+  ReturnStatus    = EFI_ABORTED;
 
   if (Image == NULL) {
     *LastAttemptStatus = LAS_ERROR_BAD_IMAGE_POINTER;
-    return EFI_INVALID_PARAMETER;
+    Status             = EFI_INVALID_PARAMETER;
+    ReturnStatus       = Status;
+    goto Error;
   }
 
   if (!mFmpLibInitialized) {
     *LastAttemptStatus = LAS_ERROR_FMP_LIB_UNINITIALIZED;
-    return EFI_NOT_READY;
+    Status             = EFI_NOT_READY;
+    ReturnStatus       = Status;
+    goto Error;
   }
 
   Status = mBootChainProtocol->CheckAndCancelUpdate (mBootChainProtocol, &Canceled);
   if (EFI_ERROR (Status) || Canceled) {
     *LastAttemptStatus = LAS_ERROR_BOOT_CHAIN_UPDATE_CANCELED;
-    return EFI_ABORTED;
+    if (!EFI_ERROR (Status)) {
+      Status = EFI_ABORTED;
+    }
+
+    goto Error;
   }
 
   Header = (CONST FW_PACKAGE_HEADER *)Image;
@@ -1584,13 +1639,14 @@ FmpTegraCheckImage (
       Status
       ));
     *LastAttemptStatus = LAS_ERROR_INVALID_PACKAGE_HEADER;
-    return EFI_ABORTED;
+    goto Error;
   }
 
   if (Header->Type != FW_PACKAGE_TYPE_FW) {
     DEBUG ((DEBUG_ERROR, "Package type=%u not supported!\n", Header->Type));
     *LastAttemptStatus = LAS_ERROR_UNSUPPORTED_PACKAGE_TYPE;
-    return EFI_ABORTED;
+    Status             = EFI_UNSUPPORTED;
+    goto Error;
   }
 
   Status = FwPackageValidateImageInfoArray (Header);
@@ -1601,7 +1657,8 @@ FmpTegraCheckImage (
       Status
       ));
     *LastAttemptStatus = LAS_ERROR_INVALID_PACKAGE_IMAGE_INFO_ARRAY;
-    return Status;
+    ReturnStatus       = Status;
+    goto Error;
   }
 
   // Detect development minimal capsule: single-image or multi-image
@@ -1610,7 +1667,9 @@ FmpTegraCheckImage (
     if (!mPcdFmpSingleImageUpdate && !PcdGetBool (PcdFmpMultiImageMinimalUpdate)) {
       DEBUG ((DEBUG_ERROR, "%a: minimal update PCD not set\n", __FUNCTION__));
       *LastAttemptStatus = LAS_ERROR_SINGLE_IMAGE_NOT_SUPPORTED;
-      return EFI_UNSUPPORTED;
+      Status             = EFI_UNSUPPORTED;
+      ReturnStatus       = Status;
+      goto Error;
     }
 
     MinimalUpdate = TRUE;
@@ -1628,21 +1687,21 @@ FmpTegraCheckImage (
       (FwImageFindProtocol (FW_PARTITION_UPDATE_INACTIVE_PARTITIONS) != NULL) &&
       !EFI_ERROR (GetPackageImageIndex (Header, L"GPT", &GptImageIndex)))
   {
-    Status = WriteImage (
-               Header,
-               FW_PARTITION_UPDATE_INACTIVE_PARTITIONS,
-               FW_IMAGE_RW_FLAG_NONE
-               );
+    ImageName = FW_PARTITION_UPDATE_INACTIVE_PARTITIONS;
+    Status    = WriteImage (
+                  Header,
+                  ImageName,
+                  FW_IMAGE_RW_FLAG_NONE
+                  );
     if (EFI_ERROR (Status)) {
       *LastAttemptStatus = LAS_ERROR_GPT_METADATA_UPDATE_FAILED;
-      return EFI_ABORTED;
+      goto Error;
     }
   }
 
   ImageCount           = FwImageGetCount ();
   FwImageProtocolArray = FwImageGetProtocolArray ();
   for (Index = 0; Index < ImageCount; Index++) {
-    CONST CHAR16         *ImageName;
     UINTN                PkgImageIndex;
     FW_IMAGE_ATTRIBUTES  ImageAttributes;
 
@@ -1660,7 +1719,7 @@ FmpTegraCheckImage (
       if (!MinimalUpdate && NameIsInList (ImageName, mFwImagesRequired)) {
         DEBUG ((DEBUG_ERROR, "%a: Missing required image for partition %s: %r\n", __FUNCTION__, ImageName, Status));
         *LastAttemptStatus = LAS_ERROR_IMAGE_NOT_IN_PACKAGE;
-        return EFI_ABORTED;
+        goto Error;
       }
 
       continue;
@@ -1681,7 +1740,7 @@ FmpTegraCheckImage (
         Status
         ));
       *LastAttemptStatus = LAS_ERROR_IMAGE_ATTRIBUTES_ERROR;
-      return EFI_ABORTED;
+      goto Error;
     }
 
     if (PkgImageInfo->Bytes > ImageAttributes.WriteBytes) {
@@ -1693,7 +1752,8 @@ FmpTegraCheckImage (
         ImageAttributes.WriteBytes
         ));
       *LastAttemptStatus = LAS_ERROR_IMAGE_TOO_BIG;
-      return EFI_ABORTED;
+      Status             = EFI_BAD_BUFFER_SIZE;
+      goto Error;
     }
 
     if (((CONST UINT8 *)FwPackageImageDataPtr (Header, PkgImageIndex) +
@@ -1705,27 +1765,34 @@ FmpTegraCheckImage (
         ImageName
         ));
       *LastAttemptStatus = LAS_ERROR_PACKAGE_SIZE_ERROR;
-      return EFI_ABORTED;
+      Status             = EFI_BAD_BUFFER_SIZE;
+      goto Error;
     }
   }
 
   // Check that every required image has a protocol
   if (!MinimalUpdate) {
     for (Index = 0; Index < mFwImagesRequiredCount; Index++) {
-      RequiredImageName = mFwImagesRequired[Index];
-      FwImageProtocol   = FwImageFindProtocol (RequiredImageName);
+      ImageName       = mFwImagesRequired[Index];
+      FwImageProtocol = FwImageFindProtocol (ImageName);
       if (FwImageProtocol == NULL) {
-        DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, RequiredImageName));
+        DEBUG ((DEBUG_ERROR, "%a: no protocol for %s\n", __FUNCTION__, ImageName));
         *LastAttemptStatus = LAS_ERROR_NO_PROTOCOL_FOR_IMAGE;
-        return EFI_ABORTED;
+        Status             = EFI_NOT_FOUND;
+        goto Error;
       }
     }
   }
 
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
   *ImageUpdatable    = IMAGE_UPDATABLE_VALID;
+  RecordFmpDiagnostic (TRUE, NULL, EFI_SUCCESS, *LastAttemptStatus);
 
   return EFI_SUCCESS;
+
+Error:
+  RecordFmpDiagnostic (TRUE, ImageName, Status, *LastAttemptStatus);
+  return ReturnStatus;
 }
 
 EFI_STATUS
@@ -1741,7 +1808,9 @@ FmpTegraSetImage (
   )
 {
   CONST FW_PACKAGE_HEADER  *Header;
+  CONST CHAR16             *FailedImage;
   EFI_STATUS               Status;
+  EFI_STATUS               ReturnStatus;
   BOOLEAN                  GptUpdate;
   UINTN                    GptImageIndex;
 
@@ -1758,20 +1827,30 @@ FmpTegraSetImage (
     return EFI_INVALID_PARAMETER;
   }
 
+  mLastDisplayedCompletion = 0;
+
+  FailedImage  = NULL;
+  ReturnStatus = EFI_ABORTED;
+
   if (Image == NULL) {
     *LastAttemptStatus = LAS_ERROR_BAD_IMAGE_POINTER;
-    return EFI_INVALID_PARAMETER;
+    Status             = EFI_INVALID_PARAMETER;
+    ReturnStatus       = Status;
+    goto Error;
   }
 
   if (!mFmpLibInitialized) {
     *LastAttemptStatus = LAS_ERROR_FMP_LIB_UNINITIALIZED;
-    return EFI_NOT_READY;
+    Status             = EFI_NOT_READY;
+    ReturnStatus       = Status;
+    goto Error;
   }
 
-  Header              = (CONST FW_PACKAGE_HEADER *)Image;
-  mTotalBytesFlashed  = 0;
-  mTotalBytesVerified = 0;
-  mCurrentCompletion  = 0;
+  Header               = (CONST FW_PACKAGE_HEADER *)Image;
+  mDiagnosticImageName = NULL;
+  mTotalBytesFlashed   = 0;
+  mTotalBytesVerified  = 0;
+  mCurrentCompletion   = 0;
 
   // Ignore Progress function parameter since it is a null implementation
   // when UpdateCapsule() is the caller.  Use our UpdateProgress() instead.
@@ -1786,10 +1865,12 @@ FmpTegraSetImage (
   if (((Header->ImageCount == 1) && mPcdFmpSingleImageUpdate) ||
       PcdGetBool (PcdFmpMultiImageMinimalUpdate))
   {
-    Status = FmpTegraSetMinimalImages (Header);
+    mDiagnosticImageName = NULL;
+    Status               = FmpTegraSetMinimalImages (Header);
     if (EFI_ERROR (Status)) {
       *LastAttemptStatus = LAS_ERROR_SET_SINGLE_IMAGE_FAILED;
-      return EFI_ABORTED;
+      FailedImage        = mDiagnosticImageName;
+      goto Error;
     }
 
     goto Done;
@@ -1808,7 +1889,7 @@ FmpTegraSetImage (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Set inactive chain bad failed: %r\n", __FUNCTION__, Status));
     *LastAttemptStatus = LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_BAD_FAILED;
-    return EFI_ABORTED;
+    goto Error;
   }
 
   // detect optional GPT update
@@ -1825,7 +1906,8 @@ FmpTegraSetImage (
     if ((Status != EFI_VOLUME_CORRUPTED) && (Status != EFI_SUCCESS)) {
       DEBUG ((DEBUG_ERROR, "%a: error verifying GPT: %r\n", __FUNCTION__, Status));
       *LastAttemptStatus = LAS_ERROR_GPT_VERIFY_FAILED;
-      return EFI_ABORTED;
+      FailedImage        = L"GPT";
+      goto Error;
     }
 
     GptUpdate = (Status != EFI_SUCCESS);
@@ -1836,7 +1918,8 @@ FmpTegraSetImage (
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Invalidate GPT failed: %r\n", Status));
       *LastAttemptStatus = LAS_ERROR_GPT_INVALIDATE_FAILED;
-      return EFI_ABORTED;
+      FailedImage        = L"GPT";
+      goto Error;
     }
   }
 
@@ -1844,26 +1927,31 @@ FmpTegraSetImage (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Invalidate mb1 failed: %r\n", Status));
     *LastAttemptStatus = LAS_ERROR_MB1_INVALIDATE_ERROR;
-    return EFI_ABORTED;
+    FailedImage        = L"mb1";
+    goto Error;
   }
 
-  Status = WriteRegularImages (Header, FALSE, FW_IMAGE_RW_FLAG_NONE);
+  mDiagnosticImageName = NULL;
+  Status               = WriteRegularImages (Header, FALSE, FW_IMAGE_RW_FLAG_NONE);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_WRITE_IMAGES_FAILED;
-    return EFI_ABORTED;
+    FailedImage        = mDiagnosticImageName;
+    goto Error;
   }
 
   Status = WriteImage (Header, L"mb1", FW_IMAGE_RW_FLAG_NONE);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_MB1_WRITE_ERROR;
-    return EFI_ABORTED;
+    FailedImage        = L"mb1";
+    goto Error;
   }
 
   if (GptUpdate) {
     Status = WriteImage (Header, L"GPT", FW_IMAGE_RW_FLAG_NONE);
     if (EFI_ERROR (Status)) {
       *LastAttemptStatus = LAS_ERROR_GPT_WRITE_FAILED;
-      return EFI_ABORTED;
+      FailedImage        = L"GPT";
+      goto Error;
     }
 
     DEBUG ((DEBUG_INFO, "\n%a: Chain %u GPT updated\n", __FUNCTION__, OTHER_BOOT_CHAIN (mActiveBootChain)));
@@ -1871,10 +1959,12 @@ FmpTegraSetImage (
 
   SetImageProgress (FMP_PROGRESS_WRITE_IMAGES);
 
-  Status = VerifyAllImages (Header, FALSE, FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE);
+  mDiagnosticImageName = NULL;
+  Status               = VerifyAllImages (Header, FALSE, FW_IMAGE_RW_FLAG_READ_INACTIVE_IMAGE);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_VERIFY_IMAGES_FAILED;
-    return EFI_ABORTED;
+    FailedImage        = mDiagnosticImageName;
+    goto Error;
   }
 
   SetImageProgress (FMP_PROGRESS_VERIFY_IMAGES);
@@ -1882,7 +1972,8 @@ FmpTegraSetImage (
   Status = UpdateBctBackupPartition (Header);
   if (EFI_ERROR (Status)) {
     *LastAttemptStatus = LAS_ERROR_UPDATE_BCT_BACKUP_PARTITION_FAILED;
-    return EFI_ABORTED;
+    FailedImage        = BR_BCT_BACKUP_PARTITION_NAME;
+    goto Error;
   }
 
   Status = mBrBctUpdateProtocol->UpdateFwChain (
@@ -1892,22 +1983,28 @@ FmpTegraSetImage (
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Update BCT failed: %r\n", Status));
     *LastAttemptStatus = LAS_ERROR_BCT_UPDATE_FAILED;
-    return EFI_ABORTED;
+    FailedImage        = L"BCT";
+    goto Error;
   }
 
   Status = SetInactiveBootChainStatus (TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Set inactive chain good failed: %r\n", __FUNCTION__, Status));
     *LastAttemptStatus = LAS_ERROR_SET_INACTIVE_BOOT_CHAIN_GOOD_FAILED;
-    return EFI_ABORTED;
+    goto Error;
   }
 
 Done:
   SetImageProgress (FMP_PROGRESS_UPDATE_BCT);
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
+  RecordFmpDiagnostic (FALSE, NULL, EFI_SUCCESS, *LastAttemptStatus);
 
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
   return EFI_SUCCESS;
+
+Error:
+  RecordFmpDiagnostic (FALSE, FailedImage, Status, *LastAttemptStatus);
+  return ReturnStatus;
 }
 
 /**

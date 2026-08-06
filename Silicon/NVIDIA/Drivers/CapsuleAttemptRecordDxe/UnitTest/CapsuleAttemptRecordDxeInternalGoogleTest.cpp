@@ -255,6 +255,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsEsrtPayloadWithGuidString) {
       Payload,
       sizeof (Payload),
       NULL,
+      NULL,
       &Entry,
       1,
       &PayloadLength
@@ -330,7 +331,8 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
       AttemptId,
       TRUE,
       &ImageTypeId,
-      &ImageInfoSet
+      &ImageInfoSet,
+      NULL
       )
     );
   ASSERT_EQ (
@@ -378,6 +380,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
       sizeof (Payload),
       &Lifecycle,
       NULL,
+      NULL,
       0,
       &PayloadLength
       )
@@ -391,6 +394,171 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
                             );
   ASSERT_NE (nullptr, Source);
   EXPECT_STREQ ("capsule-on-disk", Source);
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIdentity) {
+  UINT8                               Payload[4096];
+  UINT32                              PayloadLength;
+  CAPSULE_ATTEMPT_RECORD_LIFECYCLE    Lifecycle;
+  CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  Diagnostics;
+  CONST CHAR8                         *Value;
+  CONST VOID                          *StatusValue;
+  CONST VOID                          *CompletionValue;
+  UINT64                              RawStatus;
+  UINT32                              Completion;
+  INT32                               Node;
+  INT32                               Length;
+
+  ZeroMem (&Lifecycle, sizeof (Lifecycle));
+  Lifecycle.AttemptId      = 7;
+  Lifecycle.AttemptIdValid = TRUE;
+  Lifecycle.Source         = CapsuleAttemptRecordSourceAndroidFastboot;
+  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  ZeroMem (&Diagnostics, sizeof (Diagnostics));
+  Diagnostics.Producer        = CapsuleAttemptRecordProducerSetImage;
+  Diagnostics.FailedImage     = "A_cpu-bootloader";
+  Diagnostics.RawStatus       = EFI_DEVICE_ERROR;
+  Diagnostics.NvidiaStatus    = 0x100c;
+  Diagnostics.PlatformSpec    = "3701-0000-0000-A.0-1-2-jetson-agx-orin-devkit-";
+  Diagnostics.TnSpec          = "3701-300-0000--1--jetson-agx-orin-devkit-";
+  Diagnostics.Completion      = 47;
+  Diagnostics.CompletionValid = TRUE;
+
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBuildPayload (
+      Payload,
+      sizeof (Payload),
+      &Lifecycle,
+      &Diagnostics,
+      NULL,
+      0,
+      &PayloadLength
+      )
+    );
+  Node = FdtPathOffset (Payload, "/diagnostics");
+  ASSERT_GE (Node, 0);
+  Value = (CONST CHAR8 *)FdtGetProp (Payload, Node, "nvidia,failed-image", &Length);
+  ASSERT_NE (nullptr, Value);
+  EXPECT_STREQ ("A_cpu-bootloader", Value);
+  Value = (CONST CHAR8 *)FdtGetProp (Payload, Node, "nvidia,platform-spec", &Length);
+  ASSERT_NE (nullptr, Value);
+  EXPECT_STREQ (Diagnostics.PlatformSpec, Value);
+  Value = (CONST CHAR8 *)FdtGetProp (Payload, Node, "nvidia,tnspec", &Length);
+  ASSERT_NE (nullptr, Value);
+  EXPECT_STREQ (Diagnostics.TnSpec, Value);
+  StatusValue = FdtGetProp (Payload, Node, "nvidia,efi-status", &Length);
+  ASSERT_NE (nullptr, StatusValue);
+  ASSERT_EQ ((INT32)sizeof (RawStatus), Length);
+  CopyMem (&RawStatus, StatusValue, sizeof (RawStatus));
+  EXPECT_EQ ((UINT64)EFI_DEVICE_ERROR, Fdt64ToCpu (RawStatus));
+  CompletionValue = FdtGetProp (Payload, Node, "nvidia,completion-percent", &Length);
+  ASSERT_NE (nullptr, CompletionValue);
+  ASSERT_EQ ((INT32)sizeof (Completion), Length);
+  CopyMem (&Completion, CompletionValue, sizeof (Completion));
+  EXPECT_EQ (Diagnostics.Completion, Fdt32ToCpu (Completion));
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, RejectsInvalidFmpCompletionPercentage) {
+  UINT8                               Payload[4096];
+  UINT32                              PayloadLength;
+  CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  Diagnostics;
+
+  ZeroMem (&Diagnostics, sizeof (Diagnostics));
+  Diagnostics.Producer        = CapsuleAttemptRecordProducerSetImage;
+  Diagnostics.Completion      = 101;
+  Diagnostics.CompletionValid = TRUE;
+
+  EXPECT_EQ (
+    EFI_INVALID_PARAMETER,
+    CapsuleAttemptRecordBuildPayload (
+      Payload,
+      sizeof (Payload),
+      NULL,
+      &Diagnostics,
+      NULL,
+      0,
+      &PayloadLength
+      )
+    );
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttemptDiagnostics) {
+  CAPSULE_ATTEMPT_RECORD_CONTEXT             Context;
+  CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         Diagnostics;
+  EFI_GUID                                   ImageTypeId;
+  EFI_FIRMWARE_IMAGE_DESCRIPTOR              Descriptor;
+  CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  ImageInfoSet;
+  CAPSULE_ATTEMPT_RECORD_SLOT_INFO           SlotInfo;
+  UINT64                                     AttemptId;
+  CONST VOID                                 *Payload;
+  CONST CHAR8                                *Source;
+  INT32                                      Length;
+
+  Context = MakeContext ();
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBegin (
+      &Context,
+      CapsuleAttemptRecordSourceAndroidFastboot,
+      &AttemptId
+      )
+    );
+
+  ZeroMem (&Diagnostics, sizeof (Diagnostics));
+  Diagnostics.Producer     = CapsuleAttemptRecordProducerCheckImage;
+  Diagnostics.FailedImage  = "A_cpu-bootloader";
+  Diagnostics.RawStatus    = EFI_DEVICE_ERROR;
+  Diagnostics.NvidiaStatus = 0x100c;
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordUpdateDiagnostics (
+      &Context,
+      CapsuleAttemptRecordSourceAndroidFastboot,
+      AttemptId,
+      &Diagnostics
+      )
+    );
+
+  ZeroMem (&ImageTypeId, sizeof (ImageTypeId));
+  ImageTypeId.Data1 = 0x12345678;
+  ZeroMem (&Descriptor, sizeof (Descriptor));
+  Descriptor.ImageTypeId         = ImageTypeId;
+  Descriptor.AttributesSupported = IMAGE_ATTRIBUTE_IN_USE;
+  Descriptor.AttributesSetting   = IMAGE_ATTRIBUTE_IN_USE;
+  ZeroMem (&ImageInfoSet, sizeof (ImageInfoSet));
+  ImageInfoSet.ImageInfo         = &Descriptor;
+  ImageInfoSet.ImageInfoSize     = sizeof (Descriptor);
+  ImageInfoSet.DescriptorVersion = 3;
+  ImageInfoSet.DescriptorCount   = 1;
+  ImageInfoSet.DescriptorSize    = sizeof (Descriptor);
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordFinalize (
+      &Context,
+      CapsuleAttemptRecordSourceSavedCapsule,
+      0,
+      FALSE,
+      &ImageTypeId,
+      &ImageInfoSet,
+      NULL
+      )
+    );
+
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordValidateSlotBuffer (mStorage, Context.SlotSize, &SlotInfo)
+    );
+  Payload = mStorage + SlotInfo.PayloadOffset;
+  EXPECT_LT (FdtPathOffset (Payload, "/diagnostics"), 0);
+  Source = (CONST CHAR8 *)FdtGetProp (
+                            Payload,
+                            0,
+                            "nvidia,attempt-source",
+                            &Length
+                            );
+  ASSERT_NE (nullptr, Source);
+  EXPECT_STREQ ("saved-capsule", Source);
 }
 
 TEST_F (CapsuleAttemptRecordDxeInternalTest, BlockIoCommitAdvancesSlotsAndRejectsCorruption) {

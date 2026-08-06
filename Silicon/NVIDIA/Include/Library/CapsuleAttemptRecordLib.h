@@ -48,6 +48,38 @@ CapsuleAttemptRecordFinalize (
   );
 
 /**
+  Persist the latest FMP diagnostic for the active attempt.
+
+  @param[in] CheckImage    TRUE for FmpTegraCheckImage; FALSE for
+                           FmpTegraSetImage.
+  @param[in] FailedImage   Failed image name, or NULL when no image applies.
+  @param[in] RawStatus     Raw status returned by the failing operation.
+  @param[in] NvidiaStatus  Detailed NVIDIA last-attempt status.
+  @param[in] PlatformSpec  Tegra platform specification, or NULL.
+  @param[in] TnSpec        Compatible TnSpec, or NULL.
+  @param[in] Completion    Current SetImage completion percentage, or NULL for
+                           a producer that does not report completion.
+
+  @retval EFI_SUCCESS            The diagnostic was persisted, or support is disabled.
+  @retval EFI_INVALID_PARAMETER  A string is too long or the completion
+                                 percentage exceeds 100.
+  @retval EFI_NOT_READY          The protocol or active attempt is unavailable.
+  @retval Others                 The diagnostic could not be persisted.
+
+**/
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordUpdateFmpDiagnostics (
+  IN BOOLEAN       CheckImage,
+  IN CONST CHAR16  *FailedImage OPTIONAL,
+  IN EFI_STATUS    RawStatus,
+  IN UINT32        NvidiaStatus,
+  IN CONST CHAR8   *PlatformSpec OPTIONAL,
+  IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT32  *Completion OPTIONAL
+  );
+
+/**
   Update the capsule attempt record with the current FMP image information.
 
   The library forwards the request to the capsule attempt record protocol. The

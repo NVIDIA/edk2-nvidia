@@ -25,6 +25,8 @@
 #define CAPSULE_ATTEMPT_RECORD_HEADER_SIZE         48U
 #define CAPSULE_ATTEMPT_RECORD_MAX_SLOTS           2U
 #define CAPSULE_ATTEMPT_RECORD_PARTITION_NAME_MAX  36U
+#define CAPSULE_ATTEMPT_RECORD_IMAGE_NAME_MAX      64U
+#define CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX   256U
 
 typedef struct {
   UINT8     Magic[8];
@@ -111,6 +113,22 @@ typedef struct {
   CAPSULE_ATTEMPT_RECORD_STATE     State;
 } CAPSULE_ATTEMPT_RECORD_LIFECYCLE;
 
+typedef enum {
+  CapsuleAttemptRecordProducerCheckImage,
+  CapsuleAttemptRecordProducerSetImage
+} CAPSULE_ATTEMPT_RECORD_PRODUCER;
+
+typedef struct {
+  CAPSULE_ATTEMPT_RECORD_PRODUCER    Producer;
+  CONST CHAR8                        *FailedImage;
+  EFI_STATUS                         RawStatus;
+  UINT32                             NvidiaStatus;
+  CONST CHAR8                        *PlatformSpec;
+  CONST CHAR8                        *TnSpec;
+  UINT32                             Completion;
+  BOOLEAN                            CompletionValid;
+} CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS;
+
 EFI_STATUS
 EFIAPI
 CapsuleAttemptRecordInitialize (
@@ -149,7 +167,17 @@ CapsuleAttemptRecordFinalize (
   IN     UINT64                                           AttemptId,
   IN     BOOLEAN                                          AttemptIdValid,
   IN     CONST EFI_GUID                                   *ImageTypeId,
-  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
+  );
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordUpdateDiagnostics (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT            *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
+  IN     UINT64                                    AttemptId,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
   );
 
 EFI_STATUS
@@ -187,17 +215,18 @@ CapsuleAttemptRecordSequenceIsNewer (
 /**
   Builds a capsule attempt record payload.
 
-  Lifecycle is required when EntryCount is zero. Entries is required when
-  EntryCount is nonzero.
+  At least one of Lifecycle, Diagnostics, or a nonzero EntryCount is required.
+  Entries is required when EntryCount is nonzero.
 **/
 EFI_STATUS
 CapsuleAttemptRecordBuildPayload (
-  OUT VOID                                     *Payload,
-  IN  UINT32                                   PayloadCapacity,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE   *Lifecycle OPTIONAL,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
-  IN  UINTN                                    EntryCount,
-  OUT UINT32                                   *PayloadLength
+  OUT VOID                                      *Payload,
+  IN  UINT32                                    PayloadCapacity,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE    *Lifecycle OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY   *Entries OPTIONAL,
+  IN  UINTN                                     EntryCount,
+  OUT UINT32                                    *PayloadLength
   );
 
 #endif

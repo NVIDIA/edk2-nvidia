@@ -65,6 +65,20 @@ CapsuleAttemptRecordProtocolFinalize (
   IN CAPSULE_ATTEMPT_RECORD_SOURCE           Source
   );
 
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN BOOLEAN                                 CheckImage,
+  IN CONST CHAR16                            *FailedImage OPTIONAL,
+  IN EFI_STATUS                              RawStatus,
+  IN UINT32                                  NvidiaStatus,
+  IN CONST CHAR8                             *PlatformSpec OPTIONAL,
+  IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT32                            *Completion OPTIONAL
+  );
+
 STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
   CAPSULE_ATTEMPT_RECORD_PRIVATE_SIGNATURE,
   {
@@ -72,13 +86,15 @@ STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
     CapsuleAttemptRecordProtocolUpdateFmpImageInfo,
     CapsuleAttemptRecordProtocolDumpLatest,
     CapsuleAttemptRecordProtocolBegin,
-    CapsuleAttemptRecordProtocolFinalize
+    CapsuleAttemptRecordProtocolFinalize,
+    CapsuleAttemptRecordProtocolUpdateFmpDiagnostics
   },
   NULL,
   {
     FALSE,
     0,
-    CapsuleAttemptRecordSourceUnknown
+    CapsuleAttemptRecordSourceUnknown,
+    FALSE
   }
 };
 
@@ -328,10 +344,11 @@ InitializeRecordContext (
 STATIC
 EFI_STATUS
 FinalizeRecord (
-  IN OUT CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private,
-  IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
-  IN     UINT64                          AttemptId,
-  IN     BOOLEAN                         AttemptIdValid
+  IN OUT CAPSULE_ATTEMPT_RECORD_PRIVATE            *Private,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
+  IN     UINT64                                    AttemptId,
+  IN     BOOLEAN                                   AttemptIdValid,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL
   )
 {
   EFI_STATUS                                 Status;
@@ -364,7 +381,8 @@ FinalizeRecord (
                AttemptId,
                AttemptIdValid,
                &ImageTypeId,
-               &ImageInfoSet
+               &ImageInfoSet,
+               Diagnostics
                );
   }
 
@@ -387,7 +405,8 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
            CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This),
            CapsuleAttemptRecordSourceUnknown,
            0,
-           FALSE
+           FALSE,
+           NULL
            );
 }
 
@@ -453,7 +472,8 @@ CapsuleAttemptRecordProtocolFinalize (
              Private,
              Source,
              AttemptId,
-             MatchingAttempt
+             MatchingAttempt,
+             MatchingAttempt ? CapsuleAttemptRecordStateGetDiagnostics (&Private->State) : NULL
              );
   if (MatchingAttempt) {
     CapsuleAttemptRecordStateConsume (&Private->State);
@@ -461,6 +481,58 @@ CapsuleAttemptRecordProtocolFinalize (
 
   if (!EFI_ERROR (Status)) {
     DEBUG ((DEBUG_INFO, "%a: attempt finalized for source %u\n", __FUNCTION__, Source));
+  }
+
+  return Status;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
+  IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This,
+  IN BOOLEAN                                 CheckImage,
+  IN CONST CHAR16                            *FailedImage OPTIONAL,
+  IN EFI_STATUS                              RawStatus,
+  IN UINT32                                  NvidiaStatus,
+  IN CONST CHAR8                             *PlatformSpec OPTIONAL,
+  IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT32                            *Completion OPTIONAL
+  )
+{
+  EFI_STATUS                      Status;
+  CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private;
+
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Private = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  Status  = CapsuleAttemptRecordStateUpdateDiagnostics (
+              &Private->State,
+              CheckImage,
+              FailedImage,
+              RawStatus,
+              NvidiaStatus,
+              PlatformSpec,
+              TnSpec,
+              Completion
+              );
+  if (Status == EFI_NOT_READY) {
+    DEBUG ((DEBUG_ERROR, "%a: diagnostic update requested without an active attempt\n", __FUNCTION__));
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = InitializeRecordContext (Private);
+  }
+
+  if (!EFI_ERROR (Status)) {
+    Status = CapsuleAttemptRecordUpdateDiagnostics (
+               Private->RecordContext,
+               Private->State.AttemptSource,
+               Private->State.AttemptId,
+               CapsuleAttemptRecordStateGetDiagnostics (&Private->State)
+               );
   }
 
   return Status;

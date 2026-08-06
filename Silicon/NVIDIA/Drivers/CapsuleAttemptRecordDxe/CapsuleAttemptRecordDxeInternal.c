@@ -701,12 +701,13 @@ GuidToCanonicalString (
 
 EFI_STATUS
 CapsuleAttemptRecordBuildPayload (
-  OUT VOID                                     *Payload,
-  IN  UINT32                                   PayloadCapacity,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE   *Lifecycle OPTIONAL,
-  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
-  IN  UINTN                                    EntryCount,
-  OUT UINT32                                   *PayloadLength
+  OUT VOID                                      *Payload,
+  IN  UINT32                                    PayloadCapacity,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_LIFECYCLE    *Lifecycle OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL,
+  IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY   *Entries OPTIONAL,
+  IN  UINTN                                     EntryCount,
+  OUT UINT32                                    *PayloadLength
   )
 {
   INT32  FdtStatus;
@@ -717,7 +718,7 @@ CapsuleAttemptRecordBuildPayload (
 
   if ((Payload == NULL) || (PayloadLength == NULL) ||
       ((EntryCount != 0) && (Entries == NULL)) ||
-      ((Lifecycle == NULL) && (EntryCount == 0)))
+      ((Lifecycle == NULL) && (Diagnostics == NULL) && (EntryCount == 0)))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -790,6 +791,43 @@ CapsuleAttemptRecordBuildPayload (
            "nvidia,attempt-state",
            State
            ) != 0))
+    {
+      return EFI_BUFFER_TOO_SMALL;
+    }
+  }
+
+  if (Diagnostics != NULL) {
+    CONST CHAR8  *Producer;
+
+    if (Diagnostics->CompletionValid && (Diagnostics->Completion > 100)) {
+      return EFI_INVALID_PARAMETER;
+    }
+
+    if (Diagnostics->Producer == CapsuleAttemptRecordProducerCheckImage) {
+      Producer = "fmp-tegra-check-image";
+    } else if (Diagnostics->Producer == CapsuleAttemptRecordProducerSetImage) {
+      Producer = "fmp-tegra-set-image";
+    } else {
+      return EFI_INVALID_PARAMETER;
+    }
+
+    Node = FdtAddSubnode (Payload, 0, "diagnostics");
+    if ((Node < 0) ||
+        (FdtSetPropString (Payload, Node, "nvidia,producer", Producer) != 0) ||
+        (FdtSetPropU64 (Payload, Node, "nvidia,efi-status", (UINT64)Diagnostics->RawStatus) != 0) ||
+        (FdtSetPropU32 (Payload, Node, "nvidia,nvidia-status", Diagnostics->NvidiaStatus) != 0))
+    {
+      return EFI_BUFFER_TOO_SMALL;
+    }
+
+    if (((Diagnostics->FailedImage != NULL) &&
+         (FdtSetPropString (Payload, Node, "nvidia,failed-image", Diagnostics->FailedImage) != 0)) ||
+        ((Diagnostics->PlatformSpec != NULL) &&
+         (FdtSetPropString (Payload, Node, "nvidia,platform-spec", Diagnostics->PlatformSpec) != 0)) ||
+        ((Diagnostics->TnSpec != NULL) &&
+         (FdtSetPropString (Payload, Node, "nvidia,tnspec", Diagnostics->TnSpec) != 0)) ||
+        (Diagnostics->CompletionValid &&
+         (FdtSetPropU32 (Payload, Node, "nvidia,completion-percent", Diagnostics->Completion) != 0)))
     {
       return EFI_BUFFER_TOO_SMALL;
     }
@@ -1120,10 +1158,11 @@ CapsuleAttemptRecordDeinitialize (
 STATIC
 EFI_STATUS
 CommitRecord (
-  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT           *Context,
-  IN OUT CAPSULE_ATTEMPT_RECORD_LIFECYCLE         *Lifecycle,
-  IN     CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY  *Entries OPTIONAL,
-  IN     UINTN                                    EntryCount
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT            *Context,
+  IN OUT CAPSULE_ATTEMPT_RECORD_LIFECYCLE          *Lifecycle,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY   *Entries OPTIONAL,
+  IN     UINTN                                     EntryCount
   )
 {
   EFI_STATUS                        Status;
@@ -1213,6 +1252,7 @@ CommitRecord (
              (UINT8 *)SlotBuffer + CAPSULE_ATTEMPT_RECORD_HEADER_SIZE,
              (UINT32)(Context->SlotSize - CAPSULE_ATTEMPT_RECORD_HEADER_SIZE),
              Lifecycle,
+             Diagnostics,
              Entries,
              EntryCount,
              &PayloadLength
@@ -1306,7 +1346,7 @@ CapsuleAttemptRecordBegin (
   Lifecycle.AttemptIdValid = FALSE;
   Lifecycle.Source         = Source;
   Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
-  Status                   = CommitRecord (Context, &Lifecycle, NULL, 0);
+  Status                   = CommitRecord (Context, &Lifecycle, NULL, NULL, 0);
   if (!EFI_ERROR (Status)) {
     *AttemptId = Lifecycle.AttemptId;
   }
@@ -1322,7 +1362,8 @@ CapsuleAttemptRecordFinalize (
   IN     UINT64                                           AttemptId,
   IN     BOOLEAN                                          AttemptIdValid,
   IN     CONST EFI_GUID                                   *ImageTypeId,
-  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet
+  IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
   )
 {
   EFI_STATUS                         Status;
@@ -1347,7 +1388,32 @@ CapsuleAttemptRecordFinalize (
   Lifecycle.AttemptIdValid = AttemptIdValid;
   Lifecycle.Source         = Source;
   Lifecycle.State          = CapsuleAttemptRecordStateCompleted;
-  return CommitRecord (Context, &Lifecycle, &Entry, 1);
+  return CommitRecord (Context, &Lifecycle, Diagnostics, &Entry, 1);
+}
+
+EFI_STATUS
+EFIAPI
+CapsuleAttemptRecordUpdateDiagnostics (
+  IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT            *Context,
+  IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
+  IN     UINT64                                    AttemptId,
+  IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
+  )
+{
+  CAPSULE_ATTEMPT_RECORD_LIFECYCLE  Lifecycle;
+
+  if ((Diagnostics == NULL) ||
+      (Source <= CapsuleAttemptRecordSourceUnknown) ||
+      (Source >= CapsuleAttemptRecordSourceMax))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Lifecycle.AttemptId      = AttemptId;
+  Lifecycle.AttemptIdValid = TRUE;
+  Lifecycle.Source         = Source;
+  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  return CommitRecord (Context, &Lifecycle, Diagnostics, NULL, 0);
 }
 
 EFI_STATUS
@@ -1364,7 +1430,8 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
            0,
            FALSE,
            ImageTypeId,
-           ImageInfoSet
+           ImageInfoSet,
+           NULL
            );
 }
 

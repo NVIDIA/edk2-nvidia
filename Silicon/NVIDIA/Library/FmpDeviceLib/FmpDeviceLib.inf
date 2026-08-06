@@ -42,6 +42,7 @@
 
 [LibraryClasses]
   BootChainInfoLib
+  CapsuleAttemptRecordLib
   DisplayUpdateProgressLib
   FmpParamLib
   FmpVersionLib

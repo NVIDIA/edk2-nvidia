@@ -10,13 +10,17 @@
 #ifndef __CAPSULE_ATTEMPT_RECORD_DXE_STATE_H__
 #define __CAPSULE_ATTEMPT_RECORD_DXE_STATE_H__
 
-#include <Uefi.h>
-#include <Protocol/CapsuleAttemptRecordProtocol.h>
+#include "CapsuleAttemptRecordDxeInternal.h"
 
 typedef struct {
-  BOOLEAN                          AttemptActive;
-  UINT64                           AttemptId;
-  CAPSULE_ATTEMPT_RECORD_SOURCE    AttemptSource;
+  BOOLEAN                               AttemptActive;
+  UINT64                                AttemptId;
+  CAPSULE_ATTEMPT_RECORD_SOURCE         AttemptSource;
+  BOOLEAN                               DiagnosticsValid;
+  CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS    Diagnostics;
+  CHAR8                                 FailedImage[CAPSULE_ATTEMPT_RECORD_IMAGE_NAME_MAX + 1];
+  CHAR8                                 PlatformSpec[CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX + 1];
+  CHAR8                                 TnSpec[CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX + 1];
 } CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE;
 
 VOID
@@ -36,6 +40,23 @@ CapsuleAttemptRecordStateMatch (
 VOID
 CapsuleAttemptRecordStateConsume (
   IN OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State
+  );
+
+EFI_STATUS
+CapsuleAttemptRecordStateUpdateDiagnostics (
+  IN OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State,
+  IN     BOOLEAN                                CheckImage,
+  IN     CONST CHAR16                           *FailedImage OPTIONAL,
+  IN     EFI_STATUS                             RawStatus,
+  IN     UINT32                                 NvidiaStatus,
+  IN     CONST CHAR8                            *PlatformSpec OPTIONAL,
+  IN     CONST CHAR8                            *TnSpec OPTIONAL,
+  IN     CONST UINT32                           *Completion OPTIONAL
+  );
+
+CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS *
+CapsuleAttemptRecordStateGetDiagnostics (
+  IN CONST CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State
   );
 
 #endif

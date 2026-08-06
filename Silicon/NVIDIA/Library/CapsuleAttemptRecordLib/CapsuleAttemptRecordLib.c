@@ -96,6 +96,48 @@ CapsuleAttemptRecordFinalize (
 
 EFI_STATUS
 EFIAPI
+CapsuleAttemptRecordUpdateFmpDiagnostics (
+  IN BOOLEAN       CheckImage,
+  IN CONST CHAR16  *FailedImage OPTIONAL,
+  IN EFI_STATUS    RawStatus,
+  IN UINT32        NvidiaStatus,
+  IN CONST CHAR8   *PlatformSpec OPTIONAL,
+  IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT32  *Completion OPTIONAL
+  )
+{
+  EFI_STATUS                              Status;
+  NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *Protocol;
+
+  if (!FeaturePcdGet (PcdCapsuleAttemptRecordSupported)) {
+    return EFI_SUCCESS;
+  }
+
+  Status = LocateCapsuleAttemptRecordProtocol (&Protocol);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  if ((Protocol->Revision < NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION) ||
+      (Protocol->UpdateFmpDiagnostics == NULL))
+  {
+    return EFI_UNSUPPORTED;
+  }
+
+  return Protocol->UpdateFmpDiagnostics (
+                     Protocol,
+                     CheckImage,
+                     FailedImage,
+                     RawStatus,
+                     NvidiaStatus,
+                     PlatformSpec,
+                     TnSpec,
+                     Completion
+                     );
+}
+
+EFI_STATUS
+EFIAPI
 CapsuleAttemptRecordUpdateFmpImageInfo (
   VOID
   )

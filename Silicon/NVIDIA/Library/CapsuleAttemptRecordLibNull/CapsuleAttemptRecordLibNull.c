@@ -31,6 +31,21 @@ CapsuleAttemptRecordFinalize (
 
 EFI_STATUS
 EFIAPI
+CapsuleAttemptRecordUpdateFmpDiagnostics (
+  IN BOOLEAN       CheckImage,
+  IN CONST CHAR16  *FailedImage OPTIONAL,
+  IN EFI_STATUS    RawStatus,
+  IN UINT32        NvidiaStatus,
+  IN CONST CHAR8   *PlatformSpec OPTIONAL,
+  IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT32  *Completion OPTIONAL
+  )
+{
+  return EFI_SUCCESS;
+}
+
+EFI_STATUS
+EFIAPI
 CapsuleAttemptRecordUpdateFmpImageInfo (
   VOID
   )
