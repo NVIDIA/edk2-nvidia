@@ -1,0 +1,89 @@
+#/** @file
+#
+#  PCIe Segment Controller Driver
+#
+#  SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION. All rights reserved.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = PcieSegmentCtlrControllerDxe
+  FILE_GUID                      = 2ed8c37c-910e-11ef-900b-6b3dba5a6b5a
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DeviceDiscoveryDriverInitialize
+
+[Sources.common]
+  PcieSegmentCtlrControllerDxe.c
+  PcieSegmentCtlrControllerPrivate.h
+  PciPlatformDxe.c
+  PcieConfigDxe.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  DynamicTablesPkg/DynamicTablesPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  DeviceTreeHelperLib
+  PrintLib
+  UefiDriverEntryPoint
+  IoLib
+  TegraPlatformInfoLib
+  SortLib
+  TimerLib
+  FdtLib
+  DeviceDiscoveryDriverLib
+  MemoryAllocationLib
+  DxeServicesTableLib
+  DevicePathLib
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemRevision
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiDefaultOemTableId
+  gNVIDIATokenSpaceGuid.PcdTegraMaxSockets
+
+[Protocols]
+  gEdkiiNonDiscoverableDeviceProtocolGuid
+  gNVIDIAPciHostBridgeProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gNVIDIAPciRootBridgeConfigurationIoProtocolGuid
+  gNVIDIABpmpIpcProtocolGuid
+  gNVIDIARegulatorProtocolGuid
+  gNVIDIAPcieControllerInitCompleteProtocolGuid
+  gNVIDIAConfigurationManagerDataObjectGuid
+  gNVIDIAC2cNodeProtocolGuid
+  gNVIDIABdsDeviceConnectCompleteGuid
+  gEfiPciIoProtocolGuid
+  gEmbeddedGpioProtocolGuid
+  gNVIDIAConfigurationManagerTokenProtocolGuid
+  gNVIDIAPciConfigurationDataProtocolGuid
+  gEfiPciPlatformProtocolGuid
+  gEfiPciHostBridgeResourceAllocationProtocolGuid
+
+[Guids]
+  gNVIDIANonDiscoverableT410PcieDeviceGuid
+  gEfiEventExitBootServicesGuid
+  gNVIDIAT410MB1DataGuid
+  gNVIDIAPublicVariableGuid
+
+[Depex]
+  gNVIDIAAllRegulatorsPresentProtocolGuid
+  AND
+  gNVIDIAUphyConfigurationCompleteGuid
+  AND
+  gEmbeddedGpioProtocolGuid
+  AND
+  gNVIDIAConfigurationManagerTokenProtocolGuid

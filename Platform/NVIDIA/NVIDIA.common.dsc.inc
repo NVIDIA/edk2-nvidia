@@ -272,7 +272,6 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !ifdef CONFIG_SOC_T41X
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T24xPlatformResourceLib.inf
 !endif
-
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf
   GptLib|Silicon/NVIDIA/Library/GptLib/GptLib.inf
@@ -1817,7 +1816,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   Silicon/NVIDIA/Drivers/PcieDWControllerDxe/PcieControllerDxe.inf
 !endif
 !ifdef CONFIG_NVIDIA_PCIE
+!ifdef CONFIG_SOC_T41X
+  Silicon/NVIDIA/Drivers/PcieSegmentCtlrControllerDxe/PcieSegmentCtlrControllerDxe.inf
+!else
   Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+!endif
 !endif
 
   #

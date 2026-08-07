@@ -353,7 +353,11 @@ FvNameGuid         = $(PLATFORM_GUID)
   INF Silicon/NVIDIA/Drivers/PcieDWControllerDxe/PcieControllerDxe.inf
 !endif
 !ifdef CONFIG_NVIDIA_PCIE
+!ifdef CONFIG_SOC_T41X
+  INF Silicon/NVIDIA/Drivers/PcieSegmentCtlrControllerDxe/PcieSegmentCtlrControllerDxe.inf
+!else
   INF Silicon/NVIDIA/Drivers/PcieControllerDxe/PcieControllerDxe.inf
+!endif
 !endif
 
   #
