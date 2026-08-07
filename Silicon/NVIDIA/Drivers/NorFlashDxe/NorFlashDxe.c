@@ -853,8 +853,8 @@ InitializeNorFlashDxe (
 {
   // TODO: Add component name support.
   return EfiLibInstallDriverBinding (
-           SystemTable,
            ImageHandle,
+           SystemTable,
            &gNorFlashDxeDriverBinding,
            ImageHandle
            );
