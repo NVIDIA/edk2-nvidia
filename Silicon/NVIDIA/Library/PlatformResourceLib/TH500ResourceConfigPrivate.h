@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -89,13 +89,6 @@ typedef struct {
   UINT64                  EgmNumRetiredPages;
   EFI_PHYSICAL_ADDRESS    EgmRetiredPageAddress[MAX_RETIRED_DRAM_PAGES];
 } TH500_EGM_RETIRED_PAGES;
-
-typedef enum {
-  Th500MemoryModeNormal,
-  Th500MemoryModeEgmNoHv,
-  Th500MemoryModeEgmWithHv,
-  Th500MemoryModeMax
-} TH500_MEMORY_MODE;
 
 typedef struct {
   UINT64    Base;

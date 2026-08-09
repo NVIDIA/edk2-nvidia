@@ -270,7 +270,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T26xPlatformResourceLib.inf
 !endif
 !ifdef CONFIG_SOC_T41X
-  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T24xPlatformResourceLib.inf
+  PlatformResourceLib|Silicon/NVIDIA/Library/PlatformResourceLib/T41xPlatformResourceLib.inf
 !endif
   SystemResourceLib|Silicon/NVIDIA/Library/SystemResourceLib/SystemResourceLib.inf
   GoldenRegisterLib|Silicon/NVIDIA/Library/GoldenRegisterLib/GoldenRegisterLib.inf

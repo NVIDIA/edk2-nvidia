@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -23,8 +23,7 @@
 #include "CommonResourceConfig.h"
 
 #include "PlatformResourceConfig.h"
-#include "TH500ResourceConfigPrivate.h"
-#include "T410ResourceConfig.h"
+#include "T410ResourceConfigPrivate.h"
 
 #define MAX_CORE_DISABLE_WORDS  3
 
@@ -46,6 +45,7 @@ STATIC UINT32  T410CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
 };
 
 STATIC COMMON_RESOURCE_CONFIG_INFO  T410CommonResourceConfigInfo = {
+  T410_MAX_SOCKETS,
   MAX_CORE_DISABLE_WORDS,
   FALSE,
   MAX_UINT32,
@@ -166,9 +166,8 @@ NVDA_MEMORY_REGION  T410DramPageBlacklistInfoAddress[] = {
   }
 };
 
-TEGRA_BASE_AND_SIZE_INFO  T410EgmMemoryInfo[T410_MAX_SOCKETS]  = { };
-TEGRA_DRAM_DEVICE_INFO    T410DramDeviceInfo[T410_MAX_SOCKETS] = { };
-UINT8                     T410C2cMode[T410_MAX_SOCKETS]        = { };
+TEGRA_DRAM_DEVICE_INFO  T410DramDeviceInfo[T410_MAX_SOCKETS] = { };
+UINT8                   T410C2cMode[T410_MAX_SOCKETS]        = { };
 
 /**
   Get Socket Mask
@@ -176,7 +175,7 @@ UINT8                     T410C2cMode[T410_MAX_SOCKETS]        = { };
 **/
 UINT32
 EFIAPI
-T410GetSocketMask (
+SocGetSocketMask (
   IN UINTN  CpuBootloaderAddress
   )
 {
@@ -190,77 +189,6 @@ T410GetSocketMask (
   ASSERT (HighBitSet32 (SocketMask) < T410_MAX_SOCKETS);
 
   return SocketMask;
-}
-
-/**
-  Retrieve UART Instance Info
-
-  This function retrieves the base address of that UART instance, and sets the known UART type
-  based on the UART instance number.
-
-  @param[in]  UARTInstanceNumber    UART instance number
-  @param[out] UARTInstanceType      UART instance type
-  @param[out] UARTInstanceAddress   UART instance address
-
-  @retval TRUE    UART instance info was successfullly retrieved
-  @retval FALSE   Retrieval of UART instance info failed
-
-**/
-BOOLEAN
-T410UARTInstanceInfo (
-  IN  UINT32                UARTInstanceNumber,
-  OUT UINT32                *UARTInstanceType,
-  OUT EFI_PHYSICAL_ADDRESS  *UARTInstanceAddress
-  )
-{
-  EFI_PHYSICAL_ADDRESS  UARTBaseAddress[] = {
-    0x0,
-    TEGRA_UART_ADDRESS_0,
-    TEGRA_UART_ADDRESS_1,
-  };
-
-  *UARTInstanceAddress = 0;
-  *UARTInstanceType    = TEGRA_UART_TYPE_NONE;
-
-  if ((UARTInstanceNumber >= ARRAY_SIZE (UARTBaseAddress)) ||
-      ((BIT (UARTInstanceNumber) & TEGRA_UART_SUPPORT_FLAG) == 0x0))
-  {
-    return FALSE;
-  }
-
-  *UARTInstanceType    = TEGRA_UART_TYPE_SBSA;
-  *UARTInstanceAddress = UARTBaseAddress[UARTInstanceNumber];
-
-  return TRUE;
-}
-
-/**
-   Retrieve the T410 memory mode.
-
-   @param[in] CpuBootloaderParams  CPU BL params.
-*/
-STATIC
-T410_MEMORY_MODE
-T410GetMemoryMode (
-  IN CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams
-  )
-{
-  EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
-  UINT64                EgmSize, HvSize;
-
-  EgmBase = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_EGM].Base;
-  EgmSize = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_EGM].Size;
-
-  HvBase = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_HV].Base;
-  HvSize = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_HV].Size;
-
-  if ((EgmBase == 0) || (EgmSize == 0)) {
-    return T410MemoryModeNormal;
-  } else if ((HvBase == 0) || (HvSize == 0)) {
-    return T410MemoryModeEgmNoHv;
-  } else {
-    return T410MemoryModeEgmWithHv;
-  }
 }
 
 /**
@@ -281,37 +209,15 @@ T410BuildDramRegions (
   OUT UINTN                    *CONST  DramRegionCount
   )
 {
-  NVDA_MEMORY_REGION      *Regions;
-  UINTN                   RegionCount, RegionCountMax;
-  UINTN                   Socket;
-  EFI_PHYSICAL_ADDRESS    Base;
-  UINT64                  Size;
-  CONST UINT32            SocketMask = T410GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
-  CONST T410_MEMORY_MODE  MemoryMode = T410GetMemoryMode (CpuBootloaderParams);
-  CONST UINT32            MaxSocket  = HighBitSet32 (SocketMask);
+  NVDA_MEMORY_REGION    *Regions;
+  UINTN                 RegionCount, RegionCountMax;
+  UINTN                 Socket;
+  EFI_PHYSICAL_ADDRESS  Base;
+  UINT64                Size;
+  CONST UINT32          SocketMask = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          MaxSocket  = HighBitSet32 (SocketMask);
 
-  switch (MemoryMode) {
-    case T410MemoryModeNormal:
-      DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
-      RegionCountMax = MaxSocket + 1;
-      break;
-
-    case T410MemoryModeEgmWithHv:
-      DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
-      RegionCountMax = MaxSocket + 1;
-      break;
-
-    case T410MemoryModeEgmNoHv:
-      // When egm is enabled without hv, uefi should use only memory in
-      // egm carveout on all sockets and rcm, os and uefi carveouts only
-      // on primary socket.
-      DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
-      RegionCountMax = (MaxSocket + 1) + 3;
-      break;
-
-    default:
-      UNREACHABLE ();
-  }
+  RegionCountMax = MaxSocket + 1;
 
   Regions = (NVDA_MEMORY_REGION *)AllocatePool (RegionCountMax * sizeof (*Regions));
   NV_ASSERT_RETURN (
@@ -329,38 +235,9 @@ T410BuildDramRegions (
       continue;
     }
 
-    switch (MemoryMode) {
-      case T410MemoryModeNormal:
-      case T410MemoryModeEgmWithHv:
-        Base = CpuBootloaderParams->SdramInfo[Socket].Base;
-        Size = CpuBootloaderParams->SdramInfo[Socket].Size;
-        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-        break;
-
-      case T410MemoryModeEgmNoHv:
-        Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Base;
-        Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_EGM].Size;
-        PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-
-        if (Socket == T410_PRIMARY_SOCKET) {
-          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Base;
-          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_RCM_BLOB].Size;
-          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-
-          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Base;
-          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_OS].Size;
-          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-
-          Base = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Base;
-          Size = CpuBootloaderParams->CarveoutInfo[Socket][CARVEOUT_UEFI].Size;
-          PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
-        }
-
-        break;
-
-      default:
-        UNREACHABLE ();
-    }
+    Base = CpuBootloaderParams->SdramInfo[Socket].Base;
+    Size = CpuBootloaderParams->SdramInfo[Socket].Size;
+    PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
 
   *DramRegions     = Regions;
@@ -375,7 +252,6 @@ T410BuildDramRegions (
    @param[in,out] RegionCount        Number of regions in the list.
    @param[in]     UsableRegions      The list of usable memory regions.
    @param[in,out] UsableRegionCount  Number of usable regions in the list.
-   @param[in]     MemoryMode         T410 memory mode.
    @param[in]     Socket             CPU socket index.
    @param[in]     Carveouts          Bootloader carveouts.
    @param[in]     CarveoutCount      Number of bootloader carveouts.
@@ -387,7 +263,6 @@ T410AddBootloaderCarveouts (
   IN OUT UINTN                       *CONST  RegionCount,
   IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
   IN OUT UINTN                       *CONST  UsableRegionCount,
-  IN     CONST T410_MEMORY_MODE              MemoryMode,
   IN     CONST UINTN                         Socket,
   IN     CONST TEGRABL_CARVEOUT_INFO *CONST  Carveouts,
   IN     CONST UINTN                         CarveoutCount
@@ -418,7 +293,6 @@ T410AddBootloaderCarveouts (
       ));
 
     switch (Index) {
-      case CARVEOUT_RCM_BLOB:
       case CARVEOUT_UEFI:
       case CARVEOUT_OS:
         // Leave in memory map but marked as used on socket 0
@@ -426,16 +300,6 @@ T410AddBootloaderCarveouts (
           Pages = EFI_SIZE_TO_PAGES (Size);
           BuildMemoryAllocationHob (Base, EFI_PAGES_TO_SIZE (Pages), EfiReservedMemoryType);
           PlatformResourceAddMemoryRegion (UsableRegions, UsableRegionCount, Base, Size);
-        }
-
-        break;
-
-      case CARVEOUT_HV:
-        continue;
-
-      case CARVEOUT_EGM:
-        if (MemoryMode == T410MemoryModeEgmNoHv) {
-          continue;
         }
 
         break;
@@ -480,17 +344,16 @@ T410BuildCarveoutRegions (
   OUT UINTN                    *CONST  UsableCarveoutRegionCount
   )
 {
-  NVDA_MEMORY_REGION      *Regions, *UsableRegions;
-  UINTN                   RegionCount, UsableRegionCount;
-  UINTN                   Socket;
-  EFI_PHYSICAL_ADDRESS    *RetiredDramPageList;
-  CONST UINT32            SocketMask            = T410GetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
-  CONST T410_MEMORY_MODE  MemoryMode            = T410GetMemoryMode (CpuBootloaderParams);
-  CONST UINT32            MaxSocket             = HighBitSet32 (SocketMask);
-  CONST UINTN             RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
-  CONST UINTN             RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
-  CONST UINTN             UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
-  CONST UINTN             UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
+  NVDA_MEMORY_REGION    *Regions, *UsableRegions;
+  UINTN                 RegionCount, UsableRegionCount;
+  UINTN                 Socket;
+  EFI_PHYSICAL_ADDRESS  *RetiredDramPageList;
+  CONST UINT32          SocketMask            = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
+  CONST UINT32          MaxSocket             = HighBitSet32 (SocketMask);
+  CONST UINTN           RegionCountMax        = (UINTN)(MaxSocket + 1) * (CARVEOUT_OEM_COUNT + MAX_RETIRED_DRAM_PAGES);
+  CONST UINTN           RegionsPagesMax       = EFI_SIZE_TO_PAGES (RegionCountMax * sizeof (*Regions));
+  CONST UINTN           UsableRegionCountMax  = (UINTN)(MaxSocket + 1) * CARVEOUT_OEM_COUNT;
+  CONST UINTN           UsableRegionsPagesMax = EFI_SIZE_TO_PAGES (UsableRegionCountMax * sizeof (*UsableRegions));
 
   Regions = (NVDA_MEMORY_REGION *)AllocatePages (RegionsPagesMax);
   NV_ASSERT_RETURN (
@@ -504,7 +367,9 @@ T410BuildCarveoutRegions (
   UsableRegions = (NVDA_MEMORY_REGION *)AllocatePages (UsableRegionsPagesMax);
   NV_ASSERT_RETURN (
     UsableRegions != NULL,
-    return EFI_DEVICE_ERROR,
+    { FreePages (Regions, RegionsPagesMax);
+      return EFI_DEVICE_ERROR;
+    },
     "%a: Failed to allocate %lu pages for usable carveout regions\r\n",
     __FUNCTION__,
     (UINT64)UsableRegionsPagesMax
@@ -519,7 +384,6 @@ T410BuildCarveoutRegions (
         &RegionCount,
         UsableRegions,
         &UsableRegionCount,
-        MemoryMode,
         Socket,
         CpuBootloaderParams->CarveoutInfo[Socket],
         CARVEOUT_OEM_COUNT
@@ -592,10 +456,11 @@ T410GetResourceConfig (
              &UsableCarveoutRegionCount
              );
   if (EFI_ERROR (Status)) {
+    FreePool (DramRegions);
     return Status;
   }
 
-  PlatformInfo->DtbLoadAddress             = T410GetDTBBaseAddress ((UINTN)CpuBootloaderParams);
+  PlatformInfo->DtbLoadAddress             = GetDTBBaseAddress ();
   PlatformInfo->DramRegions                = DramRegions;
   PlatformInfo->DramRegionsCount           = DramRegionCount;
   PlatformInfo->UefiDramRegionIndex        = 0;
@@ -616,17 +481,20 @@ T410GetResourceConfig (
 
 **/
 NVDA_MEMORY_REGION *
-T410GetDramPageBlacklistInfoAddress (
-  IN  UINTN  CpuBootloaderAddress
+EFIAPI
+GetDramPageBlacklistInfoAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
   UINT32              SocketMask;
   UINTN               Socket;
   UINTN               Index;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  SocketMask          = T410GetSocketMask (CpuBootloaderAddress);
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  SocketMask           = SocGetSocketMask (CpuBootloaderAddress);
 
   Index = 0;
   for (Socket = T410_PRIMARY_SOCKET; Socket < T410_MAX_SOCKETS; Socket++) {
@@ -649,22 +517,25 @@ T410GetDramPageBlacklistInfoAddress (
 
 **/
 UINT64
-T410GetDTBBaseAddress (
-  IN UINTN  CpuBootloaderAddress
+EFIAPI
+GetDTBBaseAddress (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS          *CpuBootloaderParams;
+  UINTN                       CpuBootloaderAddress;
   UINT64                      MemoryBase;
   UINT64                      MemorySize;
   EFI_FIRMWARE_VOLUME_HEADER  *FvHeader;
   UINT64                      FvOffset;
   UINT64                      FvSize;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
-  MemoryBase          = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
-  MemorySize          = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
-  FvHeader            = NULL;
-  FvOffset            = 0;
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  MemoryBase           = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
+  MemorySize           = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+  FvHeader             = NULL;
+  FvOffset             = 0;
 
   while (FvOffset < MemorySize) {
     FvHeader = (EFI_FIRMWARE_VOLUME_HEADER *)(VOID *)(MemoryBase + FvOffset);
@@ -758,17 +629,19 @@ T410GetActiveBootChain (
 **/
 EFI_STATUS
 EFIAPI
-T410ValidateActiveBootChain (
-  IN  UINTN  CpuBootloaderAddress
+ValidateActiveBootChain (
+  VOID
   )
 {
+  UINTN       CpuBootloaderAddress;
   UINT32      SocketMask;
   UINTN       Socket;
   UINT64      ScratchAddr;
   EFI_STATUS  Status;
   UINT32      BootChain;
 
-  SocketMask = T410GetSocketMask (CpuBootloaderAddress);
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  SocketMask           = SocGetSocketMask (CpuBootloaderAddress);
   for (Socket = 0; Socket < T410_MAX_SOCKETS; Socket++) {
     if (!(SocketMask & (1UL << Socket))) {
       continue;
@@ -799,30 +672,34 @@ T410ValidateActiveBootChain (
 **/
 EFI_STATUS
 EFIAPI
-T410GetEnabledCoresBitMap (
-  IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
+SocGetEnabledCoresBitMap (
+  IN UINTN                     CpuBootloaderAddress,
+  IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
   UINT32  SatMcCore;
   UINT32  CoresPerSocket;
 
-  // SatMC core is reserved on socket 0.
-  CoresPerSocket = PlatformResourceInfo->MaxPossibleCores / PlatformResourceInfo->MaxPossibleSockets;
+  SocCoreBitmapInfo->ThreadsPerCore       = 1;
+  T410CommonResourceConfigInfo.SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
+  CoresPerSocket = SocCoreBitmapInfo->MaxPossibleCoresPerSystem /
+                   SocCoreBitmapInfo->MaxPossibleSockets;
+
+  // SatMC core is reserved on socket 0.
   SatMcCore = MmioBitFieldRead32 (
                 T410SocketScratchBaseAddr[0] + T410CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS-1],
                 T410_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
                 T410_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
                 );
-  if (SatMcCore != T410_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) {
-    ASSERT (SatMcCore <= CoresPerSocket);
+  if ((SatMcCore != T410_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
+      (SatMcCore < CoresPerSocket))
+  {
     T410CommonResourceConfigInfo.SatMcSupported = TRUE;
     T410CommonResourceConfigInfo.SatMcCore      = SatMcCore;
   }
 
-  PlatformResourceInfo->AffinityMpIdrSupported = TRUE;
-
-  return CommonConfigGetEnabledCoresBitMap (&T410CommonResourceConfigInfo, PlatformResourceInfo);
+  return CommonConfigGetEnabledCoresBitMap (&T410CommonResourceConfigInfo, SocCoreBitmapInfo);
 }
 
 /**
@@ -861,7 +738,7 @@ T410CpuC2cMode (
 **/
 EFI_STATUS
 EFIAPI
-T410GetPlatformResourceInformation (
+SocGetPlatformResourceInformation (
   IN UINTN                         CpuBootloaderAddress,
   IN TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo,
   IN BOOLEAN                       InMm
@@ -875,7 +752,7 @@ T410GetPlatformResourceInformation (
 
   CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
-  SocketMask = T410GetSocketMask (CpuBootloaderAddress);
+  SocketMask = SocGetSocketMask (CpuBootloaderAddress);
 
   PlatformResourceInfo->SocketMask = SocketMask;
 
@@ -897,11 +774,13 @@ T410GetPlatformResourceInformation (
   PlatformResourceInfo->RamdiskOSInfo.Base = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_OS].Base;
   PlatformResourceInfo->RamdiskOSInfo.Size = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_OS].Size;
 
-  PlatformResourceInfo->RcmBlobInfo.Base = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base;
-  PlatformResourceInfo->RcmBlobInfo.Size = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size;
-
   PlatformResourceInfo->CpublCoInfo.Base = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Base;
   PlatformResourceInfo->CpublCoInfo.Size = CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_UEFI].Size;
+
+  // T410 has no RCM carveout; keep the blob info defined so BootType does not
+  // depend on whatever the caller left in the structure.
+  PlatformResourceInfo->RcmBlobInfo.Base = 0;
+  PlatformResourceInfo->RcmBlobInfo.Size = 0;
 
   if ((PlatformResourceInfo->RcmBlobInfo.Base != 0) &&
       (PlatformResourceInfo->RcmBlobInfo.Size != 0))
@@ -909,22 +788,6 @@ T410GetPlatformResourceInformation (
     PlatformResourceInfo->BootType = TegrablBootRcm;
   } else {
     PlatformResourceInfo->BootType = TegrablBootColdBoot;
-  }
-
-  if ((CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_EGM].Base != 0) &&
-      (CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_EGM].Size != 0))
-  {
-    if ((CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_HV].Base != 0) &&
-        (CpuBootloaderParams->CarveoutInfo[T410_PRIMARY_SOCKET][CARVEOUT_HV].Size != 0))
-    {
-      PlatformResourceInfo->HypervisorMode = TRUE;
-    }
-  }
-
-  PlatformResourceInfo->EgmMemoryInfo = T410EgmMemoryInfo;
-  for (Index = 0; Index < T410_MAX_SOCKETS; Index++) {
-    PlatformResourceInfo->EgmMemoryInfo[Index].Base = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Base;
-    PlatformResourceInfo->EgmMemoryInfo[Index].Size = CpuBootloaderParams->CarveoutInfo[Index][CARVEOUT_EGM].Size;
   }
 
   PlatformResourceInfo->PhysicalDramSize = 0;
@@ -964,12 +827,16 @@ T410GetPlatformResourceInformation (
       return Status;
     }
   */
+
+  PlatformResourceInfo->PcieAddressBits = T410_PCIE_ADDRESS_BITS;
+
   return EFI_SUCCESS;
 }
 
 /**
  * Get Partition information.
 **/
+STATIC
 EFI_STATUS
 EFIAPI
 T410GetPartitionInfo (
@@ -1027,20 +894,22 @@ T410GetPartitionInfo (
 **/
 BOOLEAN
 EFIAPI
-T410IsTpmToBeEnabled (
-  IN  UINTN  CpuBootloaderAddress
+IsTpmToBeEnabled (
+  VOID
   )
 {
   TEGRA_CPUBL_PARAMS  *CpuBootloaderParams;
+  UINTN               CpuBootloaderAddress;
 
-  CpuBootloaderParams = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
+  CpuBootloaderAddress = GetCPUBLBaseAddress ();
+  CpuBootloaderParams  = (TEGRA_CPUBL_PARAMS *)(VOID *)CpuBootloaderAddress;
 
   return CpuBootloaderParams->EarlyBootVariables->Data.Mb1Data.FeatureData.TpmEnable;
 }
 
 EFI_STATUS
 EFIAPI
-T410UpdatePlatformResourceInformation (
+SocUpdatePlatformResourceInformation (
   IN  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo
   )
 {
@@ -1049,4 +918,235 @@ T410UpdatePlatformResourceInformation (
   }
 
   return T410CpuC2cMode (PlatformResourceInfo);
+}
+
+/**
+  Invalidate Active Boot Chain
+
+**/
+EFI_STATUS
+EFIAPI
+InValidateActiveBootChain (
+  VOID
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Get Total Core Count in case system supports software core disable
+
+**/
+EFI_STATUS
+EFIAPI
+SocSupportsSoftwareCoreDisable (
+  IN UINT32   Socket,
+  OUT UINT32  *TotalCoreCount
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Check if given boot chain is marked failed
+
+**/
+BOOLEAN
+EFIAPI
+BootChainIsFailed (
+  IN UINT32  BootChain
+  )
+{
+  return FALSE;
+}
+
+/**
+  Set the status of the inactive boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+SetInactiveBootChainStatus (
+  IN BOOLEAN  SetGoodStatus
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Clear the UpdateBrBct flag
+
+**/
+VOID
+EFIAPI
+ClearUpdateBrBctFlag (
+  VOID
+  )
+{
+}
+
+/**
+  Get Partition information.
+
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfo (
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return T410GetPartitionInfo (
+           GetCPUBLBaseAddress (),
+           PartitionIndex,
+           DeviceInstance,
+           PartitionStartByte,
+           PartitionSizeBytes
+           );
+}
+
+/**
+  Get Partition information in Standalone MM image.
+
+**/
+EFI_STATUS
+EFIAPI
+GetPartitionInfoStMm (
+  IN  UINTN   CpuBlAddress,
+  IN  UINT32  PartitionIndex,
+  OUT UINT16  *DeviceInstance,
+  OUT UINT64  *PartitionStartByte,
+  OUT UINT64  *PartitionSizeBytes
+  )
+{
+  return T410GetPartitionInfo (
+           CpuBlAddress,
+           PartitionIndex,
+           DeviceInstance,
+           PartitionStartByte,
+           PartitionSizeBytes
+           );
+}
+
+/**
+  Return PCIe interface number from ID
+
+**/
+UINT32
+EFIAPI
+PcieIdToInterface (
+  IN UINT32  PcieId
+  )
+{
+  return PcieId & T410_PCIE_ID_TO_INTERFACE_MASK;
+}
+
+/**
+  Return socket from PCIe ID
+
+**/
+UINT32
+EFIAPI
+PcieIdToSocket (
+  IN UINT32  PcieId
+  )
+{
+  return (PcieId >> T410_PCIE_ID_TO_SOCKET_SHIFT) & T410_SOCKET_MASK;
+}
+
+/**
+  Get GIC information
+
+**/
+BOOLEAN
+EFIAPI
+GetGicInfo (
+  OUT TEGRA_GIC_INFO  *GicInfo
+  )
+{
+  GicInfo->GicCompatString = "arm,gic-v3";
+  GicInfo->ItsCompatString = "arm,gic-v3-its";
+  GicInfo->Version         = 4;
+
+  return TRUE;
+}
+
+/**
+  Retrieve GR Blob Address
+
+**/
+UINT64
+EFIAPI
+GetGRBlobBaseAddress (
+  VOID
+  )
+{
+  return 0x0;
+}
+
+/**
+  Get the active boot chain from Standalone MM image
+
+**/
+EFI_STATUS
+EFIAPI
+GetActiveBootChainStMm (
+  IN  UINTN   ScratchBase,
+  OUT UINT32  *BootChain
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Set the next boot chain
+
+**/
+EFI_STATUS
+EFIAPI
+SetNextBootChain (
+  IN  UINT32  BootChain
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Set next boot into recovery
+
+**/
+VOID
+EFIAPI
+SetNextBootRecovery (
+  IN  VOID
+  )
+{
+}
+
+/**
+  Get the rootfs status register
+
+**/
+EFI_STATUS
+EFIAPI
+GetRootfsStatusReg (
+  IN UINT32  *RegisterValue
+  )
+{
+  return EFI_UNSUPPORTED;
+}
+
+/**
+  Set the rootfs status register
+
+**/
+EFI_STATUS
+EFIAPI
+SetRootfsStatusReg (
+  IN UINT32  RegisterValue
+  )
+{
+  return EFI_UNSUPPORTED;
 }

@@ -298,7 +298,7 @@ STATIC
 EFI_STATUS
 TH500GetMemoryMode (
   IN  CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
-  OUT TH500_MEMORY_MODE                *MemoryMode
+  OUT MEMORY_MODE                      *MemoryMode
   )
 {
   EFI_PHYSICAL_ADDRESS  EgmBase, HvBase;
@@ -317,11 +317,11 @@ TH500GetMemoryMode (
   HvSize = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_HV].Size);
 
   if ((EgmBase == 0) || (EgmSize == 0)) {
-    *MemoryMode = Th500MemoryModeNormal;
+    *MemoryMode = MemoryModeNormal;
   } else if ((HvBase == 0) || (HvSize == 0)) {
-    *MemoryMode = Th500MemoryModeEgmNoHv;
+    *MemoryMode = MemoryModeEgmNoHv;
   } else {
-    *MemoryMode = Th500MemoryModeEgmWithHv;
+    *MemoryMode = MemoryModeEgmWithHv;
   }
 
   return EFI_SUCCESS;
@@ -341,7 +341,7 @@ EFI_STATUS
 TH500GetMemoryInfo (
   IN CONST TEGRA_CPUBL_PARAMS *CONST  CpuBootloaderParams,
   IN UINTN                            Socket,
-  IN TH500_MEMORY_MODE                MemoryMode,
+  IN MEMORY_MODE                      MemoryMode,
   OUT EFI_PHYSICAL_ADDRESS            *MemoryBase,
   OUT UINT64                          *MemorySize
   )
@@ -359,13 +359,13 @@ TH500GetMemoryInfo (
   EgmBase = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Socket][CARVEOUT_EGM].Base);
   EgmSize = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[Socket][CARVEOUT_EGM].Size);
 
-  if (MemoryMode == Th500MemoryModeNormal) {
+  if (MemoryMode == MemoryModeNormal) {
     *MemoryBase = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Base);
     *MemorySize = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Size);
-  } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
+  } else if (MemoryMode == MemoryModeEgmNoHv) {
     *MemoryBase = EgmBase;
     *MemorySize = EgmSize;
-  } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
+  } else if (MemoryMode == MemoryModeEgmWithHv) {
     *MemoryBase = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Base) + EgmSize;
     *MemorySize = CPUBL_PARAMS (CpuBootloaderParams, SdramInfo[Socket].Size) - EgmSize;
   } else {
@@ -402,7 +402,7 @@ TH500BuildDramRegions (
   EFI_PHYSICAL_ADDRESS  MemoryBase;
   UINT64                MemorySize;
   CONST UINT32          SocketMask = SocGetSocketMask ((EFI_PHYSICAL_ADDRESS)CpuBootloaderParams);
-  TH500_MEMORY_MODE     MemoryMode;
+  MEMORY_MODE           MemoryMode;
   CONST UINT32          MaxSocket = HighBitSet32 (SocketMask);
 
   DEBUG ((DEBUG_ERROR, "SocketMask=0x%x\n", SocketMask));
@@ -445,17 +445,17 @@ TH500BuildDramRegions (
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
   }
 
-  if (MemoryMode == Th500MemoryModeNormal) {
+  if (MemoryMode == MemoryModeNormal) {
     DEBUG ((DEBUG_ERROR, "Memory Mode: Normal\n"));
-  } else if (MemoryMode == Th500MemoryModeEgmNoHv) {
+  } else if (MemoryMode == MemoryModeEgmNoHv) {
     DEBUG ((DEBUG_ERROR, "Memory Mode: EGM No HV\n"));
-  } else if (MemoryMode == Th500MemoryModeEgmWithHv) {
+  } else if (MemoryMode == MemoryModeEgmWithHv) {
     DEBUG ((DEBUG_ERROR, "Memory Mode: EGM With HV\n"));
   } else {
     DEBUG ((DEBUG_ERROR, "Memory Mode: Unknown\n"));
   }
 
-  if (MemoryMode == Th500MemoryModeEgmNoHv) {
+  if (MemoryMode == MemoryModeEgmNoHv) {
     Base = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Base);
     Size = CPUBL_PARAMS (CpuBootloaderParams, CarveoutInfo[TH500_PRIMARY_SOCKET][CARVEOUT_RCM_BLOB].Size);
     PlatformResourceAddMemoryRegion (Regions, &RegionCount, Base, Size);
@@ -493,7 +493,7 @@ TH500AddBootloaderCarveouts (
   IN OUT UINTN                       *CONST  RegionCount,
   IN     NVDA_MEMORY_REGION          *CONST  UsableRegions,
   IN OUT UINTN                       *CONST  UsableRegionCount,
-  IN     CONST TH500_MEMORY_MODE             MemoryMode,
+  IN     CONST MEMORY_MODE                   MemoryMode,
   IN     CONST UINTN                         Socket,
   IN     CONST TEGRABL_CARVEOUT_INFO *CONST  Carveouts,
   IN     CONST UINTN                         CarveoutCount
@@ -541,7 +541,7 @@ TH500AddBootloaderCarveouts (
         continue;
 
       case CARVEOUT_EGM:
-        if (MemoryMode == Th500MemoryModeEgmNoHv) {
+        if (MemoryMode == MemoryModeEgmNoHv) {
           continue;
         }
 
@@ -588,7 +588,7 @@ TH500BuildCarveoutRegions (
   )
 {
   EFI_STATUS            Status;
-  TH500_MEMORY_MODE     MemoryMode;
+  MEMORY_MODE           MemoryMode;
   NVDA_MEMORY_REGION    *Regions, *UsableRegions;
   UINTN                 RegionCount, UsableRegionCount;
   UINTN                 Socket;

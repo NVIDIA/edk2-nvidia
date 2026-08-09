@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -12,6 +12,13 @@
 #include <Uefi/UefiBaseType.h>
 #include <Library/PlatformResourceLib.h>
 #include "SocResourceConfig.h"
+
+typedef enum {
+  MemoryModeNormal,
+  MemoryModeEgmNoHv,
+  MemoryModeEgmWithHv,
+  MemoryModeMax
+} MEMORY_MODE;
 
 typedef struct {
   UINT32     SocketMask;
