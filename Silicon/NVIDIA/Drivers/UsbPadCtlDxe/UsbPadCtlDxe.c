@@ -2,7 +2,7 @@
 
   Usb Pad Control Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -163,10 +163,11 @@ DeviceDiscoveryNotify (
         // Both T234 and current USB Pad controllers are handled by this path.
         // If new hardare strings are not compatible with the T234 path new logic
         // will be needed.
-        Private->mUsbPadCtlProtocol.InitHw      = InitUsbHw234;
-        Private->mUsbPadCtlProtocol.DeInitHw    = DeInitUsbHw234;
-        Private->mUsbPadCtlProtocol.InitDevHw   = InitUsbDevHw234;
-        Private->mUsbPadCtlProtocol.DeInitDevHw = DeInitUsbDevHw234;
+        Private->mUsbPadCtlProtocol.InitHw        = InitUsbHw234;
+        Private->mUsbPadCtlProtocol.DeInitHw      = DeInitUsbHw234;
+        Private->mUsbPadCtlProtocol.InitDevHw     = InitUsbDevHw234;
+        Private->mUsbPadCtlProtocol.DeInitDevHw   = DeInitUsbDevHw234;
+        Private->mUsbPadCtlProtocol.DeInitSsVcore = DeInitSsVcore234;
 
         if (CompareGuid (NonDiscoverableProtocol->Type, &gNVIDIANonDiscoverableT234UsbPadDeviceGuid)) {
           if (!EFI_ERROR (

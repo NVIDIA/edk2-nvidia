@@ -197,24 +197,25 @@ StopController:
   Private->mUsbPadCtlProtocol->DeInitHw (Private->mUsbPadCtlProtocol);
 
   Status = gBS->HandleProtocol (Private->ControllerHandle, &gNVIDIAPowerGateNodeProtocolGuid, (VOID **)&PgProtocol);
-  if (EFI_ERROR (Status)) {
-    return;
-  }
-
-  for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
-    Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
-    if (EFI_ERROR (Status)) {
-      return;
-    }
-
-    if (PgState == CmdPgStateOn) {
-      Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+  if (!EFI_ERROR (Status)) {
+    for (Index = 0; Index < PgProtocol->NumberOfPowerGates; Index++) {
+      Status = PgProtocol->GetState (PgProtocol, PgProtocol->PowerGateId[Index], &PgState);
       if (EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
-        return;
+        break;
+      }
+
+      if (PgState == CmdPgStateOn) {
+        Status = PgProtocol->Assert (PgProtocol, PgProtocol->PowerGateId[Index]);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "Xhci Assert pg fail: %d\r\n", PgProtocol->PowerGateId[Index]));
+          break;
+        }
       }
     }
   }
+
+  /* The pads are clamped, so the core voltage can go now */
+  Private->mUsbPadCtlProtocol->DeInitSsVcore (Private->mUsbPadCtlProtocol);
 
   DeviceDiscoveryHideResources (Private->ControllerHandle);
 }

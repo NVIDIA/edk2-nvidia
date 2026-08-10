@@ -1261,6 +1261,40 @@ DeInitUsbHw234 (
     PadCtlWrite (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0, RegData);
 
     gBS->Stall (350);
+  }
+
+  return;
+}
+
+/**
+  This function removes the SuperSpeed core voltage for T234.
+
+  Call only after the XUSB partition has been power gated.
+
+  @param[in]     This                Instance of NVIDIA_USBPADCTL_PROTOCOL
+**/
+VOID
+DeInitSsVcore234 (
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  )
+{
+  USBPADCTL_DXE_PRIVATE  *Private;
+  PADCTL_PLAT_CONFIG     *PlatConfig;
+  PORT_INFO              *Usb3Ports;
+  UINT32                 i, RegData;
+
+  if (NULL == This) {
+    return;
+  }
+
+  Private    = PADCTL_PRIVATE_DATA_FROM_THIS (This);
+  PlatConfig = &(Private->PlatConfig);
+  Usb3Ports  = PlatConfig->Usb3Ports;
+
+  for (i = 0; i < PlatConfig->NumSsPhys; i++) {
+    if (Usb3Ports[i].PortEnabled == FALSE) {
+      continue;
+    }
 
     RegData  = PadCtlRead (Private, XUSB_PADCTL_ELPG_PROGRAM_1_0);
     RegData |= SSPX_ELPG_VCORE_DOWN (i);

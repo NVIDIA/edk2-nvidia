@@ -1,7 +1,7 @@
 /** @file
   Usb Pad Control Protocol
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -71,11 +71,25 @@ VOID
   IN  NVIDIA_USBPADCTL_PROTOCOL  *This
   );
 
+/**
+  This function removes the SuperSpeed core voltage for specific Chip.
+
+  Call only after the XUSB partition has been power gated.
+
+  @param[in]     This                Instance of NVIDIA_USBPADCTL_PROTOCOL
+**/
+typedef
+VOID
+(EFIAPI *USBPADCTL_DEINIT_SS_VCORE)(
+  IN  NVIDIA_USBPADCTL_PROTOCOL  *This
+  );
+
 struct _NVIDIA_USBPADCTL_PROTOCOL {
-  USBPADCTL_INIT_HW          InitHw;
-  USBPADCTL_DEINIT_HW        DeInitHw;
-  USBPADCTL_INIT_DEV_HW      InitDevHw;
-  USBPADCTL_DEINIT_DEV_HW    DeInitDevHw;
+  USBPADCTL_INIT_HW            InitHw;
+  USBPADCTL_DEINIT_HW          DeInitHw;
+  USBPADCTL_INIT_DEV_HW        InitDevHw;
+  USBPADCTL_DEINIT_DEV_HW      DeInitDevHw;
+  USBPADCTL_DEINIT_SS_VCORE    DeInitSsVcore;
 };
 
 extern EFI_GUID  gNVIDIAUsbPadCtlProtocolGuid;
