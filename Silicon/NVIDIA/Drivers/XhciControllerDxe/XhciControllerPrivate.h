@@ -2,7 +2,7 @@
 
   XHCI Controller Driver private structures
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -49,8 +49,41 @@
 #define XUSB_CFG_AXI_CFG_0  _MK_ADDR_CONST(0x000000F8)
 
 #define XUSB_OP_USBSTS  _MK_ADDR_CONST(0x00000004)
-#define USBSTS_CNR      (1 << 11)
-#define USBSTS_HCE      (1 << 12)
+#define USBSTS_HCH      BIT0
+#define USBSTS_CNR      BIT11
+#define USBSTS_HCE      BIT12
+
+#define XUSB_CAP_HCSPARAMS1        _MK_ADDR_CONST(0x00000004)
+#define HCSPARAMS1_MAXPORTS_SHIFT  24
+
+#define XUSB_OP_PORTSC_BASE    _MK_ADDR_CONST(0x00000400)
+#define XUSB_OP_PORTSC_STRIDE  _MK_ADDR_CONST(0x00000010)
+
+/* PORTSC.PED is RW1CS: write one to disable. */
+#define PORTSC_CCS    BIT0
+#define PORTSC_PED    BIT1
+#define PORTSC_OCA    BIT3
+#define PORTSC_PLS    (BIT5 | BIT6 | BIT7 | BIT8)
+#define PORTSC_PP     BIT9
+#define PORTSC_SPEED  (BIT10 | BIT11 | BIT12 | BIT13)
+#define PORTSC_PIC    (BIT14 | BIT15)
+#define PORTSC_WCE    BIT25
+#define PORTSC_WDE    BIT26
+#define PORTSC_WOE    BIT27
+#define PORTSC_DR     BIT30
+
+/* Preserve PORTSC RO and RWS fields during read-modify-write. */
+#define PORTSC_WAKE      (PORTSC_WCE | PORTSC_WDE | PORTSC_WOE)
+#define PORTSC_RO        (PORTSC_CCS | PORTSC_OCA | PORTSC_SPEED | PORTSC_DR)
+#define PORTSC_RWS       (PORTSC_PLS | PORTSC_PP | PORTSC_PIC | PORTSC_WAKE)
+#define PORTSC_PRESERVE  (PORTSC_RO | PORTSC_RWS)
+
+#define XUSB_HALT_TIMEOUT_US          16000
+#define XUSB_RUN_TIMEOUT_US           16000
+#define XUSB_PORT_DISABLE_TIMEOUT_US  10000
+#define XUSB_POLL_STEP_US             50
+
+#define XUSB_OP_USBCMD_RS  BIT0
 
 #define XUSB_BASE_ADDR_SHIFT  15
 #define XUSB_BASE_ADDR_MASK   0x1ffff

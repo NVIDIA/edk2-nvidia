@@ -2,7 +2,7 @@
 
   XHCI Controller Driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2019-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -21,6 +21,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UsbFalconLib.h>
 #include <Library/TegraPlatformInfoLib.h>
+#include <Library/TimerLib.h>
 #include <Library/HobLib.h>
 #include <Library/PlatformResourceLib.h>
 #include <Protocol/UsbPadCtl.h>
@@ -102,8 +103,14 @@ OnExitBootServices (
   UINT32                           PgState;
   VOID                             *AcpiBase;
   EFI_PHYSICAL_ADDRESS             BaseAddress;
+  UINTN                            Offset;
+  UINTN                            Waited;
   UINT8                            CapLength;
-  UINT32                           val;
+  UINT32                           UsbCmd;
+  UINT32                           UsbSts;
+  UINT32                           Port;
+  UINT32                           PortSc;
+  UINT32                           MaxPorts;
 
   Private    = (XHCICONTROLLER_DXE_PRIVATE *)Context;
   PgProtocol = NULL;
@@ -117,13 +124,74 @@ OnExitBootServices (
 
   BaseAddress = Private->XusbSoc->BaseAddress;
   CapLength   = MmioRead8 (BaseAddress);
-  val         = MmioRead32 (BaseAddress + CapLength);
+  UsbSts      = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
+  MaxPorts    = MmioRead32 (BaseAddress + XUSB_CAP_HCSPARAMS1) >> HCSPARAMS1_MAXPORTS_SHIFT;
 
-  val = 0;
-  MmioWrite32 (BaseAddress + CapLength, val);
+  /* Resume a halted controller before disabling ports. */
+  if ((UsbSts & USBSTS_HCH) != 0) {
+    UsbCmd  = MmioRead32 (BaseAddress + CapLength);
+    UsbCmd |= XUSB_OP_USBCMD_RS;
+    MmioWrite32 (BaseAddress + CapLength, UsbCmd);
 
-  val = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
-  DEBUG ((DEBUG_ERROR, "Xhci OnExitBootServices usbsts after stop write: %x\r\n", val));
+    for (Waited = 0; Waited < XUSB_RUN_TIMEOUT_US; Waited += XUSB_POLL_STEP_US) {
+      MicroSecondDelay (XUSB_POLL_STEP_US);
+      UsbSts = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
+      if ((UsbSts & USBSTS_HCH) == 0) {
+        break;
+      }
+    }
+
+    if (Waited >= XUSB_RUN_TIMEOUT_US) {
+      DEBUG ((DEBUG_ERROR, "Xhci: controller did not resume, usbsts %x\r\n", UsbSts));
+      goto StopController;
+    }
+  }
+
+  for (Port = 0; Port < MaxPorts; Port++) {
+    Offset = XUSB_OP_PORTSC_BASE + ((UINTN)Port * XUSB_OP_PORTSC_STRIDE);
+    PortSc = MmioRead32 (BaseAddress + CapLength + Offset);
+    if (((PortSc & PORTSC_CCS) == 0) || ((PortSc & PORTSC_PED) == 0)) {
+      continue;
+    }
+
+    PortSc &= PORTSC_PRESERVE;
+    PortSc |= PORTSC_PED;
+    MmioWrite32 (BaseAddress + CapLength + Offset, PortSc);
+
+    for (Waited = 0; Waited < XUSB_PORT_DISABLE_TIMEOUT_US; Waited += XUSB_POLL_STEP_US) {
+      MicroSecondDelay (XUSB_POLL_STEP_US);
+      PortSc = MmioRead32 (BaseAddress + CapLength + Offset);
+      if ((PortSc & PORTSC_PED) == 0) {
+        break;
+      }
+    }
+
+    if ((PortSc & PORTSC_PED) != 0) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Xhci: port %u disable timed out, portsc %x\r\n",
+        Port + 1,
+        PortSc
+        ));
+    }
+  }
+
+StopController:
+  UsbCmd  = MmioRead32 (BaseAddress + CapLength);
+  UsbCmd &= ~XUSB_OP_USBCMD_RS;
+  MmioWrite32 (BaseAddress + CapLength, UsbCmd);
+
+  for (Waited = 0; Waited < XUSB_HALT_TIMEOUT_US; Waited += XUSB_POLL_STEP_US) {
+    MicroSecondDelay (XUSB_POLL_STEP_US);
+    UsbSts = MmioRead32 (BaseAddress + CapLength + XUSB_OP_USBSTS);
+    if ((UsbSts & USBSTS_HCH) != 0) {
+      break;
+    }
+  }
+
+  if (Waited >= XUSB_HALT_TIMEOUT_US) {
+    DEBUG ((DEBUG_ERROR, "Xhci: controller did not halt, usbsts %x\r\n", UsbSts));
+  }
 
   /* Do UsbPadCtlDxe DeInit */
   Private->mUsbPadCtlProtocol->DeInitHw (Private->mUsbPadCtlProtocol);
