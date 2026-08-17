@@ -25,6 +25,7 @@
 #define CAPSULE_3767_NANOE8GB        L"TEGRA_BL_3767_nanoe8gb.Cap"
 #define CAPSULE_3767_NANOE8GB_SUPER  L"TEGRA_BL_3767_nanoe8gb_super.Cap"
 #define CAPSULE_3834_AGX             L"TEGRA_BL_3834_agx.Cap"
+#define CAPSULE_3834_IGX             L"TEGRA_BL_3834_igx.Cap"
 
 #define MAX_CAPSULE_PATH_CHARS  128
 #define MAX_CAPSULE_PATH_SIZE   (MAX_CAPSULE_PATH_CHARS * sizeof (CHAR16))
@@ -50,7 +51,7 @@
 
 #define BOARD_ID_AGX_ORIN   3701
 #define BOARD_ID_ORIN_NANO  3767
-#define BOARD_ID_AGX_THOR   3834
+#define BOARD_ID_THOR       3834
 
 #define COMPAT_FAB_000  "000"
 #define COMPAT_FAB_300  "300"
@@ -65,6 +66,8 @@
 #define BOARD_NAME_ORIN_NANOE8GB_DEVKIT_SUPER  "jetson-orin-nanoe8gb-devkit-super"
 #define BOARD_NAME_AGX_THOR_DEVKIT             "jetson-agx-thor-devkit"
 #define BOARD_NAME_AGX_THOR_T4000              "jetson-agx-thor-t4000"
+#define BOARD_NAME_IGX_THOR_DEVKIT             "igx-thor-devkit"
+#define BOARD_NAME_IGX_THOR_DEVKIT_MINI        "igx-thor-devkit-mini"
 
 /**
   Check if EFI\ISO_ID or EFI\INSTALLER_ID exists and its content matches

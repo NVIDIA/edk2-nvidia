@@ -1280,6 +1280,26 @@ IsSuper (
 }
 
 /**
+  Check whether the board name identifies an IGX Thor board.
+
+  @param[in]  BoardName  BoardName parsed from TegraPlatformCompatSpec.
+
+  @retval TRUE   Board name identifies an IGX Thor DevKit or DevKit Mini.
+  @retval FALSE  Board name does not identify an IGX Thor board.
+
+**/
+STATIC
+BOOLEAN
+IsIgxThor (
+  IN CONST CHAR8  *BoardName
+  )
+{
+  return (BoardName != NULL) &&
+         ((AsciiStrCmp (BoardName, BOARD_NAME_IGX_THOR_DEVKIT) == 0) ||
+          (AsciiStrCmp (BoardName, BOARD_NAME_IGX_THOR_DEVKIT_MINI) == 0));
+}
+
+/**
   Check whether cached TegraPlatformSpec and passed-in SpecString identify non-Super Jetson Orin Nano Devkit SKU 5.
 
   @param[in]  SpecString  String containing the board name to check.
@@ -1428,8 +1448,13 @@ SelectCapsuleFile (
       CapsuleFileName = GetOrinNanoCapsuleFileName ();
       break;
 
-    case BOARD_ID_AGX_THOR:
-      CapsuleFileName = CAPSULE_3834_AGX;
+    case BOARD_ID_THOR:
+      if (IsIgxThor (mTegraPlatformCompatSpec.mBoardName)) {
+        CapsuleFileName = CAPSULE_3834_IGX;
+      } else {
+        CapsuleFileName = CAPSULE_3834_AGX;
+      }
+
       break;
 
     default:
@@ -1562,6 +1587,8 @@ ResolveCompatSpecParams (
   UINTN        CompatibleLen;
   BOOLEAN      IsNanoE8GBConf;
   BOOLEAN      IsSuperConf;
+  BOOLEAN      IsIgxThorDevkit;
+  BOOLEAN      IsIgxThorDevkitMini;
   UINT32       NumericFab;
 
   NumericFab = 0;
@@ -1574,11 +1601,15 @@ ResolveCompatSpecParams (
                           (FabStr[2] - '0'));
   }
 
-  IsNanoE8GBConf = FALSE;
-  IsSuperConf    = FALSE;
+  IsNanoE8GBConf      = FALSE;
+  IsSuperConf         = FALSE;
+  IsIgxThorDevkit     = FALSE;
+  IsIgxThorDevkitMini = FALSE;
   if (ReadPlatformCompatible (&Compatible, &CompatibleLen)) {
-    IsNanoE8GBConf = AsciiBufferContainsString (Compatible, CompatibleLen, "nanoe8gb");
-    IsSuperConf    = AsciiBufferContainsString (Compatible, CompatibleLen, "super");
+    IsNanoE8GBConf      = AsciiBufferContainsString (Compatible, CompatibleLen, "nanoe8gb");
+    IsSuperConf         = AsciiBufferContainsString (Compatible, CompatibleLen, "super");
+    IsIgxThorDevkit     = AsciiBufferContainsString (Compatible, CompatibleLen, "p3740-0002+p3834-0008");
+    IsIgxThorDevkitMini = AsciiBufferContainsString (Compatible, CompatibleLen, "p4071-0008+p3834-0008");
   }
 
   switch (BoardId) {
@@ -1625,12 +1656,18 @@ ResolveCompatSpecParams (
 
       break;
 
-    case BOARD_ID_AGX_THOR:
+    case BOARD_ID_THOR:
       if (BoardSku == 0) {
         *CompatFab = COMPAT_FAB_000;
         *BoardName = BOARD_NAME_AGX_THOR_T4000;
       } else if (BoardSku == 8) {
         *BoardName = BOARD_NAME_AGX_THOR_DEVKIT;
+        if (IsIgxThorDevkit) {
+          *BoardName = BOARD_NAME_IGX_THOR_DEVKIT;
+        } else if (IsIgxThorDevkitMini) {
+          *BoardName = BOARD_NAME_IGX_THOR_DEVKIT_MINI;
+        }
+
         if (((FabStr[0] == 'E') && (FabStr[1] == 'B') && (FabStr[2] >= '9')) ||
             ((FabStr[0] == 'T') && (FabStr[1] == 'S') && (FabStr[2] >= '5')) ||
             ((FabStr[0] == 'R') && (FabStr[1] == 'C') && (FabStr[2] >= '2')) ||

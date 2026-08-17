@@ -215,7 +215,8 @@ BoardName is used only for variant checks such as NanoE8GB and Super:
 | 3767            | any        | contains `jetson-orin-nanoe8gb-devkit` only    | TEGRA_BL_3767_nanoe8gb.Cap       |
 | 3767            | any        | contains `super` only                          | TEGRA_BL_3767_super.Cap          |
 | 3767            | any        | otherwise                                      | TEGRA_BL_3767.Cap                |
-| 3834            | any        | any                                            | TEGRA_BL_3834_agx.Cap            |
+| 3834            | any        | `igx-thor-devkit` or `igx-thor-devkit-mini`    | TEGRA_BL_3834_igx.Cap            |
+| 3834            | any        | otherwise                                      | TEGRA_BL_3834_agx.Cap            |
 | other           | any        | any                                            | TEGRA_BL_3701_agx.Cap (default)  |
 
 If the cached `TegraPlatformCompatSpec` fields are unavailable or cannot be
