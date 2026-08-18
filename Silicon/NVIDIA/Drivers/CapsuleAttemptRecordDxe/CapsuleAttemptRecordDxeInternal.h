@@ -109,6 +109,10 @@ typedef enum {
 typedef struct {
   UINT64                           AttemptId;
   BOOLEAN                          AttemptIdValid;
+  EFI_TIME                         Timestamp;
+  BOOLEAN                          TimestampValid;
+  UINT64                           ElapsedTimeNs;
+  BOOLEAN                          ElapsedTimeValid;
   CAPSULE_ATTEMPT_RECORD_SOURCE    Source;
   CAPSULE_ATTEMPT_RECORD_STATE     State;
 } CAPSULE_ATTEMPT_RECORD_LIFECYCLE;
@@ -156,6 +160,7 @@ EFIAPI
 CapsuleAttemptRecordBegin (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
+  IN     CONST EFI_TIME                  *Timestamp OPTIONAL,
   OUT    UINT64                          *AttemptId
   );
 
@@ -166,6 +171,8 @@ CapsuleAttemptRecordFinalize (
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE                    Source,
   IN     UINT64                                           AttemptId,
   IN     BOOLEAN                                          AttemptIdValid,
+  IN     CONST EFI_TIME                                   *Timestamp OPTIONAL,
+  IN     CONST UINT64                                     *ElapsedTimeNs OPTIONAL,
   IN     CONST EFI_GUID                                   *ImageTypeId,
   IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
@@ -177,6 +184,7 @@ CapsuleAttemptRecordUpdateDiagnostics (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT            *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
   IN     UINT64                                    AttemptId,
+  IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
   );
 
@@ -210,6 +218,19 @@ BOOLEAN
 CapsuleAttemptRecordSequenceIsNewer (
   IN UINT64  Sequence,
   IN UINT64  Reference
+  );
+
+BOOLEAN
+CapsuleAttemptRecordIsTimeValid (
+  IN CONST EFI_TIME  *Time
+  );
+
+UINT64
+CapsuleAttemptRecordGetElapsedTicks (
+  IN UINT64  StartCounter,
+  IN UINT64  EndCounter,
+  IN UINT64  CounterStartValue,
+  IN UINT64  CounterEndValue
   );
 
 /**

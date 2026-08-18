@@ -16,13 +16,23 @@ VOID
 CapsuleAttemptRecordStateBegin (
   OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State,
   IN  CAPSULE_ATTEMPT_RECORD_SOURCE          Source,
-  IN  UINT64                                 AttemptId
+  IN  UINT64                                 AttemptId,
+  IN  CONST EFI_TIME                         *Timestamp OPTIONAL,
+  IN  UINT64                                 StartCounter
   )
 {
-  State->DiagnosticsValid = FALSE;
-  State->AttemptActive    = TRUE;
-  State->AttemptId        = AttemptId;
-  State->AttemptSource    = Source;
+  State->AttemptActive            = TRUE;
+  State->AttemptId                = AttemptId;
+  State->AttemptSource            = Source;
+  State->AttemptTimestampValid    = (BOOLEAN)(Timestamp != NULL);
+  State->AttemptStartCounter      = StartCounter;
+  State->AttemptStartCounterValid = TRUE;
+  State->DiagnosticsValid         = FALSE;
+  if (Timestamp != NULL) {
+    CopyMem (&State->AttemptTimestamp, Timestamp, sizeof (State->AttemptTimestamp));
+  } else {
+    ZeroMem (&State->AttemptTimestamp, sizeof (State->AttemptTimestamp));
+  }
 }
 
 BOOLEAN
@@ -46,10 +56,14 @@ CapsuleAttemptRecordStateConsume (
   IN OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State
   )
 {
-  State->AttemptActive    = FALSE;
-  State->AttemptId        = 0;
-  State->AttemptSource    = CapsuleAttemptRecordSourceUnknown;
-  State->DiagnosticsValid = FALSE;
+  State->AttemptActive            = FALSE;
+  State->AttemptId                = 0;
+  State->AttemptSource            = CapsuleAttemptRecordSourceUnknown;
+  State->AttemptTimestampValid    = FALSE;
+  State->AttemptStartCounter      = 0;
+  State->AttemptStartCounterValid = FALSE;
+  State->DiagnosticsValid         = FALSE;
+  ZeroMem (&State->AttemptTimestamp, sizeof (State->AttemptTimestamp));
 }
 
 EFI_STATUS

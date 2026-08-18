@@ -35,6 +35,105 @@ STATIC CONST CHAR8  *CONST  mPartitionDenyList[] = {
   NULL
 };
 
+#define CAPSULE_ATTEMPT_RECORD_TIMESTAMP_SIZE  36U
+
+BOOLEAN
+CapsuleAttemptRecordIsTimeValid (
+  IN CONST EFI_TIME  *Time
+  )
+{
+  STATIC CONST UINT8  DaysPerMonth[] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+  };
+  UINT8               DaysInMonth;
+  BOOLEAN             LeapYear;
+
+  //
+  // UEFI permits TimeZone values of -1440 and 1440, but those values cannot
+  // be represented by the timestamp's signed HH:MM offset.
+  //
+  if ((Time == NULL) ||
+      (Time->Year < 1900) || (Time->Year > 9999) ||
+      (Time->Month < 1) || (Time->Month > 12) ||
+      (Time->Hour > 23) || (Time->Minute > 59) || (Time->Second > 59) ||
+      (Time->Nanosecond > 999999999) ||
+      ((Time->TimeZone != EFI_UNSPECIFIED_TIMEZONE) &&
+       ((Time->TimeZone <= -1440) || (Time->TimeZone >= 1440))) ||
+      ((Time->Daylight & ~(EFI_TIME_ADJUST_DAYLIGHT | EFI_TIME_IN_DAYLIGHT)) != 0))
+  {
+    return FALSE;
+  }
+
+  DaysInMonth = DaysPerMonth[Time->Month - 1];
+  LeapYear    = (BOOLEAN)(((Time->Year % 4) == 0) &&
+                          (((Time->Year % 100) != 0) || ((Time->Year % 400) == 0)));
+  if ((Time->Month == 2) && LeapYear) {
+    DaysInMonth++;
+  }
+
+  return (BOOLEAN)((Time->Day >= 1) && (Time->Day <= DaysInMonth));
+}
+
+STATIC
+EFI_STATUS
+FormatTimestamp (
+  IN  CONST EFI_TIME  *Time,
+  OUT CHAR8           *Timestamp,
+  IN  UINTN           TimestampSize
+  )
+{
+  CHAR8  TimeZone[7];
+  INT16  TimeZoneMinutes;
+  UINTN  AbsoluteMinutes;
+  UINTN  Hours;
+  UINTN  Minutes;
+
+  if ((Time == NULL) || (Timestamp == NULL) ||
+      (TimestampSize < CAPSULE_ATTEMPT_RECORD_TIMESTAMP_SIZE) ||
+      !CapsuleAttemptRecordIsTimeValid (Time))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Time->TimeZone == EFI_UNSPECIFIED_TIMEZONE) {
+    TimeZone[0] = '\0';
+  } else if (Time->TimeZone == 0) {
+    AsciiStrCpyS (TimeZone, sizeof (TimeZone), "Z");
+  } else {
+    //
+    // EFI_TIME.TimeZone uses LocalTime = UTC - TimeZone, while an ISO 8601
+    // offset expresses LocalTime - UTC. Invert the UEFI value for the suffix.
+    //
+    TimeZoneMinutes = (INT16)-Time->TimeZone;
+    AbsoluteMinutes = (TimeZoneMinutes < 0) ?
+                      (UINTN)(-TimeZoneMinutes) : (UINTN)TimeZoneMinutes;
+    Hours       = AbsoluteMinutes / 60;
+    Minutes     = AbsoluteMinutes % 60;
+    TimeZone[0] = (TimeZoneMinutes < 0) ? '-' : '+';
+    TimeZone[1] = (CHAR8)('0' + (Hours / 10));
+    TimeZone[2] = (CHAR8)('0' + (Hours % 10));
+    TimeZone[3] = ':';
+    TimeZone[4] = (CHAR8)('0' + (Minutes / 10));
+    TimeZone[5] = (CHAR8)('0' + (Minutes % 10));
+    TimeZone[6] = '\0';
+  }
+
+  AsciiSPrint (
+    Timestamp,
+    TimestampSize,
+    "%04u-%02u-%02uT%02u:%02u:%02u.%09u%a",
+    Time->Year,
+    Time->Month,
+    Time->Day,
+    Time->Hour,
+    Time->Minute,
+    Time->Second,
+    Time->Nanosecond,
+    TimeZone
+    );
+  return EFI_SUCCESS;
+}
+
 BOOLEAN
 CapsuleAttemptRecordPartitionNameMatchesPattern (
   IN CONST CHAR8  *PartitionName,
@@ -564,6 +663,31 @@ CapsuleAttemptRecordSequenceIsNewer (
   return (BOOLEAN)((Difference != 0) && (Difference < MAX_INT64 + 1ULL));
 }
 
+UINT64
+CapsuleAttemptRecordGetElapsedTicks (
+  IN UINT64  StartCounter,
+  IN UINT64  EndCounter,
+  IN UINT64  CounterStartValue,
+  IN UINT64  CounterEndValue
+  )
+{
+  if (CounterStartValue < CounterEndValue) {
+    if (EndCounter >= StartCounter) {
+      return EndCounter - StartCounter;
+    }
+
+    return (CounterEndValue - StartCounter) +
+           (EndCounter - CounterStartValue) + 1;
+  }
+
+  if (EndCounter <= StartCounter) {
+    return StartCounter - EndCounter;
+  }
+
+  return (StartCounter - CounterEndValue) +
+         (CounterStartValue - EndCounter) + 1;
+}
+
 EFI_STATUS
 CapsuleAttemptRecordValidateSlotBuffer (
   IN  CONST VOID                        *SlotBuffer,
@@ -715,6 +839,7 @@ CapsuleAttemptRecordBuildPayload (
   UINTN  Index;
   CHAR8  NodeName[32];
   CHAR8  GuidString[37];
+  CHAR8  Timestamp[CAPSULE_ATTEMPT_RECORD_TIMESTAMP_SIZE];
 
   if ((Payload == NULL) || (PayloadLength == NULL) ||
       ((EntryCount != 0) && (Entries == NULL)) ||
@@ -793,6 +918,45 @@ CapsuleAttemptRecordBuildPayload (
            ) != 0))
     {
       return EFI_BUFFER_TOO_SMALL;
+    }
+
+    if (Lifecycle->TimestampValid) {
+      if (EFI_ERROR (
+            FormatTimestamp (
+              &Lifecycle->Timestamp,
+              Timestamp,
+              sizeof (Timestamp)
+              )
+            ))
+      {
+        return EFI_INVALID_PARAMETER;
+      }
+
+      if (FdtSetPropString (
+            Payload,
+            0,
+            "nvidia,timestamp",
+            Timestamp
+            ) != 0)
+      {
+        return EFI_BUFFER_TOO_SMALL;
+      }
+    }
+
+    if (Lifecycle->ElapsedTimeValid) {
+      if (Lifecycle->State != CapsuleAttemptRecordStateCompleted) {
+        return EFI_INVALID_PARAMETER;
+      }
+
+      if (FdtSetPropU64 (
+            Payload,
+            0,
+            "nvidia,elapsed-time-ns",
+            Lifecycle->ElapsedTimeNs
+            ) != 0)
+      {
+        return EFI_BUFFER_TOO_SMALL;
+      }
     }
   }
 
@@ -1330,6 +1494,7 @@ EFIAPI
 CapsuleAttemptRecordBegin (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
+  IN     CONST EFI_TIME                  *Timestamp OPTIONAL,
   OUT    UINT64                          *AttemptId
   )
 {
@@ -1342,11 +1507,17 @@ CapsuleAttemptRecordBegin (
     return EFI_INVALID_PARAMETER;
   }
 
+  ZeroMem (&Lifecycle, sizeof (Lifecycle));
   Lifecycle.AttemptId      = 0;
   Lifecycle.AttemptIdValid = FALSE;
-  Lifecycle.Source         = Source;
-  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
-  Status                   = CommitRecord (Context, &Lifecycle, NULL, NULL, 0);
+  if (Timestamp != NULL) {
+    Lifecycle.Timestamp      = *Timestamp;
+    Lifecycle.TimestampValid = TRUE;
+  }
+
+  Lifecycle.Source = Source;
+  Lifecycle.State  = CapsuleAttemptRecordStateInProgress;
+  Status           = CommitRecord (Context, &Lifecycle, NULL, NULL, 0);
   if (!EFI_ERROR (Status)) {
     *AttemptId = Lifecycle.AttemptId;
   }
@@ -1361,6 +1532,8 @@ CapsuleAttemptRecordFinalize (
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE                    Source,
   IN     UINT64                                           AttemptId,
   IN     BOOLEAN                                          AttemptIdValid,
+  IN     CONST EFI_TIME                                   *Timestamp OPTIONAL,
+  IN     CONST UINT64                                     *ElapsedTimeNs OPTIONAL,
   IN     CONST EFI_GUID                                   *ImageTypeId,
   IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
@@ -1384,10 +1557,21 @@ CapsuleAttemptRecordFinalize (
     return Status;
   }
 
+  ZeroMem (&Lifecycle, sizeof (Lifecycle));
   Lifecycle.AttemptId      = AttemptId;
   Lifecycle.AttemptIdValid = AttemptIdValid;
-  Lifecycle.Source         = Source;
-  Lifecycle.State          = CapsuleAttemptRecordStateCompleted;
+  if (Timestamp != NULL) {
+    Lifecycle.Timestamp      = *Timestamp;
+    Lifecycle.TimestampValid = TRUE;
+  }
+
+  if (ElapsedTimeNs != NULL) {
+    Lifecycle.ElapsedTimeNs    = *ElapsedTimeNs;
+    Lifecycle.ElapsedTimeValid = TRUE;
+  }
+
+  Lifecycle.Source = Source;
+  Lifecycle.State  = CapsuleAttemptRecordStateCompleted;
   return CommitRecord (Context, &Lifecycle, Diagnostics, &Entry, 1);
 }
 
@@ -1397,6 +1581,7 @@ CapsuleAttemptRecordUpdateDiagnostics (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT            *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
   IN     UINT64                                    AttemptId,
+  IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
   )
 {
@@ -1409,10 +1594,16 @@ CapsuleAttemptRecordUpdateDiagnostics (
     return EFI_INVALID_PARAMETER;
   }
 
+  ZeroMem (&Lifecycle, sizeof (Lifecycle));
   Lifecycle.AttemptId      = AttemptId;
   Lifecycle.AttemptIdValid = TRUE;
-  Lifecycle.Source         = Source;
-  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  if (Timestamp != NULL) {
+    Lifecycle.Timestamp      = *Timestamp;
+    Lifecycle.TimestampValid = TRUE;
+  }
+
+  Lifecycle.Source = Source;
+  Lifecycle.State  = CapsuleAttemptRecordStateInProgress;
   return CommitRecord (Context, &Lifecycle, Diagnostics, NULL, 0);
 }
 
@@ -1429,6 +1620,8 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
            CapsuleAttemptRecordSourceUnknown,
            0,
            FALSE,
+           NULL,
+           NULL,
            ImageTypeId,
            ImageInfoSet,
            NULL
@@ -1655,14 +1848,29 @@ DumpPayload (
   UINT64       AttemptId;
   CONST CHAR8  *Source;
   CONST CHAR8  *State;
+  CONST CHAR8  *Timestamp;
   CONST VOID   *SourceProperty;
   CONST VOID   *StateProperty;
+  CONST VOID   *TimestampProperty;
+  CONST VOID   *ElapsedTimeProperty;
   INT32        SourcePropertyLength;
   INT32        StatePropertyLength;
+  INT32        TimestampPropertyLength;
+  INT32        ElapsedTimePropertyLength;
   UINTN        SourceLength;
   UINTN        StateLength;
+  UINTN        TimestampLength;
   EFI_STATUS   SourceStatus;
   EFI_STATUS   StateStatus;
+  EFI_STATUS   TimestampStatus;
+  UINT64       ElapsedTimeValue;
+  UINT64       ElapsedTimeNs;
+  UINT64       ElapsedTimeSeconds;
+  UINT64       ElapsedTimeHours;
+  UINT32       ElapsedTimeNanoseconds;
+  UINT32       ElapsedTimeSecondsWithinHour;
+  UINT32       ElapsedTimeMinutes;
+  UINT32       ElapsedTimeSecondsWithinMinute;
 
   if ((FdtCheckHeader (Payload) != 0) || (FdtTotalSize (Payload) != PayloadLength)) {
     return EFI_COMPROMISED_DATA;
@@ -1713,6 +1921,18 @@ DumpPayload (
                     "nvidia,attempt-state",
                     &StatePropertyLength
                     );
+  TimestampProperty = FdtGetProp (
+                        Payload,
+                        0,
+                        "nvidia,timestamp",
+                        &TimestampPropertyLength
+                        );
+  ElapsedTimeProperty = FdtGetProp (
+                          Payload,
+                          0,
+                          "nvidia,elapsed-time-ns",
+                          &ElapsedTimePropertyLength
+                          );
   SourceStatus = GetRequiredStringProperty (
                    Payload,
                    0,
@@ -1727,6 +1947,13 @@ DumpPayload (
                   &State,
                   &StateLength
                   );
+  TimestampStatus = GetRequiredStringProperty (
+                      Payload,
+                      0,
+                      "nvidia,timestamp",
+                      &Timestamp,
+                      &TimestampLength
+                      );
   if ((AttemptIdProperty == NULL) && (SourceProperty == NULL) &&
       (StateProperty == NULL))
   {
@@ -1747,6 +1974,47 @@ DumpPayload (
       AttemptId,
       Source,
       State
+      ));
+  }
+
+  if (TimestampProperty != NULL) {
+    if (EFI_ERROR (TimestampStatus)) {
+      return EFI_COMPROMISED_DATA;
+    }
+
+    DEBUG ((DEBUG_ERROR, "Capsule attempt timestamp: %a\n", Timestamp));
+  }
+
+  if (ElapsedTimeProperty != NULL) {
+    if (ElapsedTimePropertyLength != sizeof (ElapsedTimeValue)) {
+      return EFI_COMPROMISED_DATA;
+    }
+
+    CopyMem (
+      &ElapsedTimeValue,
+      ElapsedTimeProperty,
+      sizeof (ElapsedTimeValue)
+      );
+    ElapsedTimeNs      = Fdt64ToCpu (ElapsedTimeValue);
+    ElapsedTimeSeconds = DivU64x32Remainder (
+                           ElapsedTimeNs,
+                           1000000000U,
+                           &ElapsedTimeNanoseconds
+                           );
+    ElapsedTimeHours = DivU64x32Remainder (
+                         ElapsedTimeSeconds,
+                         3600U,
+                         &ElapsedTimeSecondsWithinHour
+                         );
+    ElapsedTimeMinutes             = ElapsedTimeSecondsWithinHour / 60U;
+    ElapsedTimeSecondsWithinMinute = ElapsedTimeSecondsWithinHour % 60U;
+    DEBUG ((
+      DEBUG_ERROR,
+      "Capsule attempt elapsed time: %Lu:%02u:%02u.%09u\n",
+      ElapsedTimeHours,
+      ElapsedTimeMinutes,
+      ElapsedTimeSecondsWithinMinute,
+      ElapsedTimeNanoseconds
       ));
   }
 

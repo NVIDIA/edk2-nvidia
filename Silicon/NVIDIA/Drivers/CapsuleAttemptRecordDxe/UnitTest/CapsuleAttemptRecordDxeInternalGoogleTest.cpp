@@ -284,16 +284,26 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   UINT64                                     AttemptId;
   CONST VOID                                 *StoredAttemptId;
   UINT64                                     StoredAttemptIdValue;
+  CONST VOID                                 *StoredElapsedTime;
+  UINT64                                     StoredElapsedTimeValue;
+  UINT64                                     ElapsedTimeNs;
   CONST CHAR8                                *State;
+  EFI_TIME                                   Timestamp;
   INT32                                      Length;
   CONST VOID                                 *Payload;
 
   Context = MakeContext ();
+  ZeroMem (&Timestamp, sizeof (Timestamp));
+  Timestamp.Year  = 2026;
+  Timestamp.Month = 8;
+  Timestamp.Day   = 18;
+  ElapsedTimeNs   = 90123456789012ULL;
   ASSERT_EQ (
     EFI_SUCCESS,
     CapsuleAttemptRecordBegin (
       &Context,
       CapsuleAttemptRecordSourceSavedCapsule,
+      &Timestamp,
       &AttemptId
       )
     );
@@ -330,6 +340,8 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
       CapsuleAttemptRecordSourceSavedCapsule,
       AttemptId,
       TRUE,
+      &Timestamp,
+      &ElapsedTimeNs,
       &ImageTypeId,
       &ImageInfoSet,
       NULL
@@ -358,6 +370,21 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   ASSERT_EQ ((INT32)sizeof (StoredAttemptIdValue), Length);
   CopyMem (&StoredAttemptIdValue, StoredAttemptId, sizeof (StoredAttemptIdValue));
   EXPECT_EQ (AttemptId, Fdt64ToCpu (StoredAttemptIdValue));
+  StoredElapsedTime = FdtGetProp (
+                        Payload,
+                        0,
+                        "nvidia,elapsed-time-ns",
+                        &Length
+                        );
+  ASSERT_NE (nullptr, StoredElapsedTime);
+  ASSERT_EQ ((INT32)sizeof (StoredElapsedTimeValue), Length);
+  CopyMem (
+    &StoredElapsedTimeValue,
+    StoredElapsedTime,
+    sizeof (StoredElapsedTimeValue)
+    );
+  EXPECT_EQ (ElapsedTimeNs, Fdt64ToCpu (StoredElapsedTimeValue));
+  EXPECT_EQ (EFI_SUCCESS, CapsuleAttemptRecordDumpLatest (&Context));
 }
 
 TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
@@ -365,13 +392,23 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
   UINT32                            PayloadLength;
   CAPSULE_ATTEMPT_RECORD_LIFECYCLE  Lifecycle;
   CONST CHAR8                       *Source;
+  CONST CHAR8                       *Timestamp;
   INT32                             Length;
 
   ZeroMem (&Lifecycle, sizeof (Lifecycle));
-  Lifecycle.AttemptId      = 1;
-  Lifecycle.AttemptIdValid = TRUE;
-  Lifecycle.Source         = CapsuleAttemptRecordSourceCapsuleOnDisk;
-  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  Lifecycle.AttemptId            = 1;
+  Lifecycle.AttemptIdValid       = TRUE;
+  Lifecycle.Timestamp.Year       = 2026;
+  Lifecycle.Timestamp.Month      = 8;
+  Lifecycle.Timestamp.Day        = 17;
+  Lifecycle.Timestamp.Hour       = 12;
+  Lifecycle.Timestamp.Minute     = 34;
+  Lifecycle.Timestamp.Second     = 56;
+  Lifecycle.Timestamp.Nanosecond = 123456789;
+  Lifecycle.Timestamp.TimeZone   = 420;
+  Lifecycle.TimestampValid       = TRUE;
+  Lifecycle.Source               = CapsuleAttemptRecordSourceCapsuleOnDisk;
+  Lifecycle.State                = CapsuleAttemptRecordStateInProgress;
 
   ASSERT_EQ (
     EFI_SUCCESS,
@@ -394,6 +431,91 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsCapsuleOnDiskSource) {
                             );
   ASSERT_NE (nullptr, Source);
   EXPECT_STREQ ("capsule-on-disk", Source);
+  Timestamp = (CONST CHAR8 *)FdtGetProp (
+                               Payload,
+                               0,
+                               "nvidia,timestamp",
+                               &Length
+                               );
+  ASSERT_NE (nullptr, Timestamp);
+  EXPECT_STREQ ("2026-08-17T12:34:56.123456789-07:00", Timestamp);
+
+  Lifecycle.Timestamp.TimeZone = -420;
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBuildPayload (
+      Payload,
+      sizeof (Payload),
+      &Lifecycle,
+      NULL,
+      NULL,
+      0,
+      &PayloadLength
+      )
+    );
+  Timestamp = (CONST CHAR8 *)FdtGetProp (
+                               Payload,
+                               0,
+                               "nvidia,timestamp",
+                               &Length
+                               );
+  ASSERT_NE (nullptr, Timestamp);
+  EXPECT_STREQ ("2026-08-17T12:34:56.123456789+07:00", Timestamp);
+
+  Lifecycle.ElapsedTimeValid = TRUE;
+  EXPECT_EQ (
+    EFI_INVALID_PARAMETER,
+    CapsuleAttemptRecordBuildPayload (
+      Payload,
+      sizeof (Payload),
+      &Lifecycle,
+      NULL,
+      NULL,
+      0,
+      &PayloadLength
+      )
+    );
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, ValidatesDaylightAsBitmask) {
+  EFI_TIME  Time;
+
+  ZeroMem (&Time, sizeof (Time));
+  Time.Year     = 2026;
+  Time.Month    = 8;
+  Time.Day      = 17;
+  Time.TimeZone = EFI_UNSPECIFIED_TIMEZONE;
+
+  Time.Daylight = 0;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.Daylight = EFI_TIME_ADJUST_DAYLIGHT;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.Daylight = EFI_TIME_IN_DAYLIGHT;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.Daylight = EFI_TIME_ADJUST_DAYLIGHT | EFI_TIME_IN_DAYLIGHT;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.Daylight = 0x04;
+  EXPECT_FALSE (CapsuleAttemptRecordIsTimeValid (&Time));
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, RejectsUnrepresentableTimeZoneBoundaries) {
+  EFI_TIME  Time;
+
+  ZeroMem (&Time, sizeof (Time));
+  Time.Year  = 2026;
+  Time.Month = 8;
+  Time.Day   = 17;
+
+  Time.TimeZone = -1439;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.TimeZone = 1439;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.TimeZone = -1440;
+  EXPECT_FALSE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.TimeZone = 1440;
+  EXPECT_FALSE (CapsuleAttemptRecordIsTimeValid (&Time));
+  Time.TimeZone = EFI_UNSPECIFIED_TIMEZONE;
+  EXPECT_TRUE (CapsuleAttemptRecordIsTimeValid (&Time));
 }
 
 TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIdentity) {
@@ -501,6 +623,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
     CapsuleAttemptRecordBegin (
       &Context,
       CapsuleAttemptRecordSourceAndroidFastboot,
+      NULL,
       &AttemptId
       )
     );
@@ -516,6 +639,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
       &Context,
       CapsuleAttemptRecordSourceAndroidFastboot,
       AttemptId,
+      NULL,
       &Diagnostics
       )
     );
@@ -539,6 +663,8 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
       CapsuleAttemptRecordSourceSavedCapsule,
       0,
       FALSE,
+      NULL,
+      NULL,
       &ImageTypeId,
       &ImageInfoSet,
       NULL
@@ -718,6 +844,17 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, SequenceComparisonHandlesWrap) {
   EXPECT_TRUE (CapsuleAttemptRecordSequenceIsNewer (0, MAX_UINT64));
   EXPECT_FALSE (CapsuleAttemptRecordSequenceIsNewer (1, 1));
   EXPECT_FALSE (CapsuleAttemptRecordSequenceIsNewer (1ULL << 63, 0));
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, ElapsedTicksHandleCounterDirectionAndWrap) {
+  EXPECT_EQ (10U, CapsuleAttemptRecordGetElapsedTicks (10, 20, 0, 999));
+  EXPECT_EQ (10U, CapsuleAttemptRecordGetElapsedTicks (995, 5, 0, 999));
+  EXPECT_EQ (10U, CapsuleAttemptRecordGetElapsedTicks (20, 10, 999, 0));
+  EXPECT_EQ (10U, CapsuleAttemptRecordGetElapsedTicks (5, 995, 999, 0));
+  EXPECT_EQ (
+    10U,
+    CapsuleAttemptRecordGetElapsedTicks (MAX_UINT64 - 4, 5, 0, MAX_UINT64)
+    );
 }
 
 int

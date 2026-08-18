@@ -51,20 +51,29 @@ UEFI execution model, so the driver does not raise TPL or maintain a lock.
 ### `Begin`
 
 Commits an `in-progress` record containing an assigned attempt ID and the
-caller's source context. The driver retains that identity for a matching
-finalization request. The begin record intentionally has no ESRT entry because
-the post-operation FMP result does not yet exist.
+caller's source context. Immediately before the commit, the driver calls the
+UEFI Runtime Services `GetTime` service and includes the result as the attempt
+timestamp when it is available. The driver retains that identity and timestamp
+for a matching finalization request. It also retains the current TimerLib
+performance-counter value as the start of the attempt. The begin record
+intentionally has no ESRT entry because the post-operation FMP result does not
+yet exist.
 
 ### `Finalize`
 
 Gathers the current system FMP descriptor and commits a `completed` record. It
 uses the active attempt ID when the source matches a successful begin. If no
 matching begin exists, it assigns a new attempt ID so the final snapshot is
-still durable. When the source matches an active attempt, the latest valid
-CheckImage or SetImage diagnostics are retained in the completed record. A
-matching finalization request consumes the active attempt identity even if
-gathering or committing the completed record fails. This prevents a later
-capsule operation from reusing the earlier attempt ID.
+still durable and captures the current time for that standalone record. The
+driver samples the performance counter when finalization begins. For a
+matching begin, it converts the elapsed counter ticks to nanoseconds and
+includes that duration in the completed record. A standalone finalization has
+no start counter and therefore omits the duration. When the source matches an
+active attempt, the latest valid CheckImage or SetImage diagnostics are
+retained in the completed record. A matching finalization request consumes the
+active attempt identity even if gathering or committing the completed record
+fails. This prevents a later capsule operation from reusing the earlier
+attempt ID.
 
 ### `UpdateFmpDiagnostics`
 
@@ -74,8 +83,8 @@ request identifies the failed image when known, the raw `EFI_STATUS`, the
 detailed NVIDIA last-attempt status, `TegraPlatformSpec`, and the compatible
 TnSpec. The driver
 commits a replacement `in-progress` record immediately, using the active
-attempt ID and source. This makes a deep FMP failure durable before control
-returns to the outer capsule lifecycle call site.
+attempt ID, source, and timestamp. This makes a deep FMP failure durable before
+control returns to the outer capsule lifecycle call site.
 
 The driver retains the newest diagnostic in memory and includes it when the
 matching attempt is finalized. A diagnostic update without an active attempt
@@ -114,11 +123,12 @@ The dump operation initializes the record context if necessary, selects the
 newest valid slot, validates its envelope and payload, and prints it. It does
 not write, clear, or otherwise modify the record.
 
-The payload root `compatible` value and format version are validated
-explicitly. Immediate subnodes and their properties are then dumped without a
-compiled list of property names. Printable NUL-terminated values are displayed
-as strings, values with lengths divisible by four are displayed as big-endian
-32-bit cells, and other values are displayed as byte arrays.
+The payload root `compatible` value, format version, lifecycle properties,
+timestamp, and elapsed time are handled explicitly. Immediate subnodes and
+their properties are then dumped without a compiled list of property names.
+Printable NUL-terminated values are displayed as strings, values with lengths
+divisible by four are displayed as big-endian 32-bit cells, and other values
+are displayed as byte arrays.
 
 ## Platform DT Storage Contract
 
@@ -219,6 +229,8 @@ The current payload is a standalone DTB with this schema:
     nvidia,attempt-id = /bits/ 64 <...>;
     nvidia,attempt-source = "android-fastboot";
     nvidia,attempt-state = "completed";
+    nvidia,timestamp = "2026-08-17T12:34:56.123456789-07:00";
+    nvidia,elapsed-time-ns = /bits/ 64 <...>;
 
     diagnostics {
         nvidia,producer = "fmp-tegra-set-image";
@@ -247,9 +259,31 @@ Capsule-on-Disk processing and `saved-capsule` for `HandleSavedCapsules`
 processing. The compatibility update operation uses `unknown` because it does
 not identify a lifecycle producer.
 `nvidia,attempt-state` is `in-progress` or `completed`. A begin record has the
-three lifecycle properties but no ESRT subnode. Its completed replacement has
-the same attempt ID and includes the ESRT snapshot. Existing records without
-lifecycle properties remain readable.
+three required lifecycle properties, the optional timestamp, and no ESRT
+subnode. Its completed replacement has the same attempt ID and timestamp and
+includes the ESRT snapshot and, when begin supplied the active identity, the
+elapsed attempt time.
+
+`nvidia,timestamp` records when the attempt began, not when each replacement
+record was written. It is an ISO 8601 string derived from the `EFI_TIME`
+returned by the UEFI Runtime Services `GetTime` service. Nanoseconds are always
+present. A known time zone is represented by `Z` or a signed `HH:MM` offset;
+the suffix is omitted when firmware reports `EFI_UNSPECIFIED_TIMEZONE`. The
+timestamp is omitted for the UEFI boundary offsets of -1440 and 1440 minutes,
+which cannot be represented by the signed `HH:MM` offset. `GetTime` failure or
+an invalid or unrepresentable result does not fail the record operation. A later
+diagnostic or matching finalization retries the service and uses the earliest
+successfully captured time; the property remains absent if no call succeeds.
+
+`nvidia,elapsed-time-ns` is an optional 64-bit integer measuring from entry to
+the successful `Begin` operation through entry to the matching `Finalize`
+operation. The driver uses TimerLib's monotonic performance counter, handles
+either counter direction and one counter wrap, and converts the elapsed ticks
+with `GetTimeInNanoSecond`. The duration therefore does not depend on wall-clock
+time or its time-zone metadata. If the performance-counter frequency is zero,
+the driver logs the condition and omits the property without failing the
+record operation. The dump displays the stored duration as
+`hours:minutes:seconds.nanoseconds`; hours are not limited to a 24-hour range.
 
 The optional `diagnostics` subnode contains the newest event reported by
 `FmpTegraCheckImage` or `FmpTegraSetImage`. The producer is
@@ -303,11 +337,14 @@ The host test is located in `UnitTest/` and compiles
 
 - Trailing-wildcard partition-name matching.
 - Storage DT parsing.
-- Diagnostic DTB construction and GUID-string encoding.
+- Diagnostic DTB construction, GUID-string encoding, lifecycle timestamp
+  encoding, and elapsed-time encoding.
 - FMP diagnostic and platform-identity DTB properties.
 - Block I/O commits, slot advancement, corruption fallback, and dumping.
 - Read-only media, unaligned regions, and nonmatching FMP image types.
 - Sequence comparison across wrap.
+- Elapsed-tick calculation for up-counting and down-counting counters across
+  wrap.
 
 ## Related Component
 

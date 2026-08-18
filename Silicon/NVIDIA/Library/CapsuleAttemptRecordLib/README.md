@@ -47,17 +47,21 @@ Commits a durable `in-progress` record before capsule processing starts. The
 caller supplies the coarse producer context: Android fastboot,
 PlatformBootManager `HandleCapsules`, or PlatformBootManager
 `HandleSavedCapsules`. The driver assigns an attempt ID and retains it for the
-matching finalization request.
+matching finalization request. The driver also captures the attempt timestamp
+through the UEFI Runtime Services `GetTime` service; callers do not provide a
+time value. It retains a monotonic performance-counter sample for measuring
+the attempt duration.
 
 ### `CapsuleAttemptRecordFinalize`
 
 Gathers the post-operation FMP image information and commits a `completed`
 record. When a matching begin succeeded, the completed record uses the same
-attempt ID. A finalization without a matching begin remains valid and receives
-a new attempt ID, preserving the existing PlatformBootManager reset-path
-snapshot behavior. A matching finalization consumes the active attempt identity
-even if the completed record cannot be gathered or committed, so a later
-capsule operation cannot inherit the earlier attempt ID.
+attempt ID and includes the elapsed begin-to-finalize time in nanoseconds. A
+finalization without a matching begin remains valid and receives a new attempt
+ID, preserving the existing PlatformBootManager reset-path snapshot behavior,
+but it cannot include an elapsed time. A matching finalization consumes the
+active attempt identity even if the completed record cannot be gathered or
+committed, so a later capsule operation cannot inherit the earlier attempt ID.
 
 ### FMP diagnostic updates
 

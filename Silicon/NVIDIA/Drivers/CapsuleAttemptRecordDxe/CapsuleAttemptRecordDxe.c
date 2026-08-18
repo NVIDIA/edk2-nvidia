@@ -15,7 +15,9 @@
 #include <Library/DtPlatformDtbLoaderLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Protocol/CapsuleAttemptRecordProtocol.h>
 #include <Protocol/FirmwareManagement.h>
 
@@ -94,9 +96,100 @@ STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
     FALSE,
     0,
     CapsuleAttemptRecordSourceUnknown,
+    { 0 },
+    FALSE,
+    0,
+    FALSE,
     FALSE
   }
 };
+
+STATIC
+BOOLEAN
+CaptureTimestamp (
+  OUT EFI_TIME  *Timestamp
+  )
+{
+  EFI_STATUS  Status;
+
+  ZeroMem (Timestamp, sizeof (*Timestamp));
+  Status = gRT->GetTime (Timestamp, NULL);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: runtime GetTime failed: %r; timestamp omitted\n", __FUNCTION__, Status));
+    return FALSE;
+  }
+
+  if (!CapsuleAttemptRecordIsTimeValid (Timestamp)) {
+    DEBUG ((DEBUG_ERROR, "%a: runtime GetTime returned an invalid time; timestamp omitted\n", __FUNCTION__));
+    ZeroMem (Timestamp, sizeof (*Timestamp));
+    return FALSE;
+  }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: captured attempt time %04u-%02u-%02u %02u:%02u:%02u\n",
+    __FUNCTION__,
+    Timestamp->Year,
+    Timestamp->Month,
+    Timestamp->Day,
+    Timestamp->Hour,
+    Timestamp->Minute,
+    Timestamp->Second
+    ));
+  return TRUE;
+}
+
+STATIC
+CONST EFI_TIME *
+GetActiveTimestamp (
+  IN OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State
+  )
+{
+  if (!State->AttemptTimestampValid) {
+    State->AttemptTimestampValid = CaptureTimestamp (&State->AttemptTimestamp);
+  }
+
+  return State->AttemptTimestampValid ? &State->AttemptTimestamp : NULL;
+}
+
+STATIC
+BOOLEAN
+GetElapsedTimeNs (
+  IN  UINT64  StartCounter,
+  IN  UINT64  EndCounter,
+  OUT UINT64  *ElapsedTimeNs
+  )
+{
+  UINT64  CounterStartValue;
+  UINT64  CounterEndValue;
+  UINT64  Frequency;
+  UINT64  ElapsedTicks;
+
+  Frequency = GetPerformanceCounterProperties (
+                &CounterStartValue,
+                &CounterEndValue
+                );
+  if (Frequency == 0) {
+    DEBUG ((DEBUG_ERROR, "%a: performance counter frequency is zero; elapsed time omitted\n", __FUNCTION__));
+    return FALSE;
+  }
+
+  ElapsedTicks = CapsuleAttemptRecordGetElapsedTicks (
+                   StartCounter,
+                   EndCounter,
+                   CounterStartValue,
+                   CounterEndValue
+                   );
+  *ElapsedTimeNs = GetTimeInNanoSecond (ElapsedTicks);
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: capsule attempt elapsed time: %Lu ticks, %Lu ns\n",
+    __FUNCTION__,
+    ElapsedTicks,
+    *ElapsedTimeNs
+    ));
+  return TRUE;
+}
 
 STATIC
 VOID
@@ -348,6 +441,8 @@ FinalizeRecord (
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
   IN     UINT64                                    AttemptId,
   IN     BOOLEAN                                   AttemptIdValid,
+  IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
+  IN     CONST UINT64                              *ElapsedTimeNs OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL
   )
 {
@@ -380,6 +475,8 @@ FinalizeRecord (
                Source,
                AttemptId,
                AttemptIdValid,
+               Timestamp,
+               ElapsedTimeNs,
                &ImageTypeId,
                &ImageInfoSet,
                Diagnostics
@@ -397,6 +494,8 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
   IN NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL  *This
   )
 {
+  EFI_TIME  Timestamp;
+
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -406,6 +505,8 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
            CapsuleAttemptRecordSourceUnknown,
            0,
            FALSE,
+           CaptureTimestamp (&Timestamp) ? &Timestamp : NULL,
+           NULL,
            NULL
            );
 }
@@ -421,6 +522,9 @@ CapsuleAttemptRecordProtocolBegin (
   EFI_STATUS                      Status;
   CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private;
   UINT64                          AttemptId;
+  UINT64                          StartCounter;
+  EFI_TIME                        Timestamp;
+  BOOLEAN                         TimestampValid;
 
   if ((This == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
       (Source >= CapsuleAttemptRecordSourceMax))
@@ -428,18 +532,27 @@ CapsuleAttemptRecordProtocolBegin (
     return EFI_INVALID_PARAMETER;
   }
 
-  Private = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
-  Status  = InitializeRecordContext (Private);
+  Private        = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  StartCounter   = GetPerformanceCounter ();
+  TimestampValid = CaptureTimestamp (&Timestamp);
+  Status         = InitializeRecordContext (Private);
   if (!EFI_ERROR (Status)) {
     Status = CapsuleAttemptRecordBegin (
                Private->RecordContext,
                Source,
+               TimestampValid ? &Timestamp : NULL,
                &AttemptId
                );
   }
 
   if (!EFI_ERROR (Status)) {
-    CapsuleAttemptRecordStateBegin (&Private->State, Source, AttemptId);
+    CapsuleAttemptRecordStateBegin (
+      &Private->State,
+      Source,
+      AttemptId,
+      TimestampValid ? &Timestamp : NULL,
+      StartCounter
+      );
     DEBUG ((DEBUG_INFO, "%a: attempt %Lu began for source %u\n", __FUNCTION__, AttemptId, Source));
   }
 
@@ -458,6 +571,11 @@ CapsuleAttemptRecordProtocolFinalize (
   CAPSULE_ATTEMPT_RECORD_PRIVATE  *Private;
   UINT64                          AttemptId;
   BOOLEAN                         MatchingAttempt;
+  EFI_TIME                        Timestamp;
+  CONST EFI_TIME                  *TimestampPointer;
+  UINT64                          CompletionCounter;
+  UINT64                          ElapsedTimeNs;
+  CONST UINT64                    *ElapsedTimePointer;
 
   if ((This == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
       (Source >= CapsuleAttemptRecordSourceMax))
@@ -465,14 +583,32 @@ CapsuleAttemptRecordProtocolFinalize (
     return EFI_INVALID_PARAMETER;
   }
 
-  Private         = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
-  MatchingAttempt = CapsuleAttemptRecordStateMatch (&Private->State, Source, &AttemptId);
+  Private            = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  CompletionCounter  = GetPerformanceCounter ();
+  ElapsedTimePointer = NULL;
+  MatchingAttempt    = CapsuleAttemptRecordStateMatch (&Private->State, Source, &AttemptId);
+  if (MatchingAttempt) {
+    TimestampPointer = GetActiveTimestamp (&Private->State);
+    if (Private->State.AttemptStartCounterValid &&
+        GetElapsedTimeNs (
+          Private->State.AttemptStartCounter,
+          CompletionCounter,
+          &ElapsedTimeNs
+          ))
+    {
+      ElapsedTimePointer = &ElapsedTimeNs;
+    }
+  } else {
+    TimestampPointer = CaptureTimestamp (&Timestamp) ? &Timestamp : NULL;
+  }
 
   Status = FinalizeRecord (
              Private,
              Source,
              AttemptId,
              MatchingAttempt,
+             TimestampPointer,
+             ElapsedTimePointer,
              MatchingAttempt ? CapsuleAttemptRecordStateGetDiagnostics (&Private->State) : NULL
              );
   if (MatchingAttempt) {
@@ -531,6 +667,7 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
                Private->RecordContext,
                Private->State.AttemptSource,
                Private->State.AttemptId,
+               GetActiveTimestamp (&Private->State),
                CapsuleAttemptRecordStateGetDiagnostics (&Private->State)
                );
   }

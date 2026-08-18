@@ -18,17 +18,30 @@ STATIC CONST CHAR16  mFirstFailedImage[]  = { 'A', '_', 'c', 'p', 'u', 0 };
 STATIC CONST CHAR16  mSecondFailedImage[] = { 'B', '_', 'c', 'p', 'u', 0 };
 
 TEST (CapsuleAttemptRecordDxeStateTest, BeginStoresAttempt) {
-  CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  State = { };
+  CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  State     = { };
+  EFI_TIME                               Timestamp = { };
+
+  Timestamp.Year  = 2026;
+  Timestamp.Month = 8;
+  Timestamp.Day   = 24;
 
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    &Timestamp,
+    100
     );
 
   EXPECT_TRUE (State.AttemptActive);
   EXPECT_EQ (42U, State.AttemptId);
   EXPECT_EQ (CapsuleAttemptRecordSourceAndroidFastboot, State.AttemptSource);
+  EXPECT_TRUE (State.AttemptTimestampValid);
+  EXPECT_EQ (Timestamp.Year, State.AttemptTimestamp.Year);
+  EXPECT_EQ (Timestamp.Month, State.AttemptTimestamp.Month);
+  EXPECT_EQ (Timestamp.Day, State.AttemptTimestamp.Day);
+  EXPECT_TRUE (State.AttemptStartCounterValid);
+  EXPECT_EQ (100U, State.AttemptStartCounter);
 }
 
 TEST (CapsuleAttemptRecordDxeStateTest, MatchReturnsOnlyMatchingAttempt) {
@@ -38,7 +51,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, MatchReturnsOnlyMatchingAttempt) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
 
   EXPECT_FALSE (
@@ -66,13 +81,19 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsAttempt) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
   CapsuleAttemptRecordStateConsume (&State);
 
   EXPECT_FALSE (State.AttemptActive);
   EXPECT_EQ (0U, State.AttemptId);
   EXPECT_EQ (CapsuleAttemptRecordSourceUnknown, State.AttemptSource);
+  EXPECT_FALSE (State.AttemptTimestampValid);
+  EXPECT_EQ (0U, State.AttemptTimestamp.Year);
+  EXPECT_FALSE (State.AttemptStartCounterValid);
+  EXPECT_EQ (0U, State.AttemptStartCounter);
   EXPECT_FALSE (
     CapsuleAttemptRecordStateMatch (
       &State,
@@ -109,7 +130,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
 
   Completion = 25;
@@ -161,7 +184,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
   ASSERT_EQ (
     EFI_SUCCESS,
@@ -206,7 +231,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
   ASSERT_EQ (
     EFI_SUCCESS,
@@ -226,7 +253,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceCapsuleOnDisk,
-    43
+    43,
+    nullptr,
+    200
     );
 
   EXPECT_EQ (nullptr, CapsuleAttemptRecordStateGetDiagnostics (&State));
@@ -238,7 +267,9 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsCachedDiagnostics) {
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
-    42
+    42,
+    nullptr,
+    100
     );
   ASSERT_EQ (
     EFI_SUCCESS,

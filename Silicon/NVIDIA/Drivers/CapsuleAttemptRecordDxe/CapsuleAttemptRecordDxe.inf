@@ -36,8 +36,10 @@
   MemoryAllocationLib
   PcdLib
   PrintLib
+  TimerLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  UefiRuntimeServicesTableLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid                       ## CONSUMES

@@ -16,6 +16,10 @@ typedef struct {
   BOOLEAN                               AttemptActive;
   UINT64                                AttemptId;
   CAPSULE_ATTEMPT_RECORD_SOURCE         AttemptSource;
+  EFI_TIME                              AttemptTimestamp;
+  BOOLEAN                               AttemptTimestampValid;
+  UINT64                                AttemptStartCounter;
+  BOOLEAN                               AttemptStartCounterValid;
   BOOLEAN                               DiagnosticsValid;
   CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS    Diagnostics;
   CHAR8                                 FailedImage[CAPSULE_ATTEMPT_RECORD_IMAGE_NAME_MAX + 1];
@@ -27,7 +31,9 @@ VOID
 CapsuleAttemptRecordStateBegin (
   OUT CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  *State,
   IN  CAPSULE_ATTEMPT_RECORD_SOURCE          Source,
-  IN  UINT64                                 AttemptId
+  IN  UINT64                                 AttemptId,
+  IN  CONST EFI_TIME                         *Timestamp OPTIONAL,
+  IN  UINT64                                 StartCounter
   );
 
 BOOLEAN
