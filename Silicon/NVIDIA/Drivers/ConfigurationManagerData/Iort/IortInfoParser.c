@@ -798,7 +798,19 @@ SetupGlobalContextIrqForSmmuV1V2 (
     goto ErrorExit;
   }
 
-  IrqCnt                          = InterruptSize;
+  IrqCnt = InterruptSize;
+  if (IrqCnt < GlobalInterruptCnt) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Interrupt count (%u) is less than #global-interrupts (%u)\r\n",
+      __FUNCTION__,
+      IrqCnt,
+      GlobalInterruptCnt
+      ));
+    Status = EFI_DEVICE_ERROR;
+    goto ErrorExit;
+  }
+
   IortNode->ContextInterruptCount = IrqCnt - GlobalInterruptCnt;
 
   if (GlobalInterruptCnt >= 1) {
