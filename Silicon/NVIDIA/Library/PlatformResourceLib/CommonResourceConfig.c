@@ -14,7 +14,7 @@
 #include <Library/TegraPlatformInfoLib.h>
 #include "CommonResourceConfig.h"
 
-#define MAX_CORE_DISABLE_WORDS  3
+#define MAX_CORE_DISABLE_WORDS  4
 
 /**
   Add one socket's enabled cores bit map array to the EnabledCoresBitMap
@@ -67,9 +67,10 @@ AddSocketCoresToEnabledCoresBitMap (
 
   DEBUG ((
     DEBUG_INFO,
-    "%a: Socket %u cores 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
+    "%a: Socket %u cores 0x%x 0x%x 0x%x 0x%x added as EnabledCores bits %u-%u\n",
     __FUNCTION__,
     SocketNumber,
+    (MaxCoreDisableWords > 3) ? SocketCores[3] : 0,
     SocketCores[2],
     SocketCores[1],
     SocketCores[0],

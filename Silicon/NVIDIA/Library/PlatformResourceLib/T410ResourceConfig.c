@@ -25,7 +25,7 @@
 #include "PlatformResourceConfig.h"
 #include "T410ResourceConfigPrivate.h"
 
-#define MAX_CORE_DISABLE_WORDS  3
+#define MAX_CORE_DISABLE_WORDS  4
 
 STATIC UINT64  T410SocketScratchBaseAddr[T410_MAX_SOCKETS] = {
   T410_SCRATCH_BASE_SOCKET_0,
@@ -36,12 +36,14 @@ STATIC UINT32  T410CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS] = {
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_0,
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_1,
   T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_2,
+  T410_CPU_FLOORSWEEPING_DISABLE_OFFSET_3,
 };
 
 STATIC UINT32  T410CoreDisableScratchMask[MAX_CORE_DISABLE_WORDS] = {
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_0,
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_1,
   T410_CPU_FLOORSWEEPING_DISABLE_MASK_2,
+  T410_CPU_FLOORSWEEPING_DISABLE_MASK_3,
 };
 
 STATIC COMMON_RESOURCE_CONFIG_INFO  T410CommonResourceConfigInfo = {
@@ -677,27 +679,8 @@ SocGetEnabledCoresBitMap (
   IN OUT SOC_CORE_BITMAP_INFO  *SocCoreBitmapInfo
   )
 {
-  UINT32  SatMcCore;
-  UINT32  CoresPerSocket;
-
   SocCoreBitmapInfo->ThreadsPerCore       = 1;
   T410CommonResourceConfigInfo.SocketMask = SocGetSocketMask (CpuBootloaderAddress);
-
-  CoresPerSocket = SocCoreBitmapInfo->MaxPossibleCoresPerSystem /
-                   SocCoreBitmapInfo->MaxPossibleSockets;
-
-  // SatMC core is reserved on socket 0.
-  SatMcCore = MmioBitFieldRead32 (
-                T410SocketScratchBaseAddr[0] + T410CoreDisableScratchOffset[MAX_CORE_DISABLE_WORDS-1],
-                T410_CPU_FLOORSWEEPING_SATMC_CORE_BIT_LO,
-                T410_CPU_FLOORSWEEPING_SATMC_CORE_BIT_HI
-                );
-  if ((SatMcCore != T410_CPU_FLOORSWEEPING_SATMC_CORE_INVALID) &&
-      (SatMcCore < CoresPerSocket))
-  {
-    T410CommonResourceConfigInfo.SatMcSupported = TRUE;
-    T410CommonResourceConfigInfo.SatMcCore      = SatMcCore;
-  }
 
   return CommonConfigGetEnabledCoresBitMap (&T410CommonResourceConfigInfo, SocCoreBitmapInfo);
 }
