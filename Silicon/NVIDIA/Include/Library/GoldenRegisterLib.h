@@ -1,7 +1,7 @@
 /** @file
 *  Golden Register Library
 *
-*  Copyright (c) 2021-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -85,7 +85,9 @@ typedef struct {
 
   @param[in] GrBlobBase            Base address of GR blob
 
-  @retval                          Blob size in bytes
+  @retval                          Blob size in bytes, or 0 if GrBlobBase is 0
+                                   or if BlobDesc sizes overflow when summed /
+                                   64KB-aligned.
 **/
 UINT32
 EFIAPI
