@@ -124,8 +124,11 @@ newest valid slot, validates its envelope and payload, and prints it. It does
 not write, clear, or otherwise modify the record.
 
 The payload root `compatible` value, format version, lifecycle properties,
-timestamp, and elapsed time are handled explicitly. Immediate subnodes and
-their properties are then dumped without a compiled list of property names.
+timestamp, elapsed time, and FMP image digest are handled explicitly. The
+digest is displayed as `sha256:` followed by 64 lowercase hexadecimal digits,
+so the hexadecimal portion can be compared directly with `sha256sum` output.
+Immediate subnodes and their properties are then dumped without a compiled
+list of property names.
 Printable NUL-terminated values are displayed as strings, values with lengths
 divisible by four are displayed as big-endian 32-bit cells, and other values
 are displayed as byte arrays.
@@ -231,6 +234,8 @@ The current payload is a standalone DTB with this schema:
     nvidia,attempt-state = "completed";
     nvidia,timestamp = "2026-08-17T12:34:56.123456789-07:00";
     nvidia,elapsed-time-ns = /bits/ 64 <...>;
+    nvidia,fmp-image-digest-algorithm = "sha256";
+    nvidia,fmp-image-digest = [ /* 32 SHA-256 bytes */ ];
 
     diagnostics {
         nvidia,producer = "fmp-tegra-set-image";
@@ -300,6 +305,14 @@ retained in memory until the SetImage
 diagnostic is persisted when SetImage returns. A reset, hang, or power loss
 before that point does not cause periodic progress writes and may leave the
 previous diagnostic as the newest persistent record.
+
+`FmpTegraCheckImage` calculates SHA-256 over exactly its authenticated FMP
+image buffer and size and supplies the digest with its diagnostic update. The
+optional root properties `nvidia,fmp-image-digest-algorithm` and
+`nvidia,fmp-image-digest` contain `sha256` and the 32 raw digest bytes. The
+driver retains the first digest for the active attempt and includes it in the
+existing diagnostic record replacement and subsequent completed record;
+calculating the digest does not add another persistent-record update.
 
 `nvidia,platform-spec` contains `TegraPlatformSpec`, and `nvidia,tnspec`
 contains `TegraPlatformCompatSpec`, the compatible TnSpec used for capsule

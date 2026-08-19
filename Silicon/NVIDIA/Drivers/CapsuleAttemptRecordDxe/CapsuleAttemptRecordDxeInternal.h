@@ -27,6 +27,7 @@
 #define CAPSULE_ATTEMPT_RECORD_PARTITION_NAME_MAX  36U
 #define CAPSULE_ATTEMPT_RECORD_IMAGE_NAME_MAX      64U
 #define CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX   256U
+#define CAPSULE_ATTEMPT_RECORD_SHA256_TEXT_SIZE    72U
 
 typedef struct {
   UINT8     Magic[8];
@@ -129,6 +130,7 @@ typedef struct {
   UINT32                             NvidiaStatus;
   CONST CHAR8                        *PlatformSpec;
   CONST CHAR8                        *TnSpec;
+  CONST UINT8                        *FmpImageDigest;
   UINT32                             Completion;
   BOOLEAN                            CompletionValid;
 } CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS;
@@ -248,6 +250,14 @@ CapsuleAttemptRecordBuildPayload (
   IN  CONST CAPSULE_ATTEMPT_RECORD_ESRT_ENTRY   *Entries OPTIONAL,
   IN  UINTN                                     EntryCount,
   OUT UINT32                                    *PayloadLength
+  );
+
+EFI_STATUS
+CapsuleAttemptRecordFormatFmpImageDigest (
+  IN  CONST UINT8  *FmpImageDigest,
+  IN  UINTN        FmpImageDigestSize,
+  OUT CHAR8        *DigestText,
+  IN  UINTN        DigestTextSize
   );
 
 #endif

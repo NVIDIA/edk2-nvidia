@@ -11,6 +11,7 @@
 
 extern "C" {
   #include <Uefi.h>
+  #include <Library/BaseMemoryLib.h>
   #include "../CapsuleAttemptRecordDxeState.h"
 }
 
@@ -116,6 +117,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateWithoutAttemptIsRejected) {
       1,
       "platform",
       "tnspec",
+      nullptr,
       nullptr
       )
     );
@@ -146,6 +148,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
       1,
       "platform-1",
       "tnspec-1",
+      nullptr,
       &Completion
       )
     );
@@ -160,6 +163,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
       2,
       "platform-2",
       "tnspec-2",
+      nullptr,
       &Completion
       )
     );
@@ -198,6 +202,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
       1,
       "platform",
       "tnspec",
+      nullptr,
       nullptr
       )
     );
@@ -211,6 +216,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
       mSecondFailedImage,
       EFI_DEVICE_ERROR,
       2,
+      nullptr,
       nullptr,
       nullptr,
       &InvalidCompletion
@@ -243,6 +249,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
       nullptr,
       EFI_ABORTED,
       1,
+      nullptr,
       nullptr,
       nullptr,
       nullptr
@@ -281,6 +288,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsCachedDiagnostics) {
       1,
       nullptr,
       nullptr,
+      nullptr,
       nullptr
       )
     );
@@ -288,4 +296,62 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsCachedDiagnostics) {
   CapsuleAttemptRecordStateConsume (&State);
 
   EXPECT_EQ (nullptr, CapsuleAttemptRecordStateGetDiagnostics (&State));
+}
+
+TEST (CapsuleAttemptRecordDxeStateTest, RetainsFirstFmpImageDigest) {
+  CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE     State = { };
+  CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics;
+  UINT8                                     FirstDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
+  UINT8                                     SecondDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
+
+  SetMem (FirstDigest, sizeof (FirstDigest), 0x11);
+  SetMem (SecondDigest, sizeof (SecondDigest), 0x22);
+  CapsuleAttemptRecordStateBegin (
+    &State,
+    CapsuleAttemptRecordSourceAndroidFastboot,
+    42,
+    nullptr,
+    100
+    );
+
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordStateUpdateDiagnostics (
+      &State,
+      TRUE,
+      nullptr,
+      EFI_SUCCESS,
+      0,
+      nullptr,
+      nullptr,
+      FirstDigest,
+      nullptr
+      )
+    );
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordStateUpdateDiagnostics (
+      &State,
+      FALSE,
+      nullptr,
+      EFI_SUCCESS,
+      0,
+      nullptr,
+      nullptr,
+      SecondDigest,
+      nullptr
+      )
+    );
+
+  Diagnostics = CapsuleAttemptRecordStateGetDiagnostics (&State);
+  ASSERT_NE (nullptr, Diagnostics);
+  ASSERT_NE (nullptr, Diagnostics->FmpImageDigest);
+  EXPECT_EQ (
+    0,
+    CompareMem (
+      FirstDigest,
+      Diagnostics->FmpImageDigest,
+      sizeof (FirstDigest)
+      )
+    );
 }

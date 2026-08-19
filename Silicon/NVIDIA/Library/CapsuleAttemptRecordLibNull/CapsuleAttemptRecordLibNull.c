@@ -11,6 +11,17 @@
 
 #include <Library/CapsuleAttemptRecordLib.h>
 
+BOOLEAN
+EFIAPI
+CapsuleAttemptRecordCalculateFmpImageDigest (
+  IN CONST VOID  *FmpImage,
+  IN UINTN       FmpImageSize,
+  OUT UINT8      FmpImageDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE]
+  )
+{
+  return FALSE;
+}
+
 EFI_STATUS
 EFIAPI
 CapsuleAttemptRecordBegin (
@@ -38,6 +49,7 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
   IN UINT32        NvidiaStatus,
   IN CONST CHAR8   *PlatformSpec OPTIONAL,
   IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT8   *FmpImageDigest OPTIONAL,
   IN CONST UINT32  *Completion OPTIONAL
   )
 {

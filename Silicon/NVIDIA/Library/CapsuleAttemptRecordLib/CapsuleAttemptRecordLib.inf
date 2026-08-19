@@ -18,10 +18,12 @@
   CapsuleAttemptRecordLib.c
 
 [Packages]
+  CryptoPkg/CryptoPkg.dec
   MdePkg/MdePkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [LibraryClasses]
+  BaseCryptLib
   DebugLib
   PcdLib
   UefiBootServicesTableLib

@@ -48,6 +48,26 @@ CapsuleAttemptRecordFinalize (
   );
 
 /**
+  Calculate the SHA-256 digest used to identify an FMP image.
+
+  @param[in]  FmpImage        FMP image buffer.
+  @param[in]  FmpImageSize    Size of FmpImage in bytes.
+  @param[out] FmpImageDigest  SHA-256 digest buffer.
+
+  @retval TRUE   The digest was calculated.
+  @retval FALSE  Record support is disabled, a parameter is invalid, or the
+                 digest could not be calculated.
+
+**/
+BOOLEAN
+EFIAPI
+CapsuleAttemptRecordCalculateFmpImageDigest (
+  IN CONST VOID  *FmpImage,
+  IN UINTN       FmpImageSize,
+  OUT UINT8      FmpImageDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE]
+  );
+
+/**
   Persist the latest FMP diagnostic for the active attempt.
 
   @param[in] CheckImage    TRUE for FmpTegraCheckImage; FALSE for
@@ -57,6 +77,7 @@ CapsuleAttemptRecordFinalize (
   @param[in] NvidiaStatus  Detailed NVIDIA last-attempt status.
   @param[in] PlatformSpec  Tegra platform specification, or NULL.
   @param[in] TnSpec        Compatible TnSpec, or NULL.
+  @param[in] FmpImageDigest  SHA-256 digest of the FMP image, or NULL.
   @param[in] Completion    Current SetImage completion percentage, or NULL for
                            a producer that does not report completion.
 
@@ -76,6 +97,7 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
   IN UINT32        NvidiaStatus,
   IN CONST CHAR8   *PlatformSpec OPTIONAL,
   IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT8   *FmpImageDigest OPTIONAL,
   IN CONST UINT32  *Completion OPTIONAL
   );
 

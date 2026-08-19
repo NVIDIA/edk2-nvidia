@@ -16,7 +16,9 @@
   { 0xada0d916, 0xc07e, 0x489f,                     \
     { 0x93, 0x33, 0x7f, 0x44, 0x8e, 0x82, 0x2c, 0x17 } }
 
-#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00040000
+#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00050000
+
+#define CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE  32U
 
 typedef enum {
   CapsuleAttemptRecordSourceUnknown = 0,
@@ -122,6 +124,7 @@ EFI_STATUS
   @param[in] NvidiaStatus    Detailed NVIDIA last-attempt status.
   @param[in] PlatformSpec    Tegra platform specification, or NULL.
   @param[in] TnSpec          Tegra compatible TnSpec, or NULL.
+  @param[in] FmpImageDigest  SHA-256 digest of the FMP image, or NULL.
   @param[in] Completion      Current SetImage completion percentage, or NULL
                              for a producer that does not report completion.
 
@@ -142,6 +145,7 @@ EFI_STATUS
   IN UINT32                                  NvidiaStatus,
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT8                             *FmpImageDigest OPTIONAL,
   IN CONST UINT32                            *Completion OPTIONAL
   );
 

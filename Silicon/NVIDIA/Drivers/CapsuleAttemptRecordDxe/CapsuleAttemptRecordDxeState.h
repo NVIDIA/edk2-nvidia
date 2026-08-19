@@ -22,6 +22,8 @@ typedef struct {
   BOOLEAN                               AttemptStartCounterValid;
   BOOLEAN                               DiagnosticsValid;
   CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS    Diagnostics;
+  BOOLEAN                               FmpImageDigestValid;
+  UINT8                                 FmpImageDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
   CHAR8                                 FailedImage[CAPSULE_ATTEMPT_RECORD_IMAGE_NAME_MAX + 1];
   CHAR8                                 PlatformSpec[CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX + 1];
   CHAR8                                 TnSpec[CAPSULE_ATTEMPT_RECORD_PLATFORM_SPEC_MAX + 1];
@@ -57,6 +59,7 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   IN     UINT32                                 NvidiaStatus,
   IN     CONST CHAR8                            *PlatformSpec OPTIONAL,
   IN     CONST CHAR8                            *TnSpec OPTIONAL,
+  IN     CONST UINT8                            *FmpImageDigest OPTIONAL,
   IN     CONST UINT32                           *Completion OPTIONAL
   );
 

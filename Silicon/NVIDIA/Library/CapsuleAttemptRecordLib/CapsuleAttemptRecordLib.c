@@ -9,11 +9,41 @@
 
 #include <Uefi.h>
 
+#include <Library/BaseCryptLib.h>
 #include <Library/CapsuleAttemptRecordLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/CapsuleAttemptRecordProtocol.h>
+
+BOOLEAN
+EFIAPI
+CapsuleAttemptRecordCalculateFmpImageDigest (
+  IN CONST VOID  *FmpImage,
+  IN UINTN       FmpImageSize,
+  OUT UINT8      FmpImageDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE]
+  )
+{
+  BOOLEAN  HashOk;
+
+  if (!FeaturePcdGet (PcdCapsuleAttemptRecordSupported)) {
+    return FALSE;
+  }
+
+  if ((FmpImage == NULL) || (FmpImageSize == 0) || (FmpImageDigest == NULL)) {
+    DEBUG ((DEBUG_ERROR, "%a: invalid FMP image digest parameters\n", __FUNCTION__));
+    return FALSE;
+  }
+
+  HashOk = Sha256HashAll (FmpImage, FmpImageSize, FmpImageDigest);
+  if (HashOk) {
+    DEBUG ((DEBUG_INFO, "%a: calculated SHA-256 over %Lu-byte FMP image\n", __FUNCTION__, (UINT64)FmpImageSize));
+  } else {
+    DEBUG ((DEBUG_INFO, "%a: SHA-256 failed for %Lu-byte FMP image; digest omitted\n", __FUNCTION__, (UINT64)FmpImageSize));
+  }
+
+  return HashOk;
+}
 
 STATIC
 EFI_STATUS
@@ -103,6 +133,7 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
   IN UINT32        NvidiaStatus,
   IN CONST CHAR8   *PlatformSpec OPTIONAL,
   IN CONST CHAR8   *TnSpec OPTIONAL,
+  IN CONST UINT8   *FmpImageDigest OPTIONAL,
   IN CONST UINT32  *Completion OPTIONAL
   )
 {
@@ -132,6 +163,7 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
                      NvidiaStatus,
                      PlatformSpec,
                      TnSpec,
+                     FmpImageDigest,
                      Completion
                      );
 }

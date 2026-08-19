@@ -138,13 +138,27 @@ RecordFmpDiagnostic (
   IN BOOLEAN       CheckImage,
   IN CONST CHAR16  *FailedImage OPTIONAL,
   IN EFI_STATUS    RawStatus,
-  IN UINT32        NvidiaStatus
+  IN UINT32        NvidiaStatus,
+  IN CONST VOID    *FmpImage OPTIONAL,
+  IN UINTN         FmpImageSize
   )
 {
   EFI_STATUS    Status;
+  UINT8         FmpImageDigest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
+  CONST UINT8   *FmpImageDigestPointer;
   CONST UINT32  *CompletionPointer;
 
-  CompletionPointer = CheckImage ? NULL : &mLastDisplayedCompletion;
+  FmpImageDigestPointer = NULL;
+  CompletionPointer     = CheckImage ? NULL : &mLastDisplayedCompletion;
+  if (CheckImage &&
+      CapsuleAttemptRecordCalculateFmpImageDigest (
+        FmpImage,
+        FmpImageSize,
+        FmpImageDigest
+        ))
+  {
+    FmpImageDigestPointer = FmpImageDigest;
+  }
 
   Status = CapsuleAttemptRecordUpdateFmpDiagnostics (
              CheckImage,
@@ -153,6 +167,7 @@ RecordFmpDiagnostic (
              NvidiaStatus,
              mPlatformSpec,
              mPlatformCompatSpec,
+             FmpImageDigestPointer,
              CompletionPointer
              );
   if (EFI_ERROR (Status)) {
@@ -1786,12 +1801,26 @@ FmpTegraCheckImage (
 
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
   *ImageUpdatable    = IMAGE_UPDATABLE_VALID;
-  RecordFmpDiagnostic (TRUE, NULL, EFI_SUCCESS, *LastAttemptStatus);
+  RecordFmpDiagnostic (
+    TRUE,
+    NULL,
+    EFI_SUCCESS,
+    *LastAttemptStatus,
+    Image,
+    ImageSize
+    );
 
   return EFI_SUCCESS;
 
 Error:
-  RecordFmpDiagnostic (TRUE, ImageName, Status, *LastAttemptStatus);
+  RecordFmpDiagnostic (
+    TRUE,
+    ImageName,
+    Status,
+    *LastAttemptStatus,
+    Image,
+    ImageSize
+    );
   return ReturnStatus;
 }
 
@@ -1997,13 +2026,27 @@ FmpTegraSetImage (
 Done:
   SetImageProgress (FMP_PROGRESS_UPDATE_BCT);
   *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-  RecordFmpDiagnostic (FALSE, NULL, EFI_SUCCESS, *LastAttemptStatus);
+  RecordFmpDiagnostic (
+    FALSE,
+    NULL,
+    EFI_SUCCESS,
+    *LastAttemptStatus,
+    Image,
+    ImageSize
+    );
 
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
   return EFI_SUCCESS;
 
 Error:
-  RecordFmpDiagnostic (FALSE, FailedImage, Status, *LastAttemptStatus);
+  RecordFmpDiagnostic (
+    FALSE,
+    FailedImage,
+    Status,
+    *LastAttemptStatus,
+    Image,
+    ImageSize
+    );
   return ReturnStatus;
 }
 

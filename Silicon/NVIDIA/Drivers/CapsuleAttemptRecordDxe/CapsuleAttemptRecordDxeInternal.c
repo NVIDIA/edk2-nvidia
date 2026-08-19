@@ -975,6 +975,24 @@ CapsuleAttemptRecordBuildPayload (
       return EFI_INVALID_PARAMETER;
     }
 
+    if ((Diagnostics->FmpImageDigest != NULL) &&
+        ((FdtSetPropString (
+            Payload,
+            0,
+            "nvidia,fmp-image-digest-algorithm",
+            "sha256"
+            ) != 0) ||
+         (FdtSetProp (
+            Payload,
+            0,
+            "nvidia,fmp-image-digest",
+            Diagnostics->FmpImageDigest,
+            CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE
+            ) != 0)))
+    {
+      return EFI_BUFFER_TOO_SMALL;
+    }
+
     Node = FdtAddSubnode (Payload, 0, "diagnostics");
     if ((Node < 0) ||
         (FdtSetPropString (Payload, Node, "nvidia,producer", Producer) != 0) ||
@@ -1708,6 +1726,90 @@ DumpPayloadString (
   return EFI_SUCCESS;
 }
 
+EFI_STATUS
+CapsuleAttemptRecordFormatFmpImageDigest (
+  IN  CONST UINT8  *FmpImageDigest,
+  IN  UINTN        FmpImageDigestSize,
+  OUT CHAR8        *DigestText,
+  IN  UINTN        DigestTextSize
+  )
+{
+  STATIC CONST CHAR8  HexDigits[] = "0123456789abcdef";
+  UINTN               Index;
+  UINTN               TextIndex;
+
+  if ((FmpImageDigest == NULL) || (DigestText == NULL) ||
+      (FmpImageDigestSize != CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (DigestTextSize < CAPSULE_ATTEMPT_RECORD_SHA256_TEXT_SIZE) {
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  CopyMem (DigestText, "sha256:", sizeof ("sha256:") - 1);
+  TextIndex = sizeof ("sha256:") - 1;
+  for (Index = 0; Index < FmpImageDigestSize; Index++) {
+    DigestText[TextIndex++] = HexDigits[FmpImageDigest[Index] >> 4];
+    DigestText[TextIndex++] = HexDigits[FmpImageDigest[Index] & 0xF];
+  }
+
+  DigestText[TextIndex] = '\0';
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+DumpPayloadFmpImageDigest (
+  IN CONST VOID  *Payload
+  )
+{
+  EFI_STATUS   Status;
+  CONST CHAR8  *Algorithm;
+  CONST VOID   *Digest;
+  UINTN        AlgorithmLength;
+  INT32        DigestLength;
+  CHAR8        DigestText[CAPSULE_ATTEMPT_RECORD_SHA256_TEXT_SIZE];
+
+  Digest = FdtGetProp (
+             Payload,
+             0,
+             "nvidia,fmp-image-digest",
+             &DigestLength
+             );
+  Status = GetRequiredStringProperty (
+             Payload,
+             0,
+             "nvidia,fmp-image-digest-algorithm",
+             &Algorithm,
+             &AlgorithmLength
+             );
+  if ((Digest == NULL) && (Status == EFI_NOT_FOUND)) {
+    return EFI_SUCCESS;
+  }
+
+  if ((Digest == NULL) || EFI_ERROR (Status) ||
+      (AsciiStrCmp (Algorithm, "sha256") != 0) ||
+      (DigestLength != CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE))
+  {
+    return EFI_COMPROMISED_DATA;
+  }
+
+  Status = CapsuleAttemptRecordFormatFmpImageDigest (
+             Digest,
+             DigestLength,
+             DigestText,
+             sizeof (DigestText)
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  DEBUG ((DEBUG_ERROR, "Capsule attempt FMP image digest: %a\n", DigestText));
+  return EFI_SUCCESS;
+}
+
 STATIC
 BOOLEAN
 PayloadPropertyIsString (
@@ -2016,6 +2118,11 @@ DumpPayload (
       ElapsedTimeSecondsWithinMinute,
       ElapsedTimeNanoseconds
       ));
+  }
+
+  Status = DumpPayloadFmpImageDigest (Payload);
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   FdtForEachSubnode (Node, Payload, 0) {

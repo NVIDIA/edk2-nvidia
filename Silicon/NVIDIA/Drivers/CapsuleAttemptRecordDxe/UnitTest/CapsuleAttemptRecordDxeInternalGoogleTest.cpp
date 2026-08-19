@@ -149,6 +149,84 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, PartitionPatternSupportsOnlyTrailin
   EXPECT_FALSE (CapsuleAttemptRecordPartitionNameMatchesPattern ("RP1", "R*1"));
 }
 
+TEST_F (CapsuleAttemptRecordDxeInternalTest, FormatsFmpImageDigestForSha256sumComparison) {
+  UINT8  Digest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
+  CHAR8  DigestText[CAPSULE_ATTEMPT_RECORD_SHA256_TEXT_SIZE];
+  UINTN  Index;
+
+  for (Index = 0; Index < sizeof (Digest); Index++) {
+    Digest[Index] = (UINT8)Index;
+  }
+
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordFormatFmpImageDigest (
+      Digest,
+      sizeof (Digest),
+      DigestText,
+      sizeof (DigestText)
+      )
+    );
+  EXPECT_STREQ (
+    "sha256:000102030405060708090a0b0c0d0e0f"
+    "101112131415161718191a1b1c1d1e1f",
+    DigestText
+    );
+  EXPECT_EQ (
+    EFI_INVALID_PARAMETER,
+    CapsuleAttemptRecordFormatFmpImageDigest (
+      Digest,
+      sizeof (Digest) - 1,
+      DigestText,
+      sizeof (DigestText)
+      )
+    );
+  EXPECT_EQ (
+    EFI_BUFFER_TOO_SMALL,
+    CapsuleAttemptRecordFormatFmpImageDigest (
+      Digest,
+      sizeof (Digest),
+      DigestText,
+      sizeof (DigestText) - 1
+      )
+    );
+}
+
+TEST_F (CapsuleAttemptRecordDxeInternalTest, DumpsFmpImageDigest) {
+  CAPSULE_ATTEMPT_RECORD_CONTEXT      Context;
+  CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  Diagnostics;
+  UINT8                               Digest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
+  UINT64                              AttemptId;
+
+  Context = MakeContext ();
+  SetMem (Digest, sizeof (Digest), 0xA5);
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordBegin (
+      &Context,
+      CapsuleAttemptRecordSourceSavedCapsule,
+      NULL,
+      &AttemptId
+      )
+    );
+
+  ZeroMem (&Diagnostics, sizeof (Diagnostics));
+  Diagnostics.Producer       = CapsuleAttemptRecordProducerCheckImage;
+  Diagnostics.RawStatus      = EFI_SUCCESS;
+  Diagnostics.FmpImageDigest = Digest;
+  ASSERT_EQ (
+    EFI_SUCCESS,
+    CapsuleAttemptRecordUpdateDiagnostics (
+      &Context,
+      CapsuleAttemptRecordSourceSavedCapsule,
+      AttemptId,
+      NULL,
+      &Diagnostics
+      )
+    );
+  EXPECT_EQ (EFI_SUCCESS, CapsuleAttemptRecordDumpLatest (&Context));
+}
+
 TEST_F (CapsuleAttemptRecordDxeInternalTest, ParsesStorageConfiguration) {
   UINT8        Dtb[2048] __attribute__ ((aligned (8)));
   CONST CHAR8  CompatibleList[] =
@@ -525,11 +603,14 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIden
   CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  Diagnostics;
   CONST CHAR8                         *Value;
   CONST VOID                          *StatusValue;
+  CONST VOID                          *DigestValue;
   CONST VOID                          *CompletionValue;
   UINT64                              RawStatus;
   UINT32                              Completion;
+  UINT8                               Digest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
   INT32                               Node;
   INT32                               Length;
+  UINTN                               Index;
 
   ZeroMem (&Lifecycle, sizeof (Lifecycle));
   Lifecycle.AttemptId      = 7;
@@ -545,6 +626,11 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIden
   Diagnostics.TnSpec          = "3701-300-0000--1--jetson-agx-orin-devkit-";
   Diagnostics.Completion      = 47;
   Diagnostics.CompletionValid = TRUE;
+  for (Index = 0; Index < sizeof (Digest); Index++) {
+    Digest[Index] = (UINT8)Index;
+  }
+
+  Diagnostics.FmpImageDigest = Digest;
 
   ASSERT_EQ (
     EFI_SUCCESS,
@@ -579,6 +665,18 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIden
   ASSERT_EQ ((INT32)sizeof (Completion), Length);
   CopyMem (&Completion, CompletionValue, sizeof (Completion));
   EXPECT_EQ (Diagnostics.Completion, Fdt32ToCpu (Completion));
+  Value = (CONST CHAR8 *)FdtGetProp (
+                           Payload,
+                           0,
+                           "nvidia,fmp-image-digest-algorithm",
+                           &Length
+                           );
+  ASSERT_NE (nullptr, Value);
+  EXPECT_STREQ ("sha256", Value);
+  DigestValue = FdtGetProp (Payload, 0, "nvidia,fmp-image-digest", &Length);
+  ASSERT_NE (nullptr, DigestValue);
+  ASSERT_EQ ((INT32)sizeof (Digest), Length);
+  EXPECT_EQ (0, CompareMem (Digest, DigestValue, sizeof (Digest)));
 }
 
 TEST_F (CapsuleAttemptRecordDxeInternalTest, RejectsInvalidFmpCompletionPercentage) {

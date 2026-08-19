@@ -28,6 +28,7 @@ CapsuleAttemptRecordStateBegin (
   State->AttemptStartCounter      = StartCounter;
   State->AttemptStartCounterValid = TRUE;
   State->DiagnosticsValid         = FALSE;
+  State->FmpImageDigestValid      = FALSE;
   if (Timestamp != NULL) {
     CopyMem (&State->AttemptTimestamp, Timestamp, sizeof (State->AttemptTimestamp));
   } else {
@@ -63,6 +64,7 @@ CapsuleAttemptRecordStateConsume (
   State->AttemptStartCounter      = 0;
   State->AttemptStartCounterValid = FALSE;
   State->DiagnosticsValid         = FALSE;
+  State->FmpImageDigestValid      = FALSE;
   ZeroMem (&State->AttemptTimestamp, sizeof (State->AttemptTimestamp));
 }
 
@@ -75,6 +77,7 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   IN     UINT32                                 NvidiaStatus,
   IN     CONST CHAR8                            *PlatformSpec OPTIONAL,
   IN     CONST CHAR8                            *TnSpec OPTIONAL,
+  IN     CONST UINT8                            *FmpImageDigest OPTIONAL,
   IN     CONST UINT32                           *Completion OPTIONAL
   )
 {
@@ -124,6 +127,15 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
     AsciiStrCpyS (TnSpecAscii, sizeof (TnSpecAscii), TnSpec);
   }
 
+  if (!State->FmpImageDigestValid && (FmpImageDigest != NULL)) {
+    CopyMem (
+      State->FmpImageDigest,
+      FmpImageDigest,
+      sizeof (State->FmpImageDigest)
+      );
+    State->FmpImageDigestValid = TRUE;
+  }
+
   Diagnostics.Producer = CheckImage ? CapsuleAttemptRecordProducerCheckImage :
                          CapsuleAttemptRecordProducerSetImage;
   Diagnostics.FailedImage     = (FailedImageAscii[0] != '\0') ? FailedImageAscii : NULL;
@@ -131,6 +143,7 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   Diagnostics.NvidiaStatus    = NvidiaStatus;
   Diagnostics.PlatformSpec    = (PlatformSpecAscii[0] != '\0') ? PlatformSpecAscii : NULL;
   Diagnostics.TnSpec          = (TnSpecAscii[0] != '\0') ? TnSpecAscii : NULL;
+  Diagnostics.FmpImageDigest  = State->FmpImageDigestValid ? State->FmpImageDigest : NULL;
   Diagnostics.Completion      = (Completion != NULL) ? *Completion : 0;
   Diagnostics.CompletionValid = (Completion != NULL);
 
@@ -138,10 +151,11 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   CopyMem (State->PlatformSpec, PlatformSpecAscii, sizeof (State->PlatformSpec));
   CopyMem (State->TnSpec, TnSpecAscii, sizeof (State->TnSpec));
   CopyMem (&State->Diagnostics, &Diagnostics, sizeof (State->Diagnostics));
-  State->Diagnostics.FailedImage  = (State->FailedImage[0] != '\0') ? State->FailedImage : NULL;
-  State->Diagnostics.PlatformSpec = (State->PlatformSpec[0] != '\0') ? State->PlatformSpec : NULL;
-  State->Diagnostics.TnSpec       = (State->TnSpec[0] != '\0') ? State->TnSpec : NULL;
-  State->DiagnosticsValid         = TRUE;
+  State->Diagnostics.FailedImage    = (State->FailedImage[0] != '\0') ? State->FailedImage : NULL;
+  State->Diagnostics.PlatformSpec   = (State->PlatformSpec[0] != '\0') ? State->PlatformSpec : NULL;
+  State->Diagnostics.TnSpec         = (State->TnSpec[0] != '\0') ? State->TnSpec : NULL;
+  State->Diagnostics.FmpImageDigest = State->FmpImageDigestValid ? State->FmpImageDigest : NULL;
+  State->DiagnosticsValid           = TRUE;
 
   return EFI_SUCCESS;
 }

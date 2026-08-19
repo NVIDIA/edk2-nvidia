@@ -65,13 +65,20 @@ committed, so a later capsule operation cannot inherit the earlier attempt ID.
 
 ### FMP diagnostic updates
 
+`CapsuleAttemptRecordCalculateFmpImageDigest` calculates the SHA-256 identity
+of the authenticated FMP image buffer. It avoids hashing when record support
+is disabled and returns `FALSE` when no digest is available. The null library
+also returns `FALSE` without modifying the output buffer.
+
 `CapsuleAttemptRecordUpdateFmpDiagnostics` is used by `FmpTegraCheckImage` and
 `FmpTegraSetImage`. Its `CheckImage` argument distinguishes the producer. It
 forwards the failed image identity when known, raw `EFI_STATUS`, detailed
-NVIDIA last-attempt status, platform specification, and compatible TnSpec. For
-the SetImage producer, it forwards the current completion percentage. The
-value begins at zero and advances after each successful progress display
-update.
+NVIDIA last-attempt status, platform specification, and compatible TnSpec.
+For the CheckImage producer, it also forwards the SHA-256 FMP image digest so
+that the driver can retain the identity for the active attempt and include it
+in the same persistent update as the FMP diagnostic. For the SetImage
+producer, it forwards the current completion percentage. The value begins at
+zero and advances after each successful progress display update.
 
 The driver immediately persists these updates against the active attempt and
 retains the newest diagnostic for finalization. The client does not interpret

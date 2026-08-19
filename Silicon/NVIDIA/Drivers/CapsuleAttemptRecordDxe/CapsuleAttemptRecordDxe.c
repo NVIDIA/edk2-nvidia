@@ -78,6 +78,7 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
   IN UINT32                                  NvidiaStatus,
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT8                             *FmpImageDigest OPTIONAL,
   IN CONST UINT32                            *Completion OPTIONAL
   );
 
@@ -633,6 +634,7 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
   IN UINT32                                  NvidiaStatus,
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
+  IN CONST UINT8                             *FmpImageDigest OPTIONAL,
   IN CONST UINT32                            *Completion OPTIONAL
   )
 {
@@ -652,6 +654,7 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
               NvidiaStatus,
               PlatformSpec,
               TnSpec,
+              FmpImageDigest,
               Completion
               );
   if (Status == EFI_NOT_READY) {
