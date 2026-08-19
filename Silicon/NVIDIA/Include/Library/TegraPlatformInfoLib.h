@@ -15,7 +15,7 @@
 #define T234_MAJOR_REV  0x4
 #define T264_CHIP_ID    0x26
 #define TH500_CHIP_ID   0x24
-#define T410_CHIP_ID    0x02
+#define T410_CHIP_ID    0x41
 /* CS definitions for the platforms */
 #define NOR_FLASH_CHIP_SELECT_JETSON        0
 #define NOR_FLASH_CHIP_SELECT_TH500_PRESIL  0
@@ -31,6 +31,8 @@
 // Server SKUs
 #define TH500_SKU         5
 #define TH500_PRESIL_SKU  253
+#define T410_SKU          6
+#define T410_PRESIL_SKU   252
 
 // FDT Boot blob data size
 #define FDT_BLOB_MAX_SIZE  (SIZE_64KB)

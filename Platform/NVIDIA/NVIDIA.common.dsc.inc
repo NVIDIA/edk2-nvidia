@@ -1558,6 +1558,16 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
 !endif
 
+!ifdef CONFIG_SOC_T41X
+[PcdsDynamicDefault.common.T410]
+
+[PcdsDynamicDefault.common.T410Presil]
+
+[PcdsDynamicHii.common.T410Presil]
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
+
+!endif
+
 [Components.common]
   #
   # PEI Phase modules

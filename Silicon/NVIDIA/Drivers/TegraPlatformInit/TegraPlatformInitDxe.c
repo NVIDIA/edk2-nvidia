@@ -643,7 +643,7 @@ TegraPlatformInitialize (
   EmulatedVariablesUsed = FALSE;
 
   ChipID = TegraGetChipID ();
-  DEBUG ((DEBUG_INFO, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
+  DEBUG ((DEBUG_ERROR, "%a: Tegra Chip ID:  0x%x\n", __FUNCTION__, ChipID));
 
   PlatformType = TegraGetPlatform ();
   Status       = DtPlatformLoadDtb (&DtbBase, &DtbSize);
@@ -670,6 +670,8 @@ TegraPlatformInitialize (
       LibPcdSetSku (TH500_SKU);
     } else if (ChipID == T264_CHIP_ID) {
       LibPcdSetSku (T264_SKU);
+    } else if (ChipID == T410_CHIP_ID) {
+      LibPcdSetSku (T410_SKU);
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
@@ -688,6 +690,8 @@ TegraPlatformInitialize (
       LibPcdSetSku (TH500_PRESIL_SKU);
     } else if (ChipID == T264_CHIP_ID) {
       LibPcdSetSku (T264_PRESIL_SKU);
+    } else if (ChipID == T410_CHIP_ID) {
+      LibPcdSetSku (T410_PRESIL_SKU);
     }
 
     Status = gBS->InstallMultipleProtocolInterfaces (
