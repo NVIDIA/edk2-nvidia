@@ -4,6 +4,7 @@
   Copyright (c) 2016 HP Development Company, L.P.
   Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.
   Copyright (c) 2023, Ventana Micro System Inc. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -262,8 +263,12 @@ StandaloneMmCpuInitialize (
   // Allocate memory for a table to hold pointers to a
   // EFI_MM_COMMUNICATE_HEADER for each CPU
   //
+  // StandaloneMm is UP-migratable and the boot information reports
+  // NumberOfEnabledProcessors as 0. Allocate space for at least one CPU so
+  // that indexing PerCpuGuidedEventContext[CpuNumber] in the event dispatcher
+  // is not an out-of-bounds access on a zero-sized allocation.
   ArraySize = sizeof (EFI_MM_COMMUNICATE_HEADER *) *
-              mMpInformationHobData->NumberOfEnabledProcessors;
+              MAX (mMpInformationHobData->NumberOfEnabledProcessors, 1);
   Status = mMmst->MmAllocatePool (
                     EfiRuntimeServicesData,
                     ArraySize,
