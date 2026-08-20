@@ -2250,6 +2250,7 @@ ReadAndroidStyleDtbPartition (
   VOID                   *DtbBuffer;
   UINT64                 DtbBufferSize;
   UINT64                 EncryptedDtbBufferSize;
+  UINT64                 RemainingSignatureSize;
   UINTN                  Size;
   UINTN                  SignatureOffset;
   UINTN                  SignatureSize = SIG_FILE_SIZE_4KB;
@@ -2326,14 +2327,40 @@ ReadAndroidStyleDtbPartition (
       goto Exit;
     }
 
-    if (FdtCheckHeader ((UINT8 *)DtbBuffer) != 0) {
-      ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
+    if (DtbBufferSize < sizeof (FDT_HEADER)) {
+      ErrorPrint (L"DTB buffer smaller than FDT header\r\n");
+      Status = EFI_SECURITY_VIOLATION;
       goto Exit;
     }
 
-    Size            = FdtTotalSize ((UINT8 *)DtbBuffer);
+    if (FdtCheckHeader ((UINT8 *)DtbBuffer) != 0) {
+      ErrorPrint (L"DTB on partition was corrupted, attempt use to UEFI DTB\r\n");
+      Status = EFI_VOLUME_CORRUPTED;
+      goto Exit;
+    }
+
+    Size = FdtTotalSize ((UINT8 *)DtbBuffer);
+    if ((Size < sizeof (FDT_HEADER)) || ((UINT64)Size > DtbBufferSize)) {
+      ErrorPrint (L"DTB header size is invalid\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
     SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
-    SignatureSize   = DtbBufferSize - SignatureOffset;
+    if (SignatureOffset >= DtbBufferSize) {
+      ErrorPrint (L"DTB signature missing\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
+    RemainingSignatureSize = DtbBufferSize - SignatureOffset;
+    if (RemainingSignatureSize > SIG_FILE_SIZE_4KB) {
+      ErrorPrint (L"DTB signature size is invalid\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
+    SignatureSize = (UINTN)RemainingSignatureSize;
   } else {
     DtbBufferSize = MultU64x32 (BlockIo->Media->LastBlock + 1, BlockIo->Media->BlockSize);
 
@@ -2356,12 +2383,25 @@ ReadAndroidStyleDtbPartition (
       goto Exit;
     }
 
+    if (DtbBufferSize < sizeof (FDT_HEADER)) {
+      ErrorPrint (L"DTB buffer smaller than FDT header\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
     if (FdtCheckHeader ((UINT8 *)DtbBuffer) != 0) {
       ErrorPrint (L"DTB on partition was corrupted, try using UEFI DTB\r\n");
+      Status = EFI_VOLUME_CORRUPTED;
       goto Exit;
     }
 
     Size = FdtTotalSize ((UINT8 *)DtbBuffer);
+    if ((Size < sizeof (FDT_HEADER)) || ((UINT64)Size > DtbBufferSize)) {
+      ErrorPrint (L"DTB header size is invalid\r\n");
+      Status = EFI_SECURITY_VIOLATION;
+      goto Exit;
+    }
+
     if (IsSecureBootEnabled ()) {
       SignatureOffset = ALIGN_VALUE (Size, SignatureSize);
       if (SignatureOffset + SignatureSize > DtbBufferSize) {
