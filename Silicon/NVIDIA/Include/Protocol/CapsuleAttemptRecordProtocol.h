@@ -16,7 +16,7 @@
   { 0xada0d916, 0xc07e, 0x489f,                     \
     { 0x93, 0x33, 0x7f, 0x44, 0x8e, 0x82, 0x2c, 0x17 } }
 
-#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00050000
+#define NVIDIA_CAPSULE_ATTEMPT_RECORD_PROTOCOL_REVISION  0x00060000
 
 #define CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE  32U
 
@@ -127,10 +127,13 @@ EFI_STATUS
   @param[in] FmpImageDigest  SHA-256 digest of the FMP image, or NULL.
   @param[in] Completion      Current SetImage completion percentage, or NULL
                              for a producer that does not report completion.
+  @param[in] TargetBootChain  Boot chain targeted by SetImage, or NULL when no
+                              target chain was selected.
 
   @retval EFI_SUCCESS            The diagnostic record was persisted.
-  @retval EFI_INVALID_PARAMETER  This is NULL, a string is too long, or the
-                                 completion percentage exceeds 100.
+  @retval EFI_INVALID_PARAMETER  This is NULL, a string is too long, the
+                                 completion percentage exceeds 100, or the
+                                 target chain is invalid for the producer.
   @retval EFI_NOT_READY          No capsule attempt is active.
   @retval Others                 The record could not be persisted.
 
@@ -146,7 +149,8 @@ EFI_STATUS
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
   IN CONST UINT8                             *FmpImageDigest OPTIONAL,
-  IN CONST UINT32                            *Completion OPTIONAL
+  IN CONST UINT32                            *Completion OPTIONAL,
+  IN CONST UINT32                            *TargetBootChain OPTIONAL
   );
 
 ///

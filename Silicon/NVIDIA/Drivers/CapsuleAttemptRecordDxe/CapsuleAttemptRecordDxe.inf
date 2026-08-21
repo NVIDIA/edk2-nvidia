@@ -33,6 +33,7 @@
   DebugLib
   DtPlatformDtbLoaderLib
   FdtLib
+  HobLib
   MemoryAllocationLib
   PcdLib
   PrintLib
@@ -46,6 +47,9 @@
   gEfiFirmwareManagementProtocolGuid           ## CONSUMES
   gEfiPartitionInfoProtocolGuid                 ## CONSUMES
   gNVIDIACapsuleAttemptRecordProtocolGuid      ## PRODUCES
+
+[Guids]
+  gNVIDIAPlatformResourceDataGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid

@@ -12,6 +12,7 @@
 extern "C" {
   #include <Uefi.h>
   #include <Library/BaseMemoryLib.h>
+  #include <Library/BootChainInfoLib.h>
   #include "../CapsuleAttemptRecordDxeState.h"
 }
 
@@ -21,22 +22,27 @@ STATIC CONST CHAR16  mSecondFailedImage[] = { 'B', '_', 'c', 'p', 'u', 0 };
 TEST (CapsuleAttemptRecordDxeStateTest, BeginStoresAttempt) {
   CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  State     = { };
   EFI_TIME                               Timestamp = { };
+  UINT32                                 ActiveBootChain;
 
   Timestamp.Year  = 2026;
   Timestamp.Month = 8;
   Timestamp.Day   = 24;
+  ActiveBootChain = 1;
 
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
     &Timestamp,
+    &ActiveBootChain,
     100
     );
 
   EXPECT_TRUE (State.AttemptActive);
   EXPECT_EQ (42U, State.AttemptId);
   EXPECT_EQ (CapsuleAttemptRecordSourceAndroidFastboot, State.AttemptSource);
+  EXPECT_TRUE (State.ActiveBootChainValid);
+  EXPECT_EQ (ActiveBootChain, State.ActiveBootChain);
   EXPECT_TRUE (State.AttemptTimestampValid);
   EXPECT_EQ (Timestamp.Year, State.AttemptTimestamp.Year);
   EXPECT_EQ (Timestamp.Month, State.AttemptTimestamp.Month);
@@ -53,6 +59,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, MatchReturnsOnlyMatchingAttempt) {
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
+    nullptr,
     nullptr,
     100
     );
@@ -78,12 +85,16 @@ TEST (CapsuleAttemptRecordDxeStateTest, MatchReturnsOnlyMatchingAttempt) {
 TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsAttempt) {
   CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  State = { };
   UINT64                                 AttemptId;
+  UINT32                                 ActiveBootChain;
+
+  ActiveBootChain = 1;
 
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
     nullptr,
+    &ActiveBootChain,
     100
     );
   CapsuleAttemptRecordStateConsume (&State);
@@ -91,6 +102,8 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsAttempt) {
   EXPECT_FALSE (State.AttemptActive);
   EXPECT_EQ (0U, State.AttemptId);
   EXPECT_EQ (CapsuleAttemptRecordSourceUnknown, State.AttemptSource);
+  EXPECT_FALSE (State.ActiveBootChainValid);
+  EXPECT_EQ (0U, State.ActiveBootChain);
   EXPECT_FALSE (State.AttemptTimestampValid);
   EXPECT_EQ (0U, State.AttemptTimestamp.Year);
   EXPECT_FALSE (State.AttemptStartCounterValid);
@@ -118,6 +131,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateWithoutAttemptIsRejected) {
       "platform",
       "tnspec",
       nullptr,
+      nullptr,
       nullptr
       )
     );
@@ -128,11 +142,13 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
   CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE     State = { };
   CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics;
   UINT32                                    Completion;
+  UINT32                                    TargetBootChain;
 
   CapsuleAttemptRecordStateBegin (
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
+    nullptr,
     nullptr,
     100
     );
@@ -149,10 +165,12 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
       "platform-1",
       "tnspec-1",
       nullptr,
-      &Completion
+      &Completion,
+      nullptr
       )
     );
-  Completion = 75;
+  Completion      = 75;
+  TargetBootChain = 1;
   ASSERT_EQ (
     EFI_SUCCESS,
     CapsuleAttemptRecordStateUpdateDiagnostics (
@@ -164,7 +182,8 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
       "platform-2",
       "tnspec-2",
       nullptr,
-      &Completion
+      &Completion,
+      &TargetBootChain
       )
     );
 
@@ -178,6 +197,57 @@ TEST (CapsuleAttemptRecordDxeStateTest, UpdateReplacesCachedDiagnostics) {
   EXPECT_STREQ ("tnspec-2", Diagnostics->TnSpec);
   EXPECT_EQ (75U, Diagnostics->Completion);
   EXPECT_TRUE (Diagnostics->CompletionValid);
+  EXPECT_EQ (TargetBootChain, Diagnostics->TargetBootChain);
+  EXPECT_TRUE (Diagnostics->TargetBootChainValid);
+}
+
+TEST (CapsuleAttemptRecordDxeStateTest, RejectsInvalidTargetBootChain) {
+  CAPSULE_ATTEMPT_RECORD_PROTOCOL_STATE  State = { };
+  UINT32                                 TargetBootChain;
+
+  CapsuleAttemptRecordStateBegin (
+    &State,
+    CapsuleAttemptRecordSourceAndroidFastboot,
+    42,
+    nullptr,
+    nullptr,
+    100
+    );
+
+  TargetBootChain = 0;
+  EXPECT_EQ (
+    EFI_INVALID_PARAMETER,
+    CapsuleAttemptRecordStateUpdateDiagnostics (
+      &State,
+      TRUE,
+      nullptr,
+      EFI_SUCCESS,
+      0,
+      nullptr,
+      nullptr,
+      nullptr,
+      nullptr,
+      &TargetBootChain
+      )
+    );
+
+  TargetBootChain = BOOT_CHAIN_COUNT;
+  EXPECT_EQ (
+    EFI_INVALID_PARAMETER,
+    CapsuleAttemptRecordStateUpdateDiagnostics (
+      &State,
+      FALSE,
+      nullptr,
+      EFI_SUCCESS,
+      0,
+      nullptr,
+      nullptr,
+      nullptr,
+      nullptr,
+      &TargetBootChain
+      )
+    );
+  EXPECT_EQ (nullptr, CapsuleAttemptRecordStateGetDiagnostics (&State));
 }
 
 TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics) {
@@ -189,6 +259,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
     &State,
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
+    nullptr,
     nullptr,
     100
     );
@@ -202,6 +273,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
       1,
       "platform",
       "tnspec",
+      nullptr,
       nullptr,
       nullptr
       )
@@ -219,7 +291,8 @@ TEST (CapsuleAttemptRecordDxeStateTest, InvalidUpdatePreservesCachedDiagnostics)
       nullptr,
       nullptr,
       nullptr,
-      &InvalidCompletion
+      &InvalidCompletion,
+      nullptr
       )
     );
 
@@ -239,6 +312,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
     nullptr,
+    nullptr,
     100
     );
   ASSERT_EQ (
@@ -252,6 +326,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
       nullptr,
       nullptr,
       nullptr,
+      nullptr,
       nullptr
       )
     );
@@ -261,6 +336,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, BeginClearsCachedDiagnostics) {
     &State,
     CapsuleAttemptRecordSourceCapsuleOnDisk,
     43,
+    nullptr,
     nullptr,
     200
     );
@@ -276,6 +352,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsCachedDiagnostics) {
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
     nullptr,
+    nullptr,
     100
     );
   ASSERT_EQ (
@@ -286,6 +363,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, ConsumeClearsCachedDiagnostics) {
       nullptr,
       EFI_ABORTED,
       1,
+      nullptr,
       nullptr,
       nullptr,
       nullptr,
@@ -311,6 +389,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, RetainsFirstFmpImageDigest) {
     CapsuleAttemptRecordSourceAndroidFastboot,
     42,
     nullptr,
+    nullptr,
     100
     );
 
@@ -325,6 +404,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, RetainsFirstFmpImageDigest) {
       nullptr,
       nullptr,
       FirstDigest,
+      nullptr,
       nullptr
       )
     );
@@ -339,6 +419,7 @@ TEST (CapsuleAttemptRecordDxeStateTest, RetainsFirstFmpImageDigest) {
       nullptr,
       nullptr,
       SecondDigest,
+      nullptr,
       nullptr
       )
     );

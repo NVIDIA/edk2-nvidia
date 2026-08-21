@@ -54,10 +54,13 @@ Commits an `in-progress` record containing an assigned attempt ID and the
 caller's source context. Immediately before the commit, the driver calls the
 UEFI Runtime Services `GetTime` service and includes the result as the attempt
 timestamp when it is available. The driver retains that identity and timestamp
-for a matching finalization request. It also retains the current TimerLib
-performance-counter value as the start of the attempt. The begin record
-intentionally has no ESRT entry because the post-operation FMP result does not
-yet exist.
+for a matching finalization request. It also reads the active boot chain from
+the `gNVIDIAPlatformResourceDataGuid` HOB and includes it when the HOB has the
+expected size and reports a valid chain. A missing or invalid HOB or chain
+value is logged and omits this optional diagnostic without failing the begin
+operation. The driver retains the current TimerLib performance-counter value
+as the start of the attempt. The begin record intentionally has no ESRT entry
+because the post-operation FMP result does not yet exist.
 
 ### `Finalize`
 
@@ -81,8 +84,10 @@ This operation records information from the actual Tegra FMP validation and
 application paths. Its `CheckImage` argument distinguishes the producer. Each
 request identifies the failed image when known, the raw `EFI_STATUS`, the
 detailed NVIDIA last-attempt status, `TegraPlatformSpec`, and the compatible
-TnSpec. The driver
-commits a replacement `in-progress` record immediately, using the active
+TnSpec. A SetImage completion update also includes the target boot chain after
+the FMP update path has selected one; CheckImage updates do not include a
+target chain. The driver commits a replacement `in-progress` record
+immediately, using the active
 attempt ID, source, and timestamp. This makes a deep FMP failure durable before
 control returns to the outer capsule lifecycle call site.
 
@@ -232,6 +237,7 @@ The current payload is a standalone DTB with this schema:
     nvidia,attempt-id = /bits/ 64 <...>;
     nvidia,attempt-source = "android-fastboot";
     nvidia,attempt-state = "completed";
+    nvidia,active-boot-chain = <0>;
     nvidia,timestamp = "2026-08-17T12:34:56.123456789-07:00";
     nvidia,elapsed-time-ns = /bits/ 64 <...>;
     nvidia,fmp-image-digest-algorithm = "sha256";
@@ -245,6 +251,7 @@ The current payload is a standalone DTB with this schema:
         nvidia,platform-spec = "...";
         nvidia,tnspec = "...";
         nvidia,completion-percent = <47>;
+        nvidia,target-boot-chain = <1>;
     };
 
     esrt-entry-0 {
@@ -268,6 +275,13 @@ three required lifecycle properties, the optional timestamp, and no ESRT
 subnode. Its completed replacement has the same attempt ID and timestamp and
 includes the ESRT snapshot and, when begin supplied the active identity, the
 elapsed attempt time.
+
+`nvidia,active-boot-chain` is an optional root property captured when `Begin`
+is called and retained in diagnostic and completed replacements for that
+attempt. `nvidia,target-boot-chain` is an optional SetImage diagnostic property
+captured when SetImage returns after selecting an update target. Both use zero
+for boot chain A and one for boot chain B. SetImage failures before target
+selection omit the target property, and CheckImage diagnostics always omit it.
 
 `nvidia,timestamp` records when the attempt began, not when each replacement
 record was written. It is an ISO 8601 string derived from the `EFI_TIME`

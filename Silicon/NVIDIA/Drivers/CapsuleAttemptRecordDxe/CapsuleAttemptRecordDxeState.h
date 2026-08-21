@@ -16,6 +16,8 @@ typedef struct {
   BOOLEAN                               AttemptActive;
   UINT64                                AttemptId;
   CAPSULE_ATTEMPT_RECORD_SOURCE         AttemptSource;
+  UINT32                                ActiveBootChain;
+  BOOLEAN                               ActiveBootChainValid;
   EFI_TIME                              AttemptTimestamp;
   BOOLEAN                               AttemptTimestampValid;
   UINT64                                AttemptStartCounter;
@@ -35,6 +37,7 @@ CapsuleAttemptRecordStateBegin (
   IN  CAPSULE_ATTEMPT_RECORD_SOURCE          Source,
   IN  UINT64                                 AttemptId,
   IN  CONST EFI_TIME                         *Timestamp OPTIONAL,
+  IN  CONST UINT32                           *ActiveBootChain OPTIONAL,
   IN  UINT64                                 StartCounter
   );
 
@@ -60,7 +63,8 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   IN     CONST CHAR8                            *PlatformSpec OPTIONAL,
   IN     CONST CHAR8                            *TnSpec OPTIONAL,
   IN     CONST UINT8                            *FmpImageDigest OPTIONAL,
-  IN     CONST UINT32                           *Completion OPTIONAL
+  IN     CONST UINT32                           *Completion OPTIONAL,
+  IN     CONST UINT32                           *TargetBootChain OPTIONAL
   );
 
 CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS *

@@ -11,10 +11,13 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootChainInfoLib.h>
 #include <Library/NVIDIADebugLib.h>
 #include <Library/DtPlatformDtbLoaderLib.h>
+#include <Library/HobLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
+#include <Library/PlatformResourceLib.h>
 #include <Library/TimerLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -79,7 +82,8 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
   IN CONST UINT8                             *FmpImageDigest OPTIONAL,
-  IN CONST UINT32                            *Completion OPTIONAL
+  IN CONST UINT32                            *Completion OPTIONAL,
+  IN CONST UINT32                            *TargetBootChain OPTIONAL
   );
 
 STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
@@ -97,6 +101,8 @@ STATIC CAPSULE_ATTEMPT_RECORD_PRIVATE  mPrivate = {
     FALSE,
     0,
     CapsuleAttemptRecordSourceUnknown,
+    0,
+    FALSE,
     { 0 },
     FALSE,
     0,
@@ -189,6 +195,34 @@ GetElapsedTimeNs (
     ElapsedTicks,
     *ElapsedTimeNs
     ));
+  return TRUE;
+}
+
+STATIC
+BOOLEAN
+CaptureActiveBootChain (
+  OUT UINT32  *ActiveBootChain
+  )
+{
+  VOID                          *Hob;
+  TEGRA_PLATFORM_RESOURCE_INFO  *PlatformResourceInfo;
+
+  Hob = GetFirstGuidHob (&gNVIDIAPlatformResourceDataGuid);
+  if ((Hob == NULL) ||
+      (GET_GUID_HOB_DATA_SIZE (Hob) != sizeof (TEGRA_PLATFORM_RESOURCE_INFO)))
+  {
+    DEBUG ((DEBUG_ERROR, "%a: platform resource HOB is unavailable or invalid\n", __FUNCTION__));
+    return FALSE;
+  }
+
+  PlatformResourceInfo = (TEGRA_PLATFORM_RESOURCE_INFO *)GET_GUID_HOB_DATA (Hob);
+  if (PlatformResourceInfo->ActiveBootChain >= BOOT_CHAIN_COUNT) {
+    DEBUG ((DEBUG_ERROR, "%a: active boot chain is invalid: %u\n", __FUNCTION__, PlatformResourceInfo->ActiveBootChain));
+    return FALSE;
+  }
+
+  *ActiveBootChain = PlatformResourceInfo->ActiveBootChain;
+  DEBUG ((DEBUG_INFO, "%a: captured active boot chain %u\n", __FUNCTION__, *ActiveBootChain));
   return TRUE;
 }
 
@@ -444,6 +478,7 @@ FinalizeRecord (
   IN     BOOLEAN                                   AttemptIdValid,
   IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
   IN     CONST UINT64                              *ElapsedTimeNs OPTIONAL,
+  IN     CONST UINT32                              *ActiveBootChain OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics OPTIONAL
   )
 {
@@ -478,6 +513,7 @@ FinalizeRecord (
                AttemptIdValid,
                Timestamp,
                ElapsedTimeNs,
+               ActiveBootChain,
                &ImageTypeId,
                &ImageInfoSet,
                Diagnostics
@@ -508,6 +544,7 @@ CapsuleAttemptRecordProtocolUpdateFmpImageInfo (
            FALSE,
            CaptureTimestamp (&Timestamp) ? &Timestamp : NULL,
            NULL,
+           NULL,
            NULL
            );
 }
@@ -526,6 +563,8 @@ CapsuleAttemptRecordProtocolBegin (
   UINT64                          StartCounter;
   EFI_TIME                        Timestamp;
   BOOLEAN                         TimestampValid;
+  UINT32                          ActiveBootChain;
+  BOOLEAN                         ActiveBootChainValid;
 
   if ((This == NULL) || (Source <= CapsuleAttemptRecordSourceUnknown) ||
       (Source >= CapsuleAttemptRecordSourceMax))
@@ -533,15 +572,18 @@ CapsuleAttemptRecordProtocolBegin (
     return EFI_INVALID_PARAMETER;
   }
 
-  Private        = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
-  StartCounter   = GetPerformanceCounter ();
-  TimestampValid = CaptureTimestamp (&Timestamp);
-  Status         = InitializeRecordContext (Private);
+  Private              = CAPSULE_ATTEMPT_RECORD_PRIVATE_FROM_PROTOCOL (This);
+  StartCounter         = GetPerformanceCounter ();
+  TimestampValid       = CaptureTimestamp (&Timestamp);
+  ActiveBootChain      = 0;
+  ActiveBootChainValid = CaptureActiveBootChain (&ActiveBootChain);
+  Status               = InitializeRecordContext (Private);
   if (!EFI_ERROR (Status)) {
     Status = CapsuleAttemptRecordBegin (
                Private->RecordContext,
                Source,
                TimestampValid ? &Timestamp : NULL,
+               ActiveBootChainValid ? &ActiveBootChain : NULL,
                &AttemptId
                );
   }
@@ -552,6 +594,7 @@ CapsuleAttemptRecordProtocolBegin (
       Source,
       AttemptId,
       TimestampValid ? &Timestamp : NULL,
+      ActiveBootChainValid ? &ActiveBootChain : NULL,
       StartCounter
       );
     DEBUG ((DEBUG_INFO, "%a: attempt %Lu began for source %u\n", __FUNCTION__, AttemptId, Source));
@@ -610,6 +653,7 @@ CapsuleAttemptRecordProtocolFinalize (
              MatchingAttempt,
              TimestampPointer,
              ElapsedTimePointer,
+             (MatchingAttempt && Private->State.ActiveBootChainValid) ? &Private->State.ActiveBootChain : NULL,
              MatchingAttempt ? CapsuleAttemptRecordStateGetDiagnostics (&Private->State) : NULL
              );
   if (MatchingAttempt) {
@@ -635,7 +679,8 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
   IN CONST CHAR8                             *PlatformSpec OPTIONAL,
   IN CONST CHAR8                             *TnSpec OPTIONAL,
   IN CONST UINT8                             *FmpImageDigest OPTIONAL,
-  IN CONST UINT32                            *Completion OPTIONAL
+  IN CONST UINT32                            *Completion OPTIONAL,
+  IN CONST UINT32                            *TargetBootChain OPTIONAL
   )
 {
   EFI_STATUS                      Status;
@@ -655,7 +700,8 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
               PlatformSpec,
               TnSpec,
               FmpImageDigest,
-              Completion
+              Completion,
+              TargetBootChain
               );
   if (Status == EFI_NOT_READY) {
     DEBUG ((DEBUG_ERROR, "%a: diagnostic update requested without an active attempt\n", __FUNCTION__));
@@ -665,12 +711,17 @@ CapsuleAttemptRecordProtocolUpdateFmpDiagnostics (
     Status = InitializeRecordContext (Private);
   }
 
+  if (!EFI_ERROR (Status) && (TargetBootChain != NULL)) {
+    DEBUG ((DEBUG_INFO, "%a: captured target boot chain %u\n", __FUNCTION__, *TargetBootChain));
+  }
+
   if (!EFI_ERROR (Status)) {
     Status = CapsuleAttemptRecordUpdateDiagnostics (
                Private->RecordContext,
                Private->State.AttemptSource,
                Private->State.AttemptId,
                GetActiveTimestamp (&Private->State),
+               Private->State.ActiveBootChainValid ? &Private->State.ActiveBootChain : NULL,
                CapsuleAttemptRecordStateGetDiagnostics (&Private->State)
                );
   }

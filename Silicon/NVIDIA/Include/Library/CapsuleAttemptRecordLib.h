@@ -80,10 +80,13 @@ CapsuleAttemptRecordCalculateFmpImageDigest (
   @param[in] FmpImageDigest  SHA-256 digest of the FMP image, or NULL.
   @param[in] Completion    Current SetImage completion percentage, or NULL for
                            a producer that does not report completion.
+  @param[in] TargetBootChain  Boot chain targeted by SetImage, or NULL when no
+                              target chain was selected.
 
   @retval EFI_SUCCESS            The diagnostic was persisted, or support is disabled.
-  @retval EFI_INVALID_PARAMETER  A string is too long or the completion
-                                 percentage exceeds 100.
+  @retval EFI_INVALID_PARAMETER  A string is too long, the completion
+                                 percentage exceeds 100, or the target chain
+                                 is invalid for the producer.
   @retval EFI_NOT_READY          The protocol or active attempt is unavailable.
   @retval Others                 The diagnostic could not be persisted.
 
@@ -98,7 +101,8 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
   IN CONST CHAR8   *PlatformSpec OPTIONAL,
   IN CONST CHAR8   *TnSpec OPTIONAL,
   IN CONST UINT8   *FmpImageDigest OPTIONAL,
-  IN CONST UINT32  *Completion OPTIONAL
+  IN CONST UINT32  *Completion OPTIONAL,
+  IN CONST UINT32  *TargetBootChain OPTIONAL
   );
 
 /**

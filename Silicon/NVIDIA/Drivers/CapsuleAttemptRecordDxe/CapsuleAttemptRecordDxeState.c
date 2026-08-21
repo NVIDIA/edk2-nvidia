@@ -9,6 +9,7 @@
 
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/BootChainInfoLib.h>
 
 #include "CapsuleAttemptRecordDxeState.h"
 
@@ -18,12 +19,15 @@ CapsuleAttemptRecordStateBegin (
   IN  CAPSULE_ATTEMPT_RECORD_SOURCE          Source,
   IN  UINT64                                 AttemptId,
   IN  CONST EFI_TIME                         *Timestamp OPTIONAL,
+  IN  CONST UINT32                           *ActiveBootChain OPTIONAL,
   IN  UINT64                                 StartCounter
   )
 {
   State->AttemptActive            = TRUE;
   State->AttemptId                = AttemptId;
   State->AttemptSource            = Source;
+  State->ActiveBootChain          = (ActiveBootChain != NULL) ? *ActiveBootChain : 0;
+  State->ActiveBootChainValid     = (BOOLEAN)(ActiveBootChain != NULL);
   State->AttemptTimestampValid    = (BOOLEAN)(Timestamp != NULL);
   State->AttemptStartCounter      = StartCounter;
   State->AttemptStartCounterValid = TRUE;
@@ -60,6 +64,8 @@ CapsuleAttemptRecordStateConsume (
   State->AttemptActive            = FALSE;
   State->AttemptId                = 0;
   State->AttemptSource            = CapsuleAttemptRecordSourceUnknown;
+  State->ActiveBootChain          = 0;
+  State->ActiveBootChainValid     = FALSE;
   State->AttemptTimestampValid    = FALSE;
   State->AttemptStartCounter      = 0;
   State->AttemptStartCounterValid = FALSE;
@@ -78,7 +84,8 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
   IN     CONST CHAR8                            *PlatformSpec OPTIONAL,
   IN     CONST CHAR8                            *TnSpec OPTIONAL,
   IN     CONST UINT8                            *FmpImageDigest OPTIONAL,
-  IN     CONST UINT32                           *Completion OPTIONAL
+  IN     CONST UINT32                           *Completion OPTIONAL,
+  IN     CONST UINT32                           *TargetBootChain OPTIONAL
   )
 {
   EFI_STATUS                          Status;
@@ -94,7 +101,9 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
        (AsciiStrnLenS (PlatformSpec, sizeof (PlatformSpecAscii)) >= sizeof (PlatformSpecAscii))) ||
       ((TnSpec != NULL) &&
        (AsciiStrnLenS (TnSpec, sizeof (TnSpecAscii)) >= sizeof (TnSpecAscii))) ||
-      ((Completion != NULL) && (*Completion > 100)))
+      ((Completion != NULL) && (*Completion > 100)) ||
+      ((TargetBootChain != NULL) &&
+       (CheckImage || (*TargetBootChain >= BOOT_CHAIN_COUNT))))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -138,14 +147,16 @@ CapsuleAttemptRecordStateUpdateDiagnostics (
 
   Diagnostics.Producer = CheckImage ? CapsuleAttemptRecordProducerCheckImage :
                          CapsuleAttemptRecordProducerSetImage;
-  Diagnostics.FailedImage     = (FailedImageAscii[0] != '\0') ? FailedImageAscii : NULL;
-  Diagnostics.RawStatus       = RawStatus;
-  Diagnostics.NvidiaStatus    = NvidiaStatus;
-  Diagnostics.PlatformSpec    = (PlatformSpecAscii[0] != '\0') ? PlatformSpecAscii : NULL;
-  Diagnostics.TnSpec          = (TnSpecAscii[0] != '\0') ? TnSpecAscii : NULL;
-  Diagnostics.FmpImageDigest  = State->FmpImageDigestValid ? State->FmpImageDigest : NULL;
-  Diagnostics.Completion      = (Completion != NULL) ? *Completion : 0;
-  Diagnostics.CompletionValid = (Completion != NULL);
+  Diagnostics.FailedImage          = (FailedImageAscii[0] != '\0') ? FailedImageAscii : NULL;
+  Diagnostics.RawStatus            = RawStatus;
+  Diagnostics.NvidiaStatus         = NvidiaStatus;
+  Diagnostics.PlatformSpec         = (PlatformSpecAscii[0] != '\0') ? PlatformSpecAscii : NULL;
+  Diagnostics.TnSpec               = (TnSpecAscii[0] != '\0') ? TnSpecAscii : NULL;
+  Diagnostics.FmpImageDigest       = State->FmpImageDigestValid ? State->FmpImageDigest : NULL;
+  Diagnostics.Completion           = (Completion != NULL) ? *Completion : 0;
+  Diagnostics.CompletionValid      = (Completion != NULL);
+  Diagnostics.TargetBootChain      = (TargetBootChain != NULL) ? *TargetBootChain : 0;
+  Diagnostics.TargetBootChainValid = (BOOLEAN)(TargetBootChain != NULL);
 
   CopyMem (State->FailedImage, FailedImageAscii, sizeof (State->FailedImage));
   CopyMem (State->PlatformSpec, PlatformSpecAscii, sizeof (State->PlatformSpec));

@@ -50,7 +50,8 @@ CapsuleAttemptRecordUpdateFmpDiagnostics (
   IN CONST CHAR8   *PlatformSpec OPTIONAL,
   IN CONST CHAR8   *TnSpec OPTIONAL,
   IN CONST UINT8   *FmpImageDigest OPTIONAL,
-  IN CONST UINT32  *Completion OPTIONAL
+  IN CONST UINT32  *Completion OPTIONAL,
+  IN CONST UINT32  *TargetBootChain OPTIONAL
   )
 {
   return EFI_SUCCESS;

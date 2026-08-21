@@ -206,6 +206,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, DumpsFmpImageDigest) {
       &Context,
       CapsuleAttemptRecordSourceSavedCapsule,
       NULL,
+      NULL,
       &AttemptId
       )
     );
@@ -220,6 +221,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, DumpsFmpImageDigest) {
       &Context,
       CapsuleAttemptRecordSourceSavedCapsule,
       AttemptId,
+      NULL,
       NULL,
       &Diagnostics
       )
@@ -365,6 +367,9 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   CONST VOID                                 *StoredElapsedTime;
   UINT64                                     StoredElapsedTimeValue;
   UINT64                                     ElapsedTimeNs;
+  CONST VOID                                 *StoredActiveBootChain;
+  UINT32                                     StoredActiveBootChainValue;
+  UINT32                                     ActiveBootChain;
   CONST CHAR8                                *State;
   EFI_TIME                                   Timestamp;
   INT32                                      Length;
@@ -376,12 +381,14 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   Timestamp.Month = 8;
   Timestamp.Day   = 18;
   ElapsedTimeNs   = 90123456789012ULL;
+  ActiveBootChain = 1;
   ASSERT_EQ (
     EFI_SUCCESS,
     CapsuleAttemptRecordBegin (
       &Context,
       CapsuleAttemptRecordSourceSavedCapsule,
       &Timestamp,
+      &ActiveBootChain,
       &AttemptId
       )
     );
@@ -398,6 +405,11 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   State = (CONST CHAR8 *)FdtGetProp (Payload, 0, "nvidia,attempt-source", &Length);
   ASSERT_NE (nullptr, State);
   EXPECT_STREQ ("saved-capsule", State);
+  StoredActiveBootChain = FdtGetProp (Payload, 0, "nvidia,active-boot-chain", &Length);
+  ASSERT_NE (nullptr, StoredActiveBootChain);
+  ASSERT_EQ ((INT32)sizeof (StoredActiveBootChainValue), Length);
+  CopyMem (&StoredActiveBootChainValue, StoredActiveBootChain, sizeof (StoredActiveBootChainValue));
+  EXPECT_EQ (ActiveBootChain, Fdt32ToCpu (StoredActiveBootChainValue));
 
   ZeroMem (&ImageTypeId, sizeof (ImageTypeId));
   ImageTypeId.Data1 = 0x12345678;
@@ -420,6 +432,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
       TRUE,
       &Timestamp,
       &ElapsedTimeNs,
+      &ActiveBootChain,
       &ImageTypeId,
       &ImageInfoSet,
       NULL
@@ -438,6 +451,10 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BeginAndFinalizeShareAttemptIdentit
   State = (CONST CHAR8 *)FdtGetProp (Payload, 0, "nvidia,attempt-state", &Length);
   ASSERT_NE (nullptr, State);
   EXPECT_STREQ ("completed", State);
+  StoredActiveBootChain = FdtGetProp (Payload, 0, "nvidia,active-boot-chain", &Length);
+  ASSERT_NE (nullptr, StoredActiveBootChain);
+  CopyMem (&StoredActiveBootChainValue, StoredActiveBootChain, sizeof (StoredActiveBootChainValue));
+  EXPECT_EQ (ActiveBootChain, Fdt32ToCpu (StoredActiveBootChainValue));
   StoredAttemptId = FdtGetProp (
                       Payload,
                       0,
@@ -605,27 +622,33 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIden
   CONST VOID                          *StatusValue;
   CONST VOID                          *DigestValue;
   CONST VOID                          *CompletionValue;
+  CONST VOID                          *BootChainValue;
   UINT64                              RawStatus;
   UINT32                              Completion;
+  UINT32                              BootChain;
   UINT8                               Digest[CAPSULE_ATTEMPT_RECORD_SHA256_DIGEST_SIZE];
   INT32                               Node;
   INT32                               Length;
   UINTN                               Index;
 
   ZeroMem (&Lifecycle, sizeof (Lifecycle));
-  Lifecycle.AttemptId      = 7;
-  Lifecycle.AttemptIdValid = TRUE;
-  Lifecycle.Source         = CapsuleAttemptRecordSourceAndroidFastboot;
-  Lifecycle.State          = CapsuleAttemptRecordStateInProgress;
+  Lifecycle.AttemptId            = 7;
+  Lifecycle.AttemptIdValid       = TRUE;
+  Lifecycle.ActiveBootChain      = 0;
+  Lifecycle.ActiveBootChainValid = TRUE;
+  Lifecycle.Source               = CapsuleAttemptRecordSourceAndroidFastboot;
+  Lifecycle.State                = CapsuleAttemptRecordStateInProgress;
   ZeroMem (&Diagnostics, sizeof (Diagnostics));
-  Diagnostics.Producer        = CapsuleAttemptRecordProducerSetImage;
-  Diagnostics.FailedImage     = "A_cpu-bootloader";
-  Diagnostics.RawStatus       = EFI_DEVICE_ERROR;
-  Diagnostics.NvidiaStatus    = 0x100c;
-  Diagnostics.PlatformSpec    = "3701-0000-0000-A.0-1-2-jetson-agx-orin-devkit-";
-  Diagnostics.TnSpec          = "3701-300-0000--1--jetson-agx-orin-devkit-";
-  Diagnostics.Completion      = 47;
-  Diagnostics.CompletionValid = TRUE;
+  Diagnostics.Producer             = CapsuleAttemptRecordProducerSetImage;
+  Diagnostics.FailedImage          = "A_cpu-bootloader";
+  Diagnostics.RawStatus            = EFI_DEVICE_ERROR;
+  Diagnostics.NvidiaStatus         = 0x100c;
+  Diagnostics.PlatformSpec         = "3701-0000-0000-A.0-1-2-jetson-agx-orin-devkit-";
+  Diagnostics.TnSpec               = "3701-300-0000--1--jetson-agx-orin-devkit-";
+  Diagnostics.Completion           = 47;
+  Diagnostics.CompletionValid      = TRUE;
+  Diagnostics.TargetBootChain      = 1;
+  Diagnostics.TargetBootChainValid = TRUE;
   for (Index = 0; Index < sizeof (Digest); Index++) {
     Digest[Index] = (UINT8)Index;
   }
@@ -665,6 +688,16 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, BuildsFmpDiagnosticsAndPlatformIden
   ASSERT_EQ ((INT32)sizeof (Completion), Length);
   CopyMem (&Completion, CompletionValue, sizeof (Completion));
   EXPECT_EQ (Diagnostics.Completion, Fdt32ToCpu (Completion));
+  BootChainValue = FdtGetProp (Payload, 0, "nvidia,active-boot-chain", &Length);
+  ASSERT_NE (nullptr, BootChainValue);
+  ASSERT_EQ ((INT32)sizeof (BootChain), Length);
+  CopyMem (&BootChain, BootChainValue, sizeof (BootChain));
+  EXPECT_EQ (Lifecycle.ActiveBootChain, Fdt32ToCpu (BootChain));
+  BootChainValue = FdtGetProp (Payload, Node, "nvidia,target-boot-chain", &Length);
+  ASSERT_NE (nullptr, BootChainValue);
+  ASSERT_EQ ((INT32)sizeof (BootChain), Length);
+  CopyMem (&BootChain, BootChainValue, sizeof (BootChain));
+  EXPECT_EQ (Diagnostics.TargetBootChain, Fdt32ToCpu (BootChain));
   Value = (CONST CHAR8 *)FdtGetProp (
                            Payload,
                            0,
@@ -722,6 +755,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
       &Context,
       CapsuleAttemptRecordSourceAndroidFastboot,
       NULL,
+      NULL,
       &AttemptId
       )
     );
@@ -737,6 +771,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
       &Context,
       CapsuleAttemptRecordSourceAndroidFastboot,
       AttemptId,
+      NULL,
       NULL,
       &Diagnostics
       )
@@ -761,6 +796,7 @@ TEST_F (CapsuleAttemptRecordDxeInternalTest, StandaloneFinalizeOmitsPriorAttempt
       CapsuleAttemptRecordSourceSavedCapsule,
       0,
       FALSE,
+      NULL,
       NULL,
       NULL,
       &ImageTypeId,

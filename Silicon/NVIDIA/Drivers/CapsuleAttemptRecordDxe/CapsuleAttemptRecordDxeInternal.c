@@ -920,6 +920,17 @@ CapsuleAttemptRecordBuildPayload (
       return EFI_BUFFER_TOO_SMALL;
     }
 
+    if (Lifecycle->ActiveBootChainValid &&
+        (FdtSetPropU32 (
+           Payload,
+           0,
+           "nvidia,active-boot-chain",
+           Lifecycle->ActiveBootChain
+           ) != 0))
+    {
+      return EFI_BUFFER_TOO_SMALL;
+    }
+
     if (Lifecycle->TimestampValid) {
       if (EFI_ERROR (
             FormatTimestamp (
@@ -1009,7 +1020,9 @@ CapsuleAttemptRecordBuildPayload (
         ((Diagnostics->TnSpec != NULL) &&
          (FdtSetPropString (Payload, Node, "nvidia,tnspec", Diagnostics->TnSpec) != 0)) ||
         (Diagnostics->CompletionValid &&
-         (FdtSetPropU32 (Payload, Node, "nvidia,completion-percent", Diagnostics->Completion) != 0)))
+         (FdtSetPropU32 (Payload, Node, "nvidia,completion-percent", Diagnostics->Completion) != 0)) ||
+        (Diagnostics->TargetBootChainValid &&
+         (FdtSetPropU32 (Payload, Node, "nvidia,target-boot-chain", Diagnostics->TargetBootChain) != 0)))
     {
       return EFI_BUFFER_TOO_SMALL;
     }
@@ -1513,6 +1526,7 @@ CapsuleAttemptRecordBegin (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
   IN     CONST EFI_TIME                  *Timestamp OPTIONAL,
+  IN     CONST UINT32                    *ActiveBootChain OPTIONAL,
   OUT    UINT64                          *AttemptId
   )
 {
@@ -1531,6 +1545,11 @@ CapsuleAttemptRecordBegin (
   if (Timestamp != NULL) {
     Lifecycle.Timestamp      = *Timestamp;
     Lifecycle.TimestampValid = TRUE;
+  }
+
+  if (ActiveBootChain != NULL) {
+    Lifecycle.ActiveBootChain      = *ActiveBootChain;
+    Lifecycle.ActiveBootChainValid = TRUE;
   }
 
   Lifecycle.Source = Source;
@@ -1552,6 +1571,7 @@ CapsuleAttemptRecordFinalize (
   IN     BOOLEAN                                          AttemptIdValid,
   IN     CONST EFI_TIME                                   *Timestamp OPTIONAL,
   IN     CONST UINT64                                     *ElapsedTimeNs OPTIONAL,
+  IN     CONST UINT32                                     *ActiveBootChain OPTIONAL,
   IN     CONST EFI_GUID                                   *ImageTypeId,
   IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
@@ -1588,6 +1608,11 @@ CapsuleAttemptRecordFinalize (
     Lifecycle.ElapsedTimeValid = TRUE;
   }
 
+  if (ActiveBootChain != NULL) {
+    Lifecycle.ActiveBootChain      = *ActiveBootChain;
+    Lifecycle.ActiveBootChainValid = TRUE;
+  }
+
   Lifecycle.Source = Source;
   Lifecycle.State  = CapsuleAttemptRecordStateCompleted;
   return CommitRecord (Context, &Lifecycle, Diagnostics, &Entry, 1);
@@ -1600,6 +1625,7 @@ CapsuleAttemptRecordUpdateDiagnostics (
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
   IN     UINT64                                    AttemptId,
   IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
+  IN     CONST UINT32                              *ActiveBootChain OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
   )
 {
@@ -1620,6 +1646,11 @@ CapsuleAttemptRecordUpdateDiagnostics (
     Lifecycle.TimestampValid = TRUE;
   }
 
+  if (ActiveBootChain != NULL) {
+    Lifecycle.ActiveBootChain      = *ActiveBootChain;
+    Lifecycle.ActiveBootChainValid = TRUE;
+  }
+
   Lifecycle.Source = Source;
   Lifecycle.State  = CapsuleAttemptRecordStateInProgress;
   return CommitRecord (Context, &Lifecycle, Diagnostics, NULL, 0);
@@ -1638,6 +1669,7 @@ CapsuleAttemptRecordUpdateFmpImageInfo (
            CapsuleAttemptRecordSourceUnknown,
            0,
            FALSE,
+           NULL,
            NULL,
            NULL,
            ImageTypeId,
@@ -1955,10 +1987,12 @@ DumpPayload (
   CONST VOID   *StateProperty;
   CONST VOID   *TimestampProperty;
   CONST VOID   *ElapsedTimeProperty;
+  CONST VOID   *ActiveBootChainProperty;
   INT32        SourcePropertyLength;
   INT32        StatePropertyLength;
   INT32        TimestampPropertyLength;
   INT32        ElapsedTimePropertyLength;
+  INT32        ActiveBootChainPropertyLength;
   UINTN        SourceLength;
   UINTN        StateLength;
   UINTN        TimestampLength;
@@ -1973,6 +2007,8 @@ DumpPayload (
   UINT32       ElapsedTimeSecondsWithinHour;
   UINT32       ElapsedTimeMinutes;
   UINT32       ElapsedTimeSecondsWithinMinute;
+  UINT32       ActiveBootChainValue;
+  UINT32       ActiveBootChain;
 
   if ((FdtCheckHeader (Payload) != 0) || (FdtTotalSize (Payload) != PayloadLength)) {
     return EFI_COMPROMISED_DATA;
@@ -2035,6 +2071,12 @@ DumpPayload (
                           "nvidia,elapsed-time-ns",
                           &ElapsedTimePropertyLength
                           );
+  ActiveBootChainProperty = FdtGetProp (
+                              Payload,
+                              0,
+                              "nvidia,active-boot-chain",
+                              &ActiveBootChainPropertyLength
+                              );
   SourceStatus = GetRequiredStringProperty (
                    Payload,
                    0,
@@ -2077,6 +2119,20 @@ DumpPayload (
       Source,
       State
       ));
+  }
+
+  if (ActiveBootChainProperty != NULL) {
+    if (ActiveBootChainPropertyLength != sizeof (ActiveBootChainValue)) {
+      return EFI_COMPROMISED_DATA;
+    }
+
+    CopyMem (
+      &ActiveBootChainValue,
+      ActiveBootChainProperty,
+      sizeof (ActiveBootChainValue)
+      );
+    ActiveBootChain = Fdt32ToCpu (ActiveBootChainValue);
+    DEBUG ((DEBUG_ERROR, "Capsule attempt active boot chain: %u\n", ActiveBootChain));
   }
 
   if (TimestampProperty != NULL) {

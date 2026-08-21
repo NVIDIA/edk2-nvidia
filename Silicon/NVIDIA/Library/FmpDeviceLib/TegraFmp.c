@@ -140,7 +140,8 @@ RecordFmpDiagnostic (
   IN EFI_STATUS    RawStatus,
   IN UINT32        NvidiaStatus,
   IN CONST VOID    *FmpImage OPTIONAL,
-  IN UINTN         FmpImageSize
+  IN UINTN         FmpImageSize,
+  IN CONST UINT32  *TargetBootChain OPTIONAL
   )
 {
   EFI_STATUS    Status;
@@ -168,7 +169,8 @@ RecordFmpDiagnostic (
              mPlatformSpec,
              mPlatformCompatSpec,
              FmpImageDigestPointer,
-             CompletionPointer
+             CompletionPointer,
+             TargetBootChain
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: attempt record diagnostic update failed: %r\n", __FUNCTION__, Status));
@@ -1471,13 +1473,18 @@ STATIC
 EFI_STATUS
 EFIAPI
 FmpTegraSetMinimalImages (
-  IN  CONST FW_PACKAGE_HEADER  *Header
+  IN  CONST FW_PACKAGE_HEADER  *Header,
+  OUT UINT32                   *TargetBootChain
   )
 {
   EFI_STATUS  Status;
   UINT8       BootChain;
   UINTN       WriteFlag;
   UINTN       VariableSize;
+
+  if (TargetBootChain == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   VariableSize = sizeof (BootChain);
   Status       = gRT->GetVariable (
@@ -1514,6 +1521,8 @@ FmpTegraSetMinimalImages (
         ));
       return EFI_UNSUPPORTED;
   }
+
+  *TargetBootChain = BootChain;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1807,7 +1816,8 @@ FmpTegraCheckImage (
     EFI_SUCCESS,
     *LastAttemptStatus,
     Image,
-    ImageSize
+    ImageSize,
+    NULL
     );
 
   return EFI_SUCCESS;
@@ -1819,7 +1829,8 @@ Error:
     Status,
     *LastAttemptStatus,
     Image,
-    ImageSize
+    ImageSize,
+    NULL
     );
   return ReturnStatus;
 }
@@ -1842,6 +1853,8 @@ FmpTegraSetImage (
   EFI_STATUS               ReturnStatus;
   BOOLEAN                  GptUpdate;
   UINTN                    GptImageIndex;
+  UINT32                   TargetBootChain;
+  BOOLEAN                  TargetBootChainValid;
 
   DEBUG ((
     DEBUG_INFO,
@@ -1858,8 +1871,10 @@ FmpTegraSetImage (
 
   mLastDisplayedCompletion = 0;
 
-  FailedImage  = NULL;
-  ReturnStatus = EFI_ABORTED;
+  FailedImage          = NULL;
+  ReturnStatus         = EFI_ABORTED;
+  TargetBootChain      = MAX_UINT32;
+  TargetBootChainValid = FALSE;
 
   if (Image == NULL) {
     *LastAttemptStatus = LAS_ERROR_BAD_IMAGE_POINTER;
@@ -1895,7 +1910,8 @@ FmpTegraSetImage (
       PcdGetBool (PcdFmpMultiImageMinimalUpdate))
   {
     mDiagnosticImageName = NULL;
-    Status               = FmpTegraSetMinimalImages (Header);
+    Status               = FmpTegraSetMinimalImages (Header, &TargetBootChain);
+    TargetBootChainValid = (TargetBootChain < BOOT_CHAIN_COUNT);
     if (EFI_ERROR (Status)) {
       *LastAttemptStatus = LAS_ERROR_SET_SINGLE_IMAGE_FAILED;
       FailedImage        = mDiagnosticImageName;
@@ -1913,6 +1929,9 @@ FmpTegraSetImage (
     FwImageGetCount (),
     mTotalBytesToFlash
     ));
+
+  TargetBootChain      = OTHER_BOOT_CHAIN (mActiveBootChain);
+  TargetBootChainValid = TRUE;
 
   Status = SetInactiveBootChainStatus (FALSE);
   if (EFI_ERROR (Status)) {
@@ -2032,7 +2051,8 @@ Done:
     EFI_SUCCESS,
     *LastAttemptStatus,
     Image,
-    ImageSize
+    ImageSize,
+    TargetBootChainValid ? &TargetBootChain : NULL
     );
 
   DEBUG ((DEBUG_INFO, "%a: exit success\n", __FUNCTION__));
@@ -2045,7 +2065,8 @@ Error:
     Status,
     *LastAttemptStatus,
     Image,
-    ImageSize
+    ImageSize,
+    TargetBootChainValid ? &TargetBootChain : NULL
     );
   return ReturnStatus;
 }

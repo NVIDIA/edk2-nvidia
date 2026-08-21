@@ -49,8 +49,9 @@ PlatformBootManager `HandleCapsules`, or PlatformBootManager
 `HandleSavedCapsules`. The driver assigns an attempt ID and retains it for the
 matching finalization request. The driver also captures the attempt timestamp
 through the UEFI Runtime Services `GetTime` service; callers do not provide a
-time value. It retains a monotonic performance-counter sample for measuring
-the attempt duration.
+time value. It also captures the active boot chain from the NVIDIA platform
+resource HOB when that information is available. It retains a monotonic
+performance-counter sample for measuring the attempt duration.
 
 ### `CapsuleAttemptRecordFinalize`
 
@@ -78,7 +79,8 @@ For the CheckImage producer, it also forwards the SHA-256 FMP image digest so
 that the driver can retain the identity for the active attempt and include it
 in the same persistent update as the FMP diagnostic. For the SetImage
 producer, it forwards the current completion percentage. The value begins at
-zero and advances after each successful progress display update.
+zero and advances after each successful progress display update. SetImage also
+forwards the selected target boot chain when the update path has selected one.
 
 The driver immediately persists these updates against the active attempt and
 retains the newest diagnostic for finalization. The client does not interpret

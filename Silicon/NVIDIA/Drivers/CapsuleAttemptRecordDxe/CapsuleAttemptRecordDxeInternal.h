@@ -114,6 +114,8 @@ typedef struct {
   BOOLEAN                          TimestampValid;
   UINT64                           ElapsedTimeNs;
   BOOLEAN                          ElapsedTimeValid;
+  UINT32                           ActiveBootChain;
+  BOOLEAN                          ActiveBootChainValid;
   CAPSULE_ATTEMPT_RECORD_SOURCE    Source;
   CAPSULE_ATTEMPT_RECORD_STATE     State;
 } CAPSULE_ATTEMPT_RECORD_LIFECYCLE;
@@ -133,6 +135,8 @@ typedef struct {
   CONST UINT8                        *FmpImageDigest;
   UINT32                             Completion;
   BOOLEAN                            CompletionValid;
+  UINT32                             TargetBootChain;
+  BOOLEAN                            TargetBootChainValid;
 } CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS;
 
 EFI_STATUS
@@ -163,6 +167,7 @@ CapsuleAttemptRecordBegin (
   IN OUT CAPSULE_ATTEMPT_RECORD_CONTEXT  *Context,
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE   Source,
   IN     CONST EFI_TIME                  *Timestamp OPTIONAL,
+  IN     CONST UINT32                    *ActiveBootChain OPTIONAL,
   OUT    UINT64                          *AttemptId
   );
 
@@ -175,6 +180,7 @@ CapsuleAttemptRecordFinalize (
   IN     BOOLEAN                                          AttemptIdValid,
   IN     CONST EFI_TIME                                   *Timestamp OPTIONAL,
   IN     CONST UINT64                                     *ElapsedTimeNs OPTIONAL,
+  IN     CONST UINT32                                     *ActiveBootChain OPTIONAL,
   IN     CONST EFI_GUID                                   *ImageTypeId,
   IN     CONST CAPSULE_ATTEMPT_RECORD_FMP_IMAGE_INFO_SET  *ImageInfoSet,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS         *Diagnostics OPTIONAL
@@ -187,6 +193,7 @@ CapsuleAttemptRecordUpdateDiagnostics (
   IN     CAPSULE_ATTEMPT_RECORD_SOURCE             Source,
   IN     UINT64                                    AttemptId,
   IN     CONST EFI_TIME                            *Timestamp OPTIONAL,
+  IN     CONST UINT32                              *ActiveBootChain OPTIONAL,
   IN     CONST CAPSULE_ATTEMPT_RECORD_DIAGNOSTICS  *Diagnostics
   );
 
