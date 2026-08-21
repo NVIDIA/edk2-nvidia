@@ -130,14 +130,26 @@ InstallSmbiosType3Cm (
 
   TokenMap                      = NULL;
   NumEnclosures                 = 0;
-  ProductInfoSize               = sizeof (ProductInfo);
   EnclosureInfo                 = NULL;
   Type3RecordPcd                = (SMBIOS_TABLE_TYPE3 *)PcdGetPtr (PcdType3Info);
   AssetTagLenWithNullTerminator = 0;
 
-  Status = gRT->GetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, NULL, &ProductInfoSize, &ProductInfo);
-  if (!EFI_ERROR (Status)) {
-    AssetTagLenWithNullTerminator = StrSize (ProductInfo.ChassisAssetTag);
+  ZeroMem (&ProductInfo, sizeof (ProductInfo));
+  ProductInfoSize = sizeof (ProductInfo);
+  Status          = gRT->GetVariable (ProductInfoVariableName, &gNVIDIAPublicVariableGuid, NULL, &ProductInfoSize, &ProductInfo);
+  if (!EFI_ERROR (Status) && (ProductInfoSize >= sizeof (CHAR16))) {
+    //
+    // ChassisAssetTag is a fixed-size CHAR16 array, not a guaranteed C string.
+    // Force a terminator so StrnLenS/UnicodeStrToAsciiStrS cannot walk into
+    // AssetTagProtection or leftover stack contents. ZeroMem covers bytes
+    // not written by a smaller stored variable. A larger variable returns
+    // EFI_BUFFER_TOO_SMALL from GetVariable.
+    //
+    ProductInfo.ChassisAssetTag[ASSET_TAG_MAX_SIZE - 1] = L'\0';
+    AssetTagLenWithNullTerminator                       = StrnLenS (ProductInfo.ChassisAssetTag, ASSET_TAG_MAX_SIZE) + 1;
+  } else {
+    ZeroMem (&ProductInfo, sizeof (ProductInfo));
+    AssetTagLenWithNullTerminator = 0;
   }
 
   for (Type3Index = 0; Type3Index < MAX_TYPE3_COUNT; Type3Index++) {
