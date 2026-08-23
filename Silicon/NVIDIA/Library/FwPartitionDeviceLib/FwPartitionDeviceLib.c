@@ -515,38 +515,41 @@ FwPartitionWriteToUpdateInactivePartitions (
       return EFI_SECURITY_VIOLATION;
     }
 
-    NewOffset = (PseudoDeviceInfo->MmDeviceInfo == NULL) ? (Partition->StartingLBA * BlockSize) : PartitionInfo->Offset;
+    NewOffset = (Partition->StartingLBA * BlockSize);
     NewBytes  = (UINTN)(GptPartitionSizeInBlocks (Partition) * BlockSize);
     Overlap   = FALSE;
 
+    // Ensure NewOffset + NewBytes does not overflow MAX_UINT64
     if (MAX_UINT64 - NewOffset < NewBytes) {
       return EFI_SECURITY_VIOLATION;
     }
 
-    // Reject any update that would cause the inactive partition to overlap
-    // an active or non-A/B protected partition.
-    for (PartitionIndex = 0; PartitionIndex < mNumFwPartitions; PartitionIndex++) {
-      OtherPrivate = &mPrivate[PartitionIndex];
-      if ((OtherPrivate != Private) &&
-          (OtherPrivate->PartitionInfo.IsActivePartition || NameIsInList (OtherPrivate->PartitionInfo.Name, NonABPartitionNames)))
-      {
-        OtherStart = OtherPrivate->PartitionInfo.Offset;
-        OtherEnd   = OtherStart + OtherPrivate->PartitionInfo.Bytes;
-        NewEnd     = NewOffset + NewBytes;
+    // Only do offset checks and updates on MM side with GPT,
+    // because NS using MM device has offset 0 for all partitions.
+    if (PseudoDeviceInfo->MmDeviceInfo == NULL) {
+      // Reject any update that would cause the inactive partition to overlap
+      // an active or non-A/B protected partition.
+      for (PartitionIndex = 0; PartitionIndex < mNumFwPartitions; PartitionIndex++) {
+        OtherPrivate = &mPrivate[PartitionIndex];
+        if ((OtherPrivate != Private) &&
+            (OtherPrivate->PartitionInfo.IsActivePartition || NameIsInList (OtherPrivate->PartitionInfo.Name, NonABPartitionNames)))
+        {
+          OtherStart = OtherPrivate->PartitionInfo.Offset;
+          OtherEnd   = OtherStart + OtherPrivate->PartitionInfo.Bytes;
+          NewEnd     = NewOffset + NewBytes;
 
-        if ((NewOffset < OtherEnd) && (OtherStart < NewEnd)) {
-          DEBUG ((DEBUG_ERROR, "%a: %s overlaps protected partition %s\n", __FUNCTION__, Name, OtherPrivate->PartitionInfo.Name));
-          Overlap = TRUE;
-          break;
+          if ((NewOffset < OtherEnd) && (OtherStart < NewEnd)) {
+            DEBUG ((DEBUG_ERROR, "%a: %s overlaps protected partition %s\n", __FUNCTION__, Name, OtherPrivate->PartitionInfo.Name));
+            Overlap = TRUE;
+            break;
+          }
         }
       }
-    }
 
-    if (Overlap) {
-      return EFI_SECURITY_VIOLATION;
-    }
+      if (Overlap) {
+        return EFI_SECURITY_VIOLATION;
+      }
 
-    if (PseudoDeviceInfo->MmDeviceInfo == NULL) {
       PartitionInfo->Offset = NewOffset;
     } else {
       DEBUG ((DEBUG_INFO, "%a: no %s offset update for MM\n", __FUNCTION__, Name));
