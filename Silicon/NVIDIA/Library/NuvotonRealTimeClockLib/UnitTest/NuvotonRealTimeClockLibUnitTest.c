@@ -2,7 +2,7 @@
 
   Nuvoton RTC Unit Test
 
-  SPDX-FileCopyrightText: Copyright (c) 2022-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -1146,6 +1146,14 @@ NRtcGetTimeBootFirst (
   EFI_TIME               Time;
   EFI_TIME_CAPABILITIES  Capabilities;
 
+  //
+  // RealTimeClockRuntimeDxe pre-sets TimeZone/Daylight before calling
+  // LibGetTime. On first boot no timezone has been configured, so both
+  // are at their default values.
+  //
+  Time.TimeZone = EFI_UNSPECIFIED_TIMEZONE;
+  Time.Daylight = 0;
+
   will_return (__wrap_GetPerformanceCounter, FIRST_GET_TIME_PERF_COUNT);
   will_return (__wrap_EfiAtRuntime, FALSE);
   expect_check (MockedI2cMasterStartRequest, RequestPacket, CheckMockedStartRequest, &I2cRequestDateTimeCtlNoon);
@@ -1181,6 +1189,14 @@ NRtcGetTimeBootSecond (
   EFI_STATUS             Status;
   EFI_TIME               Time;
   EFI_TIME_CAPABILITIES  Capabilities;
+
+  //
+  // RealTimeClockRuntimeDxe pre-sets TimeZone/Daylight before calling
+  // LibGetTime. On first boot no timezone has been configured, so both
+  // are at their default values.
+  //
+  Time.TimeZone = EFI_UNSPECIFIED_TIMEZONE;
+  Time.Daylight = 0;
 
   //
   // After the first get time, which is read from RTC.
