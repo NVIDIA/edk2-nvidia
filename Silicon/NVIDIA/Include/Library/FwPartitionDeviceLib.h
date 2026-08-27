@@ -16,7 +16,7 @@
 #include <Uefi/UefiBaseType.h>
 #include <Uefi/UefiSpec.h>
 
-#define MAX_FW_PARTITIONS                    80
+#define MAX_FW_PARTITIONS                    128
 #define FW_PARTITION_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('F','W','P','A')
 
 typedef struct _FW_PARTITION_PRIVATE_DATA  FW_PARTITION_PRIVATE_DATA;
