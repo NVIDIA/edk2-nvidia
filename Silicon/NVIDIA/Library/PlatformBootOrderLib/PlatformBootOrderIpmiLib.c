@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -227,6 +227,35 @@ CleanupAndReturn:
 
 Done:
   return;
+}
+
+/**
+  Reports whether the cached IPMI Boot Flags request is persistent.
+
+  CheckIPMIForBootOrderUpdates () must be called before this function. The
+  cached request must not have been consumed by ProcessIPMIBootOrderUpdates ().
+
+  @retval TRUE   A valid cached request has PersistentOptions set.
+  @retval FALSE  The cached request is absent, invalid, or non-persistent.
+**/
+BOOLEAN
+EFIAPI
+IsIPMIBootOrderUpdatePersistent (
+  VOID
+  )
+{
+  IPMI_BOOT_OPTIONS_PARAMETERS  *BootOptions;
+
+  if (mBootOptionsResponse == NULL) {
+    return FALSE;
+  }
+
+  BootOptions = (IPMI_BOOT_OPTIONS_PARAMETERS *)&mBootOptionsResponse->ParameterData[0];
+
+  return (BOOLEAN)(
+                   (BootOptions->Parm5.Data1.Bits.BootFlagValid != 0) &&
+                   (BootOptions->Parm5.Data1.Bits.PersistentOptions != 0)
+                   );
 }
 
 // When IPMI requests a temporary BootOrder change, we save the BootOrder

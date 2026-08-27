@@ -2466,6 +2466,7 @@ PlatformBootManagerBeforeConsole (
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
   EFI_INPUT_KEY                 ShellKey;
   BOOLEAN                       SingleBoot;
+  BOOLEAN                       PersistentIpmiBootRequest;
   EFI_GUID                      *SingleBootAppGuid;
 
  #if FixedPcdGetBool (PcdBootAndroidImage) == 1
@@ -2485,7 +2486,8 @@ PlatformBootManagerBeforeConsole (
            );
   }
 
-  SingleBoot = PlatformGetSingleBootApp (&SingleBootAppGuid);
+  PersistentIpmiBootRequest = FALSE;
+  SingleBoot                = PlatformGetSingleBootApp (&SingleBootAppGuid);
 
   if (!SingleBoot) {
     //
@@ -2497,6 +2499,7 @@ PlatformBootManagerBeforeConsole (
     // Check IPMI for BootOrder commands, and clear and reset CMOS here if requested
     //
     CheckIPMIForBootOrderUpdates ();
+    PersistentIpmiBootRequest = IsIPMIBootOrderUpdatePersistent ();
 
     //
     // Restore the BootOrder if we temporarily changed it during the previous boot and haven't restored it yet
@@ -2660,10 +2663,13 @@ PlatformBootManagerBeforeConsole (
       PlatformConfigured ();
     }
 
-    //
-    // Process IPMI-directed BootOrder updates
-    //
-    ProcessIPMIBootOrderUpdates ();
+    if (PersistentIpmiBootRequest) {
+      //
+      // Process persistent IPMI-directed BootOrder updates before Redfish
+      // provisioning so the persistent BootOrder is visible to Redfish.
+      //
+      ProcessIPMIBootOrderUpdates ();
+    }
   } else {
     //
     // Connect the rest of the devices.
@@ -2730,6 +2736,17 @@ PlatformBootManagerBeforeConsole (
          NULL,
          NULL
          );
+
+  if (!SingleBoot &&
+      !PersistentIpmiBootRequest)
+  {
+    //
+    // Process non-persistent IPMI-directed BootOrder updates only after
+    // Redfish provisioning and its reset paths have completed.
+    //
+    ProcessIPMIBootOrderUpdates ();
+  }
+
   Status = gDS->Dispatch ();
   // Connect drivers if new driver was dispatched.
   // Do this if the platform is doing full connects
