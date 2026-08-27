@@ -1169,7 +1169,9 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 
   #Increase the size of the post end of dxe fpdt record
+!ifndef CONFIG_BUILD_ANDROID
   gEfiMdeModulePkgTokenSpaceGuid.PcdExtFpdtBootRecordPadSize|0x2000000
+!endif
 
 !ifdef CONFIG_SOC_T23X
   !ifndef CONFIG_BUILD_ANDROID
