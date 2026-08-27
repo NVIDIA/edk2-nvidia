@@ -24,6 +24,7 @@
   NctLib
   BootChainInfoLib
   AndroidBcbLib
+  PcdLib
 #
 # DxeServicesTableLib (gDS) is only valid in DXE-phase and later modules.
 # BootConfigProtocolLib stays MODULE_TYPE = BASE (it is linked into BASE
@@ -49,6 +50,7 @@
   T23xPmcBootReason.h
 
 [Pcd]
+  gNVIDIATokenSpaceGuid.PcdUefiVersionString
 
 [FixedPcd]
   gNVIDIATokenSpaceGuid.PcdBootConfigEnableSecurityModeFuse

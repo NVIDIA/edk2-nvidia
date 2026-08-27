@@ -19,6 +19,7 @@
 #include <Library/BootChainInfoLib.h>
 #include <Library/AndroidBcbLib.h>
 #include <Library/BootConfigProtocolLib.h>
+#include <Library/PcdLib.h>
 #include <Library/TegraPlatformInfoLib.h>
 #include <Protocol/BootConfigUpdateProtocol.h>
 #include <Protocol/Eeprom.h>
@@ -31,6 +32,7 @@
 
 #define MAX_SLOT_SUFFIX_LEN          3
 #define MAX_BOOT_CHAIN_INFO_MAPPING  2
+#define MAX_BOOTLOADER_VERSION_LEN   128
 
 #define T23X_FUSE_SECURITY_MODE_OFFSET                 0x1a0
 #define T23X_FUSE_SECURITY_MODE_BIT                    BIT0
@@ -590,6 +592,67 @@ BootConfigAddBootReason (
   return EFI_SUCCESS;
 }
 
+/**
+ * Adds androidboot.bootloader to the boot configuration.
+ *
+ * Android init imports this as ro.boot.bootloader, which is then exposed
+ * through the legacy ro.bootloader property and android.os.Build.BOOTLOADER.
+ *
+ * @retval EFI_SUCCESS The bootloader version was added successfully, or the
+ *                     platform did not provide one.
+ * @retval Other       The operation failed with an error status.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+BootConfigAddBootloaderVersion (
+  VOID
+  )
+{
+  EFI_STATUS                         Status;
+  NVIDIA_BOOTCONFIG_UPDATE_PROTOCOL  *BootConfigProtocol;
+  CONST CHAR16                       *UefiVersion;
+  CHAR8                              BootloaderVersion[MAX_BOOTLOADER_VERSION_LEN];
+  UINTN                              Index;
+
+  UefiVersion = (CONST CHAR16 *)PcdGetPtr (PcdUefiVersionString);
+  if ((UefiVersion == NULL) || (*UefiVersion == L'\0')) {
+    DEBUG ((DEBUG_WARN, "%a: PcdUefiVersionString is empty; skipping androidboot.bootloader\n", __FUNCTION__));
+    return EFI_SUCCESS;
+  }
+
+  Status = UnicodeStrToAsciiStrS (UefiVersion, BootloaderVersion, sizeof (BootloaderVersion));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to convert PcdUefiVersionString\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  for (Index = 0; BootloaderVersion[Index] != '\0'; Index++) {
+    if (!(((BootloaderVersion[Index] >= '0') && (BootloaderVersion[Index] <= '9')) ||
+          ((BootloaderVersion[Index] >= 'A') && (BootloaderVersion[Index] <= 'Z')) ||
+          ((BootloaderVersion[Index] >= 'a') && (BootloaderVersion[Index] <= 'z')) ||
+          (BootloaderVersion[Index] == '.') ||
+          (BootloaderVersion[Index] == '_') ||
+          (BootloaderVersion[Index] == '-')))
+    {
+      BootloaderVersion[Index] = '_';
+    }
+  }
+
+  Status = GetBootConfigUpdateProtocol (&BootConfigProtocol);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to get bootconfig update protocol\n", __FUNCTION__, Status));
+    return Status;
+  }
+
+  Status = BootConfigProtocol->UpdateBootConfigs (BootConfigProtocol, "bootloader", BootloaderVersion);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add androidboot.bootloader to bootconfig\n", __FUNCTION__, Status));
+  }
+
+  return Status;
+}
+
 #if FixedPcdGetBool (PcdBootConfigEnableSecurityModeFuse)
 
 STATIC
@@ -735,6 +798,11 @@ BootConfigPrepareBootTimeArgs (
   Status = BootConfigAddBootReason ();
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Got %r trying to add androidboot.bootreason\n", __FUNCTION__, Status));
+  }
+
+  Status = BootConfigAddBootloaderVersion ();
+  if (EFI_ERROR (Status)) {
+    return Status;
   }
 
   Status = BootConfigAddSecurityMode ();
