@@ -103,6 +103,8 @@ GrBlobBinarySize (
   @param[out] Size                 Return size of UEFI GR binary.
 
   @retval EFI_SUCCESS              UEFI GR binary located
+  @retval EFI_BAD_BUFFER_SIZE      Matched descriptor Offset/Size exceed the
+                                   aligned blob, or blob size cannot be computed
   @retval others                   Error occurred
 **/
 EFI_STATUS
@@ -115,6 +117,9 @@ LocateGrBlobBinary (
 {
   GR_BLOB_HEADER  *GrBlobHeader;
   UINT32          Count;
+  UINT32          AlignedSize;
+  UINT32          BinOffset;
+  UINT32          BinSize;
 
   if ((GrBlobBase == 0) || (Offset == NULL) || (Size == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -136,8 +141,27 @@ LocateGrBlobBinary (
     return EFI_NOT_FOUND;
   }
 
-  *Offset = GrBlobHeader->BlobDesc[Count].Offset;
-  *Size   = GrBlobHeader->BlobDesc[Count].Size;
+  if (!GrBlobComputeAlignedSize (GrBlobHeader, &AlignedSize)) {
+    return EFI_BAD_BUFFER_SIZE;
+  }
+
+  BinOffset = GrBlobHeader->BlobDesc[Count].Offset;
+  BinSize   = GrBlobHeader->BlobDesc[Count].Size;
+  if ((BinOffset >= AlignedSize) || (BinSize > (AlignedSize - BinOffset))) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: BlobDesc[%u] Offset 0x%x Size 0x%x exceeds aligned blob size 0x%x\n",
+      __FUNCTION__,
+      Count,
+      BinOffset,
+      BinSize,
+      AlignedSize
+      ));
+    return EFI_BAD_BUFFER_SIZE;
+  }
+
+  *Offset = BinOffset;
+  *Size   = BinSize;
   return EFI_SUCCESS;
 }
 

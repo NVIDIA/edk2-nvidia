@@ -103,6 +103,8 @@ GrBlobBinarySize (
   @param[out] Size                 Return size of UEFI GR binary.
 
   @retval EFI_SUCCESS              UEFI GR binary located
+  @retval EFI_BAD_BUFFER_SIZE      Matched descriptor Offset/Size exceed the
+                                   aligned blob, or blob size cannot be computed
   @retval others                   Error occurred
 **/
 EFI_STATUS
