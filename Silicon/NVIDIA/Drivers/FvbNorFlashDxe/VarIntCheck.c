@@ -645,30 +645,27 @@ STATIC
 EFI_STATUS
 PartitionRead (
   IN  NVIDIA_VAR_INT_PROTOCOL  *This,
-  IN  UINT32                   Offset,
+  IN  UINT64                   Offset,
   IN  UINT32                   Size,
   OUT UINT8                    *Buffer
   )
 {
   EFI_STATUS  Status;
-  UINT32      PartitionStart;
-  UINT32      PartitionEnd;
-  UINT32      BufferOffset;
+  UINT64      PartitionStart;
+  UINT64      PartitionEnd;
+  UINTN       BufferOffset;
 
   PartitionStart = This->PartitionByteOffset;
   PartitionEnd   = PartitionStart + This->PartitionSize;
 
-  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+  if ((Offset < PartitionStart) || (Offset > PartitionEnd) ||
+      (Size > (PartitionEnd - Offset)))
+  {
     Status = EFI_INVALID_PARAMETER;
     goto ExitPartitionRead;
   }
 
-  if ((Offset + Size) > PartitionEnd) {
-    Status = EFI_INVALID_PARAMETER;
-    goto ExitPartitionRead;
-  }
-
-  BufferOffset = Offset - PartitionStart;
+  BufferOffset = (UINTN)(Offset - PartitionStart);
   CopyMem (Buffer, (This->PartitionData + BufferOffset), Size);
   Status = EFI_SUCCESS;
 ExitPartitionRead:
@@ -694,35 +691,32 @@ STATIC
 EFI_STATUS
 PartitionWrite (
   IN  NVIDIA_VAR_INT_PROTOCOL  *This,
-  IN  UINT32                   Offset,
+  IN  UINT64                   Offset,
   IN  UINT32                   Size,
   IN  UINT8                    *Buffer
   )
 {
   EFI_STATUS  Status;
-  UINT32      PartitionStart;
-  UINT32      PartitionEnd;
-  UINT32      BufferOffset;
+  UINT64      PartitionStart;
+  UINT64      PartitionEnd;
+  UINTN       BufferOffset;
 
   PartitionStart = This->PartitionByteOffset;
   PartitionEnd   = PartitionStart + This->PartitionSize;
 
-  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+  if ((Offset < PartitionStart) || (Offset > PartitionEnd) ||
+      (Size > (PartitionEnd - Offset)))
+  {
     Status = EFI_INVALID_PARAMETER;
     goto ExitPartitionWrite;
   }
 
-  if ((Offset + Size) > PartitionEnd) {
-    Status = EFI_INVALID_PARAMETER;
-    goto ExitPartitionWrite;
-  }
-
-  BufferOffset = Offset - PartitionStart;
+  BufferOffset = (UINTN)(Offset - PartitionStart);
 
   /* Update the Partition.*/
   Status = This->NorFlashProtocol->Write (
                                      This->NorFlashProtocol,
-                                     Offset,
+                                     (UINT32)Offset,
                                      Size,
                                      Buffer
                                      );
@@ -768,28 +762,25 @@ PartitionErase (
   )
 {
   EFI_STATUS  Status;
-  UINT32      PartitionStart;
-  UINT32      PartitionEnd;
-  UINT32      BufferOffset;
-  UINT32      Offset;
-  UINT32      Size;
+  UINT64      PartitionStart;
+  UINT64      PartitionEnd;
+  UINTN       BufferOffset;
+  UINT64      Offset;
+  UINT64      Size;
 
   PartitionStart = This->PartitionByteOffset;
   PartitionEnd   = PartitionStart + This->PartitionSize;
-  Offset         = Lba * This->BlockSize;
-  Size           = NumBlocks * This->BlockSize;
+  Offset         = (UINT64)Lba * This->BlockSize;
+  Size           = (UINT64)NumBlocks * This->BlockSize;
 
-  if ((Offset < PartitionStart) && (Offset > PartitionEnd)) {
+  if ((Offset < PartitionStart) || (Offset > PartitionEnd) ||
+      (Size > (PartitionEnd - Offset)))
+  {
     Status = EFI_INVALID_PARAMETER;
     goto ExitPartitionErase;
   }
 
-  if ((Offset + Size) > PartitionEnd) {
-    Status = EFI_INVALID_PARAMETER;
-    goto ExitPartitionErase;
-  }
-
-  BufferOffset = Offset - PartitionStart;
+  BufferOffset = (UINTN)(Offset - PartitionStart);
 
   /* Erase Partition Data*/
   Status = This->NorFlashProtocol->Erase (
@@ -810,7 +801,7 @@ PartitionErase (
   }
 
   /* Update the Partition Data*/
-  SetMem ((This->PartitionData + BufferOffset), Size, FVB_ERASED_BYTE);
+  SetMem ((This->PartitionData + BufferOffset), (UINTN)Size, FVB_ERASED_BYTE);
 
 ExitPartitionErase:
   return Status;
@@ -2431,6 +2422,16 @@ VarIntValidate (
     goto ExitVarIntValidate;
   }
 
+  if (IsV0MigrationAllowed () == FALSE) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "VarIntMigrationPolicy: V1 did not match and V0 migration is disabled by PcdAllowVarIntV0Migration\r\n"
+      ));
+    MigrationBlocked = TRUE;
+    Status           = EFI_SECURITY_VIOLATION;
+    goto ExitVarIntValidate;
+  }
+
   SavedV1Measurement = AllocateCopyPool (
                          This->MeasurementSize,
                          This->CurMeasurement
@@ -2457,19 +2458,11 @@ VarIntValidate (
   for (Index = 0; Index < NumValidRecords; Index++) {
     ReadMeas = LastMeasurements[Index];
 
-    if ((IsRecordV0 (ReadMeas->Measurement[0]) == TRUE) &&
-        (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0))
-    {
-      if (IsV0MigrationAllowed () == FALSE) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "VarIntMigrationPolicy: V0 measurement migration disabled by PcdAllowVarIntV0Migration\r\n"
-          ));
-        MigrationBlocked = TRUE;
-        Status           = EFI_SECURITY_VIOLATION;
-        goto ExitVarIntValidate;
-      }
+    if (IsRecordV0 (ReadMeas->Measurement[0]) == FALSE) {
+      continue;
+    }
 
+    if (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0) {
       Matched       = TRUE;
       MatchedRecord = ReadMeas;
       DEBUG ((
@@ -2568,6 +2561,14 @@ VarIntInit (
   UINT32      MeasSize;
   UINTN       Index;
 
+  if ((NorFlashProto == NULL) || (NorFlashAttributes == NULL) ||
+      (NorFlashAttributes->BlockSize == 0) || (PartitionSize == 0) ||
+      (PartitionStartOffset > MAX_UINT32) || (PartitionSize > MAX_UINT32) ||
+      (PartitionSize > (((UINT64)MAX_UINT32 + 1) - PartitionStartOffset)))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
   VarIntProto = AllocateRuntimeZeroPool (sizeof (NVIDIA_VAR_INT_PROTOCOL));
   if (VarIntProto == NULL) {
     DEBUG ((
@@ -2622,8 +2623,8 @@ VarIntInit (
 
   Status = NorFlashProto->Read (
                             NorFlashProto,
-                            VarIntProto->PartitionByteOffset,
-                            VarIntProto->PartitionSize,
+                            (UINT32)VarIntProto->PartitionByteOffset,
+                            (UINT32)VarIntProto->PartitionSize,
                             VarIntProto->PartitionData
                             );
   if (EFI_ERROR (Status)) {
