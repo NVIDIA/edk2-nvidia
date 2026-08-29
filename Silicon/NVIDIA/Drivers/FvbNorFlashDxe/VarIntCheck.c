@@ -443,9 +443,34 @@ SendFfaCmd (
   UINT16        OpteeVmId;
   ARM_SVC_ARGS  SvcArgs;
   UINT16        MmId = 0x8002;
+  UINT8         *SharedMeas;
+
+  //
+  // The FFA handle is established once for CurMeasurement.  Callers that
+  // use a scratch measurement buffer must marshal their payload through
+  // that shared page; the direct request carries only the handle, not Meas.
+  //
+  if ((Meas == NULL) || (VarIntProto == NULL) ||
+      (VarIntProto->CurMeasurement == NULL) ||
+      (VarIntProto->MeasurementSize <= HEADER_SZ_BYTES) ||
+      (Size != GetMeasurementPayloadSize (VarIntProto)))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  SharedMeas = &VarIntProto->CurMeasurement[HEADER_SZ_BYTES];
+  if (Meas != SharedMeas) {
+    CopyMem (SharedMeas, Meas, Size);
+  }
 
   Status = FfaGetOpteeVmId (&OpteeVmId);
-  NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to get Optee VM ID");
+  if (EFI_ERROR (Status)) {
+    ZeroMem (
+      VarIntProto->CurMeasurement,
+      VarIntProto->MeasurementSize
+      );
+    return Status;
+  }
 
   ZeroMem (&SvcArgs, sizeof (SvcArgs));
 
@@ -470,8 +495,15 @@ SendFfaCmd (
     DEBUG ((DEBUG_INFO, "SvcArgs.Arg0 0x%lx Arg1 0x%lx Arg2 0x%lx Arg3 0x%lx\n", SvcArgs.Arg0, SvcArgs.Arg1, SvcArgs.Arg2, SvcArgs.Arg3));
     DEBUG ((DEBUG_INFO, "SvcArgs.Arg4 0x%lx Arg5 0x%lx Arg6 0x%lx Arg7 0x%lx\n", SvcArgs.Arg4, SvcArgs.Arg5, SvcArgs.Arg6, SvcArgs.Arg7));
 
-    PrintMeas (Meas, Size);
+    PrintMeas (SharedMeas, Size);
+    if (Meas != SharedMeas) {
+      CopyMem (Meas, SharedMeas, Size);
+    }
   } else {
+    ZeroMem (
+      VarIntProto->CurMeasurement,
+      VarIntProto->MeasurementSize
+      );
     Status = EFI_UNSUPPORTED;
     DEBUG ((
       DEBUG_ERROR,
@@ -1918,14 +1950,17 @@ STATIC
 EFI_STATUS
 MigrateV0RecordToV1 (
   IN NVIDIA_VAR_INT_PROTOCOL  *This,
-  IN MEASURE_REC_TYPE         *V0Record
+  IN MEASURE_REC_TYPE         *V0Record,
+  IN UINT8                    *V1Measurement
   )
 {
   EFI_STATUS  Status;
   UINT64      CurOffset;
   UINT8       OldHeader;
 
-  if ((V0Record == NULL) || (IsRecordV0 (V0Record->Measurement[0]) == FALSE)) {
+  if ((V0Record == NULL) || (V1Measurement == NULL) ||
+      (IsRecordV0 (V0Record->Measurement[0]) == FALSE))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1936,19 +1971,19 @@ MigrateV0RecordToV1 (
   }
 
   DEBUG ((DEBUG_INFO, "%a: Migrating V0 measurement to V1 at %lu\n", __FUNCTION__, CurOffset));
-  This->CurMeasurement[0] = VAR_INT_V1_PENDING;
-  Status                  = PartitionWrite (
-                              This,
-                              CurOffset,
-                              This->MeasurementSize,
-                              This->CurMeasurement
-                              );
+  V1Measurement[0] = VAR_INT_V1_PENDING;
+  Status           = PartitionWrite (
+                       This,
+                       CurOffset,
+                       This->MeasurementSize,
+                       V1Measurement
+                       );
   LogMeasurementWrite (
     "migrate-v1-pending",
     CurOffset,
     This->MeasurementSize,
     FVB_ERASED_BYTE,
-    This->CurMeasurement[0],
+    V1Measurement[0],
     Status
     );
   if (EFI_ERROR (Status)) {
@@ -1956,20 +1991,20 @@ MigrateV0RecordToV1 (
     return Status;
   }
 
-  OldHeader               = This->CurMeasurement[0];
-  This->CurMeasurement[0] = VAR_INT_V1_VALID;
-  Status                  = PartitionWrite (
-                              This,
-                              CurOffset,
-                              1,
-                              &This->CurMeasurement[0]
-                              );
+  OldHeader        = V1Measurement[0];
+  V1Measurement[0] = VAR_INT_V1_VALID;
+  Status           = PartitionWrite (
+                       This,
+                       CurOffset,
+                       1,
+                       &V1Measurement[0]
+                       );
   LogMeasurementWrite (
     "migrate-v1-valid",
     CurOffset,
     1,
     OldHeader,
-    This->CurMeasurement[0],
+    V1Measurement[0],
     Status
     );
   if (EFI_ERROR (Status)) {
@@ -2277,6 +2312,7 @@ VarIntValidate (
   UINTN             Index;
   UINT8             *V1Meas;
   UINT8             *V0Meas;
+  UINT8             *SavedV1Measurement;
   MEASURE_REC_TYPE  *ReadMeas;
   MEASURE_REC_TYPE  *MatchedRecord;
   BOOLEAN           Matched;
@@ -2288,9 +2324,10 @@ VarIntValidate (
   MigrationBlocked = FALSE;
   PayloadSize      = GetMeasurementPayloadSize (This);
 
-  Status = EFI_SUCCESS;
-  V1Meas = &This->CurMeasurement[HEADER_SZ_BYTES];
-  V0Meas = &CurMeas[HEADER_SZ_BYTES];
+  Status             = EFI_SUCCESS;
+  V1Meas             = &This->CurMeasurement[HEADER_SZ_BYTES];
+  V0Meas             = &CurMeas[HEADER_SZ_BYTES];
+  SavedV1Measurement = NULL;
 
   This->BootstrapDeferred = FALSE;
   This->MeasurementDirty  = FALSE;
@@ -2394,6 +2431,15 @@ VarIntValidate (
     goto ExitVarIntValidate;
   }
 
+  SavedV1Measurement = AllocateCopyPool (
+                         This->MeasurementSize,
+                         This->CurMeasurement
+                         );
+  if (SavedV1Measurement == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitVarIntValidate;
+  }
+
   Status = ComputeCurrentMeasurement (
              This,
              NULL,
@@ -2432,7 +2478,11 @@ VarIntValidate (
         __FUNCTION__,
         Index
         ));
-      Status = MigrateV0RecordToV1 (This, MatchedRecord);
+      Status = MigrateV0RecordToV1 (
+                 This,
+                 MatchedRecord,
+                 SavedV1Measurement
+                 );
       if (!EFI_ERROR (Status)) {
         Status = FinalizeValidatedRecords (
                    This,
@@ -2449,6 +2499,7 @@ VarIntValidate (
 ExitVarIntValidate:
   if ((Matched != TRUE) &&
       (MigrationBlocked != TRUE) &&
+      !EFI_ERROR (Status) &&
       (This->BootstrapDeferred == FALSE))
   {
     if (IsMeasurementPartitionErasedOrZero (
@@ -2479,6 +2530,11 @@ ExitVarIntValidate:
   ZeroMem (This->CurMeasurement, This->MeasurementSize);
   if (CurMeas != NULL) {
     ZeroMem (CurMeas, This->MeasurementSize);
+  }
+
+  if (SavedV1Measurement != NULL) {
+    ZeroMem (SavedV1Measurement, This->MeasurementSize);
+    FreePool (SavedV1Measurement);
   }
 
   return Status;

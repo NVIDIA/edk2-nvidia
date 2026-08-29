@@ -198,6 +198,22 @@ MockSuccessfulOpteeSignatures (
   }
 }
 
+STATIC
+VOID
+MockSuccessfulFfaSignatures (
+  IN ARM_SVC_ARGS  *Args,
+  IN UINTN         Count
+  )
+{
+  UINTN  Index;
+
+  for (Index = 0; Index < Count; Index++) {
+    MockFfaGetOpteeVmId (EFI_SUCCESS, (UINT16 *)(UINTN)0x8001);
+    MockArmCallSvc (Args);
+    MockIsOpteePresent (FALSE);
+  }
+}
+
 /*
   Test Data Fields:
           *VarName;
@@ -423,6 +439,65 @@ VarIntComputeTest_6 (
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
   UT_ASSERT_EQUAL (PartitionData[0], VAR_INT_INVALID);
   UT_ASSERT_EQUAL (PartitionData[VarIntProto->MeasurementSize], VAR_INT_V1_VALID);
+
+  return UNIT_TEST_PASSED;
+}
+
+/*
+ * VarIntComputeTest_6Ffa
+ * "FF-A V0 signing preserves the complete migrated V1 payload."
+ *
+ */
+STATIC
+UNIT_TEST_STATUS
+EFIAPI
+VarIntComputeTest_6Ffa (
+  IN UNIT_TEST_CONTEXT  Context
+  )
+{
+  EFI_STATUS            Status;
+  VAR_INT_TEST_CONTEXT  *TestData;
+  UINT8                 V0MeasBuf[MEAS_SZ];
+  UINT8                 V1MeasBuf[MEAS_SZ];
+  UINT8                 *PartitionData;
+
+  TestData      = (VAR_INT_TEST_CONTEXT *)Context;
+  PartitionData = (UINT8 *)VarIntProto->PartitionData;
+
+  Status = NorFlashStub->Erase (NorFlashStub, 0, TOTAL_BLOCKS);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  SetMem (PartitionData, VarIntProto->PartitionSize, FVB_ERASED_BYTE);
+  SetMem (V0MeasBuf, sizeof (V0MeasBuf), 0x8);
+  SetMem (V1MeasBuf, sizeof (V1MeasBuf), 0x4);
+
+  PartitionData[0] = VAR_INT_VALID;
+  CopyMem (&PartitionData[1], V0MeasBuf, sizeof (V0MeasBuf));
+  CopyMem (FlashDevice, PartitionData, VarIntProto->PartitionSize);
+
+  TestData->TestArgs->Arg0 = ARM_FID_FFA_MSG_SEND_DIRECT_RESP;
+  TestData->TestArgs->Arg3 = FFA_OK;
+  MockComputeVarMeasurement (
+    NULL,
+    V1MeasBuf,
+    sizeof (V1MeasBuf),
+    TestData->ComputeReturnStatus
+    );
+  MockComputeVarMeasurementV0 (
+    NULL,
+    V0MeasBuf,
+    sizeof (V0MeasBuf),
+    TestData->ComputeReturnStatus
+    );
+  MockSuccessfulFfaSignatures (TestData->TestArgs, 2);
+
+  Status = VarIntProto->Validate (VarIntProto);
+  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
+  UT_ASSERT_EQUAL (PartitionData[VarIntProto->MeasurementSize], VAR_INT_V1_VALID);
+  UT_ASSERT_MEM_EQUAL (
+    &PartitionData[VarIntProto->MeasurementSize + 1],
+    V1MeasBuf,
+    sizeof (V1MeasBuf)
+    );
 
   return UNIT_TEST_PASSED;
 }
@@ -1035,6 +1110,47 @@ InitSuiteTestData (
 STATIC
 VOID
 EFIAPI
+InitFfaSuiteTestData (
+  VOID
+  )
+{
+  EFI_STATUS  Status;
+
+  Handle  = AllocatePool (sizeof (UINT32));
+  *Handle = 0xABCD;
+  MockMmInstallProtocolInterface (
+    &gNVIDIAVarIntGuid,
+    (EFI_HANDLE)Handle,
+    EFI_SUCCESS
+    );
+  MockIsOpteePresent (FALSE);
+  MockFfaGetOpteeVmId (EFI_SUCCESS, (UINT16 *)(UINTN)0x8001);
+  MockFfaGetMmVmId (EFI_SUCCESS, (UINT16 *)(UINTN)0x8002);
+  MockFfaGetTxRxBuffer (
+    EFI_SUCCESS,
+    (UINT64 *)(UINTN)0x1000,
+    (UINT32 *)(UINTN)EFI_PAGE_SIZE,
+    (UINT64 *)(UINTN)0x2000,
+    (UINT32 *)(UINTN)EFI_PAGE_SIZE
+    );
+  MockPrepareFfaMemoryDescriptor (EFI_SUCCESS, (UINT32 *)(UINTN)0x100);
+  MockFfaSendShareCommand (EFI_SUCCESS, (UINT64 *)(UINTN)0x1234);
+
+  Status = VarIntInit (
+             ResPartitionOffset,
+             ResPartitionSize,
+             NorFlashStub,
+             &NorFlashAttr
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed to Initialize FF-A VarInt module %r\n", Status));
+    assert_false (EFI_ERROR (Status));
+  }
+}
+
+STATIC
+VOID
+EFIAPI
 CleanupSuiteTestData (
   VOID
   )
@@ -1125,6 +1241,7 @@ UnitTestingEntry (
   EFI_STATUS                  Status;
   UNIT_TEST_FRAMEWORK_HANDLE  Fw;
   UNIT_TEST_SUITE_HANDLE      VarIntComputeSuite;
+  UNIT_TEST_SUITE_HANDLE      VarIntFfaSuite;
 
   Fw = NULL;
 
@@ -1204,6 +1321,30 @@ UnitTestingEntry (
     VarIntComputeTestSetup_1,
     VarIntComputeTestCleanup_1,
     &VarIntComputeTestData_7
+    );
+
+  Status = CreateUnitTestSuite (
+             &VarIntFfaSuite,
+             Fw,
+             "VarInt FF-A Tests",
+             "VarInt.VarIntFfaTestSuite",
+             InitFfaSuiteTestData,
+             CleanupSuiteTestData
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Failed in CreateUnitTestSuite for VarInt FF-A\n"));
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitUnitTestingEntry;
+  }
+
+  AddTestCase (
+    VarIntFfaSuite,
+    "FF-A V0 signing preserves the complete migrated V1 payload.",
+    "SimpleComputeTest6Ffa",
+    VarIntComputeTest_6Ffa,
+    VarIntComputeTestSetup_1,
+    VarIntComputeTestCleanup_1,
+    &VarIntComputeTestData_6
     );
 
   AddTestCase (

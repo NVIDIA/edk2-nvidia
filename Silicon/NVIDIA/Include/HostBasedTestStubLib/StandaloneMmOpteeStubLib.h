@@ -2,7 +2,7 @@
 
 StandaloneMmOpteeStubLib definitions.
 
-SPDX-FileCopyrightText: Copyright (c) 2023-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -30,6 +30,39 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 VOID
 MockIsOpteePresent (
   IN BOOLEAN  ReturnStatus
+  );
+
+VOID
+MockFfaGetTxRxBuffer (
+  IN EFI_STATUS  ReturnStatus,
+  IN UINT64      *FfaTxBufferAddr,
+  IN UINT32      *FfaTxBufferSize,
+  IN UINT64      *FfaRxBufferAddr,
+  IN UINT32      *FfaRxBufferSize
+  );
+
+VOID
+MockFfaGetOpteeVmId (
+  IN EFI_STATUS  ReturnStatus,
+  IN UINT16      *OpteeVmId
+  );
+
+VOID
+MockFfaGetMmVmId (
+  IN EFI_STATUS  ReturnStatus,
+  IN UINT16      *MmVmId
+  );
+
+VOID
+MockPrepareFfaMemoryDescriptor (
+  IN EFI_STATUS  ReturnStatus,
+  IN UINT32      *TotalLength
+  );
+
+VOID
+MockFfaSendShareCommand (
+  IN EFI_STATUS  ReturnStatus,
+  IN UINT64      *Handle
   );
 
 /**
