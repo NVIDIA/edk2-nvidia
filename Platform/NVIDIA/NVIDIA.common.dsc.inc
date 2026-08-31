@@ -1179,6 +1179,13 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdFindLoadOptionIgnoreDescription|TRUE
 
+[PcdsDynamicExDefault]
+!ifdef CONFIG_NVIDIA_DISPLAY
+!ifdef CONFIG_SOC_T23X
+  gNVIDIATokenSpaceGuid.PcdTegraSorLinkPolarityInv|FALSE
+!endif
+!endif
+
 [PcdsDynamicDefault]
   #
   # Enable emulated variable NV mode in variable driver.

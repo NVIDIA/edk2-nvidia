@@ -16,6 +16,7 @@
 #include <Library/DeviceDiscoveryDriverLib.h>
 #include <Library/IoLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Protocol/EmbeddedGpio.h>
@@ -496,6 +497,60 @@ ConfigureGpios (
 }
 
 /**
+  Configure SOR link settings from Device Tree.
+
+  @param[in] DriverHandle      Handle to the driver.
+  @param[in] ControllerHandle  Handle to the controller.
+
+  @retval EFI_SUCCESS    SOR link settings configured successfully,
+                         or non-fatal error which does not require
+                         disabling display.
+  @retval !=EFI_SUCCESS  Operation failed.
+*/
+STATIC
+EFI_STATUS
+ConfigureSorLinks (
+  IN CONST EFI_HANDLE  DriverHandle,
+  IN CONST EFI_HANDLE  ControllerHandle
+  )
+{
+  EFI_STATUS  Status;
+  BOOLEAN     EnableSorLanePolarityInversion;
+
+  EnableSorLanePolarityInversion = FALSE;
+  Status                         = NvDisplayLookupSorLanes (
+                                     DriverHandle,
+                                     ControllerHandle,
+                                     &EnableSorLanePolarityInversion
+                                     );
+  // DT property not found is non-fatal
+  if (Status == EFI_NOT_FOUND) {
+    return EFI_SUCCESS;
+  }
+
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  Status = PcdSetExBoolS (
+             &gNVIDIATokenSpaceGuid,
+             PcdTegraSorLinkPolarityInv,
+             EnableSorLanePolarityInversion
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: failed to set PcdTegraSorLinkPolarityInv: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  return Status;
+}
+
+/**
   Enable or disable AUX over USB-C.
 
   Configures the DPAUX_HYBRID_SPARE register to enable or disable
@@ -654,6 +709,14 @@ EnableHwT238 (
       }
 
       Private->GpiosConfigured = TRUE;
+    }
+
+    Status = ConfigureSorLinks (
+               Private->DriverHandle,
+               Private->ControllerHandle
+               );
+    if (EFI_ERROR (Status)) {
+      goto Disable;
     }
 
     Status = EnableAuxOverUsbc (Private->ControllerHandle, FALSE);

@@ -78,6 +78,9 @@
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMode
   gNVIDIATokenSpaceGuid.PcdSocDisplayHandoffMethod
 
+[PcdEx]
+  gNVIDIATokenSpaceGuid.PcdTegraSorLinkPolarityInv
+
 [Depex]
   gEfiVariableArchProtocolGuid                  AND
   gNVIDIAI2cExpanderGpioProtocolGuid            AND

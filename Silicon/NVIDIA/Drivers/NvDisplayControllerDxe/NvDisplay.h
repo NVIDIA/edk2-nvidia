@@ -205,6 +205,29 @@ NvDisplayLookupGpioPins (
   );
 
 /**
+  Lookup SOR lane configuration from Device Tree.
+
+  Searches the display controller Device Tree node and its child nodes
+  for SOR lane configuration properties.
+
+  @param[in]  DriverHandle                       Handle to the driver.
+  @param[in]  ControllerHandle                   Handle to the controller.
+  @param[out] EnableSorLanePolarityInversion     TRUE if lane polarity
+                                                  inversion should be enabled.
+
+  @retval EFI_SUCCESS            SOR lane configuration successfully retrieved.
+  @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
+  @retval EFI_NOT_FOUND          SOR lane configuration was not found.
+  @retval !=EFI_SUCCESS          Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayLookupSorLanes (
+  IN  EFI_HANDLE  DriverHandle,
+  IN  EFI_HANDLE  ControllerHandle,
+  OUT BOOLEAN     *EnableSorLanePolarityInversion
+  );
+
+/**
   Locates a child handle with an active GOP instance installed.
 
   This function does not allocate any memory, hence it is safe to call

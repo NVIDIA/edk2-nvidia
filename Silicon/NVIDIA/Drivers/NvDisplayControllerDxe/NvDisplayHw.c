@@ -612,3 +612,124 @@ NvDisplayLookupGpioPins (
   *Phandle = GpioPhandle;
   return EFI_SUCCESS;
 }
+
+/**
+  Search a Device Tree node and its child nodes for SOR lane polarity
+  inversion configuration.
+
+  @param[in] DeviceTreeBase  Base of the Device Tree to be searched.
+  @param[in] DtNodeOffset    Device Tree node offset to begin search.
+
+  @retval TRUE   The SOR lane polarity inversion property was found.
+  @retval FALSE  The SOR lane polarity inversion property was not found.
+*/
+STATIC
+BOOLEAN
+HasSorLanePolarityInversionProp (
+  IN CONST VOID   *CONST  DeviceTreeBase,
+  IN CONST INT32          DtNodeOffset
+  )
+{
+  INT32               Depth;
+  INT32               CurrNode;
+  INT32               PropLen;
+  CONST CHAR8 *CONST  SorEnableLanePolarityInversionProp = "nvidia,sor-enable-lane-polarity-inversion";
+
+  CurrNode = DtNodeOffset;
+  Depth    = 0;
+
+  while (CurrNode >= 0) {
+    if (FdtGetProp (
+          DeviceTreeBase,
+          CurrNode,
+          SorEnableLanePolarityInversionProp,
+          &PropLen
+          ) != NULL)
+    {
+      return TRUE;
+    }
+
+    CurrNode = FdtNextNode (DeviceTreeBase, CurrNode, &Depth);
+    if ((CurrNode == -FDT_ERR_NOTFOUND) || (Depth <= 0)) {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: Could not find SOR polarity inversion property\r\n",
+        __FUNCTION__
+        ));
+      break;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+  Lookup SOR lane configuration from Device Tree.
+
+  Searches the display controller Device Tree node and its child nodes
+  for SOR lane configuration properties.
+
+  @param[in]  DriverHandle                       Handle to the driver.
+  @param[in]  ControllerHandle                   Handle to the controller.
+  @param[out] EnableSorLanePolarityInversion     TRUE if lane polarity
+                                                  inversion should be enabled.
+
+  @retval EFI_SUCCESS            SOR lane configuration successfully retrieved.
+  @retval EFI_INVALID_PARAMETER  One or more input parameters are NULL.
+  @retval EFI_NOT_FOUND          SOR lane configuration was not found.
+  @retval !=EFI_SUCCESS          Error(s) occurred.
+*/
+EFI_STATUS
+NvDisplayLookupSorLanes (
+  IN  EFI_HANDLE  DriverHandle,
+  IN  EFI_HANDLE  ControllerHandle,
+  OUT BOOLEAN     *EnableSorLanePolarityInversion
+  )
+{
+  EFI_STATUS                        Status;
+  NVIDIA_DEVICE_TREE_NODE_PROTOCOL  *DeviceTreeNode;
+  CONST VOID                        *DeviceTreeBase;
+
+  if ((DriverHandle == NULL) || (ControllerHandle == NULL) ||
+      (EnableSorLanePolarityInversion == NULL))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = gBS->OpenProtocol (
+                  ControllerHandle,
+                  &gNVIDIADeviceTreeNodeProtocolGuid,
+                  (VOID **)&DeviceTreeNode,
+                  DriverHandle,
+                  ControllerHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: could not retrieve DT node protocol: %r\r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
+
+  DeviceTreeBase = DeviceTreeNode->DeviceTreeBase;
+  if (DeviceTreeBase == NULL) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: DeviceTreeBase is NULL\r\n",
+      __FUNCTION__
+      ));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (HasSorLanePolarityInversionProp (DeviceTreeBase, DeviceTreeNode->NodeOffset)) {
+    *EnableSorLanePolarityInversion = TRUE;
+    Status                          = EFI_SUCCESS;
+  } else {
+    Status = EFI_NOT_FOUND;
+  }
+
+  return Status;
+}

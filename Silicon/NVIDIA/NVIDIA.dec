@@ -652,6 +652,10 @@
 #Support FMP certificates in DTB property
   gNVIDIATokenSpaceGuid.PcdSupportFmpCertsInDtb|FALSE|BOOLEAN|0x000000AD
 
+[PcdsDynamicEx.common]
+# T238 SOR lane polarity inversion state obtained from Device Tree.
+  gNVIDIATokenSpaceGuid.PcdTegraSorLinkPolarityInv|FALSE|BOOLEAN|0x00000179
+
 [PcdsDynamic.common]
 #Force disable coherent DMA in SDHCi.
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|FALSE|BOOLEAN|0x0000000C
