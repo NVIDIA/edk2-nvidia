@@ -1067,6 +1067,11 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   #
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0307
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosDocRev|0x0
+!ifdef CONFIG_BUILD_ANDROID
+!ifdef CONFIG_SOC_T23X
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosEntryPointProvideMethod|0x2
+!endif
+!endif
 
   # SMBIOS Type0 Firmware BIOS characteristics.
   gArmTokenSpaceGuid.PcdBiosCharacteristics|{0}
