@@ -1,7 +1,7 @@
 /** @file
 *  NVIDIA Secure Boot Provision
 *
-* SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+* SPDX-FileCopyrightText: Copyright (c) 2023-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
@@ -321,9 +321,13 @@ ExitUpdateSecVar:
  * @param[in]   SignedPayloadSize  Input Signed Payload Size.
  * @param[out]  PayloadPtr         Output Payload Pointer.
  * @param[out]  PayloadSize        Size of Signed payload.
+ *
+ * @return EFI_SUCCESS            Payload pointer and size were populated.
+ *         EFI_INVALID_PARAMETER  Signed payload is too small for an auth header.
+ *         EFI_COMPROMISED_DATA   Auth header length fields exceed the buffer.
  **/
 STATIC
-VOID
+EFI_STATUS
 GetPayloadFromSigned (
   IN  VOID   *SignedPayload,
   IN  UINTN  SignedPayloadSize,
@@ -331,26 +335,74 @@ GetPayloadFromSigned (
   OUT UINTN  *PayloadSize
   )
 {
+  EFI_STATUS                     Status;
   EFI_VARIABLE_AUTHENTICATION_2  *CertData;
   UINT8                          *SigData;
   UINT32                         SigDataSize;
+  UINT32                         WinCertHeaderOffset;
+
+  Status = EFI_SUCCESS;
+
+  if (SignedPayloadSize < OFFSET_OF_AUTHINFO2_CERT_DATA) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Signed payload too small %Lu\n",
+      __FUNCTION__,
+      (UINT64)SignedPayloadSize
+      ));
+    Status = EFI_INVALID_PARAMETER;
+    goto ExitGetPayloadFromSigned;
+  }
 
   CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)SignedPayload;
 
-  if ((CertData->AuthInfo.Hdr.wCertificateType != WIN_CERT_TYPE_EFI_GUID) ||
-      !CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertPkcs7Guid))
+  if ((CertData->AuthInfo.Hdr.wCertificateType == WIN_CERT_TYPE_EFI_GUID) &&
+      CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertPkcs7Guid))
   {
+    WinCertHeaderOffset = (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
+    if (CertData->AuthInfo.Hdr.dwLength < WinCertHeaderOffset) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Invalid dwLength %u\n",
+        __FUNCTION__,
+        CertData->AuthInfo.Hdr.dwLength
+        ));
+      Status = EFI_COMPROMISED_DATA;
+      goto ExitGetPayloadFromSigned;
+    }
+
+    SigDataSize = CertData->AuthInfo.Hdr.dwLength - WinCertHeaderOffset;
+    if ((UINTN)SigDataSize > (SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Signature size exceeds payload %u %Lu\n",
+        __FUNCTION__,
+        SigDataSize,
+        (UINT64)SignedPayloadSize
+        ));
+      Status = EFI_COMPROMISED_DATA;
+      goto ExitGetPayloadFromSigned;
+    }
+
+    SigData      = CertData->AuthInfo.CertData;
+    *PayloadPtr  = SigData + SigDataSize;
+    *PayloadSize = SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
+
+    DEBUG ((DEBUG_INFO, "%a:PayloadSize %Lu\n", __FUNCTION__, (UINT64)*PayloadSize));
+  } else {
+    /*
+     * Not a PKCS7 EFI_VARIABLE_AUTHENTICATION_2 wrapper. Treat the buffer as
+     * unsigned/raw payload (legacy behavior for default-key enrollment via
+     * AppendToDefault). dwLength is not a signature size in this case, so
+     * skip the AUTHINFO2 length checks.
+     */
     DEBUG ((DEBUG_ERROR, "No Valid Signature Data Found\n"));
     *PayloadPtr  = SignedPayload;
     *PayloadSize = SignedPayloadSize;
-  } else {
-    SigData      = CertData->AuthInfo.CertData;
-    SigDataSize  = CertData->AuthInfo.Hdr.dwLength - (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
-    *PayloadPtr  = SigData + SigDataSize;
-    *PayloadSize = SignedPayloadSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
   }
 
-  DEBUG ((DEBUG_INFO, "%a:PayloadSize %u\n", __FUNCTION__, *PayloadSize));
+ExitGetPayloadFromSigned:
+  return Status;
 }
 
 /**
@@ -383,12 +435,21 @@ AppendToDefault (
   UINT32      Attributes;
   UINTN       DataSize = 0;
 
-  GetPayloadFromSigned (
-    SignedPayload,
-    SignedPayloadSize,
-    &PayloadPtr,
-    &PayloadSize
-    );
+  Status = GetPayloadFromSigned (
+             SignedPayload,
+             SignedPayloadSize,
+             &PayloadPtr,
+             &PayloadSize
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to parse signed payload %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    return Status;
+  }
 
   Status = gRT->GetVariable (
                   DefaultName,
@@ -444,7 +505,7 @@ AppendKeys (
   )
 {
   EFI_STATUS  Status;
-  VOID        *SignedPayload;
+  VOID        *SignedPayload = NULL;
   UINTN       SignedPayloadSize;
   UINT8       ComputedHashValue[SHA256_DIGEST_SIZE];
   BOOLEAN     UpdateSecDb;
@@ -521,12 +582,22 @@ AppendKeys (
                       EFI_VARIABLE_BOOTSERVICE_ACCESS |
                       EFI_VARIABLE_RUNTIME_ACCESS |
                       EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS);
-        GetPayloadFromSigned (
-          SignedPayload,
-          SignedPayloadSize,
-          &PayloadPtr,
-          &PayloadSize
-          );
+        Status = GetPayloadFromSigned (
+                   SignedPayload,
+                   SignedPayloadSize,
+                   &PayloadPtr,
+                   &PayloadSize
+                   );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((
+            DEBUG_ERROR,
+            "%a: Failed to parse signed payload %r\n",
+            __FUNCTION__,
+            Status
+            ));
+          goto ExitAppendKeys;
+        }
+
         /* If the payload size is 0, then don't add the Append_write attribute */
         if (PayloadSize != 0) {
           Attributes |= EFI_VARIABLE_APPEND_WRITE;
@@ -570,6 +641,14 @@ AppendKeys (
   }
 
 ExitAppendKeys:
+  if (SignedPayload != NULL) {
+    FreePool (SignedPayload);
+  }
+
+  if (HashVarName != NULL) {
+    FreePool (HashVarName);
+  }
+
   return Status;
 }
 
