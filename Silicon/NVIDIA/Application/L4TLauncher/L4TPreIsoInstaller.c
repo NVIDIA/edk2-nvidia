@@ -45,6 +45,10 @@ STATIC BOOLEAN          mIsIsoInstallation = FALSE;
 STATIC TegraPlatformSpecInfo  mTegraPlatformSpec;
 STATIC TegraPlatformSpecInfo  mTegraPlatformCompatSpec;
 
+STATIC CONST EFI_GUID  mT264NvidiaSystemFirmwareGuid = {
+  0x3c834404, 0xd2d7, 0x4912, { 0x8c, 0x1c, 0x6e, 0x85, 0x0b, 0x5f, 0x28, 0x24 }
+};
+
 VOID
 EFIAPI
 PreIsoLogInit (
@@ -869,7 +873,19 @@ GetSystemFwEntryFromEsrt (
       EsrtEntry->FwType
       ));
 
-    if (EsrtEntry->FwType == ESRT_FW_TYPE_SYSTEMFIRMWARE) {
+    if ((EsrtEntry->FwType == ESRT_FW_TYPE_SYSTEMFIRMWARE) ||
+        ((EsrtEntry->FwType == ESRT_FW_TYPE_DEVICEFIRMWARE) &&
+         CompareGuid (&EsrtEntry->FwClass, &mT264NvidiaSystemFirmwareGuid)))
+    {
+      // Handle the FMP image type GUID mismatch that causes ESRT to classify
+      // the T264 system firmware entry as device firmware.
+      if (EsrtEntry->FwType == ESRT_FW_TYPE_DEVICEFIRMWARE) {
+        PreIsoLogWrite (
+          L"%a: Treating NVIDIA device firmware ESRT entry as system firmware\r\n",
+          __FUNCTION__
+          );
+      }
+
       *SystemFwEntry = EsrtEntry;
       PreIsoLogPrint (
         L"%a: System firmware ESRT entry found: FwVersion=0x%x, "
