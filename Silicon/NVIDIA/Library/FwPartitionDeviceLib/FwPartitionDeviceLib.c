@@ -42,6 +42,11 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
   L"BCT",
   L"BCT-boot-chain_backup",
   L"mb2-applet",
+  NULL
+};
+
+// non-A/B pseudo partition names
+STATIC CONST CHAR16  *NonABPseudoPartitionNames[] = {
   L"NorFlash-Blob",
   L"MM-NorFlash",
   L"MM-RAS",
@@ -53,6 +58,16 @@ STATIC CONST CHAR16  *NonABPartitionNames[] = {
 STATIC CONST CHAR16  *GptPseudoPartitionName[BOOT_CHAIN_COUNT] = {
   L"A_GPT",
   L"B_GPT"
+};
+
+// unused partition names
+STATIC CONST CHAR16  *UnusedPartitionNames[] = {
+  // we always create A_GPT and B_GPT partition names that point to fixed
+  // space at end of the device, but some devices have the following
+  // names in the GPT that point to the same space, so don't use them.
+  L"secondary_gpt",
+  L"secondary_gpt_backup",
+  NULL
 };
 
 /**
@@ -102,7 +117,7 @@ FwPartitionIsActive (
   UINTN       BootChain;
   EFI_STATUS  Status;
 
-  if (NameIsInList (Name, NonABPartitionNames)) {
+  if (NameIsInList (Name, NonABPartitionNames) || NameIsInList (Name, NonABPseudoPartitionNames)) {
     return FALSE;
   }
 
@@ -527,6 +542,11 @@ FwPartitionWriteToUpdateInactivePartitions (
     // Only do offset checks and updates on MM side with GPT,
     // because NS using MM device has offset 0 for all partitions.
     if (PseudoDeviceInfo->MmDeviceInfo == NULL) {
+      if (NameIsInList (Name, UnusedPartitionNames)) {
+        DEBUG ((DEBUG_INFO, "%a: skipping unused %s\n", __FUNCTION__, Name));
+        continue;
+      }
+
       // Reject any update that would cause the inactive partition to overlap
       // an active or non-A/B protected partition.
       for (PartitionIndex = 0; PartitionIndex < mNumFwPartitions; PartitionIndex++) {
@@ -539,7 +559,7 @@ FwPartitionWriteToUpdateInactivePartitions (
           NewEnd     = NewOffset + NewBytes;
 
           if ((NewOffset < OtherEnd) && (OtherStart < NewEnd)) {
-            DEBUG ((DEBUG_ERROR, "%a: %s overlaps protected partition %s\n", __FUNCTION__, Name, OtherPrivate->PartitionInfo.Name));
+            DEBUG ((DEBUG_ERROR, "%a: %s (0x%llx-0x%llx) overlaps protected partition %s (0x%llx-0x%llx)\n", __FUNCTION__, Name, NewOffset, NewEnd, OtherPrivate->PartitionInfo.Name, OtherStart, OtherEnd));
             Overlap = TRUE;
             break;
           }
