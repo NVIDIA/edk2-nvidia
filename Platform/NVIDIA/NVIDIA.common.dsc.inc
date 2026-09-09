@@ -1408,7 +1408,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0X80000000
   gNVIDIATokenSpaceGuid.PcdSdhciCoherentDMADisable|TRUE
   gNVIDIATokenSpaceGuid.PcdBPMPPCIeControllerEnable|TRUE
-  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x10000
+  gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
 
