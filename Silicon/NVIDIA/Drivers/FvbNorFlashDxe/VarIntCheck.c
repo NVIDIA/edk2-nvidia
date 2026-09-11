@@ -22,8 +22,9 @@
 #include <Library/NvVarIntLib.h>
 #include <Library/NVIDIADebugLib.h>
 
-#define HEADER_SZ_BYTES    (1)
-#define MAX_VALID_RECORDS  (2)
+#define HEADER_SZ_BYTES              (1)
+#define MAX_VALID_RECORDS            (2)
+#define T234_V0_EXTRA_PAYLOAD_BYTES  (1)
 
 typedef struct {
   UINT8     *Measurement;
@@ -45,6 +46,12 @@ typedef enum {
   VarIntRecordVersionV1
 } VAR_INT_RECORD_VERSION;
 
+typedef enum {
+  VarIntRecordFilterAny,
+  VarIntRecordFilterV0,
+  VarIntRecordFilterV1
+} VAR_INT_RECORD_FILTER;
+
 NVIDIA_VAR_INT_PROTOCOL             *VarIntProto = NULL;
 STATIC MEASURE_REC_TYPE             *LastMeasurements[MAX_VALID_RECORDS];
 STATIC UINT8                        *CurMeas;
@@ -57,11 +64,30 @@ STATIC CONST UINT16                 VarAuthTa                    = 5U;
 STATIC UINT16                       OpteeVmId                    = 0;
 STATIC UINT16                       MmVmId                       = 0;
 STATIC UINT64                       FfaHandle                    = 0;
+STATIC BOOLEAN                      OpteePresent                 = FALSE;
 STATIC VAR_INT_MEASUREMENT_CONTEXT  LastMeasurementContext;
 
 STATIC
 UINT32
 GetMeasurementPayloadSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  );
+
+STATIC
+UINT32
+GetV0MeasurementPayloadSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  );
+
+STATIC
+UINT32
+GetV0MeasurementRecordSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  );
+
+STATIC
+UINT32
+GetMaxMeasurementRecordSize (
   IN NVIDIA_VAR_INT_PROTOCOL  *This
   );
 
@@ -78,6 +104,18 @@ GetLastValidMeasurements (
   IN  NVIDIA_VAR_INT_PROTOCOL  *VarInt,
   OUT MEASURE_REC_TYPE         **Records,
   OUT UINT32                   *NumRecords
+  );
+
+STATIC
+EFI_STATUS
+GetLastValidMeasurementsByLayout (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *VarInt,
+  OUT MEASURE_REC_TYPE         **Records,
+  OUT UINT32                   *NumRecords,
+  IN  UINT32                   RecordSize,
+  IN  VAR_INT_RECORD_FILTER    RecordFilter,
+  IN  CONST UINT8              *ExpectedPayload OPTIONAL,
+  OUT BOOLEAN                  *RecordLimitExceeded OPTIONAL
   );
 
 STATIC
@@ -145,7 +183,7 @@ LogMeasurementContext (
   }
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "VarIntMeasContext: reason=%a stage=%a op=%a name=%s guid=%g attr=0x%08x size=%lu compute=%r write=%r\n",
     Reason,
     LastMeasurementContext.Stage,
@@ -197,7 +235,7 @@ LogMeasurementWrite (
   )
 {
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "VarIntMeasWrite: %a offset=0x%lx size=%u old=0x%x(%a) new=0x%x(%a) status=%r\n",
     Reason,
     Offset,
@@ -240,7 +278,7 @@ LogMeasurementPreview (
   }
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "VarIntMeasPreview: %a header=0x%x(%a) payload=%02x%02x%02x%02x%02x%02x%02x%02x\n",
     Reason,
     Measurement[0],
@@ -265,7 +303,7 @@ ClearSpeculativeMeasurement (
   SpeculativeMeasurementValid = FALSE;
 
   if ((This != NULL) && (SpeculativeMeasurement != NULL)) {
-    ZeroMem (SpeculativeMeasurement, This->MeasurementSize);
+    ZeroMem (SpeculativeMeasurement, GetMaxMeasurementRecordSize (This));
   }
 }
 
@@ -285,7 +323,7 @@ ClearLastMeasurementBuffers (
     if ((LastMeasurements[Index] != NULL) &&
         (LastMeasurements[Index]->Measurement != NULL))
     {
-      ZeroMem (LastMeasurements[Index]->Measurement, This->MeasurementSize);
+      ZeroMem (LastMeasurements[Index]->Measurement, GetMaxMeasurementRecordSize (This));
     }
   }
 }
@@ -413,7 +451,13 @@ FfaInit (
              );
   NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to prepare FFA memory descriptor");
 
-  Status = FfaSendShareCommand (TotalLength, TotalLength, FfaTxBufferAddr, EFI_SIZE_TO_PAGES (VarInt->MeasurementSize), &FfaHandle);
+  Status = FfaSendShareCommand (
+             TotalLength,
+             TotalLength,
+             FfaTxBufferAddr,
+             EFI_SIZE_TO_PAGES (GetMaxMeasurementRecordSize (VarInt)),
+             &FfaHandle
+             );
   NV_ASSERT_RETURN (!EFI_ERROR (Status), goto ExitFfaInit, "Failed to send FFA share command");
 
 ExitFfaInit:
@@ -583,7 +627,7 @@ SendOpteeCmd (
 {
   EFI_STATUS  Status;
 
-  if (IsOpteePresent ()) {
+  if (OpteePresent) {
     Status = SendOpteeFfaCmd (Meas, Size);
   } else {
     Status = SendFfaCmd (Meas, Size);
@@ -817,6 +861,40 @@ GetMeasurementPayloadSize (
 }
 
 STATIC
+UINT32
+GetV0MeasurementPayloadSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  )
+{
+  UINT32  PayloadSize;
+
+  PayloadSize = GetMeasurementPayloadSize (This);
+  if (OpteePresent) {
+    PayloadSize += T234_V0_EXTRA_PAYLOAD_BYTES;
+  }
+
+  return PayloadSize;
+}
+
+STATIC
+UINT32
+GetV0MeasurementRecordSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  )
+{
+  return HEADER_SZ_BYTES + GetV0MeasurementPayloadSize (This);
+}
+
+STATIC
+UINT32
+GetMaxMeasurementRecordSize (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This
+  )
+{
+  return MAX (This->MeasurementSize, GetV0MeasurementRecordSize (This));
+}
+
+STATIC
 BOOLEAN
 RecordWindowFitsInBlock (
   IN NVIDIA_VAR_INT_PROTOCOL  *This,
@@ -833,6 +911,23 @@ RecordWindowFitsInBlock (
   WriteSize  = This->MeasurementSize * NumRecords;
 
   return (BOOLEAN)((Offset + WriteSize) <= BlockEnd);
+}
+
+STATIC
+BOOLEAN
+RecordWindowOfSizeFitsInBlock (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN UINT64                   Offset,
+  IN UINT32                   RecordSize
+  )
+{
+  UINT64  BlockStart;
+  UINT64  BlockEnd;
+
+  BlockStart = (Offset / This->BlockSize) * This->BlockSize;
+  BlockEnd   = BlockStart + This->BlockSize;
+
+  return (BOOLEAN)((Offset + RecordSize) <= BlockEnd);
 }
 
 STATIC
@@ -985,7 +1080,7 @@ IsV0MigrationAllowed (
   MigrationAllowed = FeaturePcdGet (PcdAllowVarIntV0Migration);
 
   DEBUG ((
-    DEBUG_ERROR,
+    DEBUG_INFO,
     "VarIntMigrationPolicy: pcd_allow_v0_migration=%u\n",
     MigrationAllowed
     ));
@@ -1008,12 +1103,20 @@ ComputeCurrentMeasurement (
 {
   EFI_STATUS  Status;
   UINT32      PayloadSize;
+  UINT32      RecordSize;
   UINT8       *Meas;
 
-  PayloadSize = GetMeasurementPayloadSize (This);
-  Meas        = &Measurement[HEADER_SZ_BYTES];
+  if (Version == VarIntRecordVersionV0) {
+    PayloadSize = GetV0MeasurementPayloadSize (This);
+    RecordSize  = GetV0MeasurementRecordSize (This);
+  } else {
+    PayloadSize = GetMeasurementPayloadSize (This);
+    RecordSize  = This->MeasurementSize;
+  }
 
-  ZeroMem (Measurement, This->MeasurementSize);
+  Meas = &Measurement[HEADER_SZ_BYTES];
+
+  ZeroMem (Measurement, RecordSize);
 
   if (Version == VarIntRecordVersionV1) {
     Status = ComputeVarMeasurementV1 (VariableName, VendorGuid, Attributes, Data, Size, Meas);
@@ -1030,6 +1133,19 @@ ComputeCurrentMeasurement (
       ));
     goto ExitComputeCurrentMeasurement;
   }
+
+  DEBUG ((
+    DEBUG_INFO,
+    "VarIntSignLayout: version=%u optee_present=%u record_size=%u "
+    "payload_size=%u send_size=%u measurement=%p payload=%p\n",
+    Version,
+    OpteePresent,
+    RecordSize,
+    PayloadSize,
+    PayloadSize,
+    Measurement,
+    Meas
+    ));
 
   Status = SendOpteeCmd (Meas, PayloadSize);
   if (EFI_ERROR (Status)) {
@@ -1055,6 +1171,28 @@ ExitComputeCurrentMeasurement:
  * @retval   EFI_SUCCESS Found the next offset to write to
  *           Other       Failed to find the next offset.
  */
+STATIC
+BOOLEAN
+IsBufferErased (
+  IN CONST UINT8  *Buffer,
+  IN UINTN        Size
+  )
+{
+  UINTN  Index;
+
+  if (Buffer == NULL) {
+    return FALSE;
+  }
+
+  for (Index = 0; Index < Size; Index++) {
+    if (Buffer[Index] != FVB_ERASED_BYTE) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
 STATIC
 EFI_STATUS
 GetWriteOffset (
@@ -1105,7 +1243,7 @@ GetWriteOffset (
           break;
         }
 
-        if ((ReadBuf[0] == FVB_ERASED_BYTE)) {
+        if (IsBufferErased (ReadBuf, This->MeasurementSize)) {
           DEBUG ((
             DEBUG_INFO,
             "%a: Found a Valid Write Offset %lx\n",
@@ -1633,6 +1771,29 @@ GetLastValidMeasurements (
   OUT UINT32                   *NumRecords
   )
 {
+  return GetLastValidMeasurementsByLayout (
+           VarInt,
+           Records,
+           NumRecords,
+           VarInt->MeasurementSize,
+           VarIntRecordFilterV1,
+           NULL,
+           NULL
+           );
+}
+
+STATIC
+EFI_STATUS
+GetLastValidMeasurementsByLayout (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *VarInt,
+  OUT MEASURE_REC_TYPE         **Records,
+  OUT UINT32                   *NumRecords,
+  IN  UINT32                   RecordSize,
+  IN  VAR_INT_RECORD_FILTER    RecordFilter,
+  IN  CONST UINT8              *ExpectedPayload OPTIONAL,
+  OUT BOOLEAN                  *RecordLimitExceeded OPTIONAL
+  )
+{
   EFI_STATUS                 Status;
   NVIDIA_NOR_FLASH_PROTOCOL  *NorFlash;
   UINT64                     StartOffset;
@@ -1642,10 +1803,12 @@ GetLastValidMeasurements (
   UINT64                     BlockEnd;
   UINT64                     NumValidRecords;
   UINT8                      *ReadBuf;
+  BOOLEAN                    LimitExceeded;
 
-  ReadBuf  = NULL;
-  Status   = EFI_SUCCESS;
-  NorFlash = VarInt->NorFlashProtocol;
+  ReadBuf       = NULL;
+  Status        = EFI_SUCCESS;
+  LimitExceeded = FALSE;
+  NorFlash      = VarInt->NorFlashProtocol;
   if (NorFlash == NULL) {
     Status = EFI_DEVICE_ERROR;
     goto ExitGetLastValidMeasuremets;
@@ -1660,14 +1823,17 @@ GetLastValidMeasurements (
   BlockEnd        = BlockOffset + VarInt->BlockSize;
   NumValidRecords = 0;
   *NumRecords     = 0;
+  if (RecordLimitExceeded != NULL) {
+    *RecordLimitExceeded = FALSE;
+  }
 
   while (CurOffset < EndOffset) {
     while (BlockOffset < BlockEnd) {
-      if (RecordWindowFitsInBlock (VarInt, BlockOffset, 1) == TRUE) {
+      if (RecordWindowOfSizeFitsInBlock (VarInt, BlockOffset, RecordSize) == TRUE) {
         Status = PartitionRead (
                    VarInt,
                    BlockOffset,
-                   VarInt->MeasurementSize,
+                   RecordSize,
                    ReadBuf
                    );
         if (EFI_ERROR (Status)) {
@@ -1681,33 +1847,68 @@ GetLastValidMeasurements (
           goto ExitGetLastValidMeasuremets;
         }
 
-        if (IsRecordLive (ReadBuf[0]) == TRUE) {
+        if ((IsRecordLive (ReadBuf[0]) == TRUE) &&
+            ((RecordFilter == VarIntRecordFilterAny) ||
+             ((RecordFilter == VarIntRecordFilterV0) && IsRecordV0 (ReadBuf[0])) ||
+             ((RecordFilter == VarIntRecordFilterV1) && IsRecordV1 (ReadBuf[0]))))
+        {
           NumValidRecords++;
           if (NumValidRecords > MAX_VALID_RECORDS) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "%a: More than %d Valid measurements found %x\n",
-              __FUNCTION__,
-              MAX_VALID_RECORDS,
-              ReadBuf[0]
-              ));
-            Status = EFI_DEVICE_ERROR;
-            goto ExitGetLastValidMeasuremets;
+            if (LimitExceeded == FALSE) {
+              DEBUG ((
+                DEBUG_ERROR,
+                "%a: More than %d live-record candidates found for stride %u\n",
+                __FUNCTION__,
+                MAX_VALID_RECORDS,
+                RecordSize
+                ));
+            }
+
+            LimitExceeded = TRUE;
+            if (RecordLimitExceeded != NULL) {
+              *RecordLimitExceeded = TRUE;
+            }
+
+            if ((ExpectedPayload != NULL) &&
+                (CompareMem (
+                   ExpectedPayload,
+                   &ReadBuf[HEADER_SZ_BYTES],
+                   RecordSize - HEADER_SZ_BYTES
+                   ) == 0))
+            {
+              CopyMem (Records[MAX_VALID_RECORDS - 1]->Measurement, ReadBuf, RecordSize);
+              Records[MAX_VALID_RECORDS - 1]->ByteOffset = BlockOffset;
+            }
           } else {
-            DEBUG ((DEBUG_INFO, "Found Record at %lu Header %x\n", BlockOffset, ReadBuf[0]));
-            CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, VarInt->MeasurementSize);
+            DEBUG ((
+              DEBUG_INFO,
+              "VarIntRecordScan: index=%u offset_abs=0x%lx offset_rel=0x%lx "
+              "stride=%u block_size=0x%x header=0x%x(%a)\n",
+              (UINT32)(NumValidRecords - 1),
+              BlockOffset,
+              BlockOffset - StartOffset,
+              RecordSize,
+              VarInt->BlockSize,
+              ReadBuf[0],
+              MeasurementHeaderName (ReadBuf[0])
+              ));
+            CopyMem (Records[(NumValidRecords - 1)]->Measurement, ReadBuf, RecordSize);
             *NumRecords                               += 1;
             Records[(NumValidRecords - 1)]->ByteOffset = BlockOffset;
           }
         }
       }
 
-      BlockOffset += VarInt->MeasurementSize;
+      BlockOffset += RecordSize;
     }
 
     CurOffset  += VarInt->BlockSize;
     BlockEnd   += VarInt->BlockSize;
     BlockOffset = CurOffset;
+  }
+
+  if (LimitExceeded == TRUE) {
+    Status = EFI_DEVICE_ERROR;
   }
 
 ExitGetLastValidMeasuremets:
@@ -1939,29 +2140,295 @@ FinalizeValidatedRecords (
 
 STATIC
 EFI_STATUS
-MigrateV0RecordToV1 (
-  IN NVIDIA_VAR_INT_PROTOCOL  *This,
-  IN MEASURE_REC_TYPE         *V0Record,
-  IN UINT8                    *V1Measurement
+HasLiveV0MeasurementByLayout (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  OUT BOOLEAN                  *Found
+  )
+{
+  UINT32  RecordSize;
+  UINT64  BlockOffset;
+  UINT64  BlockEnd;
+  UINT64  EndOffset;
+  UINTN   PartitionOffset;
+  UINT8   *PartitionData;
+
+  if ((This == NULL) || (Found == NULL) || (This->BlockSize == 0)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Found        = FALSE;
+  RecordSize    = GetV0MeasurementRecordSize (This);
+  EndOffset     = This->PartitionByteOffset + This->PartitionSize;
+  PartitionData = (UINT8 *)This->PartitionData;
+
+  for (BlockOffset = This->PartitionByteOffset;
+       BlockOffset < EndOffset;
+       BlockOffset += This->BlockSize)
+  {
+    BlockEnd = BlockOffset + This->BlockSize;
+    while (RecordWindowOfSizeFitsInBlock (This, BlockOffset, RecordSize) &&
+           (BlockOffset < BlockEnd))
+    {
+      PartitionOffset = BlockOffset - This->PartitionByteOffset;
+      if ((IsRecordV0 (PartitionData[PartitionOffset]) == TRUE) &&
+          (IsRecordValid (PartitionData[PartitionOffset]) == TRUE))
+      {
+        *Found = TRUE;
+        return EFI_SUCCESS;
+      }
+
+      BlockOffset += RecordSize;
+    }
+
+    BlockOffset = BlockEnd - This->BlockSize;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+HasMatchingV0MeasurementByLayout (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  CONST UINT8              *V0Measurement,
+  OUT BOOLEAN                  *Found,
+  OUT UINT64                   *MatchOffset
+  )
+{
+  UINT32  RecordSize;
+  UINT64  BlockOffset;
+  UINT64  BlockEnd;
+  UINT64  EndOffset;
+  UINTN   PartitionOffset;
+  UINT8   *PartitionData;
+
+  if ((This == NULL) || (V0Measurement == NULL) || (Found == NULL) ||
+      (MatchOffset == NULL) ||
+      (This->BlockSize == 0))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *Found        = FALSE;
+  *MatchOffset  = MAX_UINT64;
+  RecordSize    = GetV0MeasurementRecordSize (This);
+  EndOffset     = This->PartitionByteOffset + This->PartitionSize;
+  PartitionData = (UINT8 *)This->PartitionData;
+
+  for (BlockOffset = This->PartitionByteOffset;
+       BlockOffset < EndOffset;
+       BlockOffset += This->BlockSize)
+  {
+    BlockEnd = BlockOffset + This->BlockSize;
+    while (RecordWindowOfSizeFitsInBlock (This, BlockOffset, RecordSize) &&
+           (BlockOffset < BlockEnd))
+    {
+      PartitionOffset = BlockOffset - This->PartitionByteOffset;
+      if ((IsRecordV0 (PartitionData[PartitionOffset]) == TRUE) &&
+          (IsRecordValid (PartitionData[PartitionOffset]) == TRUE) &&
+          (CompareMem (
+             &PartitionData[PartitionOffset + HEADER_SZ_BYTES],
+             &V0Measurement[HEADER_SZ_BYTES],
+             GetV0MeasurementPayloadSize (This)
+             ) == 0))
+      {
+        *Found       = TRUE;
+        *MatchOffset = BlockOffset;
+        return EFI_SUCCESS;
+      }
+
+      BlockOffset += RecordSize;
+    }
+
+    BlockOffset = BlockEnd - This->BlockSize;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+GetMigrationWriteOffset (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  MEASURE_REC_TYPE         *SourceRecord,
+  IN  UINT8                    *V1Measurement,
+  IN  UINT64                   ProtectedV0Offset,
+  OUT UINT64                   *Offset
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      NumBlocks;
+  UINT32      MatchedBlock;
+  UINT32      CandidateBlock;
+  UINT32      BlocksChecked;
+  UINT32      ByteIndex;
+  UINT32      RecordOffset;
+  UINT32      V0RecordOffset;
+  UINT32      V0RecordSize;
+  UINT32      ProtectedV0Block;
+  UINT8       *BlockData;
+  BOOLEAN     BlockErased;
+
+  if ((This == NULL) || (SourceRecord == NULL) || (V1Measurement == NULL) ||
+      (Offset == NULL) || (This->BlockSize == 0) ||
+      ((This->PartitionSize / This->BlockSize) < 2))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if ((SourceRecord->ByteOffset < This->PartitionByteOffset) ||
+      (SourceRecord->ByteOffset >= (This->PartitionByteOffset + This->PartitionSize)) ||
+      ((ProtectedV0Offset != MAX_UINT64) &&
+       ((ProtectedV0Offset < This->PartitionByteOffset) ||
+        (ProtectedV0Offset >= (This->PartitionByteOffset + This->PartitionSize)))))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  NumBlocks        = This->PartitionSize / This->BlockSize;
+  MatchedBlock     = (SourceRecord->ByteOffset - This->PartitionByteOffset) / This->BlockSize;
+  ProtectedV0Block = MAX_UINT32;
+  V0RecordSize     = GetV0MeasurementRecordSize (This);
+  if (ProtectedV0Offset != MAX_UINT64) {
+    ProtectedV0Block = (ProtectedV0Offset - This->PartitionByteOffset) / This->BlockSize;
+  }
+
+  if (MatchedBlock >= NumBlocks) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (BlocksChecked = 1; BlocksChecked < NumBlocks; BlocksChecked++) {
+    CandidateBlock = (MatchedBlock + BlocksChecked) % NumBlocks;
+    if (CandidateBlock == ProtectedV0Block) {
+      continue;
+    }
+
+    BlockData   = This->PartitionData + (CandidateBlock * This->BlockSize);
+    BlockErased = TRUE;
+
+    for (ByteIndex = 0; ByteIndex < This->BlockSize; ByteIndex++) {
+      if (BlockData[ByteIndex] != FVB_ERASED_BYTE) {
+        BlockErased = FALSE;
+        break;
+      }
+    }
+
+    if (BlockErased) {
+      *Offset = This->PartitionByteOffset + (CandidateBlock * This->BlockSize);
+      return EFI_SUCCESS;
+    }
+  }
+
+  //
+  // Preserve the matched V0 block until its V1 replacement is durable.  If
+  // the circular log has touched every other block, find a block without a
+  // live V1 record and erase it to create a safe migration destination.
+  //
+  for (BlocksChecked = 1; BlocksChecked < NumBlocks; BlocksChecked++) {
+    CandidateBlock = (MatchedBlock + BlocksChecked) % NumBlocks;
+    if (CandidateBlock == ProtectedV0Block) {
+      continue;
+    }
+
+    BlockData = This->PartitionData + (CandidateBlock * This->BlockSize);
+    for (RecordOffset = 0;
+         (RecordOffset + This->MeasurementSize) <= This->BlockSize;
+         RecordOffset += This->MeasurementSize)
+    {
+      if ((IsRecordLive (BlockData[RecordOffset]) == TRUE) &&
+          (IsRecordV1 (BlockData[RecordOffset]) == TRUE))
+      {
+        //
+        // A V1-stride boundary can fall inside a legacy V0 payload.  Do not
+        // treat that payload byte as a V1 header when a live, correctly
+        // aligned V0 record covers it.
+        //
+        V0RecordOffset = (RecordOffset / V0RecordSize) * V0RecordSize;
+        if ((RecordOffset != V0RecordOffset) &&
+            ((V0RecordOffset + V0RecordSize) <= This->BlockSize) &&
+            (IsRecordLive (BlockData[V0RecordOffset]) == TRUE) &&
+            (IsRecordV0 (BlockData[V0RecordOffset]) == TRUE))
+        {
+          continue;
+        }
+
+        DEBUG ((
+          DEBUG_INFO,
+          "%a: Skipping block %u containing a live V1 record\n",
+          __FUNCTION__,
+          CandidateBlock
+          ));
+        break;
+      }
+    }
+
+    if ((RecordOffset + This->MeasurementSize) <= This->BlockSize) {
+      continue;
+    }
+
+    *Offset = This->PartitionByteOffset + (CandidateBlock * This->BlockSize);
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: Erasing reusable block at %lu for V0 migration\n",
+      __FUNCTION__,
+      *Offset
+      ));
+    Status = PartitionErase (
+               This,
+               (*Offset / This->BlockSize),
+               1
+               );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to erase migration block at %lu: %r\n",
+        __FUNCTION__,
+        *Offset,
+        Status
+        ));
+    }
+
+    return Status;
+  }
+
+  DEBUG ((DEBUG_ERROR, "%a: No reusable migration block without a live V1 record\n", __FUNCTION__));
+  return EFI_OUT_OF_RESOURCES;
+}
+
+STATIC
+EFI_STATUS
+WriteV1ToMigrationBlock (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  MEASURE_REC_TYPE         *SourceRecord,
+  IN  UINT8                    *V1Measurement,
+  IN  UINT64                   ProtectedV0Offset,
+  OUT UINT64                   *V1RecordOffset
   )
 {
   EFI_STATUS  Status;
   UINT64      CurOffset;
   UINT8       OldHeader;
 
-  if ((V0Record == NULL) || (V1Measurement == NULL) ||
-      (IsRecordV0 (V0Record->Measurement[0]) == FALSE))
+  if ((This == NULL) || (SourceRecord == NULL) || (V1Measurement == NULL) ||
+      (V1RecordOffset == NULL))
   {
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = GetWriteOffset (This, &CurOffset);
+  Status = GetMigrationWriteOffset (
+             This,
+             SourceRecord,
+             V1Measurement,
+             ProtectedV0Offset,
+             &CurOffset
+             );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Error Getting Offset\n", __FUNCTION__));
+    DEBUG ((DEBUG_ERROR, "%a: Error getting migration offset: %r\n", __FUNCTION__, Status));
     return Status;
   }
 
-  DEBUG ((DEBUG_INFO, "%a: Migrating V0 measurement to V1 at %lu\n", __FUNCTION__, CurOffset));
+  DEBUG ((DEBUG_INFO, "%a: Writing current V1 measurement at %lu\n", __FUNCTION__, CurOffset));
+  OldHeader        = V1Measurement[0];
   V1Measurement[0] = VAR_INT_V1_PENDING;
   Status           = PartitionWrite (
                        This,
@@ -1978,7 +2445,8 @@ MigrateV0RecordToV1 (
     Status
     );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to write V1 measurement to %lu %r\n", __FUNCTION__, CurOffset, Status));
+    V1Measurement[0] = OldHeader;
+    DEBUG ((DEBUG_ERROR, "%a: Failed to write V1 measurement at %lu: %r\n", __FUNCTION__, CurOffset, Status));
     return Status;
   }
 
@@ -1999,40 +2467,222 @@ MigrateV0RecordToV1 (
     Status
     );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "%a: Failed to validate V1 measurement at %lu %r\n", __FUNCTION__, CurOffset, Status));
+    DEBUG ((DEBUG_ERROR, "%a: Failed to validate V1 measurement at %lu: %r\n", __FUNCTION__, CurOffset, Status));
     return Status;
   }
 
-  OldHeader                = V0Record->Measurement[0];
-  V0Record->Measurement[0] = SetRecordStatePreserveVersion (
-                               V0Record->Measurement[0],
-                               VAR_INT_INVALID
-                               );
-  Status = PartitionWrite (
-             This,
-             V0Record->ByteOffset,
-             1,
-             &V0Record->Measurement[0]
-             );
-  LogMeasurementWrite (
-    "migrate-v0-invalid",
-    V0Record->ByteOffset,
-    1,
-    OldHeader,
-    V0Record->Measurement[0],
-    Status
-    );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to invalidate V0 measurement at %lu %r\n",
-      __FUNCTION__,
-      V0Record->ByteOffset,
-      Status
-      ));
+  *V1RecordOffset = CurOffset;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EraseLegacyMigrationBlocks (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN UINT64                   V1RecordOffset,
+  IN UINT64                   V0RecordOffset
+  )
+{
+  EFI_STATUS  Status;
+  UINT32      FirstLba;
+  UINT32      DestinationLba;
+  UINT32      SourceLba;
+  UINT32      NumBlocks;
+  UINT32      BlockIndex;
+  UINT32      Lba;
+
+  if ((This == NULL) || (This->BlockSize == 0) ||
+      (V1RecordOffset < This->PartitionByteOffset) ||
+      (V1RecordOffset >= (This->PartitionByteOffset + This->PartitionSize)) ||
+      ((V0RecordOffset != MAX_UINT64) &&
+       ((V0RecordOffset < This->PartitionByteOffset) ||
+        (V0RecordOffset >= (This->PartitionByteOffset + This->PartitionSize)))))
+  {
+    return EFI_INVALID_PARAMETER;
   }
 
-  return Status;
+  FirstLba       = This->PartitionByteOffset / This->BlockSize;
+  DestinationLba = V1RecordOffset / This->BlockSize;
+  if (V0RecordOffset == MAX_UINT64) {
+    SourceLba = MAX_UINT32;
+  } else {
+    SourceLba = (UINT32)(V0RecordOffset / This->BlockSize);
+  }
+
+  NumBlocks = This->PartitionSize / This->BlockSize;
+
+  DEBUG ((
+    DEBUG_INFO,
+    "VarIntMigrationCleanup: v0_offset=0x%lx v1_offset=0x%lx first_lba=%u source_lba=%u destination_lba=%u blocks=%u\n",
+    V0RecordOffset,
+    V1RecordOffset,
+    FirstLba,
+    SourceLba,
+    DestinationLba,
+    NumBlocks
+    ));
+
+  //
+  // Keep the matching V0 source intact until every other legacy block has
+  // been erased.  The source remains the last known-good legacy record if an
+  // earlier erase fails, while the replacement V1 is already durable.
+  //
+  for (BlockIndex = 0; BlockIndex < NumBlocks; BlockIndex++) {
+    Lba = FirstLba + BlockIndex;
+    if ((Lba == DestinationLba) || (Lba == SourceLba)) {
+      continue;
+    }
+
+    Status = PartitionErase (This, Lba, 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "VarIntMigrationErase: lba=%u offset=0x%lx source_last=0 status=%r\n",
+      Lba,
+      (UINT64)Lba * This->BlockSize,
+      Status
+      ));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to erase legacy migration block %u: %r\n",
+        __FUNCTION__,
+        Lba,
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  if ((SourceLba != MAX_UINT32) && (SourceLba != DestinationLba)) {
+    Status = PartitionErase (This, SourceLba, 1);
+    DEBUG ((
+      DEBUG_INFO,
+      "VarIntMigrationErase: lba=%u offset=0x%lx source_last=1 status=%r\n",
+      SourceLba,
+      (UINT64)SourceLba * This->BlockSize,
+      Status
+      ));
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to erase legacy migration source block %u: %r\n",
+        __FUNCTION__,
+        SourceLba,
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+BOOLEAN
+IsOnlyLiveV1RecordInBlock (
+  IN NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN MEASURE_REC_TYPE         *Record
+  )
+{
+  UINT64  BlockIndex;
+  UINT64  BlockOffset;
+  UINT64  RecordOffset;
+  UINT64  SelectedRecordOffset;
+  UINT32  V0RecordSize;
+  UINT8   *BlockData;
+
+  if ((This == NULL) || (Record == NULL) || (This->BlockSize == 0) ||
+      (This->MeasurementSize == 0) ||
+      (Record->ByteOffset < This->PartitionByteOffset) ||
+      (Record->ByteOffset >= (This->PartitionByteOffset + This->PartitionSize)))
+  {
+    return FALSE;
+  }
+
+  BlockIndex           = (Record->ByteOffset - This->PartitionByteOffset) / This->BlockSize;
+  BlockOffset          = This->PartitionByteOffset + (BlockIndex * This->BlockSize);
+  BlockData            = This->PartitionData + (BlockIndex * This->BlockSize);
+  SelectedRecordOffset = Record->ByteOffset - BlockOffset;
+
+  for (RecordOffset = 0;
+       (RecordOffset + This->MeasurementSize) <= This->BlockSize;
+       RecordOffset += This->MeasurementSize)
+  {
+    if ((IsRecordLive (BlockData[RecordOffset]) == TRUE) &&
+        (IsRecordV1 (BlockData[RecordOffset]) == TRUE) &&
+        ((BlockOffset + RecordOffset) != Record->ByteOffset))
+    {
+      return FALSE;
+    }
+  }
+
+  //
+  // A matching V1 replacement can share its block with a retained V0 record
+  // after an interrupted migration.  Such a block is not clean: preserving
+  // it would retain the V0 indefinitely.  Force relocation of the V1 so the
+  // mixed source block can be erased.
+  //
+  V0RecordSize = GetV0MeasurementRecordSize (This);
+  for (RecordOffset = 0;
+       (RecordOffset + V0RecordSize) <= This->BlockSize;
+       RecordOffset += V0RecordSize)
+  {
+    //
+    // V0 and V1 records use different strides.  A V0-stride probe can land
+    // inside the selected V1 record, where an authenticated payload byte may
+    // resemble a live V0 header.  Bytes owned by the selected V1 record are
+    // payload, not independent V0 record headers.
+    //
+    if ((RecordOffset >= SelectedRecordOffset) &&
+        ((RecordOffset - SelectedRecordOffset) < This->MeasurementSize))
+    {
+      continue;
+    }
+
+    if ((IsRecordLive (BlockData[RecordOffset]) == TRUE) &&
+        (IsRecordV0 (BlockData[RecordOffset]) == TRUE))
+    {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+STATIC
+EFI_STATUS
+MigrateV0RecordToV1 (
+  IN  NVIDIA_VAR_INT_PROTOCOL  *This,
+  IN  MEASURE_REC_TYPE         *V0Record,
+  IN  UINT8                    *V1Measurement,
+  OUT UINT64                   *V1RecordOffset
+  )
+{
+  EFI_STATUS  Status;
+
+  if ((This == NULL) || (V0Record == NULL) || (V1Measurement == NULL) ||
+      (V1RecordOffset == NULL) ||
+      (IsRecordV0 (V0Record->Measurement[0]) == FALSE))
+  {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Status = WriteV1ToMigrationBlock (
+             This,
+             V0Record,
+             V1Measurement,
+             V0Record->ByteOffset,
+             V1RecordOffset
+             );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // The replacement is durable.  Keep the source V0 live until legacy block
+  // cleanup erases that source block last.
+  //
+  return EFI_SUCCESS;
 }
 
 /*
@@ -2303,22 +2953,48 @@ VarIntValidate (
   UINTN             Index;
   UINT8             *V1Meas;
   UINT8             *V0Meas;
+  UINT8             *V0ComputedMeasurement;
   UINT8             *SavedV1Measurement;
   MEASURE_REC_TYPE  *ReadMeas;
   MEASURE_REC_TYPE  *MatchedRecord;
   BOOLEAN           Matched;
+  BOOLEAN           MatchedRecordBlockClean;
   BOOLEAN           MigrationBlocked;
+  BOOLEAN           V1RecordLimitExceeded;
+  BOOLEAN           V0RecordPresent;
+  BOOLEAN           V0MigrationPending;
   UINT32            PayloadSize;
+  UINT32            V0PayloadSize;
+  UINT32            V0RecordSize;
+  UINT64            MigrationOffset;
+  UINT64            MatchingV0Offset;
 
-  Matched          = FALSE;
-  MatchedRecord    = NULL;
-  MigrationBlocked = FALSE;
-  PayloadSize      = GetMeasurementPayloadSize (This);
+  if (This == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
 
-  Status             = EFI_SUCCESS;
-  V1Meas             = &This->CurMeasurement[HEADER_SZ_BYTES];
-  V0Meas             = &CurMeas[HEADER_SZ_BYTES];
-  SavedV1Measurement = NULL;
+  if ((This->CurMeasurement == NULL) || (CurMeas == NULL)) {
+    return EFI_NOT_READY;
+  }
+
+  Matched                 = FALSE;
+  MatchedRecord           = NULL;
+  MatchedRecordBlockClean = FALSE;
+  MigrationBlocked        = FALSE;
+  V1RecordLimitExceeded   = FALSE;
+  V0RecordPresent         = FALSE;
+  V0MigrationPending      = FALSE;
+  PayloadSize             = GetMeasurementPayloadSize (This);
+  V0PayloadSize           = GetV0MeasurementPayloadSize (This);
+  V0RecordSize            = GetV0MeasurementRecordSize (This);
+  MigrationOffset         = 0;
+  MatchingV0Offset        = MAX_UINT64;
+
+  Status                = EFI_SUCCESS;
+  V1Meas                = &This->CurMeasurement[HEADER_SZ_BYTES];
+  V0Meas                = NULL;
+  V0ComputedMeasurement = NULL;
+  SavedV1Measurement    = NULL;
 
   This->BootstrapDeferred = FALSE;
   This->MeasurementDirty  = FALSE;
@@ -2353,25 +3029,38 @@ VarIntValidate (
   LogMeasurementPreview ("validate-computed-v1", This->CurMeasurement, This->MeasurementSize);
 
   /* Get the valid measurements from the NOR-FLash */
-  Status = GetLastValidMeasurements (
+  Status = GetLastValidMeasurementsByLayout (
              This,
              LastMeasurements,
-             &NumValidRecords
+             &NumValidRecords,
+             This->MeasurementSize,
+             VarIntRecordFilterV1,
+             V1Meas,
+             &V1RecordLimitExceeded
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to Get Valid Measurements for Var Store %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto ExitVarIntValidate;
+    if ((V1RecordLimitExceeded == TRUE) &&
+        (IsV0MigrationAllowed () == TRUE))
+    {
+      DEBUG ((
+        DEBUG_INFO,
+        "%a: V1 scan exceeded the live-record limit; checking retained candidates and legacy V0 layout\n",
+        __FUNCTION__
+        ));
+      Status = EFI_SUCCESS;
+    } else {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to Get Valid Measurements for Var Store %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      goto ExitVarIntValidate;
+    }
   }
 
   if (NumValidRecords == 0) {
-    DEBUG ((DEBUG_ERROR, "%a: No Valid Records are found\n", __FUNCTION__));
-    Status = EFI_NOT_FOUND;
-    goto ExitVarIntValidate;
+    DEBUG ((DEBUG_INFO, "%a: No V1 records found; checking legacy V0 layout\n", __FUNCTION__));
   }
 
   for (Index = 0; Index < NumValidRecords; Index++) {
@@ -2390,8 +3079,14 @@ VarIntValidate (
     if ((IsRecordV1 (ReadMeas->Measurement[0]) == TRUE) &&
         (CompareMem (V1Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0))
     {
-      Matched       = TRUE;
-      MatchedRecord = ReadMeas;
+      Matched = TRUE;
+      if ((MatchedRecord == NULL) ||
+          (IsOnlyLiveV1RecordInBlock (This, ReadMeas) == TRUE))
+      {
+        MatchedRecord           = ReadMeas;
+        MatchedRecordBlockClean = IsOnlyLiveV1RecordInBlock (This, ReadMeas);
+      }
+
       DEBUG ((
         DEBUG_INFO,
         "%a: %u Found V1 MATCH, Measurement Valid\n",
@@ -2399,17 +3094,96 @@ VarIntValidate (
         Index
         ));
       Status = EFI_SUCCESS;
-      break;
+      if (MatchedRecordBlockClean == TRUE) {
+        break;
+      }
     }
   }
 
   if (Matched == TRUE) {
-    Status = FinalizeValidatedRecords (
-               This,
-               NumValidRecords,
-               LastMeasurements,
-               MatchedRecord
-               );
+    if (IsV0MigrationAllowed () == TRUE) {
+      Status = HasLiveV0MeasurementByLayout (This, &V0RecordPresent);
+      if (EFI_ERROR (Status)) {
+        goto ExitVarIntValidate;
+      }
+
+      if (V0RecordPresent == TRUE) {
+        Status = ComputeCurrentMeasurement (
+                   This,
+                   NULL,
+                   NULL,
+                   0,
+                   NULL,
+                   0,
+                   VarIntRecordVersionV0,
+                   CurMeas
+                   );
+        if (EFI_ERROR (Status)) {
+          goto ExitVarIntValidate;
+        }
+
+        Status = HasMatchingV0MeasurementByLayout (
+                   This,
+                   CurMeas,
+                   &V0MigrationPending,
+                   &MatchingV0Offset
+                   );
+        if (EFI_ERROR (Status)) {
+          goto ExitVarIntValidate;
+        }
+      }
+    }
+
+    if ((V1RecordLimitExceeded == TRUE) || (V0MigrationPending == TRUE)) {
+      if (MatchedRecordBlockClean == TRUE) {
+        //
+        // A previous relocation may already have made the replacement
+        // durable before reset.  Finalize that clean copy and resume erasing
+        // the contaminated legacy blocks instead of relocating it again.
+        //
+        Status = FinalizeValidatedRecords (
+                   This,
+                   1,
+                   &MatchedRecord,
+                   MatchedRecord
+                   );
+        if (!EFI_ERROR (Status)) {
+          Status = EraseLegacyMigrationBlocks (
+                     This,
+                     MatchedRecord->ByteOffset,
+                     MatchingV0Offset
+                     );
+        }
+      } else {
+        //
+        // Header-only candidates from a legacy layout share the matched
+        // record's erase block.  Make a durable copy in a different block
+        // before erasing the source and all legacy data.
+        //
+        Status = WriteV1ToMigrationBlock (
+                   This,
+                   MatchedRecord,
+                   MatchedRecord->Measurement,
+                   MatchingV0Offset,
+                   &MigrationOffset
+                   );
+        if (!EFI_ERROR (Status)) {
+          Status = EraseLegacyMigrationBlocks (
+                     This,
+                     MigrationOffset,
+                     MatchingV0Offset
+                     );
+        }
+      }
+    } else {
+      Status = FinalizeValidatedRecords (
+                 This,
+                 NumValidRecords,
+                 LastMeasurements,
+                 MatchedRecord
+                 );
+    }
+
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -2432,7 +3206,12 @@ VarIntValidate (
     goto ExitVarIntValidate;
   }
 
-  SavedV1Measurement = AllocateCopyPool (
+  //
+  // The FF-A transport signs scratch measurements through CurMeasurement's
+  // shared page.  Preserve V1 before computing V0 so migration cannot persist
+  // a V0 payload under a V1 header on non-OP-TEE deployments.
+  //
+  SavedV1Measurement = AllocateRuntimeCopyPool (
                          This->MeasurementSize,
                          This->CurMeasurement
                          );
@@ -2455,6 +3234,40 @@ VarIntValidate (
     goto ExitVarIntValidate;
   }
 
+  LogMeasurementPreview ("validate-computed-v0", CurMeas, V0RecordSize);
+
+  //
+  // CurMeas is also the flash-read scratch buffer used by the record scan.
+  // Preserve the computed V0 value before the scan overwrites it.
+  //
+  V0ComputedMeasurement = AllocateRuntimeCopyPool (V0RecordSize, CurMeas);
+  if (V0ComputedMeasurement == NULL) {
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ExitVarIntValidate;
+  }
+
+  V0Meas = &V0ComputedMeasurement[HEADER_SZ_BYTES];
+
+  ClearLastMeasurementBuffers (This);
+  Status = GetLastValidMeasurementsByLayout (
+             This,
+             LastMeasurements,
+             &NumValidRecords,
+             V0RecordSize,
+             VarIntRecordFilterV0,
+             NULL,
+             NULL
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: Failed to scan legacy V0 measurements %r\n",
+      __FUNCTION__,
+      Status
+      ));
+    goto ExitVarIntValidate;
+  }
+
   for (Index = 0; Index < NumValidRecords; Index++) {
     ReadMeas = LastMeasurements[Index];
 
@@ -2462,7 +3275,7 @@ VarIntValidate (
       continue;
     }
 
-    if (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0) {
+    if (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], V0PayloadSize) == 0) {
       Matched       = TRUE;
       MatchedRecord = ReadMeas;
       DEBUG ((
@@ -2474,14 +3287,14 @@ VarIntValidate (
       Status = MigrateV0RecordToV1 (
                  This,
                  MatchedRecord,
-                 SavedV1Measurement
+                 SavedV1Measurement,
+                 &MigrationOffset
                  );
       if (!EFI_ERROR (Status)) {
-        Status = FinalizeValidatedRecords (
+        Status = EraseLegacyMigrationBlocks (
                    This,
-                   NumValidRecords,
-                   LastMeasurements,
-                   NULL
+                   MigrationOffset,
+                   MatchedRecord->ByteOffset
                    );
       }
 
@@ -2520,15 +3333,36 @@ ExitVarIntValidate:
     }
   }
 
-  ZeroMem (This->CurMeasurement, This->MeasurementSize);
+  ZeroMem (
+    This->CurMeasurement,
+    GetMaxMeasurementRecordSize (This)
+    );
   if (CurMeas != NULL) {
-    ZeroMem (CurMeas, This->MeasurementSize);
+    ZeroMem (CurMeas, GetMaxMeasurementRecordSize (This));
+  }
+
+  if (V0ComputedMeasurement != NULL) {
+    ZeroMem (V0ComputedMeasurement, V0RecordSize);
+    FreePool (V0ComputedMeasurement);
   }
 
   if (SavedV1Measurement != NULL) {
     ZeroMem (SavedV1Measurement, This->MeasurementSize);
     FreePool (SavedV1Measurement);
   }
+
+  ClearLastMeasurementBuffers (This);
+
+  DEBUG ((
+    DEBUG_INFO,
+    "VarIntValidationResult: status=%r matched=%u migration_blocked=%u bootstrap_deferred=%u v0_record_size=%u v1_record_size=%u\n",
+    Status,
+    Matched,
+    MigrationBlocked,
+    This->BootstrapDeferred,
+    V0RecordSize,
+    This->MeasurementSize
+    ));
 
   return Status;
 }
@@ -2559,12 +3393,18 @@ VarIntInit (
   EFI_STATUS  Status;
   EFI_HANDLE  VarIntHandle;
   UINT32      MeasSize;
+  UINT32      MaxRecordSize;
   UINTN       Index;
+  BOOLEAN     CurMeasAllocated;
+
+  CurMeasAllocated = FALSE;
 
   if ((NorFlashProto == NULL) || (NorFlashAttributes == NULL) ||
       (NorFlashAttributes->BlockSize == 0) || (PartitionSize == 0) ||
       (PartitionStartOffset > MAX_UINT32) || (PartitionSize > MAX_UINT32) ||
-      (PartitionSize > (((UINT64)MAX_UINT32 + 1) - PartitionStartOffset)))
+      (PartitionSize > (((UINT64)MAX_UINT32 + 1) - PartitionStartOffset)) ||
+      ((PartitionStartOffset % NorFlashAttributes->BlockSize) != 0) ||
+      ((PartitionSize % NorFlashAttributes->BlockSize) != 0))
   {
     return EFI_INVALID_PARAMETER;
   }
@@ -2580,6 +3420,8 @@ VarIntInit (
     Status = EFI_OUT_OF_RESOURCES;
     goto ExitVarIntInit;
   }
+
+  OpteePresent = IsOpteePresent ();
 
   Status = GetMeasurementSize (&MeasSize);
   if (EFI_ERROR (Status)) {
@@ -2607,13 +3449,31 @@ VarIntInit (
   VarIntProto->IsDeferred               = VarIntIsDeferred;
   VarIntProto->NorFlashProtocol         = NorFlashProto;
   VarIntProto->MeasurementSize          = MeasSize + HEADER_SZ_BYTES;
-  VarIntProto->CurMeasurement           = AllocateAlignedPages (EFI_SIZE_TO_PAGES (VarIntProto->MeasurementSize), EFI_PAGE_SIZE);
+  MaxRecordSize                         = GetMaxMeasurementRecordSize (VarIntProto);
+  DEBUG ((
+    DEBUG_INFO,
+    "VarIntLayout: optee_present=%u hash_size=%u header_size=%u "
+    "record_size=%u payload_size=%u partition_start=0x%lx "
+    "partition_size=0x%lx block_size=0x%x\n",
+    OpteePresent,
+    MeasSize,
+    HEADER_SZ_BYTES,
+    VarIntProto->MeasurementSize,
+    VarIntProto->MeasurementSize - HEADER_SZ_BYTES,
+    (UINT64)PartitionStartOffset,
+    (UINT64)PartitionSize,
+    VarIntProto->BlockSize
+    ));
+  VarIntProto->CurMeasurement = AllocateAlignedPages (EFI_SIZE_TO_PAGES (MaxRecordSize), EFI_PAGE_SIZE);
   if (VarIntProto->CurMeasurement == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not enough resources to allocate Measurement Buffer - %r", __FUNCTION__, Status);
   }
 
-  ZeroMem (VarIntProto->CurMeasurement, VarIntProto->MeasurementSize);
+  ZeroMem (
+    VarIntProto->CurMeasurement,
+    EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (MaxRecordSize))
+    );
 
   VarIntProto->PartitionData = AllocateRuntimeZeroPool (VarIntProto->PartitionSize);
   if (VarIntProto->PartitionData == NULL) {
@@ -2649,7 +3509,7 @@ VarIntInit (
     }
 
     LastMeasurements[Index]->Measurement = AllocateRuntimeZeroPool (
-                                             VarIntProto->MeasurementSize * sizeof (UINT8)
+                                             MaxRecordSize * sizeof (UINT8)
                                              );
     if (LastMeasurements[Index]->Measurement == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
@@ -2659,23 +3519,39 @@ VarIntInit (
     LastMeasurements[Index]->ByteOffset = 0;
   }
 
-  CurMeas = AllocateRuntimeZeroPool (VarIntProto->MeasurementSize);
+  //
+  // Historical T234 V0 firmware signed from an aligned page-backed buffer.
+  // Preserve that property for the legacy compatibility path because OP-TEE
+  // consumes the raw StMM address supplied in the direct FF-A request.
+  //
+  CurMeas = AllocateAlignedPages (EFI_SIZE_TO_PAGES (MaxRecordSize), EFI_PAGE_SIZE);
   if (CurMeas == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not Enough Resources to allocate Buffer - %r", __FUNCTION__, Status);
   }
 
-  SpeculativeMeasurement = AllocateRuntimeZeroPool (VarIntProto->MeasurementSize);
+  CurMeasAllocated = TRUE;
+  ZeroMem (
+    CurMeas,
+    EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (MaxRecordSize))
+    );
+
+  SpeculativeMeasurement = AllocateRuntimeZeroPool (MaxRecordSize);
   if (SpeculativeMeasurement == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "%a: Not Enough Resources to allocate Speculative Buffer - %r", __FUNCTION__, Status);
   }
 
-  if (!IsOpteePresent ()) {
+  if (!OpteePresent) {
     Status = FfaInit (VarIntProto);
     NV_ASSERT_RETURN (!EFI_ERROR (Status), CpuDeadLoop (), "Failed to Initialize FFA - %r", Status);
   }
 
 ExitVarIntInit:
+  if (EFI_ERROR (Status) && (CurMeasAllocated == TRUE) && (CurMeas != NULL)) {
+    FreeAlignedPages (CurMeas, EFI_SIZE_TO_PAGES (MaxRecordSize));
+    CurMeas = NULL;
+  }
+
   return Status;
 }
