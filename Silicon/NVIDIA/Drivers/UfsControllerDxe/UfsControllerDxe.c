@@ -119,7 +119,7 @@ typedef enum {
 #define SET_TREF(x)    (((x) & 0x7UL) << 2)
 #define SET_ST_SCT(x)  (((x) & 0x3UL) << 0)
 
-STATIC UINT32  TxBurstClosureDelay = 0;
+STATIC UINT32  mTxBurstClosureDelay = 0;
 
 /** Unipro powerchange mode.
  * SLOW : PWM
@@ -235,8 +235,7 @@ UfsCallback (
   UINT32                         Mode;
   UINT32                         MaxGearOverride;
 
-  TxBurstClosureDelay = 0;
-  Value               = 0;
+  Value = 0;
 
   Mode   = (PcdGetBool (PcdUfsEnableHighSpeed)) ?      PWRMODE_FAST_MODE : PWRMODE_SLOW_MODE;
   Status = DeviceDiscoveryGetMmioRegion (ControllerHandle, 0, &BaseAddress, &Size);
@@ -282,7 +281,7 @@ UfsCallback (
 
     case EdkiiUfsHcPreLinkStartup:
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PA_LOCAL_TX_LCC_ENABLE, 0, NULL);
-      UfsDmeCmd (DriverInterface, UfsUicDmeGet, VS_TXBURSTCLOSUREDELAY, 0, &TxBurstClosureDelay);
+      UfsDmeCmd (DriverInterface, UfsUicDmeGet, VS_TXBURSTCLOSUREDELAY, 0, &mTxBurstClosureDelay);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, VS_TXBURSTCLOSUREDELAY, 0, NULL);
       break;
 
@@ -305,7 +304,7 @@ UfsCallback (
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PWR_MODE_USER_DATA1, 0xffff, NULL);
       UfsDmeCmd (DriverInterface, UfsUicDmeSet, PWR_MODE_USER_DATA2, 0x7fff, NULL);
 
-      UfsDmeCmd (DriverInterface, UfsUicDmeSet, VS_TXBURSTCLOSUREDELAY, TxBurstClosureDelay, NULL);
+      UfsDmeCmd (DriverInterface, UfsUicDmeSet, VS_TXBURSTCLOSUREDELAY, mTxBurstClosureDelay, NULL);
 
       Status = UfsDmeCmd (DriverInterface, UfsUicDmeGet, PA_CONNECTED_TX_DATA_LANES, 0, &Value);
       if (!EFI_ERROR (Status)) {
