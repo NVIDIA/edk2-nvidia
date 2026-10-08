@@ -640,9 +640,6 @@
 #Variable Store Integrity
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|FALSE|BOOLEAN|0x00000118
 
-#Allow migration from legacy V0 VarInt measurements to V1.
-  gNVIDIATokenSpaceGuid.PcdAllowVarIntV0Migration|TRUE|BOOLEAN|0x0000016B
-
 #Memory test supported
     gNVIDIATokenSpaceGuid.PcdMemoryTestsSupported|FALSE|BOOLEAN|0x0000011A
 

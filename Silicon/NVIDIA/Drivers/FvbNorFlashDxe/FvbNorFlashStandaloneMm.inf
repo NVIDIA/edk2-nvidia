@@ -53,8 +53,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported
   gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail
-  gNVIDIATokenSpaceGuid.PcdAllowVarIntV0Migration
-  gNVIDIATokenSpaceGuid.PcdT26xCpublSocketCount
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy
 
 [Protocols]
