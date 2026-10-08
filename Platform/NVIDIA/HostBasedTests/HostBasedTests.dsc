@@ -157,15 +157,6 @@
       SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
   }
 
-  Silicon/NVIDIA/Library/NvVarIntLibrary/GoogleTest/NvVarIntLibGoogleTest.inf {
-    <LibraryClasses>
-      NvVarIntLib|Silicon/NVIDIA/Library/NvVarIntLibrary/NvVarIntLibrary.inf
-      MmServicesTableLib|MdePkg/Test/Mock/Library/GoogleTest/MockMmStTableLib/MockMmStTableLib.inf
-      MmVarLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockMmVarLib/MockMmVarLib.inf
-      HashApiLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockHashApiLib/MockHashApiLib.inf
-      SmmVarProtoLib|Silicon/NVIDIA/Test/Mock/Library/GoogleTest/MockSmmVarProto/MockSmmVarProto.inf
-  }
-
   Silicon/NVIDIA/Library/MpCoreInfoLib/UnitTest/MpCoreInfoLibGoogleTest.inf {
     <LibraryClasses>
       MpCoreInfoLib|Silicon/NVIDIA/Library/MpCoreInfoLib/MpCoreInfoLib.inf

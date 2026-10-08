@@ -27,11 +27,14 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  CryptoPkg/CryptoPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
 
 [Protocols]
   gNVIDIAVarIntGuid
 
 [LibraryClasses]
+  BaseLib
+  BaseMemoryLib
   DebugLib
-  MmServicesTableLib
+  HashApiLib

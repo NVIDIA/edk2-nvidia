@@ -412,20 +412,11 @@ EFI_STATUS
   IN  EFI_STATUS                PreviousResult
   );
 
-typedef
-BOOLEAN
-(EFIAPI *VAR_INT_BOOLEAN_FUNCTION)(
-  IN NVIDIA_VAR_INT_PROTOCOL    *This
-  );
-
 struct _NVIDIA_VAR_INT_PROTOCOL {
   VAR_INT_COMPUTE_MEASUREMENT    ComputeNewMeasurement;
   VAR_INT_FUNCTION               WriteNewMeasurement;
   VAR_INVALIDATE_FUNCTION        InvalidateLast;
   VAR_INT_FUNCTION               Validate;
-  VAR_INVALIDATE_FUNCTION        MarkDirty;
-  VAR_INT_FUNCTION               FlushDeferredMeasurement;
-  VAR_INT_BOOLEAN_FUNCTION       IsDeferred;
   UINT64                         PartitionByteOffset;
   UINT64                         PartitionSize;
   NVIDIA_NOR_FLASH_PROTOCOL      *NorFlashProtocol;
@@ -433,8 +424,6 @@ struct _NVIDIA_VAR_INT_PROTOCOL {
   UINT8                          *CurMeasurement;
   UINT32                         MeasurementSize;
   VOID                           *PartitionData;
-  BOOLEAN                        BootstrapDeferred;
-  BOOLEAN                        MeasurementDirty;
 };
 
 /*

@@ -60,102 +60,6 @@ extern NVIDIA_VAR_INT_PROTOCOL    *VarIntProto;
 STATIC NVIDIA_NOR_FLASH_PROTOCOL  *NorFlashStub;
 STATIC NOR_FLASH_ATTRIBUTES       NorFlashAttr;
 STATIC UINT32                     *Handle;
-STATIC UINTN                      FlushDeferredMeasurementCount;
-STATIC EFI_STATUS                 FlushDeferredMeasurementStatus;
-
-STATIC
-EFI_STATUS
-EFIAPI
-MockFlushDeferredMeasurement (
-  IN NVIDIA_VAR_INT_PROTOCOL  *This
-  )
-{
-  if (This == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  FlushDeferredMeasurementCount++;
-  if (!EFI_ERROR (FlushDeferredMeasurementStatus)) {
-    This->BootstrapDeferred = FALSE;
-  }
-
-  return FlushDeferredMeasurementStatus;
-}
-
-STATIC
-BOOLEAN
-EFIAPI
-MockVarIntIsDeferred (
-  IN NVIDIA_VAR_INT_PROTOCOL  *This
-  )
-{
-  if (This == NULL) {
-    return FALSE;
-  }
-
-  return This->BootstrapDeferred;
-}
-
-STATIC
-VOID
-InitDeferredMeasurementTest (
-  OUT NVIDIA_VAR_INT_PROTOCOL  *TestVarInt,
-  IN  BOOLEAN                  BootstrapDeferred,
-  IN  EFI_STATUS               FlushStatus
-  )
-{
-  ZeroMem (TestVarInt, sizeof (*TestVarInt));
-  TestVarInt->FlushDeferredMeasurement = MockFlushDeferredMeasurement;
-  TestVarInt->IsDeferred               = MockVarIntIsDeferred;
-  TestVarInt->BootstrapDeferred        = BootstrapDeferred;
-  FlushDeferredMeasurementCount        = 0;
-  FlushDeferredMeasurementStatus       = FlushStatus;
-  MockNvVarIntResetExitBootServicesNotify ();
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-RunReadyToBootDeferredMeasurementTest (
-  IN EFI_STATUS  FlushStatus,
-  IN EFI_STATUS  ExpectedStatus
-  )
-{
-  EFI_STATUS               Status;
-  NVIDIA_VAR_INT_PROTOCOL  TestVarInt;
-
-  InitDeferredMeasurementTest (&TestVarInt, TRUE, FlushStatus);
-
-  Status = VarIntFlushDeferredMeasurementAtReadyToBoot (&TestVarInt);
-
-  UT_ASSERT_STATUS_EQUAL (Status, ExpectedStatus);
-  UT_ASSERT_EQUAL (FlushDeferredMeasurementCount, 1);
-  UT_ASSERT_EQUAL (MockNvVarIntGetExitBootServicesNotifyCount (), 0);
-
-  return UNIT_TEST_PASSED;
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-RunExitBootServicesDeferredMeasurementTest (
-  IN BOOLEAN     BootstrapDeferred,
-  IN EFI_STATUS  ExpectedStatus
-  )
-{
-  EFI_STATUS               Status;
-  NVIDIA_VAR_INT_PROTOCOL  TestVarInt;
-
-  InitDeferredMeasurementTest (&TestVarInt, BootstrapDeferred, EFI_DEVICE_ERROR);
-
-  Status = VarIntNotifyExitBootServicesPreserveOnly (&TestVarInt);
-
-  UT_ASSERT_STATUS_EQUAL (Status, ExpectedStatus);
-  UT_ASSERT_EQUAL (FlushDeferredMeasurementCount, 0);
-  UT_ASSERT_EQUAL (MockNvVarIntGetExitBootServicesNotifyCount (), 1);
-
-  return UNIT_TEST_PASSED;
-}
 
 /**
   Mock implementation of CpuDeadLoop for unit testing using cmocka.
@@ -182,21 +86,6 @@ STATIC UINT8   *FlashDevice;
 STATIC UINT32  ResPartitionSize   = (PARTITION_BLOCKS * BLOCK_SIZE);
 STATIC UINT8   ResPartitionOffset = 0;
 STATIC UINT8   TestMeasBuf[32];
-
-STATIC
-VOID
-MockSuccessfulOpteeSignatures (
-  IN ARM_SVC_ARGS  *Args,
-  IN UINTN         Count
-  )
-{
-  UINTN  Index;
-
-  for (Index = 0; Index < Count; Index++) {
-    MockArmCallSvc (Args);
-    MockIsOpteePresent (TRUE);
-  }
-}
 
 /*
   Test Data Fields:
@@ -282,34 +171,6 @@ STATIC VAR_INT_TEST_CONTEXT  VarIntComputeTestData_5 = {
   1
 };
 
-STATIC VAR_INT_TEST_CONTEXT  VarIntComputeTestData_6 = {
-  EFI_BOOT_ORDER_VARIABLE_NAME,
-  &gEfiGlobalVariableGuid,
-  0,
-  NULL,
-  3,
-  TestMeasBuf,
-  TestMeasBuf,
-  MEAS_SZ,
-  EFI_SUCCESS,
-  NULL,
-  1
-};
-
-STATIC VAR_INT_TEST_CONTEXT  VarIntComputeTestData_7 = {
-  EFI_BOOT_ORDER_VARIABLE_NAME,
-  &gEfiGlobalVariableGuid,
-  0,
-  NULL,
-  3,
-  TestMeasBuf,
-  TestMeasBuf,
-  MEAS_SZ,
-  EFI_SUCCESS,
-  NULL,
-  1
-};
-
 /*=============================Test Cases================================*/
 
 /*
@@ -335,7 +196,8 @@ VarIntComputeTest_1 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
@@ -357,8 +219,6 @@ VarIntComputeTest_1 (
                           EFI_SUCCESS
                           );
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL (VarIntProto->MeasurementSize, MEAS_SZ + 1);
-  UT_ASSERT_EQUAL (((UINT8 *)VarIntProto->PartitionData)[0], VAR_INT_V1_VALID);
 
   MockComputeVarMeasurement (
     NULL,
@@ -366,219 +226,11 @@ VarIntComputeTest_1 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-
-  return UNIT_TEST_PASSED;
-}
-
-/*
- * VarIntComputeTest_6
- * "Simple Compute Test 6: Validate migrates a matching V0 record to V1.",
- *
- */
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_6 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  EFI_STATUS            Status;
-  VAR_INT_TEST_CONTEXT  *TestData;
-  UINT8                 V1MeasBuf[MEAS_SZ];
-  UINT8                 *PartitionData;
-
-  TestData      = (VAR_INT_TEST_CONTEXT *)Context;
-  PartitionData = (UINT8 *)VarIntProto->PartitionData;
-
-  Status = NorFlashStub->Erase (NorFlashStub, 0, TOTAL_BLOCKS);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-  SetMem (PartitionData, VarIntProto->PartitionSize, FVB_ERASED_BYTE);
-
-  PartitionData[0] = VAR_INT_VALID;
-  CopyMem (&PartitionData[1], TestData->ReadMeas, TestData->MeasSz);
-  CopyMem (FlashDevice, PartitionData, VarIntProto->MeasurementSize);
-
-  SetMem (V1MeasBuf, sizeof (V1MeasBuf), 0x4);
-
-  MockComputeVarMeasurement (
-    NULL,
-    V1MeasBuf,
-    TestData->MeasSz,
-    TestData->ComputeReturnStatus
-    );
-  MockComputeVarMeasurementV0 (
-    NULL,
-    TestData->VarMeas,
-    TestData->MeasSz,
-    TestData->ComputeReturnStatus
-    );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 2);
-
-  Status = VarIntProto->Validate (VarIntProto);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL (PartitionData[0], VAR_INT_INVALID);
-  UT_ASSERT_EQUAL (PartitionData[VarIntProto->MeasurementSize], VAR_INT_V1_VALID);
-
-  return UNIT_TEST_PASSED;
-}
-
-/*
- * VarIntComputeTest_7
- * "Simple Compute Test 7: Validate promotes matching V1 pending record.",
- *
- */
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_7 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  EFI_STATUS            Status;
-  VAR_INT_TEST_CONTEXT  *TestData;
-  UINT8                 OldMeasBuf[MEAS_SZ];
-  UINT8                 *PartitionData;
-
-  TestData      = (VAR_INT_TEST_CONTEXT *)Context;
-  PartitionData = (UINT8 *)VarIntProto->PartitionData;
-
-  Status = NorFlashStub->Erase (NorFlashStub, 0, TOTAL_BLOCKS);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-  SetMem (PartitionData, VarIntProto->PartitionSize, FVB_ERASED_BYTE);
-
-  SetMem (OldMeasBuf, sizeof (OldMeasBuf), 0x5);
-  PartitionData[0] = VAR_INT_V1_VALID;
-  CopyMem (&PartitionData[1], OldMeasBuf, sizeof (OldMeasBuf));
-
-  PartitionData[VarIntProto->MeasurementSize] = VAR_INT_V1_PENDING;
-  CopyMem (
-    &PartitionData[VarIntProto->MeasurementSize + 1],
-    TestData->VarMeas,
-    TestData->MeasSz
-    );
-  CopyMem (FlashDevice, PartitionData, VarIntProto->MeasurementSize * 2);
-
-  MockComputeVarMeasurement (
-    NULL,
-    TestData->VarMeas,
-    TestData->MeasSz,
-    TestData->ComputeReturnStatus
-    );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
-
-  Status = VarIntProto->Validate (VarIntProto);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-  UT_ASSERT_EQUAL (PartitionData[0], VAR_INT_V1_INVALID);
-  UT_ASSERT_EQUAL (PartitionData[VarIntProto->MeasurementSize], VAR_INT_V1_VALID);
-
-  return UNIT_TEST_PASSED;
-}
-
-/*
- * VarIntComputeTest_8
- * "Simple Compute Test 8: Mixed zero/erased measurement partition is blank.",
- *
- */
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_8 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  EFI_STATUS  Status;
-  BOOLEAN     IsBlank;
-
-  (VOID)Context;
-
-  Status = NorFlashStub->Erase (NorFlashStub, 0, TOTAL_BLOCKS);
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
-
-  SetMem (FlashDevice, BLOCK_SIZE / 8, 0);
-  IsBlank = IsMeasurementPartitionErasedOrZero (
-              NorFlashStub,
-              ResPartitionOffset,
-              ResPartitionSize
-              );
-  UT_ASSERT_EQUAL (IsBlank, TRUE);
-
-  FlashDevice[0] = VAR_INT_VALID;
-  IsBlank        = IsMeasurementPartitionErasedOrZero (
-                     NorFlashStub,
-                     ResPartitionOffset,
-                     ResPartitionSize
-                     );
-  UT_ASSERT_EQUAL (IsBlank, FALSE);
-
-  return UNIT_TEST_PASSED;
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_9 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  (VOID)Context;
-
-  return RunReadyToBootDeferredMeasurementTest (EFI_SUCCESS, EFI_SUCCESS);
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_10 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  (VOID)Context;
-
-  return RunReadyToBootDeferredMeasurementTest (EFI_DEVICE_ERROR, EFI_DEVICE_ERROR);
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_11 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  (VOID)Context;
-
-  return RunExitBootServicesDeferredMeasurementTest (TRUE, EFI_NOT_READY);
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_12 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  (VOID)Context;
-
-  return RunExitBootServicesDeferredMeasurementTest (FALSE, EFI_SUCCESS);
-}
-
-STATIC
-UNIT_TEST_STATUS
-EFIAPI
-VarIntComputeTest_13 (
-  IN UNIT_TEST_CONTEXT  Context
-  )
-{
-  EFI_STATUS  Status;
-
-  (VOID)Context;
-
-  expect_function_call (__wrap_CpuDeadLoop);
-  Status = VarIntFatalBootstrapFailure (EFI_DEVICE_ERROR, "UnitTest VarInt bootstrap");
-  UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
 
   return UNIT_TEST_PASSED;
 }
@@ -643,7 +295,9 @@ VarIntComputeTest_2 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->ComputeNewMeasurement (
                           VarIntProto,
@@ -672,13 +326,7 @@ VarIntComputeTest_2 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockComputeVarMeasurementV0 (
-    NULL,
-    TestData->ReadMeas,
-    TestData->MeasSz,
-    TestData->ComputeReturnStatus
-    );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 2);
+  MockArmCallSvc (TestData->TestArgs);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);
@@ -747,7 +395,8 @@ VarIntComputeTest_3 (
       TestData->MeasSz,
       TestData->ComputeReturnStatus
       );
-    MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+    MockArmCallSvc (TestData->TestArgs);
+    MockIsOpteePresent (TRUE);
 
     Status = VarIntProto->ComputeNewMeasurement (
                             VarIntProto,
@@ -777,7 +426,8 @@ VarIntComputeTest_3 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -842,7 +492,8 @@ VarIntComputeTest_4 (
       TestData->MeasSz,
       TestData->ComputeReturnStatus
       );
-    MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+    MockArmCallSvc (TestData->TestArgs);
+    MockIsOpteePresent (TRUE);
 
     Status = VarIntProto->ComputeNewMeasurement (
                             VarIntProto,
@@ -872,7 +523,8 @@ VarIntComputeTest_4 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockArmCallSvc (TestData->TestArgs);
+  MockIsOpteePresent (TRUE);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -1026,7 +678,8 @@ InitSuiteTestData (
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "Failed to Initialize VarInt module %r\n", Status));
-    assert_false (EFI_ERROR (Status));
+    // Asserts are disabled so let the Unit Test Setup return fail
+    // if this interface isn't present.
   }
 }
 
@@ -1182,86 +835,6 @@ UnitTestingEntry (
     VarIntComputeTestSetup_1,
     VarIntComputeTestCleanup_1,
     &VarIntComputeTestData_1
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 6: Validate migrates a matching V0 record to V1.",
-    "SimpleComputeTest6",
-    VarIntComputeTest_6,
-    VarIntComputeTestSetup_1,
-    VarIntComputeTestCleanup_1,
-    &VarIntComputeTestData_6
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 7: Validate promotes matching V1 pending record.",
-    "SimpleComputeTest7",
-    VarIntComputeTest_7,
-    VarIntComputeTestSetup_1,
-    VarIntComputeTestCleanup_1,
-    &VarIntComputeTestData_7
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 8: Mixed zero/erased measurement partition is blank.",
-    "SimpleComputeTest8",
-    VarIntComputeTest_8,
-    NULL,
-    NULL,
-    NULL
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 9: ReadyToBoot flushes deferred measurement.",
-    "SimpleComputeTest9",
-    VarIntComputeTest_9,
-    NULL,
-    NULL,
-    NULL
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 10: ReadyToBoot reports deferred flush failure.",
-    "SimpleComputeTest10",
-    VarIntComputeTest_10,
-    NULL,
-    NULL,
-    NULL
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 11: EBS deferred bootstrap does not flush.",
-    "SimpleComputeTest11",
-    VarIntComputeTest_11,
-    NULL,
-    NULL,
-    NULL
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 12: EBS completed bootstrap only enters runtime mode.",
-    "SimpleComputeTest12",
-    VarIntComputeTest_12,
-    NULL,
-    NULL,
-    NULL
-    );
-
-  AddTestCase (
-    VarIntComputeSuite,
-    "Simple Compute Test 13: Final bootstrap failure deadloops.",
-    "SimpleComputeTest13",
-    VarIntComputeTest_13,
-    NULL,
-    NULL,
-    NULL
     );
 
   AddTestCase (
