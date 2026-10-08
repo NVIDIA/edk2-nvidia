@@ -416,8 +416,7 @@ VarIntComputeTest_6 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockSuccessfulOpteeSignatures (TestData->TestArgs, 2);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_SUCCESS);
@@ -679,8 +678,7 @@ VarIntComputeTest_2 (
     TestData->MeasSz,
     TestData->ComputeReturnStatus
     );
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
-  MockSuccessfulOpteeSignatures (TestData->TestArgs, 1);
+  MockSuccessfulOpteeSignatures (TestData->TestArgs, 2);
 
   Status = VarIntProto->Validate (VarIntProto);
   UT_ASSERT_STATUS_EQUAL (Status, EFI_DEVICE_ERROR);

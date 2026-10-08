@@ -957,17 +957,11 @@ IsV0MigrationAllowed (
   VOID
   )
 {
-  BOOLEAN  MigrationAllowed;
-
-  MigrationAllowed = FeaturePcdGet (PcdAllowVarIntV0Migration);
-
-  DEBUG ((
-    DEBUG_ERROR,
-    "VarIntMigrationPolicy: pcd_allow_v0_migration=%u\n",
-    MigrationAllowed
-    ));
-
-  return MigrationAllowed;
+  /*
+   * TODO: Replace this stub with the MM-visible MB2 ratchet update status.
+   * This should return TRUE only for the skipped-transition RUS state.
+   */
+  return TRUE;
 }
 
 STATIC
@@ -2280,13 +2274,11 @@ VarIntValidate (
   MEASURE_REC_TYPE  *ReadMeas;
   MEASURE_REC_TYPE  *MatchedRecord;
   BOOLEAN           Matched;
-  BOOLEAN           MigrationBlocked;
   UINT32            PayloadSize;
 
-  Matched          = FALSE;
-  MatchedRecord    = NULL;
-  MigrationBlocked = FALSE;
-  PayloadSize      = GetMeasurementPayloadSize (This);
+  Matched       = FALSE;
+  MatchedRecord = NULL;
+  PayloadSize   = GetMeasurementPayloadSize (This);
 
   Status = EFI_SUCCESS;
   V1Meas = &This->CurMeasurement[HEADER_SZ_BYTES];
@@ -2394,63 +2386,52 @@ VarIntValidate (
     goto ExitVarIntValidate;
   }
 
-  Status = ComputeCurrentMeasurement (
-             This,
-             NULL,
-             NULL,
-             0,
-             NULL,
-             0,
-             VarIntRecordVersionV0,
-             CurMeas
-             );
-  if (EFI_ERROR (Status)) {
-    goto ExitVarIntValidate;
-  }
+  if (IsV0MigrationAllowed () == TRUE) {
+    Status = ComputeCurrentMeasurement (
+               This,
+               NULL,
+               NULL,
+               0,
+               NULL,
+               0,
+               VarIntRecordVersionV0,
+               CurMeas
+               );
+    if (EFI_ERROR (Status)) {
+      goto ExitVarIntValidate;
+    }
 
-  for (Index = 0; Index < NumValidRecords; Index++) {
-    ReadMeas = LastMeasurements[Index];
+    for (Index = 0; Index < NumValidRecords; Index++) {
+      ReadMeas = LastMeasurements[Index];
 
-    if ((IsRecordV0 (ReadMeas->Measurement[0]) == TRUE) &&
-        (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0))
-    {
-      if (IsV0MigrationAllowed () == FALSE) {
+      if ((IsRecordV0 (ReadMeas->Measurement[0]) == TRUE) &&
+          (CompareMem (V0Meas, &ReadMeas->Measurement[HEADER_SZ_BYTES], PayloadSize) == 0))
+      {
+        Matched       = TRUE;
+        MatchedRecord = ReadMeas;
         DEBUG ((
-          DEBUG_ERROR,
-          "VarIntMigrationPolicy: V0 measurement migration disabled by PcdAllowVarIntV0Migration\r\n"
+          DEBUG_INFO,
+          "%a: %u Found V0 MATCH, migrating to V1\n",
+          __FUNCTION__,
+          Index
           ));
-        MigrationBlocked = TRUE;
-        Status           = EFI_SECURITY_VIOLATION;
+        Status = MigrateV0RecordToV1 (This, MatchedRecord);
+        if (!EFI_ERROR (Status)) {
+          Status = FinalizeValidatedRecords (
+                     This,
+                     NumValidRecords,
+                     LastMeasurements,
+                     NULL
+                     );
+        }
+
         goto ExitVarIntValidate;
       }
-
-      Matched       = TRUE;
-      MatchedRecord = ReadMeas;
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: %u Found V0 MATCH, migrating to V1\n",
-        __FUNCTION__,
-        Index
-        ));
-      Status = MigrateV0RecordToV1 (This, MatchedRecord);
-      if (!EFI_ERROR (Status)) {
-        Status = FinalizeValidatedRecords (
-                   This,
-                   NumValidRecords,
-                   LastMeasurements,
-                   NULL
-                   );
-      }
-
-      goto ExitVarIntValidate;
     }
   }
 
 ExitVarIntValidate:
-  if ((Matched != TRUE) &&
-      (MigrationBlocked != TRUE) &&
-      (This->BootstrapDeferred == FALSE))
-  {
+  if ((Matched != TRUE) && (This->BootstrapDeferred == FALSE)) {
     if (IsMeasurementPartitionErasedOrZero (
           This->NorFlashProtocol,
           This->PartitionByteOffset,

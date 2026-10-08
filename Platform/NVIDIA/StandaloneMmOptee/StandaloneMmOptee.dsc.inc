@@ -51,7 +51,6 @@
   gNVIDIATokenSpaceGuid.PcdOpteePresent|TRUE
   gNVIDIATokenSpaceGuid.PcdVarStoreIntegritySupported|TRUE
   gNVIDIATokenSpaceGuid.PcdAssertOnVarStoreIntegrityCheckFail|TRUE
-  gNVIDIATokenSpaceGuid.PcdAllowVarIntV0Migration|TRUE
 
 [PcdsPatchableInModule]
   #
