@@ -1501,6 +1501,7 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   gNVIDIATokenSpaceGuid.PcdBrBctLogicalSlotSize|0x40000
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdFloorsweepCpusByDtbNop|TRUE
+  gNVIDIATokenSpaceGuid.PcdUfsSkipReinit|TRUE
 
 [PcdsDynamicHii.common.T234SLT]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2

@@ -28,6 +28,11 @@ NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[] = {
   { NULL,                 NULL                                }
 };
 
+STATIC CONST CHAR8 *CONST  mT23xClockExceptions[] = {
+  "mphy_force_ls_mode",
+  NULL
+};
+
 NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig = {
   .DriverName                                 = L"NVIDIA Ufs controller driver",
   .AutoEnableClocks                           = TRUE,
@@ -548,6 +553,10 @@ DeviceDiscoveryNotify (
 
   switch (Phase) {
     case DeviceDiscoveryDriverStart:
+      if (TegraGetChipID () == T234_CHIP_ID) {
+        gDeviceDiscoverDriverConfig.AutoEnableClocksExceptionList = mT23xClockExceptions;
+      }
+
       gUfsOverride.RefClkFreq = PcdGet32 (PcdUfsCardRefClkFreq);
       DEBUG ((DEBUG_INFO, "%a: refclk=%d\n", __FUNCTION__, gUfsOverride.RefClkFreq));
 
