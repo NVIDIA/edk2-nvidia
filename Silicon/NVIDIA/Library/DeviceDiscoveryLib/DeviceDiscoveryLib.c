@@ -991,17 +991,20 @@ GetResetNodeProtocol (
 }
 
 /**
-  This function allows for simple enablement of all clock nodes.
+  This function allows for simple enablement of clock nodes except those listed.
 
   @param[in]     This                The instance of the NVIDIA_CLOCK_NODE_PROTOCOL.
+  @param[in]     ExceptionList       Optional NULL-terminated list of DT clock names
+                                    to skip. NULL enables all clocks.
 
-  @return EFI_SUCCESS                All clocks enabled.
+  @return EFI_SUCCESS                All non-excluded clocks enabled.
   @return EFI_NOT_READY              Clock control protocol is not installed.
   @return EFI_DEVICE_ERROR           Failed to enable all clocks
 **/
 EFI_STATUS
 EnableAllClockNodes (
-  IN  NVIDIA_CLOCK_NODE_PROTOCOL  *This
+  IN  NVIDIA_CLOCK_NODE_PROTOCOL  *This,
+  IN  CONST CHAR8 *CONST          *ExceptionList OPTIONAL
   )
 {
   SCMI_CLOCK2_PROTOCOL  *ClockProtocol = NULL;
@@ -1010,6 +1013,8 @@ EnableAllClockNodes (
   UINT32                ClockId;
   BOOLEAN               ClockStatus;
   CHAR8                 ClockName[SCMI_MAX_STR_LEN];
+  CONST CHAR8           *DtClockName;
+  CONST CHAR8 *CONST    *Exception;
 
   if (This->Clocks == 0) {
     return EFI_SUCCESS;
@@ -1021,6 +1026,20 @@ EnableAllClockNodes (
   }
 
   for (Index = 0; Index < This->Clocks; Index++) {
+    DtClockName = This->ClockEntries[This->Clocks - Index - 1].ClockName;
+    if ((ExceptionList != NULL) && (DtClockName != NULL)) {
+      for (Exception = ExceptionList; *Exception != NULL; Exception++) {
+        if (AsciiStrCmp (DtClockName, *Exception) == 0) {
+          break;
+        }
+      }
+
+      if (*Exception != NULL) {
+        DEBUG ((DEBUG_INFO, "%a: Skipping clock %a\r\n", __FUNCTION__, DtClockName));
+        continue;
+      }
+    }
+
     ClockId = This->ClockEntries[This->Clocks - Index - 1].ClockId;
     Status  = ClockProtocol->GetClockAttributes (ClockProtocol, ClockId, &ClockStatus, ClockName);
     if (EFI_ERROR (Status)) {

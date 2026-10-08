@@ -1,6 +1,6 @@
 /** @file
 *
-*  SPDX-FileCopyrightText: Copyright (c) 2018-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+*  SPDX-FileCopyrightText: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 *
 *  SPDX-License-Identifier: BSD-2-Clause-Patent)
 *
@@ -27,16 +27,21 @@ typedef struct {
 extern NVIDIA_COMPATIBILITY_MAPPING  gDeviceCompatibilityMap[];
 
 typedef struct {
-  CONST CHAR16    *DriverName;
-  BOOLEAN         AutoEnableClocks;
-  BOOLEAN         AutoDeassertReset;
-  BOOLEAN         AutoResetModule;
-  BOOLEAN         AutoDeassertPg;
-  BOOLEAN         SkipEdkiiNondiscoverableInstall;
-  BOOLEAN         SkipAutoDeinitControllerOnExitBootServices;
-  BOOLEAN         DelayEnumeration;
-  BOOLEAN         ThreadedDeviceStart;
-  BOOLEAN         DisableInRcm;
+  CONST CHAR16          *DriverName;
+  BOOLEAN               AutoEnableClocks;
+  BOOLEAN               AutoDeassertReset;
+  BOOLEAN               AutoResetModule;
+  BOOLEAN               AutoDeassertPg;
+  BOOLEAN               SkipEdkiiNondiscoverableInstall;
+  BOOLEAN               SkipAutoDeinitControllerOnExitBootServices;
+  BOOLEAN               DelayEnumeration;
+  BOOLEAN               ThreadedDeviceStart;
+  BOOLEAN               DisableInRcm;
+  ///
+  /// NULL or a NULL-terminated list of DT clock names to skip when
+  /// AutoEnableClocks is TRUE. Does not affect automatic clock disablement.
+  ///
+  CONST CHAR8 *CONST    *AutoEnableClocksExceptionList;
 } NVIDIA_DEVICE_DISCOVERY_CONFIG;
 extern NVIDIA_DEVICE_DISCOVERY_CONFIG  gDeviceDiscoverDriverConfig;
 

@@ -484,7 +484,7 @@ DeviceDiscoveryStart (
       goto ErrorExit;
     }
 
-    Status = ClockProtocol->EnableAll (ClockProtocol);
+    Status = ClockProtocol->EnableAll (ClockProtocol, gDeviceDiscoverDriverConfig.AutoEnableClocksExceptionList);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "%a, failed to enable clocks %r\r\n", __FUNCTION__, Status));
       goto ErrorExit;
