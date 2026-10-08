@@ -52,13 +52,10 @@
 #define FVB_FTW_WORK_INDEX        2
 #define FVB_VAR_INT_INDEX         3
 
-#define FVB_ERASED_BYTE     0xFF
-#define VAR_INT_PENDING     0xFE
-#define VAR_INT_VALID       0xFC
-#define VAR_INT_INVALID     0xF8
-#define VAR_INT_V1_PENDING  0xEE
-#define VAR_INT_V1_VALID    0xEC
-#define VAR_INT_V1_INVALID  0xE8
+#define FVB_ERASED_BYTE  0xFF
+#define VAR_INT_PENDING  0xFE
+#define VAR_INT_VALID    0xFC
+#define VAR_INT_INVALID  0xF8
 
 typedef struct {
   UINT32                                 Signature;
@@ -86,25 +83,6 @@ EFI_STATUS
 EFIAPI
 VarIntValidate (
   IN NVIDIA_VAR_INT_PROTOCOL  *This
-  );
-
-EFI_STATUS
-EFIAPI
-VarIntFlushDeferredMeasurementAtReadyToBoot (
-  IN NVIDIA_VAR_INT_PROTOCOL  *This
-  );
-
-EFI_STATUS
-EFIAPI
-VarIntNotifyExitBootServicesPreserveOnly (
-  IN NVIDIA_VAR_INT_PROTOCOL  *This
-  );
-
-EFI_STATUS
-EFIAPI
-VarIntFatalBootstrapFailure (
-  IN EFI_STATUS   FailureStatus,
-  IN CONST CHAR8  *FailureReason
   );
 
 BOOLEAN

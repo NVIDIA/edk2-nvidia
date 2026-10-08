@@ -32,40 +32,4 @@ MockComputeVarMeasurement (
   IN  EFI_STATUS  ReturnStatus
   );
 
-VOID
-MockComputeVarMeasurementV0 (
-  IN  CHAR16      *VarName,
-  OUT UINT8       *MockMeas,
-  IN  UINTN       MeasSize,
-  IN  EFI_STATUS  ReturnStatus
-  );
-
-VOID
-MockComputeVarMeasurementV1 (
-  IN  CHAR16      *VarName,
-  OUT UINT8       *MockMeas,
-  IN  UINTN       MeasSize,
-  IN  EFI_STATUS  ReturnStatus
-  );
-
-VOID
-MockNvVarIntResetExitBootServicesNotify (
-  VOID
-  );
-
-UINTN
-MockNvVarIntGetExitBootServicesNotifyCount (
-  VOID
-  );
-
-UINTN
-MockNvVarIntGetExitBootServicesNotifyOrder (
-  VOID
-  );
-
-UINTN
-MockNvVarIntNextEventOrder (
-  VOID
-  );
-
 #endif
