@@ -41,10 +41,6 @@
 #define SHA256_DIGEST_SIZE      32
 #define SHA256_HEX_STRING_SIZE  (SHA256_DIGEST_SIZE * 2)
 
-#define ISO9660_PVD_OFFSET     32768    // Sector 16 in 2048-byte sectors
-#define ISO9660_VOLDESC_MAGIC  "CD001"
-#define ISO9660_MAGIC_LEN      5
-
 #define TEGRA_PLATFORM_SPEC_VARIABLE_NAME         L"TegraPlatformSpec"
 #define TEGRA_PLATFORM_COMPAT_SPEC_VARIABLE_NAME  L"TegraPlatformCompatSpec"
 #define PREISO_CAPSULE_STAGED_VARIABLE_NAME       L"PreIsoCapsuleStaged"
@@ -68,24 +64,6 @@
 #define BOARD_NAME_ORIN_NANOE8GB_DEVKIT_SUPER  "jetson-orin-nanoe8gb-devkit-super"
 #define BOARD_NAME_AGX_THOR_DEVKIT             "jetson-agx-thor-devkit"
 #define BOARD_NAME_AGX_THOR_T4000              "jetson-agx-thor-t4000"
-
-/**
-  Check if the boot media contains an ISO9660 filesystem by reading the
-  Primary Volume Descriptor (PVD) at sector 16 and verifying the "CD001"
-  magic signature.  Finds the parent whole-disk of DeviceHandle, then
-  checks partition 1 (or falls back to the parent disk).
-
-  @param[in]  DeviceHandle   Device handle for a partition on the boot media.
-
-  @retval TRUE   Boot media has an ISO9660 filesystem.
-  @retval FALSE  Not ISO9660, or detection failed.
-
-**/
-BOOLEAN
-EFIAPI
-IsIso9660BootMedia (
-  IN EFI_HANDLE  DeviceHandle
-  );
 
 /**
   Check if EFI\ISO_ID file exists and its content matches the SHA256

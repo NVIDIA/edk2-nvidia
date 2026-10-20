@@ -16,9 +16,7 @@ L4TLauncher
   |
   +-- HandleIsoBootMedia()
         |
-        +-- IsIsoIdFileValid()    -- cheap: check EFI\ISO_ID matches SHA256(EFI\version + "L4T")
-        |                            (returns early if check fails)
-        +-- IsIso9660BootMedia()  -- expensive: check ISO9660 PVD "CD001" at sector 16
+        +-- IsIsoIdFileValid()    -- check EFI\ISO_ID matches SHA256(EFI\version + "L4T")
         |                            (returns early if check fails)
         +-- Clear rootfs status register
         |
@@ -41,23 +39,12 @@ L4TLauncher
 
 ## ISO Detection
 
-Two methods detect ISO installation media (both must pass):
-
-1. **ISO_ID file** (evaluated first — cheap): Reads `EFI\ISO_ID` from the
-   ESP and compares its content (64 hex characters) against
-   `SHA256(trimmed EFI\version content + "L4T")` using `CompareMem`.
-   Trailing CR, LF, and space characters are ignored in the
-   version file; the ISO_ID value is read until CR, LF, or space, and
-   uppercase `A`-`F` are normalized to lowercase before comparison. If this
-   check fails, `IsIso9660BootMedia` is never called, avoiding the expensive
-   BlockIo enumeration on normal (non-ISO) boots.
-
-2. **ISO9660 PVD** (evaluated second — expensive): Reads the Primary Volume
-   Descriptor at byte offset 32768 (sector 16) from the parent disk or
-   partition 1 and checks for the `CD001` magic signature with volume
-   descriptor type `0x01`. This call enumerates all BlockIo handles via
-   `LocateHandleBuffer` and walks child controllers, so it is gated behind
-   the ISO_ID check.
+ISO installation media is detected by reading `EFI\ISO_ID` from the ESP
+and comparing its content (64 hex characters) against
+`SHA256(trimmed EFI\version content + "L4T")` using `CompareMem`.
+Trailing CR, LF, and space characters are ignored in the version file;
+the ISO_ID value is read until CR, LF, or space, and uppercase `A`-`F`
+are normalized to lowercase before comparison.
 
 ## User Confirmation Prompt
 
@@ -250,14 +237,12 @@ use `PreIsoLogWrite`.
 
 The log file is opened by `PreIsoLogInit` at the start of
 `RunPreIsoInstaller`. Detection-phase messages from `IsIsoIdFileValid`
-and `IsIso9660BootMedia` (called from `HandleIsoBootMedia` before
-`RunPreIsoInstaller`) go through `PreIsoLogWrite`, which is a no-op
-until `PreIsoLogInit` opens the log file. As a result, detection-phase
-`PreIsoLogWrite` calls are silently dropped; only `ErrorPrint` output
-(e.g., from `IsIso9660BootMedia`) reaches the console. Log writes are
-buffered; `PreIsoLogClose` flushes before closing the file handle. When
-capsule update is staged, `PerformCapsuleUpdate` also flushes cached log
-data before resetting the system.
+(called from `HandleIsoBootMedia` before `RunPreIsoInstaller`) go through
+`PreIsoLogWrite`, which is a no-op until `PreIsoLogInit` opens the log file.
+As a result, detection-phase `PreIsoLogWrite` calls are silently dropped.
+Log writes are buffered; `PreIsoLogClose` flushes before closing the file
+handle. When capsule update is staged, `PerformCapsuleUpdate` also flushes
+cached log data before resetting the system.
 
 ## Files
 

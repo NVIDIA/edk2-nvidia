@@ -16,12 +16,10 @@
 #include <Library/PrintLib.h>
 #include <Library/FileHandleLib.h>
 #include <Library/DevicePathLib.h>
-#include <Library/HandleParsingLib.h>
 #include <Library/FdtLib.h>
 
 #include <Protocol/DevicePath.h>
 #include <Protocol/LoadedImage.h>
-#include <Protocol/BlockIo.h>
 #include <Protocol/Hash2.h>
 #include <Protocol/ServiceBinding.h>
 
@@ -376,191 +374,8 @@ ComputeSha256Hex (
 }
 
 /**
-  Check if the boot media contains an ISO9660 filesystem by reading the
-  Primary Volume Descriptor (PVD) at sector 16 and verifying the "CD001"
-  magic signature.
-
-  Finds the parent whole-disk of DeviceHandle, then checks partition 1
-  for a PVD.  If partition 1 is not exposed by firmware, falls back to
-  reading the PVD directly from the parent disk at byte offset 32768.
-
-  @param[in]  DeviceHandle   Device handle for a partition on the boot media.
-
-  @retval TRUE   Boot media has an ISO9660 filesystem.
-  @retval FALSE  Not ISO9660, or detection failed.
-
-**/
-BOOLEAN
-EFIAPI
-IsIso9660BootMedia (
-  IN EFI_HANDLE  DeviceHandle
-  )
-{
-  EFI_STATUS                Status;
-  EFI_BLOCK_IO_PROTOCOL     *BlockIo;
-  VOID                      *Buffer;
-  UINT8                     *Bytes;
-  EFI_LBA                   Lba;
-  BOOLEAN                   IsIso;
-  UINTN                     NumberOfHandles;
-  EFI_HANDLE                *BlockIoHandles;
-  UINTN                     DiskIndex;
-  UINTN                     ChildCount;
-  EFI_HANDLE                *ChildHandles;
-  UINTN                     ChildIndex;
-  BOOLEAN                   FoundParent;
-  EFI_HANDLE                ParentDiskHandle;
-  EFI_HANDLE                FirstPartHandle;
-  EFI_DEVICE_PATH_PROTOCOL  *ChildPath;
-  HARDDRIVE_DEVICE_PATH     *HdNode;
-
-  if (DeviceHandle == NULL) {
-    return FALSE;
-  }
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiBlockIoProtocolGuid,
-                  NULL,
-                  &NumberOfHandles,
-                  &BlockIoHandles
-                  );
-  if (EFI_ERROR (Status)) {
-    return FALSE;
-  }
-
-  FirstPartHandle  = NULL;
-  ParentDiskHandle = NULL;
-  FoundParent      = FALSE;
-
-  for (DiskIndex = 0; DiskIndex < NumberOfHandles; DiskIndex++) {
-    Status = gBS->HandleProtocol (
-                    BlockIoHandles[DiskIndex],
-                    &gEfiBlockIoProtocolGuid,
-                    (VOID **)&BlockIo
-                    );
-    if (EFI_ERROR (Status) || BlockIo->Media->LogicalPartition) {
-      continue;
-    }
-
-    ChildHandles = NULL;
-    Status       = ParseHandleDatabaseForChildControllers (
-                     BlockIoHandles[DiskIndex],
-                     &ChildCount,
-                     &ChildHandles
-                     );
-    if (EFI_ERROR (Status) || (ChildCount == 0)) {
-      if (ChildHandles != NULL) {
-        FreePool (ChildHandles);
-      }
-
-      continue;
-    }
-
-    FoundParent = FALSE;
-    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
-      if (ChildHandles[ChildIndex] == DeviceHandle) {
-        FoundParent = TRUE;
-        break;
-      }
-    }
-
-    if (!FoundParent) {
-      FreePool (ChildHandles);
-      continue;
-    }
-
-    for (ChildIndex = 0; ChildIndex < ChildCount; ChildIndex++) {
-      ChildPath = DevicePathFromHandle (ChildHandles[ChildIndex]);
-      if (ChildPath == NULL) {
-        continue;
-      }
-
-      while (!IsDevicePathEnd (ChildPath)) {
-        if ((DevicePathType (ChildPath) == MEDIA_DEVICE_PATH) &&
-            (DevicePathSubType (ChildPath) == MEDIA_HARDDRIVE_DP))
-        {
-          HdNode = (HARDDRIVE_DEVICE_PATH *)ChildPath;
-          if (HdNode->PartitionNumber == 1) {
-            FirstPartHandle = ChildHandles[ChildIndex];
-          }
-
-          break;
-        }
-
-        ChildPath = NextDevicePathNode (ChildPath);
-      }
-
-      if (FirstPartHandle != NULL) {
-        break;
-      }
-    }
-
-    FreePool (ChildHandles);
-    ParentDiskHandle = BlockIoHandles[DiskIndex];
-    break;
-  }
-
-  FreePool (BlockIoHandles);
-
-  if (!FoundParent) {
-    return FALSE;
-  }
-
-  // Use partition 1 if found; otherwise fall back to the parent disk.
-  if (FirstPartHandle != NULL) {
-    Status = gBS->HandleProtocol (FirstPartHandle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
-  } else {
-    Status = gBS->HandleProtocol (ParentDiskHandle, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo);
-  }
-
-  if (EFI_ERROR (Status)) {
-    return FALSE;
-  }
-
-  if ((BlockIo->Media->BlockSize == 0) ||
-      ((ISO9660_PVD_OFFSET % BlockIo->Media->BlockSize) != 0))
-  {
-    return FALSE;
-  }
-
-  Lba = ISO9660_PVD_OFFSET / BlockIo->Media->BlockSize;
-
-  Buffer = AllocatePool (BlockIo->Media->BlockSize);
-  if (Buffer == NULL) {
-    return FALSE;
-  }
-
-  Status = BlockIo->ReadBlocks (
-                      BlockIo,
-                      BlockIo->Media->MediaId,
-                      Lba,
-                      BlockIo->Media->BlockSize,
-                      Buffer
-                      );
-  if (EFI_ERROR (Status)) {
-    FreePool (Buffer);
-    return FALSE;
-  }
-
-  Bytes = (UINT8 *)Buffer;
-  IsIso = ((Bytes[0] == 0x01) &&
-           (CompareMem (&Bytes[1], ISO9660_VOLDESC_MAGIC, ISO9660_MAGIC_LEN) == 0));
-
-  FreePool (Buffer);
-
-  if (IsIso) {
-    PreIsoLogWrite (L"%a: ISO9660 boot media detected\r\n", __FUNCTION__);
-  }
-
-  return IsIso;
-}
-
-/**
   Check if EFI\ISO_ID file exists and its content matches the SHA256
-  hash of the EFI\version file content concatenated with "L4T". This
-  provides an alternative detection mechanism for ISO-based installation
-  media.
+  hash of the EFI\version file content concatenated with "L4T".
 
   The ISO_ID file is expected to contain the sha256sum output (64 lowercase
   hex characters) of (version file content + "L4T").
@@ -2884,10 +2699,6 @@ HandleIsoBootMedia (
   UINTN       DataSize;
 
   if (!IsIsoIdFileValid (DeviceHandle)) {
-    return EFI_SUCCESS;
-  }
-
-  if (!IsIso9660BootMedia (DeviceHandle)) {
     return EFI_SUCCESS;
   }
 
