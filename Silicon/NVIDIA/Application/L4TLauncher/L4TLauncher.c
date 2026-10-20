@@ -50,7 +50,7 @@ L4T_LAUNCHER_SUPPORT_PROTOCOL  *gL4TSupportProtocol;
 //
 // Fallback stub implementations for backward compatibility with firmware
 // that does not include L4TLauncherSupportDxe.  These stubs are only
-// activated on ISO installation media and allow the ISO install /
+// activated on installer media and allow the installer /
 // PreIsoInstaller path to function.  Behaviour in fallback mode:
 //   - Rootfs status defaults to chain A only (no slot B, retry count A = 3)
 //   - Device tree overlays are not applied
@@ -2826,8 +2826,8 @@ L4TLauncher (
 
   Status = gBS->LocateProtocol (&gNVIDIAL4TLauncherSupportProtocol, NULL, (VOID **)&gL4TSupportProtocol);
   if (EFI_ERROR (Status)) {
-    if (IsIsoIdFileValid (LoadedImage->DeviceHandle)) {
-      ErrorPrint (L"%a: L4T Support protocol not found, but device is valid ISO installation media, using fallback\r\n", __FUNCTION__);
+    if (IsInstallerIdFileValid (LoadedImage->DeviceHandle)) {
+      ErrorPrint (L"%a: L4T Support protocol not found, but device is valid installer media, using fallback\r\n", __FUNCTION__);
       gL4TSupportProtocol = &mFallbackL4TSupport;
     } else {
       ErrorPrint (L"%a: Unable to locate L4T Support protocol: %r\r\n", __FUNCTION__, Status);
@@ -2843,9 +2843,9 @@ L4TLauncher (
 
   DeviceHandle = GetDeviceHandleForFvBoot (LoadedImage->DeviceHandle, BootParams.BootChain);
 
-  Status = HandleIsoBootMedia (ImageHandle, DeviceHandle);
+  Status = HandleInstallerBootMedia (ImageHandle, DeviceHandle);
   if (Status == EFI_ABORTED) {
-    ErrorPrint (L"%a: PreIsoInstaller blocked ISO boot, halting\r\n", __FUNCTION__);
+    ErrorPrint (L"%a: PreIsoInstaller blocked boot, halting\r\n", __FUNCTION__);
     CpuDeadLoop ();
   } else if (EFI_ERROR (Status)) {
     return Status;

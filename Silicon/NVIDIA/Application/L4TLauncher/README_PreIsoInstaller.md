@@ -1,10 +1,10 @@
-# PreIsoInstaller — QSPI Capsule Update for ISO Install Flow
+# PreIsoInstaller — QSPI Capsule Update for Installer Boot Flow
 
 ## Overview
 
 PreIsoInstaller adds firmware capsule update support to L4TLauncher for
-ISO-based installation media on NVIDIA Jetson platforms. When the boot
-device is detected as ISO installation media, PreIsoInstaller compares the
+installer boot media on NVIDIA Jetson platforms. When installer boot media
+is detected, PreIsoInstaller compares the
 capsule version against both A/B firmware slots and, if either slot needs an
 update, stages a capsule file and triggers a warm reset for the firmware to
 apply it.
@@ -14,12 +14,12 @@ apply it.
 ```
 L4TLauncher
   |
-  +-- HandleIsoBootMedia()
+  +-- HandleInstallerBootMedia()
         |
-        +-- IsIsoIdFileValid()    -- check EFI\ISO_ID matches SHA256(EFI\version + "L4T")
-        |                            (returns early if check fails)
+        +-- IsInstallerIdFileValid()
+        |     +-- Check EFI\INSTALLER_ID matches SHA256(EFI\version + "L4T")
+        |     +-- Otherwise check EFI\ISO_ID with the same rule
         +-- Clear rootfs status register
-        |
         +-- RunPreIsoInstaller()
         |     +-- PreIsoLogInit (open/create EFI\PreIsoInstaller.log)
         |     +-- Validate BootChain and read firmware versions
@@ -34,17 +34,31 @@ L4TLauncher
         |     +-- Copy capsule to EFI\UpdateCapsule\, set OsIndications, warm reset
         |     +-- PreIsoLogClose
         |
-        +-- LoadAndStartShim()    -- load EFI\BOOT\shimaa64.efi (fatal if missing)
+        +-- ISO_ID media: LoadAndStartShim()
+        |      -- load EFI\BOOT\shimaa64.efi (fatal if missing)
+        +-- INSTALLER_ID media: return to normal L4TLauncher boot
 ```
 
-## ISO Detection
+The expected `EFI_NOT_READY` status from `RunPreIsoInstaller()` permits boot to
+continue. Any unexpected error is handled as `EFI_ABORTED`, causing L4TLauncher
+to halt the installer boot flow rather than continue with an incomplete
+PreIsoInstaller operation.
 
-ISO installation media is detected by reading `EFI\ISO_ID` from the ESP
-and comparing its content (64 hex characters) against
-`SHA256(trimmed EFI\version content + "L4T")` using `CompareMem`.
-Trailing CR, LF, and space characters are ignored in the version file;
-the ISO_ID value is read until CR, LF, or space, and uppercase `A`-`F`
-are normalized to lowercase before comparison.
+## Installer Media Detection
+
+Installer media is detected by `EFI\INSTALLER_ID` or `EFI\ISO_ID`. The
+`INSTALLER_ID` file is checked first. If it is missing or invalid, the
+`ISO_ID` file is checked. Both files are supported, and either file must
+contain the 64-character
+hex value of `SHA256(trimmed EFI\version content + "L4T")`.
+
+Trailing CR, LF, and space characters are ignored in the version file. The ID
+value is read until CR, LF, or space, and uppercase `A`-`F` are normalized to
+lowercase before comparison.
+
+Only media identified by `ISO_ID` loads and starts Shim. Media identified by
+`INSTALLER_ID` returns to the normal L4TLauncher boot flow after
+`RunPreIsoInstaller()` completes.
 
 ## User Confirmation Prompt
 
@@ -58,7 +72,7 @@ a prompt is displayed on the console:
   New FW version   : <branch>.<major>.<minor>
   Lower FW version : <branch>.<major>.<minor>
 
-  WARNING: The ISO installation cannot continue until
+  WARNING: The installation cannot continue until
   this firmware update is accepted.
 
   Do you want to update the firmware?
@@ -108,15 +122,17 @@ non-current slot.
 The comparison has three early-exit cases:
 
 1. If the current slot version is earlier than 35.5.0, the firmware is too old
-   to support the ISO capsule layout change. PreIsoInstaller prints an error
-   message and returns `EFI_ABORTED`, causing L4TLauncher to halt instead of
-   continuing the ISO installation.
-2. If the ISO version is earlier than `LowestSupportedFwVersion`,
-   PreIsoInstaller skips the capsule update and continues the ISO installation.
-3. If the ISO version is not newer than either the current or non-current slot,
-   PreIsoInstaller skips the capsule update and continues the ISO installation.
+   to support the installer-media capsule layout change. PreIsoInstaller prints
+   an error message and returns `EFI_ABORTED`, causing L4TLauncher to halt
+   instead of continuing installer boot.
+2. If the capsule version is earlier than `LowestSupportedFwVersion`,
+   PreIsoInstaller skips the capsule update and continues installer boot.
+3. If the capsule version is not newer than either the current or non-current
+   slot, PreIsoInstaller skips the capsule update and continues installer boot.
 
-If no update is needed, `PreIsoCapsuleStaged` is deleted and shim boot continues.
+If no update is needed, `PreIsoCapsuleStaged` is deleted. ISO media then
+continues through Shim, while `INSTALLER_ID` media returns to the normal
+L4TLauncher boot flow.
 
 ## Platform Spec Variables
 
@@ -219,7 +235,7 @@ capsule has been staged. Normal A/B slot updates require 2 staging cycles.
 If the counter reaches 5 without the firmware version being bumped (indicating
 the capsule is failing to apply), the update is aborted with `EFI_ABORTED`,
 the `OsIndications` capsule delivery flag is cleared, and the staged counter
-is deleted. `L4TLauncher` prints `PreIsoInstaller blocked ISO boot, halting`
+is deleted. `L4TLauncher` prints `PreIsoInstaller blocked boot, halting`
 and halts the system (`CpuDeadLoop`) on `EFI_ABORTED`.
 
 Failed staging attempts (e.g., `PerformCapsuleUpdate` errors) still count
@@ -236,8 +252,8 @@ to the UEFI console (`ConOut`) via `PreIsoLogPrint`; log-only messages
 use `PreIsoLogWrite`.
 
 The log file is opened by `PreIsoLogInit` at the start of
-`RunPreIsoInstaller`. Detection-phase messages from `IsIsoIdFileValid`
-(called from `HandleIsoBootMedia` before `RunPreIsoInstaller`) go through
+`RunPreIsoInstaller`. Detection-phase messages from
+`IsInstallerIdFileValid` (called before `RunPreIsoInstaller`) go through
 `PreIsoLogWrite`, which is a no-op until `PreIsoLogInit` opens the log file.
 As a result, detection-phase `PreIsoLogWrite` calls are silently dropped.
 Log writes are buffered; `PreIsoLogClose` flushes before closing the file
@@ -250,4 +266,4 @@ cached log data before resetting the system.
 |------|-------------|
 | `L4TPreIsoInstaller.h` | Public API, constants, board definitions |
 | `L4TPreIsoInstaller.c` | Implementation |
-| `L4TLauncher.c` | Integration point (calls `HandleIsoBootMedia`) |
+| `L4TLauncher.c` | Integration point (calls `HandleInstallerBootMedia`) |

@@ -39,7 +39,8 @@ typedef struct {
   CHAR8     mBoardName[MAX_SPEC_STRING_LEN];
 } TegraPlatformSpecInfo;
 
-STATIC EFI_FILE_HANDLE  mLogFileHandle = NULL;
+STATIC EFI_FILE_HANDLE  mLogFileHandle     = NULL;
+STATIC BOOLEAN          mIsIsoInstallation = FALSE;
 
 STATIC TegraPlatformSpecInfo  mTegraPlatformSpec;
 STATIC TegraPlatformSpecInfo  mTegraPlatformCompatSpec;
@@ -374,22 +375,27 @@ ComputeSha256Hex (
 }
 
 /**
-  Check if EFI\ISO_ID file exists and its content matches the SHA256
+  Check if an installer ID file exists and its content matches the SHA256
   hash of the EFI\version file content concatenated with "L4T".
 
-  The ISO_ID file is expected to contain the sha256sum output (64 lowercase
+  The ID file is expected to contain the sha256sum output (64 lowercase
   hex characters) of (version file content + "L4T").
 
   @param[in]  DeviceHandle   Device handle for ESP partition.
+  @param[in]  IdFilePath     Path to the installer ID file.
+  @param[in]  IdFileName     ASCII file name used in diagnostic messages.
 
-  @retval TRUE   ISO_ID file matches the version file SHA256.
+  @retval TRUE   ID file matches the version file SHA256.
   @retval FALSE  Files missing, hash protocol unavailable, or hash mismatch.
 
 **/
+STATIC
 BOOLEAN
 EFIAPI
-IsIsoIdFileValid (
-  IN EFI_HANDLE  DeviceHandle
+IsIdFileValid (
+  IN EFI_HANDLE    DeviceHandle,
+  IN CONST CHAR16  *IdFilePath,
+  IN CONST CHAR8   *IdFileName
   )
 {
   EFI_STATUS          Status;
@@ -405,7 +411,7 @@ IsIsoIdFileValid (
   UINTN               HashDataSize;
   UINT8               *HashData;
 
-  Status = ReadFileContent (DeviceHandle, ISO_ID_FILE_PATH, &IsoIdContent, &IsoIdSize);
+  Status = ReadFileContent (DeviceHandle, IdFilePath, &IsoIdContent, &IsoIdSize);
   if (EFI_ERROR (Status)) {
     return FALSE;
   }
@@ -465,18 +471,38 @@ IsIsoIdFileValid (
   FreePool (IsoIdContent);
 
   if (Index != SHA256_HEX_STRING_SIZE) {
-    PreIsoLogPrint (L"%a: ISO_ID not a valid SHA256 hex string (length=%d)\r\n", __FUNCTION__, Index);
+    PreIsoLogPrint (L"%a: %a not a valid SHA256 hex string (length=%d)\r\n", __FUNCTION__, IdFileName, Index);
     return FALSE;
   }
 
   PreIsoLogWrite (L"%a: Computed SHA256: %a\r\n", __FUNCTION__, ComputedHash);
-  PreIsoLogWrite (L"%a: ISO_ID SHA256:   %a\r\n", __FUNCTION__, IsoIdHash);
+  PreIsoLogWrite (L"%a: %a SHA256:   %a\r\n", __FUNCTION__, IdFileName, IsoIdHash);
 
   if (CompareMem (ComputedHash, IsoIdHash, SHA256_HEX_STRING_SIZE) == 0) {
     return TRUE;
   }
 
-  PreIsoLogPrint (L"%a: ISO_ID does not match version file SHA256\r\n", __FUNCTION__);
+  PreIsoLogPrint (L"%a: %a does not match version file SHA256\r\n", __FUNCTION__, IdFileName);
+  return FALSE;
+}
+
+BOOLEAN
+EFIAPI
+IsInstallerIdFileValid (
+  IN EFI_HANDLE  DeviceHandle
+  )
+{
+  mIsIsoInstallation = FALSE;
+
+  if (IsIdFileValid (DeviceHandle, INSTALLER_ID_FILE_PATH, "INSTALLER_ID")) {
+    return TRUE;
+  }
+
+  if (IsIdFileValid (DeviceHandle, ISO_ID_FILE_PATH, "ISO_ID")) {
+    mIsIsoInstallation = TRUE;
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -2149,7 +2175,7 @@ EnsurePlatformSpecVariables (
 
 /**
   Print an error message indicating the current UEFI firmware is too old
-  to support ISO installation.
+  to support the current installation.
 
   @param[in]  CurrentSlotVersion  Version of the current active slot.
 
@@ -2170,7 +2196,7 @@ PrintUefiVersionUnsupported (
     CurrentSlotVersion & 0xFF
     );
   PreIsoLogPrint (L"\r\n");
-  PreIsoLogPrint (L"  Your UEFI version is too old and does not support the current ISO.\r\n");
+  PreIsoLogPrint (L"  Your UEFI version is too old and does not support the current installer.\r\n");
   PreIsoLogPrint (L"  Please install latest JP5 BSP and try again.\r\n");
   PreIsoLogPrint (L"\r\n");
 }
@@ -2182,7 +2208,7 @@ PrintUefiVersionUnsupported (
   If the current slot version is earlier than 35.5.0, the UEFI firmware
   does not support capsule update with layout change. In that case the
   error banner is displayed and FALSE is returned; the caller converts
-  this into EFI_ABORTED to abort ISO installation.
+  this into EFI_ABORTED to abort installation.
 
   @param[in]  CurrentSlotVersion  Version of the current active slot.
 
@@ -2235,7 +2261,7 @@ ShouldPerformCapsuleUpdate (
 {
   if (PreIsoInstallerVersion < LowestSupportedFwVersion) {
     PreIsoLogWrite (
-      L"%a: ISO version (0x%x) < lowest supported firmware version (0x%x) -> Skipping update\r\n",
+      L"%a: Installer version (0x%x) < lowest supported firmware version (0x%x) -> Skipping update\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
       LowestSupportedFwVersion
@@ -2245,7 +2271,7 @@ ShouldPerformCapsuleUpdate (
 
   if (PreIsoInstallerVersion > CurrentSlotVersion) {
     PreIsoLogWrite (
-      L"%a: ISO version (0x%x) > current slot version (0x%x) -> Update required\r\n",
+      L"%a: Installer version (0x%x) > current slot version (0x%x) -> Update required\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
       CurrentSlotVersion
@@ -2255,7 +2281,7 @@ ShouldPerformCapsuleUpdate (
 
   if (PreIsoInstallerVersion > NonCurrentSlotVersion) {
     PreIsoLogWrite (
-      L"%a: ISO version (0x%x) > non-current slot version (0x%x) -> Update required\r\n",
+      L"%a: Installer version (0x%x) > non-current slot version (0x%x) -> Update required\r\n",
       __FUNCTION__,
       PreIsoInstallerVersion,
       NonCurrentSlotVersion
@@ -2263,7 +2289,7 @@ ShouldPerformCapsuleUpdate (
     return TRUE;
   }
 
-  PreIsoLogWrite (L"%a: ISO version (0x%x) is not newer than any slot -> Skipping update\r\n", __FUNCTION__, PreIsoInstallerVersion);
+  PreIsoLogWrite (L"%a: Installer version (0x%x) is not newer than any slot -> Skipping update\r\n", __FUNCTION__, PreIsoInstallerVersion);
   return FALSE;
 }
 
@@ -2319,7 +2345,7 @@ ConfirmCapsuleUpdate (
     LowerVersion & 0xFF
     );
   PreIsoLogPrint (L"\r\n");
-  PreIsoLogPrint (L"  WARNING: The ISO installation cannot continue until\r\n");
+  PreIsoLogPrint (L"  WARNING: The installation cannot continue until\r\n");
   PreIsoLogPrint (L"  this firmware update is accepted.\r\n");
   PreIsoLogPrint (L"\r\n");
   PreIsoLogPrint (L"  Do you want to update the firmware?\r\n");
@@ -2423,11 +2449,12 @@ PerformCapsuleUpdate (
   Load and start shim bootloader from ESP.
 
   This function loads EFI\BOOT\shimaa64.efi and starts it.
-  If successful, this function does not return.
+  If the started image returns, this function unloads it and returns its status.
 
   @param[in]  ImageHandle    The image handle of the calling application.
   @param[in]  DeviceHandle   Device handle for ESP.
 
+  @retval EFI_SUCCESS        Shim returned successfully.
   @retval EFI_NOT_FOUND      Shim file not found.
   @retval Other              Error occurred loading or starting shim.
 
@@ -2481,9 +2508,9 @@ LoadAndStartShim (
   @param[in]  DeviceHandle   Device handle for ESP.
   @param[in]  BootChain      Current boot chain.
 
-  @retval EFI_SUCCESS        No update needed, continue with normal boot.
-  @retval EFI_NOT_READY      Update not needed, continue with normal boot.
-  @retval EFI_ABORTED        ISO installation must halt.
+  @retval EFI_SUCCESS        PreIsoInstaller completed; continue the selected boot flow.
+  @retval EFI_NOT_READY      Update not needed; continue the selected boot flow.
+  @retval EFI_ABORTED        Installation must halt.
   @retval Other              Error occurred during PreIsoInstaller execution.
 
 **/
@@ -2637,7 +2664,7 @@ RunPreIsoInstaller (
 
   if (StagedFlag == 0) {
     if (!ConfirmCapsuleUpdate (PreIsoInstallerVersion, CurrentSlotVersion, NonCurrentSlotVersion)) {
-      PreIsoLogPrint (L"%a: Capsule update confirmation failed, aborting ISO installation\r\n", __FUNCTION__);
+      PreIsoLogPrint (L"%a: Capsule update confirmation failed, aborting installation\r\n", __FUNCTION__);
       Status = EFI_ABORTED;
       goto Done;
     }
@@ -2673,23 +2700,24 @@ Done:
 }
 
 /**
-  Detect ISO installation medium and run the full ISO boot path.
+  Detect and handle installer boot media.
 
-  Checks whether the boot media is an ISO installation medium.  If so,
-  clears the rootfs status register, runs the PreIsoInstaller capsule
-  update flow, and loads the shim bootloader.
+  Checks whether the boot media contains a valid installer ID file. If so,
+  clears the rootfs status register and runs the PreIsoInstaller capsule update
+  flow. Afterward, continue boot by loading the shim bootloader from ISO_ID
+  media, or proceed with normal L4TLauncher boot for INSTALLER_ID media.
 
   @param[in]  ImageHandle    The image handle of this application.
   @param[in]  DeviceHandle   Device handle for ESP.
 
-  @retval EFI_SUCCESS        ISO medium handled (or not an ISO medium).
-  @retval EFI_ABORTED        PreIsoInstaller blocked ISO boot; caller must halt.
-  @retval Other              Fatal error from shim load.
+  @retval EFI_SUCCESS        Boot media handled (or not an installation medium).
+  @retval EFI_ABORTED        PreIsoInstaller blocked boot; caller must halt.
+  @retval Other              Fatal error from shim load for ISO media.
 
 **/
 EFI_STATUS
 EFIAPI
-HandleIsoBootMedia (
+HandleInstallerBootMedia (
   IN  EFI_HANDLE  ImageHandle,
   IN  EFI_HANDLE  DeviceHandle
   )
@@ -2698,11 +2726,11 @@ HandleIsoBootMedia (
   UINT32      BootChain;
   UINTN       DataSize;
 
-  if (!IsIsoIdFileValid (DeviceHandle)) {
+  if (!IsInstallerIdFileValid (DeviceHandle)) {
     return EFI_SUCCESS;
   }
 
-  ErrorPrint (L"ISO installation medium detected, running PreIsoInstaller logic\r\n");
+  ErrorPrint (L"Installation medium detected, running PreIsoInstaller logic\r\n");
 
   BootChain = 0;
   DataSize  = sizeof (BootChain);
@@ -2734,6 +2762,12 @@ HandleIsoBootMedia (
     return EFI_ABORTED;
   } else if (EFI_ERROR (Status)) {
     ErrorPrint (L"%a: PreIsoInstaller failed: %r\r\n", __FUNCTION__, Status);
+    return EFI_ABORTED;
+  }
+
+  if (!mIsIsoInstallation) {
+    ErrorPrint (L"%a: Continuing normal L4TLauncher boot\r\n", __FUNCTION__);
+    return EFI_SUCCESS;
   }
 
   ErrorPrint (L"%a: Loading shim bootloader\r\n", __FUNCTION__);

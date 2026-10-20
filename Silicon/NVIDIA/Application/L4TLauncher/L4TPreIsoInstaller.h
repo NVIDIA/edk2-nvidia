@@ -29,10 +29,11 @@
 #define MAX_CAPSULE_PATH_CHARS  128
 #define MAX_CAPSULE_PATH_SIZE   (MAX_CAPSULE_PATH_CHARS * sizeof (CHAR16))
 
-#define VERSION_FILE_PATH  L"EFI\\version"
-#define ISO_ID_FILE_PATH   L"EFI\\ISO_ID"
-#define LOG_FILE_PATH      L"EFI\\PreIsoInstaller.log"
-#define LOG_FILE_MAX_SIZE  (10 * 1024 * 1024)
+#define VERSION_FILE_PATH       L"EFI\\version"
+#define ISO_ID_FILE_PATH        L"EFI\\ISO_ID"
+#define INSTALLER_ID_FILE_PATH  L"EFI\\INSTALLER_ID"
+#define LOG_FILE_PATH           L"EFI\\PreIsoInstaller.log"
+#define LOG_FILE_MAX_SIZE       (10 * 1024 * 1024)
 
 #define SHIM_PATH  L"EFI\\BOOT\\shimaa64.efi"
 
@@ -66,18 +67,18 @@
 #define BOARD_NAME_AGX_THOR_T4000              "jetson-agx-thor-t4000"
 
 /**
-  Check if EFI\ISO_ID file exists and its content matches the SHA256
-  hash of the EFI\version file content concatenated with "L4T".
+  Check if EFI\ISO_ID or EFI\INSTALLER_ID exists and its content matches
+  the SHA256 hash of the EFI\version file content concatenated with "L4T".
 
   @param[in]  DeviceHandle   Device handle for ESP partition.
 
-  @retval TRUE   ISO_ID file matches the version file SHA256.
-  @retval FALSE  Files missing, hash protocol unavailable, or hash mismatch.
+  @retval TRUE   An installer ID file matches the version file SHA256.
+  @retval FALSE  Files are missing, hash protocol unavailable, or neither ID matches.
 
 **/
 BOOLEAN
 EFIAPI
-IsIsoIdFileValid (
+IsInstallerIdFileValid (
   IN EFI_HANDLE  DeviceHandle
   );
 
@@ -92,8 +93,8 @@ IsIsoIdFileValid (
   @param[in]  DeviceHandle   Device handle for ESP.
   @param[in]  BootChain      Current boot chain.
 
-  @retval EFI_SUCCESS        No update needed, continue with normal boot.
-  @retval EFI_NOT_READY      Update not needed, continue with normal boot.
+  @retval EFI_SUCCESS        PreIsoInstaller completed; continue the selected boot flow.
+  @retval EFI_NOT_READY      Update not needed; continue the selected boot flow.
   @retval Other              Error occurred during PreIsoInstaller execution.
 
 **/
@@ -109,11 +110,12 @@ RunPreIsoInstaller (
   Load and start shim bootloader from ESP.
 
   This function loads EFI\BOOT\shimaa64.efi and starts it.
-  If successful, this function does not return.
+  If the started image returns, this function unloads it and returns its status.
 
   @param[in]  ImageHandle    The image handle of the calling application.
   @param[in]  DeviceHandle   Device handle for ESP.
 
+  @retval EFI_SUCCESS        Shim returned successfully.
   @retval EFI_NOT_FOUND      Shim file not found.
   @retval Other              Error occurred loading or starting shim.
 
@@ -126,23 +128,24 @@ LoadAndStartShim (
   );
 
 /**
-  Detect ISO installation medium and run the full ISO boot path.
+  Detect and handle installer boot media.
 
-  Checks whether the boot media is an ISO installation medium.  If so,
-  clears the rootfs status register, runs the PreIsoInstaller capsule
-  update flow, and loads the shim bootloader.
+  Checks whether the boot media contains a valid installer ID file. If so,
+  clears the rootfs status register and runs the PreIsoInstaller capsule update
+  flow. Afterward, continue boot by loading the shim bootloader from ISO_ID
+  media, or proceed with normal L4TLauncher boot for INSTALLER_ID media.
 
   @param[in]  ImageHandle    The image handle of this application.
   @param[in]  DeviceHandle   Device handle for ESP.
 
-  @retval EFI_SUCCESS        ISO medium handled (or not an ISO medium).
-  @retval EFI_ABORTED        PreIsoInstaller blocked ISO boot; caller must halt.
-  @retval Other              Fatal error from shim load.
+  @retval EFI_SUCCESS        Boot media handled (or not an installation medium).
+  @retval EFI_ABORTED        PreIsoInstaller blocked boot; caller must halt.
+  @retval Other              Fatal error from shim load for ISO media.
 
 **/
 EFI_STATUS
 EFIAPI
-HandleIsoBootMedia (
+HandleInstallerBootMedia (
   IN  EFI_HANDLE  ImageHandle,
   IN  EFI_HANDLE  DeviceHandle
   );
