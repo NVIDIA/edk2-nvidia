@@ -51,7 +51,6 @@ FmpParamLibInit (
   INT32       Length;
   EFI_GUID    DtbImageTypeIdGuid;
   UINTN       GuidSize;
-  BOOLEAN     DtbGuidValid = FALSE;
   UINTN       Index;
   EFI_GUID    *NonUniqueGuid;
   UINTN       NonUniqueGuidCount;
@@ -73,14 +72,22 @@ FmpParamLibInit (
     }
 
     Property = FdtGetProp (DtbBase, UefiNode, "fmp-image-type-id-guid", &Length);
-    if ((Property != NULL) && (Length == 37)) {
-      Status = AsciiStrToGuid ((CONST CHAR8 *)Property, &DtbImageTypeIdGuid);
-      if (!EFI_ERROR (Status)) {
-        DEBUG ((DEBUG_INFO, "%a: Updating guid from dtb=%g pcd=%g\n", __FUNCTION__, &DtbImageTypeIdGuid, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid)));
+    if (Property != NULL) {
+      if ((Length != 37) || (((CONST CHAR8 *)Property)[36] != '\0')) {
+        DEBUG ((DEBUG_ERROR, "%a: invalid DTB image type ID GUID string, length=%d\n", __FUNCTION__, Length));
+      } else {
+        Status = AsciiStrToGuid ((CONST CHAR8 *)Property, &DtbImageTypeIdGuid);
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_ERROR, "%a: invalid DTB image type ID GUID: %r\n", __FUNCTION__, Status));
+        } else {
+          DEBUG ((DEBUG_INFO, "%a: Updating guid from dtb=%g pcd=%g\n", __FUNCTION__, &DtbImageTypeIdGuid, PcdGetPtr (PcdSystemFmpCapsuleImageTypeIdGuid)));
 
-        GuidSize = sizeof (DtbImageTypeIdGuid);
-        PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, &DtbImageTypeIdGuid);
-        DtbGuidValid = TRUE;
+          GuidSize = sizeof (DtbImageTypeIdGuid);
+          Status   = PcdSetPtrS (PcdSystemFmpCapsuleImageTypeIdGuid, &GuidSize, &DtbImageTypeIdGuid);
+          if (EFI_ERROR (Status)) {
+            DEBUG ((DEBUG_ERROR, "%a: set image type ID GUID failed: %r\n", __FUNCTION__, Status));
+          }
+        }
       }
     }
 

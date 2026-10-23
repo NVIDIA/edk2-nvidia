@@ -1199,6 +1199,10 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
 !endif
 
 [PcdsDynamicDefault]
+!ifdef CONFIG_FIRMWARE_MANAGEMENT
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID)")}
+!endif
+
   #
   # Enable emulated variable NV mode in variable driver.
   #
@@ -1479,7 +1483,6 @@ CONFIG_FMP_CERTIFICATES_DTB_MAX_SIZE=0
   ## Save the UEFI Carveout size from MBx
   gNVIDIATokenSpaceGuid.PcdUefiCoSize|0x0
 !ifdef CONFIG_FIRMWARE_MANAGEMENT
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSystemFmpCapsuleImageTypeIdGuid|{GUID("$(FMP_SYSTEM_IMAGE_TYPE_ID)")}
   !ifdef CONFIG_FIRMWARE_CAPSULE_SUPPORTED
     gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleOnDiskSupport|TRUE
     gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport|TRUE
