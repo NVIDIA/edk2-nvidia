@@ -38,6 +38,7 @@
   gEfiImageSecurityDatabaseGuid
   gMtcVendorGuid
   gEfiMemoryTypeInformationGuid
+  gEdkiiVarErrorFlagGuid
 
 [Pcd]
   gEfiCryptoPkgTokenSpaceGuid.PcdHashApiLibPolicy

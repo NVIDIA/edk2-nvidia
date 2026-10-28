@@ -23,6 +23,7 @@
 #include <Guid/ImageAuthentication.h>
 #include <Guid/MemoryTypeInformation.h>
 #include <Guid/MtcVendor.h>
+#include <Guid/VarErrorFlag.h>
 #include <IndustryStandard/Tpm20.h>
 #include <Protocol/SmmVariable.h>
 #include <Library/PrintLib.h>
@@ -241,7 +242,15 @@ STATIC MEASURE_VAR_TYPE  SecureVarsV0[] = {
 STATIC MEASURE_VAR_TYPE  ExcludedVars[] = {
   /* Use a NULL VarName to exclude all variables that belong to a GUID. */
   { MTC_VARIABLE_NAME,                         &gMtcVendorGuid,                NULL, 0 },
-  { EFI_MEMORY_TYPE_INFORMATION_VARIABLE_NAME, &gEfiMemoryTypeInformationGuid, NULL, 0 }
+  { EFI_MEMORY_TYPE_INFORMATION_VARIABLE_NAME, &gEfiMemoryTypeInformationGuid, NULL, 0 },
+
+  /*
+   * The variable driver clears bits in VarErrorFlag in place on flash when a
+   * write fails (RecordVarErrorFlag), outside the SetVariable pre/post
+   * callbacks. Measuring it makes the stored measurement stale after the
+   * first store-full failure.
+   */
+  { VAR_ERROR_FLAG_NAME,                       &gEdkiiVarErrorFlagGuid,        NULL, 0 }
 };
 
 VOID
