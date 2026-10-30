@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -16,7 +16,7 @@ class StandaloneMmOpteeSettingsManager(NVIDIASettingsManager):
         return "StandaloneMmOptee"
 
     def GetFirmwareVersionBase(self):
-        return "202210.8"
+        return "202210.9"
 
     def GetFirmwareVolume(self):
         return "FV/UEFI_MM.Fv"
