@@ -407,6 +407,15 @@ RemoveKernelCommandLine (
   ExistingCommandLineArgumentStart = NULL;
   ExistingCommandLineArgumentStart = StrStr (InCmdLine, DelCmdLine);
   while (ExistingCommandLineArgumentStart != NULL) {
+    // Only remove arguments that begin with DelCmdLine, not ones that contain it
+    // further in (e.g. "netconsole=" when removing "console=").
+    if ((ExistingCommandLineArgumentStart != InCmdLine) &&
+        (*(ExistingCommandLineArgumentStart - 1) != L' '))
+    {
+      ExistingCommandLineArgumentStart = StrStr (ExistingCommandLineArgumentStart + 1, DelCmdLine);
+      continue;
+    }
+
     ExistingCommandLineArgumentEnd = NULL;
     ExistingCommandLineArgumentEnd = StrStr (ExistingCommandLineArgumentStart, L" ");
 
