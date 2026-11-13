@@ -44,6 +44,8 @@ WildcardStringMatchAscii (
   CHAR8        *TokenEnd;
   BOOLEAN      Result = FALSE; // Default to FALSE
   UINTN        WildcardStringSize;
+  UINTN        TokenLength;
+  UINTN        RemainingLength;
 
   ZeroMem (WildcardStackArray, sizeof (WildcardStackArray));
 
@@ -94,6 +96,17 @@ WildcardStringMatchAscii (
     // Temporarily terminate the current token
     CHAR8  Temp = *TokenEnd;
     *TokenEnd = '\0';
+
+    if ((Temp == '\0') && (NextToken != WildcardStringCopy)) {
+      // The last token after a wildcard must match the end of the CheckString,
+      // which is not necessarily its first occurrence. Skip ahead so that only
+      // the tail is searched.
+      TokenLength     = TokenEnd - NextToken;
+      RemainingLength = AsciiStrLen (CurrentCheckString);
+      if (RemainingLength > TokenLength) {
+        CurrentCheckString += RemainingLength - TokenLength;
+      }
+    }
 
     CurrentCheckString = AsciiStrStr (CurrentCheckString, NextToken);
     if (NextToken == WildcardStringCopy) {
