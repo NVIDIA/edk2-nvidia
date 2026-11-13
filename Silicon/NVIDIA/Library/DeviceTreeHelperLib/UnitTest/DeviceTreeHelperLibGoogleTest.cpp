@@ -1727,7 +1727,7 @@ TEST_F (DeviceProperty, LocateStringIndex) {
       NotNull ()
       )
     )
-    .Times (6)
+    .Times (8)
     .WillRepeatedly (
        DoAll (
          SetArgPointee<3>(StringListProperty.Length),
@@ -1774,6 +1774,11 @@ TEST_F (DeviceProperty, LocateStringIndex) {
   EXPECT_EQ (StringIndex, (UINT32)2);
   EXPECT_EQ (EFI_SUCCESS, DeviceTreeLocateStringIndex (TEST_NODE_OFFSET, "string_list", "device1", &StringIndex));
   EXPECT_EQ (StringIndex, (UINT32)3);
+  // A wildcard string can be longer than the entry it matches, including the last one
+  EXPECT_EQ (EFI_SUCCESS, DeviceTreeLocateStringIndex (TEST_NODE_OFFSET, "string_list", "*device1", &StringIndex));
+  EXPECT_EQ (StringIndex, (UINT32)3);
+  StringIndex = MAX_UINT32;
+  EXPECT_EQ (EFI_NOT_FOUND, DeviceTreeLocateStringIndex (TEST_NODE_OFFSET, "string_list", "*device2", &StringIndex));
 }
 
 INSTANTIATE_TEST_SUITE_P (

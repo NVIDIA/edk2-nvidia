@@ -992,13 +992,12 @@ DeviceTreeLocateStringIndex (
   CONST VOID   *PropertyData;
   UINT32       PropertySize;
   CONST CHAR8  *StringSearch;
-  UINT32       MatchSize;
+  CONST CHAR8  *PropertyEnd;
+  UINTN        StringSize;
 
   if ((Property == NULL) || (String == NULL) || (Index == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
-
-  MatchSize = AsciiStrSize (String);
 
   *Index = 0;
   Status = DeviceTreeGetNodeProperty (NodeOffset, Property, &PropertyData, &PropertySize);
@@ -1007,14 +1006,22 @@ DeviceTreeLocateStringIndex (
   } else if (!EFI_ERROR (Status)) {
     Status       = EFI_NOT_FOUND;
     StringSearch = (CONST CHAR8 *)PropertyData;
-    while ((CONST VOID *)(StringSearch + MatchSize) <= (PropertyData + PropertySize)) {
+    PropertyEnd  = StringSearch + PropertySize;
+    while (StringSearch < PropertyEnd) {
+      // String may contain wildcards, so an entry that matches it can be shorter
+      // than String itself. Check every entry that is terminated in the property.
+      StringSize = AsciiStrnLenS (StringSearch, PropertyEnd - StringSearch) + 1;
+      if (StringSize > (UINTN)(PropertyEnd - StringSearch)) {
+        break;
+      }
+
       if (WildcardStringMatchAscii (String, StringSearch)) {
         Status = EFI_SUCCESS;
         break;
       }
 
       (*Index)++;
-      StringSearch += AsciiStrSize (StringSearch);
+      StringSearch += StringSize;
     }
   }
 
