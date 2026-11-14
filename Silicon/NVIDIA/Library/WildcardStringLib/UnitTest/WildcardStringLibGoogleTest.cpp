@@ -79,7 +79,14 @@ INSTANTIATE_TEST_SUITE_P (
              std::make_tuple ("*t*s*", "tent", false),               // Wildcard should fail if not found
              std::make_tuple ("*t*s*", "hello test world", true),    // Wildcard should match partial string with multiple occurrences
              std::make_tuple ("*t*s*", "hello world", false),        // Wildcard should fail if not found
-             std::make_tuple ("cache", "arm,mpam-cache", false)      // Wildcard should fail if start does not match
+             std::make_tuple ("cache", "arm,mpam-cache", false),     // Wildcard should fail if start does not match
+             std::make_tuple ("*world", "world hello world", true),  // Last token must match at the end, not at its first occurrence
+             std::make_tuple ("t*st", "test best", true),            // Last token must match at the end, not at its first occurrence
+             std::make_tuple ("*a", "aa", true),                     // Last token must match at the end, not at its first occurrence
+             std::make_tuple ("a*a", "aaa", true),                   // Last token must match at the end, not at its first occurrence
+             std::make_tuple ("a*a", "a", false),                    // Tokens must not overlap
+             std::make_tuple ("*hello", "hello hello!", false),      // Last token must still match at the end
+             std::make_tuple ("a*b", "ab b c", false)                // Last token must still match at the end
              )
   );
 
