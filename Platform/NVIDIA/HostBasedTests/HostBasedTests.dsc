@@ -265,6 +265,11 @@
   Silicon/NVIDIA/Library/DeviceDiscoveryDriverLib/UnitTest/DeviceDiscoveryDriverLibUnitTestsHost.inf
 
   #
+  # VirtioMmioDxe Host Based UnitTest Support
+  #
+  Silicon/NVIDIA/Drivers/VirtioMmioDxe/UnitTest/VirtioMmioDxeUnitTestsHost.inf
+
+  #
   # BootArchInfoParser Host Based UnitTest Support
   #
   Silicon/NVIDIA/Drivers/ConfigurationManagerData/BootArchInfo/UnitTest/BootArchInfoParserUnitTestsHost.inf {
