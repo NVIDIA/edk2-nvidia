@@ -2,7 +2,7 @@
 
   Device discovery based  Virtio MMIO driver
 
-  SPDX-FileCopyrightText: Copyright (c) 2020- 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,7 +10,6 @@
 
 #include <Library/DebugLib.h>
 #include <Library/DeviceDiscoveryDriverLib.h>
-#include <Library/DebugLib.h>
 #include <Library/VirtioMmioDeviceLib.h>
 
 #include <Guid/VirtioMmioTransport.h>
@@ -67,7 +66,7 @@ DeviceDiscoveryNotify (
       }
 
       Status = VirtioMmioInstallDevice (RegBase, ControllerHandle);
-      return EFI_SUCCESS;
+      break;
 
     default:
       return EFI_SUCCESS;
