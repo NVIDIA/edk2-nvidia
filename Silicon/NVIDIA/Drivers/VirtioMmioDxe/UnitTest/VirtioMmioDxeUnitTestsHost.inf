@@ -1,0 +1,36 @@
+## @file
+# Host-based unit tests for VirtioMmioDxe.
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION    = 0x00010006
+  BASE_NAME      = VirtioMmioDxeUnitTestsHost
+  FILE_GUID      = 8b7c4a12-6d3e-4f91-9c25-3e8a7f61b4d0
+  MODULE_TYPE    = HOST_APPLICATION
+  VERSION_STRING = 1.0
+
+[Sources]
+  VirtioMmioDxeUnitTests.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MdePkg/MdePkg.dec
+  OvmfPkg/OvmfPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  UnitTestFrameworkPkg/UnitTestFrameworkPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CmockaLib
+  DebugLib
+  MemoryAllocationLib
+  UnitTestLib
+
+[Guids]
+  gVirtioMmioTransportGuid
